@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "تراجع عن الرسالة الأخيرة",
   "command.session.redo": "إعادة",
   "command.session.redo.description": "إعادة الرسالة التي تم التراجع عنها",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "تم التراجع عن {{count}} رسالة",
+  "revert.banner.count_other": "تم التراجع عن {{count}} رسائل",
+  "revert.banner.redo": "إعادة",
+  "revert.banner.redo.all": "إعادة الكل",
+  "revert.banner.hint": "أرسل رسالة جديدة لجعل هذا دائمًا",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
@@ -164,6 +164,9 @@ export const dict = {
   "model.tag.free": "مجاني",
   "model.tag.latest": "الأحدث",
   "model.group.recommended": "موصى به",
+  "model.group.favorites": "المفضلة",
+  "model.favorite.add": "إضافة إلى المفضلة",
+  "model.favorite.remove": "إزالة من المفضلة",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -806,7 +809,7 @@ export const dict = {
   "settings.permissions.tool.list.description": "سرد الملفات داخل دليل",
   "settings.permissions.tool.bash.title": "Bash",
   "settings.permissions.tool.bash.description": "تشغيل أوامر shell",
-  "settings.permissions.tool.task.title": "Task",
+  "settings.permissions.tool.task.title": "مهمة",
   "settings.permissions.tool.task.description": "تشغيل الوكلاء الفرعيين",
   "settings.permissions.tool.skill.title": "Skill",
   "settings.permissions.tool.skill.description": "تحميل مهارة بالاسم",
@@ -836,8 +839,8 @@ export const dict = {
   "session.showHistory": "عرض السجل",
   "session.search.placeholder": "البحث في الجلسات...",
   "session.empty": "لا توجد جلسات بعد. انقر + لبدء محادثة جديدة.",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "محلي",
+  "session.tab.cloud": "السحابة",
   "session.cloud.repoOnly": "هذا المستودع فقط",
   "session.cloud.import": "استيراد من السحابة",
   "feedback.button": "التغذية الراجعة والدعم",
@@ -939,6 +942,7 @@ export const dict = {
   "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
+  "context.stats.thisSession": "هذه الجلسة",
 
   "time.justNow": "الآن",
   "time.minutesAgo": "قبل {{count}} دقيقة",
@@ -980,8 +984,13 @@ export const dict = {
     "تم تصدير هذا الملف من إصدار أحدث من Kilo. قد يتم تجاهل بعض الإعدادات.",
   "settings.aboutKiloCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
+  "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
+
   "settings.agentBehaviour.subtab.modes": "الأوضاع",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "الوكلاء",
   "settings.agentBehaviour.subtab.mcpServers": "خوادم MCP",
   "settings.agentBehaviour.subtab.rules": "القواعد",
   "settings.agentBehaviour.subtab.workflows": "سير العمل",
@@ -1066,6 +1075,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "تعطيل هذا الوكيل بالكامل — لن يظهر في أي مكان",
   "settings.agentBehaviour.badge.hidden": "مخفي",
   "settings.agentBehaviour.badge.disabled": "معطل",
+  "settings.agentBehaviour.badge.deprecated": "مُهمَل",
   "settings.agentBehaviour.discoveredSkills": "المهارات المكتشفة",
   "settings.agentBehaviour.noSkillsFound":
     "لم يتم العثور على مهارات. أضف مسارات مجلدات أو عناوين URL أدناه لإتاحة المهارات.",
@@ -1100,7 +1110,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "موجه النظام",
   "settings.agentBehaviour.editMode.save": "تم",
   "settings.agentBehaviour.editMode.back": "العودة إلى القائمة",
-  "settings.agentBehaviour.editMode.native": "وضع مدمج (تعريف للقراءة فقط)",
+  "settings.agentBehaviour.editMode.native":
+    "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
   "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1132,6 +1143,10 @@ export const dict = {
     "القواعد هي ملفات تعليمات توجه سلوك الوكيل. يتم تضمينها في موجه النظام لكل محادثة. أضف مسارات الملفات أدناه لتضمين قواعد إضافية.",
   "settings.agentBehaviour.instructionFiles": "ملفات تعليمات إضافية",
   "settings.agentBehaviour.instructionFiles.description": "مسارات ملفات التعليمات الإضافية في موجه النظام",
+  "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
+  "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
+  "settings.agentBehaviour.claudeCompat.description":
+    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل.",
   "settings.agentBehaviour.mcpDetail.command": "الأمر",
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",
@@ -1219,14 +1234,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "ما الجديد في Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
   "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
   "migration.whatsNew.features.performance.detail":
     "استدعاءات الأدوات المتوازية والوكلاء الفرعيون يتيحون لوكيلك إنجاز المزيد في وقت واحد — فتقضي وقتًا أقل في الانتظار ووقتًا أكثر في الإنجاز.",
   "migration.whatsNew.features.interface.title": "واجهة مبسّطة",
   "migration.whatsNew.features.interface.detail": "أقل تشتيتًا، أسهل وأسرع في القراءة.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "مدير الوكلاء",
   "migration.whatsNew.features.agentManager.detail":
     "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
   "migration.whatsNew.features.foundation.title": "أساس مشترك",
@@ -1244,7 +1258,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "غير متوافق مع البنية الجديدة",
   "migration.migrate.button": "ترحيل الإعدادات",
   "migration.migrate.skip": "تخطي",
-  "migration.migrate.back": "رجوع",
   "migration.migrate.keysDetected": "تم اكتشاف {{count}} مفاتيح",
   "migration.migrate.serversConfigured": "تم تكوين {{count}} خادم(خوادم)",
   "migration.migrate.modesFound": "تم العثور على {{count}} وضع(أوضاع)",
@@ -1265,6 +1278,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "هذا يزيل الإعدادات القديمة من مساحة تخزين VS Code. لن تتمكن من إعادة تشغيل هذا الترحيل.",
   "migration.complete.done": "تم",
+  "migration.migrate.sessionsDetected": "تم اكتشاف {{count}} جلسة",
+  "migration.error.sessionFailed": "فشل ترحيل الجلسة",
+  "migration.error.continue": "متابعة",
+  "migration.error.action.copy": "نسخ",
+  "migration.error.toast.copied": "تم نسخ الخطأ إلى الحافظة",
   // legacy-migration end
 
   "error.details.show": "التفاصيل",
@@ -1278,8 +1296,7 @@ export const dict = {
   "settings.saveBar.warning.many": "عدة جلسات تعمل وستتوقف",
   "settings.saveBar.saveAnyway": "حفظ على أي حال",
   "settings.saveBar.cancel": "إلغاء",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "التالي",
+  "notifications.action.close": "إغلاق",
+  "notifications.action.tryModel": "جرّب {{model}}",
 }

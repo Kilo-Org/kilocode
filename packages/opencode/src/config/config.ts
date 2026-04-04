@@ -1159,6 +1159,10 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("@deprecated Use 'share' field instead. Share newly created sessions automatically"),
+      remote_control: z // kilocode_change
+        .boolean()
+        .optional()
+        .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
         .optional()

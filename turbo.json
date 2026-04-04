@@ -22,6 +22,10 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**"],
       "env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
+    },
+    "@kilocode/kilo-jetbrains#build": {
+      "dependsOn": ["@kilocode/cli#build"],
+      "outputs": ["build/distributions/**"]
     }
   }
 }

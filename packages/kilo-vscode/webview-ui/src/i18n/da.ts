@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "Fortryd den sidste besked",
   "command.session.redo": "Omgør",
   "command.session.redo.description": "Omgør den sidste fortrudte besked",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} besked fortrudt",
+  "revert.banner.count_other": "{{count}} beskeder fortrudt",
+  "revert.banner.redo": "Gentag",
+  "revert.banner.redo.all": "Gentag alt",
+  "revert.banner.hint": "Send en ny besked for at gøre dette permanent",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalet",
+  "model.group.favorites": "Favoritter",
+  "model.favorite.add": "Føj til favoritter",
+  "model.favorite.remove": "Fjern fra favoritter",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -329,10 +332,10 @@ export const dict = {
   "context.stats.provider": "Udbyder",
   "context.stats.model": "Model",
   "context.stats.limit": "Kontekstgrænse",
-  "context.stats.totalTokens": "Total Tokens",
+  "context.stats.totalTokens": "Tokens i alt",
   "context.stats.usage": "Forbrug",
-  "context.stats.inputTokens": "Input Tokens",
-  "context.stats.outputTokens": "Output Tokens",
+  "context.stats.inputTokens": "Input-tokens",
+  "context.stats.outputTokens": "Output-tokens",
   "context.stats.reasoningTokens": "Tænke Tokens",
   "context.stats.cacheTokens": "Cache Tokens (læs/skriv)",
   "context.stats.userMessages": "Brugerbeskeder",
@@ -469,7 +472,7 @@ export const dict = {
   "ui.permission.toolLabel.globSearch": "Glob-søgning",
   "ui.permission.toolLabel.grepSearch": "Grep-søgning",
   "ui.permission.toolLabel.webSearch": "Websøgning",
-  "ui.permission.toolLabel.list": "List",
+  "ui.permission.toolLabel.list": "Liste",
   "ui.permission.toolLabel.externalDirectory": "Læs ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhentning",
   "ui.permission.toolLabel.task": "Opgave",
@@ -842,8 +845,8 @@ export const dict = {
   "session.showHistory": "Vis historik",
   "session.search.placeholder": "Søg sessioner...",
   "session.empty": "Ingen sessioner endnu. Klik + for at starte en ny samtale.",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "Lokal",
+  "session.tab.cloud": "Sky",
   "session.cloud.repoOnly": "Kun dette repository",
   "session.cloud.import": "Importér fra skyen",
   "feedback.button": "Feedback & support",
@@ -945,6 +948,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en besked... (Enter for at sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sessionsomkostning",
+  "context.stats.thisSession": "Denne session",
 
   "time.justNow": "lige nu",
   "time.minutesAgo": "{{count}} min. siden",
@@ -989,8 +993,13 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Indstillinger importeret. Gennemgå ændringerne ovenfor, og klik derefter på Gem.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetri",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetri styres af VS Codes indbyggede telemetriindstilling. For at deaktivere den, gå til Indstillinger > Telemetry > Telemetry Level og sæt den til "off". Genstart VS Code for at anvende ændringen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Åbn telemetriindstillinger",
+
   "settings.agentBehaviour.subtab.modes": "Tilstande",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
   "settings.agentBehaviour.subtab.workflows": "Arbejdsgange",
@@ -1076,6 +1085,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Deaktiver denne agent fuldstændigt — den vises ingen steder",
   "settings.agentBehaviour.badge.hidden": "skjult",
   "settings.agentBehaviour.badge.disabled": "deaktiveret",
+  "settings.agentBehaviour.badge.deprecated": "Udfaset",
   "settings.agentBehaviour.discoveredSkills": "Opdagede skills",
   "settings.agentBehaviour.noSkillsFound":
     "Ingen skills fundet. Tilføj skill-mappestier eller URL'er nedenfor for at gøre skills tilgængelige.",
@@ -1110,7 +1120,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Systemprompt",
   "settings.agentBehaviour.editMode.save": "Færdig",
   "settings.agentBehaviour.editMode.back": "Tilbage til listen",
-  "settings.agentBehaviour.editMode.native": "Indbygget tilstand (skrivebeskyttet definition)",
+  "settings.agentBehaviour.editMode.native":
+    "Dette er en indbygget tilstand. Dens grundlæggende definition kan ikke ændres, men du kan konfigurere tilsidesættelser nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-tilsidesættelse for denne indbyggede tilstand",
   "settings.agentBehaviour.removeMode.title": "Fjern tilstand",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1142,6 +1153,10 @@ export const dict = {
     "Regler er instruktionsfiler, der styrer agentens adfærd. De inkluderes i systemprompten for hver samtale. Tilføj filstier nedenfor for at inkludere yderligere regler.",
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
+  "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Indlæs CLAUDE.md-instruktioner og -færdigheder fra din Claude Code-konfigurationsmappe i sessioner. Aktivér dette, hvis du vil have Kilo til at bruge dine Claude Code-instruktioner og -færdigheder. Kræver genstart.",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
@@ -1234,14 +1249,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Nyheder i Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har genopbygget udvidelsen på et hurtigere og mere effektivt fundament.",
   "migration.whatsNew.features.performance.title": "Hurtigere agentydelse",
   "migration.whatsNew.features.performance.detail":
     "Parallelle værktøjskald og underagenter lader din agent tackle mere på én gang — så du bruger mindre tid på at vente og mere tid på at levere.",
   "migration.whatsNew.features.interface.title": "Strømlinet brugerflade",
   "migration.whatsNew.features.interface.detail": "Færre distraktioner, nemmere og hurtigere at læse.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Agentstyring",
   "migration.whatsNew.features.agentManager.detail":
     "En samlet brugerflade til at køre flere agenter parallelt, hver på sit eget worktree — overvåg fremskridt, skift kontekst og gennemgå ændringer ét sted.",
   "migration.whatsNew.features.foundation.title": "Fælles fundament",
@@ -1260,7 +1274,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Ikke kompatibel med den nye arkitektur",
   "migration.migrate.button": "Migrer indstillinger",
   "migration.migrate.skip": "Spring over",
-  "migration.migrate.back": "Tilbage",
   "migration.migrate.keysDetected": "{{count}} nøgler fundet",
   "migration.migrate.serversConfigured": "{{count}} server(e) konfigureret",
   "migration.migrate.modesFound": "{{count}} tilstand(e) fundet",
@@ -1281,6 +1294,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dette fjerner de gamle indstillinger fra VS Code-lageret. Du vil ikke kunne køre denne migrering igen.",
   "migration.complete.done": "Færdig",
+  "migration.migrate.sessionsDetected": "{{count}} sessioner fundet",
+  "migration.error.sessionFailed": "Sessionsmigrering mislykkedes",
+  "migration.error.continue": "Fortsæt",
+  "migration.error.action.copy": "Kopiér",
+  "migration.error.toast.copied": "Fejl kopieret til udklipsholder",
   // legacy-migration end
 
   "error.details.show": "Detaljer",
@@ -1294,8 +1312,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere sessioner kører og vil blive afbrudt",
   "settings.saveBar.saveAnyway": "Gem alligevel",
   "settings.saveBar.cancel": "Annuller",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Næste",
+  "notifications.action.close": "Luk",
+  "notifications.action.tryModel": "Prøv {{model}}",
 }

@@ -3,7 +3,7 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, Show, untrack } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -21,17 +21,19 @@ import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
-import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
+import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
 const reviewDrafts = new Map<string, ReviewComment[]>()
+const imageDrafts = new Map<string, ImageAttachment[]>()
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
   if (incoming.length === 0) return current
@@ -44,6 +46,8 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
 
 interface PromptInputProps {
   blocked?: () => boolean
+  boxId?: string
+  pendingSessionID?: string
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -78,7 +82,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
   const history = usePromptHistory()
 
-  const sessionKey = () => session.currentSessionID() ?? "__new__"
+  const boxKey = () => props.boxId ?? "prompt:default"
+  const rawKey = () =>
+    sessionDraftKey(session.currentSessionID()) ??
+    pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
+    "new"
+  const draftKey = () => scopeDraftKey(boxKey(), rawKey())
+  const saveDraft = (key: string, next: string, comments: ReviewComment[], imgs: ImageAttachment[]) => {
+    if (next) drafts.set(key, next)
+    else drafts.delete(key)
+    if (comments.length > 0) reviewDrafts.set(key, comments)
+    else reviewDrafts.delete(key)
+    if (imgs.length > 0) imageDrafts.set(key, imgs)
+    else imageDrafts.delete(key)
+  }
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
@@ -91,10 +108,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
     if (next.length === 0) {
-      reviewDrafts.delete(sessionKey())
+      reviewDrafts.delete(draftKey())
       return
     }
-    reviewDrafts.set(sessionKey(), next)
+    reviewDrafts.set(draftKey(), next)
   }
 
   const clearReviewComments = () => replaceReviewComments([])
@@ -156,19 +173,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
   // Save/restore input text when switching sessions.
-  // Uses `on()` to track only sessionKey — avoids re-running on every keystroke.
+  // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
-    on(sessionKey, (key, prev) => {
+    on(draftKey, (key, prev) => {
       if (prev !== undefined && prev !== key) {
-        drafts.set(prev, untrack(text))
-        const pending = untrack(reviewComments)
-        if (pending.length > 0) reviewDrafts.set(prev, pending)
-        else reviewDrafts.delete(prev)
+        saveDraft(prev, untrack(text), untrack(reviewComments), untrack(imageAttach.images))
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
       setText(draft)
       setReviewComments(pending)
+      imageAttach.replace(imageDrafts.get(key) ?? [])
       setEnhancing(false)
       preEnhanceText = null
       history.reset()
@@ -208,10 +223,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
-    const prompt = text().trim()
-    // Pre-populate the draft for the new (empty) session so the effect restores it
-    if (prompt) drafts.set("__new__", prompt)
+    const draft = text().trim()
+    const comments = reviewComments()
+    const imgs = imageAttach.images()
     session.clearCurrentSession()
+    // After clearing, draftKey() points to the "new" bucket — save there
+    // so the session-switch effect restores the prompt in the new-task view.
+    saveDraft(draftKey(), draft, comments, imgs)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
@@ -288,8 +306,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const failed = message as import("../../types/messages").SendMessageFailedMessage
       // Only restore draft if the failure is for the current session and the
       // input is empty (user hasn't started typing something new).
-      const target = failed.sessionID ?? "__new__"
-      if (target === sessionKey() && !text().trim() && imageAttach.images().length === 0) {
+      const target = scopeDraftKey(
+        boxKey(),
+        sessionDraftKey(failed.sessionID) ?? pendingDraftKey(failed.draftID) ?? "new",
+      )
+      if (target === draftKey() && !text().trim() && imageAttach.images().length === 0) {
         if (failed.text) {
           setText(failed.text)
           if (textareaRef) {
@@ -306,7 +327,27 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             mime: f.mime,
             dataUrl: f.url,
           }))
-        if (images.length > 0) imageAttach.replace(images)
+        if (images.length > 0) {
+          imageAttach.replace(images)
+          imageDrafts.set(target, images)
+        }
+      }
+    }
+
+    if (message.type === "sessionCreated" && message.draftID) {
+      const target = scopeDraftKey(boxKey(), pendingDraftKey(message.draftID) ?? "new")
+      const next = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id) ?? "new")
+      const draft = drafts.get(target)
+      const pending = reviewDrafts.get(target)
+      const imgs = imageDrafts.get(target)
+      if (draft !== undefined) drafts.set(next, draft)
+      if (pending) reviewDrafts.set(next, pending)
+      if (imgs) imageDrafts.set(next, imgs)
+      drafts.delete(target)
+      reviewDrafts.delete(target)
+      imageDrafts.delete(target)
+      if (!session.currentSessionID() && (props.pendingSessionID ?? session.draftSessionID()) === message.draftID) {
+        session.setDraftSessionID(message.session.id)
       }
     }
 
@@ -316,7 +357,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptResult") {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
-      if (result.requestId === `enhance-${sessionKey()}-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
         setText(result.text)
         setEnhancing(false)
         if (textareaRef) {
@@ -329,7 +370,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "enhancePromptError") {
       const result = message as import("../../types/messages").EnhancePromptErrorMessage
-      if (result.requestId === `enhance-${sessionKey()}-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
         setEnhancing(false)
       }
     }
@@ -337,11 +378,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   onCleanup(() => {
     // Persist current draft before unmounting
-    const current = text()
-    if (current) drafts.set(sessionKey(), current)
-    const pending = reviewComments()
-    if (pending.length > 0) reviewDrafts.set(sessionKey(), pending)
-    else reviewDrafts.delete(sessionKey())
+    saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
     unsubscribe()
   })
 
@@ -508,7 +545,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     preEnhanceText = text()
     enhanceCounter++
     setEnhancing(true)
-    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${sessionKey()}-${enhanceCounter}` })
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
   const handleSend = () => {
@@ -530,7 +567,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       imageAttach.clear()
       mention.closeMention()
       slash.close()
-      drafts.delete(sessionKey())
+      drafts.delete(draftKey())
+      reviewDrafts.delete(draftKey())
+      imageDrafts.delete(draftKey())
       if (textareaRef) textareaRef.style.height = "auto"
       matched.action()
       return
@@ -549,13 +588,15 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const sel = session.selected()
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
+    const key = draftKey()
+    const pendingId = props.pendingSessionID ?? session.draftSessionID()
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
       const args = review && rest ? `${review}\n\n${rest}` : rest || review
-      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments)
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
     } else {
-      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
     }
 
     history.append(draft)
@@ -565,7 +606,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     imageAttach.clear()
     mention.closeMention()
     slash.close()
-    drafts.delete(sessionKey())
+    drafts.delete(key)
+    reviewDrafts.delete(key)
+    imageDrafts.delete(key)
 
     if (textareaRef) textareaRef.style.height = "auto"
   }

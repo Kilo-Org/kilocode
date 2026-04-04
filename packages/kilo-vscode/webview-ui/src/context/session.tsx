@@ -4,18 +4,8 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import {
-  createContext,
-  useContext,
-  createSignal,
-  createMemo,
-  createEffect,
-  onMount,
-  onCleanup,
-  ParentComponent,
-  Accessor,
-  batch,
-} from "solid-js"
+import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
+import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
 import { useServer } from "./server"
@@ -43,7 +33,13 @@ import type {
   McpStatusEntry,
 } from "../types/messages"
 import { removeSessionPermissions, upsertPermission } from "./permission-queue"
-import { computeStatus, calcTotalCost, calcContextUsage } from "./session-utils"
+import {
+  computeStatus,
+  calcContextUsage,
+  buildFamilyCosts,
+  buildFamilyLabels,
+  buildCostBreakdown,
+} from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
@@ -61,6 +57,7 @@ interface SessionStore {
   agentSelections: Record<string, string> // sessionID -> agent name
   variantSelections: Record<string, string> // "providerID/modelID" -> variant name
   recentModels: ModelSelection[]
+  favoriteModels: ModelSelection[]
 }
 
 interface SessionContextValue {
@@ -126,7 +123,7 @@ interface SessionContextValue {
   clearModelOverride: () => void
 
   // Cost and context usage for the current session
-  totalCost: Accessor<number>
+  costBreakdown: Accessor<Array<{ label: string; cost: number }>>
   contextUsage: Accessor<ContextUsage | undefined>
 
   // Skills loaded from the CLI backend
@@ -157,6 +154,10 @@ interface SessionContextValue {
   currentVariant: () => string | undefined
   selectVariant: (value: string) => void
 
+  // Model favorites
+  favoriteModels: Accessor<ModelSelection[]>
+  toggleFavorite: (providerID: string, modelID: string) => void
+
   // Revert/undo state for the current session
   revert: Accessor<SessionInfo["revert"]>
   revertedCount: Accessor<number>
@@ -168,8 +169,15 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string) => void
   unrevertSession: () => void
-  sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
-  sendCommand: (command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) => void
+  sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[], draftID?: string) => void
+  sendCommand: (
+    command: string,
+    args: string,
+    providerID?: string,
+    modelID?: string,
+    files?: FileAttachment[],
+    draftID?: string,
+  ) => void
   abort: () => void
   compact: () => void
   respondToPermission: (
@@ -191,6 +199,8 @@ interface SessionContextValue {
   // Cloud session preview
   cloudPreviewId: Accessor<string | null>
   selectCloudSession: (cloudSessionId: string) => void
+  draftSessionID: Accessor<string | undefined>
+  setDraftSessionID: (id: string | undefined) => void
 }
 
 export const SessionContext = createContext<SessionContextValue>()
@@ -204,6 +214,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Current session ID
   const [currentSessionID, setCurrentSessionID] = createSignal<string | undefined>()
+  const [draftSessionID, setDraftSessionID] = createSignal<string | undefined>()
 
   // Per-session status map — keyed by sessionID
   const [statusMap, setStatusMap] = createStore<Record<string, SessionStatusInfo>>({})
@@ -319,6 +330,7 @@ export const SessionProvider: ParentComponent = (props) => {
     agentSelections: {},
     variantSelections: {},
     recentModels: [],
+    favoriteModels: [],
   })
 
   // Per-session agent selection
@@ -580,12 +592,30 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestRecents" })
   onCleanup(unsubRecents)
 
+  // Load persisted favorite models from extension globalState
+  const unsubFavorites = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "favoritesLoaded") return
+    setStore("favoriteModels", message.favorites)
+  })
+  vscode.postMessage({ type: "requestFavorites" })
+  onCleanup(unsubFavorites)
+
+  function toggleFavorite(providerID: string, modelID: string) {
+    const key = `${providerID}/${modelID}`
+    const idx = store.favoriteModels.findIndex((f) => `${f.providerID}/${f.modelID}` === key)
+    const updated =
+      idx >= 0 ? store.favoriteModels.filter((_, i) => i !== idx) : [...store.favoriteModels, { providerID, modelID }]
+    const action = idx >= 0 ? "remove" : "add"
+    setStore("favoriteModels", updated)
+    vscode.postMessage({ type: "toggleFavorite", action, providerID, modelID })
+  }
+
   // Handle messages from extension
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
       switch (message.type) {
         case "sessionCreated":
-          handleSessionCreated(message.session)
+          handleSessionCreated(message.session, message.draftID)
           break
 
         case "messagesLoaded":
@@ -630,6 +660,12 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "questionError":
           handleQuestionError(message.requestID)
+          break
+
+        case "clearPendingPrompts":
+          setPermissions([])
+          setQuestions([])
+          setRespondingPermissions(new Set<string>())
           break
 
         case "sessionsLoaded":
@@ -707,7 +743,7 @@ export const SessionProvider: ParentComponent = (props) => {
   })
 
   // Event handlers
-  function handleSessionCreated(session: SessionInfo) {
+  function handleSessionCreated(session: SessionInfo, draftID?: string) {
     batch(() => {
       setStore("sessions", session.id, session)
 
@@ -727,7 +763,12 @@ export const SessionProvider: ParentComponent = (props) => {
         setPendingAgentSelection(null)
       }
 
-      setCurrentSessionID(session.id)
+      const active = currentSessionID()
+      const draft = draftSessionID()
+      if (!draftID || draft === draftID || active === draftID) {
+        setCurrentSessionID(session.id)
+        setDraftSessionID(session.id)
+      }
     })
   }
 
@@ -950,6 +991,10 @@ export const SessionProvider: ParentComponent = (props) => {
       title: language.t("prompt.toast.promptSendFailed.title") ?? "Failed to send message",
       description: message.error,
     })
+
+    if (!message.sessionID && message.draftID) {
+      setDraftSessionID(message.draftID)
+    }
   }
 
   /**
@@ -1285,7 +1330,13 @@ export const SessionProvider: ParentComponent = (props) => {
     queueMicrotask(() => window.dispatchEvent(new CustomEvent("resumeAutoScroll")))
   }
 
-  function sendMessage(text: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
+  function sendMessage(
+    text: string,
+    providerID?: string,
+    modelID?: string,
+    files?: FileAttachment[],
+    draftID?: string,
+  ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send message: not connected")
       return
@@ -1320,6 +1371,7 @@ export const SessionProvider: ParentComponent = (props) => {
       text,
       messageID,
       sessionID: sid,
+      draftID,
       providerID,
       modelID,
       agent,
@@ -1328,7 +1380,14 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function sendCommand(command: string, args: string, providerID?: string, modelID?: string, files?: FileAttachment[]) {
+  function sendCommand(
+    command: string,
+    args: string,
+    providerID?: string,
+    modelID?: string,
+    files?: FileAttachment[],
+    draftID?: string,
+  ) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot send command: not connected")
       return
@@ -1367,6 +1426,7 @@ export const SessionProvider: ParentComponent = (props) => {
       arguments: args,
       messageID,
       sessionID: sid,
+      draftID,
       providerID,
       modelID,
       agent,
@@ -1444,18 +1504,24 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function replyToQuestion(requestID: string, answers: string[][]) {
     clearQuestionError(requestID)
+    const question = questions().find((item) => item.id === requestID)
+    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     vscode.postMessage({
       type: "questionReply",
       requestID,
+      sessionID,
       answers,
     })
   }
 
   function rejectQuestion(requestID: string) {
     clearQuestionError(requestID)
+    const question = questions().find((item) => item.id === requestID)
+    const sessionID = question?.sessionID ?? currentSessionID() ?? ""
     vscode.postMessage({
       type: "questionReject",
       requestID,
+      sessionID,
     })
   }
 
@@ -1472,6 +1538,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function clearCurrentSession() {
     setCurrentSessionID(undefined)
+    setDraftSessionID(undefined)
     setCloudPreviewId(null)
     setLoading(false)
     setPendingAgentSelection(defaultAgent())
@@ -1496,6 +1563,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     setCurrentSessionID(id)
+    setDraftSessionID(id)
     setLoading(!loaded().has(id))
     vscode.postMessage({ type: "loadMessages", sessionID: id })
   }
@@ -1508,6 +1576,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const key = `cloud:${cloudSessionId}`
     setCloudPreviewId(cloudSessionId)
     setCurrentSessionID(key)
+    setDraftSessionID(key)
     setLoading(true)
     vscode.postMessage({ type: "requestCloudSessionData", sessionId: cloudSessionId })
   }
@@ -1620,7 +1689,27 @@ export const SessionProvider: ParentComponent = (props) => {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
   )
 
-  const totalCost = createMemo(() => calcTotalCost(messages()))
+  /** Per-session cost — only reads store.messages (not parts). */
+  const familyCosts = createMemo<Map<string, number>>(() => {
+    const id = currentSessionID()
+    if (!id) return new Map()
+    return buildFamilyCosts(sessionFamily(id), store.messages)
+  })
+
+  /** Child session labels — only reads store.parts (not message costs). */
+  const familyLabels = createMemo<Map<string, string>>(() => {
+    const id = currentSessionID()
+    if (!id) return new Map()
+    return buildFamilyLabels(sessionFamily(id), store.messages as any, store.parts as any)
+  })
+
+  /** Combined cost breakdown with labels. */
+  const costBreakdown = createMemo<Array<{ label: string; cost: number }>>(() => {
+    const id = currentSessionID()
+    const costs = familyCosts()
+    if (!id || costs.size === 0) return []
+    return buildCostBreakdown(id, costs, familyLabels(), language.t("context.stats.thisSession"))
+  })
 
   // Status text derived from last assistant message parts
   const statusText = createMemo<string | undefined>(() => {
@@ -1675,7 +1764,7 @@ export const SessionProvider: ParentComponent = (props) => {
     selectModel,
     hasModelOverride,
     clearModelOverride,
-    totalCost,
+    costBreakdown,
     contextUsage,
     agents,
     skills,
@@ -1713,6 +1802,8 @@ export const SessionProvider: ParentComponent = (props) => {
     allParts,
     allStatusMap,
     familyData,
+    favoriteModels: () => store.favoriteModels,
+    toggleFavorite,
     variantList,
     currentVariant,
     selectVariant,
@@ -1738,6 +1829,8 @@ export const SessionProvider: ParentComponent = (props) => {
     syncSession,
     cloudPreviewId,
     selectCloudSession,
+    draftSessionID,
+    setDraftSessionID,
   }
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>

@@ -61,11 +61,23 @@ export namespace State {
 
       const label = typeof init === "function" ? init.name : String(init)
 
-      const task = Promise.resolve(entry.state)
-        .then((state) => entry.dispose!(state))
-        .catch((error) => {
-          log.error("Error while disposing state:", { error, key, init: label })
-        })
+      // kilocode_change start — hard timeout per disposer so a single hung callback
+      // (e.g. MCP client.close()) cannot block the entire disposal indefinitely.
+      // This is a backend safety bound, not a UI timeout: desktop, VS Code, and
+      // other callers all wait on State.dispose() through Instance.disposeAll().
+      // The race only stops waiting after 15 s; it does not cancel the underlying
+      // disposer. That is still acceptable here because the important recovery step
+      // is letting State.dispose() continue to entries.clear()/recordsByKey.delete()
+      // so the next state access re-initializes from fresh config instead of hanging.
+      const task = Promise.race([
+        Promise.resolve(entry.state).then((state) => entry.dispose!(state)),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`state disposer "${label}" timed out after 15 s`)), 15_000).unref(),
+        ),
+      ]).catch((error) => {
+        log.error("Error while disposing state:", { error, key, init: label })
+      })
+      // kilocode_change end
 
       tasks.push(task)
     }

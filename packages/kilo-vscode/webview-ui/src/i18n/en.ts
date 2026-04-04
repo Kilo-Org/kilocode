@@ -166,6 +166,9 @@ export const dict = {
   "model.tag.free": "Free",
   "model.tag.latest": "Latest",
   "model.group.recommended": "Recommended",
+  "model.group.favorites": "Favorites",
+  "model.favorite.add": "Add to favorites",
+  "model.favorite.remove": "Remove from favorites",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -945,6 +948,7 @@ export const dict = {
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
+  "context.stats.thisSession": "This session",
 
   "time.justNow": "just now",
   "time.minutesAgo": "{{count}} min ago",
@@ -986,6 +990,11 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.newerVersion":
     "This file was exported from a newer version of Kilo. Some settings may be ignored.",
   "settings.aboutKiloCode.importSettings.success": "Settings imported. Review the changes above, then click Save.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Open Telemetry Settings",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -1078,6 +1087,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Fully disable this agent — it will not appear anywhere",
   "settings.agentBehaviour.badge.hidden": "hidden",
   "settings.agentBehaviour.badge.disabled": "disabled",
+  "settings.agentBehaviour.badge.deprecated": "deprecated",
   "settings.agentBehaviour.discoveredSkills": "Discovered Skills",
   "settings.agentBehaviour.noSkillsFound":
     "No skills discovered. Add skill folder paths or URLs below to make skills available.",
@@ -1097,6 +1107,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Additional Instruction Files",
   "settings.agentBehaviour.instructionFiles.description":
     "Paths to additional instruction files that are included in the system prompt",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code Compatibility",
+  "settings.agentBehaviour.claudeCompat.title": "Load Claude Code Files",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into sessions. Enable this if you want Kilo to use your Claude Code instructions and skills. Requires restart.",
   "settings.agentBehaviour.removeMcp.title": "Remove MCP server",
   "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
   "settings.agentBehaviour.removeMcp.button": "Remove",
@@ -1245,7 +1259,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "What's New in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "We've rebuilt the extension on a faster, more efficient foundation.",
   "migration.whatsNew.features.performance.title": "Faster Agent Performance",
   "migration.whatsNew.features.performance.detail":
@@ -1270,10 +1283,10 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible with the new architecture",
   "migration.migrate.button": "Migrate Settings",
   "migration.migrate.skip": "Skip",
-  "migration.migrate.back": "Back",
   "migration.migrate.keysDetected": "{{count}} keys detected",
   "migration.migrate.serversConfigured": "{{count}} server(s) configured",
   "migration.migrate.modesFound": "{{count}} mode(s) found",
+  "migration.migrate.sessionsDetected": "{{count}} sessions detected",
   "migration.migrate.nothingToMigrate": "Nothing to migrate was found in the legacy settings.",
 
   // Migrate — item labels (reused from old select keys)
@@ -1291,6 +1304,10 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "This removes the old settings from VS Code storage. You will not be able to re-run this migration.",
   "migration.complete.done": "Done",
+  "migration.error.sessionFailed": "Session migration failed",
+  "migration.error.continue": "Continue",
+  "migration.error.action.copy": "Copy",
+  "migration.error.toast.copied": "Error copied to clipboard",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1306,8 +1323,7 @@ export const dict = {
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
 
-  "notifications.action.previous": "Previous",
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.tryModel": "Try {{model}}",
 }

@@ -7,6 +7,7 @@ export const KiloClawNav: NavSection[] = [
       { href: "/kiloclaw/overview", children: "Overview" },
       { href: "/kiloclaw/dashboard", children: "Dashboard" },
       { href: "/kiloclaw/pre-installed-software", children: "Pre-installed Software" },
+      { href: "/kiloclaw/end-to-end", children: "End to End Config" },
       {
         href: "/kiloclaw/control-ui/overview",
         children: "Control UI",
@@ -34,6 +35,15 @@ export const KiloClawNav: NavSection[] = [
           { href: "/kiloclaw/development-tools", children: "Overview" },
           { href: "/kiloclaw/development-tools/github", children: "GitHub" },
           { href: "/kiloclaw/development-tools/google", children: "Google Workspace" },
+        ],
+      },
+      {
+        href: "/kiloclaw/triggers",
+        children: "Triggers",
+        subLinks: [
+          { href: "/kiloclaw/triggers", children: "Overview" },
+          { href: "/kiloclaw/triggers/webhooks", children: "Webhooks" },
+          { href: "/kiloclaw/triggers/scheduled", children: "Scheduled" },
         ],
       },
       {

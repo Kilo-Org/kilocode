@@ -37,6 +37,7 @@ export namespace Agent {
       mode: z.enum(["subagent", "primary", "all"]),
       native: z.boolean().optional(),
       hidden: z.boolean().optional(),
+      deprecated: z.boolean().optional(),
       topP: z.number().optional(),
       temperature: z.number().optional(),
       color: z.string().optional(),
@@ -297,6 +298,7 @@ export namespace Agent {
         ),
         mode: "primary",
         native: true,
+        deprecated: true,
       },
       ask: {
         name: "ask",
@@ -455,6 +457,7 @@ export namespace Agent {
       item.mode = value.mode ?? item.mode
       item.color = value.color ?? item.color
       item.hidden = value.hidden ?? item.hidden
+      item.deprecated = value.deprecated ?? item.deprecated
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
       item.options = mergeDeep(item.options, value.options ?? {})

@@ -82,11 +82,11 @@ export const dict = {
   "command.session.undo.description": "마지막 메시지 실행 취소",
   "command.session.redo": "다시 실행",
   "command.session.redo.description": "마지막 실행 취소된 메시지 다시 실행",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}}개 메시지 되돌림",
+  "revert.banner.count_other": "{{count}}개 메시지 되돌림",
+  "revert.banner.redo": "다시 실행",
+  "revert.banner.redo.all": "모두 다시 실행",
+  "revert.banner.hint": "새 메시지를 보내 이를 영구적으로 만드세요",
   "revert.disabled.agentBusy": "에이전트가 완료될 때까지 기다리세요",
   "command.session.compact": "세션 압축",
   "command.session.compact.description": "컨텍스트 크기를 줄이기 위해 세션 요약",
@@ -168,6 +168,9 @@ export const dict = {
   "model.tag.free": "무료",
   "model.tag.latest": "최신",
   "model.group.recommended": "추천",
+  "model.group.favorites": "즐겨찾기",
+  "model.favorite.add": "즐겨찾기에 추가",
+  "model.favorite.remove": "즐겨찾기에서 제거",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -841,8 +844,8 @@ export const dict = {
   "session.showHistory": "기록 보기",
   "session.search.placeholder": "세션 검색...",
   "session.empty": "아직 세션이 없습니다. +를 클릭하여 새 대화를 시작하세요.",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "로컬",
+  "session.tab.cloud": "클라우드",
   "session.cloud.repoOnly": "이 저장소만",
   "session.cloud.import": "클라우드에서 가져오기",
   "feedback.button": "피드백 & 지원",
@@ -944,6 +947,7 @@ export const dict = {
   "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
+  "context.stats.thisSession": "이 세션",
 
   "time.justNow": "방금",
   "time.minutesAgo": "{{count}}분 전",
@@ -987,8 +991,13 @@ export const dict = {
     "이 파일은 더 최신 버전의 Kilo에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
   "settings.aboutKiloCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
 
+  "settings.aboutKiloCode.telemetry.title": "원격 측정",
+  "settings.aboutKiloCode.telemetry.description":
+    '원격 측정은 VS Code에 내장된 원격 측정 설정으로 제어됩니다. 비활성화하려면 설정 > 원격 측정 > 원격 측정 수준으로 이동하여 "off"로 설정하세요. 변경 사항을 적용하려면 VS Code를 다시 시작하세요.',
+  "settings.aboutKiloCode.telemetry.openSettings": "원격 측정 설정 열기",
+
   "settings.agentBehaviour.subtab.modes": "모드",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
   "settings.agentBehaviour.subtab.rules": "규칙",
   "settings.agentBehaviour.subtab.workflows": "워크플로",
@@ -1073,6 +1082,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "이 에이전트를 완전히 비활성화 — 어디에도 표시되지 않습니다",
   "settings.agentBehaviour.badge.hidden": "숨김",
   "settings.agentBehaviour.badge.disabled": "비활성화됨",
+  "settings.agentBehaviour.badge.deprecated": "비권장",
   "settings.agentBehaviour.discoveredSkills": "검색된 스킬",
   "settings.agentBehaviour.noSkillsFound":
     "스킬을 찾을 수 없습니다. 스킬을 사용하려면 아래에 스킬 폴더 경로 또는 URL을 추가하세요.",
@@ -1106,7 +1116,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "시스템 프롬프트",
   "settings.agentBehaviour.editMode.save": "완료",
   "settings.agentBehaviour.editMode.back": "목록으로 돌아가기",
-  "settings.agentBehaviour.editMode.native": "내장 모드 (읽기 전용 정의)",
+  "settings.agentBehaviour.editMode.native":
+    "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
   "settings.agentBehaviour.removeMode.title": "모드 제거",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1137,6 +1148,10 @@ export const dict = {
     "규칙은 에이전트 동작을 안내하는 지시 파일입니다. 모든 대화의 시스템 프롬프트에 포함됩니다. 추가 규칙을 포함하려면 아래에 파일 경로를 추가하세요.",
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다.",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",
@@ -1222,14 +1237,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Code의 새로운 기능",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "더 빠르고 효율적인 기반 위에 확장 프로그램을 재구축했습니다.",
   "migration.whatsNew.features.performance.title": "더 빠른 에이전트 성능",
   "migration.whatsNew.features.performance.detail":
     "병렬 도구 호출과 하위 에이전트를 통해 에이전트가 더 많은 작업을 동시에 처리할 수 있습니다 — 대기 시간은 줄이고 작업 효율은 높입니다.",
   "migration.whatsNew.features.interface.title": "간소화된 인터페이스",
   "migration.whatsNew.features.interface.detail": "불필요한 요소를 줄여 더 쉽고 빠르게 읽을 수 있습니다.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "에이전트 관리자",
   "migration.whatsNew.features.agentManager.detail":
     "여러 에이전트를 각자의 작업 트리에서 병렬로 실행할 수 있는 통합 인터페이스 — 진행 상황 모니터링, 컨텍스트 전환, 변경 사항 검토를 한 곳에서 수행합니다.",
   "migration.whatsNew.features.foundation.title": "공유 기반",
@@ -1247,7 +1261,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "새 아키텍처와 호환되지 않음",
   "migration.migrate.button": "설정 마이그레이션",
   "migration.migrate.skip": "건너뛰기",
-  "migration.migrate.back": "뒤로",
   "migration.migrate.keysDetected": "{{count}}개의 키 감지됨",
   "migration.migrate.serversConfigured": "{{count}}개의 서버 구성됨",
   "migration.migrate.modesFound": "{{count}}개의 모드 발견됨",
@@ -1268,6 +1281,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "이 작업은 VS Code 저장소에서 이전 설정을 제거합니다. 이 마이그레이션을 다시 실행할 수 없게 됩니다.",
   "migration.complete.done": "완료",
+  "migration.migrate.sessionsDetected": "{{count}}개의 세션이 감지되었습니다",
+  "migration.error.sessionFailed": "세션 마이그레이션에 실패했습니다",
+  "migration.error.continue": "계속",
+  "migration.error.action.copy": "복사",
+  "migration.error.toast.copied": "오류가 클립보드에 복사되었습니다",
   // legacy-migration end
 
   "error.details.show": "상세 정보",
@@ -1281,8 +1299,7 @@ export const dict = {
   "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
   "settings.saveBar.saveAnyway": "그래도 저장",
   "settings.saveBar.cancel": "취소",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "다음",
+  "notifications.action.close": "닫기",
+  "notifications.action.tryModel": "{{model}} 시도",
 }

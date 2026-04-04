@@ -25,7 +25,11 @@ export const SessionTable = sqliteTable(
     summary_additions: integer(),
     summary_deletions: integer(),
     summary_files: integer(),
-    summary_diffs: text({ mode: "json" }).$type<Snapshot.FileDiff[]>(),
+    // kilocode_change start - lightweight diff type (no file contents)
+    summary_diffs: text({ mode: "json" }).$type<
+      { file: string; additions: number; deletions: number; status?: "added" | "deleted" | "modified" }[]
+    >(),
+    // kilocode_change end
     revert: text({ mode: "json" }).$type<{ messageID: string; partID?: string; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<PermissionNext.Ruleset>(),
     ...Timestamps,

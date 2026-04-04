@@ -1084,20 +1084,24 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
-    // When a session is created while on local, replace the current pending tab with the real session.
-    // Guard against duplicate sessionCreated events (HTTP response + SSE can both fire).
+    // When a session is created, add it as a local tab. This handles both direct
+    // creation from the prompt input and backend-created follow-up sessions (plan
+    // follow-up "Start new session"). Guard against duplicates (HTTP + SSE can both fire).
     const unsubCreate = vscode.onMessage((msg) => {
-      if (msg.type === "sessionCreated" && selection() === LOCAL) {
-        const created = msg as { type: string; session: { id: string } }
-        if (localSessionIDs().includes(created.session.id)) return
-        const pending = activePendingId()
-        if (pending) {
-          setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
-          setActivePendingId(undefined)
-        } else {
-          setLocalSessionIDs((prev) => [...prev, created.session.id])
-        }
+      if (msg.type !== "sessionCreated") return
+      const created = msg as { type: string; session: { id: string } }
+      if (localSessionIDs().includes(created.session.id)) return
+      if (worktreeSessionIds().has(created.session.id)) return
+      const pending = selection() === LOCAL ? activePendingId() : undefined
+      if (pending) {
+        setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
+        setActivePendingId(undefined)
+      } else {
+        saveTabMemory()
+        setLocalSessionIDs((prev) => [...prev, created.session.id])
+        setSelection(LOCAL)
       }
+      session.selectSession(created.session.id)
     })
 
     // Mark sessions loaded as soon as the session context receives data (even if empty)
@@ -1157,6 +1161,8 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
+        saveTabMemory()
+        setSelection(ev.worktreeId)
         session.selectSession(ev.sessionId)
       }
 
@@ -2334,7 +2340,9 @@ const AgentManagerContent: Component = () => {
                                   onCommitRename={() => commitRename(wt.id)}
                                   onCancelRename={cancelRename}
                                   onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
+                                  onCopyPath={() =>
+                                    vscode.postMessage({ type: "agentManager.copyToClipboard", text: wt.path })
+                                  }
                                   onOpen={() =>
                                     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id })
                                   }
@@ -2769,6 +2777,8 @@ const AgentManagerContent: Component = () => {
                 }}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
+                promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
+                pendingSessionID={selection() === LOCAL ? activePendingId() : undefined}
               />
               <Show when={readOnly()}>
                 <div class="am-readonly-banner">

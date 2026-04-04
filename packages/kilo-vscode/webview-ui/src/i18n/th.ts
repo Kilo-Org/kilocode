@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "ยกเลิกข้อความล่าสุด",
   "command.session.redo": "ทำซ้ำ",
   "command.session.redo.description": "ทำซ้ำข้อความที่ถูกยกเลิกล่าสุด",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "ย้อนกลับ {{count}} ข้อความแล้ว",
+  "revert.banner.count_other": "ย้อนกลับ {{count}} ข้อความแล้ว",
+  "revert.banner.redo": "ทำซ้ำ",
+  "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
+  "revert.banner.hint": "ส่งข้อความใหม่เพื่อทำให้การเปลี่ยนแปลงนี้ถาวร",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "ฟรี",
   "model.tag.latest": "ล่าสุด",
   "model.group.recommended": "แนะนำ",
+  "model.group.favorites": "รายการโปรด",
+  "model.favorite.add": "เพิ่มในรายการโปรด",
+  "model.favorite.remove": "ลบออกจากรายการโปรด",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -838,8 +841,8 @@ export const dict = {
   "session.showHistory": "แสดงประวัติ",
   "session.search.placeholder": "ค้นหาเซสชัน...",
   "session.empty": "ยังไม่มีเซสชัน คลิก + เพื่อเริ่มการสนทนาใหม่",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "ในเครื่อง",
+  "session.tab.cloud": "คลาวด์",
   "session.cloud.repoOnly": "เฉพาะรีโพซิทอรีนี้",
   "session.cloud.import": "นำเข้าจากคลาวด์",
   "feedback.button": "ข้อเสนอแนะและการสนับสนุน",
@@ -940,6 +943,7 @@ export const dict = {
   "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
+  "context.stats.thisSession": "เซสชันนี้",
 
   "time.justNow": "เมื่อสักครู่",
   "time.minutesAgo": "{{count}} นาทีที่แล้ว",
@@ -982,8 +986,13 @@ export const dict = {
     "ไฟล์นี้ถูกส่งออกจาก Kilo เวอร์ชันใหม่กว่า การตั้งค่าบางรายการอาจถูกข้ามไป",
   "settings.aboutKiloCode.importSettings.success": "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetry",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetry ถูกควบคุมโดยการตั้งค่า Telemetry ในตัวของ VS Code หากต้องการปิดใช้งาน ให้ไปที่ Settings > Telemetry > Telemetry Level แล้วตั้งค่าเป็น "off" รีสตาร์ท VS Code เพื่อให้การเปลี่ยนแปลงมีผล',
+  "settings.aboutKiloCode.telemetry.openSettings": "เปิดการตั้งค่า Telemetry",
+
   "settings.agentBehaviour.subtab.modes": "โหมด",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
   "settings.agentBehaviour.subtab.workflows": "เวิร์กโฟลว์",
@@ -1068,6 +1077,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "ปิดใช้งานเอเจนต์นี้อย่างสมบูรณ์ — จะไม่ปรากฏที่ใดเลย",
   "settings.agentBehaviour.badge.hidden": "ซ่อน",
   "settings.agentBehaviour.badge.disabled": "ปิดใช้งาน",
+  "settings.agentBehaviour.badge.deprecated": "เลิกใช้",
   "settings.agentBehaviour.discoveredSkills": "ทักษะที่ค้นพบ",
   "settings.agentBehaviour.noSkillsFound": "ไม่พบทักษะ เพิ่มเส้นทางโฟลเดอร์หรือ URL ด้านล่างเพื่อทำให้ทักษะพร้อมใช้งาน",
   "settings.agentBehaviour.availableModes": "โหมดกำหนดเองที่ใช้ได้",
@@ -1080,7 +1090,7 @@ export const dict = {
   "settings.agentBehaviour.createMode.description": "คำอธิบาย",
   "settings.agentBehaviour.createMode.description.placeholder": "เช่น ตรวจสอบโค้ดเพื่อคุณภาพและแนวปฏิบัติที่ดีที่สุด",
   "settings.agentBehaviour.createMode.description.help": "คำอธิบายสั้น ๆ ว่าโหมดนี้ทำอะไร",
-  "settings.agentBehaviour.createMode.prompt": "System Prompt",
+  "settings.agentBehaviour.createMode.prompt": "พรอมต์ระบบ",
   "settings.agentBehaviour.createMode.prompt.placeholder":
     "เช่น คุณเป็นผู้ตรวจสอบโค้ด มุ่งเน้นที่คุณภาพโค้ด แนวปฏิบัติที่ดีที่สุด และบั๊กที่อาจเกิดขึ้น",
   "settings.agentBehaviour.createMode.prompt.help": "คำแนะนำสำหรับ AI agent เมื่อใช้โหมดนี้",
@@ -1098,10 +1108,11 @@ export const dict = {
   "settings.agentBehaviour.exportMode": "ส่งออกนิยามเอเจนต์",
   "settings.agentBehaviour.editMode": "แก้ไขโหมด",
   "settings.agentBehaviour.editMode.description": "คำอธิบาย",
-  "settings.agentBehaviour.editMode.prompt": "System Prompt",
+  "settings.agentBehaviour.editMode.prompt": "พรอมต์ระบบ",
   "settings.agentBehaviour.editMode.save": "เสร็จสิ้น",
   "settings.agentBehaviour.editMode.back": "กลับไปที่รายการ",
-  "settings.agentBehaviour.editMode.native": "โหมดในตัว (นิยามสำหรับอ่านอย่างเดียว)",
+  "settings.agentBehaviour.editMode.native":
+    "นี่คือโหมดในตัว ไม่สามารถเปลี่ยนคำจำกัดความพื้นฐานได้ แต่คุณสามารถกำหนดค่าการแทนที่ได้ที่ด้านล่าง",
   "settings.agentBehaviour.editMode.promptOverride": "การแทนที่ prompt แบบกำหนดเองสำหรับโหมดในตัวนี้",
   "settings.agentBehaviour.removeMode.title": "ลบโหมด",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1133,6 +1144,10 @@ export const dict = {
     "กฎคือไฟล์คำสั่งที่แนะนำพฤติกรรมของเอเจนต์ กฎเหล่านี้จะถูกรวมอยู่ในพรอมต์ระบบสำหรับทุกการสนทนา เพิ่มเส้นทางไฟล์ด้านล่างเพื่อรวมกฎเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
+  "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
+  "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
+  "settings.agentBehaviour.claudeCompat.description":
+    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท",
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",
@@ -1218,14 +1233,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "มีอะไรใหม่ใน Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "เราได้สร้างส่วนขยายใหม่บนรากฐานที่เร็วและมีประสิทธิภาพมากขึ้น",
   "migration.whatsNew.features.performance.title": "ประสิทธิภาพเอเจนต์ที่เร็วขึ้น",
   "migration.whatsNew.features.performance.detail":
     "การเรียกเครื่องมือแบบขนานและเอเจนต์ย่อยช่วยให้เอเจนต์ของคุณจัดการได้มากขึ้นในครั้งเดียว — คุณจึงใช้เวลารอน้อยลงและส่งงานได้มากขึ้น",
   "migration.whatsNew.features.interface.title": "อินเทอร์เฟซที่กระชับ",
   "migration.whatsNew.features.interface.detail": "สิ่งรบกวนน้อยลง อ่านง่ายและรวดเร็วขึ้น",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "ตัวจัดการตัวแทน",
   "migration.whatsNew.features.agentManager.detail":
     "อินเทอร์เฟซรวมสำหรับการเรียกใช้เอเจนต์หลายตัวพร้อมกัน แต่ละตัวบน worktree ของตัวเอง — ติดตามความคืบหน้า สลับบริบท และตรวจสอบการเปลี่ยนแปลงได้ในที่เดียว",
   "migration.whatsNew.features.foundation.title": "รากฐานที่ใช้ร่วมกัน",
@@ -1243,7 +1257,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "เข้ากันไม่ได้กับสถาปัตยกรรมใหม่",
   "migration.migrate.button": "ย้ายการตั้งค่า",
   "migration.migrate.skip": "ข้าม",
-  "migration.migrate.back": "ย้อนกลับ",
   "migration.migrate.keysDetected": "ตรวจพบ {{count}} คีย์",
   "migration.migrate.serversConfigured": "กำหนดค่า {{count}} เซิร์ฟเวอร์",
   "migration.migrate.modesFound": "พบ {{count}} โหมด",
@@ -1264,6 +1277,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "การดำเนินการนี้จะลบการตั้งค่าเดิมจากที่เก็บข้อมูล VS Code คุณจะไม่สามารถเรียกใช้การย้ายข้อมูลนี้ได้อีก",
   "migration.complete.done": "เสร็จสิ้น",
+  "migration.migrate.sessionsDetected": "ตรวจพบ {{count}} เซสชัน",
+  "migration.error.sessionFailed": "การย้ายเซสชันล้มเหลว",
+  "migration.error.continue": "ดำเนินการต่อ",
+  "migration.error.action.copy": "คัดลอก",
+  "migration.error.toast.copied": "คัดลอกข้อผิดพลาดไปยังคลิปบอร์ดแล้ว",
   // legacy-migration end
 
   "error.details.show": "รายละเอียด",
@@ -1277,8 +1295,7 @@ export const dict = {
   "settings.saveBar.warning.many": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "settings.saveBar.saveAnyway": "บันทึกต่อไป",
   "settings.saveBar.cancel": "ยกเลิก",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "ถัดไป",
+  "notifications.action.close": "ปิด",
+  "notifications.action.tryModel": "ลองใช้ {{model}}",
 }

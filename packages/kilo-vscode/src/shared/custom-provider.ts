@@ -51,6 +51,10 @@ export type SanitizedProviderConfig = {
   models: Record<string, { name: string }>
 }
 
+export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
+
+export const MASKED_CUSTOM_PROVIDER_KEY = "********"
+
 type Issue = { error: string; issue?: z.ZodIssue }
 
 function fail(error: string, issue?: z.ZodIssue): Issue {
@@ -76,6 +80,18 @@ export function parseCustomProviderSecret(raw: string): { value: { apiKey?: stri
   if (result.success) return { value: { env: result.data } }
   const issue = result.error.issues[0]
   return fail(issue?.message ?? INVALID_ENV, issue)
+}
+
+export function resolveCustomProviderAuth(apiKey: string | undefined, changed: boolean): CustomProviderAuthChange {
+  const key = apiKey?.trim()
+  if (!changed) return { mode: "preserve" }
+  if (key) return { mode: "set", key }
+  return { mode: "clear" }
+}
+
+export function resolveCustomProviderKey(auth: "api" | "oauth" | "wellknown" | undefined) {
+  if (auth !== "api") return ""
+  return MASKED_CUSTOM_PROVIDER_KEY
 }
 
 export function normalizeCustomProviderConfig(

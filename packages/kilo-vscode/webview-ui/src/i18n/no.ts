@@ -81,11 +81,11 @@ export const dict = {
   "command.session.undo.description": "Angre siste melding",
   "command.session.redo": "Gjør om",
   "command.session.redo.description": "Gjør om siste angrede melding",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} melding angret",
+  "revert.banner.count_other": "{{count}} meldinger angret",
+  "revert.banner.redo": "Gjenta",
+  "revert.banner.redo.all": "Gjenta alt",
+  "revert.banner.hint": "Send en ny melding for å gjøre dette permanent",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
   "command.session.compact": "Komprimer sesjon",
   "command.session.compact.description": "Oppsummer sesjonen for å redusere kontekststørrelsen",
@@ -168,6 +168,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Nyeste",
   "model.group.recommended": "Anbefalt",
+  "model.group.favorites": "Favoritter",
+  "model.favorite.add": "Legg til i favoritter",
+  "model.favorite.remove": "Fjern fra favoritter",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -472,7 +475,7 @@ export const dict = {
   "ui.permission.toolLabel.globSearch": "Glob-søk",
   "ui.permission.toolLabel.grepSearch": "Grep-søk",
   "ui.permission.toolLabel.webSearch": "Websøk",
-  "ui.permission.toolLabel.list": "List",
+  "ui.permission.toolLabel.list": "Liste",
   "ui.permission.toolLabel.externalDirectory": "Les ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhenting",
   "ui.permission.toolLabel.task": "Oppgave",
@@ -846,8 +849,8 @@ export const dict = {
   "session.showHistory": "Vis historikk",
   "session.search.placeholder": "Søk i sesjoner...",
   "session.empty": "Ingen sesjoner ennå. Klikk + for å starte en ny samtale.",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "Lokal",
+  "session.tab.cloud": "Sky",
   "session.cloud.repoOnly": "Kun dette repositoriet",
   "session.cloud.import": "Importer fra skyen",
   "feedback.button": "Tilbakemelding & støtte",
@@ -949,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
+  "context.stats.thisSession": "Denne sesjonen",
 
   "time.justNow": "akkurat nå",
   "time.minutesAgo": "{{count}} min siden",
@@ -992,8 +996,13 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Innstillinger importert. Gjennomgå endringene ovenfor, og klikk deretter på Lagre.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetri",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetri styres av den innebygde telemetri-innstillingen i VS Code. For å deaktivere den, gå til Innstillinger > Telemetry > Telemetry Level og sett den til "off". Start VS Code på nytt for å ta i bruk endringen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Åpne innstillinger for telemetri",
+
   "settings.agentBehaviour.subtab.modes": "Moduser",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
   "settings.agentBehaviour.subtab.workflows": "Arbeidsflyter",
@@ -1079,6 +1088,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Deaktiver denne agenten fullstendig — den vises ikke noe sted",
   "settings.agentBehaviour.badge.hidden": "skjult",
   "settings.agentBehaviour.badge.disabled": "deaktivert",
+  "settings.agentBehaviour.badge.deprecated": "Utdatert",
   "settings.agentBehaviour.discoveredSkills": "Oppdagede ferdigheter",
   "settings.agentBehaviour.noSkillsFound":
     "Ingen ferdigheter funnet. Legg til ferdighetsmappestier eller URLer nedenfor for å gjøre ferdigheter tilgjengelige.",
@@ -1113,7 +1123,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Systemprompt",
   "settings.agentBehaviour.editMode.save": "Ferdig",
   "settings.agentBehaviour.editMode.back": "Tilbake til listen",
-  "settings.agentBehaviour.editMode.native": "Innebygd modus (skrivebeskyttet definisjon)",
+  "settings.agentBehaviour.editMode.native":
+    "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
   "settings.agentBehaviour.removeMode.title": "Fjern modus",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1145,6 +1156,10 @@ export const dict = {
     "Regler er instruksjonsfiler som styrer agentens atferd. De inkluderes i systemprompten for hver samtale. Legg til filstier nedenfor for å inkludere ekstra regler.",
   "settings.agentBehaviour.instructionFiles": "Ekstra instruksjonsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til ekstra instruksjonsfiler i systemprompten",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
+  "settings.agentBehaviour.claudeCompat.title": "Last inn Claude Code-filer",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Last inn CLAUDE.md-instruksjoner og ferdigheter fra Claude Code-konfigurasjonsmappen din i økter. Aktiver dette hvis du vil at Kilo skal bruke dine Claude Code-instruksjoner og ferdigheter. Krever omstart.",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",
@@ -1235,14 +1250,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Hva er nytt i Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Vi har bygget utvidelsen på nytt med et raskere og mer effektivt grunnlag.",
   "migration.whatsNew.features.performance.title": "Raskere agentytelse",
   "migration.whatsNew.features.performance.detail":
     "Parallelle verktøykall og underagenter lar agenten din håndtere mer samtidig — slik at du bruker mindre tid på å vente og mer tid på å levere.",
   "migration.whatsNew.features.interface.title": "Strømlinjeformet grensesnitt",
   "migration.whatsNew.features.interface.detail": "Færre forstyrrelser, enklere og raskere å lese.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Agentbehandling",
   "migration.whatsNew.features.agentManager.detail":
     "Et samlet grensesnitt for å kjøre flere agenter parallelt, hver på sitt eget worktree — overvåk fremdrift, bytt kontekst og gjennomgå endringer på ett sted.",
   "migration.whatsNew.features.foundation.title": "Delt grunnlag",
@@ -1260,7 +1274,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Ikke kompatibel med den nye arkitekturen",
   "migration.migrate.button": "Migrer innstillinger",
   "migration.migrate.skip": "Hopp over",
-  "migration.migrate.back": "Tilbake",
   "migration.migrate.keysDetected": "{{count}} nøkler oppdaget",
   "migration.migrate.serversConfigured": "{{count}} server(e) konfigurert",
   "migration.migrate.modesFound": "{{count}} modus(er) funnet",
@@ -1281,6 +1294,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dette fjerner de gamle innstillingene fra VS Code-lagringen. Du vil ikke kunne kjøre denne migreringen på nytt.",
   "migration.complete.done": "Ferdig",
+  "migration.migrate.sessionsDetected": "{{count}} økter oppdaget",
+  "migration.error.sessionFailed": "Øktmigrering mislyktes",
+  "migration.error.continue": "Fortsett",
+  "migration.error.action.copy": "Kopier",
+  "migration.error.toast.copied": "Feil kopiert til utklippstavlen",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
@@ -1292,8 +1310,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Neste",
+  "notifications.action.close": "Lukk",
+  "notifications.action.tryModel": "Prøv {{model}}",
 } satisfies Partial<Record<Keys, string>>

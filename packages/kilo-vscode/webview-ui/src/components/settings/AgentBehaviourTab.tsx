@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, For, Show, onCleanup } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -55,7 +55,17 @@ const AgentBehaviourTab: Component = () => {
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
+  const [claudeCompat, setClaudeCompat] = createSignal(false)
   const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
+
+  // Load the VS Code setting for Claude Code compatibility
+  vscode.postMessage({ type: "requestClaudeCompatSetting" })
+  const unsubClaudeCompat = vscode.onMessage((msg) => {
+    if (msg.type === "claudeCompatSettingLoaded") {
+      setClaudeCompat(msg.enabled)
+    }
+  })
+  onCleanup(unsubClaudeCompat)
 
   // Agent view state
   const [agentView, setAgentView] = createSignal<AgentView>("list")
@@ -349,6 +359,7 @@ const AgentBehaviourTab: Component = () => {
                 const agentCfg = () => config().agent?.[name] ?? {}
                 const disabled = () => agentCfg().disable ?? false
                 const hidden = () => agentCfg().hidden ?? false
+                const deprecated = () => agent()?.deprecated ?? false
                 return (
                   <div
                     style={{
@@ -409,6 +420,19 @@ const AgentBehaviourTab: Component = () => {
                             }}
                           >
                             {language.t("settings.agentBehaviour.badge.disabled")}
+                          </span>
+                        </Show>
+                        <Show when={deprecated()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--vscode-editorWarning-foreground, #cca700)",
+                              color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.deprecated")}
                           </span>
                         </Show>
                       </div>
@@ -984,6 +1008,29 @@ const AgentBehaviourTab: Component = () => {
             </div>
           )}
         </For>
+      </Card>
+
+      {/* Claude Code compatibility */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.agentBehaviour.claudeCompat.heading")}
+      </h4>
+      <Card>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.claudeCompat.title")}
+          description={language.t("settings.agentBehaviour.claudeCompat.description")}
+          last
+        >
+          <Switch
+            checked={claudeCompat()}
+            onChange={(checked: boolean) => {
+              setClaudeCompat(checked)
+              vscode.postMessage({ type: "updateSetting", key: "claudeCodeCompat", value: checked })
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.claudeCompat.title")}
+          </Switch>
+        </SettingsRow>
       </Card>
     </div>
   )

@@ -36,10 +36,9 @@ const targets = [
 const binDir = join(import.meta.dir, "..", "bin")
 const distDir = join(import.meta.dir, "..", "dist")
 const outDir = join(import.meta.dir, "..", "out")
-const outDirProd = join(import.meta.dir, "..", "out", "prod")
 
 console.log("\n🧹 Cleaning up directories...")
-for (const dir of [binDir, distDir, outDir, outDirProd]) {
+for (const dir of [binDir, distDir, outDir]) {
   if (existsSync(dir)) {
     rmSync(dir, { recursive: true, force: true })
     console.log(`  ✓ Cleaned ${dir}`)
@@ -48,7 +47,6 @@ for (const dir of [binDir, distDir, outDir, outDirProd]) {
 
 mkdirSync(outDir, { recursive: true })
 mkdirSync(distDir, { recursive: true })
-mkdirSync(outDirProd, { recursive: true })
 
 console.log("\n🔄 Rebuilding SDK types (ensures dist/ is in sync with server API)...")
 await $`bun run --cwd ${join(import.meta.dir, "..", "..", "sdk", "js")} build`
@@ -84,18 +82,11 @@ for (const config of targets) {
 
   console.log(`  📦 Packaging .vsix for ${config.target}...`)
   const vsixPath = join(outDir, `kilo-vscode-${config.target}.vsix`)
-  await $`vsce package --pre-release --no-dependencies --skip-license --target ${config.target} -o ${vsixPath}`.env({
+  await $`vsce package --no-dependencies --skip-license --target ${config.target} -o ${vsixPath}`.env({
     ...process.env,
     npm_config_ignore_scripts: "true",
   })
   console.log(`  ✅ Created ${vsixPath}`)
-
-  const prodVsixPath = join(outDirProd, `kilo-vscode-${config.target}.vsix`)
-  await $`vsce package --no-dependencies --skip-license --target ${config.target} -o ${prodVsixPath}`.env({
-    ...process.env,
-    npm_config_ignore_scripts: "true",
-  })
-  console.log(`  ✅ Created ${prodVsixPath}`)
 }
 
 console.log("\n✨ All VSIX packages built successfully!")

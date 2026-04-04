@@ -71,7 +71,12 @@ export namespace RemoteProtocol {
   })
   export type System = z.infer<typeof System>
 
-  export const Inbound = z.discriminatedUnion("type", [Subscribe, Unsubscribe, Command, System])
+  export const HeartbeatAck = z.object({
+    type: z.literal("heartbeat_ack"),
+  })
+  export type HeartbeatAck = z.infer<typeof HeartbeatAck>
+
+  export const Inbound = z.discriminatedUnion("type", [Subscribe, Unsubscribe, Command, System, HeartbeatAck])
   export type Inbound = z.infer<typeof Inbound>
 
   /** Lightweight schema for diagnostic logging before full parse. */

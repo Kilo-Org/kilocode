@@ -10,6 +10,7 @@ import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
+import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
@@ -205,7 +206,9 @@ export namespace KiloSessions {
       await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
     })
 
-    if (remoteEnabled) enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
+    const cfg = await Config.getGlobal()
+    if (remoteEnabled || cfg.remote_control)
+      enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
     Bus.subscribe(Bus.InstanceDisposed, () => disableRemote())
   }
 

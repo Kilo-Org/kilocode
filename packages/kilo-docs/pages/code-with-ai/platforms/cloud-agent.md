@@ -112,30 +112,43 @@ Cloud Agents are great for:
 - **Automated refactors or tech debt cleanup** driven by Kilo Code
 - **Offloading CI-like tasks**, experiments, or batch updates
 
-## Webhook Triggers
+## Triggers
 
-Webhook triggers allow you to initiate cloud agent sessions via HTTP requests. This enables integration with external services and automation workflows.
+Triggers allow you to initiate cloud agent sessions automatically, either via HTTP requests (webhooks) or on a recurring schedule. This enables integration with external services and time-based automation workflows.
 
 {% callout type="note" %}
-Webhook triggers are currently in beta and subject to change.
+Triggers are currently in beta and subject to change.
 {% /callout %}
 
-### Accessing Webhooks
+### Accessing Triggers
 
-Webhook triggers are accessible from the main sidebar with an entry named **Webhook** and link to [https://app.kilo.ai/cloud/webhooks](https://app.kilo.ai/cloud/webhooks) for personal accounts. Organization-level webhook configurations are available through your organization's sidebar.
+Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.kilo.ai/cloud/triggers](https://app.kilo.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar.
+
+### Activation Modes
+
+When creating a trigger, you choose an **activation mode** that cannot be changed after creation:
+
+- **Webhook**: Fires when an external service sends an HTTP request to the trigger's URL
+- **Scheduled**: Fires on a recurring schedule defined by a cron expression
 
 ### Configuration
 
-Webhook triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
+Triggers utilize [agent environment profiles](#agent-environment-profiles) to configure the execution environment for triggered sessions. The agent resolves the profile at runtime, so profile updates apply automatically to future executions. Profiles referenced by triggers cannot be deleted until those triggers are updated or removed.
 
-Webhook triggers do not support manual env var or setup command overrides at this time.
+Triggers do not support manual env var or setup command overrides at this time.
+
+### Scheduled Triggers
+
+Scheduled triggers fire on a recurring schedule using cron expressions. You can configure them with a simple frequency picker (every 10 minutes, hourly, daily, weekly) or enter a raw cron expression for full control. Each trigger has a configurable timezone (default: UTC) and handles daylight saving time transitions automatically.
+
+The minimum schedule interval is 10 minutes. Scheduled triggers use `{{scheduledTime}}` and `{{timestamp}}` as prompt template variables (webhook-specific variables like `{{body}}` are not available since there is no inbound HTTP request).
 
 ### Trigger Limits and Guidance
 
-Webhook triggers are designed for low-volume invocations from trusted sources and are best suited for short-lived tasks.
+Triggers are designed for low-volume invocations from trusted sources and are best suited for short-lived tasks.
 
-- **Personal webhooks**: Execute in the same sandbox container as a user's Cloud Agent sessions. You can view/join invocations live.
-- **Organization webhooks**: Execute in dedicated compute resources as a bot user, similar to Code Review sessions. You can share/fork the sessions when they're complete.
+- **Personal triggers**: Execute in the same sandbox container as a user's Cloud Agent sessions. You can view/join invocations live.
+- **Organization triggers**: Execute in dedicated compute resources as a bot user, similar to Code Review sessions. You can share/fork the sessions when they're complete.
 
 Additional limits:
 
@@ -144,11 +157,13 @@ Additional limits:
 - **Retention**: only the **most recent 100 requests per trigger** are retained
 - **In-flight cap**: at most **20 requests per trigger** can be in `captured` or `inprogress` at once (returns `429`)
 
-The webhook endpoint will return rate limit responses when the number of queued or processing requests exceeds system capacity.
+The trigger endpoint will return rate limit responses when the number of queued or processing requests exceeds system capacity.
 
-### Webhook Prompt Template Variables
+### Prompt Template Variables
 
-You can reference request data in a trigger’s prompt template using these placeholders:
+You can reference data in a trigger’s prompt template using these placeholders.
+
+**Webhook triggers:**
 
 - `{{body}}` - raw request body (string)
 - `{{bodyJson}}` - pretty-printed JSON if parseable, otherwise raw body
@@ -157,6 +172,11 @@ You can reference request data in a trigger’s prompt template using these plac
 - `{{headers}}` - JSON-formatted request headers
 - `{{query}}` - query string without leading `?` (empty if none)
 - `{{sourceIp}}` - client IP if provided (falls back to `unknown`)
+- `{{timestamp}}` - capture timestamp (ISO string)
+
+**Scheduled triggers:**
+
+- `{{scheduledTime}}` - the time the schedule fired (ISO string)
 - `{{timestamp}}` - capture timestamp (ISO string)
 
 {% callout type="warning" title="Security Considerations" %}

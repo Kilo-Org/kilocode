@@ -27,8 +27,8 @@ export const DEFAULT_FREE_MODEL = "kilo-auto/free"
 /** Token expiration duration in milliseconds (1 year) */
 export const TOKEN_EXPIRATION_MS = 365 * 24 * 60 * 60 * 1000
 
-/** User-Agent header value for requests */
-export const USER_AGENT = "opencode-kilo-provider"
+/** User-Agent header base value for requests */
+export const USER_AGENT_BASE = "opencode-kilo-provider"
 
 /** Content-Type header value for requests */
 export const CONTENT_TYPE = "application/json"

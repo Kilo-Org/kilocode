@@ -182,6 +182,15 @@ a:hover {
   color: #dcdcaa;
 }
 
+/* Blockquotes */
+.article-content blockquote {
+  border-left: 3px solid var(--border-color);
+  margin: 1em 0;
+  padding: 0.25em 1em;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 /* Lists - Override Tailwind's reset to restore default list styling */
 .article-content ul,
 .article-content ol {

@@ -7,7 +7,6 @@ import { Script } from "@opencode-ai/script"
 console.log(`Publishing VSCode extension for release: v${Script.version}`)
 
 const outDir = process.env.VSIX_DIR || join(import.meta.dir, "..", "out")
-const outDirProd = join(outDir, "prod")
 
 console.log(`Using VSIX directory: ${outDir}`)
 
@@ -40,13 +39,12 @@ console.log(`\nFound ${vsixFiles.length} VSIX files`)
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
   console.log(`\n🚀 Publishing ${target} to VS Code Marketplace...`)
-  await $`vsce publish --pre-release --packagePath ${vsixPath}`
+  await $`vsce publish --packagePath ${vsixPath}`
   console.log(`  ✅ Published ${target} to VS Code Marketplace`)
 
-  const prodVsixPath = join(outDirProd, `kilo-vscode-${target}.vsix`)
   console.log(`\n📤 Publishing ${target} to Open VSX...`)
-  await $`npx ovsx publish --pat ${process.env.OPENVSX_TOKEN} --packagePath ${prodVsixPath}`
-  console.log(`  ✅ Published Prod ${target} to Open VSX`)
+  await $`npx ovsx publish --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`
+  console.log(`  ✅ Published ${target} to Open VSX`)
 }
 
 if (Script.release) {

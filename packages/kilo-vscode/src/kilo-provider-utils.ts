@@ -61,6 +61,7 @@ export function getErrorMessage(error: unknown): string {
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
+    parentID: session.parentID ?? null,
     title: session.title,
     createdAt: new Date(session.time.created).toISOString(),
     updatedAt: new Date(session.time.updated).toISOString(),
@@ -224,7 +225,7 @@ export type WebviewMessage =
   | { type: "questionResolved"; requestID: string }
   | { type: "permissionResolved"; permissionID: string }
   | { type: "permissionError"; permissionID: string }
-  | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }

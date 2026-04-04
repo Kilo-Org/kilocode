@@ -1,0 +1,8 @@
+{
+  "name": "@kilocode/kilo-jetbrains",
+  "private": true,
+  "scripts": {
+    "build": "bun script/build.ts",
+    "build:production": "bun script/build.ts --production"
+  }
+}

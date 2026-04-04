@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "Ücretsiz",
   "model.tag.latest": "En yeni",
   "model.group.recommended": "Önerilen",
+  "model.group.favorites": "Favoriler",
+  "model.favorite.add": "Favorilere ekle",
+  "model.favorite.remove": "Favorilerden çıkar",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -948,6 +951,7 @@ export const dict = {
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
+  "context.stats.thisSession": "Bu oturum",
 
   "time.justNow": "az önce",
   "time.minutesAgo": "{{count}} dk önce",
@@ -991,6 +995,11 @@ export const dict = {
     "Bu dosya Kilo'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
   "settings.aboutKiloCode.importSettings.success":
     "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetri",
+  "settings.aboutKiloCode.telemetry.description":
+    "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
   "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
@@ -1083,6 +1092,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Bu ajanı tamamen devre dışı bırak — hiçbir yerde görünmeyecek",
   "settings.agentBehaviour.badge.hidden": "gizli",
   "settings.agentBehaviour.badge.disabled": "devre dışı",
+  "settings.agentBehaviour.badge.deprecated": "Kullanımdan kaldırılmış",
   "settings.agentBehaviour.discoveredSkills": "Keşfedilen Beceriler",
   "settings.agentBehaviour.noSkillsFound":
     "Keşfedilen beceri yok. Becerileri kullanılabilir kılmak için aşağıya beceri klasör yolları veya URL'ler ekleyin.",
@@ -1111,6 +1121,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Ek Talimat Dosyaları",
   "settings.agentBehaviour.instructionFiles.description":
     "Sistem komutuna dahil edilen ek talimat dosyalarının yolları",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
@@ -1238,7 +1252,7 @@ export const dict = {
     "Paralel araç çağrıları ve alt ajanlar, ajanınızın aynı anda daha fazlasını yapmasını sağlar — böylece izlemek yerine daha fazla üretirsiniz.",
   "migration.whatsNew.features.interface.title": "Basitleştirilmiş Arayüz",
   "migration.whatsNew.features.interface.detail": "Daha az dikkat dağıtıcı, daha kolay ve hızlı okuma.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Ajan Yöneticisi",
   "migration.whatsNew.features.agentManager.detail":
     "Birden fazla ajanı paralel olarak çalıştırmak için birleşik bir arayüz, her biri kendi worktree'sinde — ilerlemeyi izleyin, bağlam değiştirin ve değişiklikleri tek bir yerden inceleyin.",
   "migration.whatsNew.features.foundation.title": "Paylaşılan Temel",
@@ -1256,7 +1270,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Yeni mimariyle uyumsuz",
   "migration.migrate.button": "Ayarları Taşı",
   "migration.migrate.skip": "Atla",
-  "migration.migrate.back": "Geri",
   "migration.migrate.keysDetected": "{{count}} anahtar algılandı",
   "migration.migrate.serversConfigured": "{{count}} sunucu yapılandırıldı",
   "migration.migrate.modesFound": "{{count}} mod bulundu",
@@ -1277,6 +1290,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Bu, VS Code depolamasından eski ayarları kaldırır. Bu taşımayı yeniden çalıştıramazsınız.",
   "migration.complete.done": "Bitti",
+  "migration.migrate.sessionsDetected": "{{count}} oturum bulundu",
+  "migration.error.sessionFailed": "Oturum taşıma işlemi başarısız oldu",
+  "migration.error.continue": "Devam et",
+  "migration.error.action.copy": "Kopyala",
+  "migration.error.toast.copied": "Hata panoya kopyalandı",
   // legacy-migration end
 
   "error.details.show": "Ayrıntılar",
@@ -1291,8 +1309,34 @@ export const dict = {
   "settings.saveBar.warning.many": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "settings.saveBar.saveAnyway": "Yine de kaydet",
   "settings.saveBar.cancel": "İptal",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Sonraki",
+  "notifications.action.close": "Kapat",
+  "notifications.action.tryModel": "Dene {{model}}",
+  // Missing translations - English fallbacks until translated
+  "profile.switchingAccount": "Hesap değiştiriliyor…",
+  "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
+  "settings.agentBehaviour.createMode.button": "Oluştur",
+  "settings.agentBehaviour.createMode.cancel": "İptal",
+  "settings.agentBehaviour.createMode.description": "Açıklama",
+  "settings.agentBehaviour.createMode.description.help": "Bu modun ne yaptığının kısa açıklaması.",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.name": "Ad",
+  "settings.agentBehaviour.createMode.name.description":
+    "Mod için benzersiz tanımlayıcı. Yalnızca küçük harf, rakam ve tire kullanın.",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Ad küçük harfle başlamalı ve yalnızca küçük harf, rakam ve tire içermelidir",
+  "settings.agentBehaviour.createMode.nameRequired": "Ad gereklidir",
+  "settings.agentBehaviour.createMode.nameTaken": "Bu adda bir mod zaten mevcut",
+  "settings.agentBehaviour.createMode.prompt": "Sistem İstemi",
+  "settings.agentBehaviour.createMode.prompt.help": "Bu modu kullanırken yapay zeka ajanı için talimatlar.",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.editMode": "Modu Düzenle",
+  "settings.agentBehaviour.editMode.back": "Listeye dön",
+  "settings.agentBehaviour.editMode.description": "Açıklama",
+  "settings.agentBehaviour.editMode.native": "Yerleşik mod (salt okunur tanım)",
+  "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
+  "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
+  "settings.agentBehaviour.editMode.save": "Tamam",
 }

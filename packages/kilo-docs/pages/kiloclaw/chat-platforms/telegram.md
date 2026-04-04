@@ -5,6 +5,8 @@ description: "Connect your KiloClaw agent to Telegram"
 
 # Telegram
 
+{% youtube url="https://youtu.be/hIfKz073hGw" title="Telegram Setup Guide" caption="How to connect your KiloClaw agent to Telegram" /%}
+
 Connect your KiloClaw agent to Telegram by creating a bot via BotFather and linking it to your KiloClaw dashboard.
 
 1. Open Telegram and search for [@BotFather](https://t.me/BotFather)

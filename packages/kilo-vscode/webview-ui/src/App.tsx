@@ -225,12 +225,13 @@ const AppContent: Component = () => {
       <Show
         when={migrationNeeded()}
         fallback={
-          <Switch fallback={<ChatView continueInWorktree />}>
+          <Switch fallback={<ChatView continueInWorktree promptBoxId="sidebar:fallback" />}>
             <Match when={currentView() === "newTask"}>
               <ChatView
                 onSelectSession={handleSelectSession}
                 onShowHistory={() => setCurrentView("history")}
                 continueInWorktree
+                promptBoxId="sidebar:new-task"
               />
             </Match>
             <Match when={currentView() === "marketplace"}>

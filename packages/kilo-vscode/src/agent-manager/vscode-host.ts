@@ -152,8 +152,18 @@ export class VscodeHost implements Host {
     return this.connectionService.getServerInfo()?.port
   }
 
+  copyToClipboard(text: string): void {
+    void vscode.env.clipboard.writeText(text)
+  }
+
   capture(event: string, properties?: Record<string, unknown>): void {
     TelemetryProxy.capture(event as TelemetryEventName, properties)
+  }
+
+  refreshGit(): void {
+    // Trigger VS Code's built-in git extension to re-scan repositories.
+    // This picks up worktrees whose gitdir refs were just rewritten by migration.
+    void vscode.commands.executeCommand("git.refresh")
   }
 
   dispose(): void {}

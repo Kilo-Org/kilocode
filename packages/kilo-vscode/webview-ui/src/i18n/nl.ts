@@ -166,6 +166,9 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.latest": "Nieuwste",
   "model.group.recommended": "Aanbevolen",
+  "model.group.favorites": "Favorieten",
+  "model.favorite.add": "Toevoegen aan favorieten",
+  "model.favorite.remove": "Verwijderen uit favorieten",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -364,6 +367,7 @@ export const dict = {
   "language.br": "Português (Brasil)",
   "language.bs": "Bosanski",
   "language.th": "ไทย",
+  "language.tr": "Türkçe",
 
   "toast.language.title": "Taal",
   "toast.language.description": "Omgeschakeld naar {{language}}",
@@ -734,7 +738,7 @@ export const dict = {
   "provider.custom.description.prefix": "Configureer een OpenAI-compatibele provider. Zie de ",
   "provider.custom.description.link": "provider configuratie documentatie",
   "provider.custom.description.suffix": ".",
-  "provider.custom.field.providerID.label": "Provider ID",
+  "provider.custom.field.providerID.label": "Provider-ID",
   "provider.custom.field.providerID.placeholder": "mijnprovider",
   "provider.custom.field.providerID.description": "Kleine letters, cijfers, koppeltekens of onderstrepingstekens",
   "provider.custom.field.name.label": "Weergavenaam",
@@ -783,7 +787,7 @@ export const dict = {
   "provider.custom.error.duplicate": "Duplicaat",
   "settings.models.title": "Modellen",
   "settings.models.description": "Model-instellingen zullen hier configureerbaar zijn.",
-  "settings.agents.title": "Agents",
+  "settings.agents.title": "Agenten",
   "settings.agents.description": "Agent-instellingen zullen hier configureerbaar zijn.",
   "settings.commands.title": "Opdrachten",
   "settings.commands.description": "Opdracht-instellingen zullen hier configureerbaar zijn.",
@@ -842,7 +846,7 @@ export const dict = {
   "session.showHistory": "Geschiedenis weergeven",
   "session.search.placeholder": "Zoek sessies...",
   "session.empty": "Nog geen sessies. Klik op + om een nieuw gesprek te starten.",
-  "session.tab.local": "Local",
+  "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Alleen deze repository",
   "session.cloud.import": "Importeer uit de cloud",
@@ -876,9 +880,9 @@ export const dict = {
   "workspace.delete.title": "Verwijder workspace",
   "workspace.delete.confirm": 'Workspace "{{name}}" verwijderen?',
   "workspace.delete.button": "Verwijder workspace",
-  "workspace.reset.title": "Reset workspace",
+  "workspace.reset.title": "Werkruimte herstellen",
   "workspace.reset.confirm": 'Workspace "{{name}}" resetten?',
-  "workspace.reset.button": "Reset workspace",
+  "workspace.reset.button": "Werkruimte herstellen",
   "workspace.reset.archived.none": "Er worden geen actieve sessies gearchiveerd.",
   "workspace.reset.archived.one": "1 sessie wordt gearchiveerd.",
   "workspace.reset.archived.many": "{{count}} sessies worden gearchiveerd.",
@@ -919,7 +923,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
   "settings.browser.title": "Browser",
-  "settings.checkpoints.title": "Checkpoints",
+  "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
   "settings.notifications.title": "Meldingen",
@@ -945,6 +949,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",
   "time.minutesAgo": "{{count}} min geleden",
@@ -991,8 +996,13 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Instellingen geïmporteerd. Controleer de bovenstaande wijzigingen en klik vervolgens op Opslaan.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetrie",
+  "settings.aboutKiloCode.telemetry.description":
+    'Telemetrie wordt beheerd door de ingebouwde telemetrie-instelling van VS Code. Om dit uit te schakelen, gaat u naar Instellingen > Telemetrie > Telemetrieniveau en stelt u dit in op "off". Herstart VS Code om de wijziging toe te passen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-instellingen openen",
+
   "settings.agentBehaviour.subtab.modes": "Modi",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP Servers",
   "settings.agentBehaviour.subtab.rules": "Regels",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -1077,7 +1087,7 @@ export const dict = {
   "settings.agentBehaviour.temperature.title": "Temperatuur",
   "settings.agentBehaviour.temperature.description": "Sampling temperatuur (0-2)",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
+  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
   "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
   "settings.agentBehaviour.hidden.title": "Verborgen",
@@ -1086,6 +1096,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Schakel deze agent volledig uit — deze verschijnt nergens",
   "settings.agentBehaviour.badge.hidden": "verborgen",
   "settings.agentBehaviour.badge.disabled": "uitgeschakeld",
+  "settings.agentBehaviour.badge.deprecated": "Verouderd",
   "settings.agentBehaviour.discoveredSkills": "Ontdekte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Geen skills ontdekt. Voeg hieronder skill mappaden of URL's toe om skills beschikbaar te maken.",
@@ -1114,6 +1125,10 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Aanvullende Instructiebestanden",
   "settings.agentBehaviour.instructionFiles.description":
     "Paden naar aanvullende instructiebestanden die zijn opgenomen in de systeem prompt",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code-compatibiliteit",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code-bestanden laden",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Laad CLAUDE.md instructies en vaardigheden uit je Claude Code configuratiemap in sessies. Schakel dit in als je wilt dat Kilo je Claude Code instructies en vaardigheden gebruikt. Herstart vereist.",
   "settings.agentBehaviour.removeMcp.title": "Verwijder MCP-server",
   "settings.agentBehaviour.removeMcp.confirm":
     'MCP-server "{{name}}" verwijderen? Dit zal deze uit je configuratie verwijderen.',
@@ -1238,14 +1253,13 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Wat is er Nieuw in Kilo Code",
-  "migration.whatsNew.badge": "Bèta",
   "migration.whatsNew.subtitle": "We hebben de extensie opnieuw opgebouwd op een snellere, efficiëntere basis.",
   "migration.whatsNew.features.performance.title": "Snellere Agent Prestaties",
   "migration.whatsNew.features.performance.detail":
     "Parallelle tool calls en subagents laten je agent meer tegelijk aanpakken — zodat je minder tijd besteedt aan wachten en meer tijd aan releasen.",
   "migration.whatsNew.features.interface.title": "Gestroomlijnde Interface",
   "migration.whatsNew.features.interface.detail": "Minder afleiding, makkelijker en sneller te lezen.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Agentenbeheer",
   "migration.whatsNew.features.agentManager.detail":
     "Een uniforme interface voor het parallel uitvoeren van meerdere agents, elk op zijn eigen worktree — monitor de voortgang, wissel van context en bekijk wijzigingen op één plek.",
   "migration.whatsNew.features.foundation.title": "Gedeelde Basis",
@@ -1264,7 +1278,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Niet compatibel met de nieuwe architectuur",
   "migration.migrate.button": "Migreer Instellingen",
   "migration.migrate.skip": "Overslaan",
-  "migration.migrate.back": "Terug",
   "migration.migrate.keysDetected": "{{count}} sleutels gedetecteerd",
   "migration.migrate.serversConfigured": "{{count}} server(s) geconfigureerd",
   "migration.migrate.modesFound": "{{count}} modus(sen) gevonden",
@@ -1285,6 +1298,11 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dit verwijdert de oude instellingen uit de VS Code-opslag. U zult deze migratie niet opnieuw kunnen uitvoeren.",
   "migration.complete.done": "Klaar",
+  "migration.migrate.sessionsDetected": "{{count}} sessies gedetecteerd",
+  "migration.error.sessionFailed": "Sessiemigratie is mislukt",
+  "migration.error.continue": "Doorgaan",
+  "migration.error.action.copy": "Kopiëren",
+  "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1299,8 +1317,33 @@ export const dict = {
   "settings.saveBar.warning.many": "Meerdere sessies zijn actief en worden onderbroken",
   "settings.saveBar.saveAnyway": "Toch opslaan",
   "settings.saveBar.cancel": "Annuleren",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Volgende",
+  "notifications.action.close": "Sluiten",
+  "notifications.action.tryModel": "Probeer {{model}}",
+  // Missing translations - English fallbacks until translated
+  "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
+  "settings.agentBehaviour.createMode.button": "Aanmaken",
+  "settings.agentBehaviour.createMode.cancel": "Annuleren",
+  "settings.agentBehaviour.createMode.description": "Beschrijving",
+  "settings.agentBehaviour.createMode.description.help": "Korte beschrijving van wat deze modus doet.",
+  "settings.agentBehaviour.createMode.description.placeholder": "e.g. Reviews code for quality and best practices",
+  "settings.agentBehaviour.createMode.name": "Naam",
+  "settings.agentBehaviour.createMode.name.description":
+    "Unieke identifier voor de modus. Gebruik alleen kleine letters, cijfers en koppeltekens.",
+  "settings.agentBehaviour.createMode.name.placeholder": "e.g. reviewer",
+  "settings.agentBehaviour.createMode.nameInvalid":
+    "Naam moet beginnen met een kleine letter en mag alleen kleine letters, cijfers en koppeltekens bevatten",
+  "settings.agentBehaviour.createMode.nameRequired": "Naam is verplicht",
+  "settings.agentBehaviour.createMode.nameTaken": "Er bestaat al een modus met deze naam",
+  "settings.agentBehaviour.createMode.prompt": "Systeemprompt",
+  "settings.agentBehaviour.createMode.prompt.help": "Instructies voor de AI-agent bij gebruik van deze modus.",
+  "settings.agentBehaviour.createMode.prompt.placeholder":
+    "e.g. You are a code reviewer. Focus on code quality, best practices, and potential bugs.",
+  "settings.agentBehaviour.editMode": "Modus bewerken",
+  "settings.agentBehaviour.editMode.back": "Terug naar lijst",
+  "settings.agentBehaviour.editMode.description": "Beschrijving",
+  "settings.agentBehaviour.editMode.native": "Ingebouwde modus (alleen-lezen definitie)",
+  "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
+  "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
+  "settings.agentBehaviour.editMode.save": "Klaar",
 }

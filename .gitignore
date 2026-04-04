@@ -4,7 +4,10 @@ node_modules
 .worktrees
 .sst
 .env
-.idea
+.idea/*
+!.idea/gradle.xml
+!.idea/.run
+.idea/*.iml
 .vscode/*
 !.vscode/extensions.json
 !.vscode/launch.json

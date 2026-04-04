@@ -15,6 +15,7 @@ import { dict as ru } from "./ru"
 import { dict as th } from "./th"
 import { dict as zh } from "./zh"
 import { dict as tr } from "./tr"
+import { dict as uk } from "./uk"
 import { dict as zht } from "./zht"
 import { type dict as enDict } from "./en"
 
@@ -35,6 +36,7 @@ const bundles: Record<string, Record<string, string>> = {
   ru,
   th,
   tr,
+  uk,
   zh,
   zht,
 }

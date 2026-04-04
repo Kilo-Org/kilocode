@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
-import { DEFAULT_HEADERS } from "../headers.js"
+import { getDefaultHeaders } from "../headers.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
@@ -88,7 +88,7 @@ export async function fetchKiloModels(options?: {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
       headers: {
-        ...DEFAULT_HEADERS,
+        ...getDefaultHeaders(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
