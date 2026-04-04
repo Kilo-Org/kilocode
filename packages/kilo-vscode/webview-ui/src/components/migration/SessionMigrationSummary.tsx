@@ -3,7 +3,7 @@ import { For } from "solid-js"
 import SessionMigrationCard from "./SessionMigrationCard"
 import type { SessionSummaryState } from "./session-migration-summary-state"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { copy as formatCopy, errors, line } from "./session-migration-summary-format"
+import { errors, line, report } from "./session-migration-summary-format"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
@@ -11,16 +11,21 @@ interface SessionMigrationSummaryProps {
 
 const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props) => {
   const handleCopy = async () => {
-    const text = formatCopy(props.summary)
+    const text = report(props.summary)
     if (!text) return
     await navigator.clipboard.writeText(text)
-    showToast({ variant: "success", title: "Copied errors" })
+    showToast({ variant: "success", title: "Copied report" })
   }
 
   return (
     <SessionMigrationCard>
       <div class="migration-session-summary">
-        <div class="migration-session-summary__title">Summary:</div>
+        <div class="migration-session-summary__row">
+          <div class="migration-session-summary__title">Summary:</div>
+          <button type="button" class="migration-wizard__copy-btn" onClick={() => void handleCopy()}>
+            Copy Report
+          </button>
+        </div>
         <div class="migration-session-summary__section">
           <div class="migration-session-summary__label">- Successful</div>
           <div class="migration-session-summary__list">
@@ -40,14 +45,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </div>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__row">
-            <div class="migration-session-summary__label">- Errors</div>
-            {props.summary.errored.length > 0 && (
-              <button type="button" class="migration-wizard__copy-btn" onClick={() => void handleCopy()}>
-                Copy
-              </button>
-            )}
-          </div>
+          <div class="migration-session-summary__label">- Errors</div>
           <div class="migration-session-summary__list">
             <For each={errors(props.summary)}>{(item) => <div class="migration-session-summary__item">- {item}</div>}</For>
           </div>
