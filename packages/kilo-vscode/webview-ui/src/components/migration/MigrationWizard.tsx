@@ -11,6 +11,7 @@ import type { Component, JSX } from "solid-js"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import SessionMigrationProgress, { type SessionMigrationProgressState } from "./SessionMigrationProgress"
 import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
@@ -166,16 +167,6 @@ interface ProgressEntry {
   message?: string
 }
 
-interface SessionProgressState {
-  session: MigrationSessionInfo
-  index: number
-  total: number
-  phase: LegacyMigrationSessionProgressMessage["phase"]
-  current?: number
-  count?: number
-  error?: string
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -213,7 +204,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // Progress tracking
   const [progressEntries, setProgressEntries] = createSignal<ProgressEntry[]>([])
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
-  const [sessionProgress, setSessionProgress] = createSignal<SessionProgressState | undefined>(undefined)
+  const [sessionProgress, setSessionProgress] = createSignal<SessionMigrationProgressState | undefined>(undefined)
 
   // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
@@ -719,6 +710,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     <div class="desc">
                       {language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}
                     </div>
+                    <Show when={migrateSessions() && phase() !== "selecting" && sessionProgress()}>
+                      <SessionMigrationProgress progress={sessionProgress()!} />
+                    </Show>
                     <Show
                       when={
                         (phase() === "error" || phase() === "done") &&
