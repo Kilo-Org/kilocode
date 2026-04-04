@@ -34,6 +34,14 @@ export function detail(item: SessionSummaryItem) {
   return short(item.error)
 }
 
+export function errored(summary: SessionSummaryState) {
+  if (summary.errored.length === 0) return [{ kind: "row", text: "None" }]
+  return summary.errored.flatMap((item) => [
+    { kind: "row", text: line(item) },
+    { kind: "detail", text: detail(item) },
+  ])
+}
+
 export function errors(summary: SessionSummaryState) {
   return summary.errored.map(
     (item, index) =>

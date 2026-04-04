@@ -3,13 +3,19 @@ import { For } from "solid-js"
 import SessionMigrationCard from "./SessionMigrationCard"
 import type { SessionSummaryState } from "./session-migration-summary-state"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { detail, line, report } from "./session-migration-summary-format"
+import { errored, line, report } from "./session-migration-summary-format"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
 }
 
 const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props) => {
+  const label = (name: string, count: number, desc?: string) => {
+    const suffix = count > 0 ? ` (${count})` : ""
+    const extra = desc ? ` - ${desc}` : ""
+    return `${name}${extra}${suffix}:`
+  }
+
   const handleCopy = async () => {
     const text = report(props.summary)
     if (!text) return
@@ -27,7 +33,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </button>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">- Successful</div>
+          <div class="migration-session-summary__label">{label("Successful", props.summary.imported.length)}</div>
           <div class="migration-session-summary__list migration-session-summary__list--success">
             <For each={props.summary.imported.length > 0 ? props.summary.imported : [undefined]}>
               {(item) => <div class="migration-session-summary__item">{item ? line(item) : "None"}</div>}
@@ -35,7 +41,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </div>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">- Skipped</div>
+          <div class="migration-session-summary__label">{label("Skipped", props.summary.skipped.length, "Already migrated")}</div>
           <div class="migration-session-summary__list migration-session-summary__list--skipped">
             <For each={props.summary.skipped.length > 0 ? props.summary.skipped : [undefined]}>
               {(item) => <div class="migration-session-summary__item">{item ? line(item) : "None"}</div>}
@@ -43,17 +49,14 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </div>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">- Errored</div>
+          <div class="migration-session-summary__label">{label("Errored", props.summary.errored.length)}</div>
           <div class="migration-session-summary__list migration-session-summary__list--errored">
-            <For each={props.summary.errored.length > 0 ? props.summary.errored : [undefined]}>
+            <For each={errored(props.summary)}>
               {(item) =>
-                item ? (
-                  <div class="migration-session-summary__entry">
-                    <div class="migration-session-summary__item">{line(item)}</div>
-                    <div class="migration-session-summary__detail">{detail(item)}</div>
-                  </div>
+                item.kind === "detail" ? (
+                  <div class="migration-session-summary__detail">{item.text}</div>
                 ) : (
-                  <div class="migration-session-summary__item">None</div>
+                  <div class="migration-session-summary__item">{item.text}</div>
                 )
               }
             </For>

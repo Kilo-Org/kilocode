@@ -373,43 +373,47 @@
 .migration-session-summary__list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   max-height: calc(1.45em * 4 + 12px);
   overflow: auto;
-  padding-right: 4px;
+  padding-right: 2px;
   border: 1px solid var(--vscode-panel-border);
   border-radius: 8px;
   background: color-mix(in srgb, var(--vscode-editor-background) 96%, white 4%);
-  padding: 6px;
+  padding: 0;
 }
 
 .migration-session-summary__item {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--vscode-descriptionForeground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-height: 1.45em;
-  padding: 2px 4px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--vscode-editor-background) 92%, white 8%);
+  padding: 0 8px;
+  border-radius: 0;
+  background: transparent;
 }
 
-.migration-session-summary__entry {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.migration-session-summary__list > :nth-child(odd) {
+  background: color-mix(in srgb, var(--vscode-editor-background) 88%, white 12%);
+}
+
+.migration-session-summary__list > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--vscode-panel-border) 80%, transparent 20%);
 }
 
 .migration-session-summary__detail {
   margin-left: 14px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
   color: color-mix(in srgb, var(--vscode-descriptionForeground) 88%, white 12%);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 8px 2px 8px;
+  background: transparent;
 }
 
 .migration-session-summary__list--success {
