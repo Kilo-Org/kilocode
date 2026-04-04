@@ -30,6 +30,10 @@ export function short(error?: string) {
   return error.split("\n")[0]?.trim() || error
 }
 
+export function detail(item: SessionSummaryItem) {
+  return short(item.error)
+}
+
 export function errors(summary: SessionSummaryState) {
   return summary.errored.map(
     (item, index) =>
@@ -47,12 +51,10 @@ export function copy(summary: SessionSummaryState) {
 }
 
 export function report(summary: SessionSummaryState) {
-  const block = (title: string, items: SessionSummaryItem[]) => {
-    const rows = items.length > 0 ? items.map((item) => line(item)).join("\n") : "None"
+  const block = (title: string, items: SessionSummaryItem[], full?: boolean) => {
+    const rows = items.length > 0 ? items.map((item) => (full ? `${line(item)}\n  ${short(item.error)}` : line(item))).join("\n") : "None"
     return `${title}\n${rows}`
   }
-
-  const errs = errors(summary).length > 0 ? errors(summary).join("\n\n") : "None"
 
   return [
     "Summary:",
@@ -61,9 +63,7 @@ export function report(summary: SessionSummaryState) {
     "",
     block("Skipped", summary.skipped),
     "",
-    block("Errored", summary.errored),
-    "",
-    `Errors\n${errs}`,
+    block("Errored", summary.errored, true),
   ]
     .filter(Boolean)
     .join("\n")

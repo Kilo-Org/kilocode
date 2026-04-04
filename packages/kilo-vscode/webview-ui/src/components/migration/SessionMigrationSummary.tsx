@@ -3,7 +3,7 @@ import { For } from "solid-js"
 import SessionMigrationCard from "./SessionMigrationCard"
 import type { SessionSummaryState } from "./session-migration-summary-state"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import { errors, line, report } from "./session-migration-summary-format"
+import { detail, line, report } from "./session-migration-summary-format"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
@@ -46,15 +46,16 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           <div class="migration-session-summary__label">- Errored</div>
           <div class="migration-session-summary__list migration-session-summary__list--errored">
             <For each={props.summary.errored.length > 0 ? props.summary.errored : [undefined]}>
-              {(item) => <div class="migration-session-summary__item">{item ? line(item) : "None"}</div>}
-            </For>
-          </div>
-        </div>
-        <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">- Errors</div>
-          <div class="migration-session-summary__list migration-session-summary__list--errored">
-            <For each={errors(props.summary).length > 0 ? errors(props.summary) : ["None"]}>
-              {(item) => <div class="migration-session-summary__item">{item === "None" ? item : `- ${item}`}</div>}
+              {(item) =>
+                item ? (
+                  <div class="migration-session-summary__entry">
+                    <div class="migration-session-summary__item">{line(item)}</div>
+                    <div class="migration-session-summary__detail">{detail(item)}</div>
+                  </div>
+                ) : (
+                  <div class="migration-session-summary__item">None</div>
+                )
+              }
             </For>
           </div>
         </div>

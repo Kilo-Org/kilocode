@@ -396,6 +396,22 @@
   background: color-mix(in srgb, var(--vscode-editor-background) 92%, white 8%);
 }
 
+.migration-session-summary__entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.migration-session-summary__detail {
+  margin-left: 14px;
+  font-size: 10px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--vscode-descriptionForeground) 88%, white 12%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .migration-session-summary__list--success {
   border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #34c759) 45%, var(--vscode-panel-border) 55%);
 }
