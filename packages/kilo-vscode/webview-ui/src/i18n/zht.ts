@@ -1066,6 +1066,10 @@ export const dict = {
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
   "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步...",
+||||||| parent of 4c08cf81f3 (feat(vscode): make turn completion visible in chat)
+  "session.turn.completed.seconds": "工作了 {{ seconds }}秒",
+  "session.turn.completed.minutes": "工作了 {{ minutes }}分鐘",
+  "session.turn.completed.hours": "工作了 {{ hours }}小時 {{ minutes }}分鐘",
 
   "dialog.model.noProviders": "沒有供應商",
 

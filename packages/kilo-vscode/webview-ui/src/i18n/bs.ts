@@ -1131,6 +1131,10 @@ export const dict = {
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
   "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
+||||||| parent of 4c08cf81f3 (feat(vscode): make turn completion visible in chat)
+  "session.turn.completed.seconds": "Radio {{ seconds }}s",
+  "session.turn.completed.minutes": "Radio {{ minutes }}min",
+  "session.turn.completed.hours": "Radio {{ hours }}h {{ minutes }}min",
 
   "dialog.model.noProviders": "Nema pružatelja",
 

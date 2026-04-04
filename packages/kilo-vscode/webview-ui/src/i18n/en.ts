@@ -1112,6 +1112,10 @@ export const dict = {
   "ui.sessionTurn.status.thinking": "Thinking...",
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
+  "session.turn.completed.seconds": "Worked for {{ seconds }}s",
+  "session.turn.completed.minutes": "Worked for {{ minutes }}m",
+  "session.turn.completed.hours": "Worked for {{ hours }}h {{ minutes }}m",
+
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",

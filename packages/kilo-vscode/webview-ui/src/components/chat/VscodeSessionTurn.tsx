@@ -39,10 +39,21 @@ export interface VscodeTurn {
   partial?: boolean
 }
 
+function formatDuration(ms: number, t: (key: string, vars?: Record<string, string>) => string): string {
+  const s = Math.floor(ms / 1000)
+  if (s < 60) return t("session.turn.completed.seconds", { seconds: `${s}` })
+  const m = Math.floor(s / 60)
+  if (m < 60) return t("session.turn.completed.minutes", { minutes: `${m}` })
+  const h = Math.floor(m / 60)
+  const rem = m % 60
+  return t("session.turn.completed.hours", { hours: `${h}`, minutes: `${rem}` })
+}
+
 interface VscodeSessionTurnProps {
   turn: VscodeTurn
   queued?: boolean
   onForkMessage?: (sessionId: string, messageId: string) => void
+  isLast?: boolean
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -112,6 +123,18 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       }
     }
     return undefined
+  })
+
+  // Completion indicator — shown when this is the last turn and the agent is done
+  const turnDuration = createMemo(() => {
+    if (!props.isLast) return undefined
+    if (session.status() !== "idle") return undefined
+    const msgs = assistantMessages()
+    const last = msgs[msgs.length - 1]
+    if (!last?.time?.completed) return undefined
+    const first = msgs[0]
+    if (!first?.time?.created) return undefined
+    return last.time.completed - first.time.created
   })
 
   return (
@@ -201,6 +224,16 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
           {/* Error handling */}
           <Show when={error()}>
             {(err) => <ErrorDisplay error={err() as ErrorDisplayProps["error"]} onLogin={server.goToLogin} />}
+          </Show>
+
+          {/* Completion indicator — shown below diffs when this is the last turn */}
+          <Show when={turnDuration()}>
+            {(dur) => (
+              <div class="turn-completion-indicator">
+                <Icon name="check" size="small" />
+                <span>{formatDuration(dur(), language.t)}</span>
+              </div>
+            )}
           </Show>
         </div>
       )}

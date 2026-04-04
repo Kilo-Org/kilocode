@@ -1138,6 +1138,9 @@ export const dict = {
   "ui.sessionTurn.cancel": "Abbrechen",
   "ui.sessionTurn.status.thinking": "Denke nach...",
   "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
+  "session.turn.completed.seconds": "{{ seconds }}s gearbeitet",
+  "session.turn.completed.minutes": "{{ minutes }}min gearbeitet",
+  "session.turn.completed.hours": "{{ hours }}h {{ minutes }}min gearbeitet",
 
   "dialog.model.noProviders": "Keine Anbieter",
 
