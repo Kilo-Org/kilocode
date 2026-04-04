@@ -1093,7 +1093,7 @@ export interface LegacyMigrationProgressMessage {
   message?: string
 }
 
-export type LegacyMigrationSessionPhase = "project" | "session" | "messages" | "parts" | "skipped" | "done" | "error"
+export type LegacyMigrationSessionPhase = "project" | "session" | "messages" | "parts" | "skipped" | "done" | "summary" | "error"
 
 export interface LegacyMigrationSessionProgressMessage {
   type: "legacyMigrationSessionProgress"

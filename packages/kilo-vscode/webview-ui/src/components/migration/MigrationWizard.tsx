@@ -12,6 +12,13 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import SessionMigrationProgress, { type SessionMigrationProgressState } from "./SessionMigrationProgress"
+import SessionMigrationSummary from "./SessionMigrationSummary"
+import {
+  createSessionItem,
+  createSessionSummary,
+  updateSessionSummary,
+  type SessionSummaryState,
+} from "./session-migration-summary-state"
 import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
@@ -205,6 +212,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const [progressEntries, setProgressEntries] = createSignal<ProgressEntry[]>([])
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
   const [sessionProgress, setSessionProgress] = createSignal<SessionMigrationProgressState | undefined>(undefined)
+  const [sessionSummary, setSessionSummary] = createSignal<SessionSummaryState>(createSessionSummary())
 
   // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
@@ -267,6 +275,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
       if (msg?.type === "legacyMigrationSessionProgress") {
         const update = msg as LegacyMigrationSessionProgressMessage
+        setSessionSummary((prev) =>
+          updateSessionSummary(prev, createSessionItem(update.session, update.error), update.phase),
+        )
         setSessionProgress({
           session: update.session,
           index: update.index,
@@ -378,6 +389,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     ]
 
     setProgressEntries(entries)
+    setSessionSummary(createSessionSummary())
     setPhase("migrating")
 
     vscode.postMessage({
@@ -713,7 +725,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                       {language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}
                     </div>
                     <Show when={migrateSessions() && phase() !== "selecting" && sessionProgress()}>
-                      <SessionMigrationProgress progress={sessionProgress()!} />
+                      <Show when={sessionProgress()?.phase === "summary"} fallback={<SessionMigrationProgress progress={sessionProgress()!} />}>
+                        <SessionMigrationSummary summary={sessionSummary()} />
+                      </Show>
                     </Show>
                     <Show
                       when={

@@ -343,12 +343,44 @@
   word-break: break-word;
 }
 
-.migration-session-progress {
+.migration-session-card {
   margin-top: 12px;
   padding: 12px;
   border: 1px solid var(--vscode-panel-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--vscode-editor-background) 94%, var(--vscode-button-background) 6%);
+}
+
+.migration-session-summary__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+}
+
+.migration-session-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.migration-session-summary__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.migration-session-summary__label,
+.migration-session-summary__value {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vscode-foreground);
+}
+
+.migration-session-summary__value {
+  color: var(--vscode-descriptionForeground);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .migration-session-progress__header {

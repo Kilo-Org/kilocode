@@ -150,6 +150,7 @@ export type ProgressCallback = (
 export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
 
 const SESSION_DELAY = 300
+const SESSION_SUMMARY_DELAY = 1000
 
 /**
  * Executes migration for the selected items.
@@ -292,6 +293,17 @@ export async function migrate(
       if (index < list.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY))
       }
+    }
+    const last = list.at(-1)
+    const session = last ? info.find((item: MigrationSessionInfo) => item.id === last) : undefined
+    if (session && onSessionProgress) {
+      onSessionProgress({
+        session,
+        index: list.length,
+        total: list.length,
+        phase: "summary",
+      })
+      await new Promise((resolve) => setTimeout(resolve, SESSION_SUMMARY_DELAY))
     }
   }
 
