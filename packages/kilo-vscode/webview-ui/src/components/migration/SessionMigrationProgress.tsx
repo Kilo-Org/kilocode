@@ -30,14 +30,18 @@ const order: Step[] = ["project", "session", "messages", "parts"]
 
 function formatDate(time: number) {
   if (!time) return "Unknown date"
-  return new Intl.DateTimeFormat("en", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+  const date = new Date(time)
+  const hour = new Intl.DateTimeFormat("en", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  }).format(new Date(time))
+  }).format(date)
+  const day = new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date)
+  return `${hour} ${day}`
 }
 
 function text(value: string) {
@@ -70,12 +74,25 @@ function count(step: Step, progress: SessionMigrationProgressState) {
   return `${progress.current ?? 0}/${progress.count}`
 }
 
+function label(step: Step, progress: SessionMigrationProgressState) {
+  if (step === "session" && progress.phase === "skipped") return "Session skipped"
+  return steps.find((item) => item.key === step)?.label ?? ""
+}
+
 const SessionMigrationProgress: Component<SessionMigrationProgressProps> = (props) => {
   return (
     <div class="migration-session-progress">
       <div class="migration-session-progress__header">{`Migrating ${props.progress.index} of ${props.progress.total}`}</div>
-      <div class="migration-session-progress__meta" title={props.progress.session.directory || "Unknown"}>
-        {`${formatDate(props.progress.session.time)} - ${text(props.progress.session.title)} on ${text(props.progress.session.directory)}`}
+      <div class="migration-session-progress__meta">
+        <div class="migration-session-progress__directory" title={props.progress.session.directory || "Unknown"}>
+          {text(props.progress.session.directory)}
+        </div>
+        <div class="migration-session-progress__meta-row">
+          <span class="migration-session-progress__title" title={props.progress.session.title || "Unknown"}>
+            {text(props.progress.session.title)}
+          </span>
+          <span class="migration-session-progress__date">{formatDate(props.progress.session.time)}</span>
+        </div>
       </div>
       <div class="migration-session-progress__steps">
         <For each={steps}>
@@ -85,7 +102,7 @@ const SessionMigrationProgress: Component<SessionMigrationProgressProps> = (prop
                 class={`migration-session-progress__dot migration-session-progress__dot--${state(step.key, props.progress.phase)}`}
               />
               <div class="migration-session-progress__step-text">
-                <span>{step.label}</span>
+                <span>{label(step.key, props.progress)}</span>
                 <span class="migration-session-progress__count">{count(step.key, props.progress) ?? ""}</span>
               </div>
             </div>

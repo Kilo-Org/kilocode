@@ -149,6 +149,8 @@ export type ProgressCallback = (
 
 export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
 
+const SESSION_DELAY = 300
+
 /**
  * Executes migration for the selected items.
  * Calls onProgress for each item with real-time status updates.
@@ -287,6 +289,9 @@ export async function migrate(
         message: reason,
       })
       onProgress(id, result.ok ? "success" : "error", reason)
+      if (index < list.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY))
+      }
     }
   }
 

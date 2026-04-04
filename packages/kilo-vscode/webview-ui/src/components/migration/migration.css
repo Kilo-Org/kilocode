@@ -345,7 +345,7 @@
 
 .migration-session-progress {
   margin-top: 12px;
-  padding: 12px 14px;
+  padding: 12px;
   border: 1px solid var(--vscode-panel-border);
   border-radius: 12px;
   background: color-mix(in srgb, var(--vscode-editor-background) 94%, var(--vscode-button-background) 6%);
@@ -356,29 +356,59 @@
   font-weight: 700;
   line-height: 1.4;
   color: var(--vscode-foreground);
+  white-space: nowrap;
 }
 
 .migration-session-progress__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
   margin-top: 4px;
   font-size: 11px;
   line-height: 1.45;
   color: var(--vscode-descriptionForeground);
-  white-space: nowrap;
+}
+
+.migration-session-progress__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.migration-session-progress__directory {
+  width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.migration-session-progress__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.migration-session-progress__date {
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .migration-session-progress__steps {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 12px;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .migration-session-progress__step {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .migration-session-progress__dot {
@@ -404,10 +434,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   font-size: 12px;
   line-height: 1.4;
   color: var(--vscode-foreground);
+}
+
+.migration-session-progress__step-text span:first-child {
+  white-space: nowrap;
 }
 
 .migration-session-progress__count {

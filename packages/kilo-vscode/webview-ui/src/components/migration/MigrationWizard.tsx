@@ -471,6 +471,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const totalCount = () => results().length
   const groupMessage = (group: string) =>
     progressEntries().find((entry) => entry.group === group && entry.status === "error")?.message
+  const sessionIconSpinning = () => phase() === "migrating" && migrateSessions() && hasSessions()
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
@@ -478,17 +479,18 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   const StatusIcon = (gProps: { group: string }): JSX.Element => {
     const status = () => groupStatus(gProps.group)
+    const spinning = () => (gProps.group === "sessions" ? sessionIconSpinning() : status() === "migrating")
     return (
       <>
-        <Show when={status() === "pending"}>
+        <Show when={status() === "pending" && !spinning()}>
           <div class="migration-wizard__status-icon migration-wizard__status-icon--pending" />
         </Show>
-        <Show when={status() === "migrating"}>
+        <Show when={spinning()}>
           <div class="migration-wizard__status-icon">
             <div class="migration-wizard__spinner" />
           </div>
         </Show>
-        <Show when={status() === "success"}>
+        <Show when={status() === "success" && !spinning()}>
           <div class="migration-wizard__status-icon migration-wizard__status-icon--success">
             <SuccessCheckSvg />
           </div>
