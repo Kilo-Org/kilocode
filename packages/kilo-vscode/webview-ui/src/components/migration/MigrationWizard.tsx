@@ -417,11 +417,6 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     props.onComplete()
   }
 
-  const copySessionError = async (text: string) => {
-    await navigator.clipboard.writeText(text)
-    showToast({ variant: "success", title: language.t("migration.error.toast.copied") })
-  }
-
   // ---------------------------------------------------------------------------
   // Data helpers
   // ---------------------------------------------------------------------------
@@ -729,29 +724,6 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                       <Show when={sessionProgress()?.phase === "summary"} fallback={<SessionMigrationProgress progress={sessionProgress()!} />}>
                         <SessionMigrationSummary summary={sessionSummary()} />
                       </Show>
-                    </Show>
-                    <Show
-                      when={
-                        (phase() === "error" || phase() === "done") &&
-                        groupStatus("sessions") === "error" &&
-                        groupMessage("sessions")
-                      }
-                    >
-                      <div class="migration-wizard__error-box">
-                        <div class="migration-wizard__error-box-header">
-                          <div class="migration-wizard__error-box-title">
-                            {language.t("migration.error.sessionFailed")}
-                          </div>
-                          <button
-                            type="button"
-                            class="migration-wizard__copy-btn"
-                            onClick={() => void copySessionError(groupMessage("sessions")!)}
-                          >
-                            {language.t("migration.error.action.copy")}
-                          </button>
-                        </div>
-                        <div class="migration-wizard__error-text">{groupMessage("sessions")}</div>
-                      </div>
                     </Show>
                   </div>
                 </div>

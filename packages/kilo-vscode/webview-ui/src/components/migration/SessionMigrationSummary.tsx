@@ -1,12 +1,19 @@
 import type { Component } from "solid-js"
 import SessionMigrationCard from "./SessionMigrationCard"
 import type { SessionSummaryState } from "./session-migration-summary-state"
+import { showToast } from "@kilocode/kilo-ui/toast"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
 }
 
 const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props) => {
+  const copy = async () => {
+    if (!props.summary.lastErrorRaw) return
+    await navigator.clipboard.writeText(props.summary.lastErrorRaw)
+    showToast({ variant: "success", title: "Copied error" })
+  }
+
   return (
     <SessionMigrationCard>
       <div class="migration-session-summary">
@@ -24,7 +31,14 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           <div class="migration-session-summary__value">- {props.summary.errored.length} sessions</div>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">- LastError:</div>
+          <div class="migration-session-summary__row">
+            <div class="migration-session-summary__label">- LastError:</div>
+            {props.summary.lastErrorRaw && (
+              <button type="button" class="migration-wizard__copy-btn" onClick={() => void copy()}>
+                Copy
+              </button>
+            )}
+          </div>
           <div class="migration-session-summary__value">- {props.summary.lastError || "None"}</div>
         </div>
       </div>

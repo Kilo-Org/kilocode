@@ -370,6 +370,13 @@
   gap: 2px;
 }
 
+.migration-session-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .migration-session-summary__label,
 .migration-session-summary__value {
   font-size: 12px;
