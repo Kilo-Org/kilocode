@@ -10,8 +10,17 @@ function date(time: number) {
   return `${pad(value.getHours())}:${pad(value.getMinutes())} ${pad(value.getMonth() + 1)}/${pad(value.getDate())}/${value.getFullYear()}`
 }
 
+function path(value: string) {
+  const text = value.trim()
+  if (!text) return "Unknown"
+  const parts = text.split(/[\\/]/).filter(Boolean)
+  const last = parts.at(-1)
+  if (!last) return text
+  return `.../${last}`
+}
+
 export function line(item: SessionSummaryItem) {
-  const dir = item.directory.trim() || "Unknown"
+  const dir = path(item.directory)
   const title = item.title.trim() || "Unknown"
   return `${dir} ${title} ${date(item.time)}`
 }

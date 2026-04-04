@@ -374,9 +374,13 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: calc(1.45em * 3 + 8px);
+  max-height: calc(1.45em * 4 + 12px);
   overflow: auto;
   padding-right: 4px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 96%, white 4%);
+  padding: 6px;
 }
 
 .migration-session-summary__item {
@@ -387,6 +391,21 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-height: 1.45em;
+  padding: 2px 4px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 92%, white 8%);
+}
+
+.migration-session-summary__list--success {
+  border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #34c759) 45%, var(--vscode-panel-border) 55%);
+}
+
+.migration-session-summary__list--skipped {
+  border-color: color-mix(in srgb, var(--vscode-testing-iconQueued, #d7ba7d) 55%, var(--vscode-panel-border) 45%);
+}
+
+.migration-session-summary__list--errored {
+  border-color: color-mix(in srgb, var(--vscode-errorForeground) 55%, var(--vscode-panel-border) 45%);
 }
 
 .migration-session-summary__row {
