@@ -351,7 +351,7 @@ export interface MigrationSelections {
   settings: MigrationSettingsSelections
 }
 
-export type MigrationSessionPhase = "project" | "session" | "messages" | "parts" | "skipped" | "done" | "summary" | "error"
+export type MigrationSessionPhase = "preparing" | "project" | "session" | "messages" | "parts" | "skipped" | "done" | "summary" | "error"
 
 export interface MigrationSessionProgress {
   session: MigrationSessionInfo

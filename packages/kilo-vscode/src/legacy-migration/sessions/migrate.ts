@@ -19,6 +19,7 @@ type Result =
 
 type Progress = Omit<MigrationSessionProgress, "session" | "index" | "total">
 type ProgressCallback = (progress: Progress) => void
+type Payload = Awaited<ReturnType<typeof parseSession>>
 
 function trimError(input: string) {
   return input.length <= 100 ? input : `${input.slice(0, 100)}...`
@@ -38,14 +39,27 @@ export async function migrate(
   const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
   const item = items.find((item) => item.id === input.id)
-  const payload = await parseSession(input.id, dir, item)
 
   const progress = (next: Progress) => {
     if (!meta || !onProgress) return
     onProgress(next)
   }
 
+  const fail = (error: unknown, payload: Payload) => {
+    progress({
+      phase: "error",
+      error: trimError(getMigrationErrorMessage(error)),
+    })
+    return {
+      ok: false as const,
+      payload,
+      message: getMigrationErrorMessage(error),
+    }
+  }
+
   try {
+    progress({ phase: "preparing" })
+    const payload = await parseSession(input.id, dir, item)
     progress({ phase: "project" })
     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id
@@ -89,14 +103,7 @@ export async function migrate(
       payload,
     }
   } catch (error) {
-    progress({
-      phase: "error",
-      error: trimError(getMigrationErrorMessage(error)),
-    })
-    return {
-      ok: false,
-      payload,
-      message: getMigrationErrorMessage(error),
-    }
+    const payload = await parseSession(input.id, dir, item)
+    return fail(error, payload)
   }
 }

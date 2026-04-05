@@ -17,17 +17,18 @@ interface SessionMigrationProgressProps {
   progress: SessionMigrationProgressState
 }
 
-type Step = "project" | "session" | "messages" | "parts"
+type Step = "preparing" | "project" | "session" | "messages" | "parts"
 type StepState = "pending" | "active" | "success"
 
 const steps: Array<{ key: Step; label: string }> = [
+  { key: "preparing", label: "Preparing session" },
   { key: "project", label: "Storing project" },
   { key: "session", label: "Storing session" },
   { key: "messages", label: "Storing messages" },
   { key: "parts", label: "Storing parts" },
 ]
 
-const order: Step[] = ["project", "session", "messages", "parts"]
+const order: Step[] = ["preparing", "project", "session", "messages", "parts"]
 
 function formatDate(time: number) {
   if (!time) return "Unknown date"
@@ -51,7 +52,9 @@ function text(value: string) {
 }
 
 function current(phase: LegacyMigrationSessionPhase): Step | undefined {
-  if (phase === "project" || phase === "session" || phase === "messages" || phase === "parts") return phase
+  if (phase === "preparing" || phase === "project" || phase === "session" || phase === "messages" || phase === "parts") {
+    return phase
+  }
   if (phase === "skipped") return "session"
   if (phase === "done") return "parts"
   if (phase === "error") return undefined
