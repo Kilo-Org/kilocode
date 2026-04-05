@@ -14,7 +14,7 @@ type Result =
     }
   | {
       ok: false
-      payload: Awaited<ReturnType<typeof parseSession>>
+      payload?: Awaited<ReturnType<typeof parseSession>>
       message: string
     }
 
@@ -46,7 +46,7 @@ export async function migrate(
     onProgress(next)
   }
 
-  const skip = async () => {
+  const skip = () => {
     progress({ phase: "skipped" })
     return {
       ok: true as const,
@@ -54,14 +54,14 @@ export async function migrate(
     }
   }
 
-  const fail = (error: unknown, payload: Payload) => {
+  const fail = (error: unknown, payload?: Payload) => {
     progress({
       phase: "error",
       error: trimError(getMigrationErrorMessage(error)),
     })
     return {
       ok: false as const,
-      payload,
+      ...(payload ? { payload } : {}),
       message: getMigrationErrorMessage(error),
     }
   }
@@ -112,7 +112,6 @@ export async function migrate(
       payload,
     }
   } catch (error) {
-    const payload = await parseSession(input.id, dir, item)
-    return fail(error, payload)
+    return fail(error)
   }
 }
