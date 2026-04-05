@@ -49,7 +49,7 @@ const SECRET_KEY = "roo_cline_config_api_config"
 const CODEX_OAUTH_SECRET_KEY = "openai-codex-oauth-credentials"
 const MIGRATION_STATUS_KEY = "kilo.legacyMigrationStatus"
 
-type MigrationStatus = "completed" | "skipped"
+type MigrationStatus = "completed" | "completed_with_errors" | "skipped"
 
 // ---------------------------------------------------------------------------
 // Status helpers

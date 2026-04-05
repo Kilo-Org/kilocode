@@ -35,6 +35,7 @@ export interface MigrationContext {
   refreshSessions(): void
   cachedLegacyData: LegacyMigrationData | null
   migrationCheckInFlight: boolean
+  lastMigrationHadErrors?: boolean
   disposeGlobal(): Promise<void>
   broadcastComplete(): void
 }
@@ -133,8 +134,10 @@ export async function handleStartLegacyMigration(
       ctx.cachedLegacyData?.sessions,
     )
 
+    ctx.lastMigrationHadErrors = results.some((item) => item.status === "error")
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
+    ctx.lastMigrationHadErrors = true
     console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
     ctx.postMessage({
       type: "legacyMigrationComplete",
@@ -155,7 +158,7 @@ export async function handleFinalizeLegacyMigration(ctx: MigrationContext): Prom
   await ctx.disposeGlobal()
   await MigrationService.setMigrationStatus(
     ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
-    "completed",
+    ctx.lastMigrationHadErrors ? "completed_with_errors" : "completed",
   )
   ctx.broadcastComplete()
   ctx.refreshSessions()
