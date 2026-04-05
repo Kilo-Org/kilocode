@@ -1,0 +1,73 @@
+// Kilo-specific translations and overrides (Hindi)
+export const dict = {
+  // Kilo Gateway provider translations
+  "provider.connect.kiloGateway.line1":
+    "Kilo Gateway आपको कोडिंग एजेंट्स के लिए अनुकूलित विश्वसनीय मॉडलों का चयनित सेट देता है।",
+  "provider.connect.kiloGateway.line2":
+    "एक ही API कुंजी से Claude, GPT, Gemini, GLM और अधिक जैसे मॉडलों तक पहुँच मिलती है।",
+  "provider.connect.kiloGateway.visit.prefix": "अपनी API कुंजी लेने के लिए ",
+  "provider.connect.kiloGateway.visit.link": "kilo.ai",
+  "provider.connect.kiloGateway.visit.suffix": " पर जाएँ।",
+
+  // Provider dialog translations
+  "dialog.provider.group.recommended": "अनुशंसित",
+  "dialog.provider.kilo.note": "500+ AI मॉडल तक पहुँच",
+
+  // Reasoning block label
+  "ui.permission.run": "चलाएँ",
+  "ui.reasoning.label": "तर्क",
+
+  // Marketplace
+  "marketplace.tab.skills": "कौशल",
+  "marketplace.tab.mcpServers": "MCP सर्वर",
+  "marketplace.tab.modes": "मोड",
+  "marketplace.category.all": "सभी",
+  "marketplace.placeholder": "लागू किया जाना है",
+  "marketplace.card.installed": "इंस्टॉल",
+  "marketplace.card.install": "इंस्टॉल करें",
+  "marketplace.card.remove": "हटाएँ",
+  "marketplace.card.removeScope": "हटाएँ ({{scope}})",
+  "marketplace.card.showMore": "और दिखाएँ",
+  "marketplace.card.showLess": "कम दिखाएँ",
+  "marketplace.install.title": "{{name}} इंस्टॉल करें",
+  "marketplace.install.scope": "दायरा",
+  "marketplace.install.scope.project": "प्रोजेक्ट",
+  "marketplace.install.scope.global": "वैश्विक",
+  "marketplace.install.prerequisites": "पूर्वापेक्षाएँ",
+  "marketplace.install.installing": "इंस्टॉल हो रहा है...",
+  "marketplace.install.cancel": "रद्द करें",
+  "marketplace.install.success": "सफलतापूर्वक इंस्टॉल!",
+  "marketplace.install.failed": "इंस्टॉल विफल",
+  "marketplace.install.done": "हो गया",
+  "marketplace.install.close": "बंद करें",
+  "marketplace.remove.title": "{{name}} हटाएँ?",
+  "marketplace.remove.confirm":
+    "क्या आप वाकई यह {{type}} हटाना चाहते हैं? यह आपके {{scope}} कॉन्फ़िगरेशन से हटा देगा।",
+  "marketplace.remove.cancel": "रद्द करें",
+  "marketplace.remove.confirm.button": "हटाएँ",
+  "marketplace.tab.mcp": "MCP",
+  "marketplace.search": "खोजें...",
+  "marketplace.filter.all": "सभी आइटम",
+  "marketplace.filter.notInstalled": "इंस्टॉल नहीं",
+  "marketplace.empty": "कोई आइटम नहीं मिला",
+  "marketplace.badge.mcpServer": "MCP सर्वर",
+  "marketplace.badge.mode": "मोड",
+  "marketplace.card.by": "{{author}} द्वारा",
+  "marketplace.install.method": "इंस्टॉल विधि",
+  "marketplace.install.parameters": "पैरामीटर",
+  "marketplace.install.optional": "(वैकल्पिक)",
+  "marketplace.install.required": "{{name}} आवश्यक है",
+  "marketplace.scope.project": "प्रोजेक्ट",
+  "marketplace.scope.global": "वैश्विक",
+  "marketplace.remove.type.mcp": "MCP सर्वर",
+  "marketplace.remove.type.skill": "कौशल",
+  "marketplace.remove.type.mode": "मोड",
+  "marketplace.remove.failed": "{{name}} हटाने में विफल",
+  "marketplace.install": "इंस्टॉल करें",
+  "marketplace.filter.installed": "इंस्टॉल",
+  "marketplace.error.dismiss": "खारिज करें",
+  "marketplace.warning.busyOne": "एक सत्र चालू है और बाधित हो सकता है",
+  "marketplace.warning.busyMany": "कई सत्र चालू हैं और बाधित हो सकते हैं",
+  "marketplace.warning.installAnyway": "फिर भी इंस्टॉल करें",
+  "marketplace.warning.cancel": "रद्द करें",
+}

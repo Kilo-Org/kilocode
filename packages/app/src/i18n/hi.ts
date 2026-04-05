@@ -21,6 +21,9 @@ export const dict = {
   "command.category.workspace": "कार्यक्षेत्र",
   "command.category.settings": "सेटिंग्स",
 
+  "command.session.previous.unseen": "पिछला अपठित सेशन",
+  "command.session.next.unseen": "अगला अपठित सेशन",
+
   "theme.scheme.system": "सिस्टम",
 
   "common.rename": "नाम बदलें",
