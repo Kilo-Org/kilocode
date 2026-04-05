@@ -59,6 +59,7 @@ function current(phase: LegacyMigrationSessionPhase): Step | undefined {
 function state(step: Step, phase: LegacyMigrationSessionPhase): StepState {
   const active = current(phase)
   if (!active) return phase === "done" ? "success" : "pending"
+  if (step === "preparing" && phase === "preparing") return "active"
   const i = order.indexOf(step)
   const a = order.indexOf(active)
   if (i < a) return "success"
