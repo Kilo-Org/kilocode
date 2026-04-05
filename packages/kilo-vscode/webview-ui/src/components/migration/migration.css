@@ -482,7 +482,7 @@
 .migration-session-summary__actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: 8px;
 }
@@ -490,13 +490,12 @@
 .migration-session-summary__all {
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 10px;
   font-size: 11px;
   color: var(--vscode-descriptionForeground);
   position: relative;
   cursor: pointer;
-  min-width: 140px;
 }
 
 .migration-session-summary__all input {

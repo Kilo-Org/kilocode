@@ -95,14 +95,6 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </div>
           <Show when={props.summary.skipped.length > 0}>
             <div class="migration-session-summary__actions">
-              <button
-                type="button"
-                class="migration-wizard__copy-btn"
-                disabled={picked().length === 0}
-                onClick={() => handleForce()}
-              >
-                Force Re-import
-              </button>
               <label class="migration-session-summary__all">
                 <span>Re-import all</span>
                 <input type="checkbox" checked={all()} onChange={(event) => handleAll(event.currentTarget.checked)} />
@@ -112,6 +104,14 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                   </svg>
                 </span>
               </label>
+              <button
+                type="button"
+                class="migration-wizard__copy-btn"
+                disabled={picked().length === 0}
+                onClick={() => handleForce()}
+              >
+                Force Re-import
+              </button>
             </div>
           </Show>
         </div>
