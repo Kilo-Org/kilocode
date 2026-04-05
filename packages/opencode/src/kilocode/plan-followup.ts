@@ -111,7 +111,11 @@ export namespace PlanFollowup {
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
-  async function resolvePlan(input: { assistant?: MessageV2.WithParts; messages: MessageV2.WithParts[]; sessionID: string }) {
+  async function resolvePlan(input: {
+    assistant?: MessageV2.WithParts
+    messages: MessageV2.WithParts[]
+    sessionID: string
+  }) {
     // Fast path: check the last assistant message's text first (avoids array scanning)
     if (input.assistant) {
       const text = toText(input.assistant)
@@ -121,9 +125,7 @@ export namespace PlanFollowup {
     // Fallback: scan all assistant messages after the last user message (handles
     // cases where plan text is on an earlier assistant and the last one is empty)
     const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
-    const assistantMessages = input.messages
-      .slice(lastUserIdx + 1)
-      .filter((m) => m.info.role === "assistant")
+    const assistantMessages = input.messages.slice(lastUserIdx + 1).filter((m) => m.info.role === "assistant")
 
     const text = assistantMessages.map(toText).filter(Boolean).join("\n\n").trim()
     if (text) return text

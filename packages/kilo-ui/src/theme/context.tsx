@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Copy of @opencode-ai/ui/theme/context.tsx with two changes:
 // 1. Imports DEFAULT_THEMES from our local default-themes (which includes Kilo themes)
 // 2. Default theme changed from "oc-1" to "kilo"
@@ -11,7 +10,7 @@ import { createSimpleContext } from "@opencode-ai/ui/context/helper"
 
 export type ColorScheme = "light" | "dark" | "system"
 
-const DEFAULT_THEME_ID = "kilo" // kilocode_change: was "oc-1"
+const DEFAULT_THEME_ID = "kilo"
 
 const STORAGE_KEYS = {
   THEME_ID: "opencode-theme-id",
@@ -77,7 +76,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
   init: (props: { defaultTheme?: string }) => {
     const [store, setStore] = createStore({
       themes: DEFAULT_THEMES as Record<string, DesktopTheme>,
-      themeId: props.defaultTheme ?? DEFAULT_THEME_ID, // kilocode_change: was "oc-1"
+      themeId: props.defaultTheme ?? DEFAULT_THEME_ID,
       colorScheme: "system" as ColorScheme,
       mode: getSystemMode(),
       previewThemeId: null as string | null,

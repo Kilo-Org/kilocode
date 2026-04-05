@@ -36,4 +36,20 @@ describe("file.ripgrep", () => {
     expect(hasVisible).toBe(true)
     expect(hasHidden).toBe(false)
   })
+
+  // kilocode_change start - .kilo directory should also be skipped in tree()
+  test("tree skips .kilo directory files", async () => {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(path.join(dir, "src", "main.ts"), "export {}")
+        await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
+        await Bun.write(path.join(dir, ".kilo", "config.json"), "{}")
+      },
+    })
+
+    const result = await Ripgrep.tree({ cwd: tmp.path })
+    expect(result).not.toContain(".kilo")
+    expect(result).toContain("src")
+  })
+  // kilocode_change end
 })

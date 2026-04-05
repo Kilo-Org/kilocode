@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import type { Command } from "@/command"
 import { Review } from "./review"
 

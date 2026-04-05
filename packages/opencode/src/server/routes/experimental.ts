@@ -209,9 +209,18 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
+      // kilocode_change start
+      validator(
+        "query",
+        z.object({
+          base: z.string().optional().meta({ description: "Base branch or ref to diff against" }),
+        }),
+      ),
       async (c) => {
         const log = Log.create({ service: "worktree-diff" })
-        const base = c.req.query("base") || (await Review.getBaseBranch())
+        const query = c.req.valid("query")
+        const base = query.base || (await Review.getBaseBranch())
+        // kilocode_change end
         const dir = Instance.directory
         log.info("computing diff", { dir, base })
 

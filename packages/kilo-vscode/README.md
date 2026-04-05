@@ -20,10 +20,6 @@
 - 🎁 API keys optional
 - 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3 Pro, Claude 4.5 Sonnet & Opus, and GPT-5
 
-<p align="center">
-  <img src="https://media.githubusercontent.com/media/Kilo-Org/kilocode/main/kilo.gif" width="100%" />
-</p>
-
 ## Quick Links
 
 - [VS Code Marketplace](https://kilo.ai/vscode-marketplace?utm_source=Readme) (download)
@@ -66,7 +62,7 @@ You’re free to use, modify, and distribute this code, including for commercial
 
 ## Contributing
 
-Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://discord.gg/kilocode) to chat with the team and community.
+Contributions are welcome, and they are greatly appreciated! Get started by reading our [Contributing Guide](CONTRIBUTING.md). Or join our [Discord](https://kilo.ai/discord) to chat with the team and community.
 
 Thanks to all the contributors who help make Kilo better!
 

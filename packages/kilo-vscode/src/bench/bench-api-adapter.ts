@@ -1,5 +1,5 @@
 import type { KiloConnectionService } from "../services/cli-backend/index.js"
-import type { SSEEvent } from "../services/cli-backend/types.js"
+import type { Event, KiloClient } from "@kilocode/sdk/v2/client"
 import { BenchCreditError } from "./types.js"
 import type { BenchApiHandler, BenchStreamChunk } from "./types.js"
 
@@ -20,6 +20,22 @@ export function createBenchApiHandler(
 	options?: { textOnly?: boolean },
 ): BenchApiHandler {
 	const textOnly = options?.textOnly ?? true
+	const getClient = (): KiloClient => {
+		try {
+			return connectionService.getClient()
+		} catch {
+			throw new Error("CLI backend not connected")
+		}
+	}
+	const toFailure = (value: string): string =>
+		value.toLowerCase().includes("credit") ||
+			value.toLowerCase().includes("billing") ||
+			value.toLowerCase().includes("insufficient") ||
+			value.toLowerCase().includes("quota") ||
+			value.toLowerCase().includes("rate limit") ||
+			value.toLowerCase().includes("payment")
+			? `CREDIT_ERROR:${value}`
+			: value
 
 	return {
 		getModelId(): string {
@@ -31,12 +47,12 @@ export function createBenchApiHandler(
 			userPrompt: string,
 			modelId?: string,
 		): AsyncIterable<BenchStreamChunk> {
-			const httpClient = connectionService.getHttpClient()
-			if (!httpClient) {
-				throw new Error("CLI backend not connected")
-			}
+			const client = getClient()
 
-			const session = await httpClient.createSession(workspaceDir)
+			const { data: session } = await client.session.create(
+				{ directory: workspaceDir, platform: "kilo" },
+				{ throwOnError: true },
+			)
 			const sessionId = session.id
 			console.log(`[Kilo Bench] Created session ${sessionId} (textOnly: ${textOnly})`)
 
@@ -74,7 +90,7 @@ export function createBenchApiHandler(
 				}
 
 				const unsubscribe = connectionService.onEventFiltered(
-					(event: SSEEvent) => {
+					(event: Event) => {
 						if (event.type === "message.part.delta") {
 							return event.properties.sessionID === sessionId
 						}
@@ -86,7 +102,7 @@ export function createBenchApiHandler(
 						}
 						return false
 					},
-					(event: SSEEvent) => {
+					(event: Event) => {
 						if (closed) {
 							return
 						}
@@ -108,33 +124,24 @@ export function createBenchApiHandler(
 							receivedAnyEvent = true
 							clearIdleTimer()
 							const info = event.properties.info
-							console.log(`[Kilo Bench] message.updated: role=${info.role}, hasTokens=${!!info.tokens}, hasError=${!!info.error}`)
-							if (info.role === "assistant" && info.tokens) {
+							const tokens = "tokens" in info ? info.tokens : undefined
+							const error = "error" in info ? info.error : undefined
+							const cost = "cost" in info ? info.cost : undefined
+							console.log(`[Kilo Bench] message.updated: role=${info.role}, hasTokens=${!!tokens}, hasError=${!!error}`)
+							if (info.role === "assistant" && tokens) {
 								chunks.push({
 									type: "usage",
-									inputTokens: info.tokens.input || 0,
-									outputTokens: info.tokens.output || 0,
-									totalCost: info.cost || 0,
+									inputTokens: tokens.input || 0,
+									outputTokens: tokens.output || 0,
+									totalCost: cost || 0,
 								})
 							}
-							if (info.error) {
-								const errName = info.error.name || "Unknown error"
-								const errData = info.error.data ? JSON.stringify(info.error.data) : ""
+							if (error) {
+								const errName = error.name || "Unknown error"
+								const errData = error.data ? JSON.stringify(error.data) : ""
 								const errMsg = errData || errName
-								const errLower = errMsg.toLowerCase()
-								const nameLower = errName.toLowerCase()
 								console.log(`[Kilo Bench] Error from backend: ${errName} - ${errData}`)
-								if (
-									nameLower.includes("credit") || nameLower.includes("billing") ||
-									nameLower.includes("insufficient") || nameLower.includes("quota") ||
-									errLower.includes("credit") || errLower.includes("insufficient") ||
-									errLower.includes("billing") || errLower.includes("quota") ||
-									errLower.includes("rate limit") || errLower.includes("payment")
-								) {
-									messageError = `CREDIT_ERROR:${errMsg}`
-								} else {
-									messageError = errMsg
-								}
+								messageError = toFailure(errMsg)
 								done = true
 								wake()
 							}
@@ -171,8 +178,6 @@ export function createBenchApiHandler(
 				console.log(`[Kilo Bench] Sending message to ${hasExplicitModel ? targetModel : "(user default)"} (prompt length: ${userPrompt.length})`)
 
 				const sendOptions: {
-					providerID?: string
-					modelID?: string
 					system?: string
 					tools?: Record<string, boolean>
 				} = {}
@@ -180,23 +185,38 @@ export function createBenchApiHandler(
 				if (textOnly) {
 					sendOptions.tools = { "*": false }
 				}
-				if (hasExplicitModel) {
-					sendOptions.providerID = targetProvider
-					sendOptions.modelID = targetModel
-				}
 				if (systemPrompt) {
 					sendOptions.system = systemPrompt
 				}
 
-				await httpClient.sendMessage(
-					sessionId,
-					[{ type: "text", text: userPrompt }],
-					workspaceDir,
-					sendOptions,
+				const prompt = client.session.prompt(
+					{
+						sessionID: sessionId,
+						directory: workspaceDir,
+						parts: [{ type: "text", text: userPrompt }],
+						model: hasExplicitModel
+							? {
+								providerID: targetProvider,
+								modelID: targetModel,
+							}
+							: undefined,
+						system: sendOptions.system,
+						tools: sendOptions.tools,
+					},
+					{ throwOnError: true },
 				)
 				messageSent = true
 				lastEventAt = Date.now()
 				console.log(`[Kilo Bench] Message sent successfully`)
+				void prompt.catch((err: unknown) => {
+					if (closed) {
+						return
+					}
+					const msg = err instanceof Error ? err.message : String(err)
+					messageError = toFailure(msg)
+					done = true
+					wake()
+				})
 
 				try {
 					while (!done) {
@@ -250,7 +270,7 @@ export function createBenchApiHandler(
 				}
 			} finally {
 				try {
-					await httpClient.deleteSession(sessionId, workspaceDir)
+					await client.session.delete({ sessionID: sessionId, directory: workspaceDir }, { throwOnError: true })
 					console.log(`[Kilo Bench] Cleaned up session ${sessionId}`)
 				} catch (err) {
 					console.warn(`[Kilo Bench] Failed to clean up session ${sessionId}:`, err)

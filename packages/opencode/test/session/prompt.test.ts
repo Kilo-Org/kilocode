@@ -1,4 +1,5 @@
 import path from "path"
+import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
 import { fileURLToPath } from "url"
 import { Instance } from "../../src/project/instance"
@@ -209,3 +210,123 @@ describe("session.prompt agent variant", () => {
     }
   })
 })
+
+// kilocode_change start
+function deferred<T>() {
+  const result = {} as { promise: Promise<T>; resolve: (value: T) => void }
+  result.promise = new Promise((resolve) => {
+    result.resolve = resolve
+  })
+  return result
+}
+
+describe("session.prompt abort", () => {
+  test("returns the interrupted assistant turn when the current prompt is cancelled", async () => {
+    const dir = path.dirname(fileURLToPath(import.meta.url))
+    const fixtures = (await Bun.file(path.join(dir, "../tool/fixtures/models-api.json")).json()) as Record<
+      string,
+      { models: Record<string, { id: string }> } & Record<string, unknown>
+    >
+    const model = fixtures.openai.models["gpt-5.2"]
+    const started = deferred<void>()
+    const payload = new TextEncoder().encode(
+      [
+        `data: ${JSON.stringify({
+          type: "response.created",
+          response: {
+            id: "resp-1",
+            created_at: Math.floor(Date.now() / 1000),
+            model: model.id,
+            service_tier: null,
+          },
+        })}`,
+        "",
+      ].join("\n\n"),
+    )
+    const server = Bun.serve({
+      port: 0,
+      fetch(req: Request) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/responses")) {
+          return new Response("unexpected request", { status: 404 })
+        }
+        started.resolve()
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(payload)
+            },
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          },
+        )
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (root) => {
+          const dir = path.join(root, ".opencode")
+          await fs.mkdir(dir, { recursive: true })
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://app.kilo.ai/config.json",
+              enabled_providers: ["openai"],
+              provider: {
+                openai: {
+                  name: "OpenAI",
+                  env: ["OPENAI_API_KEY"],
+                  npm: "@ai-sdk/openai",
+                  api: "https://api.openai.com/v1",
+                  models: {
+                    [model.id]: model,
+                  },
+                  options: {
+                    apiKey: "test-openai-key",
+                    baseURL: `${server.url.origin}/v1`,
+                  },
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await Session.create({})
+          const run = SessionPrompt.prompt({
+            sessionID: session.id,
+            model: {
+              providerID: "openai",
+              modelID: model.id,
+            },
+            parts: [{ type: "text", text: "say hello" }],
+          })
+
+          await started.promise
+          SessionPrompt.cancel(session.id)
+
+          const result = await run
+          expect(result.info.role).toBe("assistant")
+          if (result.info.role !== "assistant") throw new Error("expected assistant message")
+          expect(result.info.error?.name).toBe("MessageAbortedError")
+
+          const messages = await Session.messages({ sessionID: session.id })
+          const assistant = messages.find((item) => item.info.role === "assistant")
+          expect(assistant?.info.id).toBe(result.info.id)
+
+          await Session.remove(session.id)
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  }, 15000)
+})
+// kilocode_change end

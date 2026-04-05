@@ -16,6 +16,7 @@ Configure how Kilo Code behaves and responds:
 - [**Custom Modes**](/docs/customize/custom-modes) - Create specialized modes for different tasks (code review, documentation, testing, etc.)
 - [**Custom Rules**](/docs/customize/custom-rules) - Define rules that apply to specific file types or situations
 - [**Custom Instructions**](/docs/customize/custom-instructions) - Add project-specific guidelines and context
+- [**Custom Subagents**](/docs/customize/custom-subagents) - Create specialized subagents with custom prompts, models, and permissions
 - [**agents.md**](/docs/customize/agents-md) - Configure agent behavior at the project level
 - [**Workflows**](/docs/customize/workflows) - Automate multi-step processes
 - [**Skills**](/docs/customize/skills) - Extend Kilo's capabilities with reusable skill definitions

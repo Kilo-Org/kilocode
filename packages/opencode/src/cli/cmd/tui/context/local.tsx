@@ -132,6 +132,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
         state.pending = false
         Filesystem.writeJson(filePath, {
+          model: modelStore.model, // kilocode_change
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
@@ -142,6 +143,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
+          if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // kilocode_change
           if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)
         })
         .catch(() => {})
@@ -241,6 +243,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           const val = recent[next]
           if (!val) return
           setModelStore("model", agent.current().name, { ...val })
+          save() // kilocode_change
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = modelStore.favorite.filter((item) => isModelValid(item))
@@ -293,8 +296,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
                 "recent",
                 uniq.map((x) => ({ providerID: x.providerID, modelID: x.modelID })),
               )
-              save()
             }
+            save() // kilocode_change
           })
         },
         toggleFavorite(model: { providerID: string; modelID: string }) {

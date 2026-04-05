@@ -182,19 +182,24 @@ const AgentBehaviourTab: Component = () => {
         </SettingsRow>
       </Card>
 
-      {/* Agent selector */}
-      <div style={{ "margin-bottom": "12px" }}>
-        <Select
-          options={agentSelectorOptions()}
-          current={agentSelectorOptions().find((o) => o.value === selectedAgent())}
-          value={(o) => o.value}
-          label={(o) => o.label}
-          onSelect={(o) => o && setSelectedAgent(o.value)}
-          variant="secondary"
-          size="small"
-          triggerVariant="settings"
-        />
-      </div>
+      <Card style={{ "margin-bottom": "12px" }}>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.selectAgent.title")}
+          description={language.t("settings.agentBehaviour.selectAgent.description")}
+          last
+        >
+          <Select
+            options={agentSelectorOptions()}
+            current={agentSelectorOptions().find((o) => o.value === selectedAgent())}
+            value={(o) => o.value}
+            label={(o) => o.label}
+            onSelect={(o) => o && setSelectedAgent(o.value)}
+            variant="secondary"
+            size="small"
+            triggerVariant="settings"
+          />
+        </SettingsRow>
+      </Card>
 
       <Show when={selectedAgent()}>
         <Card>
@@ -313,7 +318,7 @@ const AgentBehaviourTab: Component = () => {
                   <div style={{ "font-weight": "500" }}>{name}</div>
                   <div
                     style={{
-                      "font-size": "11px",
+                      "font-size": "12px",
                       color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                       "margin-top": "4px",
                       "font-family": "var(--vscode-editor-font-family, monospace)",
@@ -361,7 +366,7 @@ const AgentBehaviourTab: Component = () => {
               }}
             />
           </div>
-          <Button size="small" onClick={addSkillPath}>
+          <Button variant="secondary" onClick={addSkillPath}>
             {language.t("common.add")}
           </Button>
         </div>
@@ -412,7 +417,7 @@ const AgentBehaviourTab: Component = () => {
               }}
             />
           </div>
-          <Button size="small" onClick={addSkillUrl}>
+          <Button variant="secondary" onClick={addSkillUrl}>
             {language.t("common.add")}
           </Button>
         </div>
@@ -455,7 +460,7 @@ const AgentBehaviourTab: Component = () => {
           <div style={{ "font-weight": "500" }}>{language.t("settings.agentBehaviour.instructionFiles")}</div>
           <div
             style={{
-              "font-size": "11px",
+              "font-size": "12px",
               color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
               "margin-top": "2px",
             }}
@@ -484,7 +489,7 @@ const AgentBehaviourTab: Component = () => {
               }}
             />
           </div>
-          <Button size="small" onClick={addInstruction}>
+          <Button variant="secondary" onClick={addInstruction}>
             {language.t("common.add")}
           </Button>
         </div>

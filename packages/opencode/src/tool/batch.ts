@@ -2,7 +2,7 @@ import z from "zod"
 import { Tool } from "./tool"
 import DESCRIPTION from "./batch.txt"
 
-const DISALLOWED = new Set(["batch"])
+const DISALLOWED = new Set(["batch", "plan_exit"]) // kilocode_change - plan_exit is agent-gated, not registry-gated
 const FILTERED_FROM_SUGGESTIONS = new Set(["invalid", "patch", ...DISALLOWED])
 
 export const BatchTool = Tool.define("batch", async () => {

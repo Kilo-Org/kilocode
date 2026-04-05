@@ -28,13 +28,31 @@ registerExpandedTaskTool()
 registerVscodeToolOverrides()
 import SessionList from "./components/history/SessionList"
 import CloudSessionList from "./components/history/CloudSessionList"
+import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { BenchView } from "./components/bench"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "bench"
-const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "cloudHistory", "profile", "settings", "bench"])
+type ViewType =
+  | "newTask"
+  | "marketplace"
+  | "history"
+  | "cloudHistory"
+  | "profile"
+  | "settings"
+  | "bench"
+  | "migration" // legacy-migration
+const VALID_VIEWS = new Set<string>([
+  "newTask",
+  "marketplace",
+  "history",
+  "cloudHistory",
+  "profile",
+  "settings",
+  "bench",
+  "migration",
+]) // legacy-migration
 
 const DummyView: Component<{ title: string }> = (props) => {
   return (
@@ -156,13 +174,14 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [migrationReturnView, setMigrationReturnView] = createSignal<ViewType>("newTask") // legacy-migration
   const session = useSession()
   const server = useServer()
 
   const handleViewAction = (action: string) => {
     switch (action) {
       case "plusButtonClicked":
-        session.clearCurrentSession()
+        window.dispatchEvent(new CustomEvent("newTaskRequest"))
         setCurrentView("newTask")
         break
       case "marketplaceButtonClicked":
@@ -240,15 +259,28 @@ const AppContent: Component = () => {
             profileData={server.profileData()}
             deviceAuth={server.deviceAuth()}
             onLogin={server.startLogin}
-            onBack={() => setCurrentView("newTask")}
           />
         </Match>
         <Match when={currentView() === "settings"}>
-          <Settings onBack={() => setCurrentView("newTask")} />
+          <Settings
+            onMigrateClick={() => {
+              setMigrationReturnView("settings")
+              setCurrentView("migration")
+            }}
+          />
+          {/* legacy-migration */}
         </Match>
         <Match when={currentView() === "bench"}>
           <BenchView onDone={() => setCurrentView("newTask")} />
         </Match>
+        {/* legacy-migration start */}
+        <Match when={currentView() === "migration"}>
+          <MigrationWizard
+            onBack={() => setCurrentView(migrationReturnView())}
+            onComplete={() => setCurrentView(migrationReturnView())}
+          />
+        </Match>
+        {/* legacy-migration end */}
       </Switch>
     </div>
   )

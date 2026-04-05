@@ -114,7 +114,10 @@
         "clear": false
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/kilo-vscode",
+        "env": {
+          "VSCODE_EXEC_PATH": "${execPath}"
+        }
       },
       "problemMatcher": []
     }

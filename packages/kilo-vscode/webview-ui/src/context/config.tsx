@@ -14,6 +14,37 @@ interface ConfigContextValue {
   updateConfig: (partial: Partial<Config>) => void
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value)
+}
+
+/** Deep merge two objects, with source values overriding target values. */
+function deepMerge(target: Config, source: Partial<Config>): Config {
+  const result: Record<string, unknown> = { ...target }
+  for (const [key, value] of Object.entries(source)) {
+    if (isRecord(value) && isRecord(result[key])) {
+      result[key] = deepMerge(result[key] as Config, value as Partial<Config>)
+    } else {
+      result[key] = value
+    }
+  }
+  return result as Config
+}
+
+/** Recursively remove keys whose value is null (null = "deleted"). */
+function stripNulls(obj: Config): Config {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === null || value === undefined) continue
+    if (isRecord(value)) {
+      result[key] = stripNulls(value as Config)
+    } else {
+      result[key] = value
+    }
+  }
+  return result as Config
+}
+
 const ConfigContext = createContext<ConfigContextValue>()
 
 export const ConfigProvider: ParentComponent = (props) => {
@@ -59,8 +90,8 @@ export const ConfigProvider: ParentComponent = (props) => {
   onCleanup(() => clearInterval(retryTimer))
 
   function updateConfig(partial: Partial<Config>) {
-    // Optimistically update local state
-    setConfig((prev) => ({ ...prev, ...partial }))
+    // Optimistically update local state with deep merge + null stripping
+    setConfig((prev) => stripNulls(deepMerge(prev, partial)))
     // Send to extension for persistence
     vscode.postMessage({ type: "updateConfig", config: partial })
   }

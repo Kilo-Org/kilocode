@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Regression test: OAuth accountId must flow into model fetch as kilocodeOrganizationId
 // When a user logs in via OAuth and selects an enterprise organization, the model fetch
 // should use the organization-specific endpoint, not the personal endpoint.
@@ -119,6 +118,55 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
       expect(captured).toBeDefined()
       expect(captured.kilocodeToken).toBe("test-personal-token")
       expect(captured.kilocodeOrganizationId).toBeUndefined()
+    },
+  })
+})
+
+test("ModelCache.clear removes cached entry so next fetch hits the network", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Bun.write(
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+        }),
+      )
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      await Auth.set("kilo", {
+        type: "oauth",
+        access: "token-clear-test",
+        refresh: "refresh-clear",
+        expires: Date.now() + 3600000,
+        accountId: "org-clear",
+      })
+    },
+    fn: async () => {
+      // Populate cache
+      captured = undefined
+      ModelCache.clear("kilo")
+      await ModelCache.fetch("kilo")
+      expect(captured).toBeDefined()
+
+      // Verify cache is populated — second fetch should NOT call fetchKiloModels
+      captured = undefined
+      await ModelCache.fetch("kilo")
+      expect(captured).toBeUndefined()
+      expect(ModelCache.get("kilo")).toBeDefined()
+
+      // Clear the cache
+      ModelCache.clear("kilo")
+
+      // get() should return undefined after clear
+      expect(ModelCache.get("kilo")).toBeUndefined()
+
+      // Next fetch should call fetchKiloModels again
+      captured = undefined
+      await ModelCache.fetch("kilo")
+      expect(captured).toBeDefined()
     },
   })
 })

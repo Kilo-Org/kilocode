@@ -1,8 +1,6 @@
 import { Component } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import ProvidersTab from "./ProvidersTab"
 import AgentBehaviourTab from "./AgentBehaviourTab"
@@ -21,7 +19,7 @@ import AboutKiloCodeTab from "./AboutKiloCodeTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
-  onBack?: () => void
+  onMigrateClick?: () => void // legacy-migration
 }
 
 const Settings: Component<SettingsProps> = (props) => {
@@ -40,11 +38,6 @@ const Settings: Component<SettingsProps> = (props) => {
           gap: "8px",
         }}
       >
-        <Tooltip value={language.t("common.goBack")} placement="bottom">
-          <Button variant="ghost" size="small" onClick={() => props.onBack?.()}>
-            <Icon name="arrow-left" />
-          </Button>
-        </Tooltip>
         <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
       </div>
 
@@ -53,59 +46,59 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.List>
           <Tabs.Trigger value="providers">
             <Icon name="providers" />
-            {language.t("settings.providers.title")}
+            <span class="label">{language.t("settings.providers.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="agentBehaviour">
             <Icon name="brain" />
-            {language.t("settings.agentBehaviour.title")}
+            <span class="label">{language.t("settings.agentBehaviour.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="autoApprove">
             <Icon name="checklist" />
-            {language.t("settings.autoApprove.title")}
+            <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="browser">
             <Icon name="window-cursor" />
-            {language.t("settings.browser.title")}
+            <span class="label">{language.t("settings.browser.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="checkpoints">
             <Icon name="branch" />
-            {language.t("settings.checkpoints.title")}
+            <span class="label">{language.t("settings.checkpoints.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="display">
             <Icon name="eye" />
-            {language.t("settings.display.title")}
+            <span class="label">{language.t("settings.display.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="autocomplete">
             <Icon name="code-lines" />
-            {language.t("settings.autocomplete.title")}
+            <span class="label">{language.t("settings.autocomplete.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="notifications">
             <Icon name="circle-check" />
-            {language.t("settings.notifications.title")}
+            <span class="label">{language.t("settings.notifications.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="context">
             <Icon name="server" />
-            {language.t("settings.context.title")}
+            <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="terminal">
             <Icon name="console" />
-            {language.t("settings.terminal.title")}
+            <span class="label">{language.t("settings.terminal.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="prompts">
             <Icon name="comment" />
-            {language.t("settings.prompts.title")}
+            <span class="label">{language.t("settings.prompts.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
-            {language.t("settings.experimental.title")}
+            <span class="label">{language.t("settings.experimental.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="language">
             <Icon name="speech-bubble" />
-            {language.t("settings.language.title")}
+            <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="aboutKiloCode">
             <Icon name="help" />
-            {language.t("settings.aboutKiloCode.title")}
+            <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -167,6 +160,7 @@ const Settings: Component<SettingsProps> = (props) => {
             port={server.serverInfo()?.port ?? null}
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}
+            onMigrateClick={props.onMigrateClick}
           />
         </Tabs.Content>
       </Tabs>

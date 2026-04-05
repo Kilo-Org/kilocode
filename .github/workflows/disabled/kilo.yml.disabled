@@ -35,4 +35,4 @@ jobs:
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           KILO_PERMISSION: '{"bash": "deny"}'
         with:
-          model: kilo/kilo/auto
+          model: kilo/kilo-auto/frontier

@@ -26,7 +26,7 @@ Kilo's **Code Reviews** feature automatically analyzes your pull or merge reques
 
 Before enabling Code Reviews:
 
-- **A platform integration must be configured:** Connect your GitHub or GitLab account via the [Integrations page](https://app.kilo.ai/integrations) so that the Review Agent can access your repositories.
+- **A platform integration must be configured:** Connect your GitHub or GitLab account via the [Integrations page](https://app.kilo.ai/integrations) so that the Review Agent can access your repositories. See the [Integration setup guide](/docs/automate/integrations) for detailed instructions.
 - **Kilo Code credits:** The AI model uses credits when analyzing your code.
 
 ## Cost

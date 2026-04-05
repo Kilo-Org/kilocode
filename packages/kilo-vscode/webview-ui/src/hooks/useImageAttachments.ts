@@ -1,8 +1,6 @@
 import { createSignal } from "solid-js"
 import { ACCEPTED_IMAGE_TYPES, isAcceptedImageType, isDragLeavingComponent } from "./image-attachments-utils"
 
-export { ACCEPTED_IMAGE_TYPES }
-
 export interface ImageAttachment {
   id: string
   filename: string

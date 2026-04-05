@@ -1,4 +1,3 @@
-// kilocode_change - new file
 export const dict = {
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1":
@@ -12,4 +11,7 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "Рекомендуемые",
   "dialog.provider.kilo.note": "Доступ к 500+ моделям ИИ",
+
+  // Reasoning block label
+  "ui.reasoning.label": "Рассуждение",
 }

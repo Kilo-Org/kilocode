@@ -100,7 +100,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "แนะนำ",
   "dialog.provider.opencode.note": "โมเดลที่คัดสรร รวมถึง Claude, GPT, Gemini และอื่น ๆ",
   "dialog.provider.anthropic.note": "เข้าถึงโมเดล Claude โดยตรง รวมถึง Pro และ Max",
-  "dialog.provider.copilot.note": "โมเดล Claude สำหรับการช่วยเหลือในการเขียนโค้ด",
+  "dialog.provider.copilot.note": "โมเดล AI สำหรับการช่วยเหลือในการเขียนโค้ดผ่าน GitHub Copilot",
   "dialog.provider.openai.note": "โมเดล GPT สำหรับงาน AI ทั่วไปที่รวดเร็วและมีความสามารถ",
   "dialog.provider.google.note": "โมเดล Gemini สำหรับการตอบสนองที่รวดเร็วและมีโครงสร้าง",
   "dialog.provider.openrouter.note": "เข้าถึงโมเดลที่รองรับทั้งหมดจากผู้ให้บริการเดียว",
@@ -111,6 +111,7 @@ export const dict = {
   "dialog.model.empty": "ไม่พบผลลัพธ์โมเดล",
   "dialog.model.manage": "จัดการโมเดล",
   "dialog.model.manage.description": "ปรับแต่งโมเดลที่จะปรากฏในตัวเลือกโมเดล",
+  "dialog.model.manage.provider.toggle": "สลับโมเดล {{provider}} ทั้งหมด",
 
   "dialog.model.unpaid.freeModels.title": "โมเดลฟรีที่จัดหาให้โดย Kilo",
   "dialog.model.unpaid.addMore.title": "เพิ่มโมเดลเพิ่มเติมจากผู้ให้บริการยอดนิยม",
@@ -146,8 +147,7 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "รหัสการอนุญาตไม่ถูกต้อง",
   "provider.connect.oauth.auto.visit.prefix": "เยี่ยมชม ",
   "provider.connect.oauth.auto.visit.link": "ลิงก์นี้",
-  "provider.connect.oauth.auto.visit.suffix":
-    " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
+  "provider.connect.oauth.auto.visit.suffix": " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Kilo",
   "provider.connect.oauth.auto.confirmationCode": "รหัสยืนยัน",
   "provider.connect.toast.connected.title": "{{provider}} ที่เชื่อมต่อแล้ว",
   "provider.connect.toast.connected.description": "โมเดล {{provider}} พร้อมใช้งานแล้ว",
@@ -493,6 +493,7 @@ export const dict = {
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.empty": "ยังไม่มีการเปลี่ยนแปลงในเซสชันนี้",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
+  "session.review.noVcs": "ไม่พบ git VCS ดังนั้นจะไม่สามารถตรวจจับการเปลี่ยนแปลงของเซสชันได้",
 
   "session.files.selectToOpen": "เลือกไฟล์เพื่อเปิด",
   "session.files.all": "ไฟล์ทั้งหมด",
@@ -508,6 +509,11 @@ export const dict = {
   "session.todo.title": "สิ่งที่ต้องทำ",
   "session.todo.collapse": "ย่อ",
   "session.todo.expand": "ขยาย",
+
+  "session.modeSwitch.switching": "กำลังสลับไปยังโหมด {{mode}}…",
+  "session.modeSwitch.waiting": "รอให้งานปัจจุบันเสร็จสมบูรณ์",
+  "session.modeSwitch.notAvailable": "ตัวแทนไม่พร้อมใช้งาน",
+  "session.modeSwitch.fallback": 'ไม่พบ "{{requested}}" กำลังใช้ "{{actual}}"',
 
   "session.new.worktree.main": "สาขาหลัก",
   "session.new.worktree.mainWithBranch": "สาขาหลัก ({{branch}})",
@@ -605,6 +611,8 @@ export const dict = {
   "settings.general.row.theme.description": "ปรับแต่งวิธีการที่ Kilo มีธีม",
   "settings.general.row.font.title": "ฟอนต์",
   "settings.general.row.font.description": "ปรับแต่งฟอนต์โมโนที่ใช้ในบล็อกโค้ด",
+  "settings.general.row.reasoningSummaries.title": "แสดงสรุปการให้เหตุผล",
+  "settings.general.row.reasoningSummaries.description": "แสดงสรุปการให้เหตุผลของโมเดลในไทม์ไลน์",
 
   "settings.general.row.shellToolPartsExpanded.title": "ขยายส่วนเครื่องมือ shell",
   "settings.general.row.shellToolPartsExpanded.description": "แสดงส่วนเครื่องมือ shell แบบขยายตามค่าเริ่มต้นในไทม์ไลน์",

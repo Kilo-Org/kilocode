@@ -1,22 +1,28 @@
 import { BenchCreditError } from "./types.js"
 import type { BenchApiHandler, BenchProblem, BenchRawResponse } from "./types.js"
 
-function extractEvalJSON(text: string): any | null {
+function extractEvalJSON(text: string): Record<string, unknown> | null {
 	const stripped = text.replace(/^```(?:json)?\s*\n?/gm, "").replace(/\n?```\s*$/gm, "").trim()
 	try {
 		const p = JSON.parse(stripped)
-		if (p && typeof p === "object") return p
+		if (p && typeof p === "object" && !Array.isArray(p)) return p as Record<string, unknown>
 	} catch { /* continue */ }
 	const match = stripped.match(/\{[\s\S]*\}/)
 	if (match) {
-		try { return JSON.parse(match[0]) } catch { /* continue */ }
+		try {
+			const p = JSON.parse(match[0])
+			if (p && typeof p === "object" && !Array.isArray(p)) return p as Record<string, unknown>
+		} catch { /* continue */ }
 	}
 	const i = text.indexOf("{")
 	if (i >= 0) {
 		const c = text.slice(i)
 		const j = c.lastIndexOf("}")
 		if (j > 0) {
-			try { return JSON.parse(c.slice(0, j + 1)) } catch { /* give up */ }
+			try {
+				const p = JSON.parse(c.slice(0, j + 1))
+				if (p && typeof p === "object" && !Array.isArray(p)) return p as Record<string, unknown>
+			} catch { /* give up */ }
 		}
 	}
 	return null
@@ -36,29 +42,31 @@ function buildEvaluationPrompt(problem: BenchProblem, response: string, diff?: s
 		: ""
 	const hasDiff = diffText.length > 0
 
-	let prompt = `You are an expert AI evaluator judging the quality of a coding assistant's response.
-
-## Problem
-**Mode:** ${problem.mode}
-**Title:** ${problem.title}
-**Prompt:** ${problem.prompt}
-**Difficulty:** ${problem.difficulty}
-
-	## Evaluation Criteria
-	The response should address these specific criteria:
-	${problem.evaluationCriteria.map((c, i) => `${i + 1}. ${c}`).join("\n")}
-
-	## Response to Evaluate
-	${responseText}`
+	let prompt = [
+		"You are an expert AI evaluator judging the quality of a coding assistant's response.",
+		"",
+		"## Problem",
+		`**Mode:** ${problem.mode}`,
+		`**Title:** ${problem.title}`,
+		`**Prompt:** ${problem.prompt}`,
+		`**Difficulty:** ${problem.difficulty}`,
+		"",
+		"## Evaluation Criteria",
+		"The response should address these specific criteria:",
+		...problem.evaluationCriteria.map((c, i) => `${i + 1}. ${c}`),
+		"",
+		"## Response to Evaluate",
+		responseText,
+	].join("\n")
 
 	if (hasDiff) {
 		prompt += `
 
-	## Code Changes (git diff)
-	The model was given an isolated copy of the workspace and produced the following file changes:
-	\`\`\`diff
-	${diffText}
-	\`\`\`
+## Code Changes (git diff)
+The model was given an isolated copy of the workspace and produced the following file changes:
+\`\`\`diff
+${diffText}
+\`\`\`
 
 When evaluating, consider both the textual response AND the actual code changes.
 A model that produced correct, working code changes should score higher than one that only described what to do.`

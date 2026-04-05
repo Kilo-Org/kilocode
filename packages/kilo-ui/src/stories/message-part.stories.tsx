@@ -1,6 +1,8 @@
 /** @jsxImportSource solid-js */
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { Message, AssistantMessageDisplay, UserMessageDisplay } from "@opencode-ai/ui/message-part"
+// Side-effect import: registers kilo-ui's PART_MAPPING override for reasoning blocks
+import "../components/message-part"
 import { DataProvider } from "@opencode-ai/ui/context/data"
 import { DiffComponentProvider } from "@opencode-ai/ui/context/diff"
 import { CodeComponentProvider } from "@opencode-ai/ui/context/code"
@@ -8,7 +10,7 @@ import { DialogProvider } from "@opencode-ai/ui/context/dialog"
 import { MarkedProvider } from "@opencode-ai/ui/context/marked"
 import { Diff } from "@opencode-ai/ui/diff"
 import { Code } from "@opencode-ai/ui/code"
-import type { UserMessage, AssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
+import type { UserMessage, AssistantMessage, TextPart, ToolPart, ReasoningPart } from "@kilocode/sdk/v2"
 
 const SESSION_ID = "session-story-001"
 const USER_MSG_ID = "user-msg-001"
@@ -104,6 +106,15 @@ const errorToolPart: ToolPart = {
   },
 }
 
+const reasoningPart: ReasoningPart = {
+  id: "part-reasoning-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "reasoning",
+  text: "Let me think about this carefully. The user wants code improvements.\n\n1. First, I should check for error boundaries — they prevent cascading failures\n2. The dependencies could be updated to newer minor versions\n3. Unit tests would improve confidence in refactoring later\n\nI'll structure my response to address each point clearly.",
+  time: { start: now - 9000, end: now - 8500 },
+}
+
 const mockData = {
   session: [],
   session_status: {},
@@ -184,6 +195,33 @@ export const FullConversationTurn: Story = {
       </div>
     </AllProviders>
   ),
+}
+
+export const WithReasoningCollapsed: Story = {
+  name: "WithReasoning (collapsed)",
+  render: () => (
+    <AllProviders>
+      <AssistantMessageDisplay message={mockAssistantMessage} parts={[reasoningPart, textPart]} />
+    </AllProviders>
+  ),
+}
+
+export const WithReasoningExpanded: Story = {
+  name: "WithReasoning (expanded)",
+  render: () => {
+    // Use a wrapper to render with the collapsible open by default
+    const expandedReasoningPart = { ...reasoningPart, id: "part-reasoning-expanded" }
+    return (
+      <AllProviders>
+        <AssistantMessageDisplay message={mockAssistantMessage} parts={[expandedReasoningPart, textPart]} />
+      </AllProviders>
+    )
+  },
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    // Click the collapsible trigger to expand it
+    const trigger = canvasElement.querySelector("[data-slot='reasoning-header']")?.closest("button")
+    if (trigger) trigger.click()
+  },
 }
 
 export const MessageSwitch: Story = {

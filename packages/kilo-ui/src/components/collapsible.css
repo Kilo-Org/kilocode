@@ -1,0 +1,7 @@
+/* Kilo Collapsible overrides */
+
+[data-component="collapsible"] {
+  [data-slot="collapsible-trigger"] {
+    cursor: pointer;
+  }
+}

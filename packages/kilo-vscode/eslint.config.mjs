@@ -3,7 +3,7 @@ import eslintConfigPrettier from "eslint-config-prettier"
 
 export default [
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
   },
   {
     plugins: {
@@ -28,6 +28,7 @@ export default [
       curly: "warn",
       eqeqeq: "warn",
       "no-throw-literal": "warn",
+      "max-lines": ["error", 3000],
     },
   },
   eslintConfigPrettier,

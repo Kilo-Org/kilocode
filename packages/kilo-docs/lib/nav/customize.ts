@@ -17,6 +17,10 @@ export const CustomizeNav: NavSection[] = [
         href: "/customize/custom-instructions",
         children: "Custom Instructions",
       },
+      {
+        href: "/customize/custom-subagents",
+        children: "Custom Subagents",
+      },
       { href: "/customize/agents-md", children: "agents.md" },
       { href: "/customize/workflows", children: "Workflows" },
       { href: "/customize/skills", children: "Skills" },

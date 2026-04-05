@@ -41,6 +41,22 @@ import { dict as appNo } from "../i18n/no"
 import { dict as appBr } from "../i18n/br"
 import { dict as appTh } from "../i18n/th"
 import { dict as appBs } from "../i18n/bs"
+import { dict as amEn } from "../../agent-manager/i18n/en"
+import { dict as amZh } from "../../agent-manager/i18n/zh"
+import { dict as amZht } from "../../agent-manager/i18n/zht"
+import { dict as amKo } from "../../agent-manager/i18n/ko"
+import { dict as amDe } from "../../agent-manager/i18n/de"
+import { dict as amEs } from "../../agent-manager/i18n/es"
+import { dict as amFr } from "../../agent-manager/i18n/fr"
+import { dict as amDa } from "../../agent-manager/i18n/da"
+import { dict as amJa } from "../../agent-manager/i18n/ja"
+import { dict as amPl } from "../../agent-manager/i18n/pl"
+import { dict as amRu } from "../../agent-manager/i18n/ru"
+import { dict as amAr } from "../../agent-manager/i18n/ar"
+import { dict as amNo } from "../../agent-manager/i18n/no"
+import { dict as amBr } from "../../agent-manager/i18n/br"
+import { dict as amTh } from "../../agent-manager/i18n/th"
+import { dict as amBs } from "../../agent-manager/i18n/bs"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { dict as kiloZh } from "@kilocode/kilo-i18n/zh"
 import { dict as kiloZht } from "@kilocode/kilo-i18n/zht"
@@ -84,25 +100,25 @@ export const LOCALE_LABELS: Record<Locale, string> = {
   bs: "Bosanski",
 }
 
-// Merge all 3 dict layers: app + ui + kilo (kilo overrides last, English base always present)
+// Merge 4 dict layers: app + ui + kilo + agent manager (kilo and agent manager override last)
 const base = { ...appEn, ...uiEn, ...kiloEn }
 const dicts: Record<Locale, Record<string, string>> = {
-  en: base,
-  zh: { ...base, ...appZh, ...uiZh, ...kiloZh },
-  zht: { ...base, ...appZht, ...uiZht, ...kiloZht },
-  ko: { ...base, ...appKo, ...uiKo, ...kiloKo },
-  de: { ...base, ...appDe, ...uiDe, ...kiloDe },
-  es: { ...base, ...appEs, ...uiEs, ...kiloEs },
-  fr: { ...base, ...appFr, ...uiFr, ...kiloFr },
-  da: { ...base, ...appDa, ...uiDa, ...kiloDa },
-  ja: { ...base, ...appJa, ...uiJa, ...kiloJa },
-  pl: { ...base, ...appPl, ...uiPl, ...kiloPl },
-  ru: { ...base, ...appRu, ...uiRu, ...kiloRu },
-  ar: { ...base, ...appAr, ...uiAr, ...kiloAr },
-  no: { ...base, ...appNo, ...uiNo, ...kiloNo },
-  br: { ...base, ...appBr, ...uiBr, ...kiloBr },
-  th: { ...base, ...appTh, ...uiTh, ...kiloTh },
-  bs: { ...base, ...appBs, ...uiBs, ...kiloBs },
+  en: { ...base, ...amEn },
+  zh: { ...base, ...appZh, ...uiZh, ...kiloZh, ...amEn, ...amZh },
+  zht: { ...base, ...appZht, ...uiZht, ...kiloZht, ...amEn, ...amZht },
+  ko: { ...base, ...appKo, ...uiKo, ...kiloKo, ...amEn, ...amKo },
+  de: { ...base, ...appDe, ...uiDe, ...kiloDe, ...amEn, ...amDe },
+  es: { ...base, ...appEs, ...uiEs, ...kiloEs, ...amEn, ...amEs },
+  fr: { ...base, ...appFr, ...uiFr, ...kiloFr, ...amEn, ...amFr },
+  da: { ...base, ...appDa, ...uiDa, ...kiloDa, ...amEn, ...amDa },
+  ja: { ...base, ...appJa, ...uiJa, ...kiloJa, ...amEn, ...amJa },
+  pl: { ...base, ...appPl, ...uiPl, ...kiloPl, ...amEn, ...amPl },
+  ru: { ...base, ...appRu, ...uiRu, ...kiloRu, ...amEn, ...amRu },
+  ar: { ...base, ...appAr, ...uiAr, ...kiloAr, ...amEn, ...amAr },
+  no: { ...base, ...appNo, ...uiNo, ...kiloNo, ...amEn, ...amNo },
+  br: { ...base, ...appBr, ...uiBr, ...kiloBr, ...amEn, ...amBr },
+  th: { ...base, ...appTh, ...uiTh, ...kiloTh, ...amEn, ...amTh },
+  bs: { ...base, ...appBs, ...uiBs, ...kiloBs, ...amEn, ...amBs },
 }
 
 function normalizeLocale(lang: string): Locale {
@@ -177,7 +193,7 @@ interface LanguageContextValue {
   t: (key: string, params?: UiI18nParams) => string
 }
 
-const LanguageContext = createContext<LanguageContextValue>()
+export const LanguageContext = createContext<LanguageContextValue>()
 
 export function useLanguage() {
   const ctx = useContext(LanguageContext)

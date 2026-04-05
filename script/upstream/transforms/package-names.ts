@@ -35,6 +35,13 @@ const PACKAGE_PATTERNS = [
   { pattern: /"@opencode-ai\/sdk":\s*"/g, replacement: '"@kilocode/sdk": "' },
   { pattern: /"@opencode-ai\/plugin":\s*"/g, replacement: '"@kilocode/plugin": "' },
 
+  // In any string context (mock.module, dynamic references, etc.)
+  // Only cli, sdk, and plugin are renamed — other @opencode-ai/* packages
+  // (e.g. @opencode-ai/ui, @opencode-ai/util) keep their upstream names.
+  { pattern: /@opencode-ai\/cli(?=\/|"|'|`|$)/g, replacement: "@kilocode/cli" },
+  { pattern: /@opencode-ai\/sdk(?=\/|"|'|`|$)/g, replacement: "@kilocode/sdk" },
+  { pattern: /@opencode-ai\/plugin(?=\/|"|'|`|$)/g, replacement: "@kilocode/plugin" },
+
   // In import statements (supports subpaths like @opencode-ai/sdk/v2)
   { pattern: /from\s+["']opencode-ai["']/g, replacement: 'from "@kilocode/cli"' },
   { pattern: /from\s+["']@opencode-ai\/cli(\/[^"']*)?["']/g, replacement: 'from "@kilocode/cli$1"' },
@@ -47,10 +54,23 @@ const PACKAGE_PATTERNS = [
   { pattern: /require\(["']@opencode-ai\/sdk(\/[^"']*)?["']\)/g, replacement: 'require("@kilocode/sdk$1")' },
   { pattern: /require\(["']@opencode-ai\/plugin(\/[^"']*)?["']\)/g, replacement: 'require("@kilocode/plugin$1")' },
 
+  // Internal placeholder hostname used for in-process RPC (never resolved by DNS)
+  { pattern: /opencode\.internal/g, replacement: "kilo.internal" },
+
   // In npx/npm commands
   { pattern: /npx opencode-ai/g, replacement: "npx @kilocode/cli" },
   { pattern: /npm install opencode-ai/g, replacement: "npm install @kilocode/cli" },
   { pattern: /bun add opencode-ai/g, replacement: "bun add @kilocode/cli" },
+
+  // SDK public API renames (Opencode → Kilo)
+  // Order matters: longer names first to avoid partial matches
+  { pattern: /OpencodeClientConfig/g, replacement: "KiloClientConfig" },
+  { pattern: /createOpencodeClient/g, replacement: "createKiloClient" },
+  { pattern: /createOpencodeServer/g, replacement: "createKiloServer" },
+  { pattern: /createOpencodeTui/g, replacement: "createKiloTui" },
+  { pattern: /OpencodeClient/g, replacement: "KiloClient" },
+  // createOpencode (without suffix) needs negative lookahead to avoid matching createOpencodeClient
+  { pattern: /\bcreateOpencode\b(?!Client|Server|Tui)/g, replacement: "createKilo" },
 ]
 
 /**

@@ -3,7 +3,7 @@ import { Popover } from "@kilocode/kilo-ui/popover"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useProvider, type EnrichedModel } from "../../context/provider"
-import { KILO_GATEWAY_ID, isFree } from "../chat/model-selector-utils"
+import { KILO_GATEWAY_ID, isFree } from "../shared/model-selector-utils"
 
 interface SelectedModel {
   modelId: string

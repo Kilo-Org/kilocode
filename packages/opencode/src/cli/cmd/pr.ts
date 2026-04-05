@@ -97,6 +97,7 @@ export const PrCommand = cmd({
         const opencodeProcess = spawn("opencode", opencodeArgs, {
           stdio: "inherit",
           cwd: process.cwd(),
+          windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
         })
 
         await new Promise<void>((resolve, reject) => {

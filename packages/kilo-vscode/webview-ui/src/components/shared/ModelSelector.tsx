@@ -172,6 +172,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const triggerLabel = () =>
     buildTriggerLabel(
       selectedModel()?.name,
+      selectedModel()?.providerID,
       props.value,
       props.allowClear ?? false,
       props.clearLabel ?? "",
@@ -190,8 +191,8 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
       onOpenChange={setOpen}
       triggerAs={Button}
       triggerProps={{
-        variant: "ghost",
-        size: "small",
+        variant: "secondary",
+        size: "normal",
         disabled: !hasProviders(),
         title: selectedModel()?.id,
       }}

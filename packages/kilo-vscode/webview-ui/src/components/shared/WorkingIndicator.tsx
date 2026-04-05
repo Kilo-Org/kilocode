@@ -71,8 +71,17 @@ export const WorkingIndicator: Component = () => {
     return `${m}m ${rem}s`
   }
 
+  const blocked = () => {
+    const id = session.currentSessionID()
+    const perms = session
+      .permissions()
+      .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
+    const questions = session.questions().filter((q) => q.sessionID === id)
+    return perms.length > 0 || questions.length > 0
+  }
+
   return (
-    <Show when={session.status() !== "idle"}>
+    <Show when={session.status() !== "idle" && !blocked()}>
       <div class="working-indicator">
         <Spinner />
         <span class="working-text">{statusText()}</span>

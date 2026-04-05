@@ -100,7 +100,7 @@ export const dict = {
   "dialog.provider.tag.recommended": "Рекомендуемые",
   "dialog.provider.opencode.note": "Отобранные модели, включая Claude, GPT, Gemini и другие",
   "dialog.provider.anthropic.note": "Прямой доступ к моделям Claude, включая Pro и Max",
-  "dialog.provider.copilot.note": "Модели Claude для помощи в кодировании",
+  "dialog.provider.copilot.note": "ИИ-модели для помощи в кодировании через GitHub Copilot",
   "dialog.provider.openai.note": "Модели GPT для быстрых и мощных задач общего ИИ",
   "dialog.provider.google.note": "Модели Gemini для быстрых и структурированных ответов",
   "dialog.provider.openrouter.note": "Доступ ко всем поддерживаемым моделям через одного провайдера",
@@ -111,6 +111,7 @@ export const dict = {
   "dialog.model.empty": "Модели не найдены",
   "dialog.model.manage": "Управление моделями",
   "dialog.model.manage.description": "Настройте какие модели появляются в выборе модели",
+  "dialog.model.manage.provider.toggle": "Переключить все модели {{provider}}",
 
   "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Kilo",
   "dialog.model.unpaid.addMore.title": "Добавьте больше моделей от популярных провайдеров",
@@ -498,6 +499,7 @@ export const dict = {
   "session.review.loadingChanges": "Загрузка изменений...",
   "session.review.empty": "Изменений в этой сессии пока нет",
   "session.review.noChanges": "Нет изменений",
+  "session.review.noVcs": "Git VCS не обнаружен, поэтому изменения сеанса не будут отслеживаться",
   "session.files.selectToOpen": "Выберите файл, чтобы открыть",
   "session.files.all": "Все файлы",
   "session.files.binaryContent": "Двоичный файл (содержимое не может быть отображено)",
@@ -511,6 +513,11 @@ export const dict = {
   "session.todo.title": "Задачи",
   "session.todo.collapse": "Свернуть",
   "session.todo.expand": "Развернуть",
+
+  "session.modeSwitch.switching": "Переключение в режим {{mode}}…",
+  "session.modeSwitch.waiting": "Ожидание завершения текущей задачи",
+  "session.modeSwitch.notAvailable": "Агент недоступен",
+  "session.modeSwitch.fallback": '"{{requested}}" не найден, используется "{{actual}}"',
 
   "session.new.worktree.main": "Основная ветка",
   "session.new.worktree.mainWithBranch": "Основная ветка ({{branch}})",
@@ -611,6 +618,8 @@ export const dict = {
   "settings.general.row.theme.description": "Настройте оформление Kilo.",
   "settings.general.row.font.title": "Шрифт",
   "settings.general.row.font.description": "Настройте моноширинный шрифт для блоков кода",
+  "settings.general.row.reasoningSummaries.title": "Показывать сводки рассуждений",
+  "settings.general.row.reasoningSummaries.description": "Отображать сводки рассуждений модели в хронологии",
 
   "settings.general.row.shellToolPartsExpanded.title": "Разворачивать элементы инструмента shell",
   "settings.general.row.shellToolPartsExpanded.description":

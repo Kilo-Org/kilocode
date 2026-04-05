@@ -139,6 +139,33 @@ const cssPackageResolvePlugin = {
   },
 }
 
+function createBrowserWebviewContext(entryPoint, outfile) {
+  return esbuild.context({
+    entryPoints: [entryPoint],
+    bundle: true,
+    format: "iife",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile,
+    logLevel: "silent",
+    loader: {
+      ".woff": "file",
+      ".woff2": "file",
+      ".ttf": "file",
+    },
+    plugins: [
+      solidDedupePlugin,
+      pierreWorkerStubPlugin,
+      svgSpritePlugin,
+      cssPackageResolvePlugin,
+      solidPlugin(),
+      esbuildProblemMatcherPlugin,
+    ],
+  })
+}
+
 async function main() {
   // Build extension
   const extensionCtx = await esbuild.context({
@@ -156,62 +183,32 @@ async function main() {
   })
 
   // Build Agent Manager webview (SolidJS, shares components with sidebar)
-  const agentManagerCtx = await esbuild.context({
-    entryPoints: ["webview-ui/agent-manager/index.tsx"],
-    bundle: true,
-    format: "iife",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile: "dist/agent-manager.js",
-    logLevel: "silent",
-    loader: {
-      ".woff": "file",
-      ".woff2": "file",
-      ".ttf": "file",
-    },
-    plugins: [
-      solidDedupePlugin,
-      pierreWorkerStubPlugin,
-      svgSpritePlugin,
-      cssPackageResolvePlugin,
-      solidPlugin(),
-      esbuildProblemMatcherPlugin,
-    ],
-  })
+  const agentManagerCtx = await createBrowserWebviewContext(
+    "webview-ui/agent-manager/index.tsx",
+    "dist/agent-manager.js",
+  )
+
+  // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
+  const diffViewerCtx = await createBrowserWebviewContext("webview-ui/diff-viewer/index.tsx", "dist/diff-viewer.js")
 
   // Build webview
-  const webviewCtx = await esbuild.context({
-    entryPoints: ["webview-ui/src/index.tsx"],
-    bundle: true,
-    format: "iife",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile: "dist/webview.js",
-    logLevel: "silent",
-    loader: {
-      ".woff": "file",
-      ".woff2": "file",
-      ".ttf": "file",
-    },
-    plugins: [
-      solidDedupePlugin,
-      pierreWorkerStubPlugin,
-      svgSpritePlugin,
-      cssPackageResolvePlugin,
-      solidPlugin(),
-      esbuildProblemMatcherPlugin,
-    ],
-  })
+  const webviewCtx = await createBrowserWebviewContext("webview-ui/src/index.tsx", "dist/webview.js")
 
   if (watch) {
-    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch()])
+    await Promise.all([extensionCtx.watch(), webviewCtx.watch(), agentManagerCtx.watch(), diffViewerCtx.watch()])
   } else {
-    await Promise.all([extensionCtx.rebuild(), webviewCtx.rebuild(), agentManagerCtx.rebuild()])
-    await Promise.all([extensionCtx.dispose(), webviewCtx.dispose(), agentManagerCtx.dispose()])
+    await Promise.all([
+      extensionCtx.rebuild(),
+      webviewCtx.rebuild(),
+      agentManagerCtx.rebuild(),
+      diffViewerCtx.rebuild(),
+    ])
+    await Promise.all([
+      extensionCtx.dispose(),
+      webviewCtx.dispose(),
+      agentManagerCtx.dispose(),
+      diffViewerCtx.dispose(),
+    ])
   }
 }
 

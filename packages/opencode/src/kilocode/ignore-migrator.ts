@@ -1,4 +1,3 @@
-// kilocode_change - new file
 
 import * as path from "path"
 import os from "os"

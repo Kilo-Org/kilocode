@@ -254,10 +254,12 @@ export interface ModelSelection {
 
 export type PermissionLevel = "allow" | "ask" | "deny"
 
-export type PermissionConfig = Partial<Record<string, PermissionLevel>>
+export type PermissionRule = PermissionLevel | Record<string, PermissionLevel>
+
+export type PermissionConfig = Partial<Record<string, PermissionRule>>
 
 export interface AgentConfig {
-  model?: string
+  model?: string | null
   prompt?: string
   temperature?: number
   top_p?: number
@@ -309,8 +311,8 @@ export interface ExperimentalConfig {
 
 export interface Config {
   permission?: PermissionConfig
-  model?: string
-  small_model?: string
+  model?: string | null
+  small_model?: string | null
   default_agent?: string
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>
@@ -384,6 +386,16 @@ export interface SessionStatusMessage {
 export interface PermissionRequestMessage {
   type: "permissionRequest"
   permission: PermissionRequest
+}
+
+export interface PermissionResolvedMessage {
+  type: "permissionResolved"
+  permissionID: string
+}
+
+export interface PermissionErrorMessage {
+  type: "permissionError"
+  permissionID: string
 }
 
 export interface TodoUpdatedMessage {
@@ -468,6 +480,25 @@ export interface SetChatBoxMessage {
   text: string
 }
 
+export interface AppendChatBoxMessage {
+  type: "appendChatBoxMessage"
+  text: string
+}
+
+export interface ReviewComment {
+  id: string
+  file: string
+  side: "additions" | "deletions"
+  line: number
+  comment: string
+  selectedText: string
+}
+
+export interface AppendReviewCommentsMessage {
+  type: "appendReviewComments"
+  comments: ReviewComment[]
+}
+
 export interface TriggerTaskMessage {
   type: "triggerTask"
   text: string
@@ -500,7 +531,7 @@ export interface DeviceAuthCancelledMessage {
 
 export interface NavigateMessage {
   type: "navigate"
-  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings"
+  view: "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
 }
 
 export interface ProvidersLoadedMessage {
@@ -607,6 +638,7 @@ export interface AgentManagerSessionMetaMessage {
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
   branch: string
+  defaultBranch?: string
 }
 
 // Agent Manager worktree setup progress
@@ -624,7 +656,10 @@ export interface WorktreeState {
   id: string
   branch: string
   path: string
+  /** Bare branch name (e.g. "main"), without remote prefix. */
   parentBranch: string
+  /** Remote name (e.g. "origin"). */
+  remote?: string
   createdAt: string
   /** Shared identifier for worktrees created together via multi-version mode. */
   groupId?: string
@@ -650,10 +685,12 @@ export interface AgentManagerStateMessage {
   type: "agentManager.state"
   worktrees: WorktreeState[]
   sessions: ManagedSessionState[]
+  staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
   sessionsCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
+  defaultBaseBranch?: string
 }
 
 // Resolved keybindings for agent manager actions
@@ -683,6 +720,7 @@ export interface BranchInfo {
   isRemote: boolean
   isDefault: boolean
   lastCommitDate?: string
+  isCheckedOut?: boolean
 }
 
 export interface AgentManagerBranchesMessage {
@@ -733,12 +771,29 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
-// Per-worktree git stats: diff additions/deletions and commits missing from origin
+export type AgentManagerApplyWorktreeDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
+
+export interface AgentManagerApplyWorktreeDiffConflict {
+  file?: string
+  reason: string
+}
+
+export interface AgentManagerApplyWorktreeDiffResultMessage {
+  type: "agentManager.applyWorktreeDiffResult"
+  worktreeId: string
+  status: AgentManagerApplyWorktreeDiffStatus
+  message: string
+  conflicts?: AgentManagerApplyWorktreeDiffConflict[]
+}
+
+// Per-worktree git stats: diff additions/deletions and ahead/behind counts
 export interface WorktreeGitStats {
   worktreeId: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
 }
 
 // Agent Manager: Worktree git stats push (extension → webview)
@@ -747,12 +802,14 @@ export interface AgentManagerWorktreeStatsMessage {
   stats: WorktreeGitStats[]
 }
 
-// Per-local-workspace git stats: branch name, diff additions/deletions, commits missing from origin
+// Per-local-workspace git stats: branch name, diff additions/deletions, ahead/behind counts
 export interface LocalGitStats {
   branch: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
 }
 
 // Agent Manager: Local workspace git stats push (extension → webview)
@@ -898,6 +955,139 @@ export interface BenchCheckpointMessage {
   benchCheckpointProgress?: string
 }
 
+// legacy-migration start
+export interface MigrationProviderInfo {
+  profileName: string
+  provider: string
+  model?: string
+  hasApiKey: boolean
+  supported: boolean
+  newProviderName?: string
+}
+
+export interface MigrationMcpServerInfo {
+  name: string
+  type: string
+}
+
+export interface MigrationCustomModeInfo {
+  name: string
+  slug: string
+}
+
+export interface LegacyAutocompleteSettings {
+  enableAutoTrigger?: boolean
+  enableSmartInlineTaskKeybinding?: boolean
+  enableChatAutocomplete?: boolean
+}
+
+export interface LegacySettings {
+  autoApprovalEnabled?: boolean
+  allowedCommands?: string[]
+  deniedCommands?: string[]
+  // Fine-grained auto-approval (legacy globalState keys — no prefix)
+  alwaysAllowReadOnly?: boolean
+  alwaysAllowReadOnlyOutsideWorkspace?: boolean
+  alwaysAllowWrite?: boolean
+  alwaysAllowExecute?: boolean
+  alwaysAllowMcp?: boolean
+  alwaysAllowModeSwitch?: boolean
+  alwaysAllowSubtasks?: boolean
+  language?: string
+  autocomplete?: LegacyAutocompleteSettings
+}
+
+export interface MigrationResultItem {
+  item: string
+  category: "provider" | "mcpServer" | "customMode" | "defaultModel" | "settings"
+  status: "success" | "warning" | "error"
+  message?: string
+}
+
+export interface LegacyMigrationDataMessage {
+  type: "legacyMigrationData"
+  data: {
+    providers: MigrationProviderInfo[]
+    mcpServers: MigrationMcpServerInfo[]
+    customModes: MigrationCustomModeInfo[]
+    defaultModel?: { provider: string; model: string }
+    settings?: LegacySettings
+  }
+}
+
+export interface LegacyMigrationProgressMessage {
+  type: "legacyMigrationProgress"
+  item: string
+  status: "migrating" | "success" | "warning" | "error"
+  message?: string
+}
+
+export interface LegacyMigrationCompleteMessage {
+  type: "legacyMigrationComplete"
+  results: MigrationResultItem[]
+}
+
+export interface RequestLegacyMigrationDataMessage {
+  type: "requestLegacyMigrationData"
+}
+
+export interface MigrationAutoApprovalSelections {
+  commandRules: boolean
+  readPermission: boolean
+  writePermission: boolean
+  executePermission: boolean
+  mcpPermission: boolean
+  taskPermission: boolean
+}
+
+export interface StartLegacyMigrationMessage {
+  type: "startLegacyMigration"
+  selections: {
+    providers: string[]
+    mcpServers: string[]
+    customModes: string[]
+    defaultModel: boolean
+    settings: {
+      autoApproval: MigrationAutoApprovalSelections
+      language: boolean
+      autocomplete: boolean
+    }
+  }
+}
+
+export interface SkipLegacyMigrationMessage {
+  type: "skipLegacyMigration"
+}
+
+export interface ClearLegacyDataMessage {
+  type: "clearLegacyData"
+}
+// legacy-migration end
+
+// Enhance prompt result (extension → webview)
+export interface EnhancePromptResultMessage {
+  type: "enhancePromptResult"
+  text: string
+  requestId: string
+}
+
+// Enhance prompt error (extension → webview)
+export interface EnhancePromptErrorMessage {
+  type: "enhancePromptError"
+  error: string
+  requestId: string
+}
+
+export interface DiffViewerDiffsMessage {
+  type: "diffViewer.diffs"
+  diffs: WorktreeFileDiff[]
+}
+
+export interface DiffViewerLoadingMessage {
+  type: "diffViewer.loading"
+  loading: boolean
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -905,6 +1095,8 @@ export type ExtensionMessage =
   | PartUpdatedMessage
   | SessionStatusMessage
   | PermissionRequestMessage
+  | PermissionResolvedMessage
+  | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
   | SessionUpdatedMessage
@@ -943,6 +1135,8 @@ export type ExtensionMessage =
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSendInitialMessage
   | SetChatBoxMessage
+  | AppendChatBoxMessage
+  | AppendReviewCommentsMessage
   | TriggerTaskMessage
   | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage
@@ -955,6 +1149,7 @@ export type ExtensionMessage =
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | BenchProgressMessage
@@ -963,6 +1158,15 @@ export type ExtensionMessage =
   | BenchProblemsMessage
   | BenchErrorMessage
   | BenchCheckpointMessage
+  // legacy-migration start
+  | LegacyMigrationDataMessage
+  | LegacyMigrationProgressMessage
+  | LegacyMigrationCompleteMessage
+  // legacy-migration end
+  | EnhancePromptResultMessage
+  | EnhancePromptErrorMessage
+  | DiffViewerDiffsMessage
+  | DiffViewerLoadingMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -1215,6 +1419,12 @@ export interface DeleteWorktreeRequest {
   worktreeId: string
 }
 
+// Remove a stale worktree entry from state without touching disk
+export interface RemoveStaleWorktreeRequest {
+  type: "agentManager.removeStaleWorktree"
+  worktreeId: string
+}
+
 // Promote a session: create a worktree and move the session into it
 export interface PromoteSessionRequest {
   type: "agentManager.promoteSession"
@@ -1264,9 +1474,24 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Open a worktree directory in VS Code
+export interface OpenWorktreeRequest {
+  type: "agentManager.openWorktree"
+  worktreeId: string
+}
+
 // Show existing local terminal when switching to local context (no-op if none exists)
 export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
+}
+
+// Open a file in the selected worktree for a specific session
+export interface AgentManagerOpenFileRequest {
+  type: "agentManager.openFile"
+  sessionId: string
+  filePath: string
+  line?: number
+  column?: number
 }
 
 /**
@@ -1402,6 +1627,12 @@ export interface BenchClearCheckpointRequest {
   type: "benchClearCheckpoint"
 }
 
+export interface ApplyWorktreeDiffMessage {
+  type: "agentManager.applyWorktreeDiff"
+  worktreeId: string
+  selectedFiles?: string[]
+}
+
 // Variant persistence (webview → extension)
 export interface PersistVariantRequest {
   type: "persistVariant"
@@ -1412,6 +1643,24 @@ export interface PersistVariantRequest {
 // Request stored variants from extension (webview → extension)
 export interface RequestVariantsMessage {
   type: "requestVariants"
+}
+
+// Enhance prompt request (webview → extension)
+export interface EnhancePromptRequest {
+  type: "enhancePrompt"
+  text: string
+  requestId: string
+}
+
+// Open the standalone changes viewer tab from the sidebar
+export interface OpenChangesRequest {
+  type: "openChanges"
+}
+
+// Set default base branch (webview → extension)
+export interface SetDefaultBaseBranchRequest {
+  type: "agentManager.setDefaultBaseBranch"
+  branch?: string
 }
 
 export type WebviewMessage =
@@ -1457,6 +1706,7 @@ export type WebviewMessage =
   | DismissNotificationMessage
   | CreateWorktreeRequest
   | DeleteWorktreeRequest
+  | RemoveStaleWorktreeRequest
   | PromoteSessionRequest
   | AddSessionToWorktreeRequest
   | CloseSessionRequest
@@ -1467,7 +1717,9 @@ export type WebviewMessage =
   | ConfigureSetupScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | OpenWorktreeRequest
   | ShowExistingLocalTerminalRequest
+  | AgentManagerOpenFileRequest
   | CreateMultiVersionRequest
   | SetTabOrderRequest
   | SetSessionsCollapsedRequest
@@ -1493,6 +1745,16 @@ export type WebviewMessage =
   | BenchCancelRunRequest
   | BenchResumeRunRequest
   | BenchClearCheckpointRequest
+  // legacy-migration start
+  | RequestLegacyMigrationDataMessage
+  | StartLegacyMigrationMessage
+  | SkipLegacyMigrationMessage
+  | ClearLegacyDataMessage
+  // legacy-migration end
+  | ApplyWorktreeDiffMessage
+  | EnhancePromptRequest
+  | OpenChangesRequest
+  | SetDefaultBaseBranchRequest
 
 // ============================================
 // VS Code API type

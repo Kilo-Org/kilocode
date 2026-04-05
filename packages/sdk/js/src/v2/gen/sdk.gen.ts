@@ -21,6 +21,8 @@ import type {
   ConfigProvidersResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
+  EnhancePromptEnhanceErrors,
+  EnhancePromptEnhanceResponses,
   EventSubscribeResponses,
   EventTuiCommandExecute,
   EventTuiPromptAppend,
@@ -232,7 +234,7 @@ class HeyApiRegistry<T> {
   get(key?: string): T {
     const instance = this.instances.get(key ?? this.defaultKey)
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new OpencodeClient()" to fix this error.`)
+      throw new Error(`No SDK client found. Create one with "new KiloClient()" to fix this error.`)
     }
     return instance
   }
@@ -928,10 +930,21 @@ export class Worktree extends HeyApiClient {
   public diff<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
+      base?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "directory" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "base" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).get<WorktreeDiffResponses, WorktreeDiffErrors, ThrowOnError>({
       url: "/experimental/worktree/diff",
       ...options,
@@ -2395,6 +2408,47 @@ export class CommitMessage extends HeyApiClient {
   }
 }
 
+export class EnhancePrompt extends HeyApiClient {
+  /**
+   * Enhance prompt
+   *
+   * Rewrite a user's draft prompt into a clearer, more specific, and more effective prompt.
+   */
+  public enhance<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      text?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "body", key: "text" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      EnhancePromptEnhanceResponses,
+      EnhancePromptEnhanceErrors,
+      ThrowOnError
+    >({
+      url: "/enhance-prompt",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
 export class Organization extends HeyApiClient {
   /**
    * Update Kilo Gateway organization
@@ -3656,12 +3710,12 @@ export class Event extends HeyApiClient {
   }
 }
 
-export class OpencodeClient extends HeyApiClient {
-  public static readonly __registry = new HeyApiRegistry<OpencodeClient>()
+export class KiloClient extends HeyApiClient {
+  public static readonly __registry = new HeyApiRegistry<KiloClient>()
 
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
-    OpencodeClient.__registry.set(this, args?.key)
+    KiloClient.__registry.set(this, args?.key)
   }
 
   private _global?: Global
@@ -3737,6 +3791,11 @@ export class OpencodeClient extends HeyApiClient {
   private _commitMessage?: CommitMessage
   get commitMessage(): CommitMessage {
     return (this._commitMessage ??= new CommitMessage({ client: this.client }))
+  }
+
+  private _enhancePrompt?: EnhancePrompt
+  get enhancePrompt(): EnhancePrompt {
+    return (this._enhancePrompt ??= new EnhancePrompt({ client: this.client }))
   }
 
   private _kilo?: Kilo

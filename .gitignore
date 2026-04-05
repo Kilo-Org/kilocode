@@ -1,3 +1,4 @@
+.husky/_
 .DS_Store
 node_modules
 .worktrees

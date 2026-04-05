@@ -57,6 +57,30 @@ function parseBenchCheckpoint(data: string): BenchCheckpoint | null {
 	return isBenchCheckpoint(parsed) ? parsed : null
 }
 
+function isBenchProblemSet(v: unknown): v is BenchProblemSet {
+	if (!isObject(v)) return false
+	if (typeof v.version !== "string" || v.version.length === 0) return false
+	if (typeof v.generatedAt !== "string" || v.generatedAt.length === 0) return false
+	if (typeof v.generatorModel !== "string") return false
+	if (typeof v.workspacePath !== "string") return false
+	if (typeof v.workspaceSummary !== "string") return false
+	if (!Array.isArray(v.problems)) return false
+	return v.problems.every((problem) =>
+		isObject(problem) &&
+		typeof problem.id === "string" &&
+		typeof problem.mode === "string" &&
+		typeof problem.title === "string" &&
+		typeof problem.prompt === "string" &&
+		Array.isArray(problem.contextFiles) &&
+		Array.isArray(problem.evaluationCriteria),
+	)
+}
+
+function parseBenchProblemSet(data: string): BenchProblemSet | null {
+	const parsed = JSON.parse(data) as unknown
+	return isBenchProblemSet(parsed) ? parsed : null
+}
+
 export async function loadConfig(cwd: string): Promise<BenchConfig> {
 	const configPath = path.join(getBenchDir(cwd), "config.json")
 	try {
@@ -91,7 +115,7 @@ export async function loadProblems(cwd: string): Promise<BenchProblemSet | null>
 	const problemsPath = path.join(getBenchDir(cwd), "problems.json")
 	try {
 		const data = await fs.readFile(problemsPath, "utf-8")
-		return JSON.parse(data)
+		return parseBenchProblemSet(data)
 	} catch {
 		return null
 	}
