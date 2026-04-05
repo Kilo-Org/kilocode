@@ -18,14 +18,12 @@ describe("session migration summary state", () => {
     expect(done.imported).toEqual([session])
   })
 
-  it("moves a session into errored and keeps lastError in sync", () => {
+  it("moves a session into errored and removes it from the other buckets", () => {
     const done = updateSessionSummary(createSessionSummary(), session, "done")
     const next = updateSessionSummary(done, { ...session, error: "Boom\nstack" }, "error")
 
     expect(next.imported).toHaveLength(0)
     expect(next.skipped).toHaveLength(0)
     expect(next.errored).toEqual([{ ...session, error: "Boom\nstack" }])
-    expect(next.lastError).toBe("Boom")
-    expect(next.lastErrorRaw).toBe("Boom\nstack")
   })
 })

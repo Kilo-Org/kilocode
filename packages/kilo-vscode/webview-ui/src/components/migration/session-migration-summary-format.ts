@@ -42,22 +42,6 @@ export function errored(summary: SessionSummaryState) {
   ])
 }
 
-export function errors(summary: SessionSummaryState) {
-  return summary.errored.map(
-    (item, index) =>
-      [`Error ${index + 1}`, `id: ${item.id}`, `directory: ${item.directory}`, `title: ${item.title}`, `date: ${date(item.time)}`, "", item.error || "Unknown error"].join("\n"),
-  )
-}
-
-export function copy(summary: SessionSummaryState) {
-  return summary.errored
-    .map(
-      (item, index) =>
-        [`Error ${index + 1}`, `id: ${item.id}`, `directory: ${item.directory}`, `title: ${item.title}`, `date: ${date(item.time)}`, "", item.error || "Unknown error"].join("\n"),
-    )
-    .join("\n\n")
-}
-
 export function report(summary: SessionSummaryState) {
   const block = (title: string, items: SessionSummaryItem[], full?: boolean) => {
     const rows = items.length > 0 ? items.map((item) => (full ? `${line(item)}\n  ${short(item.error)}` : line(item))).join("\n") : "None"

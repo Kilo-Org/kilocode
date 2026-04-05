@@ -27,6 +27,8 @@ export namespace SessionImportService {
       if (row && input.force) {
         db.delete(SessionTable).where(eq(target(SessionTable.id), input.id)).run()
       }
+      // We still keep onConflictDoUpdate here so forced reimports can recreate the session row
+      // and non-forced calls remain idempotent if they reach the DB after the existence guard.
       db.insert(SessionTable)
         .values({
           id: input.id,

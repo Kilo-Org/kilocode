@@ -39,10 +39,6 @@ export interface MigrationContext {
   broadcastComplete(): void
 }
 
-interface MigrationFinalization {
-  results: Awaited<ReturnType<typeof MigrationService.migrate>>
-}
-
 function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
   ctx.postMessage({
     type: "legacyMigrationSessionProgress",

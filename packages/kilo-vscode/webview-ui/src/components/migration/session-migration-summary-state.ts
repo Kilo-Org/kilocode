@@ -12,14 +12,6 @@ export interface SessionSummaryState {
   imported: SessionSummaryItem[]
   skipped: SessionSummaryItem[]
   errored: SessionSummaryItem[]
-  lastError?: string
-  lastErrorRaw?: string
-}
-
-function short(error?: string) {
-  if (!error) return undefined
-  const line = error.split("\n")[0]?.trim()
-  return line || error
 }
 
 export function createSessionItem(session: MigrationSessionInfo, error?: string): SessionSummaryItem {
@@ -64,8 +56,6 @@ export function updateSessionSummary(state: SessionSummaryState, item: SessionSu
       ...state,
       ...next,
       errored: [...next.errored, item],
-      lastError: short(item.error),
-      lastErrorRaw: item.error,
     }
   }
 
