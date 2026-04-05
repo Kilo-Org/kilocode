@@ -1,20 +1,16 @@
 import type { Component } from "solid-js"
 import { For, Show, createMemo, createSignal } from "solid-js"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import SessionMigrationCard from "./SessionMigrationCard"
-import ForceReimportDialog from "./ForceReimportDialog"
 import type { SessionSummaryState } from "./session-migration-summary-state"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { errored, line, report } from "./session-migration-summary-format"
-import { useVSCode } from "../../context/vscode"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
+  onForce: (ids: string[]) => void
 }
 
 const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props) => {
-  const vscode = useVSCode()
-  const dialog = useDialog()
   const [all, setAll] = createSignal(false)
   const [selected, setSelected] = createSignal<string[]>([])
 
@@ -51,36 +47,8 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
   const handleForce = () => {
     const list = picked()
     if (list.length === 0) return
-    dialog.show(() => (
-      <ForceReimportDialog
-        count={list.length}
-        onConfirm={() => {
-          vscode.postMessage({
-            type: "startLegacyMigration",
-            selections: {
-              providers: [],
-              mcpServers: [],
-              customModes: [],
-              sessions: list.map((id) => ({ id, force: true })),
-              defaultModel: false,
-              settings: {
-                autoApproval: {
-                  commandRules: false,
-                  readPermission: false,
-                  writePermission: false,
-                  executePermission: false,
-                  mcpPermission: false,
-                  taskPermission: false,
-                },
-                language: false,
-                autocomplete: false,
-              },
-            },
-          })
-          showToast({ variant: "success", title: "Force re-import started" })
-        }}
-      />
-    ))
+    props.onForce(list)
+    showToast({ variant: "success", title: "Force re-import started" })
   }
 
   return (

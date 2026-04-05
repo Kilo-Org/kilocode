@@ -8,11 +8,14 @@
 
 import { Show, createSignal, onMount, onCleanup } from "solid-js"
 import type { Component, JSX } from "solid-js"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import SessionMigrationProgress, { type SessionMigrationProgressState } from "./SessionMigrationProgress"
 import SessionMigrationSummary from "./SessionMigrationSummary"
+import ForceReimportDialog from "./ForceReimportDialog"
+import RunningMigrationDialog from "./RunningMigrationDialog"
 import {
   createSessionItem,
   createSessionSummary,
@@ -185,6 +188,7 @@ export interface MigrationWizardProps {
 
 const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
   const language = useLanguage()
 
   const [screen, setScreen] = createSignal<Screen>("whats-new")
@@ -213,6 +217,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
   const [sessionProgress, setSessionProgress] = createSignal<SessionMigrationProgressState | undefined>(undefined)
   const [sessionSummary, setSessionSummary] = createSignal<SessionSummaryState>(createSessionSummary())
+  const [running, setRunning] = createSignal(false)
 
   // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
@@ -290,6 +295,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
       if (msg?.type === "legacyMigrationComplete") {
         const complete = msg as LegacyMigrationCompleteMessage
         setResults(complete.results)
+        setRunning(false)
         const hasErrors = complete.results.some((r) => r.status === "error")
         setPhase(hasErrors ? "error" : "done")
         if (!hasErrors) {
@@ -388,6 +394,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
     setProgressEntries(entries)
     setSessionSummary(createSessionSummary())
+    setSessionProgress(undefined)
+    setRunning(true)
     setPhase("migrating")
 
     vscode.postMessage({
@@ -407,7 +415,63 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     })
   }
 
+  const handleForceReimport = (ids: string[]) => {
+    dialog.show(() => (
+      <ForceReimportDialog
+        count={ids.length}
+        onConfirm={() => {
+          setRunning(true)
+          setPhase("migrating")
+          setSessionProgress(undefined)
+          setResults((prev) => prev.filter((item) => item.category !== "session"))
+          setProgressEntries((prev) => {
+            const keep = prev.filter((item) => item.group !== "sessions")
+            const next = ids.map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
+            return [...keep, ...next]
+          })
+          vscode.postMessage({
+            type: "startLegacyMigration",
+            selections: {
+              providers: [],
+              mcpServers: [],
+              customModes: [],
+              sessions: ids.map((id) => ({ id, force: true })),
+              defaultModel: false,
+              settings: {
+                autoApproval: {
+                  commandRules: false,
+                  readPermission: false,
+                  writePermission: false,
+                  executePermission: false,
+                  mcpPermission: false,
+                  taskPermission: false,
+                },
+                language: false,
+                autocomplete: false,
+              },
+            },
+          })
+          showToast({ variant: "success", title: "Force re-import started" })
+        }}
+      />
+    ))
+  }
+
   const handleDone = () => {
+    if (running()) {
+      dialog.show(() => (
+        <RunningMigrationDialog
+          onConfirm={() => {
+            vscode.postMessage({ type: "finalizeLegacyMigration" })
+            if (clearLegacyData()) {
+              vscode.postMessage({ type: "clearLegacyData" })
+            }
+            props.onComplete()
+          }}
+        />
+      ))
+      return
+    }
     vscode.postMessage({ type: "finalizeLegacyMigration" })
     if (clearLegacyData()) {
       vscode.postMessage({ type: "clearLegacyData" })
@@ -720,7 +784,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                     </div>
                     <Show when={migrateSessions() && phase() !== "selecting" && sessionProgress()}>
                       <Show when={sessionProgress()?.phase === "summary"} fallback={<SessionMigrationProgress progress={sessionProgress()!} />}>
-                        <SessionMigrationSummary summary={sessionSummary()} />
+                        <SessionMigrationSummary summary={sessionSummary()} onForce={handleForceReimport} />
                       </Show>
                     </Show>
                   </div>
