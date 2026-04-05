@@ -530,6 +530,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const groupStatus = (group: string): ProgressEntry["status"] => {
     const entries = progressEntries().filter((entry) => entry.group === group)
     if (entries.length === 0) return "pending"
+    if (group === "sessions" && running()) {
+      if (entries.some((entry) => entry.status === "migrating" || entry.status === "pending")) return "migrating"
+    }
     if (entries.some((entry) => entry.status === "error")) return "error"
     if (entries.some((entry) => entry.status === "warning")) return "warning"
     if (entries.every((entry) => entry.status === "success")) return "success"
