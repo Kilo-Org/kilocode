@@ -40,7 +40,11 @@ function strip(state: SessionSummaryState, id: string) {
   }
 }
 
-export function updateSessionSummary(state: SessionSummaryState, item: SessionSummaryItem, phase: string): SessionSummaryState {
+export function updateSessionSummary(
+  state: SessionSummaryState,
+  item: SessionSummaryItem,
+  phase: string,
+): SessionSummaryState {
   if (phase === "skipped") {
     const next = strip(state, item.id)
     return {

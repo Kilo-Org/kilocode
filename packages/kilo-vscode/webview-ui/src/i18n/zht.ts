@@ -1271,8 +1271,7 @@ export const dict = {
   "migration.sessionSummary.errored": "發生錯誤",
   "migration.sessionSummary.none": "無",
   "migration.forceReimport.title": "強制重新匯入",
-  "migration.forceReimport.description":
-    "重新匯入 {{target}} 將會覆寫它們，並刪除這些工作階段中已建立的所有新訊息。",
+  "migration.forceReimport.description": "重新匯入 {{target}} 將會覆寫它們，並刪除這些工作階段中已建立的所有新訊息。",
   "migration.forceReimport.target.one": "這個工作階段",
   "migration.forceReimport.target.many": "這 {{count}} 個工作階段",
   "migration.forceReimport.button": "強制重新匯入",

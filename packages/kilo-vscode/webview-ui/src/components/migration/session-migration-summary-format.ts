@@ -28,7 +28,9 @@ export function report(language: LanguageContextValue, summary: SessionSummarySt
   const block = (title: string, items: SessionSummaryItem[], full?: boolean) => {
     const rows =
       items.length > 0
-        ? items.map((item) => (full ? `${line(language, item)}\n  ${short(language, item.error)}` : line(language, item))).join("\n")
+        ? items
+            .map((item) => (full ? `${line(language, item)}\n  ${short(language, item.error)}` : line(language, item)))
+            .join("\n")
         : language.t("migration.sessionSummary.none")
     return `${title}\n${rows}`
   }

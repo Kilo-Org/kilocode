@@ -62,17 +62,27 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
           </button>
         </div>
         <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">{label(language.t("migration.sessionSummary.successful"), props.summary.imported.length)}</div>
+          <div class="migration-session-summary__label">
+            {label(language.t("migration.sessionSummary.successful"), props.summary.imported.length)}
+          </div>
           <div class="migration-session-summary__list migration-session-summary__list--success">
             <For each={props.summary.imported.length > 0 ? props.summary.imported : [undefined]}>
-              {(item) => <div class="migration-session-summary__item">{item ? line(language, item) : language.t("migration.sessionSummary.none")}</div>}
+              {(item) => (
+                <div class="migration-session-summary__item">
+                  {item ? line(language, item) : language.t("migration.sessionSummary.none")}
+                </div>
+              )}
             </For>
           </div>
         </div>
         <Show when={props.summary.skipped.length > 0}>
           <div class="migration-session-summary__section">
             <div class="migration-session-summary__label">
-              {label(language.t("migration.sessionSummary.skipped"), props.summary.skipped.length, language.t("migration.sessionSummary.alreadyMigrated"))}
+              {label(
+                language.t("migration.sessionSummary.skipped"),
+                props.summary.skipped.length,
+                language.t("migration.sessionSummary.alreadyMigrated"),
+              )}
             </div>
             <div class="migration-session-summary__list migration-session-summary__list--skipped">
               <For each={props.summary.skipped}>
@@ -85,7 +95,14 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                       onChange={(event) => toggle(item.id, event.currentTarget.checked)}
                     />
                     <span class="migration-session-summary__pick-mark">
-                      <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <svg
+                        viewBox="0 0 12 12"
+                        fill="none"
+                        stroke="#fff"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
                         <polyline points="2.5 6 5 8.5 9.5 3.5" />
                       </svg>
                     </span>
@@ -98,7 +115,14 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                 <span>{language.t("migration.forceReimport.all")}</span>
                 <input type="checkbox" checked={all()} onChange={(event) => handleAll(event.currentTarget.checked)} />
                 <span class="migration-session-summary__pick-mark migration-session-summary__pick-mark--all">
-                  <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <svg
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="#fff"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
                     <polyline points="2.5 6 5 8.5 9.5 3.5" />
                   </svg>
                 </span>
@@ -116,7 +140,9 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
         </Show>
         <Show when={props.summary.errored.length > 0}>
           <div class="migration-session-summary__section">
-            <div class="migration-session-summary__label">{label(language.t("migration.sessionSummary.errored"), props.summary.errored.length)}</div>
+            <div class="migration-session-summary__label">
+              {label(language.t("migration.sessionSummary.errored"), props.summary.errored.length)}
+            </div>
             <div class="migration-session-summary__list migration-session-summary__list--errored">
               <For each={errored(language, props.summary)}>
                 {(item) =>

@@ -786,7 +786,10 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                       {language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}
                     </div>
                     <Show when={migrateSessions() && phase() !== "selecting" && sessionProgress()}>
-                      <Show when={sessionProgress()?.phase === "summary"} fallback={<SessionMigrationProgress progress={sessionProgress()!} />}>
+                      <Show
+                        when={sessionProgress()?.phase === "summary"}
+                        fallback={<SessionMigrationProgress progress={sessionProgress()!} />}
+                      >
                         <SessionMigrationSummary summary={sessionSummary()} onForce={handleForceReimport} />
                       </Show>
                     </Show>

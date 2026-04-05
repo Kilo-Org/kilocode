@@ -1348,8 +1348,10 @@ export const dict = {
   "migration.forceReimport.proceed": "Continuer",
   "migration.forceReimport.toast.started": "Réimportation forcée lancée",
   "migration.running.title": "Migration en cours",
-  "migration.running.description.line1": "Vous êtes sur le point de terminer alors que certaines sessions sont encore en cours de migration.",
-  "migration.running.description.line2": "Si vous quittez maintenant, certaines sessions risquent de rester incomplètes.",
+  "migration.running.description.line1":
+    "Vous êtes sur le point de terminer alors que certaines sessions sont encore en cours de migration.",
+  "migration.running.description.line2":
+    "Si vous quittez maintenant, certaines sessions risquent de rester incomplètes.",
   "migration.running.stay": "Rester",
   "migration.running.proceed": "Continuer",
   "migration.sessionProgress.preparing": "Préparation de la session",

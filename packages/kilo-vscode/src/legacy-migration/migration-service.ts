@@ -117,7 +117,10 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 }
 
 async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
-  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>("taskHistory", [])
+  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>(
+    "taskHistory",
+    [],
+  )
   const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
   const sessions: MigrationSessionInfo[] = []
   for (const item of items) {

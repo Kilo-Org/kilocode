@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test"
-import { createSessionItem, createSessionSummary, updateSessionSummary } from "../../../webview-ui/src/components/migration/session-migration-summary-state"
+import {
+  createSessionItem,
+  createSessionSummary,
+  updateSessionSummary,
+} from "../../../webview-ui/src/components/migration/session-migration-summary-state"
 
 const session = createSessionItem({
   id: "legacy-1",

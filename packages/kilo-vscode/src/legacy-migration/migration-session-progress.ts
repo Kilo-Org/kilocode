@@ -20,7 +20,10 @@ export function buildSessionMeta(
   }
 }
 
-export function buildSessionProgress(meta: MigrationSessionMeta | undefined, onProgress: SessionProgressCallback | undefined) {
+export function buildSessionProgress(
+  meta: MigrationSessionMeta | undefined,
+  onProgress: SessionProgressCallback | undefined,
+) {
   if (!meta || !onProgress) return undefined
   return (progress: Omit<MigrationSessionProgress, "session" | "index" | "total">) => {
     onProgress({

@@ -71,7 +71,10 @@ const SessionMigrationProgress: Component<SessionMigrationProgressProps> = (prop
             {formatText(language, props.progress.session.directory)}
           </div>
           <div class="migration-session-progress__meta-row">
-            <span class="migration-session-progress__title" title={props.progress.session.title || language.t("migration.sessionFormat.unknown")}>
+            <span
+              class="migration-session-progress__title"
+              title={props.progress.session.title || language.t("migration.sessionFormat.unknown")}
+            >
               {formatText(language, props.progress.session.title)}
             </span>
             <span class="migration-session-progress__date">{formatDate(language, props.progress.session.time)}</span>
@@ -81,7 +84,9 @@ const SessionMigrationProgress: Component<SessionMigrationProgressProps> = (prop
           <For each={steps}>
             {(step) => (
               <div class="migration-session-progress__step">
-                <div class={`migration-session-progress__dot migration-session-progress__dot--${state(step, props.progress.phase)}`} />
+                <div
+                  class={`migration-session-progress__dot migration-session-progress__dot--${state(step, props.progress.phase)}`}
+                />
                 <div class="migration-session-progress__step-text">
                   <span>{label(language, step, props.progress)}</span>
                 </div>

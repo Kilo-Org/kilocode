@@ -1268,8 +1268,7 @@ export const dict = {
   "migration.sessionSummary.errored": "出错",
   "migration.sessionSummary.none": "无",
   "migration.forceReimport.title": "强制重新导入",
-  "migration.forceReimport.description":
-    "重新导入 {{target}} 将覆盖它们，并删除这些会话中已创建的所有新消息。",
+  "migration.forceReimport.description": "重新导入 {{target}} 将覆盖它们，并删除这些会话中已创建的所有新消息。",
   "migration.forceReimport.target.one": "这个会话",
   "migration.forceReimport.target.many": "这 {{count}} 个会话",
   "migration.forceReimport.button": "强制重新导入",
