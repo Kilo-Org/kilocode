@@ -68,12 +68,12 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
             </For>
           </div>
         </div>
-        <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">{label("Skipped", props.summary.skipped.length, "Already migrated")}</div>
-          <div class="migration-session-summary__list migration-session-summary__list--skipped">
-            <For each={props.summary.skipped.length > 0 ? props.summary.skipped : [undefined]}>
-              {(item) =>
-                item ? (
+        <Show when={props.summary.skipped.length > 0}>
+          <div class="migration-session-summary__section">
+            <div class="migration-session-summary__label">{label("Skipped", props.summary.skipped.length, "Already migrated")}</div>
+            <div class="migration-session-summary__list migration-session-summary__list--skipped">
+              <For each={props.summary.skipped}>
+                {(item) => (
                   <label class="migration-session-summary__pick">
                     <span class="migration-session-summary__item">{line(item)}</span>
                     <input
@@ -87,13 +87,9 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                       </svg>
                     </span>
                   </label>
-                ) : (
-                  <div class="migration-session-summary__item">None</div>
-                )
-              }
-            </For>
-          </div>
-          <Show when={props.summary.skipped.length > 0}>
+                )}
+              </For>
+            </div>
             <div class="migration-session-summary__actions">
               <label class="migration-session-summary__all">
                 <span>Re-import all</span>
@@ -113,22 +109,24 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                 Force Re-import
               </button>
             </div>
-          </Show>
-        </div>
-        <div class="migration-session-summary__section">
-          <div class="migration-session-summary__label">{label("Errored", props.summary.errored.length)}</div>
-          <div class="migration-session-summary__list migration-session-summary__list--errored">
-            <For each={errored(props.summary)}>
-              {(item) =>
-                item.kind === "detail" ? (
-                  <div class="migration-session-summary__detail">{item.text}</div>
-                ) : (
-                  <div class="migration-session-summary__item">{item.text}</div>
-                )
-              }
-            </For>
           </div>
-        </div>
+        </Show>
+        <Show when={props.summary.errored.length > 0}>
+          <div class="migration-session-summary__section">
+            <div class="migration-session-summary__label">{label("Errored", props.summary.errored.length)}</div>
+            <div class="migration-session-summary__list migration-session-summary__list--errored">
+              <For each={errored(props.summary)}>
+                {(item) =>
+                  item.kind === "detail" ? (
+                    <div class="migration-session-summary__detail">{item.text}</div>
+                  ) : (
+                    <div class="migration-session-summary__item">{item.text}</div>
+                  )
+                }
+              </For>
+            </div>
+          </div>
+        </Show>
       </div>
     </SessionMigrationCard>
   )
