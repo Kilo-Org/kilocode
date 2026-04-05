@@ -21,6 +21,7 @@ import { dict as th } from "@/i18n/th"
 import { dict as bs } from "@/i18n/bs"
 import { dict as nl } from "@/i18n/nl"
 import { dict as tr } from "@/i18n/tr"
+import { dict as hi } from "@/i18n/hi"
 import { dict as uiEn } from "@opencode-ai/ui/i18n/en"
 import { dict as uiZh } from "@opencode-ai/ui/i18n/zh"
 import { dict as uiZht } from "@opencode-ai/ui/i18n/zht"
@@ -59,6 +60,7 @@ import { dict as kiloTh } from "@kilocode/kilo-i18n/th"
 import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
 import { dict as kiloNl } from "@kilocode/kilo-i18n/nl"
 import { dict as kiloTr } from "@kilocode/kilo-i18n/tr"
+import { dict as kiloHi } from "@kilocode/kilo-i18n/hi"
 // kilocode_change end
 
 export type Locale =
@@ -80,6 +82,7 @@ export type Locale =
   | "bs"
   | "nl"
   | "tr"
+  | "hi"
 
 type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
 type Dictionary = i18n.Flatten<RawDictionary>
@@ -107,6 +110,7 @@ const LOCALES: readonly Locale[] = [
   "br",
   "th",
   "tr",
+  "hi",
 ]
 
 const INTL: Record<Locale, string> = {
@@ -127,8 +131,8 @@ const INTL: Record<Locale, string> = {
   th: "th",
   bs: "bs",
   nl: "nl",
-
   tr: "tr",
+  hi: "hi",
 }
 
 const LABEL_KEY: Record<Locale, keyof Dictionary> = {
@@ -150,6 +154,7 @@ const LABEL_KEY: Record<Locale, keyof Dictionary> = {
   bs: "language.bs",
   nl: "language.nl",
   tr: "language.tr",
+  hi: "language.hi",
 }
 
 const base = i18n.flatten({ ...en, ...uiEn, ...kiloEn })
@@ -172,6 +177,7 @@ const DICT: Record<Locale, Dictionary> = {
   bs: { ...base, ...i18n.flatten({ ...bs, ...uiBs, ...kiloBs }) },
   nl: { ...base, ...i18n.flatten({ ...nl, ...uiNl, ...kiloNl }) },
   tr: { ...base, ...i18n.flatten({ ...tr, ...uiTr, ...kiloTr }) },
+  hi: { ...base, ...i18n.flatten({ ...hi, ...kiloHi }) },
 }
 
 const localeMatchers: Array<{ locale: Locale; match: (language: string) => boolean }> = [
@@ -196,6 +202,7 @@ const localeMatchers: Array<{ locale: Locale; match: (language: string) => boole
   { locale: "bs", match: (language) => language.startsWith("bs") },
   { locale: "nl", match: (language) => language.startsWith("nl") },
   { locale: "tr", match: (language) => language.startsWith("tr") },
+  { locale: "hi", match: (language) => language.startsWith("hi") },
 ]
 
 type ParityKey = "command.session.previous.unseen" | "command.session.next.unseen"
@@ -217,6 +224,7 @@ const PARITY_CHECK: Record<Exclude<Locale, "en">, Record<ParityKey, string>> = {
   bs,
   nl,
   tr,
+  hi,
 }
 void PARITY_CHECK
 
