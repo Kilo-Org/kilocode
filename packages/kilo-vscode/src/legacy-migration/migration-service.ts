@@ -274,11 +274,10 @@ export async function migrate(
   }
 
   if (selections.sessions?.length) {
-    const info = cachedSessions ?? sessions
     const list = selections.sessions
     for (const [index, item] of list.entries()) {
       onProgress(item.id, "migrating")
-      const session = info.find((entry: MigrationSessionInfo) => entry.id === item.id)
+      const session = sessions.find((entry: MigrationSessionInfo) => entry.id === item.id)
       const meta = buildSessionMeta(session, index, list.length)
       const progress = buildSessionProgress(meta, onSessionProgress)
       const result = await migrateSession(item, context, client, meta, progress)
@@ -295,7 +294,7 @@ export async function migrate(
       }
     }
     const last = list.at(-1)
-    const session = last ? info.find((item: MigrationSessionInfo) => item.id === last.id) : undefined
+    const session = last ? sessions.find((item: MigrationSessionInfo) => item.id === last.id) : undefined
     if (session && onSessionProgress) {
       onSessionProgress({
         session,
