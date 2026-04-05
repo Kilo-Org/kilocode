@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getMigrationErrorMessage } from "../errors/migration-error"
-import type { MigrationSessionInfo, MigrationSessionProgress } from "../legacy-types"
+import type { MigrationSessionInfo, MigrationSessionProgress, MigrationSessionSelection } from "../legacy-types"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
@@ -25,7 +25,7 @@ function trimError(input: string) {
 }
 
 export async function migrate(
-  id: string,
+  input: MigrationSessionSelection,
   context: vscode.ExtensionContext,
   client: KiloClient,
   meta?: {
@@ -37,8 +37,8 @@ export async function migrate(
 ): Promise<Result> {
   const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
-  const item = items.find((item) => item.id === id)
-  const payload = await parseSession(id, dir, item)
+  const item = items.find((item) => item.id === input.id)
+  const payload = await parseSession(input.id, dir, item)
 
   const progress = (next: Progress) => {
     if (!meta || !onProgress) return
@@ -56,6 +56,7 @@ export async function migrate(
         projectID,
         query_directory: payload.session.directory,
         body_directory: payload.session.directory,
+        ...(input.force ? { force: true } : {}),
       },
       { throwOnError: true },
     )

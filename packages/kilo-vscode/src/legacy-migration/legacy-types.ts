@@ -337,11 +337,16 @@ export interface MigrationSettingsSelections {
   autocomplete: boolean
 }
 
+export interface MigrationSessionSelection {
+  id: string
+  force?: boolean
+}
+
 export interface MigrationSelections {
   providers: string[]
   mcpServers: string[]
   customModes: string[]
-  sessions?: string[]
+  sessions?: MigrationSessionSelection[]
   defaultModel: boolean
   settings: MigrationSettingsSelections
 }

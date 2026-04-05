@@ -398,7 +398,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         providers: selectedProviderNames,
         mcpServers: selectedMcpNames,
         customModes: selectedModesSlugs,
-        sessions: migrateSessions() ? sessions().map((session) => session.id) : [],
+        sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
         defaultModel: migrateDefaultModel(),
         settings: {
           autoApproval,
