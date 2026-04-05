@@ -1303,6 +1303,11 @@ export const dict = {
   "migration.sessionSummary.title": "Oppsummering:",
   "migration.sessionSummary.copy": "Kopier rapport",
   "migration.sessionSummary.toast.copied": "Rapport kopiert",
+  "migration.sessionSummary.successful": "Vellykkede",
+  "migration.sessionSummary.skipped": "Hoppet over",
+  "migration.sessionSummary.alreadyMigrated": "Allerede migrert",
+  "migration.sessionSummary.errored": "Med feil",
+  "migration.sessionSummary.none": "Ingen",
   "migration.forceReimport.title": "Tving ny import",
   "migration.forceReimport.description":
     "Hvis du importerer {{target}} på nytt, blir de overskrevet og alle nye meldinger som allerede er opprettet i disse øktene blir slettet.",
@@ -1317,6 +1322,13 @@ export const dict = {
   "migration.running.description.line2": "Hvis du går nå, kan noen økter forbli ufullstendige.",
   "migration.running.stay": "Bli",
   "migration.running.proceed": "Fortsett",
+  "migration.sessionProgress.preparing": "Forbereder økt",
+  "migration.sessionProgress.storing": "Lagrer økt",
+  "migration.sessionProgress.skipped": "Økt hoppet over",
+  "migration.sessionProgress.header": "Migrerer {{current}} av {{total}}",
+  "migration.sessionFormat.unknownDate": "Ukjent dato",
+  "migration.sessionFormat.unknown": "Ukjent",
+  "migration.sessionFormat.unknownError": "Ukjent feil",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",

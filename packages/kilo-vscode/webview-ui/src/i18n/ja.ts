@@ -1302,6 +1302,11 @@ export const dict = {
   "migration.sessionSummary.title": "概要:",
   "migration.sessionSummary.copy": "レポートをコピー",
   "migration.sessionSummary.toast.copied": "レポートをコピーしました",
+  "migration.sessionSummary.successful": "成功",
+  "migration.sessionSummary.skipped": "スキップ",
+  "migration.sessionSummary.alreadyMigrated": "移行済み",
+  "migration.sessionSummary.errored": "エラーあり",
+  "migration.sessionSummary.none": "なし",
   "migration.forceReimport.title": "再インポートを強制",
   "migration.forceReimport.description":
     "{{target}} を再インポートすると上書きされ、それらのセッションで既に作成された新しいメッセージは削除されます。",
@@ -1316,6 +1321,13 @@ export const dict = {
   "migration.running.description.line2": "今離れると、一部のセッションは未完了のままになる可能性があります。",
   "migration.running.stay": "このままにする",
   "migration.running.proceed": "続行",
+  "migration.sessionProgress.preparing": "セッションを準備中",
+  "migration.sessionProgress.storing": "セッションを保存中",
+  "migration.sessionProgress.skipped": "セッションをスキップしました",
+  "migration.sessionProgress.header": "{{total}} 件中 {{current}} 件を移行中",
+  "migration.sessionFormat.unknownDate": "不明な日付",
+  "migration.sessionFormat.unknown": "不明",
+  "migration.sessionFormat.unknownError": "不明なエラー",
   // legacy-migration end
 
   "error.details.show": "詳細",

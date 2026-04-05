@@ -1262,6 +1262,11 @@ export const dict = {
   "migration.sessionSummary.title": "摘要：",
   "migration.sessionSummary.copy": "复制报告",
   "migration.sessionSummary.toast.copied": "报告已复制",
+  "migration.sessionSummary.successful": "成功",
+  "migration.sessionSummary.skipped": "已跳过",
+  "migration.sessionSummary.alreadyMigrated": "已迁移",
+  "migration.sessionSummary.errored": "出错",
+  "migration.sessionSummary.none": "无",
   "migration.forceReimport.title": "强制重新导入",
   "migration.forceReimport.description":
     "重新导入 {{target}} 将覆盖它们，并删除这些会话中已创建的所有新消息。",
@@ -1276,6 +1281,13 @@ export const dict = {
   "migration.running.description.line2": "如果你现在离开，某些会话可能会保持未完成状态。",
   "migration.running.stay": "留下",
   "migration.running.proceed": "继续",
+  "migration.sessionProgress.preparing": "正在准备会话",
+  "migration.sessionProgress.storing": "正在保存会话",
+  "migration.sessionProgress.skipped": "已跳过会话",
+  "migration.sessionProgress.header": "正在迁移第 {{current}} / {{total}} 个",
+  "migration.sessionFormat.unknownDate": "未知日期",
+  "migration.sessionFormat.unknown": "未知",
+  "migration.sessionFormat.unknownError": "未知错误",
   // legacy-migration end
 
   "error.details.show": "详细信息",

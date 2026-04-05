@@ -1307,6 +1307,11 @@ export const dict = {
   "migration.sessionSummary.title": "Samenvatting:",
   "migration.sessionSummary.copy": "Rapport kopiëren",
   "migration.sessionSummary.toast.copied": "Rapport gekopieerd",
+  "migration.sessionSummary.successful": "Geslaagd",
+  "migration.sessionSummary.skipped": "Overgeslagen",
+  "migration.sessionSummary.alreadyMigrated": "Al gemigreerd",
+  "migration.sessionSummary.errored": "Met fouten",
+  "migration.sessionSummary.none": "Geen",
   "migration.forceReimport.title": "Herimport forceren",
   "migration.forceReimport.description":
     "Het opnieuw importeren van {{target}} zal deze overschrijven en alle nieuwe berichten verwijderen die al in die sessies zijn gemaakt.",
@@ -1321,6 +1326,13 @@ export const dict = {
   "migration.running.description.line2": "Als je nu vertrekt, kunnen sommige sessies onvolledig blijven.",
   "migration.running.stay": "Blijven",
   "migration.running.proceed": "Doorgaan",
+  "migration.sessionProgress.preparing": "Sessie voorbereiden",
+  "migration.sessionProgress.storing": "Sessie opslaan",
+  "migration.sessionProgress.skipped": "Sessie overgeslagen",
+  "migration.sessionProgress.header": "Bezig met migreren van {{current}} van {{total}}",
+  "migration.sessionFormat.unknownDate": "Onbekende datum",
+  "migration.sessionFormat.unknown": "Onbekend",
+  "migration.sessionFormat.unknownError": "Onbekende fout",
   // legacy-migration end
 
   "error.details.show": "Details",

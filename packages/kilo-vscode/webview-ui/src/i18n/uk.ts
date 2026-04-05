@@ -1300,6 +1300,11 @@ export const dict = {
   "migration.sessionSummary.title": "Підсумок:",
   "migration.sessionSummary.copy": "Скопіювати звіт",
   "migration.sessionSummary.toast.copied": "Звіт скопійовано",
+  "migration.sessionSummary.successful": "Успішно",
+  "migration.sessionSummary.skipped": "Пропущено",
+  "migration.sessionSummary.alreadyMigrated": "Уже перенесено",
+  "migration.sessionSummary.errored": "З помилкою",
+  "migration.sessionSummary.none": "Немає",
   "migration.forceReimport.title": "Примусово імпортувати повторно",
   "migration.forceReimport.description":
     "Повторний імпорт {{target}} перезапише їх і видалить усі нові повідомлення, уже створені в цих сесіях.",
@@ -1314,6 +1319,13 @@ export const dict = {
   "migration.running.description.line2": "Якщо ви вийдете зараз, деякі сесії можуть залишитися незавершеними.",
   "migration.running.stay": "Залишитися",
   "migration.running.proceed": "Продовжити",
+  "migration.sessionProgress.preparing": "Підготовка сесії",
+  "migration.sessionProgress.storing": "Збереження сесії",
+  "migration.sessionProgress.skipped": "Сесію пропущено",
+  "migration.sessionProgress.header": "Перенесення {{current}} з {{total}}",
+  "migration.sessionFormat.unknownDate": "Невідома дата",
+  "migration.sessionFormat.unknown": "Невідомо",
+  "migration.sessionFormat.unknownError": "Невідома помилка",
   // legacy-migration end
 
   "error.details.show": "Деталі",

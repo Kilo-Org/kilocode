@@ -1299,6 +1299,11 @@ export const dict = {
   "migration.sessionSummary.title": "Özet:",
   "migration.sessionSummary.copy": "Raporu kopyala",
   "migration.sessionSummary.toast.copied": "Rapor kopyalandı",
+  "migration.sessionSummary.successful": "Başarılı",
+  "migration.sessionSummary.skipped": "Atlandı",
+  "migration.sessionSummary.alreadyMigrated": "Zaten taşındı",
+  "migration.sessionSummary.errored": "Hatalı",
+  "migration.sessionSummary.none": "Yok",
   "migration.forceReimport.title": "Yeniden içe aktarmayı zorla",
   "migration.forceReimport.description":
     "{{target}} yeniden içe aktarılırsa üzerlerine yazılır ve bu oturumlarda zaten oluşturulmuş yeni mesajlar silinir.",
@@ -1313,6 +1318,13 @@ export const dict = {
   "migration.running.description.line2": "Şimdi çıkarsanız bazı oturumlar eksik kalabilir.",
   "migration.running.stay": "Kal",
   "migration.running.proceed": "Devam et",
+  "migration.sessionProgress.preparing": "Oturum hazırlanıyor",
+  "migration.sessionProgress.storing": "Oturum kaydediliyor",
+  "migration.sessionProgress.skipped": "Oturum atlandı",
+  "migration.sessionProgress.header": "{{total}} içinden {{current}} taşınıyor",
+  "migration.sessionFormat.unknownDate": "Bilinmeyen tarih",
+  "migration.sessionFormat.unknown": "Bilinmiyor",
+  "migration.sessionFormat.unknownError": "Bilinmeyen hata",
   // legacy-migration end
 
   "error.details.show": "Ayrıntılar",

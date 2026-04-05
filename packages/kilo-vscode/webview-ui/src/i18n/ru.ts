@@ -1310,6 +1310,11 @@ export const dict = {
   "migration.sessionSummary.title": "Сводка:",
   "migration.sessionSummary.copy": "Скопировать отчёт",
   "migration.sessionSummary.toast.copied": "Отчёт скопирован",
+  "migration.sessionSummary.successful": "Успешно",
+  "migration.sessionSummary.skipped": "Пропущено",
+  "migration.sessionSummary.alreadyMigrated": "Уже перенесено",
+  "migration.sessionSummary.errored": "С ошибкой",
+  "migration.sessionSummary.none": "Нет",
   "migration.forceReimport.title": "Принудительный повторный импорт",
   "migration.forceReimport.description":
     "Повторный импорт {{target}} перезапишет их и удалит все новые сообщения, уже созданные в этих сессиях.",
@@ -1324,6 +1329,13 @@ export const dict = {
   "migration.running.description.line2": "Если вы уйдёте сейчас, некоторые сессии могут остаться незавершёнными.",
   "migration.running.stay": "Остаться",
   "migration.running.proceed": "Продолжить",
+  "migration.sessionProgress.preparing": "Подготовка сессии",
+  "migration.sessionProgress.storing": "Сохранение сессии",
+  "migration.sessionProgress.skipped": "Сессия пропущена",
+  "migration.sessionProgress.header": "Перенос {{current}} из {{total}}",
+  "migration.sessionFormat.unknownDate": "Неизвестная дата",
+  "migration.sessionFormat.unknown": "Неизвестно",
+  "migration.sessionFormat.unknownError": "Неизвестная ошибка",
   // legacy-migration end
 
   "error.details.show": "Подробности",

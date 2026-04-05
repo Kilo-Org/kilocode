@@ -211,7 +211,7 @@ export const LanguageProvider: ParentComponent<LanguageProviderProps> = (props) 
 // Expose locale + setLocale for the LanguageTab
 import { createContext, useContext } from "solid-js"
 
-interface LanguageContextValue {
+export interface LanguageContextValue {
   locale: Accessor<Locale>
   setLocale: (locale: Locale | "") => void
   userOverride: Accessor<Locale | "">

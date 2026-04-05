@@ -1265,6 +1265,11 @@ export const dict = {
   "migration.sessionSummary.title": "摘要：",
   "migration.sessionSummary.copy": "複製報告",
   "migration.sessionSummary.toast.copied": "報告已複製",
+  "migration.sessionSummary.successful": "成功",
+  "migration.sessionSummary.skipped": "已略過",
+  "migration.sessionSummary.alreadyMigrated": "已遷移",
+  "migration.sessionSummary.errored": "發生錯誤",
+  "migration.sessionSummary.none": "無",
   "migration.forceReimport.title": "強制重新匯入",
   "migration.forceReimport.description":
     "重新匯入 {{target}} 將會覆寫它們，並刪除這些工作階段中已建立的所有新訊息。",
@@ -1279,6 +1284,13 @@ export const dict = {
   "migration.running.description.line2": "如果你現在離開，部分工作階段可能會維持未完成狀態。",
   "migration.running.stay": "留下",
   "migration.running.proceed": "繼續",
+  "migration.sessionProgress.preparing": "正在準備工作階段",
+  "migration.sessionProgress.storing": "正在儲存工作階段",
+  "migration.sessionProgress.skipped": "已略過工作階段",
+  "migration.sessionProgress.header": "正在遷移第 {{current}} / {{total}} 個",
+  "migration.sessionFormat.unknownDate": "未知日期",
+  "migration.sessionFormat.unknown": "未知",
+  "migration.sessionFormat.unknownError": "未知錯誤",
   // legacy-migration end
 
   "error.details.show": "詳細資訊",

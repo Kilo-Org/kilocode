@@ -1286,6 +1286,11 @@ export const dict = {
   "migration.sessionSummary.title": "สรุป:",
   "migration.sessionSummary.copy": "คัดลอกรายงาน",
   "migration.sessionSummary.toast.copied": "คัดลอกรายงานแล้ว",
+  "migration.sessionSummary.successful": "สำเร็จ",
+  "migration.sessionSummary.skipped": "ข้ามแล้ว",
+  "migration.sessionSummary.alreadyMigrated": "ย้ายแล้ว",
+  "migration.sessionSummary.errored": "มีข้อผิดพลาด",
+  "migration.sessionSummary.none": "ไม่มี",
   "migration.forceReimport.title": "บังคับนำเข้าใหม่",
   "migration.forceReimport.description":
     "การนำเข้า {{target}} ใหม่จะเขียนทับและลบข้อความใหม่ใด ๆ ที่สร้างไว้แล้วในเซสชันเหล่านั้น",
@@ -1300,6 +1305,13 @@ export const dict = {
   "migration.running.description.line2": "หากคุณออกตอนนี้ บางเซสชันอาจยังไม่สมบูรณ์",
   "migration.running.stay": "อยู่ต่อ",
   "migration.running.proceed": "ดำเนินการต่อ",
+  "migration.sessionProgress.preparing": "กำลังเตรียมเซสชัน",
+  "migration.sessionProgress.storing": "กำลังบันทึกเซสชัน",
+  "migration.sessionProgress.skipped": "ข้ามเซสชันแล้ว",
+  "migration.sessionProgress.header": "กำลังย้าย {{current}} จาก {{total}}",
+  "migration.sessionFormat.unknownDate": "ไม่ทราบวันที่",
+  "migration.sessionFormat.unknown": "ไม่ทราบ",
+  "migration.sessionFormat.unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
   // legacy-migration end
 
   "error.details.show": "รายละเอียด",

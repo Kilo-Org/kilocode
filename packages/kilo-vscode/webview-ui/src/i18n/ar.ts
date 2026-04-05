@@ -1287,6 +1287,11 @@ export const dict = {
   "migration.sessionSummary.title": "الملخص:",
   "migration.sessionSummary.copy": "نسخ التقرير",
   "migration.sessionSummary.toast.copied": "تم نسخ التقرير",
+  "migration.sessionSummary.successful": "ناجحة",
+  "migration.sessionSummary.skipped": "تم تخطيها",
+  "migration.sessionSummary.alreadyMigrated": "تم ترحيلها بالفعل",
+  "migration.sessionSummary.errored": "حدثت بها أخطاء",
+  "migration.sessionSummary.none": "لا يوجد",
   "migration.forceReimport.title": "فرض إعادة الاستيراد",
   "migration.forceReimport.description":
     "ستؤدي إعادة استيراد {{target}} إلى استبدالها وحذف أي رسائل جديدة تم إنشاؤها بالفعل في تلك الجلسات.",
@@ -1301,6 +1306,13 @@ export const dict = {
   "migration.running.description.line2": "إذا غادرت الآن، فقد تبقى بعض الجلسات غير مكتملة.",
   "migration.running.stay": "البقاء",
   "migration.running.proceed": "متابعة",
+  "migration.sessionProgress.preparing": "جارٍ تحضير الجلسة",
+  "migration.sessionProgress.storing": "جارٍ حفظ الجلسة",
+  "migration.sessionProgress.skipped": "تم تخطي الجلسة",
+  "migration.sessionProgress.header": "جارٍ ترحيل {{current}} من {{total}}",
+  "migration.sessionFormat.unknownDate": "تاريخ غير معروف",
+  "migration.sessionFormat.unknown": "غير معروف",
+  "migration.sessionFormat.unknownError": "خطأ غير معروف",
   // legacy-migration end
 
   "error.details.show": "التفاصيل",

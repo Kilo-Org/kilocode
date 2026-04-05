@@ -1290,6 +1290,11 @@ export const dict = {
   "migration.sessionSummary.title": "요약:",
   "migration.sessionSummary.copy": "보고서 복사",
   "migration.sessionSummary.toast.copied": "보고서가 복사되었습니다",
+  "migration.sessionSummary.successful": "성공",
+  "migration.sessionSummary.skipped": "건너뜀",
+  "migration.sessionSummary.alreadyMigrated": "이미 마이그레이션됨",
+  "migration.sessionSummary.errored": "오류 발생",
+  "migration.sessionSummary.none": "없음",
   "migration.forceReimport.title": "강제 재가져오기",
   "migration.forceReimport.description":
     "{{target}}을 다시 가져오면 덮어쓰게 되며, 해당 세션에서 이미 생성된 새 메시지는 삭제됩니다.",
@@ -1304,6 +1309,13 @@ export const dict = {
   "migration.running.description.line2": "지금 나가면 일부 세션이 완료되지 않은 상태로 남을 수 있습니다.",
   "migration.running.stay": "머무르기",
   "migration.running.proceed": "진행",
+  "migration.sessionProgress.preparing": "세션 준비 중",
+  "migration.sessionProgress.storing": "세션 저장 중",
+  "migration.sessionProgress.skipped": "세션 건너뜀",
+  "migration.sessionProgress.header": "{{total}}개 중 {{current}}개 마이그레이션 중",
+  "migration.sessionFormat.unknownDate": "알 수 없는 날짜",
+  "migration.sessionFormat.unknown": "알 수 없음",
+  "migration.sessionFormat.unknownError": "알 수 없는 오류",
   // legacy-migration end
 
   "error.details.show": "상세 정보",

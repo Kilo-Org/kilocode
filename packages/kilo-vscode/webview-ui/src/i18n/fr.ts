@@ -1333,6 +1333,11 @@ export const dict = {
   "migration.sessionSummary.title": "Résumé :",
   "migration.sessionSummary.copy": "Copier le rapport",
   "migration.sessionSummary.toast.copied": "Rapport copié",
+  "migration.sessionSummary.successful": "Réussies",
+  "migration.sessionSummary.skipped": "Ignorées",
+  "migration.sessionSummary.alreadyMigrated": "Déjà migrées",
+  "migration.sessionSummary.errored": "En erreur",
+  "migration.sessionSummary.none": "Aucune",
   "migration.forceReimport.title": "Forcer la réimportation",
   "migration.forceReimport.description":
     "Réimporter {{target}} les écrasera et supprimera tous les nouveaux messages déjà créés dans ces sessions.",
@@ -1347,6 +1352,13 @@ export const dict = {
   "migration.running.description.line2": "Si vous quittez maintenant, certaines sessions risquent de rester incomplètes.",
   "migration.running.stay": "Rester",
   "migration.running.proceed": "Continuer",
+  "migration.sessionProgress.preparing": "Préparation de la session",
+  "migration.sessionProgress.storing": "Enregistrement de la session",
+  "migration.sessionProgress.skipped": "Session ignorée",
+  "migration.sessionProgress.header": "Migration de {{current}} sur {{total}}",
+  "migration.sessionFormat.unknownDate": "Date inconnue",
+  "migration.sessionFormat.unknown": "Inconnu",
+  "migration.sessionFormat.unknownError": "Erreur inconnue",
   // legacy-migration end
 
   "error.details.show": "Détails",

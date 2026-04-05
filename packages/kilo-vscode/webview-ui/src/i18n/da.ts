@@ -1303,6 +1303,11 @@ export const dict = {
   "migration.sessionSummary.title": "Opsummering:",
   "migration.sessionSummary.copy": "Kopiér rapport",
   "migration.sessionSummary.toast.copied": "Rapport kopieret",
+  "migration.sessionSummary.successful": "Vellykkede",
+  "migration.sessionSummary.skipped": "Sprunget over",
+  "migration.sessionSummary.alreadyMigrated": "Allerede migreret",
+  "migration.sessionSummary.errored": "Med fejl",
+  "migration.sessionSummary.none": "Ingen",
   "migration.forceReimport.title": "Tving genimport",
   "migration.forceReimport.description":
     "Genimport af {{target}} vil overskrive dem og slette alle nye beskeder, der allerede er oprettet i disse sessioner.",
@@ -1317,6 +1322,13 @@ export const dict = {
   "migration.running.description.line2": "Hvis du forlader nu, kan nogle sessioner forblive ufuldstændige.",
   "migration.running.stay": "Bliv",
   "migration.running.proceed": "Fortsæt",
+  "migration.sessionProgress.preparing": "Forbereder session",
+  "migration.sessionProgress.storing": "Gemmer session",
+  "migration.sessionProgress.skipped": "Session sprunget over",
+  "migration.sessionProgress.header": "Migrerer {{current}} af {{total}}",
+  "migration.sessionFormat.unknownDate": "Ukendt dato",
+  "migration.sessionFormat.unknown": "Ukendt",
+  "migration.sessionFormat.unknownError": "Ukendt fejl",
   // legacy-migration end
 
   "error.details.show": "Detaljer",

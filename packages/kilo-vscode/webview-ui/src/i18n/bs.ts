@@ -1312,6 +1312,11 @@ export const dict = {
   "migration.sessionSummary.title": "Sažetak:",
   "migration.sessionSummary.copy": "Kopiraj izvještaj",
   "migration.sessionSummary.toast.copied": "Izvještaj kopiran",
+  "migration.sessionSummary.successful": "Uspješne",
+  "migration.sessionSummary.skipped": "Preskočene",
+  "migration.sessionSummary.alreadyMigrated": "Već migrirane",
+  "migration.sessionSummary.errored": "S greškom",
+  "migration.sessionSummary.none": "Nijedna",
   "migration.forceReimport.title": "Prisilni ponovni uvoz",
   "migration.forceReimport.description":
     "Ponovni uvoz {{target}} će ih prepisati i obrisati sve nove poruke koje su već napravljene u tim sesijama.",
@@ -1326,6 +1331,13 @@ export const dict = {
   "migration.running.description.line2": "Ako sada izađete, neke sesije mogu ostati nedovršene.",
   "migration.running.stay": "Ostani",
   "migration.running.proceed": "Nastavi",
+  "migration.sessionProgress.preparing": "Priprema se sesija",
+  "migration.sessionProgress.storing": "Spremanje sesije",
+  "migration.sessionProgress.skipped": "Sesija je preskočena",
+  "migration.sessionProgress.header": "Migrira se {{current}} od {{total}}",
+  "migration.sessionFormat.unknownDate": "Nepoznat datum",
+  "migration.sessionFormat.unknown": "Nepoznato",
+  "migration.sessionFormat.unknownError": "Nepoznata greška",
   // legacy-migration end
 
   "error.details.show": "Detalji",

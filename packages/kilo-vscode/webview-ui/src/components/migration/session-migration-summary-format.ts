@@ -1,61 +1,46 @@
 import type { SessionSummaryItem, SessionSummaryState } from "./session-migration-summary-state"
+import type { LanguageContextValue } from "../../context/language"
+import { formatDate, formatError, formatPath, formatText } from "./session-migration-format"
 
-function pad(value: number) {
-  return String(value).padStart(2, "0")
+export function line(language: LanguageContextValue, item: SessionSummaryItem) {
+  const dir = formatPath(language, item.directory)
+  const title = formatText(language, item.title)
+  return `${dir} ${title} ${formatDate(language, item.time)}`
 }
 
-function date(time: number) {
-  if (!time) return "Unknown date"
-  const value = new Date(time)
-  return `${pad(value.getHours())}:${pad(value.getMinutes())} ${pad(value.getMonth() + 1)}/${pad(value.getDate())}/${value.getFullYear()}`
+export function short(language: LanguageContextValue, error?: string) {
+  return formatError(language, error)
 }
 
-function path(value: string) {
-  const text = value.trim()
-  if (!text) return "Unknown"
-  const parts = text.split(/[\\/]/).filter(Boolean)
-  const last = parts.at(-1)
-  if (!last) return text
-  return `.../${last}`
+export function detail(language: LanguageContextValue, item: SessionSummaryItem) {
+  return short(language, item.error)
 }
 
-export function line(item: SessionSummaryItem) {
-  const dir = path(item.directory)
-  const title = item.title.trim() || "Unknown"
-  return `${dir} ${title} ${date(item.time)}`
-}
-
-export function short(error?: string) {
-  if (!error) return "Unknown error"
-  return error.split("\n")[0]?.trim() || error
-}
-
-export function detail(item: SessionSummaryItem) {
-  return short(item.error)
-}
-
-export function errored(summary: SessionSummaryState) {
-  if (summary.errored.length === 0) return [{ kind: "row", text: "None" }]
+export function errored(language: LanguageContextValue, summary: SessionSummaryState) {
+  if (summary.errored.length === 0) return [{ kind: "row", text: language.t("migration.sessionSummary.none") }]
   return summary.errored.flatMap((item) => [
-    { kind: "row", text: line(item) },
-    { kind: "detail", text: detail(item) },
+    { kind: "row", text: line(language, item) },
+    { kind: "detail", text: detail(language, item) },
   ])
 }
 
-export function report(summary: SessionSummaryState) {
+export function report(language: LanguageContextValue, summary: SessionSummaryState) {
   const block = (title: string, items: SessionSummaryItem[], full?: boolean) => {
-    const rows = items.length > 0 ? items.map((item) => (full ? `${line(item)}\n  ${short(item.error)}` : line(item))).join("\n") : "None"
+    const rows =
+      items.length > 0
+        ? items.map((item) => (full ? `${line(language, item)}\n  ${short(language, item.error)}` : line(language, item))).join("\n")
+        : language.t("migration.sessionSummary.none")
     return `${title}\n${rows}`
   }
 
   return [
-    "Summary:",
+    language.t("migration.sessionSummary.title"),
     "",
-    block("Successful", summary.imported),
+    block(language.t("migration.sessionSummary.successful"), summary.imported),
     "",
-    block("Skipped", summary.skipped),
+    block(language.t("migration.sessionSummary.skipped"), summary.skipped),
     "",
-    block("Errored", summary.errored, true),
+    block(language.t("migration.sessionSummary.errored"), summary.errored, true),
   ]
     .filter(Boolean)
     .join("\n")
