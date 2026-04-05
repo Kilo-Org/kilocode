@@ -40,29 +40,41 @@ export function createSessionSummary(): SessionSummaryState {
   }
 }
 
+function strip(state: SessionSummaryState, id: string) {
+  return {
+    imported: state.imported.filter((entry) => entry.id !== id),
+    skipped: state.skipped.filter((entry) => entry.id !== id),
+    errored: state.errored.filter((entry) => entry.id !== id),
+  }
+}
+
 export function updateSessionSummary(state: SessionSummaryState, item: SessionSummaryItem, phase: string): SessionSummaryState {
   if (phase === "skipped") {
+    const next = strip(state, item.id)
     return {
       ...state,
-      skipped: [...state.skipped.filter((entry) => entry.id !== item.id), item],
+      ...next,
+      skipped: [...next.skipped, item],
     }
   }
 
   if (phase === "error") {
+    const next = strip(state, item.id)
     return {
       ...state,
-      errored: [...state.errored.filter((entry) => entry.id !== item.id), item],
+      ...next,
+      errored: [...next.errored, item],
       lastError: short(item.error),
       lastErrorRaw: item.error,
     }
   }
 
   if (phase === "done") {
-    const seen = state.skipped.some((entry) => entry.id === item.id) || state.errored.some((entry) => entry.id === item.id)
-    if (seen) return state
+    const next = strip(state, item.id)
     return {
       ...state,
-      imported: [...state.imported.filter((entry) => entry.id !== item.id), item],
+      ...next,
+      imported: [...next.imported, item],
     }
   }
 
