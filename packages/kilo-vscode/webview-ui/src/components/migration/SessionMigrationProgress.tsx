@@ -8,8 +8,6 @@ export interface SessionMigrationProgressState {
   index: number
   total: number
   phase: LegacyMigrationSessionPhase
-  current?: number
-  count?: number
   error?: string
 }
 
@@ -17,18 +15,15 @@ interface SessionMigrationProgressProps {
   progress: SessionMigrationProgressState
 }
 
-type Step = "preparing" | "project" | "session" | "messages" | "parts"
+type Step = "preparing" | "storing"
 type StepState = "pending" | "active" | "success"
 
 const steps: Array<{ key: Step; label: string }> = [
   { key: "preparing", label: "Preparing session" },
-  { key: "project", label: "Storing project" },
-  { key: "session", label: "Storing session" },
-  { key: "messages", label: "Storing messages" },
-  { key: "parts", label: "Storing parts" },
+  { key: "storing", label: "Storing session" },
 ]
 
-const order: Step[] = ["preparing", "project", "session", "messages", "parts"]
+const order: Step[] = ["preparing", "storing"]
 
 function formatDate(time: number) {
   if (!time) return "Unknown date"
@@ -52,11 +47,11 @@ function text(value: string) {
 }
 
 function current(phase: LegacyMigrationSessionPhase): Step | undefined {
-  if (phase === "preparing" || phase === "project" || phase === "session" || phase === "messages" || phase === "parts") {
+  if (phase === "preparing" || phase === "storing") {
     return phase
   }
-  if (phase === "skipped") return "session"
-  if (phase === "done") return "parts"
+  if (phase === "skipped") return "storing"
+  if (phase === "done") return "storing"
   if (phase === "error") return undefined
   return undefined
 }
@@ -71,15 +66,8 @@ function state(step: Step, phase: LegacyMigrationSessionPhase): StepState {
   return "pending"
 }
 
-function count(step: Step, progress: SessionMigrationProgressState) {
-  if (step !== "messages" && step !== "parts") return undefined
-  if (progress.phase !== step && !(progress.phase === "done" && step === "parts")) return undefined
-  if (progress.count === undefined) return undefined
-  return `${progress.current ?? 0}/${progress.count}`
-}
-
 function label(step: Step, progress: SessionMigrationProgressState) {
-  if (step === "session" && progress.phase === "skipped") return "Session skipped"
+  if (step === "storing" && progress.phase === "skipped") return "Session skipped"
   return steps.find((item) => item.key === step)?.label ?? ""
 }
 
@@ -106,7 +94,6 @@ const SessionMigrationProgress: Component<SessionMigrationProgressProps> = (prop
                 <div class={`migration-session-progress__dot migration-session-progress__dot--${state(step.key, props.progress.phase)}`} />
                 <div class="migration-session-progress__step-text">
                   <span>{label(step.key, props.progress)}</span>
-                  <span class="migration-session-progress__count">{count(step.key, props.progress) ?? ""}</span>
                 </div>
               </div>
             )}

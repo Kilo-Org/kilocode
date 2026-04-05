@@ -50,8 +50,6 @@ function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionPr
     index: progress.index,
     total: progress.total,
     phase: progress.phase,
-    current: progress.current,
-    count: progress.count,
     error: progress.error,
   })
 }

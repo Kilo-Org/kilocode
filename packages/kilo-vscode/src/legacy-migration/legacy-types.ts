@@ -351,14 +351,12 @@ export interface MigrationSelections {
   settings: MigrationSettingsSelections
 }
 
-export type MigrationSessionPhase = "preparing" | "project" | "session" | "messages" | "parts" | "skipped" | "done" | "summary" | "error"
+export type MigrationSessionPhase = "preparing" | "storing" | "skipped" | "done" | "summary" | "error"
 
 export interface MigrationSessionProgress {
   session: MigrationSessionInfo
   index: number
   total: number
   phase: MigrationSessionPhase
-  current?: number
-  count?: number
   error?: string
 }

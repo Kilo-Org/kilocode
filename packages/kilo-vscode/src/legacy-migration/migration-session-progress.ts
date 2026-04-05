@@ -28,8 +28,6 @@ export function buildSessionProgress(meta: MigrationSessionMeta | undefined, onP
       index: meta.index,
       total: meta.total,
       phase: progress.phase,
-      current: progress.current,
-      count: progress.count,
       error: progress.error,
     })
   }

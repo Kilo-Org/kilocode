@@ -283,8 +283,6 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           index: update.index,
           total: update.total,
           phase: update.phase,
-          current: update.current,
-          count: update.count,
           error: update.error,
         })
       }

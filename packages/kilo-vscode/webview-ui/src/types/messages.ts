@@ -1093,7 +1093,7 @@ export interface LegacyMigrationProgressMessage {
   message?: string
 }
 
-export type LegacyMigrationSessionPhase = "preparing" | "project" | "session" | "messages" | "parts" | "skipped" | "done" | "summary" | "error"
+export type LegacyMigrationSessionPhase = "preparing" | "storing" | "skipped" | "done" | "summary" | "error"
 
 export interface LegacyMigrationSessionProgressMessage {
   type: "legacyMigrationSessionProgress"
@@ -1101,8 +1101,6 @@ export interface LegacyMigrationSessionProgressMessage {
   index: number
   total: number
   phase: LegacyMigrationSessionPhase
-  current?: number
-  count?: number
   error?: string
 }
 

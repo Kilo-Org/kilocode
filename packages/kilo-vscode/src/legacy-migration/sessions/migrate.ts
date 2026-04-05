@@ -60,10 +60,9 @@ export async function migrate(
   try {
     progress({ phase: "preparing" })
     const payload = await parseSession(input.id, dir, item)
-    progress({ phase: "project" })
+    progress({ phase: "storing" })
     const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id
-    progress({ phase: "session" })
     const session = await client.kilocode.sessionImport.session(
       {
         ...payload.session,
@@ -84,16 +83,12 @@ export async function migrate(
       }
     }
 
-    progress({ phase: "messages", current: 0, count: payload.messages.length })
-    for (const [index, msg] of payload.messages.entries()) {
+    for (const msg of payload.messages) {
       await client.kilocode.sessionImport.message(msg, { throwOnError: true })
-      progress({ phase: "messages", current: index + 1, count: payload.messages.length })
     }
 
-    progress({ phase: "parts", current: 0, count: payload.parts.length })
-    for (const [index, part] of payload.parts.entries()) {
+    for (const part of payload.parts) {
       await client.kilocode.sessionImport.part(part, { throwOnError: true })
-      progress({ phase: "parts", current: index + 1, count: payload.parts.length })
     }
 
     progress({ phase: "done" })
