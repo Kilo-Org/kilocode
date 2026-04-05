@@ -50,7 +50,6 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
     const list = picked()
     if (list.length === 0) return
     props.onForce(list)
-    showToast({ variant: "success", title: language.t("migration.forceReimport.toast.started") })
   }
 
   return (
