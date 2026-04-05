@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { getMigrationErrorMessage } from "../errors/migration-error"
 import type { MigrationSessionInfo, MigrationSessionProgress, MigrationSessionSelection } from "../legacy-types"
+import { createSessionID } from "./lib/ids"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
 
@@ -9,7 +10,7 @@ type Result =
   | {
       ok: true
       skipped?: boolean
-      payload: Awaited<ReturnType<typeof parseSession>>
+      payload?: Awaited<ReturnType<typeof parseSession>>
     }
   | {
       ok: false
@@ -45,6 +46,14 @@ export async function migrate(
     onProgress(next)
   }
 
+  const skip = async () => {
+    progress({ phase: "skipped" })
+    return {
+      ok: true as const,
+      skipped: true,
+    }
+  }
+
   const fail = (error: unknown, payload: Payload) => {
     progress({
       phase: "error",
@@ -58,6 +67,11 @@ export async function migrate(
   }
 
   try {
+    if (!input.force) {
+      const result = await client.session.get({ sessionID: createSessionID(input.id) })
+      if (result.data) return skip()
+    }
+
     progress({ phase: "preparing" })
     const payload = await parseSession(input.id, dir, item)
     progress({ phase: "storing" })
