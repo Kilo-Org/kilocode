@@ -40,6 +40,7 @@ import { dict as uiTh } from "@opencode-ai/ui/i18n/th"
 import { dict as uiBs } from "@opencode-ai/ui/i18n/bs"
 import { dict as uiNl } from "@opencode-ai/ui/i18n/nl"
 import { dict as uiTr } from "@opencode-ai/ui/i18n/tr"
+import { dict as uiHi } from "@opencode-ai/ui/i18n/hi"
 
 // kilocode_change start
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
@@ -177,7 +178,7 @@ const DICT: Record<Locale, Dictionary> = {
   bs: { ...base, ...i18n.flatten({ ...bs, ...uiBs, ...kiloBs }) },
   nl: { ...base, ...i18n.flatten({ ...nl, ...uiNl, ...kiloNl }) },
   tr: { ...base, ...i18n.flatten({ ...tr, ...uiTr, ...kiloTr }) },
-  hi: { ...base, ...i18n.flatten({ ...hi, ...kiloHi }) },
+  hi: { ...base, ...i18n.flatten({ ...hi, ...uiHi, ...kiloHi }) },
 }
 
 const localeMatchers: Array<{ locale: Locale; match: (language: string) => boolean }> = [
