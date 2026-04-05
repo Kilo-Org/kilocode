@@ -1283,6 +1283,24 @@ export const dict = {
   "migration.error.continue": "متابعة",
   "migration.error.action.copy": "نسخ",
   "migration.error.toast.copied": "تم نسخ الخطأ إلى الحافظة",
+
+  "migration.sessionSummary.title": "الملخص:",
+  "migration.sessionSummary.copy": "نسخ التقرير",
+  "migration.sessionSummary.toast.copied": "تم نسخ التقرير",
+  "migration.forceReimport.title": "فرض إعادة الاستيراد",
+  "migration.forceReimport.description":
+    "ستؤدي إعادة استيراد {{target}} إلى استبدالها وحذف أي رسائل جديدة تم إنشاؤها بالفعل في تلك الجلسات.",
+  "migration.forceReimport.target.one": "هذه الجلسة",
+  "migration.forceReimport.target.many": "هذه الجلسات الـ {{count}}",
+  "migration.forceReimport.button": "فرض إعادة الاستيراد",
+  "migration.forceReimport.all": "إعادة استيراد الكل",
+  "migration.forceReimport.proceed": "متابعة",
+  "migration.forceReimport.toast.started": "بدأت إعادة الاستيراد القسرية",
+  "migration.running.title": "الترحيل قيد التنفيذ",
+  "migration.running.description.line1": "أنت على وشك الإنهاء بينما لا تزال هناك جلسات قيد الترحيل.",
+  "migration.running.description.line2": "إذا غادرت الآن، فقد تبقى بعض الجلسات غير مكتملة.",
+  "migration.running.stay": "البقاء",
+  "migration.running.proceed": "متابعة",
   // legacy-migration end
 
   "error.details.show": "التفاصيل",

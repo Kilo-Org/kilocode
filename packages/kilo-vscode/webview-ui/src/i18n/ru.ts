@@ -1306,6 +1306,24 @@ export const dict = {
   "migration.error.continue": "Продолжить",
   "migration.error.action.copy": "Копировать",
   "migration.error.toast.copied": "Ошибка скопирована в буфер обмена",
+
+  "migration.sessionSummary.title": "Сводка:",
+  "migration.sessionSummary.copy": "Скопировать отчёт",
+  "migration.sessionSummary.toast.copied": "Отчёт скопирован",
+  "migration.forceReimport.title": "Принудительный повторный импорт",
+  "migration.forceReimport.description":
+    "Повторный импорт {{target}} перезапишет их и удалит все новые сообщения, уже созданные в этих сессиях.",
+  "migration.forceReimport.target.one": "эту сессию",
+  "migration.forceReimport.target.many": "эти {{count}} сессии",
+  "migration.forceReimport.button": "Принудительно импортировать снова",
+  "migration.forceReimport.all": "Импортировать всё заново",
+  "migration.forceReimport.proceed": "Продолжить",
+  "migration.forceReimport.toast.started": "Принудительный повторный импорт запущен",
+  "migration.running.title": "Миграция выполняется",
+  "migration.running.description.line1": "Вы собираетесь завершить процесс, пока некоторые сессии всё ещё переносятся.",
+  "migration.running.description.line2": "Если вы уйдёте сейчас, некоторые сессии могут остаться незавершёнными.",
+  "migration.running.stay": "Остаться",
+  "migration.running.proceed": "Продолжить",
   // legacy-migration end
 
   "error.details.show": "Подробности",

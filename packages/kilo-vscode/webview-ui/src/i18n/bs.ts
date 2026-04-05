@@ -1308,6 +1308,24 @@ export const dict = {
   "migration.error.continue": "Nastavi",
   "migration.error.action.copy": "Kopiraj",
   "migration.error.toast.copied": "Greška kopirana u međuspremnik",
+
+  "migration.sessionSummary.title": "Sažetak:",
+  "migration.sessionSummary.copy": "Kopiraj izvještaj",
+  "migration.sessionSummary.toast.copied": "Izvještaj kopiran",
+  "migration.forceReimport.title": "Prisilni ponovni uvoz",
+  "migration.forceReimport.description":
+    "Ponovni uvoz {{target}} će ih prepisati i obrisati sve nove poruke koje su već napravljene u tim sesijama.",
+  "migration.forceReimport.target.one": "ovu sesiju",
+  "migration.forceReimport.target.many": "ovih {{count}} sesija",
+  "migration.forceReimport.button": "Prisilni ponovni uvoz",
+  "migration.forceReimport.all": "Ponovo uvezi sve",
+  "migration.forceReimport.proceed": "Nastavi",
+  "migration.forceReimport.toast.started": "Prisilni ponovni uvoz je pokrenut",
+  "migration.running.title": "Migracija je u toku",
+  "migration.running.description.line1": "Upravo ćete završiti dok se neke sesije još uvijek migriraju.",
+  "migration.running.description.line2": "Ako sada izađete, neke sesije mogu ostati nedovršene.",
+  "migration.running.stay": "Ostani",
+  "migration.running.proceed": "Nastavi",
   // legacy-migration end
 
   "error.details.show": "Detalji",

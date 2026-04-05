@@ -1286,6 +1286,24 @@ export const dict = {
   "migration.error.continue": "계속",
   "migration.error.action.copy": "복사",
   "migration.error.toast.copied": "오류가 클립보드에 복사되었습니다",
+
+  "migration.sessionSummary.title": "요약:",
+  "migration.sessionSummary.copy": "보고서 복사",
+  "migration.sessionSummary.toast.copied": "보고서가 복사되었습니다",
+  "migration.forceReimport.title": "강제 재가져오기",
+  "migration.forceReimport.description":
+    "{{target}}을 다시 가져오면 덮어쓰게 되며, 해당 세션에서 이미 생성된 새 메시지는 삭제됩니다.",
+  "migration.forceReimport.target.one": "이 세션",
+  "migration.forceReimport.target.many": "이 {{count}}개 세션",
+  "migration.forceReimport.button": "강제 재가져오기",
+  "migration.forceReimport.all": "모두 다시 가져오기",
+  "migration.forceReimport.proceed": "진행",
+  "migration.forceReimport.toast.started": "강제 재가져오기가 시작되었습니다",
+  "migration.running.title": "마이그레이션 진행 중",
+  "migration.running.description.line1": "아직 마이그레이션 중인 세션이 남아 있는 상태에서 종료하려고 합니다.",
+  "migration.running.description.line2": "지금 나가면 일부 세션이 완료되지 않은 상태로 남을 수 있습니다.",
+  "migration.running.stay": "머무르기",
+  "migration.running.proceed": "진행",
   // legacy-migration end
 
   "error.details.show": "상세 정보",

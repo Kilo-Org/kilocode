@@ -451,7 +451,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
               },
             },
           })
-          showToast({ variant: "success", title: "Force re-import started" })
+          showToast({ variant: "success", title: language.t("migration.forceReimport.toast.started") })
         }}
       />
     ))

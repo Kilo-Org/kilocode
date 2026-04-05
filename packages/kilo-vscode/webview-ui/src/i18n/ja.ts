@@ -1298,6 +1298,24 @@ export const dict = {
   "migration.error.continue": "続行",
   "migration.error.action.copy": "コピー",
   "migration.error.toast.copied": "エラーをクリップボードにコピーしました",
+
+  "migration.sessionSummary.title": "概要:",
+  "migration.sessionSummary.copy": "レポートをコピー",
+  "migration.sessionSummary.toast.copied": "レポートをコピーしました",
+  "migration.forceReimport.title": "再インポートを強制",
+  "migration.forceReimport.description":
+    "{{target}} を再インポートすると上書きされ、それらのセッションで既に作成された新しいメッセージは削除されます。",
+  "migration.forceReimport.target.one": "このセッション",
+  "migration.forceReimport.target.many": "これら {{count}} 件のセッション",
+  "migration.forceReimport.button": "再インポートを強制",
+  "migration.forceReimport.all": "すべて再インポート",
+  "migration.forceReimport.proceed": "続行",
+  "migration.forceReimport.toast.started": "強制再インポートを開始しました",
+  "migration.running.title": "移行を実行中",
+  "migration.running.description.line1": "まだ移行中のセッションがある状態で終了しようとしています。",
+  "migration.running.description.line2": "今離れると、一部のセッションは未完了のままになる可能性があります。",
+  "migration.running.stay": "このままにする",
+  "migration.running.proceed": "続行",
   // legacy-migration end
 
   "error.details.show": "詳細",

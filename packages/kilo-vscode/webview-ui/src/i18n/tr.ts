@@ -1295,6 +1295,24 @@ export const dict = {
   "migration.error.continue": "Devam et",
   "migration.error.action.copy": "Kopyala",
   "migration.error.toast.copied": "Hata panoya kopyalandı",
+
+  "migration.sessionSummary.title": "Özet:",
+  "migration.sessionSummary.copy": "Raporu kopyala",
+  "migration.sessionSummary.toast.copied": "Rapor kopyalandı",
+  "migration.forceReimport.title": "Yeniden içe aktarmayı zorla",
+  "migration.forceReimport.description":
+    "{{target}} yeniden içe aktarılırsa üzerlerine yazılır ve bu oturumlarda zaten oluşturulmuş yeni mesajlar silinir.",
+  "migration.forceReimport.target.one": "bu oturum",
+  "migration.forceReimport.target.many": "bu {{count}} oturum",
+  "migration.forceReimport.button": "Yeniden içe aktarmayı zorla",
+  "migration.forceReimport.all": "Hepsini yeniden içe aktar",
+  "migration.forceReimport.proceed": "Devam et",
+  "migration.forceReimport.toast.started": "Zorunlu yeniden içe aktarma başlatıldı",
+  "migration.running.title": "Taşıma sürüyor",
+  "migration.running.description.line1": "Hâlâ taşınan oturumlar varken işlemi bitirmek üzeresiniz.",
+  "migration.running.description.line2": "Şimdi çıkarsanız bazı oturumlar eksik kalabilir.",
+  "migration.running.stay": "Kal",
+  "migration.running.proceed": "Devam et",
   // legacy-migration end
 
   "error.details.show": "Ayrıntılar",

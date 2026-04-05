@@ -1307,6 +1307,24 @@ export const dict = {
   "migration.error.continue": "Kontynuuj",
   "migration.error.action.copy": "Kopiuj",
   "migration.error.toast.copied": "Błąd skopiowano do schowka",
+
+  "migration.sessionSummary.title": "Podsumowanie:",
+  "migration.sessionSummary.copy": "Kopiuj raport",
+  "migration.sessionSummary.toast.copied": "Skopiowano raport",
+  "migration.forceReimport.title": "Wymuś ponowny import",
+  "migration.forceReimport.description":
+    "Ponowny import {{target}} spowoduje ich nadpisanie i usunięcie wszystkich nowych wiadomości już utworzonych w tych sesjach.",
+  "migration.forceReimport.target.one": "tej sesji",
+  "migration.forceReimport.target.many": "tych {{count}} sesji",
+  "migration.forceReimport.button": "Wymuś ponowny import",
+  "migration.forceReimport.all": "Zaimportuj ponownie wszystko",
+  "migration.forceReimport.proceed": "Kontynuuj",
+  "migration.forceReimport.toast.started": "Rozpoczęto wymuszony ponowny import",
+  "migration.running.title": "Migracja w toku",
+  "migration.running.description.line1": "Zaraz zakończysz, podczas gdy część sesji wciąż się migruje.",
+  "migration.running.description.line2": "Jeśli wyjdziesz teraz, niektóre sesje mogą pozostać niekompletne.",
+  "migration.running.stay": "Zostań",
+  "migration.running.proceed": "Kontynuuj",
   // legacy-migration end
 
   "error.details.show": "Szczegóły",

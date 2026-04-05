@@ -1299,6 +1299,24 @@ export const dict = {
   "migration.error.continue": "Fortsett",
   "migration.error.action.copy": "Kopier",
   "migration.error.toast.copied": "Feil kopiert til utklippstavlen",
+
+  "migration.sessionSummary.title": "Oppsummering:",
+  "migration.sessionSummary.copy": "Kopier rapport",
+  "migration.sessionSummary.toast.copied": "Rapport kopiert",
+  "migration.forceReimport.title": "Tving ny import",
+  "migration.forceReimport.description":
+    "Hvis du importerer {{target}} på nytt, blir de overskrevet og alle nye meldinger som allerede er opprettet i disse øktene blir slettet.",
+  "migration.forceReimport.target.one": "denne økten",
+  "migration.forceReimport.target.many": "disse {{count}} øktene",
+  "migration.forceReimport.button": "Tving ny import",
+  "migration.forceReimport.all": "Importer alle på nytt",
+  "migration.forceReimport.proceed": "Fortsett",
+  "migration.forceReimport.toast.started": "Tvungen ny import startet",
+  "migration.running.title": "Migrering pågår",
+  "migration.running.description.line1": "Du er i ferd med å avslutte mens det fortsatt er økter som migreres.",
+  "migration.running.description.line2": "Hvis du går nå, kan noen økter forbli ufullstendige.",
+  "migration.running.stay": "Bli",
+  "migration.running.proceed": "Fortsett",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",

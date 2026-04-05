@@ -1296,6 +1296,24 @@ export const dict = {
   "migration.error.continue": "Продовжити",
   "migration.error.action.copy": "Копіювати",
   "migration.error.toast.copied": "Помилку скопійовано до буфера обміну",
+
+  "migration.sessionSummary.title": "Підсумок:",
+  "migration.sessionSummary.copy": "Скопіювати звіт",
+  "migration.sessionSummary.toast.copied": "Звіт скопійовано",
+  "migration.forceReimport.title": "Примусово імпортувати повторно",
+  "migration.forceReimport.description":
+    "Повторний імпорт {{target}} перезапише їх і видалить усі нові повідомлення, уже створені в цих сесіях.",
+  "migration.forceReimport.target.one": "цю сесію",
+  "migration.forceReimport.target.many": "ці {{count}} сесії",
+  "migration.forceReimport.button": "Примусово імпортувати повторно",
+  "migration.forceReimport.all": "Імпортувати все повторно",
+  "migration.forceReimport.proceed": "Продовжити",
+  "migration.forceReimport.toast.started": "Примусовий повторний імпорт розпочато",
+  "migration.running.title": "Триває перенесення",
+  "migration.running.description.line1": "Ви збираєтеся завершити роботу, поки деякі сесії ще переносяться.",
+  "migration.running.description.line2": "Якщо ви вийдете зараз, деякі сесії можуть залишитися незавершеними.",
+  "migration.running.stay": "Залишитися",
+  "migration.running.proceed": "Продовжити",
   // legacy-migration end
 
   "error.details.show": "Деталі",

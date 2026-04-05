@@ -2,6 +2,7 @@ import type { Component } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { useLanguage } from "../../context/language"
 
 interface ForceReimportDialogProps {
   count: number
@@ -10,17 +11,22 @@ interface ForceReimportDialogProps {
 
 const ForceReimportDialog: Component<ForceReimportDialogProps> = (props) => {
   const dialog = useDialog()
+  const language = useLanguage()
 
   return (
-    <Dialog title="Force Re-import" fit>
+    <Dialog title={language.t("migration.forceReimport.title")} fit>
       <div class="dialog-confirm-body">
         <p>
-          Re-importing {props.count === 1 ? "this session" : `these ${props.count} sessions`} will overwrite them and
-          delete any progress already made in those migrated sessions.
+          {language.t("migration.forceReimport.description", {
+            target:
+              props.count === 1
+                ? language.t("migration.forceReimport.target.one")
+                : language.t("migration.forceReimport.target.many", { count: String(props.count) }),
+          })}
         </p>
         <div class="dialog-confirm-actions">
           <Button variant="secondary" size="large" onClick={() => dialog.close()}>
-            Cancel
+            {language.t("common.cancel")}
           </Button>
           <Button
             variant="primary"
@@ -30,7 +36,7 @@ const ForceReimportDialog: Component<ForceReimportDialogProps> = (props) => {
               dialog.close()
             }}
           >
-            Proceed
+            {language.t("migration.forceReimport.proceed")}
           </Button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { Component } from "solid-js"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { useLanguage } from "../../context/language"
 
 interface RunningMigrationDialogProps {
   onConfirm: () => void
@@ -9,15 +10,16 @@ interface RunningMigrationDialogProps {
 
 const RunningMigrationDialog: Component<RunningMigrationDialogProps> = (props) => {
   const dialog = useDialog()
+  const language = useLanguage()
 
   return (
-    <Dialog title="Migration in Progress" fit>
+    <Dialog title={language.t("migration.running.title")} fit>
       <div class="dialog-confirm-body">
-        <p>You are about to finish while there are still sessions being migrated.</p>
-        <p>If you leave now, some sessions may remain incomplete.</p>
+        <p>{language.t("migration.running.description.line1")}</p>
+        <p>{language.t("migration.running.description.line2")}</p>
         <div class="dialog-confirm-actions">
           <Button variant="secondary" size="large" onClick={() => dialog.close()}>
-            Stay
+            {language.t("migration.running.stay")}
           </Button>
           <Button
             variant="primary"
@@ -27,7 +29,7 @@ const RunningMigrationDialog: Component<RunningMigrationDialogProps> = (props) =
               dialog.close()
             }}
           >
-            Proceed
+            {language.t("migration.running.proceed")}
           </Button>
         </div>
       </div>

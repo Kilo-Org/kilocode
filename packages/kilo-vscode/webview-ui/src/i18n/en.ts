@@ -1308,6 +1308,23 @@ export const dict = {
   "migration.error.continue": "Continue",
   "migration.error.action.copy": "Copy",
   "migration.error.toast.copied": "Error copied to clipboard",
+  "migration.sessionSummary.title": "Summary:",
+  "migration.sessionSummary.copy": "Copy Report",
+  "migration.sessionSummary.toast.copied": "Copied report",
+  "migration.forceReimport.title": "Force Re-import",
+  "migration.forceReimport.description":
+    "Re-importing {{target}} will overwrite them and delete any new messages already made in those sessions.",
+  "migration.forceReimport.target.one": "this session",
+  "migration.forceReimport.target.many": "these {{count}} sessions",
+  "migration.forceReimport.button": "Force Re-import",
+  "migration.forceReimport.all": "Re-import all",
+  "migration.forceReimport.proceed": "Proceed",
+  "migration.forceReimport.toast.started": "Force re-import started",
+  "migration.running.title": "Migration in Progress",
+  "migration.running.description.line1": "You are about to finish while there are still sessions being migrated.",
+  "migration.running.description.line2": "If you leave now, some sessions may remain incomplete.",
+  "migration.running.stay": "Stay",
+  "migration.running.proceed": "Proceed",
   // legacy-migration end
 
   "error.details.show": "Details",

@@ -1326,6 +1326,24 @@ export const dict = {
   "migration.error.continue": "Weiter",
   "migration.error.action.copy": "Kopieren",
   "migration.error.toast.copied": "Fehler in die Zwischenablage kopiert",
+
+  "migration.sessionSummary.title": "Zusammenfassung:",
+  "migration.sessionSummary.copy": "Bericht kopieren",
+  "migration.sessionSummary.toast.copied": "Bericht kopiert",
+  "migration.forceReimport.title": "Erneuten Import erzwingen",
+  "migration.forceReimport.description":
+    "Ein erneuter Import von {{target}} überschreibt diese und löscht alle neuen Nachrichten, die in diesen Sitzungen bereits erstellt wurden.",
+  "migration.forceReimport.target.one": "diese Sitzung",
+  "migration.forceReimport.target.many": "diese {{count}} Sitzungen",
+  "migration.forceReimport.button": "Erneuten Import erzwingen",
+  "migration.forceReimport.all": "Alle erneut importieren",
+  "migration.forceReimport.proceed": "Fortfahren",
+  "migration.forceReimport.toast.started": "Erneuter Import gestartet",
+  "migration.running.title": "Migration läuft",
+  "migration.running.description.line1": "Sie sind dabei abzuschließen, während noch Sitzungen migriert werden.",
+  "migration.running.description.line2": "Wenn Sie jetzt gehen, bleiben einige Sitzungen möglicherweise unvollständig.",
+  "migration.running.stay": "Bleiben",
+  "migration.running.proceed": "Fortfahren",
   // legacy-migration end
 
   "error.details.show": "Details",

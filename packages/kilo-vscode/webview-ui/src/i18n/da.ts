@@ -1299,6 +1299,24 @@ export const dict = {
   "migration.error.continue": "Fortsæt",
   "migration.error.action.copy": "Kopiér",
   "migration.error.toast.copied": "Fejl kopieret til udklipsholder",
+
+  "migration.sessionSummary.title": "Opsummering:",
+  "migration.sessionSummary.copy": "Kopiér rapport",
+  "migration.sessionSummary.toast.copied": "Rapport kopieret",
+  "migration.forceReimport.title": "Tving genimport",
+  "migration.forceReimport.description":
+    "Genimport af {{target}} vil overskrive dem og slette alle nye beskeder, der allerede er oprettet i disse sessioner.",
+  "migration.forceReimport.target.one": "denne session",
+  "migration.forceReimport.target.many": "disse {{count}} sessioner",
+  "migration.forceReimport.button": "Tving genimport",
+  "migration.forceReimport.all": "Genimportér alle",
+  "migration.forceReimport.proceed": "Fortsæt",
+  "migration.forceReimport.toast.started": "Tvungen genimport er startet",
+  "migration.running.title": "Migrering i gang",
+  "migration.running.description.line1": "Du er ved at afslutte, mens der stadig er sessioner, som bliver migreret.",
+  "migration.running.description.line2": "Hvis du forlader nu, kan nogle sessioner forblive ufuldstændige.",
+  "migration.running.stay": "Bliv",
+  "migration.running.proceed": "Fortsæt",
   // legacy-migration end
 
   "error.details.show": "Detaljer",

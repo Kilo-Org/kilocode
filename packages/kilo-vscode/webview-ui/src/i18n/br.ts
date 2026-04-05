@@ -1312,6 +1312,24 @@ export const dict = {
   "migration.error.continue": "Continuar",
   "migration.error.action.copy": "Copiar",
   "migration.error.toast.copied": "Erro copiado para a área de transferência",
+
+  "migration.sessionSummary.title": "Resumo:",
+  "migration.sessionSummary.copy": "Copiar relatório",
+  "migration.sessionSummary.toast.copied": "Relatório copiado",
+  "migration.forceReimport.title": "Forçar reimportação",
+  "migration.forceReimport.description":
+    "Reimportar {{target}} vai sobrescrevê-los e apagar quaisquer novas mensagens já criadas nessas sessões.",
+  "migration.forceReimport.target.one": "esta sessão",
+  "migration.forceReimport.target.many": "estas {{count}} sessões",
+  "migration.forceReimport.button": "Forçar reimportação",
+  "migration.forceReimport.all": "Reimportar tudo",
+  "migration.forceReimport.proceed": "Prosseguir",
+  "migration.forceReimport.toast.started": "Reimportação forçada iniciada",
+  "migration.running.title": "Migração em andamento",
+  "migration.running.description.line1": "Você está prestes a concluir enquanto ainda há sessões sendo migradas.",
+  "migration.running.description.line2": "Se você sair agora, algumas sessões podem ficar incompletas.",
+  "migration.running.stay": "Ficar",
+  "migration.running.proceed": "Prosseguir",
   // legacy-migration end
 
   "error.details.show": "Detalhes",

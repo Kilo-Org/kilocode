@@ -1258,6 +1258,24 @@ export const dict = {
   "migration.error.continue": "继续",
   "migration.error.action.copy": "复制",
   "migration.error.toast.copied": "错误已复制到剪贴板",
+
+  "migration.sessionSummary.title": "摘要：",
+  "migration.sessionSummary.copy": "复制报告",
+  "migration.sessionSummary.toast.copied": "报告已复制",
+  "migration.forceReimport.title": "强制重新导入",
+  "migration.forceReimport.description":
+    "重新导入 {{target}} 将覆盖它们，并删除这些会话中已创建的所有新消息。",
+  "migration.forceReimport.target.one": "这个会话",
+  "migration.forceReimport.target.many": "这 {{count}} 个会话",
+  "migration.forceReimport.button": "强制重新导入",
+  "migration.forceReimport.all": "重新导入全部",
+  "migration.forceReimport.proceed": "继续",
+  "migration.forceReimport.toast.started": "已开始强制重新导入",
+  "migration.running.title": "迁移进行中",
+  "migration.running.description.line1": "仍有会话正在迁移时，你即将结束流程。",
+  "migration.running.description.line2": "如果你现在离开，某些会话可能会保持未完成状态。",
+  "migration.running.stay": "留下",
+  "migration.running.proceed": "继续",
   // legacy-migration end
 
   "error.details.show": "详细信息",

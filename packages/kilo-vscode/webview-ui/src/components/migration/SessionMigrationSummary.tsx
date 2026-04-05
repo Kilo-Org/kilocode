@@ -4,6 +4,7 @@ import SessionMigrationCard from "./SessionMigrationCard"
 import type { SessionSummaryState } from "./session-migration-summary-state"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { errored, line, report } from "./session-migration-summary-format"
+import { useLanguage } from "../../context/language"
 
 interface SessionMigrationSummaryProps {
   summary: SessionSummaryState
@@ -11,6 +12,7 @@ interface SessionMigrationSummaryProps {
 }
 
 const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props) => {
+  const language = useLanguage()
   const [all, setAll] = createSignal(false)
   const [selected, setSelected] = createSignal<string[]>([])
 
@@ -24,7 +26,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
     const text = report(props.summary)
     if (!text) return
     await navigator.clipboard.writeText(text)
-    showToast({ variant: "success", title: "Copied report" })
+    showToast({ variant: "success", title: language.t("migration.sessionSummary.toast.copied") })
   }
 
   const skipped = createMemo(() => props.summary.skipped)
@@ -48,16 +50,16 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
     const list = picked()
     if (list.length === 0) return
     props.onForce(list)
-    showToast({ variant: "success", title: "Force re-import started" })
+    showToast({ variant: "success", title: language.t("migration.forceReimport.toast.started") })
   }
 
   return (
     <SessionMigrationCard>
       <div class="migration-session-summary">
         <div class="migration-session-summary__row">
-          <div class="migration-session-summary__title">Summary:</div>
+          <div class="migration-session-summary__title">{language.t("migration.sessionSummary.title")}</div>
           <button type="button" class="migration-wizard__copy-btn" onClick={() => void handleCopy()}>
-            Copy Report
+            {language.t("migration.sessionSummary.copy")}
           </button>
         </div>
         <div class="migration-session-summary__section">
@@ -92,7 +94,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
             </div>
             <div class="migration-session-summary__actions">
               <label class="migration-session-summary__all">
-                <span>Re-import all</span>
+                <span>{language.t("migration.forceReimport.all")}</span>
                 <input type="checkbox" checked={all()} onChange={(event) => handleAll(event.currentTarget.checked)} />
                 <span class="migration-session-summary__pick-mark migration-session-summary__pick-mark--all">
                   <svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -106,7 +108,7 @@ const SessionMigrationSummary: Component<SessionMigrationSummaryProps> = (props)
                 disabled={picked().length === 0}
                 onClick={() => handleForce()}
               >
-                Force Re-import
+                {language.t("migration.forceReimport.button")}
               </button>
             </div>
           </div>

@@ -1282,6 +1282,24 @@ export const dict = {
   "migration.error.continue": "ดำเนินการต่อ",
   "migration.error.action.copy": "คัดลอก",
   "migration.error.toast.copied": "คัดลอกข้อผิดพลาดไปยังคลิปบอร์ดแล้ว",
+
+  "migration.sessionSummary.title": "สรุป:",
+  "migration.sessionSummary.copy": "คัดลอกรายงาน",
+  "migration.sessionSummary.toast.copied": "คัดลอกรายงานแล้ว",
+  "migration.forceReimport.title": "บังคับนำเข้าใหม่",
+  "migration.forceReimport.description":
+    "การนำเข้า {{target}} ใหม่จะเขียนทับและลบข้อความใหม่ใด ๆ ที่สร้างไว้แล้วในเซสชันเหล่านั้น",
+  "migration.forceReimport.target.one": "เซสชันนี้",
+  "migration.forceReimport.target.many": "{{count}} เซสชันเหล่านี้",
+  "migration.forceReimport.button": "บังคับนำเข้าใหม่",
+  "migration.forceReimport.all": "นำเข้าทั้งหมดใหม่",
+  "migration.forceReimport.proceed": "ดำเนินการต่อ",
+  "migration.forceReimport.toast.started": "เริ่มการนำเข้าใหม่แบบบังคับแล้ว",
+  "migration.running.title": "กำลังย้ายข้อมูล",
+  "migration.running.description.line1": "คุณกำลังจะเสร็จสิ้นในขณะที่ยังมีบางเซสชันกำลังย้ายข้อมูลอยู่",
+  "migration.running.description.line2": "หากคุณออกตอนนี้ บางเซสชันอาจยังไม่สมบูรณ์",
+  "migration.running.stay": "อยู่ต่อ",
+  "migration.running.proceed": "ดำเนินการต่อ",
   // legacy-migration end
 
   "error.details.show": "รายละเอียด",

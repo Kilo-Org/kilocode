@@ -1261,6 +1261,24 @@ export const dict = {
   "migration.error.continue": "繼續",
   "migration.error.action.copy": "複製",
   "migration.error.toast.copied": "錯誤已複製到剪貼簿",
+
+  "migration.sessionSummary.title": "摘要：",
+  "migration.sessionSummary.copy": "複製報告",
+  "migration.sessionSummary.toast.copied": "報告已複製",
+  "migration.forceReimport.title": "強制重新匯入",
+  "migration.forceReimport.description":
+    "重新匯入 {{target}} 將會覆寫它們，並刪除這些工作階段中已建立的所有新訊息。",
+  "migration.forceReimport.target.one": "這個工作階段",
+  "migration.forceReimport.target.many": "這 {{count}} 個工作階段",
+  "migration.forceReimport.button": "強制重新匯入",
+  "migration.forceReimport.all": "全部重新匯入",
+  "migration.forceReimport.proceed": "繼續",
+  "migration.forceReimport.toast.started": "已開始強制重新匯入",
+  "migration.running.title": "遷移進行中",
+  "migration.running.description.line1": "目前仍有工作階段正在遷移，但你即將結束流程。",
+  "migration.running.description.line2": "如果你現在離開，部分工作階段可能會維持未完成狀態。",
+  "migration.running.stay": "留下",
+  "migration.running.proceed": "繼續",
   // legacy-migration end
 
   "error.details.show": "詳細資訊",

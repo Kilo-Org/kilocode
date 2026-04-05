@@ -1303,6 +1303,24 @@ export const dict = {
   "migration.error.continue": "Doorgaan",
   "migration.error.action.copy": "Kopiëren",
   "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
+
+  "migration.sessionSummary.title": "Samenvatting:",
+  "migration.sessionSummary.copy": "Rapport kopiëren",
+  "migration.sessionSummary.toast.copied": "Rapport gekopieerd",
+  "migration.forceReimport.title": "Herimport forceren",
+  "migration.forceReimport.description":
+    "Het opnieuw importeren van {{target}} zal deze overschrijven en alle nieuwe berichten verwijderen die al in die sessies zijn gemaakt.",
+  "migration.forceReimport.target.one": "deze sessie",
+  "migration.forceReimport.target.many": "deze {{count}} sessies",
+  "migration.forceReimport.button": "Herimport forceren",
+  "migration.forceReimport.all": "Alles opnieuw importeren",
+  "migration.forceReimport.proceed": "Doorgaan",
+  "migration.forceReimport.toast.started": "Geforceerde herimport gestart",
+  "migration.running.title": "Migratie bezig",
+  "migration.running.description.line1": "Je staat op het punt af te ronden terwijl er nog sessies worden gemigreerd.",
+  "migration.running.description.line2": "Als je nu vertrekt, kunnen sommige sessies onvolledig blijven.",
+  "migration.running.stay": "Blijven",
+  "migration.running.proceed": "Doorgaan",
   // legacy-migration end
 
   "error.details.show": "Details",
