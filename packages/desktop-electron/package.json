@@ -43,7 +43,7 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "electron": "40.4.1",
+    "electron": "40.8.5",
     "electron-builder": "^26",
     "electron-vite": "^5",
     "typescript": "~5.6.2",
