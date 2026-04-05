@@ -104,7 +104,8 @@ export namespace Server {
           // kilocode_change start
           // kilocode change add telemetry because it is high volume
           // add early return to prevent logging timing
-          const skipLogging = c.req.path === "/log" || c.req.path === "/telemetry/capture" 
+          const skipLogging =
+            c.req.path === "/log" || c.req.path === "/telemetry/capture" || c.req.path === "/global/health"
           if (skipLogging) {
             await next()
             return

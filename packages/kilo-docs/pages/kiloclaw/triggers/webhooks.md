@@ -9,7 +9,7 @@ KiloClaw supports inbound webhooks so external events can trigger your agent aut
 
 ## Setup
 
-1. Go to the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
+1. Go to **Settings** under the KiloClaw section in the sidebar
 2. Find the **Webhook Integration** card and click **Manage**
 3. Click **Set Up Webhook**
 
@@ -104,6 +104,8 @@ Now every push to that repository sends a payload to your agent. Customize the p
 
 ## Related
 
+- [Scheduled Triggers](/docs/kiloclaw/triggers/scheduled)
+- [Triggers Overview](/docs/kiloclaw/triggers)
 - [KiloClaw Overview](/docs/kiloclaw/overview)
 - [Dashboard Reference](/docs/kiloclaw/dashboard)
 - [GitHub Integration](/docs/kiloclaw/development-tools/github)
