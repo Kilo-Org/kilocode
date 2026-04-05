@@ -424,6 +424,103 @@
   border-color: color-mix(in srgb, var(--vscode-testing-iconQueued, #d7ba7d) 55%, var(--vscode-panel-border) 45%);
 }
 
+.migration-session-summary__pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 1.45em;
+  padding: 0 8px;
+  cursor: pointer;
+  position: relative;
+}
+
+.migration-session-summary__pick input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  pointer-events: none;
+  right: 8px;
+}
+
+.migration-session-summary__pick-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 34%, transparent);
+  background: color-mix(in srgb, var(--vscode-editor-background) 88%, white 12%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.migration-session-summary__pick-mark svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.migration-session-summary__pick input:checked + .migration-session-summary__pick-mark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 46%, transparent);
+}
+
+.migration-session-summary__pick input:checked + .migration-session-summary__pick-mark svg {
+  opacity: 1;
+}
+
+.migration-session-summary__pick .migration-session-summary__item {
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.migration-session-summary__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.migration-session-summary__all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  position: relative;
+  cursor: pointer;
+  min-width: 140px;
+}
+
+.migration-session-summary__all input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  pointer-events: none;
+  right: 0;
+}
+
+.migration-session-summary__all input:checked + .migration-session-summary__pick-mark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 46%, transparent);
+}
+
+.migration-session-summary__all input:checked + .migration-session-summary__pick-mark svg {
+  opacity: 1;
+}
+
+.migration-session-summary__pick-mark--all {
+  margin-left: auto;
+}
+
 .migration-session-summary__list--errored {
   border-color: color-mix(in srgb, var(--vscode-errorForeground) 55%, var(--vscode-panel-border) 45%);
 }
