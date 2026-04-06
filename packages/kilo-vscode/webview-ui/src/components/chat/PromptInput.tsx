@@ -814,7 +814,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onBlur={syncGhost}
             onSelect={syncGhost}
             onScroll={syncHighlightScroll}
-            disabled={isDisabled()}
+            disabled={retrying()}
             aria-disabled={isDisabled()}
             rows={1}
           />
