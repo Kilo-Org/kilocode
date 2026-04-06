@@ -18,21 +18,22 @@ import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 
 import { PermissionNext } from "@/permission/next"
-import { NamedError } from "@opencode-ai/util/error" // kilocode_change
-import { Glob } from "../util/glob" // kilocode_change
+import { NamedError } from "@opencode-ai/util/error" // devilcode_change
+import { Glob } from "../util/glob" // devilcode_change
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global"
 import path from "path"
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 
-import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
+import { Telemetry } from "@devilcode/kilo-telemetry" // devilcode_change
+import { createWorkflowAgents } from "@/devilcode/team/agents" // devilcode_change
 
 export namespace Agent {
   export const Info = z
     .object({
       name: z.string(),
-      displayName: z.string().optional(), // kilocode_change - human-readable name for org modes
+      displayName: z.string().optional(), // devilcode_change - human-readable name for org modes
       description: z.string().optional(),
       mode: z.enum(["subagent", "primary", "all"]),
       native: z.boolean().optional(),
@@ -63,7 +64,7 @@ export namespace Agent {
 
     const skillDirs = await Skill.dirs()
     const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
-    // kilocode_change start — safe bash commands that don't need user approval.
+    // devilcode_change start — safe bash commands that don't need user approval.
     // only commands that cannot execute arbitrary code or subprocesses.
     const bash: Record<string, "allow" | "ask" | "deny"> = {
       "*": "ask",
@@ -111,9 +112,9 @@ export namespace Agent {
       "gzip *": "allow",
       "gunzip *": "allow",
     }
-    // kilocode_change end
+    // devilcode_change end
 
-    // kilocode_change start — read-only bash commands for the ask agent.
+    // devilcode_change start — read-only bash commands for the ask agent.
     // Unlike the default bash allowlist, unknown commands are DENIED (not "ask")
     // because the ask agent must never modify the filesystem.
     const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
@@ -174,18 +175,18 @@ export namespace Agent {
       "gh *": "ask",
     }
 
-    // kilocode_change start — allow MCP tools in ask agent with user approval.
+    // devilcode_change start — allow MCP tools in ask agent with user approval.
     // Generates per-server wildcard rules that override "*": "deny".
     const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
     for (const key of Object.keys(cfg.mcp ?? {})) {
       const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
       mcpRules[sanitized + "_*"] = "ask"
     }
-    // kilocode_change end
+    // devilcode_change end
 
     const defaults = PermissionNext.fromConfig({
       "*": "allow",
-      bash, // kilocode_change
+      bash, // devilcode_change
       doom_loop: "ask",
       external_directory: {
         "*": "ask",
@@ -205,11 +206,11 @@ export namespace Agent {
     const user = PermissionNext.fromConfig(cfg.permission ?? {})
 
     const result: Record<string, Info> = {
-      // kilocode_change start
+      // devilcode_change start
       code: {
         name: "code",
         description: "The default agent. Executes tools based on configured permissions.",
-        // kilocode_change end
+        // devilcode_change end
         options: {},
         permission: PermissionNext.merge(
           defaults,
@@ -236,8 +237,8 @@ export namespace Agent {
             },
             edit: {
               "*": "deny",
-              [path.join(".kilo", "plans", "*.md")]: "allow", // kilocode_change
-              [path.join(".opencode", "plans", "*.md")]: "allow", // kilocode_change: .opencode fallback
+              [path.join(".kilo", "plans", "*.md")]: "allow", // devilcode_change
+              [path.join(".opencode", "plans", "*.md")]: "allow", // devilcode_change: .opencode fallback
               [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
             },
           }),
@@ -246,7 +247,7 @@ export namespace Agent {
         mode: "primary",
         native: true,
       },
-      // kilocode_change start - add debug, orchestrator, and ask agents
+      // devilcode_change start - add debug, orchestrator, and ask agents
       debug: {
         name: "debug",
         description: "Diagnose and fix software issues with systematic debugging methodology.",
@@ -276,7 +277,7 @@ export namespace Agent {
             grep: "allow",
             glob: "allow",
             list: "allow",
-            // bash: "allow", // kilocode_change - disabled to prevent orchestrator from writing files via shell commands instead of delegating to sub-agents
+            // bash: "allow", // devilcode_change - disabled to prevent orchestrator from writing files via shell commands instead of delegating to sub-agents
             question: "allow",
             task: "allow",
             todoread: "allow",
@@ -284,17 +285,17 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            codebase_search: "allow", // kilocode_change
+            codebase_search: "allow", // devilcode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
           }),
           user,
-          // kilocode_change start - enforce bash deny after user so user config cannot re-enable shell
+          // devilcode_change start - enforce bash deny after user so user config cannot re-enable shell
           PermissionNext.fromConfig({
             bash: "deny",
           }),
-          // kilocode_change end
+          // devilcode_change end
         ),
         mode: "primary",
         native: true,
@@ -307,7 +308,7 @@ export namespace Agent {
         options: {},
         permission: PermissionNext.merge(
           defaults,
-          user, // kilocode_change: user before ask-specific so ask's deny+allowlist wins
+          user, // devilcode_change: user before ask-specific so ask's deny+allowlist wins
           PermissionNext.fromConfig({
             "*": "deny",
             bash: readOnlyBash,
@@ -324,18 +325,18 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            codebase_search: "allow", // kilocode_change
+            codebase_search: "allow", // devilcode_change
             external_directory: {
               [Truncate.GLOB]: "allow",
             },
             ...mcpRules,
           }),
-          user.filter((r) => r.action === "deny"), // kilocode_change: re-apply user denies so explicit MCP blocks win over mcpRules
+          user.filter((r) => r.action === "deny"), // devilcode_change: re-apply user denies so explicit MCP blocks win over mcpRules
         ),
         mode: "primary",
         native: true,
       },
-      // kilocode_change end
+      // devilcode_change end
       general: {
         name: "general",
         description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
@@ -364,7 +365,7 @@ export namespace Agent {
             webfetch: "allow",
             websearch: "allow",
             codesearch: "allow",
-            codebase_search: "allow", // kilocode_change
+            codebase_search: "allow", // devilcode_change
             read: "allow",
             external_directory: {
               "*": "ask",
@@ -374,7 +375,7 @@ export namespace Agent {
           user,
         ),
         description: `Fast agent specialized for exploring codebases. Use this when you need to quickly find files by patterns (eg. "src/components/**/*.tsx"), search code for keywords (eg. "API endpoints"), or answer questions about the codebase (eg. "how do API endpoints work?"). When calling this agent, specify the desired thoroughness level: "quick" for basic searches, "medium" for moderate exploration, or "very thorough" for comprehensive analysis across multiple locations and naming conventions.`,
-        // kilocode_change - only advertise codebase_search when the experimental flag is on
+        // devilcode_change - only advertise codebase_search when the experimental flag is on
         prompt: cfg.experimental?.codebase_search
           ? `Prefer using the codebase_search tool for codebase searches — it performs intelligent multi-step code search and returns the most relevant code spans.\n\n${PROMPT_EXPLORE}`
           : PROMPT_EXPLORE,
@@ -431,7 +432,7 @@ export namespace Agent {
     }
 
     for (const [key, value] of Object.entries(cfg.agent ?? {})) {
-      // kilocode_change start
+      // devilcode_change start
       // Treat "build" config as "code" for backward compatibility
       const effectiveKey = key === "build" ? "code" : key
       if (value.disable) {
@@ -447,7 +448,7 @@ export namespace Agent {
           options: {},
           native: false,
         }
-      // kilocode_change end
+      // devilcode_change end
       if (value.model) item.model = Provider.parseModel(value.model)
       item.variant = value.variant ?? item.variant
       item.prompt = value.prompt ?? item.prompt
@@ -461,11 +462,11 @@ export namespace Agent {
       item.name = value.name ?? item.name
       item.steps = value.steps ?? item.steps
       item.options = mergeDeep(item.options, value.options ?? {})
-      // kilocode_change  start - populate displayName from org mode options
+      // devilcode_change  start - populate displayName from org mode options
       if (item.options?.displayName && typeof item.options.displayName === "string") {
         item.displayName = item.options.displayName
       }
-      // kilocode_change end
+      // devilcode_change end
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }
 
@@ -485,14 +486,21 @@ export namespace Agent {
       )
     }
 
+    // devilcode_change start — register team workflow agents
+    const workflowAgents = createWorkflowAgents(cfg.team, defaults)
+    if (workflowAgents) {
+      Object.assign(result, workflowAgents)
+    }
+    // devilcode_change end
+
     return result
   })
 
   export async function get(agent: string) {
-    // kilocode_change start -  Treat "build" as "code" for backward compatibility
+    // devilcode_change start -  Treat "build" as "code" for backward compatibility
     const effectiveAgent = agent === "build" ? "code" : agent
     return state().then((x) => x[effectiveAgent])
-    // kilocode_change end
+    // devilcode_change end
   }
 
   export async function list() {
@@ -500,7 +508,7 @@ export namespace Agent {
     return pipe(
       await state(),
       values(),
-      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "code"), "desc"]), // kilocode_change - renamed from "build" to "code"
+      sortBy([(x) => (cfg.default_agent ? x.name === cfg.default_agent : x.name === "code"), "desc"]), // devilcode_change - renamed from "build" to "code"
     )
   }
 
@@ -509,11 +517,11 @@ export namespace Agent {
     const agents = await state()
 
     if (cfg.default_agent) {
-      // kilocode_change start -  Treat "build" as "code" for backward compatibility
+      // devilcode_change start -  Treat "build" as "code" for backward compatibility
       const effectiveDefault = cfg.default_agent === "build" ? "code" : cfg.default_agent
       const agent = agents[effectiveDefault]
       if (!agent) throw new Error(`default agent "${cfg.default_agent}" not found`)
-      // kilocode_change end
+      // devilcode_change end
       if (agent.mode === "subagent") throw new Error(`default agent "${cfg.default_agent}" is a subagent`)
       if (agent.hidden === true) throw new Error(`default agent "${cfg.default_agent}" is hidden`)
       return agent.name
@@ -527,7 +535,16 @@ export namespace Agent {
   export async function generate(input: { description: string; model?: { providerID: string; modelID: string } }) {
     const cfg = await Config.get()
     const defaultModel = input.model ?? (await Provider.defaultModel())
-    const model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID)
+    let model = await Provider.getModel(defaultModel.providerID, defaultModel.modelID)
+    // devilcode_change start
+    if (Provider.external(model, await Provider.getProvider(model.providerID))) {
+      const next = await Provider.usable()
+      if (!next) {
+        throw new Error("A non-external provider is required to generate agent configurations.")
+      }
+      model = await Provider.getModel(next.providerID, next.modelID)
+    }
+    // devilcode_change end
     const language = await Provider.getLanguage(model)
 
     const system = [PROMPT_GENERATE]
@@ -535,7 +552,7 @@ export namespace Agent {
     const existing = await list()
 
     const params = {
-      // kilocode_change start - enable telemetry by default with custom PostHog tracer
+      // devilcode_change start - enable telemetry by default with custom PostHog tracer
       experimental_telemetry: {
         isEnabled: cfg.experimental?.openTelemetry !== false,
         recordInputs: false, // Prevent recording prompts, messages, tool args
@@ -545,7 +562,7 @@ export namespace Agent {
           userId: cfg.username ?? "unknown",
         },
       },
-      // kilocode_change end
+      // devilcode_change end
       temperature: 0.3,
       messages: [
         ...system.map(
@@ -586,7 +603,7 @@ export namespace Agent {
     return result.object
   }
 
-  // kilocode_change start
+  // devilcode_change start
   export const RemoveError = NamedError.create(
     "AgentRemoveError",
     z.object({
@@ -597,19 +614,19 @@ export namespace Agent {
 
   /**
    * Remove a custom agent by deleting its markdown source file and/or
-   * removing it from legacy .kilocodemodes YAML files.
+   * removing it from legacy .devilcodemodes YAML files.
    * Scans all config directories for agent/mode .md files matching the name,
-   * then also checks the .kilocodemodes files the ModesMigrator reads.
+   * then also checks the .devilcodemodes files the ModesMigrator reads.
    */
   export async function remove(name: string) {
     const agents = await state()
     const agent = agents[name]
     if (!agent) throw new RemoveError({ name, message: "agent not found" })
     if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
-    // kilocode_change start - prevent removal of organization-managed agents
+    // devilcode_change start - prevent removal of organization-managed agents
     if (agent.options?.source === "organization")
       throw new RemoveError({ name, message: "cannot remove organization agent — manage it from the cloud dashboard" })
-    // kilocode_change end
+    // devilcode_change end
 
     const { unlink, readFile, writeFile } = await import("fs/promises")
     let found = false
@@ -629,17 +646,17 @@ export namespace Agent {
       }
     }
 
-    // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
-    const { ModesMigrator } = await import("@/kilocode/modes-migrator")
-    const { KilocodePaths } = await import("@/kilocode/paths")
+    // 2. Remove from legacy .devilcodemodes YAML files (read by ModesMigrator)
+    const { ModesMigrator } = await import("@/devilcode/modes-migrator")
+    const { DevilcodePaths } = await import("@/devilcode/paths")
     const os = await import("os")
     const matter = (await import("gray-matter")).default
     const home = os.default.homedir()
     const modesFiles = [
-      path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
-      path.join(home, ".kilocode", "cli", "global", "settings", "custom_modes.yaml"),
-      path.join(home, ".kilocodemodes"),
-      path.join(Instance.directory, ".kilocodemodes"),
+      path.join(DevilcodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml"),
+      path.join(home, ".devilcode", "cli", "global", "settings", "custom_modes.yaml"),
+      path.join(home, ".devilcodemodes"),
+      path.join(Instance.directory, ".devilcodemodes"),
     ]
 
     for (const file of modesFiles) {
@@ -662,5 +679,5 @@ export namespace Agent {
 
     await Instance.dispose()
   }
-  // kilocode_change end
+  // devilcode_change end
 }
