@@ -245,10 +245,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
   const isBusy = () => session.status() === "busy"
-  const isDisabled = () => !server.isConnected()
+  const retrying = () => session.status() === "retry" // kilocode_change
+  const isDisabled = () => !server.isConnected() || retrying() // kilocode_change - block input during retry countdown
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () => hasInput() && !isDisabled() && !props.blocked?.()
-  const showStop = () => isBusy() && !hasInput()
+  const showStop = () => (isBusy() && !hasInput()) || retrying() // kilocode_change - show stop during retry countdown
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const placeholder = () => {
@@ -813,6 +814,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             onBlur={syncGhost}
             onSelect={syncGhost}
             onScroll={syncHighlightScroll}
+            disabled={isDisabled()}
             aria-disabled={isDisabled()}
             rows={1}
           />
