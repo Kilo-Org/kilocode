@@ -1,49 +1,46 @@
 import { describe, it, expect } from "bun:test"
-import {
-  ACCEPTED_IMAGE_TYPES,
-  isAcceptedImageType,
-  isDragLeavingComponent,
-} from "../../webview-ui/src/hooks/image-attachments-utils"
-
-describe("ACCEPTED_IMAGE_TYPES", () => {
-  it("includes the standard image MIME types", () => {
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/png")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/jpeg")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/gif")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/webp")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/bmp")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/tiff")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/tif")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/heic")
-    expect(ACCEPTED_IMAGE_TYPES).toContain("image/avif")
-  })
-})
+import { isAcceptedImageType, isDragLeavingComponent } from "../../webview-ui/src/hooks/image-attachments-utils"
 
 describe("isAcceptedImageType", () => {
-  it("returns true for accepted types", () => {
+  it("returns true for standard image types", () => {
     expect(isAcceptedImageType("image/png")).toBe(true)
     expect(isAcceptedImageType("image/jpeg")).toBe(true)
     expect(isAcceptedImageType("image/gif")).toBe(true)
     expect(isAcceptedImageType("image/webp")).toBe(true)
+  })
+
+  it("returns true for additional image formats", () => {
     expect(isAcceptedImageType("image/bmp")).toBe(true)
     expect(isAcceptedImageType("image/tiff")).toBe(true)
     expect(isAcceptedImageType("image/tif")).toBe(true)
     expect(isAcceptedImageType("image/heic")).toBe(true)
     expect(isAcceptedImageType("image/avif")).toBe(true)
+    expect(isAcceptedImageType("image/x-icon")).toBe(true)
+    expect(isAcceptedImageType("image/x-portable-pixmap")).toBe(true)
+  })
+
+  it("returns true for text/svg+xml specifically", () => {
+    expect(isAcceptedImageType("text/svg+xml")).toBe(true)
+    expect(isAcceptedImageType("text/svg+xml;charset=utf-8")).toBe(true)
+  })
+
+  it("returns false for other text types", () => {
+    expect(isAcceptedImageType("text/plain")).toBe(false)
+    expect(isAcceptedImageType("text/html")).toBe(false)
+  })
+
+  it("handles MIME type with parameters", () => {
+    expect(isAcceptedImageType("image/png;base64")).toBe(true)
   })
 
   it("returns false for non-image types", () => {
     expect(isAcceptedImageType("application/pdf")).toBe(false)
-    expect(isAcceptedImageType("text/plain")).toBe(false)
     expect(isAcceptedImageType("video/mp4")).toBe(false)
+    expect(isAcceptedImageType("audio/mp3")).toBe(false)
   })
 
   it("returns false for empty string", () => {
     expect(isAcceptedImageType("")).toBe(false)
-  })
-
-  it("returns false for image types not in the accepted list", () => {
-    expect(isAcceptedImageType("image/svg+xml")).toBe(false)
   })
 })
 

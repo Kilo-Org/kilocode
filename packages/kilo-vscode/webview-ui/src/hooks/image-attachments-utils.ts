@@ -1,18 +1,11 @@
-export const ACCEPTED_IMAGE_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
-  "image/bmp",
-  "image/tiff",
-  "image/tif",
-  "image/heic",
-  "image/avif",
-]
+const IMAGE_PREFIX = "image/"
+const ADDITIONAL_IMAGE_TYPES = ["text/svg+xml"]
 
 /** Returns true if the given MIME type is an accepted image type. */
 export function isAcceptedImageType(mimeType: string): boolean {
-  return ACCEPTED_IMAGE_TYPES.includes(mimeType)
+  const normalized = mimeType.split(";")[0]?.trim().toLowerCase()
+  if (!normalized) return false
+  return normalized.startsWith(IMAGE_PREFIX) || ADDITIONAL_IMAGE_TYPES.includes(normalized)
 }
 
 /**
