@@ -1,5 +1,17 @@
+/** Used by clipboard API to filter paste/drop items */
+export const ACCEPTED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+  "image/bmp",
+  "image/tiff",
+  "image/heic",
+  "image/avif",
+]
+
 const IMAGE_PREFIX = "image/"
-const ADDITIONAL_IMAGE_TYPES = ["text/svg+xml"]
+const ADDITIONAL_IMAGE_TYPES = ["image/svg+xml"]
 
 /** Returns true if the given MIME type is an accepted image type. */
 export function isAcceptedImageType(mimeType: string): boolean {

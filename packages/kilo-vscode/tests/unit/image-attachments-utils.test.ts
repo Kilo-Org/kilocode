@@ -19,9 +19,9 @@ describe("isAcceptedImageType", () => {
     expect(isAcceptedImageType("image/x-portable-pixmap")).toBe(true)
   })
 
-  it("returns true for text/svg+xml specifically", () => {
-    expect(isAcceptedImageType("text/svg+xml")).toBe(true)
-    expect(isAcceptedImageType("text/svg+xml;charset=utf-8")).toBe(true)
+  it("returns true for image/svg+xml specifically", () => {
+    expect(isAcceptedImageType("image/svg+xml")).toBe(true)
+    expect(isAcceptedImageType("image/svg+xml;charset=utf-8")).toBe(true)
   })
 
   it("returns false for other text types", () => {

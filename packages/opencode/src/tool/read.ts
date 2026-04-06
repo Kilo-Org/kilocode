@@ -117,9 +117,10 @@ export const ReadTool = Tool.define("read", {
 
     const instructions = await InstructionPrompt.resolve(ctx.messages, filepath, ctx.messageID)
 
-    // Exclude SVG (XML-based) and vnd.fastbidsheet (.fbs extension, commonly FlatBuffers schema files)
+    // Accept image/ types except vnd.fastbidsheet, plus image/svg+xml
     const mime = Filesystem.mimeType(filepath)
-    const isImage = mime.startsWith("image/") || ["text/svg+xml"].includes(mime)
+    const EXCLUDED_MIMES = ["image/vnd.fastbidsheet"]
+    const isImage = (mime.startsWith("image/") && !EXCLUDED_MIMES.includes(mime)) || mime === "image/svg+xml"
     const isPdf = mime === "application/pdf"
     if (isImage || isPdf) {
       const msg = `${isImage ? "Image" : "PDF"} read successfully`
