@@ -156,6 +156,61 @@ describe("TeamConfig", () => {
   })
 })
 
+describe("TeamConfig cross-field validation", () => {
+  test("rejects defaultRole pointing to non-existent role when enabled", () => {
+    expect(() =>
+      TeamConfig.parse({
+        enabled: true,
+        roles: {
+          worker: {
+            displayName: "Worker",
+            provider: "fireworks-ai",
+            model: "kimi-k2p5-turbo",
+            tier: 1,
+          },
+        },
+        routing: { defaultRole: "nonexistent" },
+      })
+    ).toThrow("routing.defaultRole must reference an existing role")
+  })
+
+  test("rejects canDelegate pointing to non-existent role when enabled", () => {
+    expect(() =>
+      TeamConfig.parse({
+        enabled: true,
+        roles: {
+          orchestrator: {
+            displayName: "Orchestrator",
+            provider: "anthropic",
+            model: "claude-opus-4-6",
+            tier: 1,
+            canDelegate: ["ghost"],
+          },
+        },
+        routing: { defaultRole: "orchestrator" },
+      })
+    ).toThrow("canDelegate entries must reference existing roles")
+  })
+
+  test("allows invalid references when enabled is false", () => {
+    const result = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        worker: {
+          displayName: "Worker",
+          provider: "fireworks-ai",
+          model: "kimi-k2p5-turbo",
+          tier: 1,
+          canDelegate: ["ghost"],
+        },
+      },
+      routing: { defaultRole: "nonexistent" },
+    })
+    expect(result.enabled).toBe(false)
+    expect(result.routing.defaultRole).toBe("nonexistent")
+  })
+})
+
 describe("EffortLevel", () => {
   test("accepts all valid effort levels", () => {
     for (const level of ["max", "xhigh", "high", "medium", "low", "default"]) {

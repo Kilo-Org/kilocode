@@ -26,5 +26,13 @@ export const TeamConfig = z.object({
   enabled: z.boolean().default(false),
   roles: z.record(z.string(), TeamRole),
   routing: TeamRouting,
-})
+}).refine(
+  (cfg) => !cfg.enabled || cfg.routing.defaultRole in cfg.roles,
+  { message: "routing.defaultRole must reference an existing role", path: ["routing", "defaultRole"] }
+).refine(
+  (cfg) => !cfg.enabled || Object.values(cfg.roles).every(role =>
+    role.canDelegate.every(d => d in cfg.roles)
+  ),
+  { message: "canDelegate entries must reference existing roles", path: ["roles"] }
+)
 export type TeamConfig = z.infer<typeof TeamConfig>
