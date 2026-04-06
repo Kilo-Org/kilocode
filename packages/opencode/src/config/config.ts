@@ -12,7 +12,7 @@ import { lazy } from "../util/lazy"
 import { NamedError } from "@opencode-ai/util/error"
 import { Flag } from "../flag/flag"
 import { Auth } from "../auth"
-// kilocode_change start
+// devilcode_change start
 import {
   type ParseError as JsoncParseError,
   applyEdits,
@@ -22,7 +22,10 @@ import {
   parseTree,
   printParseErrorCode,
 } from "jsonc-parser"
-// kilocode_change end
+// devilcode_change end
+// devilcode_change start
+import { TeamConfig } from "@/devilcode/team/config"
+// devilcode_change end
 import { Instance } from "../project/instance"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
@@ -40,12 +43,12 @@ import { Control } from "@/control"
 import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
 
-import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
-import { fetchOrganizationModes } from "@kilocode/kilo-gateway" // kilocode_change
-import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
-import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
-import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { ModesMigrator } from "../devilcode/modes-migrator" // devilcode_change
+import { fetchOrganizationModes } from "@devilcode/kilo-gateway" // devilcode_change
+import { RulesMigrator } from "../devilcode/rules-migrator" // devilcode_change
+import { WorkflowsMigrator } from "../devilcode/workflows-migrator" // devilcode_change
+import { McpMigrator } from "../devilcode/mcp-migrator" // devilcode_change
+import { IgnoreMigrator } from "../devilcode/ignore-migrator" // devilcode_change
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -57,16 +60,16 @@ export namespace Config {
   function systemManagedConfigDir(): string {
     switch (process.platform) {
       case "darwin":
-        return "/Library/Application Support/kilo" // kilocode_change
+        return "/Library/Application Support/kilo" // devilcode_change
       case "win32":
-        return path.join(process.env.ProgramData || "C:\\ProgramData", "kilo") // kilocode_change
+        return path.join(process.env.ProgramData || "C:\\ProgramData", "kilo") // devilcode_change
       default:
-        return "/etc/kilo" // kilocode_change
+        return "/etc/kilo" // devilcode_change
     }
   }
 
   export function managedConfigDir() {
-    return process.env.KILO_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
+    return process.env.DEVIL_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
   }
 
   const managedDir = managedConfigDir()
@@ -83,100 +86,100 @@ export namespace Config {
     return merged
   }
 
-  // kilocode_change start — capture init so resetState() can invalidate the cache entry
+  // devilcode_change start — capture init so resetState() can invalidate the cache entry
   const stateInit = async () => {
-    // kilocode_change end
+    // devilcode_change end
     const auth = await Auth.all()
 
-    // This ensures Opencode native configs always take precedence over legacy Kilocode configs
+    // This ensures Opencode native configs always take precedence over legacy Devilcode configs
     // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
     // 1) Remote .well-known/opencode (org defaults)
     // 2) Global config (~/.config/opencode/opencode.json{,c})
-    // 3) Custom config (KILO_CONFIG)
+    // 3) Custom config (DEVIL_CONFIG)
     // 4) Project config (opencode.json{,c})
     // 5) .opencode directories (.opencode/agents/, .opencode/commands/, .opencode/plugins/, .opencode/opencode.json{,c})
-    // 6) Inline config (KILO_CONFIG_CONTENT)
+    // 6) Inline config (DEVIL_CONFIG_CONTENT)
     // Managed config directory is enterprise-only and always overrides everything above.
     let result: Info = {}
 
-    // kilocode_change start - Load Kilocode configs first (lowest precedence)
-    // Load Kilocode custom modes (legacy fallback)
+    // devilcode_change start - Load Devilcode configs first (lowest precedence)
+    // Load Devilcode custom modes (legacy fallback)
     try {
-      const kilocodeMigration = await ModesMigrator.migrate({
+      const devilcodeMigration = await ModesMigrator.migrate({
         projectDir: Instance.directory,
       })
-      if (Object.keys(kilocodeMigration.agents).length > 0) {
-        result = mergeConfigConcatArrays(result, { agent: kilocodeMigration.agents })
-        log.debug("loaded kilocode custom modes", {
-          count: Object.keys(kilocodeMigration.agents).length,
-          modes: Object.keys(kilocodeMigration.agents),
+      if (Object.keys(devilcodeMigration.agents).length > 0) {
+        result = mergeConfigConcatArrays(result, { agent: devilcodeMigration.agents })
+        log.debug("loaded devilcode custom modes", {
+          count: Object.keys(devilcodeMigration.agents).length,
+          modes: Object.keys(devilcodeMigration.agents),
         })
       }
-      for (const skipped of kilocodeMigration.skipped) {
-        log.debug("skipped kilocode mode", { slug: skipped.slug, reason: skipped.reason })
+      for (const skipped of devilcodeMigration.skipped) {
+        log.debug("skipped devilcode mode", { slug: skipped.slug, reason: skipped.reason })
       }
     } catch (err) {
-      log.warn("failed to load kilocode modes", { error: err })
+      log.warn("failed to load devilcode modes", { error: err })
     }
 
-    // Load Kilocode workflows as commands (legacy fallback)
+    // Load Devilcode workflows as commands (legacy fallback)
     try {
       const workflowsMigration = await WorkflowsMigrator.migrate({
         projectDir: Instance.directory,
       })
       if (Object.keys(workflowsMigration.commands).length > 0) {
         result = mergeConfigConcatArrays(result, { command: workflowsMigration.commands })
-        log.debug("loaded kilocode workflows as commands", {
+        log.debug("loaded devilcode workflows as commands", {
           count: Object.keys(workflowsMigration.commands).length,
           commands: Object.keys(workflowsMigration.commands),
         })
       }
     } catch (err) {
-      log.warn("failed to load kilocode workflows", { error: err })
+      log.warn("failed to load devilcode workflows", { error: err })
     }
 
-    // Load Kilocode rules (legacy fallback)
+    // Load Devilcode rules (legacy fallback)
     try {
-      const kilocodeRules = await RulesMigrator.migrate({
+      const devilcodeRules = await RulesMigrator.migrate({
         projectDir: Instance.directory,
       })
-      if (kilocodeRules.instructions.length > 0) {
-        result = mergeConfigConcatArrays(result, { instructions: kilocodeRules.instructions })
-        log.debug("loaded kilocode rules", {
-          count: kilocodeRules.instructions.length,
-          files: kilocodeRules.instructions,
+      if (devilcodeRules.instructions.length > 0) {
+        result = mergeConfigConcatArrays(result, { instructions: devilcodeRules.instructions })
+        log.debug("loaded devilcode rules", {
+          count: devilcodeRules.instructions.length,
+          files: devilcodeRules.instructions,
         })
       }
-      for (const warning of kilocodeRules.warnings) {
-        log.debug("kilocode rules warning", { warning })
+      for (const warning of devilcodeRules.warnings) {
+        log.debug("devilcode rules warning", { warning })
       }
     } catch (err) {
-      log.warn("failed to load kilocode rules", { error: err })
+      log.warn("failed to load devilcode rules", { error: err })
     }
 
-    // Load Kilocode MCP servers (legacy fallback)
-    const kilocodeMcp = await McpMigrator.loadMcpConfig(Instance.directory)
-    if (Object.keys(kilocodeMcp).length > 0) {
-      result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
+    // Load Devilcode MCP servers (legacy fallback)
+    const devilcodeMcp = await McpMigrator.loadMcpConfig(Instance.directory)
+    if (Object.keys(devilcodeMcp).length > 0) {
+      result = mergeConfigConcatArrays(result, { mcp: devilcodeMcp })
     }
 
-    // Load .kilocodeignore patterns (legacy fallback)
+    // Load .devilcodeignore patterns (legacy fallback)
     try {
       const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
       if (Object.keys(ignorePermission).length > 0) {
         result = mergeConfigConcatArrays(result, { permission: ignorePermission })
-        log.debug("loaded kilocode ignore patterns", {
+        log.debug("loaded devilcode ignore patterns", {
           hasRead: !!ignorePermission.read,
           hasEdit: !!ignorePermission.edit,
         })
       }
     } catch (err) {
-      log.warn("failed to load kilocode ignore patterns", { error: err })
+      log.warn("failed to load devilcode ignore patterns", { error: err })
     }
-    // kilocode_change end
+    // devilcode_change end
 
-    // kilocode_change start - Load organization custom modes from Kilo Cloud API
-    // These override legacy Kilocode modes but are overridden by well-known, global, and project config
+    // devilcode_change start - Load organization custom modes from Devil Cloud API
+    // These override legacy Devilcode modes but are overridden by well-known, global, and project config
     try {
       const kilo = auth["kilo"]
       if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
@@ -193,9 +196,9 @@ export namespace Config {
     } catch (err) {
       log.warn("failed to load organization custom modes", { error: err })
     }
-    // kilocode_change end
+    // devilcode_change end
 
-    // Load remote/well-known config (overrides Kilocode legacy configs)
+    // Load remote/well-known config (overrides Devilcode legacy configs)
     // This allows organizations to provide default configs that users can override
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
@@ -209,7 +212,7 @@ export namespace Config {
         const wellknown = (await response.json()) as any
         const remoteConfig = wellknown.config ?? {}
         // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+        if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.devil.ai/config.json" // devilcode_change
         result = mergeConfigConcatArrays(
           result,
           await load(JSON.stringify(remoteConfig), {
@@ -229,16 +232,16 @@ export namespace Config {
     result = mergeConfigConcatArrays(result, await global())
 
     // Custom config path overrides global config.
-    if (Flag.KILO_CONFIG) {
-      result = mergeConfigConcatArrays(result, await loadFile(Flag.KILO_CONFIG))
-      log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
+    if (Flag.DEVIL_CONFIG) {
+      result = mergeConfigConcatArrays(result, await loadFile(Flag.DEVIL_CONFIG))
+      log.debug("loaded custom config", { path: Flag.DEVIL_CONFIG })
     }
 
     // Project config overrides global and remote config.
-    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      // kilocode_change start
+    if (!Flag.DEVIL_DISABLE_PROJECT_CONFIG) {
+      // devilcode_change start
       for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        // kilocode_change end
+        // devilcode_change end
         result = mergeConfigConcatArrays(result, await loadFile(file))
       }
     }
@@ -250,22 +253,22 @@ export namespace Config {
     const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
 
     // .opencode directory config overrides (project and global) config sources.
-    if (Flag.KILO_CONFIG_DIR) {
-      log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
+    if (Flag.DEVIL_CONFIG_DIR) {
+      log.debug("loading config from DEVIL_CONFIG_DIR", { path: Flag.DEVIL_CONFIG_DIR })
     }
 
     const deps = []
 
     for (const dir of unique(directories)) {
-      // kilocode_change start
+      // devilcode_change start
       if (
         dir.endsWith(".kilo") ||
-        dir.endsWith(".kilocode") ||
+        dir.endsWith(".devilcode") ||
         dir.endsWith(".opencode") ||
-        dir === Flag.KILO_CONFIG_DIR
+        dir === Flag.DEVIL_CONFIG_DIR
       ) {
         for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-          // kilocode_change end
+          // devilcode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
           result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
           // to satisfy the type checker
@@ -289,15 +292,15 @@ export namespace Config {
     }
 
     // Inline config content overrides all non-managed config sources.
-    if (process.env.KILO_CONFIG_CONTENT) {
+    if (process.env.DEVIL_CONFIG_CONTENT) {
       result = mergeConfigConcatArrays(
         result,
-        await load(process.env.KILO_CONFIG_CONTENT, {
+        await load(process.env.DEVIL_CONFIG_CONTENT, {
           dir: Instance.directory,
-          source: "KILO_CONFIG_CONTENT",
+          source: "DEVIL_CONFIG_CONTENT",
         }),
       )
-      log.debug("loaded custom config from KILO_CONFIG_CONTENT")
+      log.debug("loaded custom config from DEVIL_CONFIG_CONTENT")
     }
 
     // Load managed config files last (highest priority) - enterprise admin-controlled
@@ -305,9 +308,9 @@ export namespace Config {
     // which would fail on system directories requiring elevated permissions
     // This way it only loads config file and not skills/plugins/commands
     if (existsSync(managedDir)) {
-      // kilocode_change start
+      // devilcode_change start
       for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        // kilocode_change end
+        // devilcode_change end
         result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
     }
@@ -322,8 +325,8 @@ export namespace Config {
       })
     }
 
-    if (Flag.KILO_PERMISSION) {
-      result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
+    if (Flag.DEVIL_PERMISSION) {
+      result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.DEVIL_PERMISSION))
     }
 
     // Backwards compatibility: legacy top-level `tools` config
@@ -348,10 +351,10 @@ export namespace Config {
     }
 
     // Apply flag overrides for compaction settings
-    if (Flag.KILO_DISABLE_AUTOCOMPACT) {
+    if (Flag.DEVIL_DISABLE_AUTOCOMPACT) {
       result.compaction = { ...result.compaction, auto: false }
     }
-    if (Flag.KILO_DISABLE_PRUNE) {
+    if (Flag.DEVIL_DISABLE_PRUNE) {
       result.compaction = { ...result.compaction, prune: false }
     }
 
@@ -363,9 +366,9 @@ export namespace Config {
       deps,
     }
   }
-  // kilocode_change start — create state from named init so resetState() can invalidate it
+  // devilcode_change start — create state from named init so resetState() can invalidate it
   export const state = Instance.state(stateInit)
-  // kilocode_change end
+  // devilcode_change end
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -381,7 +384,7 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@kilocode/plugin": targetVersion,
+      "@devilcode/plugin": targetVersion,
     }
     await Filesystem.writeJson(pkg, json)
 
@@ -431,20 +434,20 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@kilocode/plugin"]
+    const depVersion = dependencies["@devilcode/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@devilcode/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@kilocode/plugin",
+        pkg: "@devilcode/plugin",
         cachedVersion: depVersion,
       })
       return true
     }
-    // kilocode_change end
+    // devilcode_change end
     if (depVersion === targetVersion) return false
     return true
   }
@@ -485,8 +488,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/command/",
         "/.kilo/commands/",
-        "/.kilocode/command/",
-        "/.kilocode/commands/",
+        "/.devilcode/command/",
+        "/.devilcode/commands/",
         "/.opencode/command/",
         "/.opencode/commands/",
         "/command/",
@@ -530,18 +533,18 @@ export namespace Config {
       })
       if (!md) continue
 
-      // kilocode_change start
+      // devilcode_change start
       const patterns = [
         "/.kilo/agent/",
         "/.kilo/agents/",
-        "/.kilocode/agent/",
-        "/.kilocode/agents/",
+        "/.devilcode/agent/",
+        "/.devilcode/agents/",
         "/.opencode/agent/",
         "/.opencode/agents/",
         "/agent/",
         "/agents/",
       ]
-      // kilocode_change end
+      // devilcode_change end
       const file = rel(item, patterns) ?? path.basename(item)
       const agentName = trim(file)
 
@@ -726,7 +729,7 @@ export namespace Config {
   export type Mcp = z.infer<typeof Mcp>
 
   export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({
-    // kilocode_change - nullable allows null as a delete sentinel
+    // devilcode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>
@@ -814,7 +817,7 @@ export namespace Config {
 
   export const Agent = z
     .object({
-      model: ModelId.nullable().optional(), // kilocode_change - nullable for delete sentinel
+      model: ModelId.nullable().optional(), // devilcode_change - nullable for delete sentinel
       variant: z
         .string()
         .optional()
@@ -1053,7 +1056,7 @@ export namespace Config {
       terminal_suspend: z.string().optional().default("ctrl+z").describe("Suspend terminal"),
       terminal_title_toggle: z.string().optional().default("none").describe("Toggle terminal title"),
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
-      news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
+      news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // devilcode_change
       display_thinking: z.string().optional().default("none").describe("Toggle thinking blocks visibility"),
     })
     .strict()
@@ -1066,7 +1069,7 @@ export namespace Config {
       port: z.number().int().positive().optional().describe("Port to listen on"),
       hostname: z.string().optional().describe("Hostname to listen on"),
       mdns: z.boolean().optional().describe("Enable mDNS service discovery"),
-      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: kilo.local)"), // kilocode_change
+      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: kilo.local)"), // devilcode_change
       cors: z.array(z.string()).optional().describe("Additional domains to allow for CORS"),
     })
     .strict()
@@ -1159,10 +1162,10 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("@deprecated Use 'share' field instead. Share newly created sessions automatically"),
-      remote_control: z // kilocode_change
+      remote_control: z // devilcode_change
         .boolean()
         .optional()
-        .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
+        .describe("Enable remote control of sessions via Devil Cloud. Equivalent to running /remote on startup."),
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
         .optional()
@@ -1174,22 +1177,22 @@ export namespace Config {
         .array(z.string())
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
-      // kilocode_change start - nullable for delete sentinel
+      // devilcode_change start - nullable for delete sentinel
       model: ModelId.nullable()
         .describe("Model to use in the format of provider/model, eg anthropic/claude-2")
         .optional(),
       small_model: ModelId.nullable()
         .describe("Small model to use for tasks like title generation in the format of provider/model")
         .optional(),
-      // kilocode_change end
-      // kilocode_change start - renamed from "build" to "code"
+      // devilcode_change end
+      // devilcode_change start - renamed from "build" to "code"
       default_agent: z
         .string()
         .optional()
         .describe(
           "Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.",
         ),
-      // kilocode_change end
+      // devilcode_change end
       username: z
         .string()
         .optional()
@@ -1207,9 +1210,9 @@ export namespace Config {
           // primary
           plan: Agent.optional(),
           build: Agent.optional(),
-          debug: Agent.optional(), // kilocode_change
-          orchestrator: Agent.optional(), // kilocode_change
-          ask: Agent.optional(), // kilocode_change
+          debug: Agent.optional(), // devilcode_change
+          orchestrator: Agent.optional(), // devilcode_change
+          ask: Agent.optional(), // devilcode_change
           // subagent
           general: Agent.optional(),
           explore: Agent.optional(),
@@ -1314,10 +1317,10 @@ export namespace Config {
         .object({
           disable_paste_summary: z.boolean().optional(),
           batch_tool: z.boolean().optional().describe("Enable the batch tool"),
-          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
-          // kilocode_change start - enable telemetry by default
+          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // devilcode_change
+          // devilcode_change start - enable telemetry by default
           openTelemetry: z.boolean().default(true).describe("Enable telemetry. Set to false to opt-out."),
-          // kilocode_change end
+          // devilcode_change end
           primary_tools: z
             .array(z.string())
             .optional()
@@ -1331,6 +1334,9 @@ export namespace Config {
             .describe("Timeout in milliseconds for model context protocol (MCP) requests"),
         })
         .optional(),
+      // devilcode_change start
+      team: TeamConfig.optional().describe("Multi-model team configuration for hierarchical agent dispatch"),
+      // devilcode_change end
     })
     .strict()
     .meta({
@@ -1339,7 +1345,7 @@ export namespace Config {
 
   export type Info = z.output<typeof Info>
 
-  // kilocode_change start — migrate bash permission for existing users before config is consumed
+  // devilcode_change start — migrate bash permission for existing users before config is consumed
   const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
 
   async function migrateBashPermission() {
@@ -1383,17 +1389,17 @@ export namespace Config {
     await Bun.write(target, JSON.stringify(merged, null, 2))
     log.info("migrated bash permission to allow for existing user", { path: target })
   }
-  // kilocode_change end
+  // devilcode_change end
 
   export const global = lazy(async () => {
-    await migrateBashPermission() // kilocode_change — run before config is read
+    await migrateBashPermission() // devilcode_change — run before config is read
     let result: Info = pipe(
       {},
       mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
-      // kilocode_change start
+      // devilcode_change start
       mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
       mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
-      // kilocode_change end
+      // devilcode_change end
       mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
       mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
     )
@@ -1408,7 +1414,7 @@ export namespace Config {
         .then(async (mod) => {
           const { provider, model, ...rest } = mod.default
           if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
+          result["$schema"] = "https://app.devil.ai/config.json" // devilcode_change
           result = mergeDeep(result, rest)
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
@@ -1452,8 +1458,8 @@ export namespace Config {
     const parsed = Info.safeParse(normalized)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+        parsed.data.$schema = "https://app.devil.ai/config.json" // devilcode_change
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.devil.ai/config.json",') // devilcode_change
         await Filesystem.write(options.path, updated).catch(() => {})
       }
       const data = parsed.data
@@ -1504,14 +1510,14 @@ export namespace Config {
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
-    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // kilocode_change
+    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // devilcode_change
     await Instance.dispose()
   }
 
   function globalConfigFile() {
-    // kilocode_change start
+    // devilcode_change start
     const candidates = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
-      // kilocode_change end
+      // devilcode_change end
       path.join(Global.Path.config, file),
     )
     for (const file of candidates) {
@@ -1524,7 +1530,7 @@ export namespace Config {
     return !!value && typeof value === "object" && !Array.isArray(value)
   }
 
-  // kilocode_change start - strip null delete sentinels after merge
+  // devilcode_change start - strip null delete sentinels after merge
   /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
   function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
     const result: Record<string, unknown> = {}
@@ -1538,9 +1544,9 @@ export namespace Config {
     }
     return result
   }
-  // kilocode_change end
+  // devilcode_change end
 
-  // kilocode_change start — merge config with normalization pipeline
+  // devilcode_change start — merge config with normalization pipeline
   /**
    * Merge a patch into an existing config:
    * 1. Normalize permission scalars → objects when the patch has an object
@@ -1567,11 +1573,11 @@ export namespace Config {
     }
     return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
   }
-  // kilocode_change end
+  // devilcode_change end
 
   function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
     if (!isRecord(patch)) {
-      // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
+      // devilcode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
       const edits = modify(input, path, patch === null ? undefined : patch, {
         formattingOptions: {
           insertSpaces: true,
@@ -1581,7 +1587,7 @@ export namespace Config {
       return applyEdits(input, edits)
     }
 
-    // kilocode_change start — when the existing JSONC node at this path is a
+    // devilcode_change start — when the existing JSONC node at this path is a
     // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
     // add child keys to it. Detect this case and replace the whole node with
     // the patch object in a single modify() call instead of recursing.
@@ -1599,7 +1605,7 @@ export namespace Config {
         return applyEdits(input, edits)
       }
     }
-    // kilocode_change end
+    // devilcode_change end
 
     return Object.entries(patch).reduce((result, [key, value]) => {
       if (value === undefined) return result
@@ -1641,10 +1647,10 @@ export namespace Config {
     })
   }
 
-  // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
+  // devilcode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
   export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
     const dispose = options?.dispose ?? true
-    // kilocode_change end
+    // devilcode_change end
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1654,7 +1660,7 @@ export namespace Config {
     const next = await (async () => {
       if (!filepath.endsWith(".jsonc")) {
         const existing = parseConfig(before, filepath)
-        const merged = mergeConfig(existing, config) // kilocode_change
+        const merged = mergeConfig(existing, config) // devilcode_change
         await Filesystem.writeJson(filepath, merged)
         return merged
       }
@@ -1665,7 +1671,7 @@ export namespace Config {
       return merged
     })()
 
-    // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
+    // devilcode_change start — skip dispose when caller opts out (e.g. permission-only saves)
     await global.reset()
 
     if (!dispose) {
@@ -1685,7 +1691,7 @@ export namespace Config {
       })
       return next
     }
-    // kilocode_change end
+    // devilcode_change end
 
     void Instance.disposeAll()
       .catch(() => undefined)
