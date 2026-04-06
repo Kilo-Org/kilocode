@@ -1045,24 +1045,31 @@ export const dict = {
   "settings.notifications.sound.none": "None",
 
   "settings.experimental.share.title": "Share Mode",
-  "settings.experimental.share.description": "How session sharing behaves",
+  "settings.experimental.share.description":
+    "Controls whether chat sessions can be shared as links. Manual requires you to click Share, Auto shares every session, Disabled turns off sharing entirely.",
   "settings.experimental.share.manual": "Manual",
   "settings.experimental.share.auto": "Auto",
   "settings.experimental.share.disabled": "Disabled",
   "settings.experimental.formatter.title": "Formatter",
-  "settings.experimental.formatter.description": "Enable the automatic code formatter",
+  "settings.experimental.formatter.description":
+    "Automatically format code changes made by the agent using your project's formatter settings.",
   "settings.experimental.lsp.title": "LSP",
-  "settings.experimental.lsp.description": "Enable language server protocol integration",
+  "settings.experimental.lsp.description":
+    "Let the agent use your editor's language server for diagnostics, go-to-definition, and other code intelligence features.",
   "settings.experimental.pasteSummary.title": "Disable Paste Summary",
-  "settings.experimental.pasteSummary.description": "Don't summarize large pasted content",
+  "settings.experimental.pasteSummary.description":
+    "When enabled, large pasted text is sent as-is instead of being summarized. Useful when you need the full content preserved.",
   "settings.experimental.batch.title": "Batch Tool",
-  "settings.experimental.batch.description": "Enable batching of multiple tool calls",
+  "settings.experimental.batch.description":
+    "Allow the agent to run multiple tool calls in a single step, which can speed up tasks that involve many independent operations.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
-  "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
+  "settings.experimental.continueOnDeny.description":
+    "When you deny a tool permission, the agent will continue working instead of stopping. It may try an alternative approach or skip the denied action.",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
-  "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
+  "settings.experimental.mcpTimeout.description":
+    "How long to wait for MCP server responses before timing out. Increase this if you use slow or remote MCP servers. Default is 60000 (60 seconds).",
   "settings.experimental.toolToggles": "Tool Toggles",
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
@@ -1072,15 +1079,19 @@ export const dict = {
   "settings.agentBehaviour.selectAgent.title": "Agent",
   "settings.agentBehaviour.selectAgent.description": "Select an agent to configure…",
   "settings.agentBehaviour.modelOverride.title": "Model Override",
-  "settings.agentBehaviour.modelOverride.description": "Override the default model for this agent",
+  "settings.agentBehaviour.modelOverride.description":
+    "Use a specific model for this agent instead of the default. Format: provider/model-name (e.g. anthropic/claude-sonnet-4-20250514).",
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
   "settings.agentBehaviour.prompt.description": "Additional system prompt for this agent",
   "settings.agentBehaviour.temperature.title": "Temperature",
-  "settings.agentBehaviour.temperature.description": "Sampling temperature (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls randomness in responses (0-2). Lower values (e.g. 0) make output more focused and deterministic, higher values (e.g. 1) make it more creative and varied.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Controls diversity of responses (0-1). Lower values make the model consider fewer word choices, producing more predictable output. Usually best to adjust either this or temperature, not both.",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
-  "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of tool-use steps the agent can take per request. Increase for complex tasks, decrease to limit cost and runtime.",
   "settings.agentBehaviour.hidden.title": "Hidden",
   "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
   "settings.agentBehaviour.disable.title": "Disabled",
@@ -1211,9 +1222,11 @@ export const dict = {
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",
 
   "settings.context.autoCompaction.title": "Auto Compaction",
-  "settings.context.autoCompaction.description": "Automatically compact context when it's full",
+  "settings.context.autoCompaction.description":
+    "Automatically summarize older messages when the context window is full, allowing longer conversations without losing important details.",
   "settings.context.prune.title": "Prune Old Outputs",
-  "settings.context.prune.description": "Remove old tool outputs during compaction",
+  "settings.context.prune.description":
+    "Remove older tool outputs (file contents, command results) during compaction to free up more context space.",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
 
@@ -1225,7 +1238,8 @@ export const dict = {
   "settings.display.layout.stretch": "Stretch",
 
   "settings.providers.defaultModel.title": "Default Model",
-  "settings.providers.defaultModel.description": "Primary model for conversations",
+  "settings.providers.defaultModel.description":
+    "The primary model used for all conversations unless overridden by a specific agent.",
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
