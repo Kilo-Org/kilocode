@@ -1413,6 +1413,46 @@ test("permission config preserves key order", async () => {
 
 // MCP config merging tests
 
+test("legacy mcp local `env` key is accepted as `environment`", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const kiloDir = path.join(dir, ".kilo")
+      await fs.mkdir(kiloDir, { recursive: true })
+      await Filesystem.write(
+        path.join(kiloDir, "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          mcp: {
+            context7: {
+              type: "local",
+              command: ["npx", "-y", "@upstash/context7-mcp"],
+              env: {
+                CONTEXT7_API_KEY: "test-key",
+              },
+              enabled: true,
+            },
+          },
+        }),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.mcp?.context7).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@upstash/context7-mcp"],
+        environment: {
+          CONTEXT7_API_KEY: "test-key",
+        },
+        enabled: true,
+      })
+    },
+  })
+})
+
 test("project config can override MCP server enabled status", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

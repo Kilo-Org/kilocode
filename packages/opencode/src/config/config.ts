@@ -663,22 +663,35 @@ export namespace Config {
   }
 
   export const McpLocal = z
-    .object({
-      type: z.literal("local").describe("Type of MCP server connection"),
-      command: z.string().array().describe("Command and arguments to run the MCP server"),
-      environment: z
-        .record(z.string(), z.string())
-        .optional()
-        .describe("Environment variables to set when running the MCP server"),
-      enabled: z.boolean().optional().describe("Enable or disable the MCP server on startup"),
-      timeout: z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .describe("Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified."),
-    })
-    .strict()
+    .preprocess((value) => {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return value
+
+      const normalized = { ...(value as Record<string, unknown>) }
+      if (!("environment" in normalized) && "env" in normalized) {
+        normalized.environment = normalized.env
+      }
+      delete normalized.env
+
+      return normalized
+    },
+    z
+      .object({
+        type: z.literal("local").describe("Type of MCP server connection"),
+        command: z.string().array().describe("Command and arguments to run the MCP server"),
+        environment: z
+          .record(z.string(), z.string())
+          .optional()
+          .describe("Environment variables to set when running the MCP server"),
+        enabled: z.boolean().optional().describe("Enable or disable the MCP server on startup"),
+        timeout: z
+          .number()
+          .int()
+          .positive()
+          .optional()
+          .describe("Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified."),
+      })
+      .strict(),
+    )
     .meta({
       ref: "McpLocalConfig",
     })
