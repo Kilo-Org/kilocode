@@ -140,6 +140,13 @@ describe("file/index Filesystem patterns", () => {
         { ext: "png", mime: "image/png" },
         { ext: "gif", mime: "image/gif" },
         { ext: "webp", mime: "image/webp" },
+        { ext: "svg", mime: "text/svg+xml" },
+        { ext: "bmp", mime: "image/bmp" },
+        { ext: "tiff", mime: "image/tiff" },
+        { ext: "tif", mime: "image/tiff" },
+        { ext: "heic", mime: "image/heic" },
+        { ext: "avif", mime: "image/avif" },
+        { ext: "ico", mime: "image/x-icon" },
       ]
 
       for (const { ext, mime } of testCases) {

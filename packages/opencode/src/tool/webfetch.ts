@@ -92,7 +92,7 @@ export const WebFetchTool = Tool.define("webfetch", {
     const title = `${params.url} (${contentType})`
 
     // Check if response is an image
-    const isImage = mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet"
+    const isImage = mime.startsWith("image/") || ["text/svg+xml"].includes(mime)
 
     if (isImage) {
       const base64Content = Buffer.from(arrayBuffer).toString("base64")

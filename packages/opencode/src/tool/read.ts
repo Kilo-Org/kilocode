@@ -119,7 +119,7 @@ export const ReadTool = Tool.define("read", {
 
     // Exclude SVG (XML-based) and vnd.fastbidsheet (.fbs extension, commonly FlatBuffers schema files)
     const mime = Filesystem.mimeType(filepath)
-    const isImage = mime.startsWith("image/") && mime !== "image/svg+xml" && mime !== "image/vnd.fastbidsheet"
+    const isImage = mime.startsWith("image/") || ["text/svg+xml"].includes(mime)
     const isPdf = mime === "application/pdf"
     if (isImage || isPdf) {
       const msg = `${isImage ? "Image" : "PDF"} read successfully`
