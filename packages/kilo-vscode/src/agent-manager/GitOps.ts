@@ -130,14 +130,14 @@ export class GitOps {
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
-  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+  async listWorktreePaths(cwd: string): Promise<Map<string, string>> {
     const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
-    const paths = new Set<string>()
+    const result = new Map<string, string>()
     for (const entry of parseWorktreeList(raw)) {
       if (entry.bare) continue
-      paths.add(normalizePath(entry.path))
+      result.set(normalizePath(entry.path), entry.branch)
     }
-    return paths
+    return result
   }
 
   /**

@@ -32,6 +32,9 @@ export interface Worktree {
   prUrl?: string
   /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
   prState?: string
+  /** Original branch created with the worktree, used for cleanup on deletion.
+   *  Set automatically when `branch` is updated via live sync. */
+  originalBranch?: string
 }
 
 /**
@@ -167,6 +170,16 @@ export class WorktreeStateManager {
     )
     void this.save()
     return wt
+  }
+
+  updateWorktreeBranch(id: string, branch: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branch === branch) return false
+    if (!wt.originalBranch) wt.originalBranch = wt.branch
+    this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
+    wt.branch = branch
+    void this.save()
+    return true
   }
 
   updateWorktreeLabel(id: string, label: string): void {

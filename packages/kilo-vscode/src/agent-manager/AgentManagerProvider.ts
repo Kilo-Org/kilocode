@@ -695,11 +695,11 @@ export class AgentManagerProvider implements Disposable {
     this.pushState()
     // Disk removal after state is clean — pollers no longer reference this worktree.
     try {
-      await manager.removeWorktree(worktree.path, worktree.branch)
+      await manager.removeWorktree(worktree.path, worktree.originalBranch ?? worktree.branch)
     } catch (error) {
       this.log(`Failed to remove worktree from disk: ${error}`)
     }
-    this.log(`Deleted worktree ${worktreeId} (${worktree.branch})`)
+    this.log(`Deleted worktree ${worktreeId} (${worktree.originalBranch ?? worktree.branch})`)
     return null
   }
 
@@ -1444,12 +1444,20 @@ export class AgentManagerProvider implements Disposable {
     const entries = result.worktrees.filter((item) => ids.has(item.worktreeId))
     if (entries.length === 0) return
 
+    // Sync branches from git worktree list (no extra git calls)
+    let branchChanged = false
+    for (const entry of entries) {
+      if (entry.branch && state.updateWorktreeBranch(entry.worktreeId, entry.branch)) {
+        branchChanged = true
+      }
+    }
+
     const next = new Set(entries.filter((entry) => entry.missing).map((entry) => entry.worktreeId))
-    const changed =
+    const staleChanged =
       next.size !== this.staleWorktreeIds.size || [...next].some((worktreeId) => !this.staleWorktreeIds.has(worktreeId))
     this.staleWorktreeIds = next
 
-    if (changed) {
+    if (staleChanged || branchChanged) {
       this.pushState()
     }
   }
