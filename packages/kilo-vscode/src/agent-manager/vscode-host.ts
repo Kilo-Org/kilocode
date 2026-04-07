@@ -92,6 +92,9 @@ export class VscodeHost implements Host {
       get active() {
         return panel.active
       },
+      get visible() {
+        return panel.visible
+      },
       postMessage(msg) {
         void panel.webview.postMessage(msg)
       },
@@ -99,6 +102,9 @@ export class VscodeHost implements Host {
         panel.reveal(vscode.ViewColumn.One, preserveFocus ?? false)
       },
       sessions,
+      onDidChangeVisibility(cb) {
+        return panel.onDidChangeViewState((e) => cb(e.webviewPanel.visible))
+      },
       onDidDispose(cb) {
         return panel.onDidDispose(cb)
       },
@@ -160,9 +166,11 @@ export class VscodeHost implements Host {
     TelemetryProxy.capture(event as TelemetryEventName, properties)
   }
 
+  openExternal(url: string): void {
+    void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
   refreshGit(): void {
-    // Trigger VS Code's built-in git extension to re-scan repositories.
-    // This picks up worktrees whose gitdir refs were just rewritten by migration.
     void vscode.commands.executeCommand("git.refresh")
   }
 
