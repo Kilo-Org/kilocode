@@ -3,7 +3,8 @@ import type { WorkflowStage, WorkflowState } from "./types"
 
 const STAGE_TRANSITIONS: Record<WorkflowStage, WorkflowStage[]> = {
   plan: ["challenge"],
-  challenge: ["plan", "build"],
+  challenge: ["plan", "contract"],
+  contract: ["challenge", "build"],
   build: ["review"],
   review: ["build", "ship"],
   ship: ["retro"],

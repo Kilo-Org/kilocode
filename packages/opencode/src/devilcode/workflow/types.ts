@@ -1,6 +1,6 @@
 import z from "zod"
 
-export const WorkflowStage = z.enum(["plan", "challenge", "build", "review", "ship", "retro"])
+export const WorkflowStage = z.enum(["plan", "challenge", "contract", "build", "review", "ship", "retro"])
 export type WorkflowStage = z.infer<typeof WorkflowStage>
 
 export const PlanTask = z.object({

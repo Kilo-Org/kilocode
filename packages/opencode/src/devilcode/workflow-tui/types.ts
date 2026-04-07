@@ -62,6 +62,8 @@ export function stageColor(stage: WorkflowStage): string {
       return "cyan"
     case "challenge":
       return "yellow"
+    case "contract":
+      return "#00CED1"
     case "build":
       return "green"
     case "review":
