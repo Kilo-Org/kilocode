@@ -10,8 +10,11 @@ import { EventLogger } from "../workflow/events"
 import { runPreflight, preflightPassed, type PreflightReport } from "../workflow/preflight"
 import { detectGates, runAllGates, summarizeGateFailures, type GateResult } from "../workflow/quality-gates"
 import { detectStuckTasks, detectDeadlock, DEFAULT_HEALTH_CONFIG, type HealthAlert, type DeadlockResult } from "../workflow/health"
+import { dispatchPlan, dispatchChallenge, dispatchReview } from "../workflow/dispatch"
+import { BuildRunner, type BuildCallbacks } from "../workflow/build-runner"
+import { generateContracts } from "../workflow/contract-generator"
 import type { ContractSet } from "../workflow/contracts"
-import type { WorkflowStage, PlanTask, ReviewFinding, ActiveTask } from "../workflow/types"
+import type { WorkflowStage, PlanTask, PlanChallenge, ReviewFinding, ReviewVerdict, ActiveTask, TaskResult } from "../workflow/types"
 import type { TeamConfig } from "../team/config"
 import { Instance } from "@/project/instance"
 
@@ -65,6 +68,138 @@ export class WorkflowOrchestrator {
 
   async advanceStage(stage: WorkflowStage): Promise<void> {
     await Workflow.advanceStage(this.manager, stage)
+  }
+
+  async executePlan(input: {
+    providerID: string
+    modelID: string
+    phaseContext: string
+    availableRoles: string[]
+  }): Promise<PlanTask[]> {
+    const state = await this.manager.readState()
+    if (!state.currentPhase) throw new Error("No current phase")
+
+    const lessons = await this.getLessonsForPrompt()
+    const tasks = await dispatchPlan({
+      ...input,
+      lessons: lessons || undefined,
+    })
+
+    for (const task of tasks) {
+      await this.manager.writePlan(state.currentPhase, task)
+    }
+
+    await this.events.log({
+      eventType: "plan_created",
+      message: `Generated ${tasks.length} tasks in ${new Set(tasks.map((t) => t.wave)).size} waves`,
+    })
+
+    return tasks
+  }
+
+  async executeChallenge(input: {
+    providerID: string
+    modelID: string
+    phaseContext: string
+  }): Promise<PlanChallenge> {
+    const state = await this.manager.readState()
+    if (!state.currentPhase) throw new Error("No current phase")
+
+    const plans = await this.manager.readAllPlans(state.currentPhase)
+    const challenge = await dispatchChallenge({
+      ...input,
+      planTasks: plans,
+    })
+
+    await this.events.log({
+      eventType: "stage_advanced",
+      message: `Challenge verdict: ${challenge.verdict} (${challenge.concerns.length} concerns)`,
+    })
+
+    return challenge
+  }
+
+  async executeContracts(): Promise<ContractSet> {
+    const state = await this.manager.readState()
+    if (!state.currentPhase) throw new Error("No current phase")
+
+    const plans = await this.manager.readAllPlans(state.currentPhase)
+    const contracts = generateContracts(plans)
+
+    await this.events.log({
+      eventType: "contract_generated",
+      message: `Generated ${contracts.typeContracts.length} type contracts, ${contracts.integrationHints.length} integration hints`,
+    })
+
+    return contracts
+  }
+
+  async executeBuild(
+    callbacks: BuildCallbacks,
+    teamConfig: TeamConfig | undefined,
+  ): Promise<TaskResult[]> {
+    const state = await this.manager.readState()
+    if (!state.currentPhase) throw new Error("No current phase")
+
+    const validation = await this.validateBuild()
+    if (!validation.valid) {
+      throw new Error(`Build validation failed: ${validation.errors.join("; ")}`)
+    }
+
+    const plans = await this.manager.readAllPlans(state.currentPhase)
+    const runner = new BuildRunner({
+      teamConfig,
+      ...callbacks,
+    })
+
+    const results = await runner.executeAll(plans)
+
+    for (const result of results) {
+      if (result.status === "completed") {
+        await this.manager.writeSummary(
+          state.currentPhase,
+          result.taskId,
+          result.output,
+        )
+      }
+    }
+
+    return results
+  }
+
+  async executeReview(input: {
+    providerID: string
+    modelID: string
+    diff: string
+    cycle: number
+  }): Promise<ReviewVerdict> {
+    const state = await this.manager.readState()
+    if (!state.currentPhase) throw new Error("No current phase")
+
+    const plans = await this.manager.readAllPlans(state.currentPhase)
+    const summaries: string[] = []
+    for (const plan of plans) {
+      try {
+        const summary = await this.manager.readSummary(state.currentPhase, plan.id)
+        summaries.push(`${plan.id}: ${summary}`)
+      } catch {
+        summaries.push(`${plan.id}: (no summary)`)
+      }
+    }
+
+    const verdict = await dispatchReview({
+      ...input,
+      summaries,
+    })
+
+    await this.manager.writeReview(state.currentPhase, verdict)
+
+    await this.events.log({
+      eventType: "stage_advanced",
+      message: `Review cycle ${input.cycle}: ${verdict.verdict} (${verdict.findings.length} findings)`,
+    })
+
+    return verdict
   }
 
   async triageReview(): Promise<{

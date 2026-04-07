@@ -124,6 +124,12 @@ export class WorkflowStateManager {
     await fs.writeFile(path.join(phaseDir, filename), content)
   }
 
+  async readSummary(phaseSlug: string, taskId: string): Promise<string> {
+    const phaseDir = path.join(this.planningDir, "phases", phaseSlug)
+    const filename = `${taskId}-SUMMARY.md`
+    return await fs.readFile(path.join(phaseDir, filename), "utf-8")
+  }
+
   async writeReview(phaseSlug: string, verdict: ReviewVerdict): Promise<void> {
     const phaseDir = path.join(this.planningDir, "phases", phaseSlug)
     const filename = `${phaseSlug.split("-")[0]}-REVIEW.md`
