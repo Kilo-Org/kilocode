@@ -300,8 +300,9 @@ export class WorktreeManager {
    * via `git worktree list --porcelain` before treating it as a real error.
    */
   private async runWorktreeAdd(args: string[], wtPath: string): Promise<void> {
+    const git = simpleGit(this.root).env(nonInteractiveEnv())
     try {
-      await this.git.raw(args)
+      await git.raw(args)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       if (this.isHookError(msg) && (await this.worktreeRegistered(wtPath))) {
@@ -355,9 +356,10 @@ export class WorktreeManager {
   }
 
   private async removeWorktreeImpl(worktreePath: string, branch?: string): Promise<void> {
+    const git = simpleGit(this.root).env(nonInteractiveEnv())
     if (!fs.existsSync(worktreePath)) {
       // Directory already gone — just prune stale metadata
-      await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+      await git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
       this.log(`Worktree directory already absent, pruned metadata: ${worktreePath}`)
       if (branch) await this.deleteBranch(branch)
       return
@@ -376,13 +378,13 @@ export class WorktreeManager {
     } catch {
       // Rename failed (e.g. locked files on Windows) — fall back to force remove
       this.log(`Rename failed, falling back to force remove: ${worktreePath}`)
-      await this.git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
+      await git.raw(["worktree", "remove", "--force", worktreePath]).catch(() => {})
       if (branch) await this.deleteBranch(branch)
       return
     }
 
     // 2. Prune git metadata now that the directory is gone from the expected path
-    await this.git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
+    await git.raw(["worktree", "prune", "--expire", "now"]).catch(() => {})
     this.log(`Removed worktree (rename+prune): ${worktreePath}`)
 
     // 3. Delete the local branch while we still hold the git lock
@@ -395,8 +397,9 @@ export class WorktreeManager {
   }
 
   private async deleteBranch(branch: string): Promise<void> {
+    const git = simpleGit(this.root).env(nonInteractiveEnv())
     try {
-      await this.git.raw(["branch", "-D", branch])
+      await git.raw(["branch", "-D", branch])
       this.log(`Deleted branch: ${branch}`)
     } catch {
       this.log(`Failed to delete branch (may still be referenced): ${branch}`)
