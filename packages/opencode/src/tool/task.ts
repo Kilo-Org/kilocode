@@ -63,6 +63,26 @@ export const TaskTool = Tool.define("task", async (ctx) => {
 
       const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // kilocode_change
 
+      // kilocode_change start — inherit edit and bash restrictions from the calling agent so
+      // sub-agents cannot perform actions the parent agent is not allowed to perform.
+      // We merge the static agent definition with the current session's accumulated permissions
+      // so that restrictions survive multi-hop chains (plan → general → explore).
+      // Agent.get() gives the base definition; session.permission carries restrictions that
+      // were themselves inherited from a grandparent, so both sources are needed.
+      const caller = await Agent.get(ctx.agent)
+      const callerSession = await Session.get(ctx.sessionID)
+      const callerRules = PermissionNext.merge(caller?.permission ?? [], callerSession.permission ?? [])
+      // Build the set of MCP server prefixes (e.g. "servername_") so we can
+      // include both server-wide wildcards ("servername_*") and specific MCP tool
+      // permissions ("servername_create_issue") in the inherited ruleset.
+      // Same sanitisation logic as agent.ts.
+      const mcpPrefixes = Object.keys(config.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
+      const isMcpRule = (p: string) => mcpPrefixes.some((prefix) => p.startsWith(prefix))
+      const inherited = callerRules.filter(
+        (r) => r.permission === "edit" || r.permission === "bash" || isMcpRule(r.permission),
+      )
+      // kilocode_change end
+
       const session = await iife(async () => {
         if (params.task_id) {
           const found = await Session.get(params.task_id).catch(() => {})
@@ -97,6 +117,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
               action: "allow" as const,
               permission: t,
             })) ?? []),
+            ...inherited, // kilocode_change — propagate caller's edit and bash restrictions
           ],
         })
       })

@@ -14,6 +14,8 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const PKG_JSON_FILE = path.join(ROOT, "package.json")
 const SRC_DIR = path.join(ROOT, "src")
+const EXTENSION_FILE = path.join(ROOT, "src/extension.ts")
+const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 
 function readSrcFiles(dir: string): string {
   const parts: string[] = []
@@ -82,5 +84,102 @@ describe("Extension — package.json command sync", () => {
       bad,
       `Commands without "kilo-code.new." prefix — use the namespaced form:\n` + bad.map((b) => `  - ${b}`).join("\n"),
     ).toEqual([])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// KiloProvider handler wiring — every new KiloProvider() must get
+// setContinueInWorktreeHandler() called before resolving its webview.
+//
+// Regression: tab panels created via openKiloInNewTab() and the TabPanel
+// deserializer were missing the handler, causing "Capturing changes..." to
+// spin forever because the webview message was silently dropped.
+// ---------------------------------------------------------------------------
+
+describe("Extension — KiloProvider handler wiring", () => {
+  const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
+
+  /**
+   * Every `new KiloProvider(` in extension.ts must be followed (before the
+   * next `new KiloProvider(`) by a `setContinueInWorktreeHandler` call.
+   * This prevents future tab/panel additions from silently missing the handler.
+   */
+  it("every KiloProvider instance gets setContinueInWorktreeHandler wired", () => {
+    const pattern = /new KiloProvider\(/g
+    const instances: number[] = []
+    let match
+    while ((match = pattern.exec(ext)) !== null) {
+      instances.push(match.index)
+    }
+
+    expect(
+      instances.length,
+      "expected at least 3 KiloProvider instances (sidebar, tab, deserializer)",
+    ).toBeGreaterThanOrEqual(3)
+
+    const missing: string[] = []
+    for (let i = 0; i < instances.length; i++) {
+      const start = instances[i]
+      const end = instances[i + 1] ?? ext.length
+      const region = ext.slice(start, end)
+
+      if (!region.includes("setContinueInWorktreeHandler")) {
+        const line = ext.slice(0, start).split("\n").length
+        missing.push(`KiloProvider at line ${line}`)
+      }
+    }
+
+    expect(
+      missing,
+      `These KiloProvider instances are missing setContinueInWorktreeHandler.\n` +
+        `Without it, "Continue in Worktree" silently no-ops and the spinner\n` +
+        `stays stuck on "Capturing changes..." forever.\n\n` +
+        missing.map((m) => `  - ${m}`).join("\n"),
+    ).toEqual([])
+  })
+
+  it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
+    const fn = ext.indexOf("function openKiloInNewTab")
+    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
+    const body = ext.slice(fn, fn + 1500)
+    const handler = body.indexOf("setContinueInWorktreeHandler")
+    const resolve = body.indexOf("resolveWebviewPanel")
+    expect(handler, "setContinueInWorktreeHandler must be called").toBeGreaterThan(-1)
+    expect(resolve, "resolveWebviewPanel must be called").toBeGreaterThan(-1)
+    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  })
+
+  it("TabPanel deserializer wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
+    const serializer = ext.indexOf('"kilo-code.new.TabPanel"')
+    expect(serializer, "TabPanel serializer must exist").toBeGreaterThan(-1)
+    const body = ext.slice(serializer, serializer + 800)
+    const handler = body.indexOf("setContinueInWorktreeHandler")
+    const resolve = body.indexOf("resolveWebviewPanel")
+    expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)
+    expect(resolve, "resolveWebviewPanel must be called in deserializer").toBeGreaterThan(-1)
+    expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// KiloProvider — continueInWorktree error fallback
+//
+// Regression: when continueInWorktreeHandler is null, the message handler
+// must send an error back to the webview so the spinner resets. Previously
+// it silently no-op'd, leaving the UI stuck.
+// ---------------------------------------------------------------------------
+
+describe("KiloProvider — continueInWorktree error fallback", () => {
+  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+
+  it("sends error progress when handler is missing", () => {
+    const caseStart = provider.indexOf('case "continueInWorktree"')
+    expect(caseStart, "continueInWorktree case must exist").toBeGreaterThan(-1)
+    const caseEnd = provider.indexOf("break", caseStart)
+    const block = provider.slice(caseStart, caseEnd)
+
+    expect(block, "must have else branch for missing handler").toContain("else if")
+    expect(block, "must send error status back to webview").toContain('"error"')
+    expect(block, "must use continueInWorktreeProgress message type").toContain("continueInWorktreeProgress")
   })
 })

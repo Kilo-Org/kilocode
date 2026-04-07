@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "最後のメッセージを元に戻す",
   "command.session.redo": "やり直す",
   "command.session.redo.description": "元に戻したメッセージをやり直す",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} 件のメッセージが元に戻されました",
+  "revert.banner.count_other": "{{count}} 件のメッセージが元に戻されました",
+  "revert.banner.redo": "やり直し",
+  "revert.banner.redo.all": "すべてやり直し",
+  "revert.banner.hint": "新しいメッセージを送信してこれを永続させてください",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
@@ -164,6 +164,9 @@ export const dict = {
   "model.tag.free": "無料",
   "model.tag.latest": "最新",
   "model.group.recommended": "推奨",
+  "model.group.favorites": "お気に入り",
+  "model.favorite.add": "お気に入りに追加",
+  "model.favorite.remove": "お気に入りから削除",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -820,11 +823,11 @@ export const dict = {
   "settings.permissions.tool.todoread.description": "Todoリストの読み込み",
   "settings.permissions.tool.todowrite.title": "Todo書き込み",
   "settings.permissions.tool.todowrite.description": "Todoリストの更新",
-  "settings.permissions.tool.webfetch.title": "Web Fetch",
+  "settings.permissions.tool.webfetch.title": "ウェブ取得",
   "settings.permissions.tool.webfetch.description": "URLからコンテンツを取得",
-  "settings.permissions.tool.websearch.title": "Web Search",
+  "settings.permissions.tool.websearch.title": "ウェブ検索",
   "settings.permissions.tool.websearch.description": "ウェブを検索",
-  "settings.permissions.tool.codesearch.title": "Code Search",
+  "settings.permissions.tool.codesearch.title": "コード検索",
   "settings.permissions.tool.codesearch.description": "ウェブ上のコードを検索",
   "settings.permissions.tool.external_directory.title": "外部ディレクトリ",
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
@@ -840,8 +843,8 @@ export const dict = {
   "session.showHistory": "履歴を表示",
   "session.search.placeholder": "セッションを検索...",
   "session.empty": "セッションがありません。+ をクリックして新しい会話を始めましょう。",
-  "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.local": "ローカル",
+  "session.tab.cloud": "クラウド",
   "session.cloud.repoOnly": "このリポジトリのみ",
   "session.cloud.import": "クラウドからインポート",
   "feedback.button": "フィードバック & サポート",
@@ -944,6 +947,7 @@ export const dict = {
   "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
+  "context.stats.thisSession": "このセッション",
 
   "time.justNow": "たった今",
   "time.minutesAgo": "{{count}}分前",
@@ -973,7 +977,7 @@ export const dict = {
     "請求やアカウントに関するご質問は、カスタマーサポートまでお問い合わせください",
   "settings.aboutKiloCode.resetSettings.title": "設定をリセット",
   "settings.aboutKiloCode.resetSettings.description":
-    "Kilo Code拡張機能のすべての設定をデフォルト値にリセットします。CLIやバックエンドの設定には影響しません。",
+    "これはVS Code拡張機能固有の設定のみをデフォルト値にリセットします。モードや自動承認ルールなど、CLIと共有される設定はCLI設定ファイルに保存されており、リセットされません。",
   "settings.aboutKiloCode.resetSettings.button": "すべての設定をリセット",
   "settings.aboutKiloCode.settingsTransfer.title": "設定の移行",
   "settings.aboutKiloCode.settingsTransfer.description":
@@ -989,8 +993,13 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "設定をインポートしました。上記の変更内容を確認してから、保存をクリックしてください。",
 
+  "settings.aboutKiloCode.telemetry.title": "テレメトリ",
+  "settings.aboutKiloCode.telemetry.description":
+    "テレメトリは VS Code の組み込みテレメトリ設定によって制御されます。無効にするには、設定 > テレメトリ > Telemetry Level に移動して「off」に設定してください。変更を適用するには、VS Code を再起動してください。",
+  "settings.aboutKiloCode.telemetry.openSettings": "テレメトリ設定を開く",
+
   "settings.agentBehaviour.subtab.modes": "モード",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
   "settings.agentBehaviour.subtab.workflows": "ワークフロー",
@@ -1076,6 +1085,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "このエージェントを完全に無効にする — どこにも表示されなくなります",
   "settings.agentBehaviour.badge.hidden": "非表示",
   "settings.agentBehaviour.badge.disabled": "無効",
+  "settings.agentBehaviour.badge.deprecated": "非推奨",
   "settings.agentBehaviour.discoveredSkills": "検出されたスキル",
   "settings.agentBehaviour.noSkillsFound":
     "スキルが見つかりません。スキルを利用可能にするには、以下にスキルフォルダパスまたはURLを追加してください。",
@@ -1112,7 +1122,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "システムプロンプト",
   "settings.agentBehaviour.editMode.save": "完了",
   "settings.agentBehaviour.editMode.back": "リストに戻る",
-  "settings.agentBehaviour.editMode.native": "組み込みモード（読み取り専用の定義）",
+  "settings.agentBehaviour.editMode.native":
+    "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
   "settings.agentBehaviour.removeMode.title": "モードを削除",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1143,10 +1154,15 @@ export const dict = {
     "ルールはエージェントの動作を導く指示ファイルです。すべての会話のシステムプロンプトに含まれます。追加のルールを含めるには、以下にファイルパスを追加してください。",
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。",
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",
   "settings.agentBehaviour.mcpDetail.disabled": "このサーバーは無効です。",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "マーケットプレイスを閲覧",
   "settings.agentBehaviour.mcpEmpty":
     "MCPサーバーが設定されていません。kilo.jsoncでMCPサーバーを追加するか、エージェントに追加を依頼してください。",
   "settings.agentBehaviour.workflowsPlaceholder":
@@ -1233,20 +1249,20 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Kilo Codeの新機能",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "より高速で効率的な基盤上に拡張機能を再構築しました。",
   "migration.whatsNew.features.performance.title": "高速なエージェントパフォーマンス",
   "migration.whatsNew.features.performance.detail":
     "並列ツール呼び出しとサブエージェントにより、エージェントがより多くのタスクを同時に処理できます — 待ち時間が減り、作業効率が向上します。",
   "migration.whatsNew.features.interface.title": "洗練されたインターフェース",
   "migration.whatsNew.features.interface.detail": "不要な要素を排除し、より読みやすく素早く操作できます。",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "エージェントマネージャー",
   "migration.whatsNew.features.agentManager.detail":
     "複数のエージェントを並列実行するための統合インターフェース。それぞれ独自のワークツリー上で動作し、進捗の確認、コンテキストの切り替え、変更のレビューを一箇所で行えます。",
   "migration.whatsNew.features.foundation.title": "共通基盤",
   "migration.whatsNew.features.foundation.detail":
     "すべてのKilo製品で共有される小さく効率的なコア。どのような作業スタイルでも馴染みのある体験を提供します。",
   "migration.whatsNew.blogLink": "完全なアナウンスを読む",
+  "migration.whatsNew.docsLink": "新機能とよくある質問",
   "migration.whatsNew.continue": "続行",
 
   // Screen 2 — Migrate Settings
@@ -1258,7 +1274,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "新しいアーキテクチャと互換性がありません",
   "migration.migrate.button": "設定を移行",
   "migration.migrate.skip": "スキップ",
-  "migration.migrate.back": "戻る",
   "migration.migrate.keysDetected": "{{count}}個のキーを検出",
   "migration.migrate.serversConfigured": "{{count}}個のサーバーが設定済み",
   "migration.migrate.modesFound": "{{count}}個のモードが見つかりました",
@@ -1279,6 +1294,41 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "VS Codeのストレージから古い設定を削除します。この移行を再度実行することはできなくなります。",
   "migration.complete.done": "完了",
+  "migration.migrate.sessionsDetected": "{{count}} 件のセッションが見つかりました",
+  "migration.error.sessionFailed": "セッションの移行に失敗しました",
+  "migration.error.continue": "続行",
+  "migration.error.action.copy": "コピー",
+  "migration.error.toast.copied": "エラーをクリップボードにコピーしました",
+
+  "migration.sessionSummary.title": "概要:",
+  "migration.sessionSummary.copy": "レポートをコピー",
+  "migration.sessionSummary.toast.copied": "レポートをコピーしました",
+  "migration.sessionSummary.successful": "成功",
+  "migration.sessionSummary.skipped": "スキップ",
+  "migration.sessionSummary.alreadyMigrated": "移行済み",
+  "migration.sessionSummary.errored": "エラーあり",
+  "migration.sessionSummary.none": "なし",
+  "migration.forceReimport.title": "再インポートを強制",
+  "migration.forceReimport.description":
+    "{{target}} を再インポートすると上書きされ、それらのセッションで既に作成された新しいメッセージは削除されます。",
+  "migration.forceReimport.target.one": "このセッション",
+  "migration.forceReimport.target.many": "これら {{count}} 件のセッション",
+  "migration.forceReimport.button": "再インポートを強制",
+  "migration.forceReimport.all": "すべて再インポート",
+  "migration.forceReimport.proceed": "続行",
+  "migration.forceReimport.toast.started": "強制再インポートを開始しました",
+  "migration.running.title": "移行を実行中",
+  "migration.running.description.line1": "まだ移行中のセッションがある状態で終了しようとしています。",
+  "migration.running.description.line2": "今離れると、一部のセッションは未完了のままになる可能性があります。",
+  "migration.running.stay": "このままにする",
+  "migration.running.proceed": "続行",
+  "migration.sessionProgress.preparing": "セッションを準備中",
+  "migration.sessionProgress.storing": "セッションを保存中",
+  "migration.sessionProgress.skipped": "セッションをスキップしました",
+  "migration.sessionProgress.header": "{{total}} 件中 {{current}} 件を移行中",
+  "migration.sessionFormat.unknownDate": "不明な日付",
+  "migration.sessionFormat.unknown": "不明",
+  "migration.sessionFormat.unknownError": "不明なエラー",
   // legacy-migration end
 
   "error.details.show": "詳細",
@@ -1292,8 +1342,7 @@ export const dict = {
   "settings.saveBar.warning.many": "複数のセッションが実行中で中断されます",
   "settings.saveBar.saveAnyway": "それでも保存",
   "settings.saveBar.cancel": "キャンセル",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "次へ",
+  "notifications.action.close": "閉じる",
+  "notifications.action.tryModel": "{{model}}を試す",
 }

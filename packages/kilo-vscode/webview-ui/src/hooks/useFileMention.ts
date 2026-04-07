@@ -132,6 +132,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     onSelect?: () => void,
   ): boolean => {
     if (!showMention()) return false
+    if (e.isComposing) return false
 
     if (e.key === "ArrowDown") {
       e.preventDefault()

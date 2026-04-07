@@ -150,28 +150,54 @@
             '';
           in
           pkgs.mkShell {
-            packages = with pkgs; [
-              bun
-              nodejs_20
-              pkg-config
-              openssl
-              git
-              gh
-              playwright-driver.browsers
-              vsce
-              unzip
-              gnutar
-              gzip
-              patchelf
-              ripgrep
-              kilo-dev
-              kilo-install-bin
-              kilo-bin
-            ];
+            packages =
+              with pkgs;
+              [
+                bun
+                nodejs_20
+                pkg-config
+                openssl
+                git
+                gh
+                playwright-driver.browsers
+                vsce
+                unzip
+                gnutar
+                gzip
+                patchelf
+                ripgrep
+                jetbrains.jdk
+                jdk21
+                kilo-dev
+                kilo-install-bin
+                kilo-bin
+              ]
+              ++ lib.optionals stdenv.isLinux [
+                libX11
+                libXext
+                libXrender
+                libXtst
+                libXi
+                fontconfig
+                freetype
+              ];
             shellHook = ''
               export KILO_ROOT="$PWD"
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+            ''
+            + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+              export LD_LIBRARY_PATH="${
+                pkgs.lib.makeLibraryPath [
+                  pkgs.libX11
+                  pkgs.libXext
+                  pkgs.libXrender
+                  pkgs.libXtst
+                  pkgs.libXi
+                  pkgs.fontconfig
+                  pkgs.freetype
+                ]
+              }:$LD_LIBRARY_PATH"
             '';
           };
       });

@@ -183,6 +183,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
     onSelect?: () => void,
   ): boolean => {
     if (!show()) return false
+    if (e.isComposing) return false
 
     const filtered = results()
 

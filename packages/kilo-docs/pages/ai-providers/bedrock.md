@@ -34,6 +34,9 @@ You have three options for configuring AWS credentials:
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Bedrock" from the "API Provider" dropdown.
 3.  **Select Authentication Method:**
@@ -47,6 +50,53 @@ You have three options for configuring AWS credentials:
 4.  **Select Region:** Choose the AWS region where your Bedrock service is available (e.g., "us-east-1").
 5.  **(Optional) Cross-Region Inference:** Check "Use cross-region inference" if you want to access models in a region different from your configured AWS region.
 6.  **Select Model:** Choose your desired model from the "Model" dropdown.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add AWS Bedrock. The extension uses the AWS credentials chain for authentication — configure your AWS credentials using the AWS CLI or environment variables before adding the provider.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Bedrock uses the AWS credentials chain for authentication. Configure your AWS credentials using the AWS CLI or environment variables:
+
+**Environment variables:**
+
+```bash
+export AWS_ACCESS_KEY_ID="your-access-key"
+export AWS_SECRET_ACCESS_KEY="your-secret-key"
+export AWS_REGION="us-east-1"
+```
+
+Or use an AWS profile:
+
+```bash
+aws configure --profile bedrock
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "amazon-bedrock": {},
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "amazon-bedrock/anthropic.claude-sonnet-4-20250514-v1:0",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

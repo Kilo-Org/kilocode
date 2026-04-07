@@ -43,6 +43,7 @@ import open from "open"
 import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
+import { KiloClawView } from "@/kilocode/claw/view" // kilocode_change
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
 import { TuiConfigProvider } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
@@ -301,6 +302,12 @@ function App() {
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
       renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
     }
+
+    // kilocode_change start
+    if (route.data.type === "kiloclaw") {
+      renderer.setTerminalTitle(`${titleDefault} | KiloClaw`)
+    }
+    // kilocode_change end
   })
 
   const args = useArgs()
@@ -812,6 +819,11 @@ function App() {
         <Match when={route.data.type === "session"}>
           <Session />
         </Match>
+        {/* kilocode_change start */}
+        <Match when={route.data.type === "kiloclaw"}>
+          <KiloClawView />
+        </Match>
+        {/* kilocode_change end */}
       </Switch>
     </box>
   )

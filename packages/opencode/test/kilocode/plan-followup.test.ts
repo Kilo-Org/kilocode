@@ -445,7 +445,11 @@ describe("plan follow-up", () => {
       expect(_mocks.llmSpy).toHaveBeenCalledTimes(1)
 
       const newSessionID = created[0]
-      expect(added[0].id).toBe(newSessionID)
+      const next = added[0]
+      if (!newSessionID || !next) throw new Error("expected follow-up session")
+      expect(next.id).toBe(newSessionID)
+      expect(next.parentID).toBeUndefined()
+      const planPath = Session.plan(await Session.get(seeded.sessionID))
       const messages = await Session.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       expect(user?.info.role).toBe("user")
@@ -458,6 +462,7 @@ describe("plan follow-up", () => {
       expect(part?.type).toBe("text")
       if (!part || part.type !== "text") throw new Error("expected text part")
       expect(part.text).toContain("Implement the following plan:")
+      expect(part.text).toContain(`Plan file: ${planPath}`)
       expect(part.text).toContain("1. Add API\n2. Add tests")
       expect(part.text).toContain("## Handover from Planning Session")
       expect(part.text).toContain("Found REST endpoints in src/api.ts")
@@ -472,6 +477,78 @@ describe("plan follow-up", () => {
       expect(newTodos).toContainEqual({ content: "Write tests", status: "pending", priority: "medium" })
 
       SessionPrompt.cancel(newSessionID)
+    }))
+
+  test("ask - creates a new session in the planning session directory when the current instance differs", () =>
+    withInstance(async () => {
+      await using other = await tmpdir({ git: true })
+      const get = spyOn(Agent, "get").mockImplementation(async () => undefined as any)
+      const modelSpy = spyOn(Provider, "getModel").mockResolvedValue(fakeModel)
+      const llmSpy = spyOn(LLM, "stream").mockResolvedValue({
+        text: Promise.resolve(""),
+      } as any)
+      using _mocks = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+          llmSpy.mockRestore()
+        },
+      }
+
+      const dir = other.path
+
+      const seeded = await Instance.provide({
+        directory: dir,
+        fn: async () => seed({ text: "1. Add API\n2. Add tests" }),
+      })
+
+      const before = await Instance.provide({
+        directory: dir,
+        fn: async () => sessions(),
+      })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+
+      await Question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      await expect(pending).resolves.toBe("break")
+      const after = await Instance.provide({
+        directory: dir,
+        fn: async () => sessions(),
+      })
+
+      const prev = new Set(before.map((item) => item.id))
+      const added = after.filter((item) => !prev.has(item.id))
+      expect(added).toHaveLength(1)
+      const next = added[0]
+      if (!next) throw new Error("expected follow-up session")
+      expect(next?.directory).toBe(dir)
+      expect(next?.parentID).toBeUndefined()
+
+      if (next) {
+        const planPath = await Instance.provide({
+          directory: dir,
+          fn: async () => Session.plan(await Session.get(seeded.sessionID)),
+        })
+        const messages = await Session.messages({ sessionID: next.id })
+        const user = messages.find((item) => item.info.role === "user")
+        if (!user || user.info.role !== "user") throw new Error("expected user message")
+        const part = user.parts.find((item) => item.type === "text")
+        if (!part || part.type !== "text") throw new Error("expected text part")
+        expect(part.text).toContain(`Plan file: ${planPath}`)
+
+        SessionPrompt.cancel(next.id)
+      }
     }))
 
   test("ask - prefers saved code variant over configured code variant", () =>
@@ -670,7 +747,9 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("break")
       unsub()
 
-      const messages = await Session.messages({ sessionID: created[0] })
+      const newSessionID = created[0]
+      if (!newSessionID) throw new Error("expected follow-up session")
+      const messages = await Session.messages({ sessionID: newSessionID })
       const user = messages.find((item) => item.info.role === "user")
       if (!user || user.info.role !== "user") throw new Error("expected user message")
       const part = user.parts.find((item) => item.type === "text")
@@ -679,7 +758,7 @@ describe("plan follow-up", () => {
       expect(part.text).not.toContain("## Handover from Planning Session")
       expect(part.text).not.toContain("## Todo List")
 
-      SessionPrompt.cancel(created[0])
+      SessionPrompt.cancel(newSessionID)
     }))
 
   test("ask - returns break when assistant text is empty", () =>

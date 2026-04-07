@@ -164,10 +164,68 @@ export namespace ModelCache {
       return fetchKiloModels(options)
     }
 
+    // kilocode_change start
+    if (providerID === "apertis") {
+      return fetchApertisModels(options)
+    }
+    // kilocode_change end
+
     // Other providers not implemented yet
     log.debug("provider not implemented", { providerID })
     return {}
   }
+
+  // kilocode_change start
+  const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
+
+  async function fetchApertisModels(options: any): Promise<Record<string, any>> {
+    const baseURL = options.baseURL ?? APERTIS_BASE_URL
+    const apiKey = options.apiKey
+
+    if (!apiKey) {
+      log.debug("no API key for apertis, skipping model fetch")
+      return {}
+    }
+
+    const url = `${baseURL.replace(/\/+$/, "")}/models`
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      signal: AbortSignal.timeout(10_000),
+    })
+
+    if (!response.ok) {
+      log.error("apertis model fetch failed", { status: response.status })
+      return {}
+    }
+
+    const json = (await response.json()) as { data?: Array<{ id: string; owned_by?: string }> }
+    const models: Record<string, any> = {}
+
+    for (const model of json.data ?? []) {
+      models[model.id] = {
+        id: model.id,
+        name: model.id,
+        family: model.owned_by ?? "",
+        release_date: "",
+        attachment: false,
+        reasoning: false,
+        temperature: true,
+        tool_call: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: 128000, output: 4096 },
+        options: {},
+        modalities: {
+          input: ["text"],
+          output: ["text"],
+        },
+      }
+    }
+
+    return models
+  }
+  // kilocode_change end
 
   /**
    * Get authentication options from multiple sources
@@ -222,6 +280,38 @@ export namespace ModelCache {
         hasOrganizationId: !!options.kilocodeOrganizationId,
       })
     }
+
+    // kilocode_change start
+    if (providerID === "apertis") {
+      const config = await Config.get()
+      const providerConfig = config.provider?.[providerID]
+      if (providerConfig?.options?.apiKey) {
+        options.apiKey = providerConfig.options.apiKey
+      }
+      if (providerConfig?.options?.baseURL) {
+        options.baseURL = providerConfig.options.baseURL
+      }
+
+      const auth = await Auth.get(providerID)
+      if (auth && auth.type === "api") {
+        options.apiKey = auth.key
+      }
+
+      const env = Env.all()
+      if (env.APERTIS_API_KEY) {
+        options.apiKey = env.APERTIS_API_KEY
+      }
+      if (env.APERTIS_BASE_URL) {
+        options.baseURL = env.APERTIS_BASE_URL
+      }
+
+      log.debug("apertis auth options resolved", {
+        providerID,
+        hasKey: !!options.apiKey,
+        hasBaseURL: !!options.baseURL,
+      })
+    }
+    // kilocode_change end
 
     return options
   }

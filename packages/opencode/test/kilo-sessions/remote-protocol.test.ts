@@ -237,4 +237,22 @@ describe("RemoteProtocol", () => {
     const result = RemoteProtocol.SessionInfo.safeParse({ id: "x" })
     expect(result.success).toBe(false)
   })
+
+  test("valid heartbeat_ack parses", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.HeartbeatAck.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
+
+  test("inbound union picks heartbeat_ack", () => {
+    const msg = { type: "heartbeat_ack" }
+    const result = RemoteProtocol.Inbound.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
 })

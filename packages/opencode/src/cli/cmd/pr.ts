@@ -97,7 +97,8 @@ export const PrCommand = cmd({
         // Launch opencode TUI with session ID if available
         const { spawn } = await import("child_process")
         const opencodeArgs = sessionId ? ["-s", sessionId] : []
-        const opencodeProcess = spawn(bin, opencodeArgs, { // kilocode_change
+        const opencodeProcess = spawn(bin, opencodeArgs, {
+          // kilocode_change
           stdio: "inherit",
           cwd: process.cwd(),
           windowsHide: true, // kilocode_change - prevent CMD window flash on Windows

@@ -61,7 +61,7 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 
 In the terminal-based TUI, you can provide context in several ways:
 
-- **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions for quick file references.
+- **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. You can limit how much is included by appending a line range, e.g. `@src/utils.ts#10-50`.
 - **Mention file paths in your message** — Simply refer to files by path in your conversation text (e.g., "look at src/utils.ts") and the agent will read them.
 - **Use `kilo run -f`** — When using the non-interactive `kilo run` command, pass `-f path/to/file.ts` to explicitly include a file's contents in the context.
 - **Let the agent find files itself** — The agent has access to `glob` (find files by pattern), `grep` (search file contents), and `read` (read file contents) tools. Describe what you're looking for and it will locate the relevant code.

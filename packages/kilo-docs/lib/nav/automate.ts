@@ -29,6 +29,7 @@ export const AutomateNav: NavSection[] = [
       {
         href: "/automate/extending/auto-launch",
         children: "Auto-launch Configuration",
+        platform: "legacy",
       },
       {
         href: "/automate/mcp/overview",
@@ -53,8 +54,8 @@ export const AutomateNav: NavSection[] = [
   {
     title: "Tools",
     links: [
-      { href: "/automate/how-tools-work", children: "How Tools Work" },
-      { href: "/automate/tools", children: "Tools Details" },
+      { href: "/automate/how-tools-work", children: "How Tools Work", platform: "legacy" },
+      { href: "/automate/tools", children: "Tools Details", platform: "legacy" },
     ],
   },
 ]

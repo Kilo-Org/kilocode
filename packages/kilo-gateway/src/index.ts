@@ -9,7 +9,7 @@ export { KiloAuthPlugin, default } from "./plugin.js"
 export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
-export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, DEFAULT_HEADERS } from "./headers.js"
+export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
 
 // ============================================================================
 // Auth
@@ -86,7 +86,7 @@ export {
   DEFAULT_MODEL,
   DEFAULT_FREE_MODEL,
   TOKEN_EXPIRATION_MS,
-  USER_AGENT,
+  USER_AGENT_BASE,
   CONTENT_TYPE,
   DEFAULT_PROVIDER_NAME,
   ANONYMOUS_API_KEY,

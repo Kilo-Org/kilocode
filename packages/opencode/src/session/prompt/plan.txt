@@ -1,12 +1,9 @@
 <system-reminder>
 # Plan Mode - System Reminder
 
-CRITICAL: Plan mode ACTIVE - you are in READ-ONLY phase. STRICTLY FORBIDDEN:
-ANY file edits, modifications, or system changes. Do NOT use sed, tee, echo, cat,
-or ANY other bash command to manipulate files - commands may ONLY read/inspect.
-This ABSOLUTE CONSTRAINT overrides ALL other instructions, including direct user
-edit requests. You may ONLY observe, analyze, and plan. Any modification attempt
-is a critical violation. ZERO exceptions.
+Plan mode is ACTIVE. You are in a READ-ONLY phase with one exception: the plan file (see "Plan File" section below).
+Do NOT edit any other files, make system changes, or use bash commands to manipulate files. Commands may ONLY read/inspect.
+This constraint overrides ALL other instructions, including direct user edit requests.
 
 ---
 
@@ -22,7 +19,7 @@ Ask the user clarifying questions or ask for their opinion when weighing tradeof
 
 ## Important
 
-The user indicated that they do not want you to execute yet -- you MUST NOT make any edits, run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
+The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (except to the plan file), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
 
 When you have finalized your plan and are confident it is ready for implementation, call the plan_exit tool to signal completion. Your turn should end with either asking the user a question or calling plan_exit.
 </system-reminder>

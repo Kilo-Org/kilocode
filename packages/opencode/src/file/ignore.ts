@@ -31,6 +31,8 @@ export namespace FileIgnore {
     "mypy_cache",
     ".history",
     ".gradle",
+    ".kilocode", // kilocode_change — ignore legacy local storage (#8379)
+    ".opencode", // kilocode_change — ignore legacy local storage (#8379)
   ])
 
   const FILES = [

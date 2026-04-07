@@ -13,7 +13,7 @@ export const dict = {
   "command.category.model": "Modèle",
   "command.category.mcp": "MCP",
   "command.category.agent": "Agent",
-  "command.category.permissions": "Permissions",
+  "command.category.permissions": "Autorisations",
   "command.category.workspace": "Espace de travail",
 
   "command.category.settings": "Paramètres",
@@ -79,11 +79,11 @@ export const dict = {
   "command.session.undo.description": "Annuler le dernier message",
   "command.session.redo": "Rétablir",
   "command.session.redo.description": "Rétablir le dernier message annulé",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} message annulé",
+  "revert.banner.count_other": "{{count}} messages annulés",
+  "revert.banner.redo": "Rétablir",
+  "revert.banner.redo.all": "Tout rétablir",
+  "revert.banner.hint": "Envoyez un nouveau message pour rendre ceci permanent",
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
@@ -166,6 +166,9 @@ export const dict = {
   "model.tag.free": "Gratuit",
   "model.tag.latest": "Dernier",
   "model.group.recommended": "Recommandé",
+  "model.group.favorites": "Favoris",
+  "model.favorite.add": "Ajouter aux favoris",
+  "model.favorite.remove": "Retirer des favoris",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -689,7 +692,7 @@ export const dict = {
   "settings.general.notifications.agent.title": "Agent",
   "settings.general.notifications.agent.description":
     "Afficher une notification système lorsque l'agent a terminé ou nécessite une attention",
-  "settings.general.notifications.permissions.title": "Permissions",
+  "settings.general.notifications.permissions.title": "Autorisations",
   "settings.general.notifications.permissions.description":
     "Afficher une notification système lorsqu'une permission est requise",
   "settings.general.notifications.errors.title": "Erreurs",
@@ -697,7 +700,7 @@ export const dict = {
 
   "settings.general.sounds.agent.title": "Agent",
   "settings.general.sounds.agent.description": "Jouer un son lorsque l'agent a terminé ou nécessite une attention",
-  "settings.general.sounds.permissions.title": "Permissions",
+  "settings.general.sounds.permissions.title": "Autorisations",
   "settings.general.sounds.permissions.description": "Jouer un son lorsqu'une permission est requise",
   "settings.general.sounds.errors.title": "Erreurs",
   "settings.general.sounds.errors.description": "Jouer un son lorsqu'une erreur se produit",
@@ -718,7 +721,7 @@ export const dict = {
   "settings.shortcuts.group.navigation": "Navigation",
   "settings.shortcuts.group.modelAndAgent": "Modèle et agent",
   "settings.shortcuts.group.terminal": "Terminal",
-  "settings.shortcuts.group.prompt": "Prompt",
+  "settings.shortcuts.group.prompt": "Invite",
 
   "settings.providers.title": "Fournisseurs",
   "settings.providers.description": "Les paramètres des fournisseurs seront configurables ici.",
@@ -802,7 +805,7 @@ export const dict = {
   "settings.mcp.title": "MCP",
   "settings.mcp.description": "Les paramètres MCP seront configurables ici.",
 
-  "settings.permissions.title": "Permissions",
+  "settings.permissions.title": "Autorisations",
   "settings.permissions.description": "Contrôlez les outils que le serveur peut utiliser par défaut.",
   "settings.permissions.section.tools": "Outils",
   "settings.permissions.toast.updateFailed.title": "Échec de la mise à jour des permissions",
@@ -959,6 +962,7 @@ export const dict = {
   "prompt.placeholder.default": "Tapez un message... (Entrée pour envoyer, Maj+Entrée pour un saut de ligne)",
 
   "context.usage.sessionCost": "Coût de la session",
+  "context.stats.thisSession": "Cette session",
 
   "time.justNow": "à l'instant",
   "time.minutesAgo": "il y a {{count}} min",
@@ -989,7 +993,7 @@ export const dict = {
     "Pour les questions de facturation ou de compte, contactez le support client à",
   "settings.aboutKiloCode.resetSettings.title": "Réinitialiser les paramètres",
   "settings.aboutKiloCode.resetSettings.description":
-    "Réinitialiser tous les paramètres de l'extension Kilo Code à leurs valeurs par défaut. Cela n'affecte pas la configuration CLI ou backend.",
+    "Ceci réinitialise uniquement les paramètres spécifiques à l'extension VS Code à leurs valeurs par défaut. Les paramètres partagés avec le CLI, tels que les modes et les règles d'approbation automatique, sont stockés dans la configuration du CLI et ne seront pas réinitialisés.",
   "settings.aboutKiloCode.resetSettings.button": "Réinitialiser tous les paramètres",
   "settings.aboutKiloCode.settingsTransfer.title": "Transfert des paramètres",
   "settings.aboutKiloCode.settingsTransfer.description":
@@ -1005,6 +1009,11 @@ export const dict = {
     "Ce fichier a été exporté depuis une version plus récente de Kilo. Certains paramètres pourraient être ignorés.",
   "settings.aboutKiloCode.importSettings.success":
     "Paramètres importés. Vérifiez les modifications ci-dessus, puis cliquez sur Enregistrer.",
+
+  "settings.aboutKiloCode.telemetry.title": "Télémétrie",
+  "settings.aboutKiloCode.telemetry.description":
+    'La télémétrie est contrôlée par le paramètre de télémétrie intégré de VS Code. Pour la désactiver, allez dans Paramètres > Télémétrie > Niveau de télémétrie et réglez-le sur "off". Redémarrez VS Code pour appliquer la modification.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Ouvrir les paramètres de télémétrie",
 
   "settings.agentBehaviour.subtab.modes": "Modes",
   "settings.agentBehaviour.subtab.agents": "Agents",
@@ -1098,6 +1107,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Désactiver complètement cet agent — il n'apparaîtra nulle part",
   "settings.agentBehaviour.badge.hidden": "masqué",
   "settings.agentBehaviour.badge.disabled": "désactivé",
+  "settings.agentBehaviour.badge.deprecated": "Déprécié",
   "settings.agentBehaviour.discoveredSkills": "Compétences découvertes",
   "settings.agentBehaviour.noSkillsFound":
     "Aucune compétence découverte. Ajoutez des chemins de dossiers ou des URLs ci-dessous pour rendre les compétences disponibles.",
@@ -1136,7 +1146,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Prompt système",
   "settings.agentBehaviour.editMode.save": "Terminé",
   "settings.agentBehaviour.editMode.back": "Retour à la liste",
-  "settings.agentBehaviour.editMode.native": "Mode intégré (définition en lecture seule)",
+  "settings.agentBehaviour.editMode.native":
+    "Il s'agit d'un mode intégré. Sa définition de base ne peut pas être modifiée, mais vous pouvez configurer des surcharges ci-dessous.",
   "settings.agentBehaviour.editMode.promptOverride": "Remplacement de prompt personnalisé pour ce mode intégré",
   "settings.agentBehaviour.removeMode.title": "Supprimer le mode",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1169,10 +1180,15 @@ export const dict = {
     "Les règles sont des fichiers d'instructions qui guident le comportement de l'agent. Elles sont incluses dans le prompt système pour chaque conversation. Ajoutez des chemins de fichiers ci-dessous pour inclure des règles supplémentaires.",
   "settings.agentBehaviour.instructionFiles": "Fichiers d'instructions supplémentaires",
   "settings.agentBehaviour.instructionFiles.description": "Chemins vers des fichiers d'instructions supplémentaires",
+  "settings.agentBehaviour.claudeCompat.heading": "Compatibilité Claude Code",
+  "settings.agentBehaviour.claudeCompat.title": "Charger les fichiers Claude Code",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Charge les instructions et les compétences de CLAUDE.md depuis votre répertoire de configuration Claude Code dans les sessions. Activez cette option si vous souhaitez que Kilo utilise vos instructions et compétences Claude Code. Nécessite un redémarrage.",
   "settings.agentBehaviour.mcpDetail.command": "Commande",
   "settings.agentBehaviour.mcpDetail.args": "Arguments",
   "settings.agentBehaviour.mcpDetail.env": "Environnement",
   "settings.agentBehaviour.mcpDetail.disabled": "Ce serveur est désactivé.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Parcourir le Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Aucun serveur MCP configuré. Ajoutez des serveurs MCP dans kilo.jsonc ou demandez à l'agent de les ajouter.",
   "settings.agentBehaviour.workflowsPlaceholder":
@@ -1263,20 +1279,20 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Nouveautés de Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Nous avons reconstruit l'extension sur une base plus rapide et plus efficace.",
   "migration.whatsNew.features.performance.title": "Performance accélérée de l'agent",
   "migration.whatsNew.features.performance.detail":
     "Les appels d'outils en parallèle et les sous-agents permettent à votre agent de traiter plus de tâches simultanément — vous passez moins de temps à attendre et plus de temps à livrer.",
   "migration.whatsNew.features.interface.title": "Interface simplifiée",
   "migration.whatsNew.features.interface.detail": "Moins de distractions, plus facile et plus rapide à lire.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Gestionnaire d'agents",
   "migration.whatsNew.features.agentManager.detail":
     "Une interface unifiée pour exécuter plusieurs agents en parallèle, chacun sur son propre arbre de travail — surveillez la progression, changez de contexte et examinez les modifications depuis un seul endroit.",
   "migration.whatsNew.features.foundation.title": "Base partagée",
   "migration.whatsNew.features.foundation.detail":
     "Un noyau petit et efficace partagé par tous les produits Kilo. Une expérience familière quelle que soit votre façon de travailler.",
   "migration.whatsNew.blogLink": "Lire l'annonce complète",
+  "migration.whatsNew.docsLink": "Nouveautés & questions fréquentes",
   "migration.whatsNew.continue": "Continuer",
 
   // Screen 2 — Migrate Settings
@@ -1289,7 +1305,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatible avec la nouvelle architecture",
   "migration.migrate.button": "Migrer les paramètres",
   "migration.migrate.skip": "Ignorer",
-  "migration.migrate.back": "Retour",
   "migration.migrate.keysDetected": "{{count}} clés détectées",
   "migration.migrate.serversConfigured": "{{count}} serveur(s) configuré(s)",
   "migration.migrate.modesFound": "{{count}} mode(s) trouvé(s)",
@@ -1310,6 +1325,43 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Cela supprime les anciens paramètres du stockage de VS Code. Vous ne pourrez pas réexécuter cette migration.",
   "migration.complete.done": "Terminé",
+  "migration.migrate.sessionsDetected": "{{count}} sessions détectées",
+  "migration.error.sessionFailed": "La migration de la session a échoué",
+  "migration.error.continue": "Continuer",
+  "migration.error.action.copy": "Copier",
+  "migration.error.toast.copied": "Erreur copiée dans le presse-papiers",
+
+  "migration.sessionSummary.title": "Résumé :",
+  "migration.sessionSummary.copy": "Copier le rapport",
+  "migration.sessionSummary.toast.copied": "Rapport copié",
+  "migration.sessionSummary.successful": "Réussies",
+  "migration.sessionSummary.skipped": "Ignorées",
+  "migration.sessionSummary.alreadyMigrated": "Déjà migrées",
+  "migration.sessionSummary.errored": "En erreur",
+  "migration.sessionSummary.none": "Aucune",
+  "migration.forceReimport.title": "Forcer la réimportation",
+  "migration.forceReimport.description":
+    "Réimporter {{target}} les écrasera et supprimera tous les nouveaux messages déjà créés dans ces sessions.",
+  "migration.forceReimport.target.one": "cette session",
+  "migration.forceReimport.target.many": "ces {{count}} sessions",
+  "migration.forceReimport.button": "Forcer la réimportation",
+  "migration.forceReimport.all": "Tout réimporter",
+  "migration.forceReimport.proceed": "Continuer",
+  "migration.forceReimport.toast.started": "Réimportation forcée lancée",
+  "migration.running.title": "Migration en cours",
+  "migration.running.description.line1":
+    "Vous êtes sur le point de terminer alors que certaines sessions sont encore en cours de migration.",
+  "migration.running.description.line2":
+    "Si vous quittez maintenant, certaines sessions risquent de rester incomplètes.",
+  "migration.running.stay": "Rester",
+  "migration.running.proceed": "Continuer",
+  "migration.sessionProgress.preparing": "Préparation de la session",
+  "migration.sessionProgress.storing": "Enregistrement de la session",
+  "migration.sessionProgress.skipped": "Session ignorée",
+  "migration.sessionProgress.header": "Migration de {{current}} sur {{total}}",
+  "migration.sessionFormat.unknownDate": "Date inconnue",
+  "migration.sessionFormat.unknown": "Inconnu",
+  "migration.sessionFormat.unknownError": "Erreur inconnue",
   // legacy-migration end
 
   "error.details.show": "Détails",
@@ -1323,8 +1375,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Plusieurs sessions sont en cours et seront interrompues",
   "settings.saveBar.saveAnyway": "Enregistrer quand même",
   "settings.saveBar.cancel": "Annuler",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Suivant",
+  "notifications.action.close": "Fermer",
+  "notifications.action.tryModel": "Essayer {{model}}",
 }

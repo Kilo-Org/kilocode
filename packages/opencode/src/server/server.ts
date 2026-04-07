@@ -101,7 +101,16 @@ export namespace Server {
           return basicAuth({ username, password })(c, next)
         })
         .use(async (c, next) => {
-          const skipLogging = c.req.path === "/log"
+          // kilocode_change start
+          // kilocode change add telemetry because it is high volume
+          // add early return to prevent logging timing
+          const skipLogging =
+            c.req.path === "/log" || c.req.path === "/telemetry/capture" || c.req.path === "/global/health"
+          if (skipLogging) {
+            await next()
+            return
+          }
+          // kilocode_change end
           if (!skipLogging) {
             log.info("request", {
               method: c.req.method,

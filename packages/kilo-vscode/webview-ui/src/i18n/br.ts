@@ -78,11 +78,11 @@ export const dict = {
   "command.session.undo.description": "Desfazer a última mensagem",
   "command.session.redo": "Refazer",
   "command.session.redo.description": "Refazer a última mensagem desfeita",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} mensagem revertida",
+  "revert.banner.count_other": "{{count}} mensagens revertidas",
+  "revert.banner.redo": "Refazer",
+  "revert.banner.redo.all": "Refazer Tudo",
+  "revert.banner.hint": "Envie uma nova mensagem para tornar isso permanente",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
@@ -165,6 +165,9 @@ export const dict = {
   "model.tag.free": "Grátis",
   "model.tag.latest": "Mais recente",
   "model.group.recommended": "Recomendado",
+  "model.group.favorites": "Favoritos",
+  "model.favorite.add": "Adicionar aos favoritos",
+  "model.favorite.remove": "Remover dos favoritos",
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
   "model.provider.google": "Google",
@@ -768,7 +771,7 @@ export const dict = {
   "provider.custom.models.fetch.add": "Adicionar {{count}} modelo(s)",
   "provider.custom.edit.title": "Editar provedor",
   "provider.custom.headers.label": "Headers (opcional)",
-  "provider.custom.headers.key.label": "Header",
+  "provider.custom.headers.key.label": "Cabeçalho",
   "provider.custom.headers.key.placeholder": "Header-Name",
   "provider.custom.headers.value.label": "Valor",
   "provider.custom.headers.value.placeholder": "value",
@@ -844,7 +847,7 @@ export const dict = {
   "session.search.placeholder": "Buscar sessões...",
   "session.empty": "Nenhuma sessão ainda. Clique + para iniciar uma nova conversa.",
   "session.tab.local": "Local",
-  "session.tab.cloud": "Cloud",
+  "session.tab.cloud": "Nuvem",
   "session.cloud.repoOnly": "Apenas este repositório",
   "session.cloud.import": "Importar da nuvem",
   "feedback.button": "Feedback e suporte",
@@ -947,6 +950,7 @@ export const dict = {
   "prompt.placeholder.default": "Digite uma mensagem... (Enter para enviar, Shift+Enter para nova linha)",
 
   "context.usage.sessionCost": "Custo da sessão",
+  "context.stats.thisSession": "Esta sessão",
 
   "time.justNow": "agora mesmo",
   "time.minutesAgo": "{{count}} min atrás",
@@ -976,7 +980,7 @@ export const dict = {
     "Para questões de cobrança ou conta, entre em contato com o Suporte ao Cliente em",
   "settings.aboutKiloCode.resetSettings.title": "Redefinir Configurações",
   "settings.aboutKiloCode.resetSettings.description":
-    "Redefinir todas as configurações da extensão Kilo Code para os valores padrão. Isso não afeta a configuração do CLI ou do backend.",
+    "Isso redefine apenas as configurações específicas da extensão VS Code para seus valores padrão. As configurações compartilhadas com o CLI, como modos e regras de aprovação automática, são armazenadas na configuração do CLI e não serão redefinidas.",
   "settings.aboutKiloCode.resetSettings.button": "Redefinir Todas as Configurações",
   "settings.aboutKiloCode.settingsTransfer.title": "Transferência de configurações",
   "settings.aboutKiloCode.settingsTransfer.description":
@@ -993,8 +997,13 @@ export const dict = {
   "settings.aboutKiloCode.importSettings.success":
     "Configurações importadas. Revise as alterações acima e clique em Salvar.",
 
+  "settings.aboutKiloCode.telemetry.title": "Telemetria",
+  "settings.aboutKiloCode.telemetry.description":
+    'A telemetria é controlada pela configuração de telemetria integrada do VS Code. Para desativá-la, vá para Configurações > Telemetria > Nível de Telemetria e defina como "off". Reinicie o VS Code para aplicar a alteração.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Abrir Configurações de Telemetria",
+
   "settings.agentBehaviour.subtab.modes": "Modos",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agentes",
   "settings.agentBehaviour.subtab.mcpServers": "Servidores MCP",
   "settings.agentBehaviour.subtab.rules": "Regras",
   "settings.agentBehaviour.subtab.workflows": "Fluxos de trabalho",
@@ -1084,6 +1093,7 @@ export const dict = {
     "Desativar completamente este agente — ele não aparecerá em nenhum lugar",
   "settings.agentBehaviour.badge.hidden": "oculto",
   "settings.agentBehaviour.badge.disabled": "desativado",
+  "settings.agentBehaviour.badge.deprecated": "Descontinuado",
   "settings.agentBehaviour.discoveredSkills": "Habilidades descobertas",
   "settings.agentBehaviour.noSkillsFound":
     "Nenhuma habilidade encontrada. Adicione caminhos de pastas ou URLs abaixo para disponibilizar habilidades.",
@@ -1119,7 +1129,8 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "Prompt do Sistema",
   "settings.agentBehaviour.editMode.save": "Concluído",
   "settings.agentBehaviour.editMode.back": "Voltar à lista",
-  "settings.agentBehaviour.editMode.native": "Modo integrado (definição somente leitura)",
+  "settings.agentBehaviour.editMode.native":
+    "Este é um modo embutido. Sua definição base não pode ser alterada, mas você pode configurar as sobrescritas abaixo.",
   "settings.agentBehaviour.editMode.promptOverride": "Substituição de prompt personalizado para este modo integrado",
   "settings.agentBehaviour.removeMode.title": "Remover modo",
   "settings.agentBehaviour.removeMode.confirm":
@@ -1153,10 +1164,15 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Arquivos de instruções adicionais",
   "settings.agentBehaviour.instructionFiles.description":
     "Caminhos para arquivos de instruções adicionais no prompt do sistema",
+  "settings.agentBehaviour.claudeCompat.heading": "Compatibilidade com Claude Code",
+  "settings.agentBehaviour.claudeCompat.title": "Carregar Arquivos do Claude Code",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Carrega as instruções e skills do CLAUDE.md a partir do seu diretório de configuração do Claude Code para as sessões. Ative esta opção se deseja que o Kilo utilize suas instruções e skills do Claude Code. Requer reinicialização.",
   "settings.agentBehaviour.mcpDetail.command": "Comando",
   "settings.agentBehaviour.mcpDetail.args": "Argumentos",
   "settings.agentBehaviour.mcpDetail.env": "Ambiente",
   "settings.agentBehaviour.mcpDetail.disabled": "Este servidor está desativado.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Explorar Marketplace",
   "settings.agentBehaviour.mcpEmpty":
     "Nenhum servidor MCP configurado. Adicione servidores MCP em kilo.jsonc ou peça ao agente para adicioná-los.",
   "settings.agentBehaviour.workflowsPlaceholder":
@@ -1247,20 +1263,20 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "O Que Há de Novo no Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Reconstruímos a extensão sobre uma base mais rápida e eficiente.",
   "migration.whatsNew.features.performance.title": "Desempenho de Agente Mais Rápido",
   "migration.whatsNew.features.performance.detail":
     "Chamadas de ferramentas paralelas e subagentes permitem que seu agente faça mais de uma vez — assim você gasta menos tempo esperando e mais tempo entregando.",
   "migration.whatsNew.features.interface.title": "Interface Simplificada",
   "migration.whatsNew.features.interface.detail": "Menos distrações, mais fácil e rápido de ler.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Gerenciador de Agentes",
   "migration.whatsNew.features.agentManager.detail":
     "Uma interface unificada para executar múltiplos agentes em paralelo, cada um em sua própria worktree — monitore o progresso, troque de contexto e revise alterações em um só lugar.",
   "migration.whatsNew.features.foundation.title": "Base Compartilhada",
   "migration.whatsNew.features.foundation.detail":
     "Um núcleo pequeno e eficiente em todos os produtos Kilo. Uma experiência familiar independentemente de como você escolha trabalhar.",
   "migration.whatsNew.blogLink": "Leia o anúncio completo",
+  "migration.whatsNew.docsLink": "Novidades e perguntas frequentes",
   "migration.whatsNew.continue": "Continuar",
 
   // Screen 2 — Migrate Settings
@@ -1272,7 +1288,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Incompatível com a nova arquitetura",
   "migration.migrate.button": "Migrar Configurações",
   "migration.migrate.skip": "Pular",
-  "migration.migrate.back": "Voltar",
   "migration.migrate.keysDetected": "{{count}} chaves detectadas",
   "migration.migrate.serversConfigured": "{{count}} servidor(es) configurado(s)",
   "migration.migrate.modesFound": "{{count}} modo(s) encontrado(s)",
@@ -1293,6 +1308,41 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Isso remove as configurações antigas do armazenamento do VS Code. Você não poderá executar esta migração novamente.",
   "migration.complete.done": "Concluído",
+  "migration.migrate.sessionsDetected": "{{count}} sessões detectadas",
+  "migration.error.sessionFailed": "Falha na migração da sessão",
+  "migration.error.continue": "Continuar",
+  "migration.error.action.copy": "Copiar",
+  "migration.error.toast.copied": "Erro copiado para a área de transferência",
+
+  "migration.sessionSummary.title": "Resumo:",
+  "migration.sessionSummary.copy": "Copiar relatório",
+  "migration.sessionSummary.toast.copied": "Relatório copiado",
+  "migration.sessionSummary.successful": "Bem-sucedidas",
+  "migration.sessionSummary.skipped": "Ignoradas",
+  "migration.sessionSummary.alreadyMigrated": "Já migradas",
+  "migration.sessionSummary.errored": "Com erro",
+  "migration.sessionSummary.none": "Nenhuma",
+  "migration.forceReimport.title": "Forçar reimportação",
+  "migration.forceReimport.description":
+    "Reimportar {{target}} vai sobrescrevê-los e apagar quaisquer novas mensagens já criadas nessas sessões.",
+  "migration.forceReimport.target.one": "esta sessão",
+  "migration.forceReimport.target.many": "estas {{count}} sessões",
+  "migration.forceReimport.button": "Forçar reimportação",
+  "migration.forceReimport.all": "Reimportar tudo",
+  "migration.forceReimport.proceed": "Prosseguir",
+  "migration.forceReimport.toast.started": "Reimportação forçada iniciada",
+  "migration.running.title": "Migração em andamento",
+  "migration.running.description.line1": "Você está prestes a concluir enquanto ainda há sessões sendo migradas.",
+  "migration.running.description.line2": "Se você sair agora, algumas sessões podem ficar incompletas.",
+  "migration.running.stay": "Ficar",
+  "migration.running.proceed": "Prosseguir",
+  "migration.sessionProgress.preparing": "Preparando sessão",
+  "migration.sessionProgress.storing": "Salvando sessão",
+  "migration.sessionProgress.skipped": "Sessão ignorada",
+  "migration.sessionProgress.header": "Migrando {{current}} de {{total}}",
+  "migration.sessionFormat.unknownDate": "Data desconhecida",
+  "migration.sessionFormat.unknown": "Desconhecido",
+  "migration.sessionFormat.unknownError": "Erro desconhecido",
   // legacy-migration end
 
   "error.details.show": "Detalhes",
@@ -1306,8 +1356,7 @@ export const dict = {
   "settings.saveBar.warning.many": "Várias sessões estão em execução e serão interrompidas",
   "settings.saveBar.saveAnyway": "Salvar mesmo assim",
   "settings.saveBar.cancel": "Cancelar",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "notifications.action.next": "Próximo",
+  "notifications.action.close": "Fechar",
+  "notifications.action.tryModel": "Experimentar {{model}}",
 }

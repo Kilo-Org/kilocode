@@ -187,8 +187,31 @@ export namespace Snapshot {
       ref: "FileDiff",
     })
   export type FileDiff = z.infer<typeof FileDiff>
+
+  // kilocode_change start — cache diffFull results to prevent redundant git spawning (#8379)
+  const diffCache = new Map<string, Promise<FileDiff[]>>()
+  const DIFF_CACHE_MAX = 100
+
   export async function diffFull(from: string, to: string): Promise<FileDiff[]> {
+    if (from === to) return []
+    const key = `${from}:${to}`
+    const cached = diffCache.get(key)
+    if (cached) return cached
+    if (diffCache.size >= DIFF_CACHE_MAX) {
+      const first = diffCache.keys().next().value
+      if (first) diffCache.delete(first)
+    }
+    const pending = diffFullUncached(from, to).catch((err) => {
+      diffCache.delete(key)
+      throw err
+    })
+    diffCache.set(key, pending)
+    return pending
+  }
+
+  async function diffFullUncached(from: string, to: string): Promise<FileDiff[]> {
     const git = await KiloSnapshot.prepare() // kilocode_change
+  // kilocode_change end
     const result: FileDiff[] = []
     const status = new Map<string, "added" | "deleted" | "modified">()
 

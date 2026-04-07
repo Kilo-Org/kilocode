@@ -282,8 +282,9 @@
 
 .message-list {
   height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
-  padding: 12px;
+  padding: 12px 16px;
 }
 
 .message-list-loading {
@@ -1580,6 +1581,53 @@
   opacity: 0.8;
 }
 
+.model-selector-item-provider-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.8;
+}
+
+.model-selector-star {
+  all: unset;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  transition:
+    opacity 0.1s ease,
+    color 0.1s ease;
+}
+
+.model-selector-star [data-component="icon"] {
+  color: inherit;
+}
+
+.model-selector-item:hover .model-selector-star,
+.model-selector-item.selected .model-selector-star,
+.model-selector-star--active {
+  opacity: 1;
+}
+
+.model-selector-star--active {
+  color: var(--vscode-list-highlightForeground);
+}
+
+.model-selector-star:hover {
+  color: var(--vscode-list-highlightForeground);
+  opacity: 1;
+}
+
+.model-selector-star--preview {
+  opacity: 1;
+}
+
 .model-selector-item-select-btn {
   flex-shrink: 0;
   padding: 2px 10px;
@@ -1712,6 +1760,7 @@
 .welcome-header {
   position: absolute;
   top: 12px;
+  left: 12px;
   right: 12px;
   z-index: 10;
   display: flex;
@@ -1777,7 +1826,7 @@
 
 .account-switcher-role {
   border-radius: 9999px;
-  padding: 1px 6px;
+  padding: 1px 12px;
   font-size: 10px;
   letter-spacing: 0.3px;
   background: var(--vscode-badge-background);
@@ -2200,6 +2249,14 @@
   opacity: 0.7;
 }
 
+/* Session List (inside History View) */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 /* Session List Items */
 .session-list [data-slot="list-item-title"],
 .cloud-session-list [data-slot="list-item-title"] {
@@ -2380,7 +2437,6 @@ body.vscode-light
    ============================================ */
 
 .kilo-notifications {
-  width: 280px;
   display: flex;
   flex-direction: column;
   border-radius: 6px;
@@ -2433,9 +2489,10 @@ body.vscode-light
 
 .kilo-notifications-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  min-height: 28px;
+  gap: 16px;
+  container-type: inline-size;
 }
 
 .kilo-notifications-nav {
@@ -2448,6 +2505,23 @@ body.vscode-light
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.kilo-notifications-cta-group {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+
+@container (max-width: 300px) {
+  .kilo-notifications-cta-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 .kilo-notifications-action-btn {
@@ -3179,4 +3253,190 @@ body.vscode-high-contrast-light {
     outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     outline-offset: -1px;
   }
+}
+
+/* ============================================
+   Task Timeline
+   ============================================ */
+
+.task-timeline-outer {
+  width: 100%;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.task-timeline {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  touch-action: pan-x;
+  scrollbar-width: none; /* Firefox */
+}
+
+.task-timeline::-webkit-scrollbar {
+  display: none;
+}
+
+.task-timeline-bar {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 1px;
+  overflow: hidden;
+}
+
+.task-timeline-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.15s;
+}
+
+.task-timeline-bar:hover .task-timeline-bar-fill {
+  opacity: 0.7;
+}
+
+/* Fade-in animation for new bars */
+.task-timeline-bar-fill--new {
+  animation: timeline-fade-in 0.3s ease-out;
+}
+
+/* Active (latest) bar pulse when session is busy */
+.task-timeline-bar-fill--active {
+  animation: timeline-pulse 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes timeline-fade-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes timeline-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================
+   Context Progress Bar
+   ============================================ */
+
+.context-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-progress-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.context-progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+}
+
+.context-progress-used {
+  height: 100%;
+  background: var(--vscode-foreground);
+  transition:
+    width 0.3s ease-out,
+    background 0.3s ease-out;
+}
+
+.context-progress-used--hot {
+  background: color-mix(in srgb, var(--vscode-errorForeground) 60%, rgba(128, 0, 0, 1));
+}
+
+.context-progress-reserved {
+  height: 100%;
+  background: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  transition: width 0.3s ease-out;
+}
+
+.context-progress-available {
+  height: 100%;
+}
+
+/* ============================================
+   Task Header Graph Section
+   ============================================ */
+
+[data-component="task-header-graph"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="task-header-graph-row"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+/* Token breakdown in expanded state */
+.task-header-tokens {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.task-header-tokens-label {
+  font-weight: 600;
+}
+
+.task-header-tokens-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Expand toggle */
+[data-slot="task-header-expand"] {
+  all: unset;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  color: var(--vscode-descriptionForeground);
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+[data-slot="task-header-expand"]:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground);
 }

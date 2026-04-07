@@ -59,6 +59,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     return uncontrolledOpen()
   }
 
+  const focus = (node?: ParentNode | null) => {
+    const root = node ?? contentRef()
+    if (!root) return
+    const target = root.querySelector<HTMLElement>("[data-autofocus]")
+    if (!target) return
+    target.focus()
+  }
+
   const onOpenChange = (next: boolean) => {
     if (next) setDismiss(null)
     if (local.onOpenChange) local.onOpenChange(next)
@@ -95,6 +103,8 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
+      // Node was detached by a reactive update — treat as inside
+      if (!target.isConnected) return
       close("outside")
     }
 
@@ -102,6 +112,8 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
+      // Node was detached by a reactive update — treat as inside
+      if (!target.isConnected) return
       close("outside")
     }
 
@@ -131,6 +143,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     })
   })
 
+  createEffect(() => {
+    if (!opened()) return
+    const node = contentRef()
+    if (!node) return
+    const id = requestAnimationFrame(() => focus(node))
+    onCleanup(() => cancelAnimationFrame(id))
+  })
+
   const content = () => (
     <Kobalte.Content
       ref={(el: HTMLElement | undefined) => setContentRef(el)}
@@ -140,8 +160,20 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         [local.class ?? ""]: !!local.class,
       }}
       style={local.style}
+      onInteractOutside={(event: Event) => {
+        // Custom window-level handlers manage outside dismissal;
+        // always prevent Kobalte's built-in interact-outside close
+        // to avoid double-firing and stale-node false positives.
+        event.preventDefault()
+      }}
       onFocusOutside={(event: Event) => {
-        if (!ready()) event.preventDefault()
+        event.preventDefault()
+      }}
+      onOpenAutoFocus={(event: Event) => {
+        const node = event.currentTarget as ParentNode | null
+        if (!node) return
+        event.preventDefault()
+        focus(node)
       }}
       onCloseAutoFocus={(event: Event) => {
         if (dismiss() === "outside") event.preventDefault()

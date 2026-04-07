@@ -53,6 +53,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Kredi ekle",
 
   "ui.sessionTurn.status.delegating": "Görev devrediliyor",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Sonraki adımlar planlanıyor",
   "ui.sessionTurn.status.gatheringContext": "Keşfediliyor",
   "ui.sessionTurn.status.gatheredContext": "Keşfedildi",
