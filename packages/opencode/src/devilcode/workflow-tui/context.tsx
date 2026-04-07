@@ -27,6 +27,7 @@ export type WorkflowViewState = {
   executeStage(stage: WorkflowStage): Promise<void>
   selectTask(taskId: string): void
   switchTab(tabId: string): void
+  closeTab(tabId: string): void
   addAgentTab(info: TabInfo): void
   updateSessionOutput(sessionId: string, line: string): void
   setSessionStatus(sessionId: string, status: SessionInfo["status"]): void
@@ -162,6 +163,21 @@ export function WorkflowProvider(props: ParentProps) {
 
     switchTab(tabId: string) {
       setStore("activeTab", tabId)
+    },
+
+    closeTab(tabId: string) {
+      const tab = store.tabs.find((t) => t.id === tabId)
+      if (!tab || !tab.closeable) return
+      const currentIndex = store.tabs.findIndex((t) => t.id === tabId)
+      setStore("tabs", (tabs) => tabs.filter((t) => t.id !== tabId))
+      if (store.activeTab === tabId) {
+        const remaining = store.tabs.filter((t) => t.id !== tabId)
+        const nextIndex = Math.min(currentIndex, remaining.length - 1)
+        const nextTab = remaining[nextIndex] ?? remaining[0]
+        if (nextTab) {
+          setStore("activeTab", nextTab.id)
+        }
+      }
     },
 
     addAgentTab(info: TabInfo) {

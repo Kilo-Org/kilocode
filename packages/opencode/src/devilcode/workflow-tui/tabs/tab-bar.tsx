@@ -17,30 +17,64 @@ export function TabBar() {
         {(tab) => {
           const isActive = createMemo(() => wf.activeTab === tab.id)
           return (
-            <text
-              fg={isActive() ? theme.primary : theme.textMuted}
-              attributes={isActive() ? TextAttributes.BOLD : undefined}
-              onMouseDown={() => wf.switchTab(tab.id)}
-            >
-              {"[" + tab.label + "]"}
-            </text>
+            <box flexDirection="row">
+              <text
+                fg={isActive() ? theme.primary : theme.textMuted}
+                attributes={isActive() ? TextAttributes.BOLD : undefined}
+                onMouseDown={() => wf.switchTab(tab.id)}
+              >
+                {"[" + tab.label}
+              </text>
+              <Show when={tab.closeable}>
+                <text
+                  fg={isActive() ? theme.error : theme.textMuted}
+                  onMouseDown={() => wf.closeTab(tab.id)}
+                >
+                  {" x"}
+                </text>
+              </Show>
+              <text
+                fg={isActive() ? theme.primary : theme.textMuted}
+                attributes={isActive() ? TextAttributes.BOLD : undefined}
+                onMouseDown={() => wf.switchTab(tab.id)}
+              >
+                {"]"}
+              </text>
+            </box>
           )
         }}
       </For>
       <Show when={agentTabs().length > 0 && artifactTabs().length > 0}>
-        <text fg={theme.border}>│</text>
+        <text fg={theme.border}>|</text>
       </Show>
       <For each={artifactTabs()}>
         {(tab) => {
           const isActive = createMemo(() => wf.activeTab === tab.id)
           return (
-            <text
-              fg={isActive() ? theme.primary : theme.textMuted}
-              attributes={isActive() ? TextAttributes.BOLD : undefined}
-              onMouseDown={() => wf.switchTab(tab.id)}
-            >
-              {"[" + tab.label + "]"}
-            </text>
+            <box flexDirection="row">
+              <text
+                fg={isActive() ? theme.primary : theme.textMuted}
+                attributes={isActive() ? TextAttributes.BOLD : undefined}
+                onMouseDown={() => wf.switchTab(tab.id)}
+              >
+                {"[" + tab.label}
+              </text>
+              <Show when={tab.closeable}>
+                <text
+                  fg={isActive() ? theme.error : theme.textMuted}
+                  onMouseDown={() => wf.closeTab(tab.id)}
+                >
+                  {" x"}
+                </text>
+              </Show>
+              <text
+                fg={isActive() ? theme.primary : theme.textMuted}
+                attributes={isActive() ? TextAttributes.BOLD : undefined}
+                onMouseDown={() => wf.switchTab(tab.id)}
+              >
+                {"]"}
+              </text>
+            </box>
           )
         }}
       </For>
