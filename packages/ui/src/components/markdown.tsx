@@ -163,6 +163,8 @@ function markSymbolLinks(root: HTMLDivElement) {
     // Store the full original text (e.g. "BuildFrame()") so handleOpenSymbol
     // can detect isMethod via rawSymbol.endsWith("()")
     code.dataset.symbolLink = rawText
+    // title helps user verify they are hovering the symbol link (not a nearby file reference)
+    code.title = `Go to symbol: ${rawText}`
   }
 }
 // kilocode_change end
