@@ -475,6 +475,7 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
+          teamRole: (task as any).teamRole ?? undefined, // devilcode_change — propagate team role to subtask
           async metadata(input) {
             await Session.updatePart({
               ...part,

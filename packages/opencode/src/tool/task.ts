@@ -117,7 +117,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const teamModel = resolveTaskModel({
         subagentType: params.subagent_type,
         teamConfig: config.team,
-        parentRole: (ctx as any).teamRole,
+        parentRole: ctx.teamRole,
       })
       const model = teamModel?.model ?? agent.model ?? {
         modelID: msg.info.modelID,
