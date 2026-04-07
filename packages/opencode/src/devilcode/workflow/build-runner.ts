@@ -8,6 +8,9 @@ import { groupByWave } from "./executor"
 import type { PlanTask, TaskResult } from "./types"
 import type { TeamConfig } from "../team/config"
 import BUILD_PROMPT from "./prompts/build.txt"
+import { LockManager } from "./locks"
+import { EventLogger } from "./events"
+import { LessonStore, extractFromAgentReport } from "./learning"
 
 const log = Log.create({ service: "workflow.build-runner" })
 
@@ -19,6 +22,9 @@ export type BuildCallbacks = {
 
 export type BuildRunnerOptions = {
   teamConfig: TeamConfig | undefined
+  lockManager?: LockManager
+  eventLogger?: EventLogger
+  lessonStore?: LessonStore
 } & BuildCallbacks
 
 export class BuildRunner {
@@ -83,6 +89,28 @@ export class BuildRunner {
         log.info("worktree created", { taskId: task.id, directory: worktree.directory })
       }
 
+      // Acquire file locks if lock manager is configured
+      if (this.options.lockManager && task.files.length > 0) {
+        const conflicts = await this.options.lockManager.checkConflicts(task.files)
+        if (conflicts.length > 0) {
+          const conflictMsg = conflicts
+            .map((c) => `${c.taskId} holds lock on: ${c.files.join(", ")}`)
+            .join("; ")
+          log.info("file conflict detected", { taskId: task.id, conflicts: conflictMsg })
+          throw new Error(`File conflict: ${conflictMsg}`)
+        }
+        await this.options.lockManager.acquire(task.id, task.role, task.files)
+        if (this.options.eventLogger) {
+          await this.options.eventLogger.log({
+            eventType: "files_locked",
+            taskId: task.id,
+            role: task.role,
+            message: `Locked files: ${task.files.join(", ")}`,
+          })
+        }
+        log.info("files locked", { taskId: task.id, files: task.files })
+      }
+
       const resolved = resolveTaskModel({
         subagentType: task.role,
         teamConfig: this.options.teamConfig,
@@ -134,6 +162,31 @@ export class BuildRunner {
       const errMsg = error instanceof Error ? error.message : String(error)
       log.error("task execution failed", { taskId: task.id, error: errMsg })
 
+      // Attempt to capture a lesson from the failure
+      if (this.options.lessonStore) {
+        const lesson = extractFromAgentReport({
+          trigger: errMsg,
+          resolution: `Task "${task.title}" failed. Error: ${errMsg}`,
+          files: task.files,
+          taskTitle: task.title,
+          category: "code_pattern",
+        })
+        if (lesson) {
+          await this.options.lessonStore.save(lesson).catch((e) => {
+            log.error("lesson save failed", { taskId: task.id, error: String(e) })
+          })
+          if (this.options.eventLogger) {
+            await this.options.eventLogger.log({
+              eventType: "lesson_captured",
+              taskId: task.id,
+              role: task.role,
+              message: `Lesson captured: ${lesson.title}`,
+            }).catch(() => {})
+          }
+          log.info("lesson captured from failure", { taskId: task.id, lessonId: lesson.id })
+        }
+      }
+
       const result: TaskResult = {
         taskId: task.id,
         status: "failed",
@@ -145,6 +198,20 @@ export class BuildRunner {
       this.options.onTaskComplete(task.id, result)
       return result
     } finally {
+      // Release file locks
+      if (this.options.lockManager) {
+        await this.options.lockManager.release(task.id).catch((e) => {
+          log.error("lock release failed", { taskId: task.id, error: String(e) })
+        })
+        if (this.options.eventLogger) {
+          await this.options.eventLogger.log({
+            eventType: "files_unlocked",
+            taskId: task.id,
+            message: `Released locks for task ${task.id}`,
+          }).catch(() => {})
+        }
+      }
+      // Clean up worktree if we created one
       if (worktree) {
         await Worktree.remove({ directory: worktree.directory }).catch((e) => {
           log.error("worktree cleanup failed", { taskId: task.id, error: String(e) })
