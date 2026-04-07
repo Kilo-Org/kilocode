@@ -168,7 +168,7 @@ interface SessionContextValue {
   worktreeStats: Accessor<{ files: number; additions: number; deletions: number } | undefined>
 
   // Actions
-  revertSession: (messageID: string) => void
+  revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
   sendMessage: (text: string, providerID?: string, modelID?: string, files?: FileAttachment[], draftID?: string) => void
   sendCommand: (
@@ -1676,20 +1676,20 @@ export const SessionProvider: ParentComponent = (props) => {
     return id ? (store.sessions[id]?.summary ?? undefined) : undefined
   })
 
-  function revertSession(messageID: string) {
+  function revertSession(messageID: string, partID?: string) {
     const id = currentSessionID()
     if (!id) return
     // Restore the reverted user message's prompt text into the input.
     // Dispatch as a window message so PromptInput picks it up via onMessage.
     const parts = store.parts[messageID]
-    if (parts) {
+    if (parts && !partID) {
       const text = parts
         .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
         .map((p) => (p as { text: string }).text ?? "")
         .join("")
       if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
     }
-    vscode.postMessage({ type: "revertSession", sessionID: id, messageID })
+    vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
 
   function unrevertSession() {

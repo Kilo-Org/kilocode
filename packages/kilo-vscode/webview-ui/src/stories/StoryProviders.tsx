@@ -177,7 +177,7 @@ export function mockSessionValue(overrides?: {
     revertedCount: () => 0,
     summary: () => undefined,
     worktreeStats: () => undefined,
-    revertSession: noop,
+    revertSession: (_messageID: string, _partID?: string) => {},
     unrevertSession: noop,
     favoriteModels: () => [],
     toggleFavorite: noop,

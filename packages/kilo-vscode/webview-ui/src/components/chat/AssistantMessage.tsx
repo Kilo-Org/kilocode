@@ -17,6 +17,7 @@ import type {
   ToolPart,
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
+import { useSession } from "../../context/session"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -67,12 +68,19 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
+  const session = useSession()
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => isRenderable(part))
   })
+
+  const handleToolRevert = (partID: string) => {
+    session.revertSession(props.message.id, partID)
+  }
+
+  const fileModifyingTools = new Set(["edit", "write", "apply_patch", "bash", "task"])
 
   return (
     <>
@@ -82,9 +90,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // so we detect them here and render via ToolRegistry directly.
           const isUpstreamSuppressed =
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
+          const toolPart = part as unknown as ToolPart
+          const hasSnapshot =
+            part.type === "tool" && fileModifyingTools.has(toolPart.tool) && toolPart.snapshot && toolPart.snapshotFiles
           return (
             <Show when={isUpstreamSuppressed || PART_MAPPING[part.type]}>
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
+              <div
+                data-component="tool-part-wrapper"
+                data-part-type={part.type}
+                style={hasSnapshot ? "cursor: pointer; position: relative;" : undefined}
+                onClick={hasSnapshot ? () => handleToolRevert(toolPart.id) : undefined}
+                title={hasSnapshot ? "Click to revert to this tool" : undefined}
+              >
                 <Show
                   when={isUpstreamSuppressed}
                   fallback={
