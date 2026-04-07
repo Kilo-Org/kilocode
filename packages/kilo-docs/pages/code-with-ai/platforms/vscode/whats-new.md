@@ -39,7 +39,7 @@ See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actio
 
 Yes — the context progress graph (also known as the task timeline) is now available. It appears at the top of the chat panel and shows:
 
-- **Timeline bars** — colored horizontal bars representing session activity (different colors for read, write, tool, error, and text parts), with width proportional to time between parts
+- **Timeline bars** — colored bars representing session activity (different colors for read, write, tool, error, and text parts)
 - **Context window progress** — a three-segment bar showing used, reserved, and available tokens, with a visual indicator when usage exceeds 50%
 - **Token breakdown** — input, output, cache writes, and cache reads display
 
