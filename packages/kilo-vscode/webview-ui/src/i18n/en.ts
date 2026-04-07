@@ -1173,6 +1173,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.back": "Back to list",
   "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Calculated Permissions",
+  "settings.agentBehaviour.permissions.count": "{{count}} rules",
+  "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Tool",
+  "settings.agentBehaviour.permissions.col.pattern": "Pattern",
+  "settings.agentBehaviour.permissions.col.action": "Action",
+  "settings.agentBehaviour.permissions.hint":
+    "Rules are evaluated in order — last matching rule wins. This is the resolved ruleset from the CLI backend.",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
