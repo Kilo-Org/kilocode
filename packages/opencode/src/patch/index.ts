@@ -3,6 +3,7 @@ import * as path from "path"
 import * as fs from "fs/promises"
 import { readFileSync } from "fs"
 import { Log } from "../util/log"
+import { Encoding } from "../kilocode/encoding" // kilocode_change
 
 export namespace Patch {
   const log = Log.create({ service: "patch" })
@@ -306,16 +307,21 @@ export namespace Patch {
   interface ApplyPatchFileUpdate {
     unified_diff: string
     content: string
+    encoding: Encoding.Info // kilocode_change
   }
 
   export function deriveNewContentsFromChunks(filePath: string, chunks: UpdateFileChunk[]): ApplyPatchFileUpdate {
-    // Read original file content
+    // kilocode_change start - encoding-aware read
     let originalContent: string
+    let enc: Encoding.Info
     try {
-      originalContent = readFileSync(filePath, "utf-8")
+      const result = Encoding.readSync(filePath)
+      originalContent = result.text
+      enc = result.info
     } catch (error) {
       throw new Error(`Failed to read file ${filePath}: ${error}`)
     }
+    // kilocode_change end
 
     let originalLines = originalContent.split("\n")
 
@@ -340,6 +346,7 @@ export namespace Patch {
     return {
       unified_diff: unifiedDiff,
       content: newContent,
+      encoding: enc, // kilocode_change
     }
   }
 
@@ -524,6 +531,7 @@ export namespace Patch {
     const modified: string[] = []
     const deleted: string[] = []
 
+    // kilocode_change start - encoding-aware writes
     for (const hunk of hunks) {
       switch (hunk.type) {
         case "add":
@@ -533,7 +541,7 @@ export namespace Patch {
             await fs.mkdir(addDir, { recursive: true })
           }
 
-          await fs.writeFile(hunk.path, hunk.contents, "utf-8")
+          await Encoding.write(hunk.path, hunk.contents, Encoding.DEFAULT)
           added.push(hunk.path)
           log.info(`Added file: ${hunk.path}`)
           break
@@ -554,19 +562,20 @@ export namespace Patch {
               await fs.mkdir(moveDir, { recursive: true })
             }
 
-            await fs.writeFile(hunk.move_path, fileUpdate.content, "utf-8")
+            await Encoding.write(hunk.move_path, fileUpdate.content, fileUpdate.encoding)
             await fs.unlink(hunk.path)
             modified.push(hunk.move_path)
             log.info(`Moved file: ${hunk.path} -> ${hunk.move_path}`)
           } else {
             // Regular update
-            await fs.writeFile(hunk.path, fileUpdate.content, "utf-8")
+            await Encoding.write(hunk.path, fileUpdate.content, fileUpdate.encoding)
             modified.push(hunk.path)
             log.info(`Updated file: ${hunk.path}`)
           }
           break
       }
     }
+    // kilocode_change end
 
     return { added, modified, deleted }
   }
@@ -625,11 +634,13 @@ export namespace Patch {
               // For delete, we need to read the current content
               const deletePath = path.resolve(effectiveCwd, hunk.path)
               try {
-                const content = await fs.readFile(deletePath, "utf-8")
+                // kilocode_change start - encoding-aware read
+                const result = await Encoding.read(deletePath)
                 changes.set(resolvedPath, {
                   type: "delete",
-                  content,
+                  content: result.text,
                 })
+                // kilocode_change end
               } catch (error) {
                 return {
                   type: MaybeApplyPatchVerified.CorrectnessError,

@@ -13,6 +13,7 @@ import { Instance } from "../project/instance"
 import { trimDiff } from "./edit"
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { Encoding } from "../kilocode/encoding" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -28,7 +29,11 @@ export const WriteTool = Tool.define("write", {
     await assertExternalDirectory(ctx, filepath)
 
     const exists = await Filesystem.exists(filepath)
-    const contentOld = exists ? await Filesystem.readText(filepath) : ""
+    // kilocode_change start - preserve file encoding
+    const encoded = exists ? await Filesystem.readEncoded(filepath) : undefined
+    const contentOld = encoded ? encoded.text : ""
+    const enc = encoded ? encoded.encoding : Encoding.DEFAULT
+    // kilocode_change end
     if (exists) await FileTime.assert(ctx.sessionID, filepath)
 
     const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
@@ -42,7 +47,7 @@ export const WriteTool = Tool.define("write", {
       },
     })
 
-    await Filesystem.write(filepath, params.content)
+    await Filesystem.writeEncoded(filepath, params.content, enc) // kilocode_change
     await Bus.publish(File.Event.Edited, {
       file: filepath,
     })

@@ -6,6 +6,7 @@ import { dirname, join, relative, resolve as pathResolve } from "path"
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "./glob"
+import { Encoding } from "../kilocode/encoding" // kilocode_change
 
 export namespace Filesystem {
   // Fast sync version for metadata checks
@@ -41,6 +42,41 @@ export namespace Filesystem {
   export async function readBytes(p: string): Promise<Buffer> {
     return readFile(p)
   }
+
+  // kilocode_change start - encoding-aware read/write for tool file operations
+  export async function readEncoded(p: string): Promise<{ text: string; encoding: Encoding.Info }> {
+    const bytes = await readFile(p)
+    const info = Encoding.detect(bytes)
+    return { text: Encoding.decode(bytes, info), encoding: info }
+  }
+
+  export async function writeEncoded(
+    p: string,
+    content: string,
+    encoding: Encoding.Info,
+    mode?: number,
+  ): Promise<void> {
+    const bytes = Encoding.encode(content, encoding)
+    try {
+      if (mode) {
+        await writeFile(p, bytes, { mode })
+      } else {
+        await writeFile(p, bytes)
+      }
+    } catch (e) {
+      if (isEnoent(e)) {
+        await mkdir(dirname(p), { recursive: true })
+        if (mode) {
+          await writeFile(p, bytes, { mode })
+        } else {
+          await writeFile(p, bytes)
+        }
+        return
+      }
+      throw e
+    }
+  }
+  // kilocode_change end
 
   export async function readArrayBuffer(p: string): Promise<ArrayBuffer> {
     const buf = await readFile(p)

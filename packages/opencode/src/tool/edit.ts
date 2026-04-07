@@ -18,6 +18,7 @@ import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { Encoding } from "../kilocode/encoding" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -87,7 +88,11 @@ export const EditTool = Tool.define("edit", {
       if (!stats) throw new Error(`File ${filePath} not found`)
       if (stats.isDirectory()) throw new Error(`Path is a directory, not a file: ${filePath}`)
       await FileTime.assert(ctx.sessionID, filePath)
-      contentOld = await Filesystem.readText(filePath)
+      // kilocode_change start - preserve file encoding
+      const encoded = await Filesystem.readEncoded(filePath)
+      contentOld = encoded.text
+      const enc = encoded.encoding
+      // kilocode_change end
 
       const ending = detectLineEnding(contentOld)
       const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
@@ -108,7 +113,7 @@ export const EditTool = Tool.define("edit", {
         },
       })
 
-      await Filesystem.write(filePath, contentNew)
+      await Filesystem.writeEncoded(filePath, contentNew, enc) // kilocode_change
       await Bus.publish(File.Event.Edited, {
         file: filePath,
       })
@@ -116,7 +121,9 @@ export const EditTool = Tool.define("edit", {
         file: filePath,
         event: "change",
       })
-      contentNew = await Filesystem.readText(filePath)
+      // kilocode_change start - re-read with encoding awareness
+      contentNew = (await Filesystem.readEncoded(filePath)).text
+      // kilocode_change end
       diff = trimDiff(
         createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
       )
