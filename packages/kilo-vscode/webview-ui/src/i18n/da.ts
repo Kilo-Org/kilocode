@@ -1123,6 +1123,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en indbygget tilstand. Dens grundlæggende definition kan ikke ændres, men du kan konfigurere tilsidesættelser nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-tilsidesættelse for denne indbyggede tilstand",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Beregnede tilladelser",
+  "settings.agentBehaviour.permissions.count": "{{count}} regler",
+  "settings.agentBehaviour.permissions.effective": "Gældende (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Værktøj",
+  "settings.agentBehaviour.permissions.col.pattern": "Mønster",
+  "settings.agentBehaviour.permissions.col.action": "Handling",
+  "settings.agentBehaviour.permissions.hint":
+    "Reglerne evalueres i rækkefølge — den sidst matchende regel vinder. Dette er det endelige regelsæt fra CLI-backenden.",
   "settings.agentBehaviour.removeMode.title": "Fjern tilstand",
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne tilstanden "{{name}}"? Dette vil deaktivere tilstanden ved at opdatere din konfiguration.',

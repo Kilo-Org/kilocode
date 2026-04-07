@@ -1129,6 +1129,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
+  "settings.agentBehaviour.permissions.count": "{{count}} reguł",
+  "settings.agentBehaviour.permissions.effective": "Efektywne (wieloznacznik):",
+  "settings.agentBehaviour.permissions.col.tool": "Narzędzie",
+  "settings.agentBehaviour.permissions.col.pattern": "Wzorzec",
+  "settings.agentBehaviour.permissions.col.action": "Akcja",
+  "settings.agentBehaviour.permissions.hint":
+    "Reguły są sprawdzane po kolei — ostatnia pasująca reguła wygrywa. To jest wynikowy zestaw reguł z backendu CLI.",
   "settings.agentBehaviour.removeMode.title": "Usuń tryb",
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',

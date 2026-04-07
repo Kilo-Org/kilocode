@@ -1376,5 +1376,14 @@ export const dict = {
   "settings.agentBehaviour.editMode.native": "Ingebouwde modus (alleen-lezen definitie)",
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
+  "settings.agentBehaviour.permissions.count": "{{count}} regels",
+  "settings.agentBehaviour.permissions.effective": "Effectief (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Tool",
+  "settings.agentBehaviour.permissions.col.pattern": "Patroon",
+  "settings.agentBehaviour.permissions.col.action": "Actie",
+  "settings.agentBehaviour.permissions.hint":
+    "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
 }

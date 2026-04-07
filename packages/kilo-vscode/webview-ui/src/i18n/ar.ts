@@ -1113,6 +1113,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
+  "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
+  "settings.agentBehaviour.permissions.count": "{{count}} قواعد",
+  "settings.agentBehaviour.permissions.effective": "الفعال (حرف بدل):",
+  "settings.agentBehaviour.permissions.col.tool": "الأداة",
+  "settings.agentBehaviour.permissions.col.pattern": "النمط",
+  "settings.agentBehaviour.permissions.col.action": "الإجراء",
+  "settings.agentBehaviour.permissions.hint":
+    "يتم تقييم القواعد بالترتيب — القاعدة المطابقة الأخيرة هي التي تُطبق. هذه هي مجموعة القواعد المحلولة من خلفية CLI.",
   "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
   "settings.agentBehaviour.removeMode.confirm":
     'هل تريد إزالة الوضع "{{name}}"؟ سيؤدي هذا إلى تعطيل الوضع عن طريق تحديث الإعدادات.',

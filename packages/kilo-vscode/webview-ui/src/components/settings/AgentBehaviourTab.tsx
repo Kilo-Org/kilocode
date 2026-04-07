@@ -93,10 +93,15 @@ const AgentBehaviourTab: Component = () => {
     return names.sort()
   })
 
-  const defaultAgentOptions = createMemo<SelectOption[]>(() => [
-    { value: "", label: language.t("common.default") },
-    ...agentNames().map((name) => ({ value: name, label: name })),
-  ])
+  // Default-agent picker must only show visible primary agents (not subagents
+  // or hidden modes) since the CLI rejects those as default_agent values.
+  const defaultAgentOptions = createMemo<SelectOption[]>(() => {
+    const visible = session.agents().map((a) => a.name)
+    return [
+      { value: "", label: language.t("common.default") },
+      ...visible.map((name) => ({ value: name, label: name })),
+    ]
+  })
 
   const instructions = () => config().instructions ?? []
 

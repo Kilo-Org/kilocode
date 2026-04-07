@@ -1114,6 +1114,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "นี่คือโหมดในตัว ไม่สามารถเปลี่ยนคำจำกัดความพื้นฐานได้ แต่คุณสามารถกำหนดค่าการแทนที่ได้ที่ด้านล่าง",
   "settings.agentBehaviour.editMode.promptOverride": "การแทนที่ prompt แบบกำหนดเองสำหรับโหมดในตัวนี้",
+  "settings.agentBehaviour.badge.subagent": "เอเจนต์ย่อย",
+  "settings.agentBehaviour.permissions.title": "สิทธิ์ที่คำนวณแล้ว",
+  "settings.agentBehaviour.permissions.count": "{{count}} กฎ",
+  "settings.agentBehaviour.permissions.effective": "มีผล (ไวลด์การ์ด):",
+  "settings.agentBehaviour.permissions.col.tool": "เครื่องมือ",
+  "settings.agentBehaviour.permissions.col.pattern": "รูปแบบ",
+  "settings.agentBehaviour.permissions.col.action": "การดำเนินการ",
+  "settings.agentBehaviour.permissions.hint":
+    "กฎจะถูกประเมินตามลำดับ — กฎที่ตรงกันล่าสุดจะมีผล นี่คือชุดกฎที่ประมวลผลแล้วจากแบ็กเอนด์ CLI",
   "settings.agentBehaviour.removeMode.title": "ลบโหมด",
   "settings.agentBehaviour.removeMode.confirm":
     'ต้องการลบโหมด "{{name}}" หรือไม่? การดำเนินการนี้จะปิดใช้งานโหมดโดยอัปเดตการกำหนดค่าของคุณ',

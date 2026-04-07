@@ -1130,6 +1130,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
+  "settings.agentBehaviour.permissions.count": "{{count}} pravila",
+  "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Alat",
+  "settings.agentBehaviour.permissions.col.pattern": "Uzorak",
+  "settings.agentBehaviour.permissions.col.action": "Akcija",
+  "settings.agentBehaviour.permissions.hint":
+    "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',

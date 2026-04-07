@@ -1119,6 +1119,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
+  "settings.agentBehaviour.badge.subagent": "서브에이전트",
+  "settings.agentBehaviour.permissions.title": "계산된 권한",
+  "settings.agentBehaviour.permissions.count": "{{count}}개 규칙",
+  "settings.agentBehaviour.permissions.effective": "유효 (와일드카드):",
+  "settings.agentBehaviour.permissions.col.tool": "도구",
+  "settings.agentBehaviour.permissions.col.pattern": "패턴",
+  "settings.agentBehaviour.permissions.col.action": "작업",
+  "settings.agentBehaviour.permissions.hint":
+    "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
   "settings.agentBehaviour.removeMode.title": "모드 제거",
   "settings.agentBehaviour.removeMode.confirm":
     '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
