@@ -475,7 +475,7 @@ export namespace SessionPrompt {
           callID: part.callID,
           extra: { bypassAgentCheck: true },
           messages: msgs,
-          teamRole: (task as any).teamRole ?? undefined, // devilcode_change — propagate team role to subtask
+          teamRole: task.teamRole, // devilcode_change — propagate team role to subtask
           async metadata(input) {
             await Session.updatePart({
               ...part,
@@ -858,6 +858,7 @@ export namespace SessionPrompt {
       extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
       agent: input.agent.name,
       messages: input.messages,
+      teamRole: input.agent.options?.teamRole as string | undefined, // devilcode_change — propagate team role for task delegation
       metadata: async (val: { title?: string; metadata?: any }) => {
         const match = input.processor.partFromToolCall(options.toolCallId)
         if (match && match.state.status === "running") {
@@ -1973,6 +1974,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             },
             // TODO: how can we make task tool accept a more complex input?
             prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
+            teamRole: agent.options?.teamRole as string | undefined, // devilcode_change — propagate team role for routing
           },
         ]
       : [...templateParts, ...(input.parts ?? [])]

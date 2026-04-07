@@ -218,6 +218,7 @@ export namespace MessageV2 {
       })
       .optional(),
     command: z.string().optional(),
+    teamRole: z.string().optional(), // devilcode_change — team role for multi-model routing
   }).meta({
     ref: "SubtaskPart",
   })
@@ -368,7 +369,7 @@ export namespace MessageV2 {
     system: z.string().optional(),
     tools: z.record(z.string(), z.boolean()).optional(),
     variant: z.string().optional(),
-    // kilocode_change start
+    // devilcode_change start
     editorContext: z
       .object({
         visibleFiles: z.array(z.string()).optional(),
@@ -377,7 +378,7 @@ export namespace MessageV2 {
         shell: z.string().optional(),
       })
       .optional(),
-    // kilocode_change end
+    // devilcode_change end
   }).meta({
     ref: "UserMessage",
   })
@@ -503,7 +504,7 @@ export namespace MessageV2 {
   })
   export type WithParts = z.infer<typeof WithParts>
 
-  // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
+  // devilcode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
   // This handles both legacy data that was stored with full file contents and keeps the API response lean.
   function stripPartMetadata(part: Part): Part {
     if (part.type !== "tool") return part
@@ -557,7 +558,7 @@ export namespace MessageV2 {
       },
     } as Info
   }
-  // kilocode_change end
+  // devilcode_change end
 
   export function toModelMessages(
     input: WithParts[],
@@ -827,7 +828,7 @@ export namespace MessageV2 {
             id: row.id,
             sessionID: row.session_id,
             messageID: row.message_id,
-          } as MessageV2.Part) // kilocode_change - strip bloated metadata on read
+          } as MessageV2.Part) // devilcode_change - strip bloated metadata on read
           const list = partsByMessage.get(row.message_id)
           if (list) list.push(part)
           else partsByMessage.set(row.message_id, [part])
@@ -835,7 +836,7 @@ export namespace MessageV2 {
       }
 
       for (const row of rows) {
-        const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
+        const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // devilcode_change
         yield {
           info,
           parts: partsByMessage.get(row.id) ?? [],
@@ -858,7 +859,7 @@ export namespace MessageV2 {
           id: row.id,
           sessionID: row.session_id,
           messageID: row.message_id,
-        } as MessageV2.Part), // kilocode_change - strip bloated metadata on read
+        } as MessageV2.Part), // devilcode_change - strip bloated metadata on read
     )
   })
 
@@ -870,7 +871,7 @@ export namespace MessageV2 {
     async (input): Promise<WithParts> => {
       const row = Database.use((db) => db.select().from(MessageTable).where(eq(MessageTable.id, input.messageID)).get())
       if (!row) throw new Error(`Message not found: ${input.messageID}`)
-      const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
+      const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // devilcode_change
       return {
         info,
         parts: await parts(input.messageID),
