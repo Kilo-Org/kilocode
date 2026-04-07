@@ -76,14 +76,21 @@ function codeUrl(text: string) {
 }
 
 // kilocode_change start: file:line link detection
-const fileLinkPattern =
-  /^([\w.\-/\\]*?\.(?:cs|ts|tsx|js|jsx|mts|mjs|cjs|cts|py|go|rs|cpp|cxx|c|h|hpp|java|kt|swift|rb|php|lua|sh|bash|zsh|json|xml|yaml|yml|toml)):(\d+)$/i
+const KNOWN_EXTS =
+  "cs|ts|tsx|js|jsx|mts|mjs|cjs|cts|py|go|rs|cpp|cxx|c|h|hpp|java|kt|swift|rb|php|lua|sh|bash|zsh|json|xml|yaml|yml|toml"
 
-function codeFileLink(text: string): { file: string; line: number } | undefined {
+// filename.ext:lineNumber  e.g. ShapeEditorContext.cs:129
+const fileLinkPattern = new RegExp(`^([\\w.\\-/\\\\]*?\\.(?:${KNOWN_EXTS})):(\\d+)$`, "i")
+// bare filename without line  e.g. ShapeEditorContext.cs
+const fileOnlyPattern = new RegExp(`^([\\w.\\-/\\\\]+\\.(?:${KNOWN_EXTS}))$`, "i")
+
+function codeFileLink(text: string): { file: string; line?: number } | undefined {
   const trimmed = text.trim()
-  const match = fileLinkPattern.exec(trimmed)
-  if (!match) return undefined
-  return { file: match[1], line: parseInt(match[2], 10) }
+  let match = fileLinkPattern.exec(trimmed)
+  if (match) return { file: match[1], line: parseInt(match[2], 10) }
+  match = fileOnlyPattern.exec(trimmed)
+  if (match) return { file: match[1] }
+  return undefined
 }
 
 function markFileLinks(root: HTMLDivElement) {
@@ -107,7 +114,12 @@ function markFileLinks(root: HTMLDivElement) {
     }
     code.classList.add("file-link")
     code.dataset.fileLink = link.file
-    code.dataset.fileLine = String(link.line)
+    // Only set fileLine when a line number is present; omitting it opens the file at top
+    if (link.line !== undefined) {
+      code.dataset.fileLine = String(link.line)
+    } else {
+      delete code.dataset.fileLine
+    }
   }
 }
 // kilocode_change end
@@ -286,7 +298,10 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
         new CustomEvent("kilo:openFileAtLine", {
           detail: {
             file: fileCode.dataset.fileLink,
-            line: parseInt(fileCode.dataset.fileLine ?? "1", 10),
+            line:
+              fileCode.dataset.fileLine !== undefined
+                ? parseInt(fileCode.dataset.fileLine, 10)
+                : undefined,
           },
         }),
       )

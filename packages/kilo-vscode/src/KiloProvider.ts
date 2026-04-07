@@ -2526,6 +2526,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   // kilocode_change start: navigate to a symbol (class/method) by name
   /**
+   * Cache: symbol raw text → resolved URI + position, to avoid re-scanning on repeated clicks.
+   * Cleared when the workspace changes or the extension is deactivated.
+   */
+  private readonly symbolCache = new Map<string, { uri: vscode.Uri; index: number }>()
+
+  /**
    * Search the workspace for a symbol by name and navigate to its definition.
    * First tries the LSP workspace symbol provider (e.g. OmniSharp, tsserver).
    * Falls back to a regex content search across workspace files when LSP is
@@ -2554,32 +2560,36 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Phase 2: content search with two-tier matching
+    // Return cached result immediately if available
+    const cached = this.symbolCache.get(rawSymbol)
+    if (cached) {
+      const doc = await vscode.workspace.openTextDocument(cached.uri)
+      const pos = doc.positionAt(cached.index)
+      await vscode.window.showTextDocument(doc, { selection: new vscode.Range(pos, pos), preview: true })
+      return
+    }
+
     const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    const CHUNK = 50
+    // Cap per-extension to 300 files — enough to cover large monorepos while
+    // keeping peak memory manageable. Sequential reads (chunk=1) avoid GC pressure
+    // from many simultaneous Uint8Array + TextDecoder allocations.
+    const MAX_FILES_PER_EXT = 300
     const exts = ["cs", "ts", "tsx", "js", "jsx", "mts", "py", "go", "rs", "cpp", "java", "kt", "swift"]
 
     type Hit = { uri: vscode.Uri; index: number }
 
     const searchWithPattern = async (pattern: RegExp): Promise<Hit | undefined> => {
       for (const ext of exts) {
-        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**")
-        if (uris.length === 0) continue
-        for (let i = 0; i < uris.length; i += CHUNK) {
-          const chunk = uris.slice(i, i + CHUNK)
-          const hits = await Promise.all(
-            chunk.map(async (uri) => {
-              try {
-                const bytes = await vscode.workspace.fs.readFile(uri)
-                const text = new TextDecoder().decode(bytes)
-                const match = pattern.exec(text)
-                return match ? { uri, index: match.index } : null
-              } catch {
-                return null
-              }
-            }),
-          )
-          const hit = hits.find((h) => h !== null)
-          if (hit) return hit
+        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**", MAX_FILES_PER_EXT)
+        for (const uri of uris) {
+          try {
+            const bytes = await vscode.workspace.fs.readFile(uri)
+            const text = new TextDecoder().decode(bytes)
+            const match = pattern.exec(text)
+            if (match) return { uri, index: match.index }
+          } catch {
+            // skip unreadable files
+          }
         }
       }
       return undefined
@@ -2618,6 +2628,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         selection: new vscode.Range(pos, pos),
         preview: true,
       })
+      // Cache so repeated clicks are instant
+      this.symbolCache.set(rawSymbol, hit)
       return
     }
 
