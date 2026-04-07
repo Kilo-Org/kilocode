@@ -8,6 +8,7 @@ import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager, remoteRef } from "./WorktreeStateManager"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
+import { PRStatusBridge } from "./pr-status-bridge"
 import { GitOps, type ApplyConflict } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { normalizePath, classifyWorktreeError } from "./git-import"
@@ -53,6 +54,7 @@ export class AgentManagerProvider implements Disposable {
   private diffSessionId: string | undefined
   private lastDiffHash: string | undefined
   private statsPoller: GitStatsPoller
+  private prBridge!: PRStatusBridge
   private gitOps: GitOps
   private cachedDiffTarget: { sessionId: string; directory: string; baseBranch: string } | undefined
   private staleWorktreeIds = new Set<string>()
@@ -93,6 +95,15 @@ export class AgentManagerProvider implements Disposable {
       },
       log: (...args) => this.log(...args),
       git: this.gitOps,
+    })
+    this.prBridge = PRStatusBridge.create({
+      getWorktrees: () => this.state?.getWorktrees() ?? [],
+      getWorkspaceRoot: () => this.getRoot(),
+      postToWebview: (m) => this.postToWebview(m),
+      updateWorktreePR: (id, n, u, s) => this.state?.updateWorktreePR(id, n, u, s),
+      hasPersistedPR: (id: string) => !!this.state?.getWorktree(id)?.prNumber,
+      openExternal: (u) => this.host.openExternal(u),
+      log: (...a) => this.log(...a),
     })
   }
 
@@ -147,13 +158,14 @@ export class AgentManagerProvider implements Disposable {
     this.stateReady = this.initializeState()
     void this.sendRepoInfo()
     this.sendKeybindings()
-
+    this.prBridge.attachPanel(ctx)
     ctx.onDidDispose(() => {
       // Only clear if this is still the active panel — a newer panel may
       // have already replaced us via attachPanel.
       if (this.panel === ctx) {
         this.log("Panel disposed")
         this.statsPoller.stop()
+        this.prBridge.poller.stop()
         this.stopDiffPolling()
         this.panel = undefined
       }
@@ -209,6 +221,7 @@ export class AgentManagerProvider implements Disposable {
   // ---------------------------------------------------------------------------
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+    if (this.prBridge.handleMessage(msg)) return null
     const m = msg as unknown as AgentManagerInMessage
 
     if (m.type === "agentManager.createWorktree") {
@@ -292,6 +305,7 @@ export class AgentManagerProvider implements Disposable {
           // already emitted before the webview was ready to receive messages.
           if (this.cachedWorktreeStats) this.postToWebview(this.cachedWorktreeStats)
           if (this.cachedLocalStats) this.postToWebview(this.cachedLocalStats)
+          this.prBridge.replay()
           // Refresh sessions after pushState so the webview's sessionsLoaded
           // handler is guaranteed to be registered (requestState fires from
           // onMount). Without this, the initial refreshSessions() in
@@ -408,6 +422,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
+      this.prBridge.poller.setActiveWorktreeId(this.state?.getSession(m.sessionID)?.worktreeId ?? undefined)
     }
 
     // After clearSession, clear active tracking and re-register worktree sessions
@@ -671,6 +686,7 @@ export class AgentManagerProvider implements Disposable {
     }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     this.statsPoller.skipWorktree(worktreeId)
+    this.prBridge.remove(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (shouldStopDiffPolling(worktree.path, orphaned, this.cachedDiffTarget, this.diffSessionId)) {
       this.stopDiffPolling()
@@ -1474,6 +1490,7 @@ export class AgentManagerProvider implements Disposable {
     })
 
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
+    this.prBridge.poller.setEnabled(worktrees.length > 0)
   }
 
   /** Push empty state when the folder is not a git repo or has no folder open. */
@@ -1893,6 +1910,7 @@ export class AgentManagerProvider implements Disposable {
   public dispose(): void {
     this.stopDiffPolling()
     this.statsPoller.stop()
+    this.prBridge.poller.stop()
     this.terminalManager.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()

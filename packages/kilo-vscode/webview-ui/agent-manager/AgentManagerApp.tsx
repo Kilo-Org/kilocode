@@ -34,6 +34,8 @@ import type {
   WorktreeGitStats,
   LocalGitStats,
   WorktreeState,
+  PRStatus,
+  AgentManagerPRStatusMessage,
   ManagedSessionState,
   SessionInfo,
   BranchInfo,
@@ -119,6 +121,8 @@ interface ApplyState {
 
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
+
+type SidePanel = "diff" | "pr" | null
 
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 
@@ -328,8 +332,8 @@ const AgentManagerContent: Component = () => {
   let diffRaf: number | undefined
   let pendingDiffWidth: number | undefined
 
-  // Diff panel state
-  const [diffOpen, setDiffOpen] = createSignal(false)
+  const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
+  const diffOpen = () => sidePanel() === "diff"
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
@@ -344,6 +348,9 @@ const AgentManagerContent: Component = () => {
 
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
   const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
+
+  // Per-worktree PR status data
+  const [prStatuses, setPrStatuses] = createSignal<Record<string, PRStatus | null>>({})
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
@@ -1012,9 +1019,9 @@ const AgentManagerContent: Component = () => {
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
-          setDiffOpen(true)
+          setSidePanel("diff")
         } else {
-          setDiffOpen((prev) => !prev)
+          setSidePanel((prev) => (prev === "diff" ? null : "diff"))
         }
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
@@ -1153,7 +1160,7 @@ const AgentManagerContent: Component = () => {
             setSelection(ev.worktreeId)
           }
           // Close diff/review panels — nothing to show during setup
-          setDiffOpen(false)
+          setSidePanel(null)
           setReviewActive(false)
           setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
         }
@@ -1383,6 +1390,11 @@ const AgentManagerContent: Component = () => {
         setLocalStats(ev.stats)
         setRepoBranch(ev.stats.branch)
       }
+
+      if (msg.type === "agentManager.prStatus") {
+        const ev = msg as AgentManagerPRStatusMessage
+        setPrStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev.pr }))
+      }
     })
 
     onCleanup(() => {
@@ -1458,7 +1470,7 @@ const AgentManagerContent: Component = () => {
   const openReviewTab = () => {
     const sel = selection()
     if (sel === null) return
-    setDiffOpen(false)
+    setSidePanel(null)
     setReviewOpenForContext(sel, true)
     setReviewActive(true)
   }
@@ -2327,6 +2339,34 @@ const AgentManagerContent: Component = () => {
                                   renameValue={renameValue()}
                                   closeKeybind={kb().closeWorktree ?? ""}
                                   openKeybind={kb().openWorktree ?? ""}
+                                  pr={
+                                    prStatuses()[wt.id] !== undefined
+                                      ? prStatuses()[wt.id]
+                                      : wt.prNumber
+                                        ? {
+                                            number: wt.prNumber,
+                                            title: "",
+                                            url: wt.prUrl ?? "",
+                                            state: (wt.prState ?? "open") as PRStatus["state"],
+                                            review: null,
+                                            checks: {
+                                              status: "none" as const,
+                                              total: 0,
+                                              passed: 0,
+                                              failed: 0,
+                                              pending: 0,
+                                              items: [],
+                                            },
+                                            comments: { total: 0, unresolved: 0, items: [] },
+                                            additions: 0,
+                                            deletions: 0,
+                                            files: 0,
+                                          }
+                                        : undefined
+                                  }
+                                  onOpenPR={() =>
+                                    vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id })
+                                  }
                                   onClick={() => {
                                     if (pendingDelete() === wt.id) {
                                       confirmDeleteWorktree(wt.id)
@@ -2622,10 +2662,10 @@ const AgentManagerContent: Component = () => {
                           onClick={() => {
                             if (reviewActive()) {
                               closeReviewTab()
-                              setDiffOpen(true)
+                              setSidePanel("diff")
                               return
                             }
-                            setDiffOpen((prev) => !prev)
+                            setSidePanel((prev) => (prev === "diff" ? null : "diff"))
                           }}
                           title={t("agentManager.diff.toggle")}
                         >
@@ -2752,7 +2792,7 @@ const AgentManagerContent: Component = () => {
         <Show when={!contextEmpty()}>
           {/* Chat + side diff panel (hidden when review tab is active) */}
           <div
-            class={`am-detail-content ${diffOpen() ? "am-detail-split" : ""}`}
+            class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""}`}
             style={{ display: reviewActive() ? "none" : undefined }}
           >
             <div class="am-chat-wrapper">
@@ -2810,7 +2850,7 @@ const AgentManagerContent: Component = () => {
                 </div>
               </Show>
             </div>
-            <Show when={diffOpen()}>
+            <Show when={sidePanel() !== null}>
               <div class="am-diff-resize" style={{ width: `${diffWidth()}px` }}>
                 <ResizeHandle
                   direction="horizontal"
@@ -2829,25 +2869,27 @@ const AgentManagerContent: Component = () => {
                   }}
                 />
                 <div class="am-diff-panel-wrapper">
-                  <DiffPanel
-                    diffs={reviewDiffs()}
-                    loading={diffLoading()}
-                    loadingFiles={diffFileLoadingForCurrent()}
-                    sessionId={currentDiffSessionId()}
-                    sessionKey={diffSessionKey()}
-                    diffStyle={reviewDiffStyle()}
-                    onDiffStyleChange={setSharedDiffStyle}
-                    comments={reviewComments()}
-                    onCommentsChange={setReviewCommentsForSelection}
-                    onClose={() => setDiffOpen(false)}
-                    onExpand={selection() !== null ? openReviewTab : undefined}
-                    onRequestDiff={requestDiffFile}
-                    onOpenFile={(file) => {
-                      const id = currentDiffSessionId()
-                      if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
-                      else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
-                    }}
-                  />
+                  <Show when={sidePanel() === "diff"}>
+                    <DiffPanel
+                      diffs={reviewDiffs()}
+                      loading={diffLoading()}
+                      loadingFiles={diffFileLoadingForCurrent()}
+                      sessionId={currentDiffSessionId()}
+                      sessionKey={diffSessionKey()}
+                      diffStyle={reviewDiffStyle()}
+                      onDiffStyleChange={setSharedDiffStyle}
+                      comments={reviewComments()}
+                      onCommentsChange={setReviewCommentsForSelection}
+                      onClose={() => setSidePanel(null)}
+                      onExpand={selection() !== null ? openReviewTab : undefined}
+                      onRequestDiff={requestDiffFile}
+                      onOpenFile={(file) => {
+                        const id = currentDiffSessionId()
+                        if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
+                        else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
+                      }}
+                    />
+                  </Show>
                 </div>
               </div>
             </Show>

@@ -30,6 +30,58 @@ export type WorktreeDiffEntry = FileDiff & {
 }
 
 // ---------------------------------------------------------------------------
+// PR status types
+// ---------------------------------------------------------------------------
+
+export type PRState = "open" | "draft" | "merged" | "closed"
+export type ReviewDecision = "approved" | "changes_requested" | "pending"
+export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
+export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
+
+export interface PRCheck {
+  name: string
+  status: CheckStatus
+  url?: string
+  duration?: string
+}
+
+export interface PRComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  file?: string
+  line?: number
+  url?: string
+  resolved: boolean
+  createdAt?: number
+}
+
+export interface PRStatus {
+  number: number
+  title: string
+  url: string
+  state: PRState
+  review: ReviewDecision | null
+  checks: {
+    status: AggregateCheckStatus
+    total: number
+    passed: number
+    failed: number
+    pending: number
+    items: PRCheck[]
+  }
+  comments?: {
+    total: number
+    unresolved: number
+    items: PRComment[]
+  }
+  additions: number
+  deletions: number
+  files: number
+}
+
+// ---------------------------------------------------------------------------
 // Extension → Webview messages (postToWebview)
 // ---------------------------------------------------------------------------
 
@@ -175,6 +227,13 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+interface PRStatusOutMessage {
+  type: "agentManager.prStatus"
+  worktreeId: string
+  pr: PRStatus | null
+  error?: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -202,6 +261,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | PRStatusOutMessage
   | ActionOutMessage
 
 // ---------------------------------------------------------------------------
@@ -379,6 +439,16 @@ interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
 }
 
+interface RefreshPRIn {
+  type: "agentManager.refreshPR"
+  worktreeId: string
+}
+
+interface OpenPRIn {
+  type: "agentManager.openPR"
+  worktreeId: string
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -489,6 +559,8 @@ export type AgentManagerInMessage =
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn
+  | RefreshPRIn
+  | OpenPRIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
