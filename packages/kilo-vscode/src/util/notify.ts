@@ -11,15 +11,15 @@ export async function sendOsNotification(title: string, body: string): Promise<v
       // osascript -e receives the string directly; escape backslashes, quotes, and control characters for AppleScript
       const esc = (s: string) =>
         s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
-      await exec("osascript", ["-e", `display notification "${esc(body)}" with title "${esc(title)}"`]).catch(() => {
-        // osascript may not be available — fall back silently
+      await exec("osascript", ["-e", `display notification "${esc(body)}" with title "${esc(title)}"`]).catch((err) => {
+        console.log("[Kilo New] macOS notification failed:", err)
       })
       break
     }
     case "linux":
       // notify-send receives raw arguments directly, no shell escaping needed
-      await exec("notify-send", [title, body]).catch(() => {
-        // notify-send may not be installed — fall back silently
+      await exec("notify-send", [title, body]).catch((err) => {
+        console.log("[Kilo New] Linux notification failed:", err)
       })
       break
     case "win32": {
@@ -39,8 +39,8 @@ export async function sendOsNotification(title: string, body: string): Promise<v
           `$textNodes.Item(1).AppendChild($xml.CreateTextNode($b)) > $null; ` +
           `$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); ` +
           `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Kilo Code").Show($toast)`,
-      ]).catch(() => {
-        // PowerShell may not be available — fall back silently
+      ]).catch((err) => {
+        console.log("[Kilo New] Windows notification failed:", err)
       })
       break
     }

@@ -138,25 +138,28 @@ export async function playSound(soundId: SoundID): Promise<void> {
     case "darwin":
       try {
         await exec("afplay", [filePath])
-      } catch {
+      } catch (err) {
+        console.log("[Kilo New] afplay failed, trying play:", err)
         try {
           await exec("play", [filePath])
-        } catch {
-          // No audio
+        } catch (err2) {
+          console.log("[Kilo New] Sound playback failed:", err2)
         }
       }
       break
     case "linux":
       try {
         await exec("/usr/bin/aplay", ["-f", "CD", filePath])
-      } catch {
+      } catch (err) {
+        console.log("[Kilo New] aplay failed, trying paplay:", err)
         try {
           await exec("paplay", [filePath])
-        } catch {
+        } catch (err2) {
+          console.log("[Kilo New] paplay failed, trying play:", err2)
           try {
             await exec("play", [filePath])
-          } catch {
-            // No audio
+          } catch (err3) {
+            console.log("[Kilo New] Sound playback failed:", err3)
           }
         }
       }
@@ -169,8 +172,8 @@ export async function playSound(soundId: SoundID): Promise<void> {
           "-Command",
           `$path = '${safePath}'; $s = New-Object System.Media.SoundPlayer($path); $s.PlaySync(); $s.Dispose()`,
         ])
-      } catch {
-        // No audio
+      } catch (err) {
+        console.log("[Kilo New] Windows sound playback failed:", err)
       }
       break
   }
