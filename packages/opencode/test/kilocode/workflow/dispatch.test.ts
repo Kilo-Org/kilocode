@@ -2,7 +2,7 @@ import { describe, it, expect, mock, beforeEach } from "bun:test"
 import { PlanTask, PlanChallenge, ReviewVerdict, ReviewFinding } from "@/devilcode/workflow/types"
 
 // Mock the AI SDK generateObject
-const mockGenerateObject = mock(() =>
+const mockGenerateObject = mock((..._args: any[]): any =>
   Promise.resolve({
     object: [],
   }),

@@ -213,7 +213,7 @@ describe("TeamConfig cross-field validation", () => {
 
 describe("EffortLevel", () => {
   test("accepts all valid effort levels", () => {
-    for (const level of ["max", "xhigh", "high", "medium", "low", "default"]) {
+    for (const level of ["max", "xhigh", "high", "medium", "low", "default"] as const) {
       expect(EffortLevel.parse(level)).toBe(level)
     }
   })

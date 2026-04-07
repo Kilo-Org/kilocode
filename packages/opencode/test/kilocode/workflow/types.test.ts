@@ -11,7 +11,7 @@ import {
 
 describe("WorkflowStage", () => {
   test("accepts all valid stages", () => {
-    for (const stage of ["plan", "challenge", "build", "review", "ship", "retro"]) {
+    for (const stage of ["plan", "challenge", "contract", "build", "review", "ship", "retro"] as const) {
       expect(WorkflowStage.parse(stage)).toBe(stage)
     }
   })

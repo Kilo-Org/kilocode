@@ -3,7 +3,7 @@ import { TaskResultStatus, Escalation, TaskResult } from "@/devilcode/team/types
 
 describe("TaskResultStatus", () => {
   test("accepts valid values", () => {
-    for (const status of ["completed", "escalated", "blocked", "failed"]) {
+    for (const status of ["completed", "escalated", "blocked", "failed"] as const) {
       expect(TaskResultStatus.parse(status)).toBe(status)
     }
   })

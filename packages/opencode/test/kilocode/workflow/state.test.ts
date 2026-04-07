@@ -95,6 +95,10 @@ describe("WorkflowStateManager", () => {
       title: "Task A",
       role: "worker",
       wave: 1,
+      dependsOn: [],
+      estimatedComplexity: "low" as const,
+      files: [],
+      verification: [],
       description: "First task",
     })
     await manager.writePlan("01-auth", {
@@ -102,6 +106,10 @@ describe("WorkflowStateManager", () => {
       title: "Task B",
       role: "senior",
       wave: 1,
+      dependsOn: [],
+      estimatedComplexity: "medium" as const,
+      files: [],
+      verification: [],
       description: "Second task",
     })
     const plans = await manager.readAllPlans("01-auth")
