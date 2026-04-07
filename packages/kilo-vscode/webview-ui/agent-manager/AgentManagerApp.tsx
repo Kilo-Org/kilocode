@@ -1084,6 +1084,23 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
+    // kilocode_change start: forward file:line and symbol link clicks from markdown to the extension
+    const fileLinkHandler = (e: Event) => {
+      const { file, line } = (e as CustomEvent<{ file: string; line?: number }>).detail
+      vscode.postMessage({ type: "openFile", filePath: file, line })
+    }
+    const symbolLinkHandler = (e: Event) => {
+      const { symbol } = (e as CustomEvent<{ symbol: string }>).detail
+      vscode.postMessage({ type: "openSymbol", symbol })
+    }
+    document.addEventListener("kilo:openFileAtLine", fileLinkHandler)
+    document.addEventListener("kilo:openSymbol", symbolLinkHandler)
+    onCleanup(() => {
+      document.removeEventListener("kilo:openFileAtLine", fileLinkHandler)
+      document.removeEventListener("kilo:openSymbol", symbolLinkHandler)
+    })
+    // kilocode_change end
+
     // When a session is created, add it as a local tab. This handles both direct
     // creation from the prompt input and backend-created follow-up sessions (plan
     // follow-up "Start new session"). Guard against duplicates (HTTP + SSE can both fire).

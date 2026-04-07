@@ -405,9 +405,9 @@ export class AgentManagerProvider implements Disposable {
     }
 
     // kilocode_change start: handle symbol navigation from chat markdown links
-    if (m.type === "openSymbol" && m.symbol) {
-      openSymbol(m.symbol)
-      return null
+    if ((m as { type: string; symbol?: string }).type === "openSymbol") {
+      const sym = (m as { symbol?: string }).symbol
+      if (sym) { openSymbol(sym); return null }
     }
     // kilocode_change end
 
