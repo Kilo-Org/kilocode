@@ -1,6 +1,7 @@
 // packages/opencode/src/devilcode/workflow-tui/task-panel.tsx
 import { For, Show, createMemo } from "solid-js"
 import { TextAttributes } from "@opentui/core"
+import { useKeyboard } from "@opentui/solid"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "./context"
 import { taskStatusIcon } from "./types"
@@ -11,6 +12,33 @@ export function TaskPanel() {
   const wf = useWorkflow()
 
   const waves = createMemo(() => groupByWave(wf.plans))
+
+  const flatTaskIds = createMemo(() => {
+    const ids: string[] = []
+    for (const [, tasks] of waves()) {
+      for (const task of tasks) {
+        ids.push(task.id)
+      }
+    }
+    return ids
+  })
+
+  useKeyboard((evt) => {
+    const ids = flatTaskIds()
+    if (ids.length === 0) return
+    if (evt.name === "up" || evt.name === "k") {
+      evt.preventDefault()
+      const currentIndex = ids.indexOf(wf.selectedTask ?? "")
+      const nextIndex = currentIndex <= 0 ? ids.length - 1 : currentIndex - 1
+      wf.selectTask(ids[nextIndex]!)
+    }
+    if (evt.name === "down" || evt.name === "j") {
+      evt.preventDefault()
+      const currentIndex = ids.indexOf(wf.selectedTask ?? "")
+      const nextIndex = currentIndex < 0 || currentIndex >= ids.length - 1 ? 0 : currentIndex + 1
+      wf.selectTask(ids[nextIndex]!)
+    }
+  })
 
   const completedCount = createMemo(() => {
     const active = wf.state?.activeTasks ?? []
@@ -26,7 +54,7 @@ export function TaskPanel() {
       paddingLeft={2}
       paddingRight={1}
     >
-      <text fg={theme.text} attributes={TextAttributes.BOLD}>
+      <text fg={theme.primary} attributes={TextAttributes.BOLD}>
         TASKS
       </text>
       <text fg={theme.border}>{"─".repeat(28)}</text>
