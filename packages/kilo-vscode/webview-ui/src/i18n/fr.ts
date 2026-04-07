@@ -787,6 +787,16 @@ export const dict = {
   "provider.custom.headers.value.placeholder": "value",
   "provider.custom.headers.remove": "Supprimer l'en-tête",
   "provider.custom.headers.add": "Ajouter un en-tête",
+  "provider.custom.extraBody.label": "Extra body properties (optional)",
+  "provider.custom.extraBody.description":
+    "Additional properties to include in the request body (e.g. reasoning_effort, enable_thinking). Values are parsed as JSON.",
+  "provider.custom.extraBody.key.label": "Key",
+  "provider.custom.extraBody.key.placeholder": "reasoning_effort",
+  "provider.custom.extraBody.value.label": "Value",
+  "provider.custom.extraBody.value.placeholder": '"high"',
+  "provider.custom.extraBody.remove": "Remove property",
+  "provider.custom.extraBody.add": "Add property",
+  "provider.custom.error.extraBody.invalidJSON": "Invalid JSON value",
   "provider.custom.error.providerID.required": "L'ID du fournisseur est requis",
   "provider.custom.error.providerID.format":
     "Utilisez des lettres minuscules, des chiffres, des tirets ou des underscores",

@@ -784,6 +784,15 @@ export namespace ProviderTransform {
       }
     }
 
+    if (input.model.api.npm === "@ai-sdk/openai-compatible" && input.providerOptions?.["extraBody"]) {
+      const body = input.providerOptions["extraBody"]
+      if (typeof body === "object" && body !== null && !Array.isArray(body)) {
+        for (const [key, value] of Object.entries(body)) {
+          result[key] = value
+        }
+      }
+    }
+
     if (input.model.providerID === "openai" || input.providerOptions?.setCacheKey) {
       result["promptCacheKey"] = input.sessionID
     }

@@ -25,6 +25,7 @@ export const CustomProviderConfigSchema = z
             message: INVALID_BASE_URL,
           }),
         headers: z.record(z.string().trim().min(1), z.string().trim().min(1)).optional(),
+        extraBody: z.record(z.string().trim().min(1), z.unknown()).optional(),
       })
       .strict(),
     models: z
@@ -47,6 +48,7 @@ export type SanitizedProviderConfig = {
   options: {
     baseURL: string
     headers?: Record<string, string>
+    extraBody?: Record<string, unknown>
   }
   models: Record<string, { name: string }>
 }
@@ -105,6 +107,14 @@ export function normalizeCustomProviderConfig(
       )
     : undefined
 
+  const extraBody = config.options.extraBody
+    ? Object.fromEntries(
+        Object.entries(config.options.extraBody)
+          .map(([key, value]) => [key.trim(), value] as const)
+          .filter(([key]) => key.length > 0),
+      )
+    : undefined
+
   return {
     npm: CUSTOM_PROVIDER_PACKAGE,
     name: config.name.trim(),
@@ -112,6 +122,7 @@ export function normalizeCustomProviderConfig(
     options: {
       baseURL: config.options.baseURL.trim(),
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
+      ...(extraBody && Object.keys(extraBody).length > 0 ? { extraBody } : {}),
     },
     models: Object.fromEntries(
       Object.entries(config.models).map(([id, model]) => [id.trim(), { name: model.name.trim() }]),
