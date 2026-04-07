@@ -57,13 +57,13 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return agents()
         },
         current() {
-          // kilocode_change start - fall back to first agent when current is removed (e.g. org switch)
+          // devilcode_change start - fall back to first agent when current is removed (e.g. org switch)
           const found = agents().find((x) => x.name === agentStore.current)
           if (found) return found
           const fallback = agents()[0]
           if (fallback) setAgentStore("current", fallback.name)
           return fallback
-          // kilocode_change end
+          // devilcode_change end
         },
         set(name: string) {
           if (!agents().some((x) => x.name === name))
@@ -80,7 +80,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (next < 0) next = agents().length - 1
             if (next >= agents().length) next = 0
             const value = agents()[next]
-            if (!value) return // kilocode_change - guard against empty agent list during org switch
+            if (!value) return // devilcode_change - guard against empty agent list during org switch
             setAgentStore("current", value.name)
           })
         },
@@ -128,35 +128,50 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       })
 
       const filePath = path.join(Global.Path.state, "model.json")
+      // devilcode_change start - serialize writes to prevent concurrent writeFile races on Windows
       const state = {
-        pending: false,
+        pendingBeforeReady: false,
+        writing: false,
+        queued: false,
       }
 
       function save() {
         if (!modelStore.ready) {
-          state.pending = true
+          state.pendingBeforeReady = true
           return
         }
-        state.pending = false
+        state.pendingBeforeReady = false
+        if (state.writing) {
+          state.queued = true
+          return
+        }
+        state.writing = true
         Filesystem.writeJson(filePath, {
-          model: modelStore.model, // kilocode_change
+          model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
+        }).finally(() => {
+          state.writing = false
+          if (state.queued) {
+            state.queued = false
+            save()
+          }
         })
       }
+      // devilcode_change end
 
       Filesystem.readJson(filePath)
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
-          if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // kilocode_change
+          if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // devilcode_change
           if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)
         })
         .catch(() => {})
         .finally(() => {
           setModelStore("ready", true)
-          if (state.pending) save()
+          if (state.pendingBeforeReady) save()
         })
 
       const args = useArgs()
@@ -201,7 +216,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
       const currentModel = createMemo(() => {
         const a = agent.current()
-        if (!a) return fallbackModel() // kilocode_change - guard against empty agent list
+        if (!a) return fallbackModel() // devilcode_change - guard against empty agent list
         return (
           getFirstValidModel(
             () => modelStore.model[a.name],
@@ -250,12 +265,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (next >= recent.length) next = 0
           const val = recent[next]
           if (!val) return
-          // kilocode_change start
+          // devilcode_change start
           const cur = agent.current()
           if (!cur) return
           setModelStore("model", cur.name, { ...val })
           save()
-          // kilocode_change end
+          // devilcode_change end
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = modelStore.favorite.filter((item) => isModelValid(item))
@@ -281,11 +296,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
           const next = favorites[index]
           if (!next) return
-          // kilocode_change start
+          // devilcode_change start
           const cur = agent.current()
           if (!cur) return
           setModelStore("model", cur.name, { ...next })
-          // kilocode_change end
+          // devilcode_change end
           const uniq = uniqueBy([next, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
           if (uniq.length > 10) uniq.pop()
           setModelStore(
@@ -304,11 +319,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               })
               return
             }
-            // kilocode_change start
+            // devilcode_change start
             const cur = agent.current()
             if (!cur) return
             setModelStore("model", cur.name, model)
-            // kilocode_change end
+            // devilcode_change end
             if (options?.recent) {
               const uniq = uniqueBy([model, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
               if (uniq.length > 10) uniq.pop()
@@ -317,7 +332,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
                 uniq.map((x) => ({ providerID: x.providerID, modelID: x.modelID })),
               )
             }
-            save() // kilocode_change
+            save() // devilcode_change
           })
         },
         toggleFavorite(model: { providerID: string; modelID: string }) {
@@ -404,7 +419,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     // Automatically update model when agent changes
     createEffect(() => {
       const value = agent.current()
-      if (!value) return // kilocode_change - guard against empty agent list during org switch
+      if (!value) return // devilcode_change - guard against empty agent list during org switch
       if (value.model) {
         if (isModelValid(value.model))
           model.set({
