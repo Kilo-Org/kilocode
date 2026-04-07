@@ -329,12 +329,12 @@
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.historyButtonClicked",
+          "command": "kilo-code.new.agentManagerOpen",
           "group": "navigation@1",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.agentManagerOpen",
+          "command": "kilo-code.new.historyButtonClicked",
           "group": "navigation@2",
           "when": "view == kilo-code.SidebarProvider"
         },
