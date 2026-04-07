@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 // Tests for per-agent model persistence in local.tsx (model.json read/write)
 //
 // NOTE: Bun test uses solid-js/dist/server.js (SSR build) where createMemo
@@ -159,6 +159,7 @@ function runInRoot(): { local: any; dispose: () => void } {
 async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<{ local: any; dispose: () => void }> {
   if (options?.prewrite) {
     await fs.writeFile(modelJsonPath, JSON.stringify(options.prewrite))
+    await Bun.sleep(20)
   }
 
   if (!capturedInit) throw new Error("capturedInit not set — mock.module for helper failed")
@@ -176,8 +177,19 @@ async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<
 }
 
 async function readModelJson(): Promise<any> {
-  const text = await fs.readFile(modelJsonPath, "utf-8")
-  return JSON.parse(text)
+  // Retry a few times to handle filesystem write races on Windows
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const text = await fs.readFile(modelJsonPath, "utf-8")
+      return JSON.parse(text)
+    } catch (e) {
+      if (attempt < 4) {
+        await Bun.sleep(30)
+        continue
+      }
+      throw e
+    }
+  }
 }
 
 async function removeModelJson() {
