@@ -43,7 +43,7 @@ Yes — the context progress graph (also known as the task timeline) is now avai
 - **Context window progress** — a three-segment bar showing used, reserved, and available tokens, with a visual indicator when usage exceeds 50%
 - **Token breakdown** — input, output, cache writes, and cache reads display
 
-You can expand or collapse the graph — your preference is saved in localStorage.
+You can expand or collapse the graph — your preference is saved in the `kilo-code.new.showTaskTimeline` setting.
 
 ### I like to closely monitor and approve the behavior of the agent. How can I do that better in the new version?
 
