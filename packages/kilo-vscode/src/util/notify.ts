@@ -16,7 +16,7 @@ export async function sendOsNotification(title: string, body: string): Promise<v
       try {
         const extensionUri = vscode.extensions.getExtension(`kilocode.kilo-code`)!.extensionUri
         const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "kilo.png").fsPath
-        await exec("terminal-notifier", ["-message", esc(body), "-title", esc(title), "-appIcon", iconPath])
+        await exec("terminal-notifier", ["-message", body, "-title", title, "-appIcon", iconPath])
         break
       } catch {
         // Fall back to osascript if terminal-notifier fails
