@@ -1,4 +1,5 @@
 import * as os from "os"
+import * as vscode from "vscode"
 import { exec } from "./process"
 
 /**
@@ -8,9 +9,20 @@ import { exec } from "./process"
 export async function sendOsNotification(title: string, body: string): Promise<void> {
   switch (os.platform()) {
     case "darwin": {
-      // osascript -e receives the string directly; escape backslashes, quotes, and control characters for AppleScript
       const esc = (s: string) =>
         s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+
+      // Try terminal-notifier first for richer notifications
+      try {
+        const extensionUri = vscode.extensions.getExtension(`kilocode.kilo-code`)!.extensionUri
+        const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "kilo.png").fsPath
+        await exec("terminal-notifier", ["-message", esc(body), "-title", esc(title), "-appIcon", iconPath])
+        break
+      } catch {
+        // Fall back to osascript if terminal-notifier fails
+      }
+
+      // Fallback to osascript
       await exec("osascript", ["-e", `display notification "${esc(body)}" with title "${esc(title)}"`]).catch((err) => {
         console.log("[Kilo New] macOS notification failed:", err)
       })
