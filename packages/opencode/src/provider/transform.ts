@@ -143,6 +143,11 @@ export namespace ProviderTransform {
           const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
           const reasoningText = reasoningParts.map((part: any) => part.text).join("")
 
+          // kilocode_change - extract encrypted_content from reasoning parts for round-trip
+          const encrypted = reasoningParts
+            .map((part: any) => part.providerOptions?.openaiCompatible?.encrypted_content)
+            .find(Boolean)
+
           // Filter out reasoning parts from content
           const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
 
@@ -156,6 +161,8 @@ export namespace ProviderTransform {
                 openaiCompatible: {
                   ...(msg.providerOptions as any)?.openaiCompatible,
                   [field]: reasoningText,
+                  // kilocode_change - preserve encrypted_content for Dola Seed 2.0 and similar models
+                  ...(encrypted ? { encrypted_content: encrypted } : {}),
                 },
               },
             }

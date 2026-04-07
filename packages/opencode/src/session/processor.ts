@@ -37,6 +37,7 @@ export namespace SessionProcessor {
     let attempt = 0
     let needsCompaction = false
     let stepStart = 0 // kilocode_change
+    const stepReasoning = new Set<string>() // kilocode_change — track reasoning parts per step
 
     const result = {
       get message() {
@@ -78,6 +79,7 @@ export namespace SessionProcessor {
                     metadata: value.providerMetadata,
                   }
                   reasoningMap[value.id] = reasoningPart
+                  stepReasoning.add(reasoningPart.id) // kilocode_change
                   await Session.updatePart(reasoningPart)
                   break
 
@@ -259,6 +261,7 @@ export namespace SessionProcessor {
 
                 case "start-step":
                   stepStart = performance.now() // kilocode_change
+                  stepReasoning.clear() // kilocode_change
                   snapshot = await Snapshot.track()
                   await Session.updatePart({
                     id: Identifier.ascending("part"),
@@ -309,6 +312,25 @@ export namespace SessionProcessor {
                     cost: usage.cost,
                   })
                   await Session.updateMessage(input.assistantMessage)
+                  // kilocode_change start — attach encrypted_content to this step's reasoning parts
+                  const encrypted = (value.providerMetadata?.openaiCompatible as Record<string, unknown>)
+                    ?.encrypted_content as string | undefined
+                  if (encrypted && stepReasoning.size > 0) {
+                    const allParts = await MessageV2.parts(input.assistantMessage.id)
+                    for (const part of allParts) {
+                      if (part.type === "reasoning" && stepReasoning.has(part.id)) {
+                        part.metadata = {
+                          ...part.metadata,
+                          openaiCompatible: {
+                            ...(part.metadata?.openaiCompatible as Record<string, unknown>),
+                            encrypted_content: encrypted,
+                          },
+                        }
+                        await Session.updatePart(part)
+                      }
+                    }
+                  }
+                  // kilocode_change end
                   if (snapshot) {
                     const patch = await Snapshot.patch(snapshot)
                     if (patch.files.length) {

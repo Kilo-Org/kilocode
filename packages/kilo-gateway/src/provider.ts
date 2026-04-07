@@ -1,11 +1,45 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import { createOpenAICompatible, type MetadataExtractor } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+
+/**
+ * Creates a MetadataExtractor that captures `encrypted_content` from
+ * OpenAI-compatible API responses (e.g. Dola Seed 2.0) and surfaces it
+ * as providerMetadata so it can be round-tripped in subsequent requests.
+ */
+function encryptedContentExtractor(): MetadataExtractor {
+  return {
+    async extractMetadata({ parsedBody }) {
+      const body = parsedBody as {
+        choices?: Array<{ message?: { encrypted_content?: string } }>
+      }
+      const encrypted = body?.choices?.[0]?.message?.encrypted_content
+      if (!encrypted) return undefined
+      return { openaiCompatible: { encrypted_content: encrypted } }
+    },
+    createStreamExtractor() {
+      let encrypted = ""
+      return {
+        processChunk(chunk: unknown) {
+          const c = chunk as {
+            choices?: Array<{ delta?: { encrypted_content?: string } }>
+          }
+          const value = c?.choices?.[0]?.delta?.encrypted_content
+          if (value) encrypted += value
+        },
+        buildMetadata() {
+          if (!encrypted) return undefined
+          return { openaiCompatible: { encrypted_content: encrypted } }
+        },
+      }
+    },
+  }
+}
 
 /**
  * Create a KiloCode provider instance
@@ -78,7 +112,11 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openrouter = createOpenRouter(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
   const openai = createOpenAI(sdkOptions)
-  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
+  const openaiCompatible = createOpenAICompatible({
+    ...sdkOptions,
+    name: "openaiCompatible",
+    metadataExtractor: encryptedContentExtractor(),
+  })
 
   return {
     languageModel(modelId) {
