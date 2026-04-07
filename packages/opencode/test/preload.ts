@@ -16,10 +16,14 @@ afterAll(async () => {
     typeof error === "object" && error !== null && "code" in error && error.code === "EBUSY"
   const rm = async (left: number): Promise<void> => {
     Bun.gc(true)
-    await sleep(100)
+    await sleep(200)
     return fs.rm(dir, { recursive: true, force: true }).catch((error) => {
       if (!busy(error)) throw error
-      if (left <= 1) throw error
+      if (left <= 1) {
+        // On Windows, git/bun processes may hold handles longer than expected.
+        // Swallow the final EBUSY to avoid flaky test failures from cleanup.
+        return
+      }
       return rm(left - 1)
     })
   }
@@ -39,11 +43,11 @@ process.env["OPENCODE_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtur
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills
 const testHome = path.join(dir, "home")
 await fs.mkdir(testHome, { recursive: true })
-process.env["KILO_TEST_HOME"] = testHome
+process.env["DEVIL_TEST_HOME"] = testHome
 
 // Set test managed config directory to isolate tests from system managed settings
 const testManagedConfigDir = path.join(dir, "managed")
-process.env["KILO_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
+process.env["DEVIL_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
 const cacheDir = path.join(dir, "cache", "opencode")

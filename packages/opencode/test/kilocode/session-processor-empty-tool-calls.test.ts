@@ -59,7 +59,7 @@ describe("session processor empty tool-calls", () => {
     const { Identifier } = await import("../../src/id/id")
     const { MessageV2 } = await import("../../src/session/message-v2")
 
-    await using tmp = await tmpdir({ git: true })
+    await using tmp = await tmpdir({ git: true, config: { snapshot: false } })
 
     await Instance.provide({
       directory: tmp.path,
@@ -92,20 +92,26 @@ describe("session processor empty tool-calls", () => {
           sessionID: session.id,
         })) as MessageV2.Assistant
 
-        // Stream with finish_reason "tool-calls" but zero tool events
-        const llm = spyOn(LLM, "stream").mockResolvedValueOnce(
-          stream([
-            { type: "start" },
-            { type: "start-step" },
-            {
-              type: "finish-step",
-              finishReason: "tool-calls",
-              usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
-              providerMetadata: undefined,
-            },
-            { type: "finish" },
-          ]),
-        )
+        // Stream with finish_reason "tool-calls" but zero tool events.
+        // Use mockImplementation instead of mockResolvedValueOnce to avoid
+        // cross-file spy interference when Bun runs test files in parallel.
+        const streamEvents = [
+          { type: "start" },
+          { type: "start-step" },
+          {
+            type: "finish-step",
+            finishReason: "tool-calls",
+            usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
+            providerMetadata: undefined,
+          },
+          { type: "finish" },
+        ]
+        let llmCalled = false
+        const llm = spyOn(LLM, "stream").mockImplementation(async () => {
+          if (llmCalled) throw new Error("unexpected second LLM call")
+          llmCalled = true
+          return stream(streamEvents)
+        })
 
         const processor = SessionProcessor.create({
           assistantMessage: assistant,
@@ -145,7 +151,7 @@ describe("session processor empty tool-calls", () => {
     const { Identifier } = await import("../../src/id/id")
     const { MessageV2 } = await import("../../src/session/message-v2")
 
-    await using tmp = await tmpdir({ git: true })
+    await using tmp = await tmpdir({ git: true, config: { snapshot: false } })
 
     await Instance.provide({
       directory: tmp.path,
@@ -178,21 +184,26 @@ describe("session processor empty tool-calls", () => {
           sessionID: session.id,
         })) as MessageV2.Assistant
 
-        // Stream with finish_reason "tool-calls" AND a tool-input-start event
-        const llm = spyOn(LLM, "stream").mockResolvedValueOnce(
-          stream([
-            { type: "start" },
-            { type: "start-step" },
-            { type: "tool-input-start", id: "call_1", toolName: "test_tool" },
-            {
-              type: "finish-step",
-              finishReason: "tool-calls",
-              usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
-              providerMetadata: undefined,
-            },
-            { type: "finish" },
-          ]),
-        )
+        // Stream with finish_reason "tool-calls" AND a tool-input-start event.
+        // Use mockImplementation to avoid cross-file spy interference.
+        const streamEvents = [
+          { type: "start" },
+          { type: "start-step" },
+          { type: "tool-input-start", id: "call_1", toolName: "test_tool" },
+          {
+            type: "finish-step",
+            finishReason: "tool-calls",
+            usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
+            providerMetadata: undefined,
+          },
+          { type: "finish" },
+        ]
+        let llmCalled = false
+        const llm = spyOn(LLM, "stream").mockImplementation(async () => {
+          if (llmCalled) throw new Error("unexpected second LLM call")
+          llmCalled = true
+          return stream(streamEvents)
+        })
 
         const processor = SessionProcessor.create({
           assistantMessage: assistant,
