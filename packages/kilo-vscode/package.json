@@ -602,12 +602,14 @@
       {
         "command": "kilo-code.new.cycleAgentMode",
         "key": "ctrl+.",
-        "mac": "cmd+."
+        "mac": "cmd+.",
+        "when": "focusedView == 'kilo-code.SidebarProvider' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
-        "mac": "cmd+shift+."
+        "mac": "cmd+shift+.",
+        "when": "focusedView == 'kilo-code.SidebarProvider' || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
