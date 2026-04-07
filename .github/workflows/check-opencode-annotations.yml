@@ -26,7 +26,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           if [ -n "$BASE_SHA" ]; then
-            bun run script/check-opencode-annotations.ts --base "$BASE_SHA"
+            bun ./script/check-opencode-annotations.ts --base "$BASE_SHA"
           else
             echo "No PR base SHA available (workflow_dispatch without PR context) — skipping."
           fi
