@@ -2580,6 +2580,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       for (const ext of exts) {
         const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**")
         for (const uri of uris) {
+          // Guard: skip files whose path doesn't match the expected extension
+          if (!uri.fsPath.toLowerCase().endsWith(`.${ext}`)) continue
           try {
             const bytes = await vscode.workspace.fs.readFile(uri)
             const text = new TextDecoder().decode(bytes)
@@ -2622,16 +2624,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
 
       // Phase A: same-name file, exclude documentation folders to avoid false positives
-      // (.ReadMe/ShapeEditorContext.cs snippets should not take priority over the real source file)
       const docExclude = "**/{node_modules,.ReadMe,.readme,docs,documentation,wiki,.doc}/**"
       for (const ext of exts) {
         const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, docExclude, 5)
         for (const uri of files) {
+          // Guard: skip any file whose path doesn't end with the expected extension
+          // (works around VS Code glob quirks on Windows that may return wrong files)
+          if (!uri.fsPath.toLowerCase().endsWith(`.${ext}`)) continue
           try {
             const bytes = await vscode.workspace.fs.readFile(uri)
             const text = new TextDecoder().decode(bytes)
             const match = declPattern.exec(text)
-            // Only accept if declaration is actually found; no fallback to position 0
             if (match) { hit = { uri, index: match.index }; break }
           } catch { /* skip */ }
         }
