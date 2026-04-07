@@ -1,14 +1,14 @@
 import * as vscode from "vscode"
-import { KiloProvider } from "./KiloProvider"
+import { DevilProvider } from "./KiloProvider"
 import { resolvePanelProjectDirectory } from "./project-directory"
-import type { KiloConnectionService } from "./services/cli-backend"
+import type { DevilConnectionService } from "./services/cli-backend"
 
 type PanelView = "settings" | "profile" | "marketplace"
 
 const PANEL_TITLES: Record<PanelView, string> = {
-  settings: "Kilo Settings",
-  profile: "Kilo Profile",
-  marketplace: "Kilo Marketplace",
+  settings: "Devil Settings",
+  profile: "Devil Profile",
+  marketplace: "Devil Marketplace",
 }
 
 /**
@@ -18,18 +18,18 @@ const PANEL_TITLES: Record<PanelView, string> = {
  * Each view type is a singleton panel — calling openPanel() again
  * reveals the existing panel instead of creating a duplicate.
  *
- * Uses a full KiloProvider under the hood so each panel has
+ * Uses a full DevilProvider under the hood so each panel has
  * the same backend connectivity (config, providers, profile, auth)
  * as the sidebar.
  */
 export class SettingsEditorProvider implements vscode.Disposable {
   private panels = new Map<PanelView, vscode.WebviewPanel>()
-  private providers = new Map<PanelView, KiloProvider>()
+  private providers = new Map<PanelView, DevilProvider>()
   private tabs = new Map<PanelView, string>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly connectionService: KiloConnectionService,
+    private readonly connectionService: DevilConnectionService,
     private readonly context: vscode.ExtensionContext,
   ) {}
 
@@ -96,9 +96,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    // Create a dedicated KiloProvider for this panel so it has full
+    // Create a dedicated DevilProvider for this panel so it has full
     // backend connectivity (config, providers, agents, profile, auth).
-    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+    const provider = new DevilProvider(this.extensionUri, this.connectionService, this.context, {
       projectDirectory,
     })
     provider.resolveWebviewPanel(panel)
@@ -114,7 +114,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // "Developer: Reload Webviews" which re-creates the JS context).
     const readyDisposable = panel.webview.onDidReceiveMessage((msg) => {
       if (msg.type === "webviewReady") {
-        // Small delay to let KiloProvider's own webviewReady handler finish first
+        // Small delay to let DevilProvider's own webviewReady handler finish first
         setTimeout(() => {
           provider.postMessage({ type: "navigate", view, tab: this.tabs.get(view) })
         }, 50)
@@ -133,7 +133,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
 
     const title = PANEL_TITLES[view]
     panel.onDidDispose(() => {
-      console.log(`[Kilo New] ${title} panel disposed`)
+      console.log(`[Devil New] ${title} panel disposed`)
       closePanelDisposable.dispose()
       readyDisposable.dispose()
       tabDisposable.dispose()

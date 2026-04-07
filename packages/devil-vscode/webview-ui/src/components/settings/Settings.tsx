@@ -1,8 +1,8 @@
 import { Component, createSignal, createEffect, on, Show } from "solid-js"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Tabs } from "@kilocode/kilo-ui/tabs"
-import { Button } from "@kilocode/kilo-ui/button"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Tabs } from "@devilcode/kilo-ui/tabs"
+import { Button } from "@devilcode/kilo-ui/button"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
@@ -20,7 +20,7 @@ import ContextTab from "./ContextTab"
 
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
-import AboutKiloCodeTab from "./AboutKiloCodeTab"
+import AboutDevilCodeTab from "./AboutKiloCodeTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
@@ -146,9 +146,9 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="speech-bubble" />
             <span class="label">{language.t("settings.language.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="aboutKiloCode">
+          <Tabs.Trigger value="aboutDevilCode">
             <Icon name="help" />
-            <span class="label">{language.t("settings.aboutKiloCode.title")}</span>
+            <span class="label">{language.t("settings.aboutDevilCode.title")}</span>
           </Tabs.Trigger>
         </Tabs.List>
 
@@ -201,9 +201,9 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.language.title")}</h3>
           <LanguageTab />
         </Tabs.Content>
-        <Tabs.Content value="aboutKiloCode">
-          <h3>{language.t("settings.aboutKiloCode.title")}</h3>
-          <AboutKiloCodeTab
+        <Tabs.Content value="aboutDevilCode">
+          <h3>{language.t("settings.aboutDevilCode.title")}</h3>
+          <AboutDevilCodeTab
             port={server.serverInfo()?.port ?? null}
             connectionState={server.connectionState()}
             extensionVersion={server.extensionVersion()}

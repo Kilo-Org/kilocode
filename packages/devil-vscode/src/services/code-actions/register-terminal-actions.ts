@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { KiloProvider } from "../../KiloProvider"
+import type { DevilProvider } from "../../KiloProvider"
 import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { createPrompt } from "./support-prompt"
 
@@ -51,7 +51,7 @@ async function getTerminalContents(commands = -1): Promise<string> {
 
 export function registerTerminalActions(
   context: vscode.ExtensionContext,
-  provider: KiloProvider,
+  provider: DevilProvider,
   agentManager?: AgentManagerProvider,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : provider)
