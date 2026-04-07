@@ -51,6 +51,7 @@ type FormState = {
   apiKey: string
   models: ModelRow[]
   headers: HeaderRow[]
+  extraBody: string
   saving: boolean
 }
 
@@ -60,6 +61,7 @@ type FormErrors = {
   baseURL: string | undefined
   models: Array<{ id?: string; name?: string }>
   headers: Array<{ key?: string; value?: string }>
+  extraBody: string | undefined
 }
 
 type FetchedModel = { id: string; name: string }
@@ -79,6 +81,7 @@ function validateCustomProvider(input: ValidateArgs) {
   const name = input.form.name.trim()
   const baseURL = input.form.baseURL.trim()
   const apiKey = input.form.apiKey.trim()
+  const raw = input.form.extraBody.trim()
 
   const env = apiKey.match(/^\{env:([^}]+)\}$/)?.[1]?.trim()
   // When editing and apiKey is empty, preserve existing env from the original config
@@ -149,20 +152,35 @@ function validateCustomProvider(input: ValidateArgs) {
       .map((h) => [h.key, h.value]),
   )
 
+  const extraBodyResult = (() => {
+    if (!raw) return { value: undefined }
+    try {
+      const parsed = JSON.parse(raw)
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
+        return { error: input.t("provider.custom.extraBody.error.invalid") }
+      return { value: parsed as Record<string, unknown> }
+    } catch {
+      return { error: input.t("provider.custom.extraBody.error.invalid") }
+    }
+  })()
+
   const errors: FormErrors = {
     providerID: idError ?? existsError,
     name: nameError,
     baseURL: urlError,
     models: modelErrors,
     headers: headerErrors,
+    extraBody: extraBodyResult.error,
   }
 
-  const ok = !idError && !existsError && !nameError && !urlError && modelsValid && headersValid
+  const ok =
+    !idError && !existsError && !nameError && !urlError && modelsValid && headersValid && !extraBodyResult.error
   if (!ok) return { errors }
 
   const options = {
     baseURL,
     ...(Object.keys(headers).length ? { headers } : {}),
+    ...(extraBodyResult.value && Object.keys(extraBodyResult.value).length ? { extraBody: extraBodyResult.value } : {}),
   }
 
   return {
@@ -220,6 +238,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     return entries.map(([key, value]) => ({ key, value }))
   }
 
+  function initExtraBody(): string {
+    const opts = props.existing?.config?.options as { extraBody?: Record<string, unknown> } | undefined
+    const body = opts?.extraBody
+    if (!body || typeof body !== "object" || Object.keys(body).length === 0) return ""
+    return JSON.stringify(body, null, 2)
+  }
+
   const auth = props.existing?.config?.env?.length
     ? undefined
     : props.existing
@@ -233,6 +258,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     apiKey: resolveCustomProviderKey(auth),
     models: initModels(),
     headers: initHeaders(),
+    extraBody: initExtraBody(),
     saving: false,
   })
 
@@ -242,6 +268,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     baseURL: undefined,
     models: form.models.map(() => ({})),
     headers: form.headers.map(() => ({})),
+    extraBody: undefined,
   })
   const [apiTouched, setApiTouched] = createSignal(false)
 
@@ -828,6 +855,42 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addHeader}>
               {language.t("provider.custom.headers.add")}
             </Button>
+          </div>
+
+          {/* Extra body */}
+          <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
+            <label style={{ "font-size": "12px", "font-weight": "500", color: "var(--text-weak-base)" }}>
+              {language.t("provider.custom.extraBody.label")}
+            </label>
+            <textarea
+              rows={4}
+              placeholder={language.t("provider.custom.extraBody.placeholder")}
+              value={form.extraBody}
+              onInput={(e) => setForm("extraBody", e.currentTarget.value)}
+              style={{
+                width: "100%",
+                "box-sizing": "border-box",
+                resize: "vertical",
+                "font-family": "var(--vscode-editor-font-family, monospace)",
+                "font-size": "12px",
+                padding: "6px 8px",
+                background: "var(--vscode-input-background)",
+                color: "var(--vscode-input-foreground)",
+                border: errors.extraBody
+                  ? "1px solid var(--vscode-inputValidation-errorBorder, #f14c4c)"
+                  : "1px solid var(--vscode-input-border, var(--border-base))",
+                "border-radius": "4px",
+                outline: "none",
+              }}
+            />
+            <Show when={errors.extraBody}>
+              {(err) => (
+                <span style={{ "font-size": "12px", color: "var(--vscode-errorForeground, #f14c4c)" }}>{err()}</span>
+              )}
+            </Show>
+            <span style={{ "font-size": "12px", color: "var(--text-weak-base, var(--vscode-descriptionForeground))" }}>
+              {language.t("provider.custom.extraBody.description")}
+            </span>
           </div>
 
           <Button type="submit" size="large" variant="primary" disabled={form.saving}>

@@ -111,4 +111,72 @@ describe("sanitizeCustomProviderConfig", () => {
 
     expect("error" in result ? result.error : "").toContain("mcpServer")
   })
+
+  it("includes extraBody in the normalized config", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "My Provider",
+      options: {
+        baseURL: "https://example.com/v1",
+        extraBody: { reasoning_effort: "high", enable_thinking: true },
+      },
+      models: { "model-1": { name: "Model One" } },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "My Provider",
+        options: {
+          baseURL: "https://example.com/v1",
+          extraBody: { reasoning_effort: "high", enable_thinking: true },
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+  })
+
+  it("omits extraBody when empty", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "My Provider",
+      options: {
+        baseURL: "https://example.com/v1",
+        extraBody: {},
+      },
+      models: { "model-1": { name: "Model One" } },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "My Provider",
+        options: {
+          baseURL: "https://example.com/v1",
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+  })
+
+  it("supports nested extraBody objects", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "My Provider",
+      options: {
+        baseURL: "https://example.com/v1",
+        extraBody: { thinking: { type: "enabled", budget_tokens: 1024 } },
+      },
+      models: { "model-1": { name: "Model One" } },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "My Provider",
+        options: {
+          baseURL: "https://example.com/v1",
+          extraBody: { thinking: { type: "enabled", budget_tokens: 1024 } },
+        },
+        models: { "model-1": { name: "Model One" } },
+      },
+    })
+  })
 })

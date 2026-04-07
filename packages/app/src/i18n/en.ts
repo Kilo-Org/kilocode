@@ -183,6 +183,11 @@ export const dict = {
   "provider.custom.headers.value.placeholder": "value",
   "provider.custom.headers.remove": "Remove header",
   "provider.custom.headers.add": "Add header",
+  "provider.custom.extraBody.label": "Extra body properties (optional)",
+  "provider.custom.extraBody.placeholder": '{\n  "reasoning_effort": "high"\n}',
+  "provider.custom.extraBody.description":
+    "JSON object with extra properties to include in every request body (e.g. reasoning_effort, enable_thinking).",
+  "provider.custom.extraBody.error.invalid": "Must be a valid JSON object",
   "provider.custom.error.providerID.required": "Provider ID is required",
   "provider.custom.error.providerID.format": "Use lowercase letters, numbers, hyphens, or underscores",
   "provider.custom.error.providerID.exists": "That provider ID already exists",
