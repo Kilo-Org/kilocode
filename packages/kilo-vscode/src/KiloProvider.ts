@@ -2614,44 +2614,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         hit = await searchWithPattern(anyNonCommentPattern)
       }
     } else {
-      // Type declaration search — two phases:
-      //
-      // Phase A: look for a file named exactly "SymbolName.ext" (e.g. ShapeEditorContext.cs).
-      //   Classes are almost always in a same-name file; this is fast, precise, and avoids
-      //   false positives from scanning thousands of files.
-      //
-      // Phase B: global content search as fallback when no same-name file exists.
+      // Type declaration — Phase A: find a file named exactly "SymbolName.ext".
+      // Phase B: global content search fallback.
       const declPattern = new RegExp(
         `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)*(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
         "m",
       )
 
-      // Phase A: same-name file search
+      // Phase A: same-name file, exclude documentation folders to avoid false positives
+      // (.ReadMe/ShapeEditorContext.cs snippets should not take priority over the real source file)
+      const docExclude = "**/{node_modules,.ReadMe,.readme,docs,documentation,wiki,.doc}/**"
       for (const ext of exts) {
-        const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, "**/node_modules/**", 5)
+        const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, docExclude, 5)
         for (const uri of files) {
           try {
             const bytes = await vscode.workspace.fs.readFile(uri)
             const text = new TextDecoder().decode(bytes)
             const match = declPattern.exec(text)
-            // Found declaration inside the same-name file
-            if (match) {
-              hit = { uri, index: match.index }
-              break
-            }
-            // File exists but pattern not matched — open at top as fallback
-            if (!hit) hit = { uri, index: 0 }
-          } catch {
-            // skip
-          }
+            // Only accept if declaration is actually found; no fallback to position 0
+            if (match) { hit = { uri, index: match.index }; break }
+          } catch { /* skip */ }
         }
         if (hit) break
       }
 
-      // Phase B: global content search (fallback when no same-name file)
-      if (!hit) {
-        hit = await searchWithPattern(declPattern)
-      }
+      // Phase B: global content search fallback
+      if (!hit) hit = await searchWithPattern(declPattern)
     }
 
     if (hit) {
