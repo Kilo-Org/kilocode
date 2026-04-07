@@ -3,6 +3,7 @@ import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
+import { openSymbol } from "../open-symbol"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager, remoteRef } from "./WorktreeStateManager"
@@ -402,6 +403,13 @@ export class AgentManagerProvider implements Disposable {
         return null
       }
     }
+
+    // kilocode_change start: handle symbol navigation from chat markdown links
+    if (m.type === "openSymbol" && m.symbol) {
+      openSymbol(m.symbol)
+      return null
+    }
+    // kilocode_change end
 
     // Track the active session synchronously so worktree-aware file resolution
     // uses the correct session even before the session provider's async session.get completes.

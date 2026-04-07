@@ -3,6 +3,7 @@ import * as vscode from "vscode"
 import { z } from "zod"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
+import { openSymbol } from "./open-symbol"
 import type {
   KiloClient,
   Session,
@@ -647,7 +648,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // kilocode_change start: open symbol (class/method) by name via workspace symbol provider
         case "openSymbol":
           if (message.symbol) {
-            this.handleOpenSymbol(message.symbol)
+            openSymbol(message.symbol)
           }
           break
         // kilocode_change end
@@ -2525,147 +2526,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   // kilocode_change start: navigate to a symbol (class/method) by name
-  /**
-   * Cache: symbol raw text → resolved URI + position, to avoid re-scanning on repeated clicks.
-   * Cleared when the workspace changes or the extension is deactivated.
-   */
-  private readonly symbolCache = new Map<string, { uri: vscode.Uri; index: number }>()
-
-  /**
-   * Search the workspace for a symbol by name and navigate to its definition.
-   * First tries the LSP workspace symbol provider (e.g. OmniSharp, tsserver).
-   * Falls back to a regex content search across workspace files when LSP is
-   * unavailable (common in Unity / non-LSP projects).
-   * Strips trailing "()" so both "BuildFrame" and "BuildFrame()" resolve correctly.
-   */
-  private async handleOpenSymbol(rawSymbol: string): Promise<void> {
-    const symbol = rawSymbol.replace(/\(\)$/, "").split(".").pop() ?? rawSymbol
-    const isMethod = rawSymbol.endsWith("()")
-
-    // Phase 1: try the workspace symbol provider (requires an active LSP)
-    try {
-      const results = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
-        "vscode.executeWorkspaceSymbolProvider",
-        symbol,
-      )
-      if (results && results.length > 0) {
-        const exact = results.find((s) => s.name === symbol || s.name === rawSymbol.replace(/\(\)$/, ""))
-        const target = exact ?? results[0]
-        const doc = await vscode.workspace.openTextDocument(target.location.uri)
-        await vscode.window.showTextDocument(doc, { selection: target.location.range, preview: true })
-        return
-      }
-    } catch {
-      // LSP unavailable — fall through to content search
-    }
-
-    // Phase 2: content search with two-tier matching
-    // Return cached result immediately if available
-    const cached = this.symbolCache.get(rawSymbol)
-    if (cached) {
-      const doc = await vscode.workspace.openTextDocument(cached.uri)
-      const pos = doc.positionAt(cached.index)
-      await vscode.window.showTextDocument(doc, { selection: new vscode.Range(pos, pos), preview: true })
-      return
-    }
-
-    const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    // No file count cap — sequential reads are memory-safe (one file at a time).
-    // The previous Promise.all approach was the cause of memory spikes, not the file count.
-    const exts = ["cs", "ts", "tsx", "js", "jsx", "mts", "py", "go", "rs", "cpp", "java", "kt", "swift"]
-
-    type Hit = { uri: vscode.Uri; index: number }
-
-    const searchWithPattern = async (pattern: RegExp): Promise<Hit | undefined> => {
-      for (const ext of exts) {
-        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**")
-        for (const uri of uris) {
-          // Guard: skip files whose path doesn't match the expected extension
-          if (!uri.fsPath.toLowerCase().endsWith(`.${ext}`)) continue
-          try {
-            const bytes = await vscode.workspace.fs.readFile(uri)
-            const text = new TextDecoder().decode(bytes)
-            const match = pattern.exec(text)
-            if (match) return { uri, index: match.index }
-          } catch {
-            // skip unreadable files
-          }
-        }
-      }
-      return undefined
-    }
-
-    let hit: Hit | undefined
-
-    if (isMethod) {
-      // Tier 1: declaration — line starts with access modifiers (not a comment or plain call)
-      // Matches: "    public static void BuildFrame("
-      // Skips:   "    // BuildFrame(" and "    BuildFrame();"
-      const declPattern = new RegExp(
-        `^[ \\t]*(?![ \\t]*//)(?:(?:public|private|protected|internal|static|virtual|override|abstract|async|sealed|unsafe|partial|new|extern)[ \\t]+)+[^\\n]*\\b${esc}\\s*\\(`,
-        "m",
-      )
-      hit = await searchWithPattern(declPattern)
-
-      // Tier 2: any occurrence that isn't on a pure comment line
-      if (!hit) {
-        const anyNonCommentPattern = new RegExp(
-          `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:[^\\n]*)\\b${esc}\\s*\\(`,
-          "m",
-        )
-        hit = await searchWithPattern(anyNonCommentPattern)
-      }
-    } else {
-      // Type declaration — Phase A: find a file named exactly "SymbolName.ext".
-      // Phase B: global content search fallback.
-      const declPattern = new RegExp(
-        `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)*(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
-        "m",
-      )
-
-      // Phase A: same-name file, exclude documentation folders to avoid false positives
-      const docExclude = "**/{node_modules,.ReadMe,.readme,docs,documentation,wiki,.doc}/**"
-      for (const ext of exts) {
-        const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, docExclude, 5)
-        for (const uri of files) {
-          // Guard: skip any file whose path doesn't end with the expected extension
-          // (works around VS Code glob quirks on Windows that may return wrong files)
-          if (!uri.fsPath.toLowerCase().endsWith(`.${ext}`)) continue
-          try {
-            const bytes = await vscode.workspace.fs.readFile(uri)
-            const text = new TextDecoder().decode(bytes)
-            const match = declPattern.exec(text)
-            if (match) { hit = { uri, index: match.index }; break }
-          } catch { /* skip */ }
-        }
-        if (hit) break
-      }
-
-      // Phase B: global content search fallback
-      if (!hit) hit = await searchWithPattern(declPattern)
-    }
-
-    if (hit) {
-      const doc = await vscode.workspace.openTextDocument(hit.uri)
-      const pos = doc.positionAt(hit.index)
-      await vscode.window.showTextDocument(doc, {
-        selection: new vscode.Range(pos, pos),
-        preview: false,    // open in persistent tab so it doesn't get replaced
-        preserveFocus: false, // focus the editor so user sees the jump
-      })
-      // Cache so repeated clicks are instant
-      this.symbolCache.set(rawSymbol, hit)
-      return
-    }
-
-    // Show which files were searched so the user can diagnose missing results
-    const searched = exts.map((e) => `*.${e}`).join(", ")
-    vscode.window.showInformationMessage(
-      `Symbol not found: ${rawSymbol} (searched ${searched} in workspace)`,
-    )
-  }
-  // kilocode_change end
-
   /**
    * Handle a generic setting update from the webview.
    * The key uses dot notation relative to `kilo-code.new` (e.g. "browserAutomation.enabled").
