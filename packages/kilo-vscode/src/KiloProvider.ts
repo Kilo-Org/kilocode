@@ -3200,7 +3200,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.busySessions.add(sid)
       } else if (status === "idle" && this.busySessions.has(sid) && this.trackedSessionIds.has(sid)) {
         this.busySessions.delete(sid)
-        this.notifyIfNotFocused("agent", "Agent task completed")
+        if (this.connectionService.shouldNotify(sid, "session.status:idle"))
+          this.notifyIfNotFocused("agent", "Agent task completed")
       }
       const msg = mapSSEEventToWebviewMessage(event, sid)
       if (msg) {
@@ -3286,15 +3287,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // OS notifications for events that need user attention
-    if (event.type === "permission.asked") {
+    if (
+      event.type === "permission.asked" &&
+      sessionID &&
+      this.connectionService.shouldNotify(sessionID, "permission.asked")
+    ) {
       const tool = event.properties.permission ?? event.properties.tool ?? "tool"
       this.notifyIfNotFocused("permissions", `Permission required: ${tool}`)
     }
-    if (event.type === "question.asked") {
+    if (
+      event.type === "question.asked" &&
+      sessionID &&
+      this.connectionService.shouldNotify(sessionID, "question.asked")
+    ) {
       const questions = event.properties.questions as Array<{ question: string }> | undefined
       this.notifyIfNotFocused("permissions", "Agent Question", questions?.[0]?.question)
     }
-    if (event.type === "session.error") {
+    if (
+      event.type === "session.error" &&
+      sessionID &&
+      this.connectionService.shouldNotify(sessionID, "session.error")
+    ) {
       const err = event.properties.error as { message?: string } | undefined
       this.notifyIfNotFocused("errors", `Session error: ${err?.message ?? "Unknown error"}`)
     }

@@ -84,6 +84,7 @@ export class KiloConnectionService {
    * Used primarily for message.part.updated where only messageID may be present.
    */
   private readonly messageSessionIdsByMessageId: Map<string, string> = new Map()
+  private readonly notifiedEvents: Set<string> = new Set()
 
   /** Provider key → single focused session ID. */
   private readonly focused: Map<string, string> = new Map()
@@ -243,6 +244,21 @@ export class KiloConnectionService {
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
       (messageId, sessionId) => this.recordMessageSessionId(messageId, sessionId),
     )
+  }
+
+  /**
+   * Check-and-mark deduplication for OS notifications.
+   * Returns true the first time a given sessionID + eventType combination is seen,
+   * and false for all subsequent calls until the entry expires (TTL).
+   * This prevents multiple KiloProvider instances from emitting duplicate
+   * OS notifications for the same backend event.
+   */
+  shouldNotify(sessionID: string, eventType: string): boolean {
+    const key = `${sessionID}:${eventType}`
+    if (this.notifiedEvents.has(key)) return false
+    this.notifiedEvents.add(key)
+    setTimeout(() => this.notifiedEvents.delete(key), 5_000)
+    return true
   }
 
   /**
