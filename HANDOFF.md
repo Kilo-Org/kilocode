@@ -54,29 +54,49 @@ session/prompt.ts    — Workflow context injection into system prompts
 - `docs/superpowers/specs/2026-04-06-multi-model-multiplexing-design.md`
 - `docs/superpowers/plans/2026-04-06-multi-model-multiplexing.md`
 
-### Phase 2: Workflow TUI (PLANNED — not yet implemented)
+### Phase 2: Workflow TUI (DONE — all 12 tasks)
 
-Design spec and implementation plan are written and committed. 12 tasks covering a dashboard-style mission control TUI view.
+Dashboard-style mission control TUI view with split-pane layout, command input, and stage-driven execution.
 
 #### Specs & Plans
 
 - `docs/superpowers/specs/2026-04-06-workflow-tui-design.md`
 - `docs/superpowers/plans/2026-04-06-workflow-tui.md`
 
-#### What the Plan Covers
+#### Files Created
 
-1. View types (TabInfo, SessionInfo, commands)
-2. WorkflowContext provider (shared state + actions)
-3. StatusBar component (phase, stage, wave, model indicators)
-4. TaskPanel component (scrollable task list grouped by wave)
-5. TabBar + DetailPanel (tabbed content area)
-6. Tab content components (agent output, plan, challenge, review)
-7. CommandInput component (workflow> prompt with stage dispatch)
-8. Main WorkflowView route component (layout shell)
-9. Route integration (route.tsx, app.tsx changes)
-10. /team slash command registration
-11. WorkflowOrchestrator bridge
-12. End-to-end verification
+```
+packages/opencode/src/devilcode/workflow-tui/
+  types.ts              — View types (TabInfo, SessionInfo, WorkflowCommand, etc.)
+  context.tsx           — WorkflowContext provider (shared view state + actions)
+  status-bar.tsx        — Top bar: phase, stage, wave, model indicators
+  task-panel.tsx        — Left pane: scrollable task list grouped by wave
+  detail-panel.tsx      — Right pane: tab container with tab bar + content
+  command-input.tsx     — Bottom: workflow> prompt with command dispatch
+  index.tsx             — WorkflowView route component (layout shell)
+  orchestrator.ts       — Bridges view to workflow engine, manages sessions
+  tabs/
+    tab-bar.tsx         — Dynamic tab headers
+    agent-output-tab.tsx — Streaming agent session output
+    plan-tab.tsx        — Plan task viewer
+    challenge-tab.tsx   — Challenge results with concerns
+    review-tab.tsx      — Review findings with severity colors
+
+packages/opencode/src/devilcode/workflow-commands.tsx  — /team slash command registration
+```
+
+#### Files Modified (with `devilcode_change` markers)
+
+```
+packages/opencode/src/cli/cmd/tui/context/route.tsx  — WorkflowRoute added to Route union
+packages/opencode/src/cli/cmd/tui/app.tsx            — WorkflowView Match + command registration
+```
+
+#### Verification
+
+- 0 new type errors introduced (pre-existing test type errors remain)
+- All 81 team/workflow tests pass
+- Fixed OpenTUI type issue: plan spec used `attributes={{ bold: true }}` but OpenTUI expects `TextAttributes.BOLD` (number)
 
 ## How to Resume
 
