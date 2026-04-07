@@ -2,7 +2,7 @@
 // This MUST happen before static imports, but ES module imports are hoisted.
 // So we set it here and use mock.module + dynamic imports for modules that
 // transitively load flag.ts to ensure the env is captured at load time.
-process.env.KILO_SESSION_RETRY_LIMIT = "2"
+process.env.DEVIL_SESSION_RETRY_LIMIT = "2"
 
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 
@@ -68,12 +68,12 @@ function sentinel() {
 }
 
 afterEach(() => {
-  delete process.env.KILO_SESSION_RETRY_LIMIT
+  delete process.env.DEVIL_SESSION_RETRY_LIMIT
 })
 
 describe("session processor retry limit", () => {
   test("stops after two retries with the normalized retryable error", async () => {
-    // Dynamic imports so that flag.ts sees KILO_SESSION_RETRY_LIMIT="2" set above
+    // Dynamic imports so that flag.ts sees DEVIL_SESSION_RETRY_LIMIT="2" set above
     const { Bus } = await import("../../src/bus")
     const { Identifier } = await import("../../src/id/id")
     const { Instance } = await import("../../src/project/instance")
@@ -181,28 +181,28 @@ describe("session processor retry limit", () => {
   test("only positive integers enable the limit", async () => {
     const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
 
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    delete process.env.DEVIL_SESSION_RETRY_LIMIT
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "0"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "0"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "-1"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "-1"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "abc"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "abc"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "2"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "2"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBe(2)
   })
 
-  test("does not change after import", async () => {
-    delete process.env.KILO_SESSION_RETRY_LIMIT
+  test("reads env var dynamically at access time", async () => {
+    delete process.env.DEVIL_SESSION_RETRY_LIMIT
     const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
     const { Flag: loaded } = await import("../../src/flag/flag?" + id)
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-    process.env.KILO_SESSION_RETRY_LIMIT = "5"
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    expect(loaded.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "5"
+    expect(loaded.DEVIL_SESSION_RETRY_LIMIT).toBe(5)
   })
 })
