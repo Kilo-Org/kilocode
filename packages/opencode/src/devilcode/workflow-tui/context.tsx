@@ -2,10 +2,13 @@
 import { createContext, useContext, type ParentProps } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { onMount, onCleanup } from "solid-js"
-import type { WorkflowState, PlanTask, PlanChallenge, ReviewVerdict, WorkflowStage } from "../workflow/types"
+import type { WorkflowState, PlanTask, PlanChallenge, ReviewVerdict, WorkflowStage, TaskResult } from "../workflow/types"
 import type { TabInfo, SessionInfo } from "./types"
+import type { TeamConfig } from "../team/config"
 import { WorkflowStateManager } from "../workflow/state"
 import { Workflow } from "../workflow"
+import { SessionBridge } from "../workflow/session-bridge"
+import { getOrchestrator } from "./orchestrator"
 import { Instance } from "@/project/instance"
 
 export type WorkflowViewState = {
@@ -29,6 +32,16 @@ export type WorkflowViewState = {
   switchTab(tabId: string): void
   closeTab(tabId: string): void
   addAgentTab(info: TabInfo): void
+  startBuild(teamConfig: TeamConfig | undefined): Promise<TaskResult[]>
+  dispatchStage(
+    stage: WorkflowStage,
+    modelInfo: { providerID: string; modelID: string },
+    options?: {
+      phaseContext?: string
+      teamConfig?: TeamConfig
+      diff?: string
+    },
+  ): Promise<void>
   updateSessionOutput(sessionId: string, line: string): void
   setSessionStatus(sessionId: string, status: SessionInfo["status"]): void
   pause(): void
@@ -65,6 +78,31 @@ export function WorkflowProvider(props: ParentProps) {
     activeSessions: {},
     rootSessionId: undefined,
   })
+
+  const bridge = new SessionBridge({
+    onOutput(sessionId, taskId, line) {
+      setStore(
+        produce((s) => {
+          const session = s.activeSessions[sessionId]
+          if (session) {
+            session.output.push(line)
+          }
+        }),
+      )
+    },
+    onStatusChange(sessionId, status) {
+      setStore(
+        produce((s) => {
+          const session = s.activeSessions[sessionId]
+          if (session) {
+            session.status = status
+          }
+        }),
+      )
+    },
+  })
+
+  onCleanup(() => bridge.unwatchAll())
 
   async function refresh() {
     try {
@@ -148,6 +186,7 @@ export function WorkflowProvider(props: ParentProps) {
         setStore("executing", false)
         throw e
       }
+      setStore("executing", false)
     },
 
     selectTask(taskId: string) {
@@ -216,6 +255,128 @@ export function WorkflowProvider(props: ParentProps) {
 
     setExecuting(value: boolean) {
       setStore("executing", value)
+    },
+
+    async startBuild(teamConfig: TeamConfig | undefined) {
+      setStore("executing", true)
+      const orchestrator = getOrchestrator()
+
+      try {
+        const results = await orchestrator.executeBuild(
+          {
+            onTaskStart: (taskId, sessionId) => {
+              setStore(
+                produce((s) => {
+                  s.activeSessions[sessionId] = {
+                    sessionId,
+                    taskId,
+                    role: "worker",
+                    status: "running",
+                    output: [],
+                  }
+                }),
+              )
+              const task = store.plans.find((p) => p.id === taskId)
+              value.addAgentTab({
+                id: `agent-${taskId}`,
+                label: task?.title ?? taskId,
+                kind: "agent",
+                sessionId,
+                taskId,
+                closeable: true,
+              })
+              bridge.watch(sessionId, taskId)
+            },
+            onTaskComplete: (taskId, result) => {
+              const entry = Object.values(store.activeSessions).find(
+                (s) => s.taskId === taskId,
+              )
+              if (entry) {
+                setStore(
+                  produce((s) => {
+                    const session = s.activeSessions[entry.sessionId]
+                    if (session) {
+                      session.status = result.status === "completed" ? "completed" : "failed"
+                    }
+                  }),
+                )
+              }
+            },
+            onOutput: (taskId, sessionId, line) => {
+              setStore(
+                produce((s) => {
+                  const session = s.activeSessions[sessionId]
+                  if (session) {
+                    session.output.push(line)
+                  }
+                }),
+              )
+            },
+          },
+          teamConfig,
+        )
+
+        await refresh()
+        return results
+      } finally {
+        setStore("executing", false)
+        bridge.unwatchAll()
+      }
+    },
+
+    async dispatchStage(
+      stage: WorkflowStage,
+      modelInfo: { providerID: string; modelID: string },
+      options?: {
+        phaseContext?: string
+        teamConfig?: TeamConfig
+        diff?: string
+      },
+    ) {
+      setStore("executing", true)
+      const orchestrator = getOrchestrator()
+
+      try {
+        switch (stage) {
+          case "plan": {
+            const roles = options?.teamConfig
+              ? Object.keys(options.teamConfig.roles)
+              : ["senior", "worker"]
+            await orchestrator.executePlan({
+              ...modelInfo,
+              phaseContext: options?.phaseContext ?? "",
+              availableRoles: roles,
+            })
+            break
+          }
+          case "challenge": {
+            await orchestrator.executeChallenge({
+              ...modelInfo,
+              phaseContext: options?.phaseContext ?? "",
+            })
+            break
+          }
+          case "contract": {
+            await orchestrator.executeContracts()
+            break
+          }
+          case "build": {
+            await value.startBuild(options?.teamConfig)
+            break
+          }
+          case "review": {
+            await orchestrator.executeReview({
+              ...modelInfo,
+              diff: options?.diff ?? "",
+              cycle: store.review ? store.review.cycle + 1 : 1,
+            })
+            break
+          }
+        }
+        await refresh()
+      } finally {
+        setStore("executing", false)
+      }
     },
   }
 
