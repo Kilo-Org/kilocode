@@ -17,6 +17,7 @@ import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Flag } from "@/flag/flag" // kilocode_change
+import { persistEncryptedContent } from "@/kilocode/encrypted-content" // kilocode_change
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -312,25 +313,12 @@ export namespace SessionProcessor {
                     cost: usage.cost,
                   })
                   await Session.updateMessage(input.assistantMessage)
-                  // kilocode_change start — attach encrypted_content to this step's reasoning parts
-                  const encrypted = (value.providerMetadata?.openaiCompatible as Record<string, unknown>)
-                    ?.encrypted_content as string | undefined
-                  if (encrypted && stepReasoning.size > 0) {
-                    const allParts = await MessageV2.parts(input.assistantMessage.id)
-                    for (const part of allParts) {
-                      if (part.type === "reasoning" && stepReasoning.has(part.id)) {
-                        part.metadata = {
-                          ...part.metadata,
-                          openaiCompatible: {
-                            ...(part.metadata?.openaiCompatible as Record<string, unknown>),
-                            encrypted_content: encrypted,
-                          },
-                        }
-                        await Session.updatePart(part)
-                      }
-                    }
-                  }
-                  // kilocode_change end
+                  // kilocode_change — persist encrypted_content from Dola Seed 2.0 etc.
+                  await persistEncryptedContent({
+                    metadata: value.providerMetadata,
+                    messageID: input.assistantMessage.id,
+                    ids: stepReasoning,
+                  })
                   if (snapshot) {
                     const patch = await Snapshot.patch(snapshot)
                     if (patch.files.length) {

@@ -143,10 +143,14 @@ export namespace ProviderTransform {
           const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
           const reasoningText = reasoningParts.map((part: any) => part.text).join("")
 
-          // kilocode_change - extract encrypted_content from reasoning parts for round-trip
-          const encrypted = reasoningParts
-            .map((part: any) => part.providerOptions?.openaiCompatible?.encrypted_content)
-            .find(Boolean)
+          // kilocode_change - use the last encrypted_content across all reasoning parts.
+          // Multi-step turns (reasoning → tools → reasoning) produce multiple
+          // reasoning parts each with their own blob; the final one represents
+          // the complete reasoning state the upstream provider expects.
+          const encrypted = reasoningParts.reduce(
+            (acc: string | undefined, part: any) => part.providerOptions?.openaiCompatible?.encrypted_content ?? acc,
+            undefined,
+          )
 
           // Filter out reasoning parts from content
           const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
