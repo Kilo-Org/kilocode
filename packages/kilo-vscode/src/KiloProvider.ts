@@ -2570,17 +2570,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-    // Cap per-extension to 300 files — enough to cover large monorepos while
-    // keeping peak memory manageable. Sequential reads (chunk=1) avoid GC pressure
-    // from many simultaneous Uint8Array + TextDecoder allocations.
-    const MAX_FILES_PER_EXT = 300
+    // No file count cap — sequential reads are memory-safe (one file at a time).
+    // The previous Promise.all approach was the cause of memory spikes, not the file count.
     const exts = ["cs", "ts", "tsx", "js", "jsx", "mts", "py", "go", "rs", "cpp", "java", "kt", "swift"]
 
     type Hit = { uri: vscode.Uri; index: number }
 
     const searchWithPattern = async (pattern: RegExp): Promise<Hit | undefined> => {
       for (const ext of exts) {
-        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**", MAX_FILES_PER_EXT)
+        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**")
         for (const uri of uris) {
           try {
             const bytes = await vscode.workspace.fs.readFile(uri)
@@ -2616,8 +2614,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         hit = await searchWithPattern(anyNonCommentPattern)
       }
     } else {
-      // Type declarations are distinctive — class/struct/interface/enum/record before the name
-      const declPattern = new RegExp(`(?:class|struct|interface|enum|record)\\s+${esc}\\b`, "m")
+      // Type declaration — require access modifiers or bare declaration keyword,
+      // and exclude comment lines (// or *) to avoid matching XML doc comments.
+      // Matches: "public class ShapeEditorContext"  "class ShapeEditorContext"
+      // Skips:   "// class ShapeEditorContext"      "/// see class ShapeEditorContext"
+      const declPattern = new RegExp(
+        `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)*(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
+        "m",
+      )
       hit = await searchWithPattern(declPattern)
     }
 
