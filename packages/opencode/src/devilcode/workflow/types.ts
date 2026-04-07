@@ -86,6 +86,16 @@ export const ActiveTask = z.object({
 })
 export type ActiveTask = z.infer<typeof ActiveTask>
 
+export const TaskResult = z.object({
+  taskId: z.string(),
+  status: z.enum(["completed", "failed", "escalated", "blocked"]),
+  output: z.string(),
+  filesModified: z.array(z.string()).default([]),
+  error: z.string().optional(),
+  escalationReason: z.string().optional(),
+})
+export type TaskResult = z.infer<typeof TaskResult>
+
 export const WorkflowState = z.object({
   project: z.string(),
   currentPhase: z.string(),

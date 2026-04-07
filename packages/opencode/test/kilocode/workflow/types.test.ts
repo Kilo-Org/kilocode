@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, it, test } from "bun:test"
 import {
   WorkflowStage,
   PlanTask,
@@ -6,6 +6,7 @@ import {
   ReviewFinding,
   ReviewVerdict,
   WorkflowState,
+  TaskResult,
 } from "@/devilcode/workflow/types"
 
 describe("WorkflowStage", () => {
@@ -143,5 +144,51 @@ describe("WorkflowState", () => {
     })
     expect(result.currentStage).toBe("build")
     expect(result.activeTasks.length).toBe(1)
+  })
+})
+
+describe("TaskResult", () => {
+  it("parses a completed result", () => {
+    const result = TaskResult.parse({
+      taskId: "task-1",
+      status: "completed",
+      output: "Implemented the feature",
+      filesModified: ["src/foo.ts", "src/bar.ts"],
+    })
+    expect(result.status).toBe("completed")
+    expect(result.filesModified).toEqual(["src/foo.ts", "src/bar.ts"])
+  })
+
+  it("parses a failed result with error", () => {
+    const result = TaskResult.parse({
+      taskId: "task-1",
+      status: "failed",
+      output: "Could not resolve type error",
+      filesModified: [],
+      error: "TypeScript error in src/foo.ts:42",
+    })
+    expect(result.status).toBe("failed")
+    expect(result.error).toBe("TypeScript error in src/foo.ts:42")
+  })
+
+  it("parses an escalated result", () => {
+    const result = TaskResult.parse({
+      taskId: "task-1",
+      status: "escalated",
+      output: "Security review needed",
+      filesModified: [],
+      escalationReason: "Found potential SQL injection",
+    })
+    expect(result.status).toBe("escalated")
+    expect(result.escalationReason).toBe("Found potential SQL injection")
+  })
+
+  it("defaults filesModified to empty array", () => {
+    const result = TaskResult.parse({
+      taskId: "task-1",
+      status: "completed",
+      output: "Done",
+    })
+    expect(result.filesModified).toEqual([])
   })
 })
