@@ -79,7 +79,7 @@
     "turbo": "2.8.13"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "3.933.0",
+    "@aws-sdk/client-s3": "3.1025.0",
     "@kilocode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
     "@kilocode/sdk": "workspace:*",
