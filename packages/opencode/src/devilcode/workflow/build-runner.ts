@@ -11,6 +11,7 @@ import BUILD_PROMPT from "./prompts/build.txt"
 import { LockManager } from "./locks"
 import { EventLogger } from "./events"
 import { LessonStore, extractFromAgentReport } from "./learning"
+import { Instance } from "@/project/instance"
 
 const log = Log.create({ service: "workflow.build-runner" })
 
@@ -26,6 +27,28 @@ export type BuildRunnerOptions = {
   eventLogger?: EventLogger
   lessonStore?: LessonStore
 } & BuildCallbacks
+
+/**
+ * Build scoped permissions for a workflow task session.
+ * Allows read access everywhere, write access only to task files,
+ * and bash/command execution for verification commands.
+ */
+export function buildPermissions(taskFiles: string[]): Array<{ permission: string; action: "allow" | "deny"; pattern: string }> {
+  const perms: Array<{ permission: string; action: "allow" | "deny"; pattern: string }> = [
+    { permission: "read", action: "allow", pattern: "*" },
+    { permission: "bash", action: "allow", pattern: "*" },
+    { permission: "command", action: "allow", pattern: "*" },
+  ]
+  for (const file of taskFiles) {
+    perms.push({ permission: "write", action: "allow", pattern: file })
+    perms.push({ permission: "edit", action: "allow", pattern: file })
+  }
+  if (taskFiles.length === 0) {
+    perms.push({ permission: "write", action: "allow", pattern: "*" })
+    perms.push({ permission: "edit", action: "allow", pattern: "*" })
+  }
+  return perms
+}
 
 export class BuildRunner {
   private options: BuildRunnerOptions
@@ -117,15 +140,6 @@ export class BuildRunner {
         parentRole: "orchestrator",
       })
 
-      const session = await Session.create({
-        title: `[workflow] ${task.title}`,
-        permission: [
-          { permission: "*", action: "allow", pattern: "*" },
-        ],
-      })
-
-      this.options.onTaskStart(task.id, session.id)
-
       const taskPrompt = [
         BUILD_PROMPT,
         `\n## Your Task\n`,
@@ -136,23 +150,48 @@ export class BuildRunner {
         `**Verification:** ${task.verification.join("\n- ") || "none specified"}`,
       ].join("\n")
 
-      const message = await SessionPrompt.prompt({
-        sessionID: session.id,
-        ...(resolved
-          ? {
-              model: {
-                providerID: resolved.model.providerID,
-                modelID: resolved.model.modelID,
-              },
-            }
-          : {}),
-        parts: [{ type: "text", text: taskPrompt }],
-      })
+      const run = async () => {
+        const session = await Session.create({
+          title: `[workflow] ${task.title}`,
+          permission: buildPermissions(task.files),
+        })
+
+        this.options.onTaskStart(task.id, session.id)
+
+        const message = await SessionPrompt.prompt({
+          sessionID: session.id,
+          ...(resolved
+            ? {
+                agent: resolved.role,
+                model: {
+                  providerID: resolved.model.providerID,
+                  modelID: resolved.model.modelID,
+                },
+              }
+            : {}),
+          parts: [{ type: "text", text: taskPrompt }],
+        })
+
+        return { message, session }
+      }
+
+      const next = worktree
+        ? await Instance.provide({
+            directory: worktree.directory,
+            fn: async () => {
+              try {
+                return await run()
+              } finally {
+                await Instance.dispose()
+              }
+            },
+          })
+        : await run()
 
       const result: TaskResult = {
         taskId: task.id,
         status: "completed",
-        output: extractOutput(message),
+        output: extractOutput(next.message),
         filesModified: task.files,
       }
 
