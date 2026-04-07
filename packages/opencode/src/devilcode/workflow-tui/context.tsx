@@ -10,6 +10,8 @@ import { Workflow } from "../workflow"
 import { SessionBridge } from "../workflow/session-bridge"
 import { getOrchestrator } from "./orchestrator"
 import { Instance } from "@/project/instance"
+import type { HealthAlert, DeadlockResult } from "../workflow/health"
+import type { WorkflowEvent } from "../workflow/events"
 
 export type WorkflowViewState = {
   state: WorkflowState | undefined
@@ -24,6 +26,10 @@ export type WorkflowViewState = {
   executing: boolean
   activeSessions: Record<string, SessionInfo>
   rootSessionId: string | undefined
+
+  healthAlerts: HealthAlert[]
+  deadlock: DeadlockResult | null
+  events: WorkflowEvent[]
 
   // Actions
   refresh(): Promise<void>
@@ -64,6 +70,9 @@ export function WorkflowProvider(props: ParentProps) {
     executing: boolean
     activeSessions: Record<string, SessionInfo>
     rootSessionId: string | undefined
+    healthAlerts: HealthAlert[]
+    deadlock: DeadlockResult | null
+    events: WorkflowEvent[]
   }>({
     state: undefined,
     plans: [],
@@ -72,11 +81,15 @@ export function WorkflowProvider(props: ParentProps) {
     selectedTask: undefined,
     activeTab: "plan",
     tabs: [
-      { id: "plan", label: "Plan", kind: "plan", closeable: false },
+      { id: "plan", label: "Plan", kind: "plan" as const, closeable: false },
+      { id: "activity", label: "Activity", kind: "activity" as const, closeable: false },
     ],
     executing: false,
     activeSessions: {},
     rootSessionId: undefined,
+    healthAlerts: [],
+    deadlock: null,
+    events: [],
   })
 
   const bridge = new SessionBridge({
@@ -132,6 +145,26 @@ export function WorkflowProvider(props: ParentProps) {
           // No review yet
         }
       }
+
+      // Poll health during active execution
+      if (store.executing && state.activeTasks.length > 0) {
+        const orchestrator = getOrchestrator()
+        const health = orchestrator.checkHealth(state.activeTasks)
+        setStore("healthAlerts", health.stuckAlerts)
+        setStore("deadlock", health.deadlock)
+      } else {
+        setStore("healthAlerts", [])
+        setStore("deadlock", null)
+      }
+
+      // Load recent events for the activity tab
+      try {
+        const orchestrator = getOrchestrator()
+        const events = await orchestrator.getEventLogger().readRecent(50)
+        setStore("events", events)
+      } catch {
+        // events not available yet
+      }
     } catch {
       // .planning/ not initialized
     }
@@ -174,12 +207,33 @@ export function WorkflowProvider(props: ParentProps) {
     get rootSessionId() {
       return store.rootSessionId
     },
+    get healthAlerts() {
+      return store.healthAlerts
+    },
+    get deadlock() {
+      return store.deadlock
+    },
+    get events() {
+      return store.events
+    },
 
     refresh,
 
     async executeStage(stage: WorkflowStage) {
       setStore("executing", true)
       try {
+        const orchestrator = getOrchestrator()
+
+        // Run preflight checks before the plan stage
+        if (stage === "plan") {
+          const report = await orchestrator.runPreflight()
+          const { preflightPassed: passed, reportSummary: summary } = await import("../workflow/preflight")
+          if (!passed(report)) {
+            const msg = summary(report)
+            throw new Error(`Preflight failed: ${msg}. Fix the errors above before planning.`)
+          }
+        }
+
         await Workflow.advanceStage(manager, stage)
         await refresh()
       } catch (e) {
