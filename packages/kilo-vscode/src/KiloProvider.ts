@@ -2647,14 +2647,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const pos = doc.positionAt(hit.index)
       await vscode.window.showTextDocument(doc, {
         selection: new vscode.Range(pos, pos),
-        preview: true,
+        preview: false,    // open in persistent tab so it doesn't get replaced
+        preserveFocus: false, // focus the editor so user sees the jump
       })
       // Cache so repeated clicks are instant
       this.symbolCache.set(rawSymbol, hit)
       return
     }
 
-    vscode.window.showInformationMessage(`Symbol not found: ${rawSymbol}`)
+    // Show which files were searched so the user can diagnose missing results
+    const searched = exts.map((e) => `*.${e}`).join(", ")
+    vscode.window.showInformationMessage(
+      `Symbol not found: ${rawSymbol} (searched ${searched} in workspace)`,
+    )
   }
   // kilocode_change end
 
