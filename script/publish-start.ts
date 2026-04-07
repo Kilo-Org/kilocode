@@ -83,11 +83,13 @@ process.chdir(dir)
 let output = `version=${Script.version}\n`
 
 if (!Script.preview) {
+  await $`git stash`
+  await $`git fetch origin main`
+  await $`git reset --hard origin/main`
+  await $`git stash pop`
   await $`git commit -am "release: v${Script.version}"`
   await $`git tag v${Script.version}`
-  await $`git fetch origin`
-  await $`git cherry-pick HEAD..origin/main`.nothrow()
-  await $`git push origin HEAD --tags --no-verify --force-with-lease`
+  await $`git push origin HEAD:main --tags --no-verify`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
   // kilocode_change start - skip draft flag when KILO_SKIP_NOTES=1 (used by publish-stable.yml which doesn't have a publish-complete step)
   const draftFlag = skipNotes ? [] : ["-d"]

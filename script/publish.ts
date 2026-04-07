@@ -90,12 +90,14 @@ await $`bun install`
 await import(`../packages/sdk/js/script/build.ts`)
 
 if (Script.release) {
-  // kilocode_change start - commit and tag both release and rc version bumps
+  // kilocode_change start - commit and tag both release and rc version bumps on latest main
+  await $`git stash`
+  await $`git fetch origin main`
+  await $`git reset --hard origin/main`
+  await $`git stash pop`
   await $`git commit -am "release: v${Script.version}"`
   await $`git tag v${Script.version}`
-  await $`git fetch origin`
-  await $`git cherry-pick HEAD..origin/main`.nothrow()
-  await $`git push origin HEAD --tags --no-verify --force-with-lease`
+  await $`git push origin HEAD:main --tags --no-verify`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
   // kilocode_change end
 
