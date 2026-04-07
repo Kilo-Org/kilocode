@@ -2614,15 +2614,44 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         hit = await searchWithPattern(anyNonCommentPattern)
       }
     } else {
-      // Type declaration — require access modifiers or bare declaration keyword,
-      // and exclude comment lines (// or *) to avoid matching XML doc comments.
-      // Matches: "public class ShapeEditorContext"  "class ShapeEditorContext"
-      // Skips:   "// class ShapeEditorContext"      "/// see class ShapeEditorContext"
+      // Type declaration search — two phases:
+      //
+      // Phase A: look for a file named exactly "SymbolName.ext" (e.g. ShapeEditorContext.cs).
+      //   Classes are almost always in a same-name file; this is fast, precise, and avoids
+      //   false positives from scanning thousands of files.
+      //
+      // Phase B: global content search as fallback when no same-name file exists.
       const declPattern = new RegExp(
         `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)*(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
         "m",
       )
-      hit = await searchWithPattern(declPattern)
+
+      // Phase A: same-name file search
+      for (const ext of exts) {
+        const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, "**/node_modules/**", 5)
+        for (const uri of files) {
+          try {
+            const bytes = await vscode.workspace.fs.readFile(uri)
+            const text = new TextDecoder().decode(bytes)
+            const match = declPattern.exec(text)
+            // Found declaration inside the same-name file
+            if (match) {
+              hit = { uri, index: match.index }
+              break
+            }
+            // File exists but pattern not matched — open at top as fallback
+            if (!hit) hit = { uri, index: 0 }
+          } catch {
+            // skip
+          }
+        }
+        if (hit) break
+      }
+
+      // Phase B: global content search (fallback when no same-name file)
+      if (!hit) {
+        hit = await searchWithPattern(declPattern)
+      }
     }
 
     if (hit) {
