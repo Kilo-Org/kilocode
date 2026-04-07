@@ -35,7 +35,7 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 Worktree items in the sidebar display a **PR status badge** when the branch has an associated pull request:
 
-- **Open** — green badge indicating the PR is open
+- **Open** — badge indicating the PR is open (its color can also reflect review and check status)
 - **Merged** — purple badge indicating the PR has been merged
 - **Closed** — red badge indicating the PR was closed without merging
 - **Draft** — gray badge indicating the PR is in draft state
