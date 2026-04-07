@@ -1,5 +1,5 @@
 // packages/opencode/src/devilcode/workflow-tui/command-input.tsx
-import type { TextareaRenderable, KeyBinding } from "@opentui/core"
+import { TextAttributes, type TextareaRenderable, type KeyBinding } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useRoute } from "@tui/context/route"
 import { useToast } from "@tui/ui/toast"
@@ -105,7 +105,7 @@ export function WorkflowCommandInput() {
       alignItems="center"
       gap={1}
     >
-      <text fg={theme.primary} attributes={{ bold: true }}>
+      <text fg={theme.primary} attributes={TextAttributes.BOLD}>
         workflow&gt;
       </text>
       <textarea

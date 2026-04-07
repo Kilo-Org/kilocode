@@ -1,5 +1,6 @@
 // packages/opencode/src/devilcode/workflow-tui/tabs/tab-bar.tsx
 import { For, Show, createMemo } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "../context"
 
@@ -18,7 +19,7 @@ export function TabBar() {
           return (
             <text
               fg={isActive() ? theme.primary : theme.textMuted}
-              attributes={isActive() ? { bold: true } : {}}
+              attributes={isActive() ? TextAttributes.BOLD : undefined}
               onMouseDown={() => wf.switchTab(tab.id)}
             >
               {"[" + tab.label + "]"}
@@ -35,7 +36,7 @@ export function TabBar() {
           return (
             <text
               fg={isActive() ? theme.primary : theme.textMuted}
-              attributes={isActive() ? { bold: true } : {}}
+              attributes={isActive() ? TextAttributes.BOLD : undefined}
               onMouseDown={() => wf.switchTab(tab.id)}
             >
               {"[" + tab.label + "]"}

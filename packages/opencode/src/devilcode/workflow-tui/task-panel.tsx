@@ -1,5 +1,6 @@
 // packages/opencode/src/devilcode/workflow-tui/task-panel.tsx
 import { For, Show, createMemo } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "./context"
 import { taskStatusIcon } from "./types"
@@ -25,7 +26,7 @@ export function TaskPanel() {
       paddingLeft={2}
       paddingRight={1}
     >
-      <text fg={theme.text} attributes={{ bold: true }}>
+      <text fg={theme.text} attributes={TextAttributes.BOLD}>
         TASKS
       </text>
       <text fg={theme.border}>{"─".repeat(28)}</text>
@@ -77,7 +78,7 @@ export function TaskPanel() {
                         <text
                           fg={isSelected() ? theme.primary : theme.text}
                           flexGrow={1}
-                          overflow="truncate"
+                          overflow="hidden"
                         >
                           {task.id + " " + task.title}
                         </text>

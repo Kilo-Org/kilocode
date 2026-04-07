@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "../context"
 
@@ -27,7 +28,7 @@ export function ChallengeTab() {
                       ? theme.error
                       : theme.warning
                 }
-                attributes={{ bold: true }}
+                attributes={TextAttributes.BOLD}
               >
                 {"Verdict: " + challenge().verdict.toUpperCase()}
               </text>
@@ -36,7 +37,7 @@ export function ChallengeTab() {
               {challenge().summary}
             </text>
             <Show when={challenge().concerns.length > 0}>
-              <text fg={theme.text} attributes={{ bold: true }} marginBottom={1}>
+              <text fg={theme.text} attributes={TextAttributes.BOLD} marginBottom={1}>
                 Concerns:
               </text>
               <For each={challenge().concerns}>
@@ -69,7 +70,7 @@ export function ChallengeTab() {
               </For>
             </Show>
             <Show when={challenge().alternativeApproach}>
-              <text fg={theme.info} attributes={{ bold: true }}>
+              <text fg={theme.info} attributes={TextAttributes.BOLD}>
                 Alternative Approach:
               </text>
               <text fg={theme.text} wrapMode="word" width="100%">

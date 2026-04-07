@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "../context"
 
@@ -19,7 +20,7 @@ export function PlanTab() {
         <For each={wf.plans}>
           {(plan) => (
             <box flexDirection="column" marginBottom={1}>
-              <text fg={theme.primary} attributes={{ bold: true }}>
+              <text fg={theme.primary} attributes={TextAttributes.BOLD}>
                 {"[" + plan.id + "] " + plan.title}
               </text>
               <text fg={theme.textMuted}>

@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import { TextAttributes } from "@opentui/core"
 import { useTheme } from "@tui/context/theme"
 import { useWorkflow } from "../context"
 
@@ -34,7 +35,7 @@ export function ReviewTab() {
             <box flexDirection="row" gap={2} marginBottom={1}>
               <text
                 fg={review().verdict === "pass" ? theme.success : theme.error}
-                attributes={{ bold: true }}
+                attributes={TextAttributes.BOLD}
               >
                 {"Verdict: " + review().verdict.toUpperCase()}
               </text>
