@@ -7,9 +7,8 @@ import { parseWorktreeList, normalizePath } from "./git-import"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
-  refreshMs?: number
   /** Override git command execution for testing. */
-  runGit?: (args: string[], cwd: string, env?: Record<string, string>) => Promise<string>
+  runGit?: (args: string[], cwd: string) => Promise<string>
 }
 
 export interface ApplyConflict {
@@ -61,26 +60,21 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
 }
 
 export class GitOps {
-  private lastFetch = new Map<string, number>()
-  private inflightFetch = new Map<string, Promise<void>>()
-  private readonly refreshMs: number
   private readonly log: (...args: unknown[]) => void
-  private readonly runGit: (args: string[], cwd: string, env?: Record<string, string>) => Promise<string>
+  private readonly runGit: (args: string[], cwd: string) => Promise<string>
 
   constructor(options: GitOpsOptions) {
-    this.refreshMs = options.refreshMs ?? 120000
     this.log = options.log
     this.runGit =
       options.runGit ??
-      ((args, cwd, env) => {
-        const git = simpleGit(cwd)
-        if (env) git.env({ ...process.env, ...env })
-        return git.raw(args).then((out) => out.trim())
-      })
+      ((args, cwd) =>
+        simpleGit(cwd)
+          .raw(args)
+          .then((out) => out.trim()))
   }
 
-  private raw(args: string[], cwd: string, env?: Record<string, string>): Promise<string> {
-    return this.runGit(args, cwd, env)
+  private raw(args: string[], cwd: string): Promise<string> {
+    return this.runGit(args, cwd)
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -133,37 +127,6 @@ export class GitOps {
     return this.raw(["rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], cwd)
       .then(() => true)
       .catch(() => false)
-  }
-
-  async refreshRemote(cwd: string, remote: string): Promise<void> {
-    if (!remote) return
-
-    const commonRaw = await this.raw(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
-    const common = nodePath.isAbsolute(commonRaw) ? commonRaw : nodePath.resolve(cwd, commonRaw)
-    const key = `${common}:${remote}`
-
-    const existing = this.inflightFetch.get(key)
-    if (existing) return existing
-
-    const prev = this.lastFetch.get(key) ?? 0
-    const now = Date.now()
-    if (now - prev < this.refreshMs) return
-    this.lastFetch.set(key, now)
-
-    const env = {
-      GIT_TERMINAL_PROMPT: "0",
-      ...(process.env.GIT_SSH_COMMAND ? {} : { GIT_SSH_COMMAND: "ssh -o BatchMode=yes" }),
-    }
-    const job = this.raw(["fetch", "--quiet", "--no-tags", remote], cwd, env)
-      .catch((err) => {
-        this.log(`Failed to refresh remote refs for ${cwd}:`, err)
-      })
-      .then(() => undefined)
-      .finally(() => {
-        this.inflightFetch.delete(key)
-      })
-    this.inflightFetch.set(key, job)
-    return job
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
@@ -236,12 +199,11 @@ export class GitOps {
   /**
    * Count commits ahead and behind using `rev-list --left-right --count`.
    * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
-   * Pass `remote` explicitly to refresh the tracking ref before counting;
-   * the remote is NOT inferred from the ref to avoid misinterpreting
-   * branch names that contain slashes (e.g. "release/1.0").
+   * Counts are computed against local tracking refs only — no fetch is
+   * performed, so values may be stale until an explicit git operation
+   * (push, pull, etc.) updates the refs.
    */
-  async aheadBehind(cwd: string, base: string, remote?: string): Promise<{ ahead: number; behind: number }> {
-    if (remote) await this.refreshRemote(cwd, remote)
+  async aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
     return this.parseLeftRight(cwd, base)
   }
 

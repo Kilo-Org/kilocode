@@ -66,9 +66,6 @@ describe("GitStatsPoller", () => {
       log: () => undefined,
       intervalMs: 5,
       git: gitOps(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t1"
         return ""
       }),
@@ -106,9 +103,7 @@ describe("GitStatsPoller", () => {
       log: () => undefined,
       intervalMs: 5,
       git: gitOps(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       }),
@@ -231,9 +226,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "worktree") {
           return `worktree ${wtAPath}\nbranch refs/heads/branch-a\n`
         }
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "1"
         return ""
       }),
@@ -287,8 +280,6 @@ describe("GitStatsPoller", () => {
       git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "feature"
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/feature"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t3"
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
@@ -341,8 +332,6 @@ describe("GitStatsPoller", () => {
         // myfork/HEAD resolves to the default branch
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/myfork/HEAD") return "myfork/develop"
         if (args[0] === "branch") return "my-feature"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t5"
         return ""
       }),
@@ -406,7 +395,7 @@ describe("GitStatsPoller", () => {
     })
   })
 
-  it("refreshes upstream remote once for concurrent worktrees", async () => {
+  it("does not fetch from remote for ahead/behind counts", async () => {
     const commands: string[][] = []
     const emitted: Array<
       Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
@@ -416,7 +405,6 @@ describe("GitStatsPoller", () => {
       worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
     } as unknown as KiloClient
 
-    // Worktrees store remote="upstream" so aheadBehind receives "upstream/main"
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a", "upstream"), worktree("b", "upstream")],
       getWorkspaceRoot: () => undefined,
@@ -427,8 +415,6 @@ describe("GitStatsPoller", () => {
       intervalMs: 500,
       git: gitOps(async (args) => {
         commands.push(args)
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
         return ""
       }),
@@ -439,9 +425,6 @@ describe("GitStatsPoller", () => {
     poller.stop()
 
     const fetches = commands.filter((cmd) => cmd[0] === "fetch")
-    expect(fetches.length).toBe(1)
-    const fetch = fetches[0]
-    if (!fetch) throw new Error("expected fetch command")
-    expect(fetch[3]).toBe("upstream")
+    expect(fetches.length).toBe(0)
   })
 })
