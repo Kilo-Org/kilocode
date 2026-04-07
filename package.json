@@ -105,7 +105,15 @@
   ],
   "overrides": {
     "@types/bun": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "path-to-regexp": ">=8.4.0",
+    "picomatch": ">=2.3.2",
+    "defu": "6.1.6",
+    "lodash": "4.18.1",
+    "@xmldom/xmldom": ">=0.8.12",
+    "smol-toml": ">=1.6.1",
+    "fastify": ">=5.8.3",
+    "happy-dom": ">=20.8.9"
   },
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
