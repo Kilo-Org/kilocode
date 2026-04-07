@@ -38,6 +38,7 @@ import { getWorkspaceRoot } from "./review-utils"
 import { MarketplaceService } from "./services/marketplace"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
+import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 // legacy-migration start
@@ -281,7 +282,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Use fire-and-forget (no throwOnError) to match old getProfile() which returned null on error.
     if (this.connectionState === "connected" && this.client) {
       console.log("[Kilo New] KiloProvider: 👤 syncWebviewState fetching profile...")
-      const profileResult = await this.client.kilo.profile()
+      const profileResult = await retry(() => this.client!.kilo.profile())
       const profileData = profileResult.data ?? null
       console.log("[Kilo New] KiloProvider: 👤 syncWebviewState profile:", profileData ? "received" : "null")
       this.postMessage({
@@ -1225,9 +1226,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const { data: messagesData } = await this.client.session.messages(
-        { sessionID, directory: workspaceDir },
-        { throwOnError: true, signal: abort.signal },
+      const { data: messagesData } = await retry(() =>
+        this.client!.session.messages(
+          { sessionID, directory: workspaceDir },
+          { throwOnError: true, signal: abort.signal },
+        ),
       )
 
       // If this request was aborted while awaiting, skip posting stale results
@@ -1328,9 +1331,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      const { data: messagesData } = await this.client.session.messages(
-        { sessionID, directory: workspaceDir },
-        { throwOnError: true },
+      const { data: messagesData } = await retry(() =>
+        this.client!.session.messages({ sessionID, directory: workspaceDir }, { throwOnError: true }),
       )
 
       const messages = messagesData.map((m) => ({
@@ -1600,7 +1602,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const { data: agents } = await this.client.app.agents({ directory: workspaceDir }, { throwOnError: true })
+      const { data: agents } = await retry(() =>
+        this.client!.app.agents({ directory: workspaceDir }, { throwOnError: true }),
+      )
 
       const { visible, defaultAgent } = filterVisibleAgents(agents)
 
@@ -1634,7 +1638,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const { data: skills } = await this.client.app.skills({ directory: workspaceDir }, { throwOnError: true })
+      const { data: skills } = await retry(() =>
+        this.client!.app.skills({ directory: workspaceDir }, { throwOnError: true }),
+      )
 
       const message = {
         type: "skillsLoaded",
@@ -1657,7 +1663,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data: commands } = await this.client.command.list({ directory: dir }, { throwOnError: true })
+      const { data: commands } = await retry(() =>
+        this.client!.command.list({ directory: dir }, { throwOnError: true }),
+      )
 
       const message = {
         type: "commandsLoaded",
@@ -1679,7 +1687,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client) return undefined
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data } = await this.client.app.skills({ directory: dir }, { throwOnError: true })
+      const { data } = await retry(() => this.client!.app.skills({ directory: dir }, { throwOnError: true }))
       return data
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch CLI skills for marketplace:", error)
@@ -1787,7 +1795,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const directory = this.getWorkspaceDirectory()
-      const { data } = await this.client.mcp.status({ directory })
+      const { data } = await retry(() => this.client!.mcp.status({ directory }))
       if (data) {
         const message = { type: "mcpStatusLoaded", status: data }
         this.cachedMcpStatusMessage = message
@@ -1898,7 +1906,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     try {
       const workspaceDir = this.getWorkspaceDirectory()
-      const { data: config } = await this.client.config.get({ directory: workspaceDir }, { throwOnError: true })
+      const { data: config } = await retry(() =>
+        this.client!.config.get({ directory: workspaceDir }, { throwOnError: true }),
+      )
 
       const message = {
         type: "configLoaded",
@@ -1945,7 +1955,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (!this.client || this.connectionState !== "connected") return
     try {
       const dir = this.getWorkspaceDirectory()
-      const { data: config } = await this.client.config.get({ directory: dir }, { throwOnError: true })
+      const { data: config } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
       this.cachedConfigMessage = { type: "configLoaded", config }
       this.postMessage({ type: "configUpdated", config })
     } catch (error) {
@@ -1978,7 +1988,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const { data: all } = await this.client.kilo.notifications(undefined, { throwOnError: true })
+      const { data: all } = await retry(() => this.client!.kilo.notifications(undefined, { throwOnError: true }))
       const notifications = all.filter((n) => !n.showIn || n.showIn.includes("extension"))
       const existing = this.extensionContext?.globalState.get<string[]>("kilo.dismissedNotificationIds", []) ?? []
       const active = new Set(notifications.map((n) => n.id))
@@ -2093,7 +2103,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Config.state is reset by updateGlobal (via Instance.resetStateEntry) so
       // config.get() returns fresh data without a full dispose cycle.
       const dir = this.getWorkspaceDirectory()
-      const { data: merged } = await this.client.config.get({ directory: dir }, { throwOnError: true })
+      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
 
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage({ type: "configUpdated", config: merged })
