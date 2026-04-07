@@ -1,7 +1,7 @@
 // packages/opencode/src/devilcode/workflow-tui/types.ts
 import type { WorkflowStage, PlanTask, PlanChallenge, ReviewVerdict, WorkflowState } from "../workflow/types"
 
-export type TabKind = "agent" | "plan" | "challenge" | "review"
+export type TabKind = "agent" | "plan" | "challenge" | "review" | "activity"
 
 export type TabInfo = {
   id: string
