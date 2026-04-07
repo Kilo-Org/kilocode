@@ -1085,12 +1085,15 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("focus", onWindowFocus)
 
     // kilocode_change start: forward file:line and symbol link clicks from markdown to the extension
+    console.log("[Kilo] AgentManagerApp: registering kilo link handlers")
     const fileLinkHandler = (e: Event) => {
       const { file, line } = (e as CustomEvent<{ file: string; line?: number }>).detail
+      console.log("[Kilo] kilo:openFileAtLine", file, line)
       vscode.postMessage({ type: "openFile", filePath: file, line })
     }
     const symbolLinkHandler = (e: Event) => {
       const { symbol } = (e as CustomEvent<{ symbol: string }>).detail
+      console.log("[Kilo] kilo:openSymbol", symbol)
       vscode.postMessage({ type: "openSymbol", symbol })
     }
     document.addEventListener("kilo:openFileAtLine", fileLinkHandler)

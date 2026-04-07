@@ -12,6 +12,7 @@ const symbolCache = new Map<string, { uri: vscode.Uri; index: number }>()
 export async function openSymbol(rawSymbol: string): Promise<void> {
   const symbol = rawSymbol.replace(/\(\)$/, "").split(".").pop() ?? rawSymbol
   const isMethod = rawSymbol.endsWith("()")
+  console.log(`[Kilo] openSymbol called: raw="${rawSymbol}" symbol="${symbol}" isMethod=${isMethod}`)
 
   // Phase 1: LSP
   try {
