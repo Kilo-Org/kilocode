@@ -29,7 +29,7 @@ import { PromptHistoryProvider } from "./component/prompt/history"
 import { FrecencyProvider } from "./component/prompt/frecency"
 import { PromptStashProvider } from "./component/prompt/stash"
 import { DialogAlert } from "./ui/dialog-alert"
-import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors" // kilocode_change
+import { isDevilError, showDevilErrorToast } from "@/devilcode/kilo-errors" // devilcode_change
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session"
@@ -42,9 +42,11 @@ import { ArgsProvider, useArgs, type Args } from "./context/args"
 import open from "open"
 import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
-import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
-import { KiloClawView } from "@/kilocode/claw/view" // kilocode_change
-import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { registerDevilCommands } from "@/devilcode/kilo-commands" // devilcode_change
+import { DevilClawView } from "@/devilcode/claw/view" // devilcode_change
+import { WorkflowView } from "@/devilcode/workflow-tui" // devilcode_change
+import { registerWorkflowCommands } from "@/devilcode/workflow-commands" // devilcode_change
+import { initializeTUIDependencies } from "@devilcode/kilo-gateway/tui" // devilcode_change
 import { TuiConfigProvider } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
 
@@ -222,7 +224,7 @@ function App() {
   const promptRef = usePromptRef()
 
   useKeyboard((evt) => {
-    if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+    if (!Flag.DEVIL_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
     if (!renderer.getSelection()) return
 
     // Windows Terminal-like behavior:
@@ -262,14 +264,14 @@ function App() {
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
-  // kilocode_change start — notify server which session the user is viewing (for live session indicators)
+  // devilcode_change start — notify server which session the user is viewing (for live session indicators)
   createEffect(() => {
     const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
     sdk.client.session.viewed({ sessionID }).catch(() => {})
   })
-  // kilocode_change end
+  // devilcode_change end
 
-  // kilocode_change start — evict per-session data from store when navigating away
+  // devilcode_change start — evict per-session data from store when navigating away
   createEffect(
     on(
       () => (route.data.type === "session" ? route.data.sessionID : undefined),
@@ -278,36 +280,36 @@ function App() {
       },
     ),
   )
-  // kilocode_change end
+  // devilcode_change end
 
   // Update terminal window title based on current route and session
   createEffect(() => {
-    if (!terminalTitleEnabled() || Flag.KILO_DISABLE_TERMINAL_TITLE) return
+    if (!terminalTitleEnabled() || Flag.DEVIL_DISABLE_TERMINAL_TITLE) return
 
-    const titleDefault = "Kilo CLI" // kilocode_change
+    const titleDefault = "Devil CLI" // devilcode_change
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle(titleDefault) // kilocode_change
+      renderer.setTerminalTitle(titleDefault) // devilcode_change
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle(titleDefault) // kilocode_change
+        renderer.setTerminalTitle(titleDefault) // devilcode_change
         return
       }
 
       // Truncate title to 40 chars max
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
+      renderer.setTerminalTitle(`${titleDefault} | ${title}`) // devilcode_change
     }
 
-    // kilocode_change start
+    // devilcode_change start
     if (route.data.type === "kiloclaw") {
-      renderer.setTerminalTitle(`${titleDefault} | KiloClaw`)
+      renderer.setTerminalTitle(`${titleDefault} | DevilClaw`)
     }
-    // kilocode_change end
+    // devilcode_change end
   })
 
   const args = useArgs()
@@ -400,7 +402,7 @@ function App() {
         dialog.replace(() => <DialogSessionList />)
       },
     },
-    ...(Flag.KILO_EXPERIMENTAL_WORKSPACES_TUI
+    ...(Flag.DEVIL_EXPERIMENTAL_WORKSPACES_TUI
       ? [
           {
             title: "Manage workspaces",
@@ -603,7 +605,7 @@ function App() {
       title: "Open docs",
       value: "docs.open",
       onSelect: () => {
-        open("https://kilo.ai/docs").catch(() => {}) // kilocode_change
+        open("https://devil.ai/docs").catch(() => {}) // devilcode_change
         dialog.clear()
       },
       category: "System",
@@ -711,7 +713,7 @@ function App() {
     },
   ])
 
-  // kilocode_change start - Initialize TUI dependencies for kilo-gateway
+  // devilcode_change start - Initialize TUI dependencies for kilo-gateway
   initializeTUIDependencies({
     useCommandDialog: useCommandDialog,
     useSync: useSync,
@@ -726,10 +728,11 @@ function App() {
     useKeyboard: useKeyboard,
     TextAttributes: TextAttributes,
   })
-  registerKiloCommands(useSDK)
-  // kilocode_change end
+  registerDevilCommands(useSDK)
+  registerWorkflowCommands()
+  // devilcode_change end
 
-  // kilocode_change - Delete OpenRouter Alert
+  // devilcode_change - Delete OpenRouter Alert
   sdk.event.on(TuiEvent.CommandExecute.type, (evt) => {
     command.trigger(evt.properties.command)
   })
@@ -763,12 +766,12 @@ function App() {
   sdk.event.on(SessionApi.Event.Error.type, (evt) => {
     const error = evt.properties.error
     if (error && typeof error === "object" && error.name === "MessageAbortedError") return
-    // kilocode_change start - Show warning toast for Kilo errors instead of generic error toast
-    if (error && typeof error === "object" && isKiloError(error)) {
-      showKiloErrorToast(error, toast)
+    // devilcode_change start - Show warning toast for Devil errors instead of generic error toast
+    if (error && typeof error === "object" && isDevilError(error)) {
+      showDevilErrorToast(error, toast)
       return
     }
-    // kilocode_change end
+    // devilcode_change end
     const message = (() => {
       if (!error) return "An error occurred"
 
@@ -792,7 +795,7 @@ function App() {
     toast.show({
       variant: "info",
       title: "Update Available",
-      message: `Kilo v${evt.properties.version} is available. Run 'kilo upgrade' to update manually.`, // kilocode_change
+      message: `Devil v${evt.properties.version} is available. Run 'kilo upgrade' to update manually.`, // devilcode_change
       duration: 10000,
     })
   })
@@ -803,14 +806,14 @@ function App() {
       height={dimensions().height}
       backgroundColor={theme.background}
       onMouseDown={(evt) => {
-        if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+        if (!Flag.DEVIL_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
 
         if (!Selection.copy(renderer, toast)) return
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      onMouseUp={Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
+      onMouseUp={Flag.DEVIL_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
     >
       <Switch>
         <Match when={route.data.type === "home"}>
@@ -819,11 +822,14 @@ function App() {
         <Match when={route.data.type === "session"}>
           <Session />
         </Match>
-        {/* kilocode_change start */}
+        {/* devilcode_change start */}
         <Match when={route.data.type === "kiloclaw"}>
-          <KiloClawView />
+          <DevilClawView />
         </Match>
-        {/* kilocode_change end */}
+        <Match when={route.data.type === "workflow"}>
+          <WorkflowView />
+        </Match>
+        {/* devilcode_change end */}
       </Switch>
     </box>
   )
@@ -852,7 +858,7 @@ function ErrorComponent(props: {
   })
   const [copied, setCopied] = createSignal(false)
 
-  const issueURL = new URL("https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml")
+  const issueURL = new URL("https://github.com/Devil-Org/devilcode/issues/new?template=bug-report.yml")
 
   // Choose safe fallback colors per mode since theme context may not be available
   const isLight = props.mode === "light"
