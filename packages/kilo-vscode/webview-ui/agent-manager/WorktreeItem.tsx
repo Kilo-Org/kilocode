@@ -22,6 +22,8 @@ interface WorktreeItemProps {
   worktree: WorktreeState
   /** Display label (resolved from label, first session title, or branch). */
   label: string
+  /** Branch name shown as subtitle when it differs from the label. */
+  subtitle?: string
   active: boolean
   pendingDelete: boolean
   busy: boolean
@@ -262,8 +264,11 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                       </div>
                     </div>
                   </div>
-                  {/* Row 2: always rendered for consistent height; PR badge or skeleton */}
+                  {/* Row 2: branch subtitle + PR badge */}
                   <div class="am-wt-row2">
+                    <Show when={props.subtitle}>
+                      <span class="am-worktree-subtitle">{props.subtitle}</span>
+                    </Show>
                     <Show
                       when={props.pr}
                       fallback={

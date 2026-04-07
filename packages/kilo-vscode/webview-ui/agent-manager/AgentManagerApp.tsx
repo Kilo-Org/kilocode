@@ -793,6 +793,11 @@ const AgentManagerContent: Component = () => {
     return firstOrderedTitle(sessions, worktreeTabOrder()[wt.id], wt.branch)
   }
 
+  const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
+    const label = worktreeLabel(wt)
+    return label !== wt.branch ? wt.branch : undefined
+  }
+
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
   /** True when any session in the given ID list is actively working (busy/retry and not blocked by permissions/questions). */
@@ -2322,6 +2327,7 @@ const AgentManagerContent: Component = () => {
                                 <WorktreeItem
                                   worktree={wt}
                                   label={worktreeLabel(wt)}
+                                  subtitle={worktreeSubtitle(wt)}
                                   active={selection() === wt.id}
                                   pendingDelete={pendingDelete() === wt.id}
                                   busy={busyWorktrees().has(wt.id)}

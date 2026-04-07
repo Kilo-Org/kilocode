@@ -62,8 +62,7 @@
 }
 
 .am-local-item-active .am-local-branch {
-  color: var(--text-on-interactive-base);
-  opacity: 0.7;
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-local-item-active .am-stat-files {
@@ -92,8 +91,8 @@
 }
 
 .am-local-branch {
-  font-size: var(--font-size-small);
-  color: var(--text-weak);
+  font-size: 10px;
+  color: var(--text-weaker);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -258,8 +257,23 @@ button.am-section-toggle:hover .am-section-label {
 .am-wt-row2 {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  gap: 6px;
   min-height: 14px;
+}
+
+.am-worktree-subtitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--text-weaker);
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.am-worktree-item-active .am-worktree-subtitle {
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-worktree-item:hover {
@@ -373,7 +387,8 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-critical-strong) 25%, transparent);
 }
 
-.am-worktree-pending-delete .am-worktree-branch {
+.am-worktree-pending-delete .am-worktree-branch,
+.am-worktree-pending-delete .am-worktree-subtitle {
   opacity: 0.5;
   transition: opacity 200ms ease;
 }
@@ -490,6 +505,7 @@ button.am-section-toggle:hover .am-section-label {
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
   animation-delay: 0.3s;
   opacity: 0;
+  margin-left: auto;
 }
 
 .am-stat-files {
@@ -520,6 +536,7 @@ button.am-section-toggle:hover .am-section-label {
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   transition: background 150ms ease;
+  margin-left: auto;
 }
 .am-pr-badge:hover {
   background: color-mix(in srgb, var(--pr-accent) 25%, transparent);
