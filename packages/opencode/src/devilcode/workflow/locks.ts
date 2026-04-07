@@ -1,6 +1,7 @@
 import z from "zod"
 import fs from "fs/promises"
 import path from "path"
+import { Mutex } from "./mutex"
 
 export const FileLock = z.object({
   taskId: z.string(),
@@ -16,6 +17,7 @@ const LocksFile = z.object({
 
 export class LockManager {
   private lockPath: string
+  private mutex = new Mutex()
 
   constructor(planningDir: string) {
     this.lockPath = path.join(planningDir, "locks.json")
@@ -36,25 +38,31 @@ export class LockManager {
   }
 
   async acquire(taskId: string, role: string, files: string[]): Promise<void> {
-    const locks = await this.read()
-    // Remove existing lock for this task (re-acquire)
-    const filtered = locks.filter((l) => l.taskId !== taskId)
-    filtered.push({
-      taskId,
-      role,
-      files,
-      lockedAt: new Date().toISOString(),
+    return this.mutex.run(async () => {
+      const locks = await this.read()
+      // Remove existing lock for this task (re-acquire)
+      const filtered = locks.filter((l) => l.taskId !== taskId)
+      filtered.push({
+        taskId,
+        role,
+        files,
+        lockedAt: new Date().toISOString(),
+      })
+      await this.write(filtered)
     })
-    await this.write(filtered)
   }
 
   async release(taskId: string): Promise<void> {
-    const locks = await this.read()
-    await this.write(locks.filter((l) => l.taskId !== taskId))
+    return this.mutex.run(async () => {
+      const locks = await this.read()
+      await this.write(locks.filter((l) => l.taskId !== taskId))
+    })
   }
 
   async releaseAll(): Promise<void> {
-    await this.write([])
+    return this.mutex.run(async () => {
+      await this.write([])
+    })
   }
 
   async listLocks(): Promise<FileLock[]> {

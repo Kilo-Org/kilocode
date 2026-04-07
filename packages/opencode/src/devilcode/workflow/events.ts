@@ -1,6 +1,7 @@
 // packages/opencode/src/devilcode/workflow/events.ts
 import fs from "fs/promises"
 import path from "path"
+import { Mutex } from "./mutex"
 
 export type EventType =
   | "plan_created"
@@ -30,18 +31,21 @@ export type WorkflowEvent = {
 
 export class EventLogger {
   private logPath: string
+  private mutex = new Mutex()
 
   constructor(planningDir: string) {
     this.logPath = path.join(planningDir, "events.jsonl")
   }
 
   async log(event: Omit<WorkflowEvent, "timestamp"> & { timestamp?: string }): Promise<void> {
-    const entry: WorkflowEvent = {
-      ...event,
-      timestamp: event.timestamp ?? new Date().toISOString(),
-    }
-    const line = JSON.stringify(entry) + "\n"
-    await fs.appendFile(this.logPath, line)
+    return this.mutex.run(async () => {
+      const entry: WorkflowEvent = {
+        ...event,
+        timestamp: event.timestamp ?? new Date().toISOString(),
+      }
+      const line = JSON.stringify(entry) + "\n"
+      await fs.appendFile(this.logPath, line)
+    })
   }
 
   async readAll(): Promise<WorkflowEvent[]> {
@@ -64,7 +68,21 @@ export class EventLogger {
   }
 
   async readRecent(count: number): Promise<WorkflowEvent[]> {
-    const all = await this.readAll()
-    return all.slice(-count)
+    try {
+      const content = await fs.readFile(this.logPath, "utf-8")
+      const lines = content.split("\n").filter((line) => line.trim().length > 0)
+      const tail = lines.slice(-count)
+      return tail
+        .map((line) => {
+          try {
+            return JSON.parse(line) as WorkflowEvent
+          } catch {
+            return null
+          }
+        })
+        .filter((e): e is WorkflowEvent => e !== null)
+    } catch {
+      return []
+    }
   }
 }

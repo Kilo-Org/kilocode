@@ -1,5 +1,5 @@
 import { spawn } from "child_process"
-import os from "os"
+import fs from "fs/promises"
 
 export type CheckResult = {
   name: string
@@ -76,27 +76,32 @@ export async function checkBaseBranch(cwd: string, branch: string = "main"): Pro
 }
 
 export async function checkDiskSpace(): Promise<CheckResult> {
-  const freeBytes = os.freemem()
-  const freeGB = freeBytes / (1024 * 1024 * 1024)
-  if (freeGB < 1) {
-    return {
-      name: "disk_space",
-      passed: false,
-      message: `${freeGB.toFixed(1)} GB free (< 1 GB)`,
-      severity: "error",
-      fixHint: "Free up disk space",
+  try {
+    const stats = await fs.statfs(process.cwd())
+    const freeBytes = stats.bfree * stats.bsize
+    const freeGB = freeBytes / (1024 * 1024 * 1024)
+    if (freeGB < 1) {
+      return {
+        name: "disk_space",
+        passed: false,
+        message: `${freeGB.toFixed(1)} GB free disk space (< 1 GB)`,
+        severity: "error",
+        fixHint: "Free up disk space",
+      }
     }
-  }
-  if (freeGB < 5) {
-    return {
-      name: "disk_space",
-      passed: true,
-      message: `${freeGB.toFixed(1)} GB free (low)`,
-      severity: "warning",
-      fixHint: "Consider freeing disk space",
+    if (freeGB < 5) {
+      return {
+        name: "disk_space",
+        passed: true,
+        message: `${freeGB.toFixed(1)} GB free disk space (low)`,
+        severity: "warning",
+        fixHint: "Consider freeing disk space",
+      }
     }
+    return { name: "disk_space", passed: true, message: `${freeGB.toFixed(1)} GB free disk space`, severity: "error", fixHint: "" }
+  } catch {
+    return { name: "disk_space", passed: true, message: "Unable to check disk space", severity: "warning", fixHint: "" }
   }
-  return { name: "disk_space", passed: true, message: `${freeGB.toFixed(1)} GB free`, severity: "error", fixHint: "" }
 }
 
 export async function checkWorkingTree(cwd: string): Promise<CheckResult> {

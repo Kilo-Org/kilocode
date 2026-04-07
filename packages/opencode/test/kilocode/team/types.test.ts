@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { TaskResultStatus, Escalation, TaskResult } from "@/devilcode/team/types"
+import { TaskResultStatus, Escalation, TeamTaskResult } from "@/devilcode/team/types"
 
 describe("TaskResultStatus", () => {
   test("accepts valid values", () => {
@@ -38,9 +38,9 @@ describe("Escalation", () => {
   })
 })
 
-describe("TaskResult", () => {
+describe("TeamTaskResult", () => {
   test("parses with all fields", () => {
-    const result = TaskResult.parse({
+    const result = TeamTaskResult.parse({
       status: "completed",
       output: "Implemented feature X",
       filesModified: ["src/foo.ts", "src/bar.ts"],
@@ -58,7 +58,7 @@ describe("TaskResult", () => {
   })
 
   test("defaults filesModified to empty array", () => {
-    const result = TaskResult.parse({
+    const result = TeamTaskResult.parse({
       status: "completed",
       output: "Done",
     })
@@ -66,7 +66,7 @@ describe("TaskResult", () => {
   })
 
   test("parses with escalation present", () => {
-    const result = TaskResult.parse({
+    const result = TeamTaskResult.parse({
       status: "escalated",
       output: "Cannot proceed",
       escalation: {
@@ -80,7 +80,7 @@ describe("TaskResult", () => {
   })
 
   test("parses without escalation (optional field)", () => {
-    const result = TaskResult.parse({
+    const result = TeamTaskResult.parse({
       status: "completed",
       output: "All good",
       filesModified: ["readme.md"],

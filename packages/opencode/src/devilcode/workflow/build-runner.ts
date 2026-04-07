@@ -260,11 +260,11 @@ export class BuildRunner {
   }
 }
 
-function extractOutput(message: any): string {
+function extractOutput(message: { parts?: Array<{ type: string; text?: string }> } | undefined): string {
   if (!message?.parts) return ""
   return message.parts
-    .filter((p: any) => p.type === "text")
-    .map((p: any) => p.text)
+    .filter((p) => p.type === "text" && p.text)
+    .map((p) => p.text!)
     .join("\n")
     .slice(0, 2000)
 }

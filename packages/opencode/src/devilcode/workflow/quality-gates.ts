@@ -18,6 +18,8 @@ export type GateResult = {
   durationMs: number
 }
 
+const GATE_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes per gate
+
 function fileExists(filePath: string): Promise<boolean> {
   return fs
     .stat(filePath)
@@ -84,9 +86,28 @@ export async function runGate(gate: QualityGate, cwd: string): Promise<GateResul
     })
     let stdout = ""
     let stderr = ""
+    let resolved = false
     proc.stdout?.on("data", (d) => (stdout += d.toString()))
     proc.stderr?.on("data", (d) => (stderr += d.toString()))
+
+    const timeout = setTimeout(() => {
+      if (resolved) return
+      resolved = true
+      proc.kill()
+      resolve({
+        gateName: gate.name,
+        passed: false,
+        exitCode: -1,
+        stdout: truncateTail(stdout),
+        stderr: `TIMEOUT: gate exceeded ${GATE_TIMEOUT_MS / 1000}s limit`,
+        durationMs: Date.now() - start,
+      })
+    }, GATE_TIMEOUT_MS)
+
     proc.on("close", (code) => {
+      if (resolved) return
+      resolved = true
+      clearTimeout(timeout)
       resolve({
         gateName: gate.name,
         passed: code === 0,
@@ -97,6 +118,9 @@ export async function runGate(gate: QualityGate, cwd: string): Promise<GateResul
       })
     })
     proc.on("error", () => {
+      if (resolved) return
+      resolved = true
+      clearTimeout(timeout)
       resolve({
         gateName: gate.name,
         passed: false,

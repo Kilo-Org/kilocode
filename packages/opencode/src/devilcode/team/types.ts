@@ -10,10 +10,10 @@ export const Escalation = z.object({
 })
 export type Escalation = z.infer<typeof Escalation>
 
-export const TaskResult = z.object({
+export const TeamTaskResult = z.object({
   status: TaskResultStatus,
   output: z.string(),
   filesModified: z.array(z.string()).default([]),
   escalation: Escalation.optional(),
 })
-export type TaskResult = z.infer<typeof TaskResult>
+export type TeamTaskResult = z.infer<typeof TeamTaskResult>

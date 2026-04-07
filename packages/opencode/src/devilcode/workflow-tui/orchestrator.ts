@@ -326,22 +326,28 @@ export class WorkflowOrchestrator {
     this.taskLastActivity.set(taskId, Date.now())
   }
 
-  checkHealth(tasks: ActiveTask[]): {
+  checkHealth(tasks: ActiveTask[], planTasks?: PlanTask[]): {
     stuckAlerts: HealthAlert[]
     deadlock: DeadlockResult | null
   } {
     const stuckAlerts = detectStuckTasks(tasks, this.taskLastActivity, DEFAULT_HEALTH_CONFIG)
     const deps = new Map<string, string[]>()
+    if (planTasks) {
+      for (const pt of planTasks) {
+        if (pt.dependsOn.length > 0) {
+          deps.set(pt.id, pt.dependsOn)
+        }
+      }
+    }
     const deadlock = detectDeadlock(tasks, deps)
     return { stuckAlerts, deadlock }
   }
 }
 
-let instance: WorkflowOrchestrator | undefined
+const orchestratorState = Instance.state(
+  () => new WorkflowOrchestrator(),
+)
 
 export function getOrchestrator(): WorkflowOrchestrator {
-  if (!instance) {
-    instance = new WorkflowOrchestrator()
-  }
-  return instance
+  return orchestratorState()
 }

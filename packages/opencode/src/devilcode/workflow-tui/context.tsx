@@ -149,7 +149,7 @@ export function WorkflowProvider(props: ParentProps) {
       // Poll health during active execution
       if (store.executing && state.activeTasks.length > 0) {
         const orchestrator = getOrchestrator()
-        const health = orchestrator.checkHealth(state.activeTasks)
+        const health = orchestrator.checkHealth(state.activeTasks, store.plans)
         setStore("healthAlerts", health.stuckAlerts)
         setStore("deadlock", health.deadlock)
       } else {
@@ -419,9 +419,13 @@ export function WorkflowProvider(props: ParentProps) {
             break
           }
           case "review": {
+            const diff = options?.diff
+            if (!diff) {
+              throw new Error("Review requires a diff. Run `git diff` against the base branch and pass the result.")
+            }
             await orchestrator.executeReview({
               ...modelInfo,
-              diff: options?.diff ?? "",
+              diff,
               cycle: store.review ? store.review.cycle + 1 : 1,
             })
             break

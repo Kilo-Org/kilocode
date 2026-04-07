@@ -64,6 +64,17 @@ export class SessionBridge {
       }),
     )
 
+    // Subscribe to session updates for streaming output
+    unsubscribers.push(
+      Bus.subscribe(Session.Event.Updated, (event) => {
+        if (event.properties.info.id !== sessionId) return
+        const title = event.properties.info.title
+        if (title) {
+          this.callbacks.onOutput(sessionId, taskId, title)
+        }
+      }),
+    )
+
     this.watched.set(sessionId, { sessionId, taskId, unsubscribers })
   }
 

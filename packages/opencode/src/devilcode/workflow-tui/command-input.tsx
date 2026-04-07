@@ -4,7 +4,6 @@ import { useTheme } from "@tui/context/theme"
 import { useRoute } from "@tui/context/route"
 import { useToast } from "@tui/ui/toast"
 import { useWorkflow } from "./context"
-import { isWorkflowCommand } from "./types"
 
 export function WorkflowCommandInput() {
   const { theme } = useTheme()
@@ -71,10 +70,12 @@ export function WorkflowCommandInput() {
       return
     }
 
-    // Check if it's a stage command
-    if (isWorkflowCommand(trimmed)) {
+    // Check if it's a valid stage transition command
+    const { WorkflowStage } = await import("../workflow/types")
+    const parsed = WorkflowStage.safeParse(trimmed)
+    if (parsed.success) {
       try {
-        await wf.executeStage(trimmed as any)
+        await wf.executeStage(parsed.data)
       } catch (e: any) {
         toast.show({ message: e.message ?? "Stage transition failed", variant: "error", duration: 4000 })
       }

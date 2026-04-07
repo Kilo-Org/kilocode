@@ -40,7 +40,11 @@ export function detectStuckTasks(
     const idleMs = now - lastSeen
 
     const threshold =
-      task.status === "in_progress" ? config.taskStuckTimeoutMs : config.taskStuckTimeoutMs
+      task.status === "in_progress"
+        ? config.taskStuckTimeoutMs
+        : task.status === "blocked"
+          ? config.reviewStuckTimeoutMs
+          : config.mergeStuckTimeoutMs
 
     if (idleMs > threshold) {
       alerts.push({

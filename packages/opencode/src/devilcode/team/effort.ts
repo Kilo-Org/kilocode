@@ -15,6 +15,7 @@ export function effortToProviderOptions(effort: EffortLevel): Record<string, any
       return {
         reasoning: { enabled: true, effort: "high" },
         verbosity: "high",
+        maxTokens: "extended",
       }
     case "xhigh":
       return {
