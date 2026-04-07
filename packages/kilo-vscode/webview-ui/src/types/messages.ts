@@ -2074,6 +2074,13 @@ export interface ContinueInWorktreeRequest {
   sessionId: string
 }
 
+// kilocode_change start: open a symbol (class/method) by name via workspace symbol provider
+export interface OpenSymbolRequest {
+  type: "openSymbol"
+  symbol: string
+}
+// kilocode_change end
+
 export type ContinueInWorktreeStatus =
   | "capturing"
   | "creating"
@@ -2216,6 +2223,9 @@ export type WebviewMessage =
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
   | ContinueInWorktreeRequest
+  // kilocode_change start
+  | OpenSymbolRequest
+  // kilocode_change end
 
 // ============================================
 // VS Code API type

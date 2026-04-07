@@ -231,6 +231,19 @@
         text-decoration-style: solid;
       }
     }
+
+    &.symbol-link {
+      cursor: pointer;
+      text-decoration-line: underline;
+      text-decoration-style: dashed;
+      text-underline-offset: 2px;
+      transition: color 0.15s ease;
+
+      &:hover {
+        color: var(--vscode-symbolIcon-classForeground, var(--text-interactive-base));
+        text-decoration-style: solid;
+      }
+    }
     /* kilocode_change end */
   }
 

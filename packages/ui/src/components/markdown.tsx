@@ -112,6 +112,49 @@ function markFileLinks(root: HTMLDivElement) {
 }
 // kilocode_change end
 
+// kilocode_change start: symbol link detection (class/method names)
+// Method: identifier() or Namespace.Method()  e.g. BuildFrame(), ShapeEditorContext.BuildFrame()
+const symbolMethodPattern = /^([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)?)\(\)$/
+// Class/type: PascalCase, at least 7 chars, alphanumeric only  e.g. ShapeEditorContext
+const symbolClassPattern = /^([A-Z][a-zA-Z0-9]{6,})$/
+
+function codeSymbolLink(text: string): string | undefined {
+  const trimmed = text.trim()
+  const methodMatch = symbolMethodPattern.exec(trimmed)
+  if (methodMatch) return methodMatch[1]
+  const classMatch = symbolClassPattern.exec(trimmed)
+  if (classMatch) return classMatch[1]
+  return undefined
+}
+
+function markSymbolLinks(root: HTMLDivElement) {
+  const codeNodes = Array.from(root.querySelectorAll(":not(pre) > code"))
+  for (const code of codeNodes) {
+    if (!(code instanceof HTMLElement)) continue
+    // Skip already-tagged file links or external URL links
+    if (code.classList.contains("file-link")) continue
+    if (
+      code.parentElement instanceof HTMLAnchorElement &&
+      code.parentElement.classList.contains("external-link")
+    )
+      continue
+    const rawText = (code.textContent ?? "").trim()
+    const symbol = codeSymbolLink(rawText)
+    if (!symbol) {
+      if (code.classList.contains("symbol-link")) {
+        code.classList.remove("symbol-link")
+        delete code.dataset.symbolLink
+      }
+      continue
+    }
+    code.classList.add("symbol-link")
+    // Store the full original text (e.g. "BuildFrame()") so handleOpenSymbol
+    // can detect isMethod via rawSymbol.endsWith("()")
+    code.dataset.symbolLink = rawText
+  }
+}
+// kilocode_change end
+
 function createIcon(path: string, slot: string) {
   const icon = document.createElement("div")
   icon.setAttribute("data-component", "icon")
@@ -218,6 +261,9 @@ function decorate(root: HTMLDivElement, labels: CopyLabels) {
   // kilocode_change start: mark inline code containing file:line references
   markFileLinks(root)
   // kilocode_change end
+  // kilocode_change start: mark inline code containing symbol names (class/method)
+  markSymbolLinks(root)
+  // kilocode_change end
 }
 
 function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
@@ -242,6 +288,18 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
             file: fileCode.dataset.fileLink,
             line: parseInt(fileCode.dataset.fileLine ?? "1", 10),
           },
+        }),
+      )
+      return
+    }
+    // kilocode_change end
+
+    // kilocode_change start: handle clicks on symbol (class/method) code links
+    const symbolCode = target.closest("code.symbol-link")
+    if (symbolCode instanceof HTMLElement && symbolCode.dataset.symbolLink) {
+      document.dispatchEvent(
+        new CustomEvent("kilo:openSymbol", {
+          detail: { symbol: symbolCode.dataset.symbolLink },
         }),
       )
       return

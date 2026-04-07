@@ -220,6 +220,14 @@ const AppContent: Component = () => {
     }
     document.addEventListener("kilo:openFileAtLine", fileLinkHandler)
     onCleanup(() => document.removeEventListener("kilo:openFileAtLine", fileLinkHandler))
+
+    // handle symbol (class/method) link clicks from the markdown renderer
+    const symbolLinkHandler = (e: Event) => {
+      const { symbol } = (e as CustomEvent<{ symbol: string }>).detail
+      vscode.postMessage({ type: "openSymbol", symbol })
+    }
+    document.addEventListener("kilo:openSymbol", symbolLinkHandler)
+    onCleanup(() => document.removeEventListener("kilo:openSymbol", symbolLinkHandler))
     // kilocode_change end
   })
 

@@ -644,6 +644,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.handleOpenFile(message.filePath, message.line, message.column)
           }
           break
+        // kilocode_change start: open symbol (class/method) by name via workspace symbol provider
+        case "openSymbol":
+          if (message.symbol) {
+            this.handleOpenSymbol(message.symbol)
+          }
+          break
+        // kilocode_change end
         case "requestProviders":
           this.fetchAndSendProviders().catch((e) => console.error("[Kilo New] fetchAndSendProviders failed:", e))
           break
@@ -2516,6 +2523,107 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       (err) => console.error("[Kilo New] KiloProvider: Failed to open file:", uri.fsPath, err),
     )
   }
+
+  // kilocode_change start: navigate to a symbol (class/method) by name
+  /**
+   * Search the workspace for a symbol by name and navigate to its definition.
+   * First tries the LSP workspace symbol provider (e.g. OmniSharp, tsserver).
+   * Falls back to a regex content search across workspace files when LSP is
+   * unavailable (common in Unity / non-LSP projects).
+   * Strips trailing "()" so both "BuildFrame" and "BuildFrame()" resolve correctly.
+   */
+  private async handleOpenSymbol(rawSymbol: string): Promise<void> {
+    const symbol = rawSymbol.replace(/\(\)$/, "").split(".").pop() ?? rawSymbol
+    const isMethod = rawSymbol.endsWith("()")
+
+    // Phase 1: try the workspace symbol provider (requires an active LSP)
+    try {
+      const results = await vscode.commands.executeCommand<vscode.SymbolInformation[]>(
+        "vscode.executeWorkspaceSymbolProvider",
+        symbol,
+      )
+      if (results && results.length > 0) {
+        const exact = results.find((s) => s.name === symbol || s.name === rawSymbol.replace(/\(\)$/, ""))
+        const target = exact ?? results[0]
+        const doc = await vscode.workspace.openTextDocument(target.location.uri)
+        await vscode.window.showTextDocument(doc, { selection: target.location.range, preview: true })
+        return
+      }
+    } catch {
+      // LSP unavailable — fall through to content search
+    }
+
+    // Phase 2: content search with two-tier matching
+    const esc = symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const CHUNK = 50
+    const exts = ["cs", "ts", "tsx", "js", "jsx", "mts", "py", "go", "rs", "cpp", "java", "kt", "swift"]
+
+    type Hit = { uri: vscode.Uri; index: number }
+
+    const searchWithPattern = async (pattern: RegExp): Promise<Hit | undefined> => {
+      for (const ext of exts) {
+        const uris = await vscode.workspace.findFiles(`**/*.${ext}`, "**/node_modules/**")
+        if (uris.length === 0) continue
+        for (let i = 0; i < uris.length; i += CHUNK) {
+          const chunk = uris.slice(i, i + CHUNK)
+          const hits = await Promise.all(
+            chunk.map(async (uri) => {
+              try {
+                const bytes = await vscode.workspace.fs.readFile(uri)
+                const text = new TextDecoder().decode(bytes)
+                const match = pattern.exec(text)
+                return match ? { uri, index: match.index } : null
+              } catch {
+                return null
+              }
+            }),
+          )
+          const hit = hits.find((h) => h !== null)
+          if (hit) return hit
+        }
+      }
+      return undefined
+    }
+
+    let hit: Hit | undefined
+
+    if (isMethod) {
+      // Tier 1: declaration — line starts with access modifiers (not a comment or plain call)
+      // Matches: "    public static void BuildFrame("
+      // Skips:   "    // BuildFrame(" and "    BuildFrame();"
+      const declPattern = new RegExp(
+        `^[ \\t]*(?![ \\t]*//)(?:(?:public|private|protected|internal|static|virtual|override|abstract|async|sealed|unsafe|partial|new|extern)[ \\t]+)+[^\\n]*\\b${esc}\\s*\\(`,
+        "m",
+      )
+      hit = await searchWithPattern(declPattern)
+
+      // Tier 2: any occurrence that isn't on a pure comment line
+      if (!hit) {
+        const anyNonCommentPattern = new RegExp(
+          `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:[^\\n]*)\\b${esc}\\s*\\(`,
+          "m",
+        )
+        hit = await searchWithPattern(anyNonCommentPattern)
+      }
+    } else {
+      // Type declarations are distinctive — class/struct/interface/enum/record before the name
+      const declPattern = new RegExp(`(?:class|struct|interface|enum|record)\\s+${esc}\\b`, "m")
+      hit = await searchWithPattern(declPattern)
+    }
+
+    if (hit) {
+      const doc = await vscode.workspace.openTextDocument(hit.uri)
+      const pos = doc.positionAt(hit.index)
+      await vscode.window.showTextDocument(doc, {
+        selection: new vscode.Range(pos, pos),
+        preview: true,
+      })
+      return
+    }
+
+    vscode.window.showInformationMessage(`Symbol not found: ${rawSymbol}`)
+  }
+  // kilocode_change end
 
   /**
    * Handle a generic setting update from the webview.
