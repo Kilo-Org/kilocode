@@ -147,12 +147,46 @@ export class WorkflowOrchestrator {
     }
 
     const plans = await this.manager.readAllPlans(state.currentPhase)
+    const self = this
     const runner = new BuildRunner({
       teamConfig,
-      ...callbacks,
+      lockManager: this.locks,
+      lessonStore: this.lessons,
+      eventLogger: this.events,
+      onTaskStart(taskId, sessionId) {
+        self.recordTaskActivity(taskId)
+        self.events.log({
+          eventType: "task_started",
+          taskId,
+          message: `Task ${taskId} started (session: ${sessionId})`,
+        }).catch(() => {})
+        callbacks.onTaskStart(taskId, sessionId)
+      },
+      onTaskComplete(taskId, result) {
+        self.recordTaskActivity(taskId)
+        self.events.log({
+          eventType: result.status === "completed" ? "task_completed" : "task_failed",
+          taskId,
+          message: `Task ${taskId}: ${result.status}${result.error ? ` - ${result.error}` : ""}`,
+        }).catch(() => {})
+        callbacks.onTaskComplete(taskId, result)
+      },
+      onOutput(taskId, sessionId, line) {
+        self.recordTaskActivity(taskId)
+        callbacks.onOutput(taskId, sessionId, line)
+      },
     })
 
     const results = await runner.executeAll(plans)
+
+    // Log build completion
+    const completed = results.filter((r) => r.status === "completed").length
+    const failed = results.filter((r) => r.status === "failed").length
+    const blocked = results.filter((r) => r.status === "blocked").length
+    await this.events.log({
+      eventType: "stage_advanced",
+      message: `Build complete: ${completed} completed, ${failed} failed, ${blocked} blocked out of ${results.length} tasks`,
+    })
 
     for (const result of results) {
       if (result.status === "completed") {
@@ -176,6 +210,10 @@ export class WorkflowOrchestrator {
     const state = await this.manager.readState()
     if (!state.currentPhase) throw new Error("No current phase")
 
+    // Run quality gates before review
+    const gateResults = await this.runQualityGates()
+    const gateFailures = summarizeGateFailures(gateResults)
+
     const plans = await this.manager.readAllPlans(state.currentPhase)
     const summaries: string[] = []
     for (const plan of plans) {
@@ -190,13 +228,14 @@ export class WorkflowOrchestrator {
     const verdict = await dispatchReview({
       ...input,
       summaries,
+      gateResults: gateFailures || undefined,
     })
 
     await this.manager.writeReview(state.currentPhase, verdict)
 
     await this.events.log({
       eventType: "stage_advanced",
-      message: `Review cycle ${input.cycle}: ${verdict.verdict} (${verdict.findings.length} findings)`,
+      message: `Review cycle ${input.cycle}: ${verdict.verdict} (${verdict.findings.length} findings, ${gateResults.filter((g) => !g.passed).length} gate failures)`,
     })
 
     return verdict
