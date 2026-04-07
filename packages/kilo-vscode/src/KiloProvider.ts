@@ -3290,7 +3290,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (
       event.type === "permission.asked" &&
       sessionID &&
-      this.connectionService.shouldNotify(sessionID, "permission.asked")
+      this.connectionService.shouldNotify(sessionID, "permission.asked", event.properties.id)
     ) {
       const tool = event.properties.permission ?? event.properties.tool ?? "tool"
       this.notifyIfNotFocused("permissions", `Permission required: ${tool}`)
@@ -3298,7 +3298,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (
       event.type === "question.asked" &&
       sessionID &&
-      this.connectionService.shouldNotify(sessionID, "question.asked")
+      this.connectionService.shouldNotify(sessionID, "question.asked", event.properties.id)
     ) {
       const questions = event.properties.questions as Array<{ question: string }> | undefined
       this.notifyIfNotFocused("permissions", "Agent Question", questions?.[0]?.question)

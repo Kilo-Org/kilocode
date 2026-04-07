@@ -248,13 +248,14 @@ export class KiloConnectionService {
 
   /**
    * Check-and-mark deduplication for OS notifications.
-   * Returns true the first time a given sessionID + eventType combination is seen,
+   * Returns true the first time a given sessionID + eventType (+ optional requestID) combination is seen,
    * and false for all subsequent calls until the entry expires (TTL).
    * This prevents multiple KiloProvider instances from emitting duplicate
    * OS notifications for the same backend event.
+   * When requestID is provided, distinct requests in the same session are not suppressed.
    */
-  shouldNotify(sessionID: string, eventType: string): boolean {
-    const key = `${sessionID}:${eventType}`
+  shouldNotify(sessionID: string, eventType: string, requestID?: string): boolean {
+    const key = requestID ? `${sessionID}:${eventType}:${requestID}` : `${sessionID}:${eventType}`
     if (this.notifiedEvents.has(key)) return false
     this.notifiedEvents.add(key)
     setTimeout(() => this.notifiedEvents.delete(key), 5_000)
