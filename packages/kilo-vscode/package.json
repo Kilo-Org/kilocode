@@ -842,7 +842,7 @@
     "lru-cache": "^11.0.2",
     "openai": "^4.85.4",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.31.1",
+    "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
     "web-tree-sitter": "^0.24.7",
