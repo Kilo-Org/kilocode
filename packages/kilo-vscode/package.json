@@ -765,6 +765,11 @@
             "none"
           ],
           "description": "Sound to play on errors"
+        },
+        "kilo-code.new.showTaskTimeline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the task timeline graph in the chat header"
         }
       }
     }

@@ -3,16 +3,22 @@
  * Sticky header above the chat messages showing session title,
  * cost, context usage, and a compact button.
  * Also shows todo progress when the session has todos.
+ *
+ * When expanded, shows the task timeline (colored bars representing
+ * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
-import type { TodoItem } from "../../types/messages"
+import { useVSCode } from "../../context/vscode"
+import { TaskTimeline } from "./TaskTimeline"
+import { ContextProgress } from "./ContextProgress"
+import type { TodoItem, ExtensionMessage } from "../../types/messages"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -54,6 +60,42 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     const pct = usage.percentage !== null ? `${usage.percentage}%` : undefined
     return { tokens, pct }
   })
+
+  // Token breakdown from the last assistant message — only return if at least one value is > 0
+  const tokens = createMemo(() => {
+    const msgs = session.messages()
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i]
+      if (m.role !== "assistant" || !m.tokens) continue
+      const tk = m.tokens
+      const has = tk.input > 0 || tk.output > 0 || (tk.cache?.write ?? 0) > 0 || (tk.cache?.read ?? 0) > 0
+      if (has) return tk
+    }
+    return undefined
+  })
+
+  const fmtNum = (n: number): string => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+    return String(n)
+  }
+
+  const vscode = useVSCode()
+  const [expanded, setExpanded] = createSignal(true)
+
+  // Read initial value from VS Code settings
+  onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
+  const handler = (e: MessageEvent<ExtensionMessage>) => {
+    if (e.data.type === "timelineSettingLoaded") setExpanded(e.data.visible)
+  }
+  window.addEventListener("message", handler)
+  onCleanup(() => window.removeEventListener("message", handler))
+
+  const toggle = () => {
+    const next = !expanded()
+    setExpanded(next)
+    vscode.postMessage({ type: "updateSetting", key: "showTaskTimeline", value: next })
+  }
 
   const todos = createMemo(() => session.todos())
   const hasTodos = createMemo(() => todos().length > 0)
@@ -107,8 +149,58 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               />
             </Tooltip>
           </Show>
+          <Show when={hasMessages()}>
+            <button
+              data-slot="task-header-expand"
+              onClick={toggle}
+              aria-expanded={expanded()}
+              aria-label="Toggle timeline"
+            >
+              <Icon name="chevron-down" size="small" style={expanded() ? { transform: "rotate(180deg)" } : undefined} />
+            </button>
+          </Show>
         </div>
       </div>
+      {/* Expanded graph section: timeline + context bar + token breakdown */}
+      <Show when={expanded() && session.messages().some((m) => m.role === "assistant")}>
+        <div data-component="task-header-graph">
+          <TaskTimeline />
+          <div data-slot="task-header-graph-row">
+            <ContextProgress />
+          </div>
+          <Show when={tokens()}>
+            {(tk) => (
+              <div class="task-header-tokens">
+                <span class="task-header-tokens-label">Tokens</span>
+                <Show when={tk().input > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-up" size="small" />
+                    {fmtNum(tk().input)}
+                  </span>
+                </Show>
+                <Show when={tk().output > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-down-to-line" size="small" />
+                    {fmtNum(tk().output)}
+                  </span>
+                </Show>
+                <Show when={tk().cache?.write && tk().cache!.write > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-up" size="small" />
+                    cache {fmtNum(tk().cache!.write)}
+                  </span>
+                </Show>
+                <Show when={tk().cache?.read && tk().cache!.read > 0}>
+                  <span class="task-header-tokens-value">
+                    <Icon name="arrow-down-to-line" size="small" />
+                    cache {fmtNum(tk().cache!.read)}
+                  </span>
+                </Show>
+              </div>
+            )}
+          </Show>
+        </div>
+      </Show>
       <Show when={hasTodos()}>
         <div data-component="task-header-todos">
           <button
