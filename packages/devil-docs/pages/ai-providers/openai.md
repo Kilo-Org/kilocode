@@ -2,9 +2,9 @@
 sidebar_label: OpenAI
 ---
 
-# Using OpenAI With Kilo Code
+# Using OpenAI With devil Code
 
-Kilo Code supports accessing models directly through the official OpenAI API.
+devil Code supports accessing models directly through the official OpenAI API.
 
 **Website:** [https://openai.com/](https://openai.com/)
 
@@ -12,15 +12,15 @@ Kilo Code supports accessing models directly through the official OpenAI API.
 
 1.  **Sign Up/Sign In:** Go to the [OpenAI Platform](https://platform.openai.com/). Create an account or sign in.
 2.  **Navigate to API Keys:** Go to the [API keys](https://platform.openai.com/api-keys) page.
-3.  **Create a Key:** Click "Create new secret key". Give your key a descriptive name (e.g., "Kilo Code").
+3.  **Create a Key:** Click "Create new secret key". Give your key a descriptive name (e.g., "devil Code").
 4.  **Copy the Key:** **Important:** Copy the API key _immediately_. You will not be able to see it again. Store it securely.
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+1.  **Open devil Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the devil Code panel.
 2.  **Select Provider:** Choose "OpenAI" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your OpenAI API key into the "OpenAI API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -30,12 +30,12 @@ Kilo Code supports accessing models directly through the official OpenAI API.
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add OpenAI and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores this in your `devil.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Set the API key as an environment variable or configure it in your `devil.json` config file:
 
 **Environment variable:**
 
@@ -43,7 +43,7 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 export OPENAI_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {

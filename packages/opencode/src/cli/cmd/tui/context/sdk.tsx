@@ -1,4 +1,4 @@
-import { createKiloClient, type Event } from "@kilocode/sdk/v2"
+import { createDevilClient, type Event } from "@devilcode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { batch, onCleanup, onMount } from "solid-js"
@@ -22,7 +22,7 @@ export const { use: useSDK, provider: SDKProvider } = createSimpleContext({
     let sse: AbortController | undefined
 
     function createSDK() {
-      return createKiloClient({
+      return createDevilClient({
         baseUrl: props.url,
         signal: abort.signal,
         directory: props.directory,

@@ -580,7 +580,7 @@ export function Autocomplete(props: {
             e.preventDefault()
             return
           }
-          // kilocode_change start
+          // devilcode_change start
           if (name === "right") {
             // Right arrow should not accept the suggestion when cursor is not
             // within the filter region (not near where the suggestion is being added)
@@ -591,7 +591,7 @@ export function Autocomplete(props: {
               return
             }
           }
-          // kilocode_change end
+          // devilcode_change end
         }
         if (!store.visible) {
           if (e.name === "@") {
@@ -607,7 +607,7 @@ export function Autocomplete(props: {
           }
         }
       },
-      // kilocode_change start
+      // devilcode_change start
       onCursorChange() {
         if (!store.visible) return
         const cursor = props.input().cursorOffset
@@ -623,7 +623,7 @@ export function Autocomplete(props: {
           hide()
         }
       },
-      // kilocode_change end
+      // devilcode_change end
     })
   })
 

@@ -25,7 +25,7 @@ export const Long: Story = {
 }
 
 export const AsHeading: Story = {
-  render: () => <Typewriter as="h2" text="Welcome to Kilo" />,
+  render: () => <Typewriter as="h2" text="Welcome to Devil" />,
 }
 
 export const WithClass: Story = {

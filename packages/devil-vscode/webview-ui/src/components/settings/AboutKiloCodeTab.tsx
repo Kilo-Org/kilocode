@@ -1,21 +1,21 @@
 import { Component, createSignal, onCleanup } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Button } from "@devilcode/kilo-ui/button"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import type { ConnectionState, ExtensionMessage } from "../../types/messages"
 import { buildExport, parseImport, MAX_IMPORT_SIZE } from "./settings-io"
 
-export interface AboutKiloCodeTabProps {
+export interface AboutDevilCodeTabProps {
   port: number | null
   connectionState: ConnectionState
   extensionVersion?: string
   onMigrateClick?: () => void // legacy-migration
 }
 
-const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
+const AboutDevilCodeTab: Component<AboutDevilCodeTabProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const { updateConfig } = useConfig()
@@ -68,7 +68,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       const file = input.files?.[0]
       if (!file) return
       if (file.size > MAX_IMPORT_SIZE) {
-        showToast({ variant: "error", title: language.t("settings.aboutKiloCode.importSettings.tooLarge") })
+        showToast({ variant: "error", title: language.t("settings.aboutDevilCode.importSettings.tooLarge") })
         return
       }
       setImporting(true)
@@ -80,26 +80,26 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
         if (!result.ok) {
           const key =
             result.error === "invalidJson"
-              ? "settings.aboutKiloCode.importSettings.invalidJson"
-              : "settings.aboutKiloCode.importSettings.invalidConfig"
+              ? "settings.aboutDevilCode.importSettings.invalidJson"
+              : "settings.aboutDevilCode.importSettings.invalidConfig"
           showToast({ variant: "error", title: language.t(key) })
           return
         }
         if (result.warning === "newerVersion") {
           showToast({
             variant: "default",
-            title: language.t("settings.aboutKiloCode.importSettings.newerVersion"),
+            title: language.t("settings.aboutDevilCode.importSettings.newerVersion"),
           })
         }
         updateConfig(result.config)
         showToast({
           variant: "success",
-          title: language.t("settings.aboutKiloCode.importSettings.success"),
+          title: language.t("settings.aboutDevilCode.importSettings.success"),
         })
       }
       reader.onerror = () => {
         setImporting(false)
-        showToast({ variant: "error", title: language.t("settings.aboutKiloCode.importSettings.invalidJson") })
+        showToast({ variant: "error", title: language.t("settings.aboutDevilCode.importSettings.invalidJson") })
       }
       reader.readAsText(file)
     })
@@ -124,13 +124,13 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
   const getStatusText = () => {
     switch (props.connectionState) {
       case "connected":
-        return language.t("settings.aboutKiloCode.status.connected")
+        return language.t("settings.aboutDevilCode.status.connected")
       case "connecting":
-        return language.t("settings.aboutKiloCode.status.connecting")
+        return language.t("settings.aboutDevilCode.status.connecting")
       case "disconnected":
-        return language.t("settings.aboutKiloCode.status.disconnected")
+        return language.t("settings.aboutDevilCode.status.disconnected")
       case "error":
-        return language.t("settings.aboutKiloCode.status.error")
+        return language.t("settings.aboutDevilCode.status.error")
     }
   }
 
@@ -172,16 +172,16 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
     <div>
       {/* Version Information */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.versionInfo")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.versionInfo")}</h4>
         <div style={{ display: "flex", "align-items": "center" }}>
-          <span style={labelStyle}>{language.t("settings.aboutKiloCode.version.label")}</span>
+          <span style={labelStyle}>{language.t("settings.aboutDevilCode.version.label")}</span>
           <span style={valueStyle}>{props.extensionVersion ?? "—"}</span>
         </div>
       </div>
 
       {/* Community & Support */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.community")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.community")}</h4>
         <p
           style={{
             "font-size": "12px",
@@ -190,16 +190,16 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.feedback.prefix")}{" "}
-          <span style={linkStyle} onClick={() => open("https://github.com/Kilo-Org/kilocode")}>
+          {language.t("settings.aboutDevilCode.feedback.prefix")}{" "}
+          <span style={linkStyle} onClick={() => open("https://github.com/Devil-Org/devilcode")}>
             GitHub
           </span>
           ,{" "}
-          <span style={linkStyle} onClick={() => open("https://reddit.com/r/kilocode")}>
+          <span style={linkStyle} onClick={() => open("https://reddit.com/r/devilcode")}>
             Reddit
           </span>
-          , {language.t("settings.aboutKiloCode.feedback.or")}{" "}
-          <span style={linkStyle} onClick={() => open("https://kilo.ai/discord")}>
+          , {language.t("settings.aboutDevilCode.feedback.or")}{" "}
+          <span style={linkStyle} onClick={() => open("https://devil.ai/discord")}>
             Discord
           </span>
           .
@@ -212,9 +212,9 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.support.prefix")}{" "}
-          <span style={linkStyle} onClick={() => open("https://kilo.ai/support")}>
-            kilo.ai/support
+          {language.t("settings.aboutDevilCode.support.prefix")}{" "}
+          <span style={linkStyle} onClick={() => open("https://devil.ai/support")}>
+            devil.ai/support
           </span>
           .
         </p>
@@ -222,7 +222,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
 
       {/* Telemetry */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.telemetry.title")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.telemetry.title")}</h4>
         <p
           style={{
             "font-size": "12px",
@@ -231,7 +231,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.telemetry.description")}
+          {language.t("settings.aboutDevilCode.telemetry.description")}
         </p>
         <Button
           variant="secondary"
@@ -239,17 +239,17 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
           onClick={() => vscode.postMessage({ type: "openVSCodeSettings", query: "telemetry.telemetryLevel" })}
         >
           <Icon name="settings-gear" />
-          {language.t("settings.aboutKiloCode.telemetry.openSettings")}
+          {language.t("settings.aboutDevilCode.telemetry.openSettings")}
         </Button>
       </div>
 
       {/* CLI Server */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.cliServer")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.cliServer")}</h4>
 
         {/* Connection Status */}
         <div style={{ display: "flex", "align-items": "center", "margin-bottom": "12px" }}>
-          <span style={labelStyle}>{language.t("settings.aboutKiloCode.status.label")}</span>
+          <span style={labelStyle}>{language.t("settings.aboutDevilCode.status.label")}</span>
           <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
             <span
               style={{
@@ -266,14 +266,14 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
 
         {/* Port Number */}
         <div style={{ display: "flex", "align-items": "center" }}>
-          <span style={labelStyle}>{language.t("settings.aboutKiloCode.port.label")}</span>
+          <span style={labelStyle}>{language.t("settings.aboutDevilCode.port.label")}</span>
           <span style={valueStyle}>{props.port !== null ? props.port : "—"}</span>
         </div>
       </div>
 
       {/* Settings Transfer */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.settingsTransfer.title")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.settingsTransfer.title")}</h4>
         <p
           style={{
             "font-size": "12px",
@@ -282,23 +282,23 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.settingsTransfer.description")}
+          {language.t("settings.aboutDevilCode.settingsTransfer.description")}
         </p>
         <div style={{ display: "flex", gap: "8px" }}>
           <Button variant="secondary" size="small" onClick={handleExport}>
             <Icon name="cloud-upload" />
-            {language.t("settings.aboutKiloCode.exportSettings")}
+            {language.t("settings.aboutDevilCode.exportSettings")}
           </Button>
           <Button variant="secondary" size="small" onClick={handleImport} disabled={importing()}>
             <Icon name="download" />
-            {language.t("settings.aboutKiloCode.importSettings")}
+            {language.t("settings.aboutDevilCode.importSettings")}
           </Button>
         </div>
       </div>
 
       {/* legacy-migration start */}
       <div style={{ ...sectionStyle, "margin-bottom": "0" }}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.legacyMigration.title")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.legacyMigration.title")}</h4>
         <p
           style={{
             "font-size": "12px",
@@ -307,7 +307,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.legacyMigration.description")}
+          {language.t("settings.aboutDevilCode.legacyMigration.description")}
         </p>
         <button
           type="button"
@@ -329,7 +329,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
 
       {/* Reset Settings */}
       <div style={sectionStyle}>
-        <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.resetSettings.title")}</h4>
+        <h4 style={headingStyle}>{language.t("settings.aboutDevilCode.resetSettings.title")}</h4>
         <p
           style={{
             "font-size": "12px",
@@ -338,7 +338,7 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "line-height": "1.5",
           }}
         >
-          {language.t("settings.aboutKiloCode.resetSettings.description")}
+          {language.t("settings.aboutDevilCode.resetSettings.description")}
         </p>
         <button
           type="button"
@@ -353,11 +353,11 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
             "font-size": "12px",
           }}
         >
-          {language.t("settings.aboutKiloCode.resetSettings.button")}
+          {language.t("settings.aboutDevilCode.resetSettings.button")}
         </button>
       </div>
     </div>
   )
 }
 
-export default AboutKiloCodeTab
+export default AboutDevilCodeTab

@@ -30,7 +30,7 @@
         "reveal": "never"
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       }
     },
     {
@@ -46,7 +46,7 @@
         "reveal": "never"
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       }
     },
     {
@@ -61,7 +61,7 @@
         "reveal": "never"
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       },
       "problemMatcher": []
     },
@@ -89,7 +89,7 @@
         "reveal": "silent"
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       },
       "dependsOn": ["VSCode - Install"],
       "problemMatcher": ["$tsc", "$eslint-stylish"]
@@ -107,7 +107,7 @@
       },
       "group": "build",
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       }
     },
     {
@@ -129,7 +129,7 @@
         "clear": false
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode"
+        "cwd": "${workspaceFolder}/packages/devil-vscode"
       },
       "problemMatcher": []
     },
@@ -147,7 +147,7 @@
         "clear": false
       },
       "options": {
-        "cwd": "${workspaceFolder}/packages/kilo-vscode",
+        "cwd": "${workspaceFolder}/packages/devil-vscode",
         "env": {
           "VSCODE_EXEC_PATH": "${execPath}"
         }

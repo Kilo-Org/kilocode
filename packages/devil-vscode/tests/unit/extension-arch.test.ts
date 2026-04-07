@@ -15,7 +15,7 @@ const ROOT = path.resolve(import.meta.dir, "../..")
 const PKG_JSON_FILE = path.join(ROOT, "package.json")
 const SRC_DIR = path.join(ROOT, "src")
 const EXTENSION_FILE = path.join(ROOT, "src/extension.ts")
-const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const DEVIL_PROVIDER_FILE = path.join(ROOT, "src/DevilProvider.ts")
 
 function readSrcFiles(dir: string): string {
   const parts: string[] = []
@@ -88,24 +88,24 @@ describe("Extension — package.json command sync", () => {
 })
 
 // ---------------------------------------------------------------------------
-// KiloProvider handler wiring — every new KiloProvider() must get
+// DevilProvider handler wiring — every new DevilProvider() must get
 // setContinueInWorktreeHandler() called before resolving its webview.
 //
-// Regression: tab panels created via openKiloInNewTab() and the TabPanel
+// Regression: tab panels created via openDevilInNewTab() and the TabPanel
 // deserializer were missing the handler, causing "Capturing changes..." to
 // spin forever because the webview message was silently dropped.
 // ---------------------------------------------------------------------------
 
-describe("Extension — KiloProvider handler wiring", () => {
+describe("Extension — DevilProvider handler wiring", () => {
   const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
 
   /**
-   * Every `new KiloProvider(` in extension.ts must be followed (before the
-   * next `new KiloProvider(`) by a `setContinueInWorktreeHandler` call.
+   * Every `new DevilProvider(` in extension.ts must be followed (before the
+   * next `new DevilProvider(`) by a `setContinueInWorktreeHandler` call.
    * This prevents future tab/panel additions from silently missing the handler.
    */
-  it("every KiloProvider instance gets setContinueInWorktreeHandler wired", () => {
-    const pattern = /new KiloProvider\(/g
+  it("every DevilProvider instance gets setContinueInWorktreeHandler wired", () => {
+    const pattern = /new DevilProvider\(/g
     const instances: number[] = []
     let match
     while ((match = pattern.exec(ext)) !== null) {
@@ -114,7 +114,7 @@ describe("Extension — KiloProvider handler wiring", () => {
 
     expect(
       instances.length,
-      "expected at least 3 KiloProvider instances (sidebar, tab, deserializer)",
+      "expected at least 3 DevilProvider instances (sidebar, tab, deserializer)",
     ).toBeGreaterThanOrEqual(3)
 
     const missing: string[] = []
@@ -125,22 +125,22 @@ describe("Extension — KiloProvider handler wiring", () => {
 
       if (!region.includes("setContinueInWorktreeHandler")) {
         const line = ext.slice(0, start).split("\n").length
-        missing.push(`KiloProvider at line ${line}`)
+        missing.push(`DevilProvider at line ${line}`)
       }
     }
 
     expect(
       missing,
-      `These KiloProvider instances are missing setContinueInWorktreeHandler.\n` +
+      `These DevilProvider instances are missing setContinueInWorktreeHandler.\n` +
         `Without it, "Continue in Worktree" silently no-ops and the spinner\n` +
         `stays stuck on "Capturing changes..." forever.\n\n` +
         missing.map((m) => `  - ${m}`).join("\n"),
     ).toEqual([])
   })
 
-  it("openKiloInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
-    const fn = ext.indexOf("function openKiloInNewTab")
-    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
+  it("openDevilInNewTab wires setContinueInWorktreeHandler before resolveWebviewPanel", () => {
+    const fn = ext.indexOf("function openDevilInNewTab")
+    expect(fn, "openDevilInNewTab must exist").toBeGreaterThan(-1)
     const body = ext.slice(fn, fn + 1500)
     const handler = body.indexOf("setContinueInWorktreeHandler")
     const resolve = body.indexOf("resolveWebviewPanel")
@@ -162,15 +162,15 @@ describe("Extension — KiloProvider handler wiring", () => {
 })
 
 // ---------------------------------------------------------------------------
-// KiloProvider — continueInWorktree error fallback
+// DevilProvider — continueInWorktree error fallback
 //
 // Regression: when continueInWorktreeHandler is null, the message handler
 // must send an error back to the webview so the spinner resets. Previously
 // it silently no-op'd, leaving the UI stuck.
 // ---------------------------------------------------------------------------
 
-describe("KiloProvider — continueInWorktree error fallback", () => {
-  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+describe("DevilProvider — continueInWorktree error fallback", () => {
+  const provider = fs.readFileSync(DEVIL_PROVIDER_FILE, "utf-8")
 
   it("sends error progress when handler is missing", () => {
     const caseStart = provider.indexOf('case "continueInWorktree"')

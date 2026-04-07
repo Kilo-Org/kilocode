@@ -1,7 +1,7 @@
 import { z } from "zod"
-import { getKiloUrlFromToken } from "../auth/token.js"
+import { getDevilUrlFromToken } from "../auth/token.js"
 import { getDefaultHeaders } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
+import { DEVIL_API_BASE, DEVIL_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -60,26 +60,26 @@ function parseApiPrice(price: string | null | undefined): number | undefined {
 }
 
 /**
- * Fetch models from Kilo API (OpenRouter-compatible endpoint)
+ * Fetch models from Devil API (OpenRouter-compatible endpoint)
  *
  * @param options - Configuration options
  * @returns Record of models in ModelsDev.Model format
  */
-export async function fetchKiloModels(options?: {
-  kilocodeToken?: string
-  kilocodeOrganizationId?: string
+export async function fetchDevilModels(options?: {
+  devilcodeToken?: string
+  devilcodeOrganizationId?: string
   baseURL?: string
 }): Promise<Record<string, any>> {
-  const token = options?.kilocodeToken
-  const organizationId = options?.kilocodeOrganizationId
+  const token = options?.devilcodeToken
+  const organizationId = options?.devilcodeOrganizationId
 
   // Construct base URL
-  const defaultBaseURL = organizationId ? `${KILO_API_BASE}/api/organizations/${organizationId}` : KILO_OPENROUTER_BASE
+  const defaultBaseURL = organizationId ? `${DEVIL_API_BASE}/api/organizations/${organizationId}` : DEVIL_OPENROUTER_BASE
 
   const baseURL = options?.baseURL ?? defaultBaseURL
 
   // Transform URL with token if available
-  const finalBaseURL = token ? getKiloUrlFromToken(baseURL, token) : baseURL
+  const finalBaseURL = token ? getDevilUrlFromToken(baseURL, token) : baseURL
 
   // Construct models endpoint
   const modelsURL = `${finalBaseURL}/models`
@@ -98,13 +98,19 @@ export async function fetchKiloModels(options?: {
       throw new Error(`Failed to fetch models: ${response.status} ${response.statusText}`)
     }
 
-    const json = await response.json()
+    let json: unknown
+    try {
+      json = await response.json()
+    } catch {
+      console.error(`Devil models endpoint returned non-JSON response (status ${response.status})`)
+      return {}
+    }
 
     // Validate response schema
     const result = openRouterModelsResponseSchema.safeParse(json)
 
     if (!result.success) {
-      console.error("Kilo models response validation failed:", result.error.format())
+      console.error("Devil models response validation failed:", result.error.format())
       return {}
     }
 
@@ -123,7 +129,7 @@ export async function fetchKiloModels(options?: {
 
     return models
   } catch (error) {
-    console.error("Error fetching Kilo models:", error)
+    console.error("Error fetching Devil models:", error)
     return {}
   }
 }

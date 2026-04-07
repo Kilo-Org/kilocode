@@ -9,14 +9,14 @@
 
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { Part, PART_MAPPING, ToolRegistry } from "@devilcode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
   Message as SDKMessage,
   ToolPart,
-} from "@kilocode/sdk/v2"
-import { useData } from "@kilocode/kilo-ui/context/data"
+} from "@devilcode/sdk/v2"
+import { useData } from "@devilcode/kilo-ui/context/data"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,

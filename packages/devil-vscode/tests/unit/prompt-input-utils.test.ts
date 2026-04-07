@@ -42,7 +42,7 @@ describe("dirName", () => {
   })
 
   it("truncates long directories to last two segments", () => {
-    const path = "packages/kilo-vscode/webview-ui/src/components/chat/foo.ts"
+    const path = "packages/devil-vscode/webview-ui/src/components/chat/foo.ts"
     const result = dirName(path)
     expect(result).toMatch(/^…\//)
     expect(result).toContain("components/chat")

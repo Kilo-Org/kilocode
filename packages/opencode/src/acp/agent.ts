@@ -42,10 +42,10 @@ import { Config } from "@/config/config"
 import { Todo } from "@/session/todo"
 import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
-import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage, Event, DevilClient, SessionMessageResponse, ToolPart } from "@devilcode/sdk/v2"
 import { applyPatch } from "diff"
 
-import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
+import { fetchDefaultModel } from "@devilcode/kilo-gateway" // devilcode_change
 
 type ModeOption = { id: string; name: string; description?: string }
 type ModelOption = { modelId: string; name: string }
@@ -56,7 +56,7 @@ export namespace ACP {
   const log = Log.create({ service: "acp-agent" })
 
   async function getContextLimit(
-    sdk: KiloClient,
+    sdk: DevilClient,
     providerID: string,
     modelID: string,
     directory: string,
@@ -76,7 +76,7 @@ export namespace ACP {
 
   async function sendUsageUpdate(
     connection: AgentSideConnection,
-    sdk: KiloClient,
+    sdk: DevilClient,
     sessionID: string,
     directory: string,
   ): Promise<void> {
@@ -123,7 +123,7 @@ export namespace ACP {
       })
   }
 
-  export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
+  export async function init({ sdk: _sdk }: { sdk: DevilClient }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
         return new Agent(connection, fullConfig)
@@ -134,7 +134,7 @@ export namespace ACP {
   export class Agent implements ACPAgent {
     private connection: AgentSideConnection
     private config: ACPConfig
-    private sdk: KiloClient
+    private sdk: DevilClient
     private sessionManager: ACPSessionManager
     private eventAbort = new AbortController()
     private eventStarted = false
@@ -520,13 +520,13 @@ export namespace ACP {
     async initialize(params: InitializeRequest): Promise<InitializeResponse> {
       log.info("initialize", { protocolVersion: params.protocolVersion })
 
-      // kilocode_change start
+      // devilcode_change start
       const authMethod: AuthMethod = {
         description: "Run `kilo auth login` in the terminal",
-        name: "Login with Kilo",
+        name: "Login with Devil",
         id: "kilo-login",
       }
-      // kilocode_change end
+      // devilcode_change end
 
       // If client supports terminal-auth capability, use that instead.
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
@@ -534,7 +534,7 @@ export namespace ACP {
           "terminal-auth": {
             command: "kilo",
             args: ["auth", "login"],
-            label: "Kilo Login", // kilocode_change
+            label: "Devil Login", // devilcode_change
           },
         }
       }
@@ -559,7 +559,7 @@ export namespace ACP {
         },
         authMethods: [authMethod],
         agentInfo: {
-          name: "Kilo", // kilocode_change
+          name: "Devil", // devilcode_change
           version: Installation.VERSION,
         },
       }
@@ -1567,7 +1567,7 @@ export namespace ACP {
 
     if (specified && !providers.length) return specified
 
-    // kilocode_change start
+    // devilcode_change start
     const kiloProvider = providers.find((p) => p.id === "kilo")
     if (kiloProvider) {
       const [best] = Provider.sort(Object.values(kiloProvider.models))
@@ -1578,7 +1578,7 @@ export namespace ACP {
         }
       }
     }
-    // kilocode_change end
+    // devilcode_change end
 
     const models = providers.flatMap((p) => Object.values(p.models))
     const [best] = Provider.sort(models)
@@ -1591,8 +1591,8 @@ export namespace ACP {
 
     if (specified) return specified
 
-    // kilocode_change start
-    // Only fall back to the Kilo provider if it was present in the available
+    // devilcode_change start
+    // Only fall back to the Devil provider if it was present in the available
     // providers list. When teams configure enabled_providers to use only their
     // own models, this prevents silently routing requests to an external API.
     // Note: LiteLLM / custom provider users won't reach here — the function
@@ -1602,7 +1602,7 @@ export namespace ACP {
       return { providerID: "kilo", modelID: freeModel }
     }
     throw new Error("no model available: no providers are configured and no default model is set")
-    // kilocode_change end
+    // devilcode_change end
   }
 
   function parseUri(

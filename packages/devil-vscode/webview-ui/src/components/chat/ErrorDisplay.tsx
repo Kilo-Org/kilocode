@@ -1,9 +1,9 @@
 import { Component, createMemo, Switch, Match } from "solid-js"
-import { Card } from "@kilocode/kilo-ui/card"
-import { Collapsible } from "@kilocode/kilo-ui/collapsible"
-import { ErrorDetails } from "@kilocode/kilo-ui/error-details"
-import { Button } from "@kilocode/kilo-ui/button"
-import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { Card } from "@devilcode/kilo-ui/card"
+import { Collapsible } from "@devilcode/kilo-ui/collapsible"
+import { ErrorDetails } from "@devilcode/kilo-ui/error-details"
+import { Button } from "@devilcode/kilo-ui/button"
+import type { AssistantMessage } from "@devilcode/sdk/v2"
 import { useLanguage } from "../../context/language"
 import {
   unwrapError,

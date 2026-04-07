@@ -16,7 +16,7 @@ async function getLastModel(sessionID: string) {
   return Provider.defaultModel()
 }
 
-// kilocode_change start - simplified plan_exit: readiness signal only, no user prompt
+// devilcode_change start - simplified plan_exit: readiness signal only, no user prompt
 export const PlanExitTool = Tool.define("plan_exit", {
   description: EXIT_DESCRIPTION,
   parameters: z.object({}),
@@ -30,7 +30,7 @@ export const PlanExitTool = Tool.define("plan_exit", {
     }
   },
 })
-// kilocode_change end
+// devilcode_change end
 
 /*
 export const PlanEnterTool = Tool.define("plan_enter", {
@@ -49,7 +49,7 @@ export const PlanEnterTool = Tool.define("plan_enter", {
           custom: false,
           options: [
             { label: "Yes", description: "Switch to plan agent for research and planning" },
-            { label: "No", description: "Stay with code agent to continue making changes" }, // kilocode_change - renamed from "build" to "code"
+            { label: "No", description: "Stay with code agent to continue making changes" }, // devilcode_change - renamed from "build" to "code"
           ],
         },
       ],

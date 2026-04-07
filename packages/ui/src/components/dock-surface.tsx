@@ -25,7 +25,7 @@ export function DockShellForm(props: ComponentProps<"form">) {
   return (
     <form
       {...rest}
-      data-component="prompt-input-form" // kilocode_change
+      data-component="prompt-input-form" // devilcode_change
       data-dock-surface="shell"
       classList={{
         ...(split.classList ?? {}),

@@ -1,7 +1,7 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
-import type { KiloConnectionService } from "../services/cli-backend"
+import type { DevilClient, Session } from "@devilcode/sdk/v2/client"
+import type { DevilConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
@@ -66,9 +66,9 @@ export class AgentManagerProvider implements Disposable {
   private activeSessionId: string | undefined
   constructor(
     private readonly host: Host,
-    private readonly connectionService: KiloConnectionService,
+    private readonly connectionService: DevilConnectionService,
   ) {
-    this.outputChannel = host.createOutput("Kilo Agent Manager")
+    this.outputChannel = host.createOutput("Devil Agent Manager")
     this.terminalManager = new SessionTerminalManager(
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
@@ -176,7 +176,7 @@ export class AgentManagerProvider implements Disposable {
     const migration = await state.load()
     manager.cleanupOrphanedTempDirs()
 
-    // When the .kilocode → .kilo migration rewrote git worktree refs, nudge
+    // When the .devilcode → .kilo migration rewrote git worktree refs, nudge
     // VS Code's git extension to re-discover them. Without this, worktrees
     // won't appear in Source Control until the next VS Code restart.
     if (migration.refsFixed > 0) {
@@ -544,7 +544,7 @@ export class AgentManagerProvider implements Disposable {
     branch: string,
     worktreeId?: string,
   ): Promise<Session | null> {
-    let client: KiloClient
+    let client: DevilClient
     try {
       client = this.connectionService.getClient()
     } catch (err) {
@@ -740,7 +740,7 @@ export class AgentManagerProvider implements Disposable {
 
   /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string): Promise<null> {
-    let client: KiloClient
+    let client: DevilClient
     try {
       client = this.connectionService.getClient()
     } catch (err) {
@@ -1655,7 +1655,7 @@ export class AgentManagerProvider implements Disposable {
       // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
       if (resolved !== root && !resolved.startsWith(root + path.sep)) return
     } catch (err) {
-      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
+      console.error("[Devil New] AgentManagerProvider: Cannot resolve file path:", err)
       return
     }
     this.host.openFile(resolved, line, column)
@@ -1853,7 +1853,7 @@ export class AgentManagerProvider implements Disposable {
   /**
    * Continue a sidebar session in a new worktree.
    * Captures git state, creates worktree, applies state, forks session.
-   * Called from KiloProvider when the sidebar sends "continueInWorktree".
+   * Called from DevilProvider when the sidebar sends "continueInWorktree".
    */
   public async continueFromSidebar(
     sessionId: string,

@@ -1,11 +1,11 @@
 ---
 title: "Autocomplete"
-description: "AI-powered code autocompletion in Kilo Code"
+description: "AI-powered code autocompletion in devil Code"
 ---
 
 # Autocomplete
 
-Kilo Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
+devil Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -25,7 +25,7 @@ Autocomplete is **enabled by default** and automatically shows inline suggestion
 Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux) to manually request a completion at your cursor position.
 
 {% callout type="note" %}
-This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` to be enabled in VS Code settings. It is **disabled by default**.
+This keybinding requires `devil-code.new.autocomplete.enableSmartInlineTaskKeybinding` to be enabled in VS Code settings. It is **disabled by default**.
 {% /callout %}
 
 ## Status Bar
@@ -41,7 +41,7 @@ You can temporarily disable autocomplete by clicking the status bar item to **sn
 
 ## Copilot Conflict Detection
 
-The extension automatically detects if **GitHub Copilot** inline suggestions are enabled and warns you about potential conflicts. Disable Copilot's inline completions for the best experience with Kilo Code autocomplete.
+The extension automatically detects if **GitHub Copilot** inline suggestions are enabled and warns you about potential conflicts. Disable Copilot's inline completions for the best experience with devil Code autocomplete.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -61,7 +61,7 @@ Autocomplete analyzes your code context and provides:
 
 #### Auto-trigger suggestions
 
-When enabled, Kilo Code automatically shows inline suggestions when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
+When enabled, devil Code automatically shows inline suggestions when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
 
 - **Auto Trigger Delay**: Configure the delay (in seconds) before suggestions appear after you stop typing
 - Default is 3 seconds, but this can be adjusted up or down
@@ -73,7 +73,7 @@ For more control over when suggestions appear:
 
 1. Position your cursor where you need assistance
 2. Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux)
-3. Kilo Code analyzes the surrounding context
+3. devil Code analyzes the surrounding context
 4. Receive immediate improvements or completions
 
 This is ideal for:
@@ -89,7 +89,7 @@ You can customize this keyboard shortcut as well in your VS Code settings.
 
 #### Enable Chat Autocomplete
 
-When enabled, Kilo Code will suggest completions as you type in the chat input. Press Tab to accept suggestions.
+When enabled, devil Code will suggest completions as you type in the chat input. Press Tab to accept suggestions.
 
 ## Provider and Model Selection
 
@@ -97,10 +97,10 @@ Autocomplete currently uses **Codestral** (by Mistral AI) as the underlying mode
 
 ### How the Provider is Chosen
 
-Kilo Code automatically selects a provider for autocomplete in the following priority order:
+devil Code automatically selects a provider for autocomplete in the following priority order:
 
 - **Mistral** (using `codestral-latest`)
-- **Kilo Code** (using `mistralai/codestral-2508`)
+- **devil Code** (using `mistralai/codestral-2508`)
 - **OpenRouter** (using `mistralai/codestral-2508`)
 - **Requesty** (using `mistral/codestral-latest`)
 - **Bedrock** (using `mistral.codestral-2508-v1:0`)
@@ -115,7 +115,7 @@ Kilo Code automatically selects a provider for autocomplete in the following pri
 
 ## Disable Rival Autocomplete
 
-We recommend disabling rival autocompletes to optimize your experience with Kilo Code. To disable GitHub Copilot autocomplete in VSCode, go to **Settings** and navigate to **GitHub** > **Copilot: Advanced** (or search for 'copilot').
+We recommend disabling rival autocompletes to optimize your experience with devil Code. To disable GitHub Copilot autocomplete in VSCode, go to **Settings** and navigate to **GitHub** > **Copilot: Advanced** (or search for 'copilot').
 
 Then, toggle to 'disabled':
 

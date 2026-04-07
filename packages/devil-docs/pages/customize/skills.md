@@ -1,11 +1,11 @@
 ---
 title: "Skills"
-description: "Extend Kilo Code capabilities with skills"
+description: "Extend devil Code capabilities with skills"
 ---
 
 # Skills
 
-Kilo Code implements [Agent Skills](https://agentskills.io/), a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
+devil Code implements [Agent Skills](https://agentskills.io/), a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
 
 ## What Are Agent Skills?
 
@@ -20,7 +20,7 @@ This approach keeps agents fast while giving them access to more context on dema
 - **Extensible**: Skills can range in complexity from simple text instructions to bundled scripts, templates, and reference materials
 - **Shareable**: Skills are portable and can be easily shared between projects and developers
 
-## How Skills Work in Kilo Code
+## How Skills Work in devil Code
 
 Skills can be:
 
@@ -29,7 +29,7 @@ Skills can be:
 
 The workflow is:
 
-1. **Discovery**: Skills are scanned from designated directories when Kilo Code initializes. Only the metadata (name, description, and file path) is read at this stage—not the full instructions.
+1. **Discovery**: Skills are scanned from designated directories when devil Code initializes. Only the metadata (name, description, and file path) is read at this stage—not the full instructions.
 2. **Prompt inclusion**: When a mode is active, the metadata for relevant skills is included in the system prompt. The agent sees a list of available skills with their descriptions.
 3. **On-demand loading**: When the agent determines that a task matches a skill's description, it reads the full `SKILL.md` file into context and follows the instructions.
 
@@ -52,13 +52,13 @@ Skills are loaded from multiple locations, allowing both personal skills and pro
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilo` directory within your Home directory:
+Global skills are located in the `.devil` directory within your Home directory:
 
-- Mac and Linux: `~/.kilo/skills/`
-- Windows: `\Users\<yourUser>\.kilo\skills\`
+- Mac and Linux: `~/.devil/skills/`
+- Windows: `\Users\<yourUser>\.devil\skills\`
 
 ```
-~/.kilo/
+~/.devil/
 └── skills/                    # Generic skills (all modes)
     ├── my-skill/
     │   └── SKILL.md
@@ -68,11 +68,11 @@ Global skills are located in the `.kilo` directory within your Home directory:
 
 ### Project Skills (Workspace-Level)
 
-Located in `.kilo/skills/` within your project:
+Located in `.devil/skills/` within your project:
 
 ```
 your-project/
-└── .kilo/
+└── .devil/
     └── skills/               # Generic skills for this project
         └── project-conventions/
             └── SKILL.md
@@ -87,7 +87,7 @@ For interoperability with other tools, the CLI also loads skills from:
 
 ### Additional Skill Paths and Remote URLs
 
-You can configure extra skill locations and remote skill URLs in your `kilo.jsonc` config (project or global):
+You can configure extra skill locations and remote skill URLs in your `devil.jsonc` config (project or global):
 
 ```jsonc
 {
@@ -105,13 +105,13 @@ The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or path
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilo` directory within your Home directory:
+Global skills are located in the `.devil` directory within your Home directory:
 
-- Mac and Linux: `~/.kilo/skills/`
-- Windows: `\Users\<yourUser>\.kilo\skills\`
+- Mac and Linux: `~/.devil/skills/`
+- Windows: `\Users\<yourUser>\.devil\skills\`
 
 ```
-~/.kilo/
+~/.devil/
 └── skills/                    # Generic skills (all modes)
     ├── my-skill/
     │   └── SKILL.md
@@ -121,11 +121,11 @@ Global skills are located in the `.kilo` directory within your Home directory:
 
 ### Project Skills (Workspace-Level)
 
-Located in `.kilo/skills/` within your project:
+Located in `.devil/skills/` within your project:
 
 ```
 your-project/
-└── .kilo/
+└── .devil/
     └── skills/               # Generic skills for this project
         └── project-conventions/
             └── SKILL.md
@@ -140,7 +140,7 @@ For interoperability with other tools, the CLI also loads skills from:
 
 ### Additional Skill Paths and Remote URLs
 
-You can configure extra skill locations and remote skill URLs in your `kilo.jsonc` config (project or global):
+You can configure extra skill locations and remote skill URLs in your `devil.jsonc` config (project or global):
 
 ```jsonc
 {
@@ -158,13 +158,13 @@ The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or path
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilocode` directory within your Home directory.
+Global skills are located in the `.devilcode` directory within your Home directory.
 
-- Mac and Linux: `~/.kilocode/skills/`
-- Windows: `\Users\<yourUser>\.kilocode\`
+- Mac and Linux: `~/.devilcode/skills/`
+- Windows: `\Users\<yourUser>\.devilcode\`
 
 ```
-~/.kilocode/
+~/.devilcode/
 ├── skills/                    # Generic skills (all modes)
 │   ├── my-skill/
 │   │   └── SKILL.md
@@ -180,11 +180,11 @@ Global skills are located in the `.kilocode` directory within your Home director
 
 ### Project Skills (Workspace-Level)
 
-Located in `.kilocode/skills/` within your project:
+Located in `.devilcode/skills/` within your project:
 
 ```
 your-project/
-└── .kilocode/
+└── .devilcode/
     ├── skills/               # Generic skills for this project
     │   └── project-conventions/
     │       └── SKILL.md
@@ -219,10 +219,10 @@ To create a skill that only appears in a specific mode, place it in a `skills-{m
 
 ```bash
 # For Code mode only
-mkdir -p ~/.kilocode/skills-code/typescript-patterns
+mkdir -p ~/.devilcode/skills-code/typescript-patterns
 
 # For Architect mode only
-mkdir -p ~/.kilocode/skills-architect/microservices
+mkdir -p ~/.devilcode/skills-architect/microservices
 ```
 
 The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
@@ -235,17 +235,17 @@ The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches
 {% tabs %}
 {% tab label="VSCode" %}
 
-When multiple skills share the same name, project-level skills (`.kilo/skills/`) take precedence over global skills (`~/.kilo/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
+When multiple skills share the same name, project-level skills (`.devil/skills/`) take precedence over global skills (`~/.devil/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-When multiple skills share the same name, project-level skills (`.kilo/skills/`) take precedence over global skills (`~/.kilo/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
+When multiple skills share the same name, project-level skills (`.devil/skills/`) take precedence over global skills (`~/.devil/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-When multiple skills share the same name, Kilo Code uses these priority rules:
+When multiple skills share the same name, devil Code uses these priority rules:
 
 1. **Project skills override global skills** - A project skill with the same name takes precedence
 2. **Mode-specific skills override generic skills** - A skill in `skills-code/` overrides the same skill in `skills/` when in Code mode
@@ -266,7 +266,7 @@ This allows you to:
 
 Skills are discovered when a session starts. The CLI scans all configured skill directories and reads metadata (name, description, file path) for each skill.
 
-- In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
+- In the **CLI**: Skills are loaded when you start a new session or run `devil run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
 Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
@@ -276,7 +276,7 @@ Skills are re-scanned at the start of each new session. To pick up newly added o
 
 Skills are discovered when a session starts. The CLI scans all configured skill directories and reads metadata (name, description, file path) for each skill.
 
-- In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
+- In the **CLI**: Skills are loaded when you start a new session or run `devil run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
 Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
@@ -284,12 +284,12 @@ Skills are re-scanned at the start of each new session. To pick up newly added o
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Skills are discovered when Kilo Code initializes:
+Skills are discovered when devil Code initializes:
 
 - When VSCode starts
 - When you reload the VSCode window (`Cmd+Shift+P` → "Developer: Reload Window")
 
-Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the Kilo Code extension.
+Skills directories are monitored for changes to `SKILL.md` files. However, the most reliable way to pick up new skills is to reload VS or the devil Code extension.
 
 **Adding or modifying skills requires reloading VSCode for changes to take effect.**
 
@@ -357,7 +357,7 @@ metadata:
 
 ### Name Matching Rule
 
-In Kilo Code, the `name` field **must match** the parent directory name:
+In devil Code, the `name` field **must match** the parent directory name:
 
 ```
 ✅ Correct:
@@ -393,7 +393,7 @@ These additional files can be referenced from your skill's instructions, allowin
 1. Create the skill directory:
 
    ```bash
-   mkdir -p ~/.kilo/skills/api-design
+   mkdir -p ~/.devil/skills/api-design
    ```
 
 2. Create `SKILL.md` (see content below)
@@ -406,7 +406,7 @@ These additional files can be referenced from your skill's instructions, allowin
 1. Create the skill directory:
 
    ```bash
-   mkdir -p ~/.kilo/skills/api-design
+   mkdir -p ~/.devil/skills/api-design
    ```
 
 2. Create `SKILL.md` (see content below)
@@ -419,7 +419,7 @@ These additional files can be referenced from your skill's instructions, allowin
 1. Create the skill directory:
 
    ```bash
-   mkdir -p ~/.kilocode/skills/api-design
+   mkdir -p ~/.devilcode/skills/api-design
    ```
 
 2. Create `SKILL.md` (see content below)
@@ -473,7 +473,7 @@ When designing REST APIs, follow these conventions:
 
 The new platform does not have a marketplace UI yet. You can find and share skills through:
 
-- **[Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace)** — Browse community skills on GitHub and manually download them into your skills directory
+- **[devil Marketplace repository](https://github.com/Devil-Org/devil-marketplace)** — Browse community skills on GitHub and manually download them into your skills directory
 - **[Agent Skills Specification](https://agentskills.io/home)** — The open specification that skills follow, enabling interoperability across different AI agents
 - **Remote URLs** — Use the `skills.urls` config key to load skills directly from URLs without manually downloading them
 
@@ -482,7 +482,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 The new platform does not have a marketplace UI yet. You can find and share skills through:
 
-- **[Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace)** — Browse community skills on GitHub and manually download them into your skills directory
+- **[devil Marketplace repository](https://github.com/Devil-Org/devil-marketplace)** — Browse community skills on GitHub and manually download them into your skills directory
 - **[Agent Skills Specification](https://agentskills.io/home)** — The open specification that skills follow, enabling interoperability across different AI agents
 - **Remote URLs** — Use the `skills.urls` config key to load skills directly from URLs without manually downloading them
 
@@ -491,7 +491,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 You can discover and install community-created skills through:
 
-- **Kilo Marketplace** — Browse skills directly in the Kilo Code extension via the Marketplace tab, or explore the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) on GitHub
+- **devil Marketplace** — Browse skills directly in the devil Code extension via the Marketplace tab, or explore the [devil Marketplace repository](https://github.com/Devil-Org/devil-marketplace) on GitHub
 - [Agent Skills Specification](https://agentskills.io/home) — The open specification that skills follow, enabling interoperability across different AI agents
 
 {% /tab %}
@@ -508,9 +508,9 @@ You can discover and install community-created skills through:
 
 2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
 
-3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
+3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.devil/skills/my-skill/SKILL.md`), not nested further.
 
-4. **Check config paths**: If using `skills.paths` or `skills.urls`, verify the paths and URLs are correct in your `kilo.jsonc`.
+4. **Check config paths**: If using `skills.paths` or `skills.urls`, verify the paths and URLs are correct in your `devil.jsonc`.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -519,14 +519,14 @@ You can discover and install community-created skills through:
 
 2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
 
-3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
+3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.devil/skills/my-skill/SKILL.md`), not nested further.
 
-4. **Check config paths**: If using `skills.paths` or `skills.urls`, verify the paths and URLs are correct in your `kilo.jsonc`.
+4. **Check config paths**: If using `skills.paths` or `skills.urls`, verify the paths and URLs are correct in your `devil.jsonc`.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-1. **Check the Output panel**: Open `View` → `Output` → Select "Kilo Code" from dropdown. Look for skill-related errors.
+1. **Check the Output panel**: Open `View` → `Output` → Select "devil Code" from dropdown. Look for skill-related errors.
 
 2. **Verify frontmatter**: Ensure `name` exactly matches the directory name and `description` is present.
 
@@ -581,17 +581,17 @@ There's currently no dedicated UI indicator showing "Skill X was activated." The
 
 ## Contributing to the Marketplace
 
-Have you created a skill that others might find useful? Share it with the community by contributing to the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace)!
+Have you created a skill that others might find useful? Share it with the community by contributing to the [devil Marketplace](https://github.com/Devil-Org/devil-marketplace)!
 
 {% tabs %}
 {% tab label="VSCode" %}
 
-While the new platform does not yet have a built-in marketplace UI, skills from the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) can be manually downloaded into your `.kilo/skills/` directory or loaded via `skills.urls` in config.
+While the new platform does not yet have a built-in marketplace UI, skills from the [devil Marketplace repository](https://github.com/Devil-Org/devil-marketplace) can be manually downloaded into your `.devil/skills/` directory or loaded via `skills.urls` in config.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-While the new platform does not yet have a built-in marketplace UI, skills from the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) can be manually downloaded into your `.kilo/skills/` directory or loaded via `skills.urls` in config.
+While the new platform does not yet have a built-in marketplace UI, skills from the [devil Marketplace repository](https://github.com/Devil-Org/devil-marketplace) can be manually downloaded into your `.devil/skills/` directory or loaded via `skills.urls` in config.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -605,7 +605,7 @@ Skills submitted to the marketplace are browsable and installable directly from 
 
 1. **Prepare your skill**: Ensure your skill directory contains a valid `SKILL.md` file with proper frontmatter
 2. **Test thoroughly**: Verify your skill works correctly across different scenarios and modes
-3. **Fork the marketplace repository**: Visit [github.com/Kilo-Org/kilo-marketplace](https://github.com/Kilo-Org/kilo-marketplace) and create a fork
+3. **Fork the marketplace repository**: Visit [github.com/Devil-Org/devil-marketplace](https://github.com/Devil-Org/devil-marketplace) and create a fork
 4. **Add your skill**: Place your skill directory in the appropriate location following the repository's structure
 5. **Submit a pull request**: Create a PR with a clear description of what your skill does and when it's useful
 
@@ -615,9 +615,9 @@ Skills submitted to the marketplace are browsable and installable directly from 
 - Include a clear `name` and `description` in the frontmatter
 - Document any dependencies or requirements (scripts, external tools, etc.)
 - If your skill includes bundled resources (scripts, templates), ensure they are well-documented
-- Follow the [contribution guidelines](https://github.com/Kilo-Org/kilo-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
+- Follow the [contribution guidelines](https://github.com/Devil-Org/devil-marketplace/blob/main/CONTRIBUTING.md) in the marketplace repository
 
-For more details on contributing to Kilo Code, see the [Contributing Guide](/docs/contributing).
+For more details on contributing to devil Code, see the [Contributing Guide](/docs/contributing).
 
 ## Related
 

@@ -5,7 +5,7 @@ import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler 
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
-// import { proxy } from "hono/proxy" // kilocode_change - disabled external proxy
+// import { proxy } from "hono/proxy" // devilcode_change - disabled external proxy
 import { basicAuth } from "hono/basic-auth"
 import z from "zod"
 import { Provider } from "../provider/provider"
@@ -18,7 +18,7 @@ import { Vcs } from "../project/vcs"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill/skill"
 import { Auth } from "../auth"
-import { ModelCache } from "../provider/model-cache" // kilocode_change
+import { ModelCache } from "../provider/model-cache" // devilcode_change
 import { Flag } from "../flag/flag"
 import { Command } from "../command"
 import { Global } from "../global"
@@ -31,13 +31,13 @@ import { McpRoutes } from "./routes/mcp"
 import { FileRoutes } from "./routes/file"
 import { ConfigRoutes } from "./routes/config"
 import { ExperimentalRoutes } from "./routes/experimental"
-import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
+import { TelemetryRoutes } from "./routes/telemetry" // devilcode_change
 import { ProviderRoutes } from "./routes/provider"
-import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
-import { Database } from "../storage/db" // kilocode_change
-import { Session } from "../session" // kilocode_change
-import { Identifier } from "../id/id" // kilocode_change
-import { SessionTable, MessageTable, PartTable } from "../session/session.sql" // kilocode_change
+import { createDevilRoutes } from "@devilcode/kilo-gateway" // devilcode_change
+import { Database } from "../storage/db" // devilcode_change
+import { Session } from "../session" // devilcode_change
+import { Identifier } from "../id/id" // devilcode_change
+import { SessionTable, MessageTable, PartTable } from "../session/session.sql" // devilcode_change
 import { lazy } from "../util/lazy"
 import { InstanceBootstrap } from "../project/bootstrap"
 import { NotFoundError } from "../storage/db"
@@ -45,13 +45,13 @@ import type { ContentfulStatusCode } from "hono/utils/http-status"
 import { websocket } from "hono/bun"
 import { HTTPException } from "hono/http-exception"
 import { errors } from "./error"
-import { CommitMessageRoutes } from "./routes/commit-message" // kilocode_change
-import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
-import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
+import { CommitMessageRoutes } from "./routes/commit-message" // devilcode_change
+import { EnhancePromptRoutes } from "./routes/enhance-prompt" // devilcode_change
+import { DevilcodeRoutes } from "./routes/devilcode" // devilcode_change
 import { Filesystem } from "@/util/filesystem"
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
-import { RemoteRoutes } from "./routes/remote" // kilocode_change
+import { RemoteRoutes } from "./routes/remote" // devilcode_change
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 
@@ -95,14 +95,14 @@ export namespace Server {
           // Allow CORS preflight requests to succeed without auth.
           // Browser clients sending Authorization headers will preflight with OPTIONS.
           if (c.req.method === "OPTIONS") return next()
-          const password = Flag.KILO_SERVER_PASSWORD
+          const password = Flag.DEVIL_SERVER_PASSWORD
           if (!password) return next()
-          const username = Flag.KILO_SERVER_USERNAME ?? "kilo" // kilocode_change
+          const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
           return basicAuth({ username, password })(c, next)
         })
         .use(async (c, next) => {
-          // kilocode_change start
-          // kilocode change add telemetry because it is high volume
+          // devilcode_change start
+          // devilcode change add telemetry because it is high volume
           // add early return to prevent logging timing
           const skipLogging =
             c.req.path === "/log" || c.req.path === "/telemetry/capture" || c.req.path === "/global/health"
@@ -110,7 +110,7 @@ export namespace Server {
             await next()
             return
           }
-          // kilocode_change end
+          // devilcode_change end
           if (!skipLogging) {
             log.info("request", {
               method: c.req.method,
@@ -182,9 +182,9 @@ export namespace Server {
             const providerID = c.req.valid("param").providerID
             const info = c.req.valid("json")
             await Auth.set(providerID, info)
-            // kilocode_change start - invalidate provider/model cache after auth change
+            // devilcode_change start - invalidate provider/model cache after auth change
             ModelCache.clear(providerID)
-            // kilocode_change end
+            // devilcode_change end
             return c.json(true)
           },
         )
@@ -215,9 +215,9 @@ export namespace Server {
           async (c) => {
             const providerID = c.req.valid("param").providerID
             await Auth.remove(providerID)
-            // kilocode_change start - invalidate provider/model cache after auth removal
+            // devilcode_change start - invalidate provider/model cache after auth removal
             ModelCache.clear(providerID)
-            // kilocode_change end
+            // devilcode_change end
             return c.json(true)
           },
         )
@@ -254,9 +254,9 @@ export namespace Server {
           openAPIRouteHandler(app, {
             documentation: {
               info: {
-                title: "kilo", // kilocode_change
+                title: "kilo", // devilcode_change
                 version: "0.0.3",
-                description: "kilo api", // kilocode_change
+                description: "kilo api", // devilcode_change
               },
               openapi: "3.1.1",
             },
@@ -279,15 +279,15 @@ export namespace Server {
         .route("/permission", PermissionRoutes())
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
-        .route("/telemetry", TelemetryRoutes()) // kilocode_change
-        .route("/remote", RemoteRoutes()) // kilocode_change
-        .route("/commit-message", CommitMessageRoutes()) // kilocode_change
-        .route("/enhance-prompt", EnhancePromptRoutes()) // kilocode_change
-        .route("/kilocode", KilocodeRoutes()) // kilocode_change
-        // kilocode_change start - Kilo Gateway routes
+        .route("/telemetry", TelemetryRoutes()) // devilcode_change
+        .route("/remote", RemoteRoutes()) // devilcode_change
+        .route("/commit-message", CommitMessageRoutes()) // devilcode_change
+        .route("/enhance-prompt", EnhancePromptRoutes()) // devilcode_change
+        .route("/devilcode", DevilcodeRoutes()) // devilcode_change
+        // devilcode_change start - Devil Gateway routes
         .route(
           "/kilo",
-          createKiloRoutes({
+          createDevilRoutes({
             Hono,
             describeRoute,
             validator,
@@ -295,19 +295,19 @@ export namespace Server {
             errors,
             Auth,
             z,
-            Database, // kilocode_change
-            Instance, // kilocode_change
-            SessionTable, // kilocode_change
-            MessageTable, // kilocode_change
-            PartTable, // kilocode_change
-            SessionToRow: Session.toRow, // kilocode_change
-            Bus, // kilocode_change
-            SessionCreatedEvent: Session.Event.Created, // kilocode_change
-            Identifier, // kilocode_change
-            ModelCache, // kilocode_change
+            Database, // devilcode_change
+            Instance, // devilcode_change
+            SessionTable, // devilcode_change
+            MessageTable, // devilcode_change
+            PartTable, // devilcode_change
+            SessionToRow: Session.toRow, // devilcode_change
+            Bus, // devilcode_change
+            SessionCreatedEvent: Session.Event.Created, // devilcode_change
+            Identifier, // devilcode_change
+            ModelCache, // devilcode_change
           }),
         )
-        // kilocode_change end
+        // devilcode_change end
         .route("/", FileRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
@@ -617,7 +617,7 @@ export namespace Server {
             })
           },
         )
-        // kilocode_change start - disable external proxy to app.opencode.ai for privacy/security
+        // devilcode_change start - disable external proxy to app.opencode.ai for privacy/security
         .all("/*", async (c) => {
           // const path = c.req.path
           //
@@ -635,7 +635,7 @@ export namespace Server {
           // return response
           return c.notFound()
         }) as unknown as Hono,
-    // kilocode_change end
+    // devilcode_change end
   )
 
   export async function openapi() {
@@ -643,9 +643,9 @@ export namespace Server {
     const result = await generateSpecs(App() as Hono, {
       documentation: {
         info: {
-          title: "kilo", // kilocode_change
+          title: "kilo", // devilcode_change
           version: "1.0.0",
-          description: "kilo api", // kilocode_change
+          description: "kilo api", // devilcode_change
         },
         openapi: "3.1.1",
       },

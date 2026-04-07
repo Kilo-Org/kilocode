@@ -1,11 +1,11 @@
 ---
 title: "Models & Providers"
-description: "Learn about the AI models and providers available through the Kilo AI Gateway, including model IDs, routing behavior, and provider-specific features."
+description: "Learn about the AI models and providers available through the devil.ai Gateway, including model IDs, routing behavior, and provider-specific features."
 ---
 
 # Models & Providers
 
-The Kilo AI Gateway provides access to hundreds of AI models from multiple providers through a single unified API. You can switch between models by changing the model ID string -- no code changes required.
+The devil.ai Gateway provides access to hundreds of AI models from multiple providers through a single unified API. You can switch between models by changing the model ID string -- no code changes required.
 
 ## Specifying a model
 
@@ -13,7 +13,7 @@ Models are identified using the format `provider/model-name`. Pass this as the `
 
 ```typescript
 const result = streamText({
-  model: kilo.chat("anthropic/claude-sonnet-4.6"),
+  model: devil.chat("anthropic/claude-sonnet-4.6"),
   prompt: "Hello!",
 })
 ```
@@ -32,7 +32,7 @@ Or in a raw API request:
 You can browse the full list of available models via the models endpoint:
 
 ```
-GET https://api.kilo.ai/api/gateway/models
+GET https://api.devil.ai/api/gateway/models
 ```
 
 This returns model information including pricing, context window, and supported features. No authentication is required.
@@ -66,9 +66,9 @@ Free models are available to both authenticated and anonymous users. Anonymous u
 
 ## Auto models
 
-Kilo Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
+devil Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-devilcode-mode` request header.
 
-### `kilo-auto/frontier`
+### `devil-auto/frontier`
 
 Routes to the most capable paid models optimizing for cost, performance, and capabilities.
 
@@ -78,7 +78,7 @@ Routes to the most capable paid models optimizing for cost, performance, and cap
 | `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.6` |
 | Default (no mode specified)                                    | `anthropic/claude-sonnet-4.6` |
 
-### `kilo-auto/balanced`
+### `devil-auto/balanced`
 
 Follows the same mode-based routing as Frontier but uses more cost-effective models.
 
@@ -88,7 +88,7 @@ Follows the same mode-based routing as Frontier but uses more cost-effective mod
 | `build`, `explore`, `code`                                     | `minimax/minimax-m2.7` |
 | Default (no mode specified)                                    | `minimax/minimax-m2.7` |
 
-### `kilo-auto/free`
+### `devil-auto/free`
 
 The best available free model for each mode.
 
@@ -101,7 +101,7 @@ The best available free model for each mode.
 
 ```json
 {
-  "model": "kilo-auto/frontier",
+  "model": "devil-auto/frontier",
   "messages": [{ "role": "user", "content": "Help me design a database schema" }]
 }
 ```
@@ -109,11 +109,11 @@ The best available free model for each mode.
 With the mode header:
 
 ```bash
-curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
-  -H "Authorization: Bearer $KILO_API_KEY" \
-  -H "x-kilocode-mode: plan" \
+curl -X POST "https://api.devil.ai/api/gateway/chat/completions" \
+  -H "Authorization: Bearer $Devil_API_KEY" \
+  -H "x-devilcode-mode: plan" \
   -H "Content-Type: application/json" \
-  -d '{"model": "kilo-auto/balanced", "messages": [{"role": "user", "content": "Design a database schema"}]}'
+  -d '{"model": "devil-auto/balanced", "messages": [{"role": "user", "content": "Design a database schema"}]}'
 ```
 
 ## Providers
@@ -137,7 +137,7 @@ The gateway routes requests to the appropriate provider based on the model and y
 The gateway uses the following priority for routing requests:
 
 1. **BYOK check**: If you have a BYOK key for the model's provider, the request is routed through Vercel AI Gateway using your key
-2. **Free model routing**: If the model is a Kilo-hosted free model, it's routed to its designated provider
+2. **Free model routing**: If the model is a devil-hosted free model, it's routed to its designated provider
 3. **Default routing**: All other requests go through OpenRouter
 
 ### Preferred inference providers
@@ -158,7 +158,7 @@ These preferences are sent as hints to OpenRouter, which may override them based
 ### Models endpoint
 
 ```
-GET https://api.kilo.ai/api/gateway/models
+GET https://api.devil.ai/api/gateway/models
 ```
 
 Returns an OpenAI-compatible list of all available models with metadata including pricing, context window, and capabilities.
@@ -166,7 +166,7 @@ Returns an OpenAI-compatible list of all available models with metadata includin
 ### Providers endpoint
 
 ```
-GET https://api.kilo.ai/api/gateway/providers
+GET https://api.devil.ai/api/gateway/providers
 ```
 
 Returns a list of all available inference providers.
@@ -174,7 +174,7 @@ Returns a list of all available inference providers.
 ### Models by provider
 
 ```
-GET https://api.kilo.ai/api/gateway/models-by-provider
+GET https://api.devil.ai/api/gateway/models-by-provider
 ```
 
 Returns models grouped by their provider, useful for building model selection interfaces.

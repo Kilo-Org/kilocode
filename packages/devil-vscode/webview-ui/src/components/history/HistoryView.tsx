@@ -5,8 +5,8 @@
  */
 
 import { Component, createSignal } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Button } from "@devilcode/kilo-ui/button"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { CloudImportDialog } from "../chat/CloudImportDialog"

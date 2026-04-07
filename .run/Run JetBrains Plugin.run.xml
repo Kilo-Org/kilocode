@@ -2,7 +2,7 @@
   <configuration default="false" name="Run JetBrains Plugin" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
       <option name="executionName" />
-      <option name="externalProjectPath" value="$PROJECT_DIR$/packages/kilo-jetbrains" />
+      <option name="externalProjectPath" value="$PROJECT_DIR$/packages/devil-jetbrains" />
       <option name="externalSystemIdString" value="GRADLE" />
       <option name="scriptParameters" value="" />
       <option name="taskDescriptions">

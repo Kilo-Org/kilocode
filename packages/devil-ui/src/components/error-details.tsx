@@ -1,4 +1,4 @@
-import type { AssistantMessage } from "@kilocode/sdk/v2/client"
+import type { AssistantMessage } from "@devilcode/sdk/v2/client"
 
 type ErrorType = NonNullable<AssistantMessage["error"]>
 

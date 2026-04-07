@@ -1,6 +1,6 @@
 /// <reference path="../env.d.ts" />
 // import { Octokit } from "@octokit/rest"
-import { tool } from "@kilocode/plugin"
+import { tool } from "@devilcode/plugin"
 import DESCRIPTION from "./github-triage.txt"
 
 function getIssueNumber(): number {

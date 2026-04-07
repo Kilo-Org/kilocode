@@ -13,7 +13,7 @@ import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const DEVIL_PROVIDER_FILE = path.join(ROOT, "src/DevilProvider.ts")
 const CSS_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/agent-manager.css"),
   path.join(ROOT, "webview-ui/agent-manager/agent-manager-review.css"),
@@ -319,7 +319,7 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
   const tsx = readAllTsx()
 
   /**
-   * Regression: when isGitRepo is false, the Kilo server never sends a
+   * Regression: when isGitRepo is false, the Devil server never sends a
    * "sessionsLoaded" message, so the skeleton was stuck forever.
    * The fix must set sessionsLoaded(true) when receiving a state message
    * with isGitRepo === false.
@@ -337,11 +337,11 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
 })
 
 // ---------------------------------------------------------------------------
-// KiloProvider — pendingSessionRefresh race condition fix
+// DevilProvider — pendingSessionRefresh race condition fix
 // ---------------------------------------------------------------------------
 
-describe("KiloProvider — pending session refresh on reconnect", () => {
-  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+describe("DevilProvider — pending session refresh on reconnect", () => {
+  const provider = fs.readFileSync(DEVIL_PROVIDER_FILE, "utf-8")
   const utils = fs.readFileSync(path.join(ROOT, "src/kilo-provider-utils.ts"), "utf-8")
 
   /**
@@ -614,7 +614,7 @@ describe("Agent Manager — VS Code import boundary", () => {
 // also be present in the agent manager's provider chain. A missing provider
 // crashes the entire SolidJS component tree silently.
 //
-// Regression: PR #7473 moved KiloNotifications into MessageList. It calls
+// Regression: PR #7473 moved DevilNotifications into MessageList. It calls
 // useNotifications(), but NotificationsProvider was only in App.tsx — the agent
 // manager rendered a blank screen.
 // ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import type { Event, Session } from "@kilocode/sdk/v2/client"
+import type { Event, Session } from "@devilcode/sdk/v2/client"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
-const { KiloProvider } = await import("../../src/KiloProvider")
+const { DevilProvider } = await import("../../src/DevilProvider")
 
 type Internals = {
   webview: { postMessage: (message: unknown) => Promise<unknown> } | null
@@ -74,10 +74,10 @@ function connection() {
   }
 }
 
-describe("KiloProvider follow-up sessions", () => {
+describe("DevilProvider follow-up sessions", () => {
   it("adopts pending follow-up sessions for single-session views", async () => {
     const service = connection()
-    const provider = new KiloProvider({} as never, service as never)
+    const provider = new DevilProvider({} as never, service as never)
     const internal = provider as unknown as Internals
     const sent: unknown[] = []
     const loaded: string[] = []

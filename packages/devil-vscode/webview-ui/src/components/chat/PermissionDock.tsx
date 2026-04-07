@@ -10,10 +10,10 @@
  */
 
 import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { DockPrompt } from "@kilocode/kilo-ui/dock-prompt"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Button } from "@devilcode/kilo-ui/button"
+import { DockPrompt } from "@devilcode/kilo-ui/dock-prompt"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Tooltip } from "@devilcode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"

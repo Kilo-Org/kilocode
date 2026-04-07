@@ -1,14 +1,14 @@
 ---
 title: "Custom Modes"
-description: "Create and configure custom modes in Kilo Code"
+description: "Create and configure custom modes in devil Code"
 ---
 
 # Custom Modes
 
-Kilo Code allows you to create **custom modes** (also called **agents**) to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
+devil Code allows you to create **custom modes** (also called **agents**) to tailor devil's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
 
 {% callout type="info" %}
-The current VS Code extension (built on the Kilo CLI) uses **agent Markdown files** to define custom modes. The legacy extension used `custom_modes.yaml` / `.kilocodemodes`. See the tabs below for the relevant approach.
+The current VS Code extension (built on the devil CLI) uses **agent Markdown files** to define custom modes. The legacy extension used `custom_modes.yaml` / `.devilcodemodes`. See the tabs below for the relevant approach.
 {% /callout %}
 
 ## Why Use Custom Modes?
@@ -42,15 +42,15 @@ In the VSCode extension and CLI, custom behavioral profiles are called **agents*
 
 ## Methods for Creating and Configuring Agents
 
-### 1. Ask Kilo! (Recommended)
+### 1. Ask devil! (Recommended)
 
-Ask Kilo to create an agent for you:
+Ask devil to create an agent for you:
 
 ```
 Create a new agent called "docs-writer" that can only read files and edit Markdown files.
 ```
 
-Kilo will generate the agent definition and write it to `.kilo/agent/` in your project.
+devil will generate the agent definition and write it to `.devil/agent/` in your project.
 
 ### 2. Using the Settings UI
 
@@ -61,20 +61,20 @@ You can manage agents through the **Settings → Agent Behaviour → Agents** su
 Create `.md` files in any of these directories:
 
 ```
-.kilo/agents/my-agent.md
-.kilo/agent/my-agent.md
+.devil/agents/my-agent.md
+.devil/agent/my-agent.md
 .opencode/agents/my-agent.md
 ```
 
 For global agents, place files in your global config directory:
 
 ```
-~/.config/kilo/agent/my-agent.md
+~/.config/devil/agent/my-agent.md
 ```
 
 The **filename** (minus `.md`) becomes the agent name. Nested directories create namespaced names (e.g., `agents/backend/sql.md` becomes agent `backend/sql`).
 
-**Example agent file** (`.kilo/agents/docs-writer.md`):
+**Example agent file** (`.devil/agents/docs-writer.md`):
 
 ```markdown
 ---
@@ -97,9 +97,9 @@ You are a technical documentation specialist. Your expertise includes:
 Focus on clarity and completeness. Only edit Markdown files.
 ```
 
-### 4. Config File (`kilo.jsonc`)
+### 4. Config File (`devil.jsonc`)
 
-Define agents under the `agent` key in your project's `kilo.jsonc`:
+Define agents under the `agent` key in your project's `devil.jsonc`:
 
 ```jsonc
 {
@@ -174,10 +174,10 @@ steps: 25
 Agent configurations merge from lowest to highest priority:
 
 1. Built-in (native) agent defaults
-2. Global config (`~/.config/kilo/kilo.jsonc`)
-3. Project config (`kilo.jsonc` at project root)
-4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
-5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
+2. Global config (`~/.config/devil/devil.jsonc`)
+3. Project config (`devil.jsonc` at project root)
+4. `.devil/` / `.opencode/` directory configs and agent `.md` files
+5. Environment variable overrides (`Devil_CONFIG_CONTENT`)
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
 
@@ -186,7 +186,7 @@ When the same agent name appears at multiple levels, properties are merged (not 
 Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestrator**, **explore**, **general**) by defining an agent with the same name:
 
 ```jsonc
-// kilo.jsonc — override the built-in "code" agent
+// devil.jsonc — override the built-in "code" agent
 {
   "agent": {
     "code": {
@@ -203,7 +203,7 @@ Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestra
 }
 ```
 
-Or as a `.md` file (`.kilo/agents/code.md`):
+Or as a `.md` file (`.devil/agents/code.md`):
 
 ```markdown
 ---
@@ -220,7 +220,7 @@ You are a Python specialist. Only edit Python files.
 
 ## Migration from VSCode Extension Modes
 
-If you have existing `.kilocodemodes` or `custom_modes.yaml` files from the VSCode extension, the extension automatically migrates them on startup. The migration converts:
+If you have existing `.devilcodemodes` or `custom_modes.yaml` files from the VSCode extension, the extension automatically migrates them on startup. The migration converts:
 
 - `slug` to the agent name (key)
 - `roleDefinition` + `customInstructions` to `prompt`
@@ -254,22 +254,22 @@ In the CLI, custom behavioral profiles are called **agents** instead of modes. A
 
 ## Methods for Creating and Configuring Agents
 
-### 1. Ask Kilo! (Recommended)
+### 1. Ask devil! (Recommended)
 
-Ask Kilo to create an agent for you:
+Ask devil to create an agent for you:
 
 ```
 Create a new agent called "docs-writer" that can only read files and edit Markdown files.
 ```
 
-Kilo will generate the agent definition and write it to `.kilo/agent/` in your project.
+devil will generate the agent definition and write it to `.devil/agent/` in your project.
 
-### 2. Using `kilo agent create`
+### 2. Using `devil agent create`
 
 The CLI provides an interactive command:
 
 ```bash
-kilo agent create
+devil agent create
 ```
 
 This walks you through selecting a description, mode, and tools, then uses an LLM to generate the agent's system prompt and writes a `.md` file with YAML frontmatter.
@@ -279,20 +279,20 @@ This walks you through selecting a description, mode, and tools, then uses an LL
 Create `.md` files in any of these directories:
 
 ```
-.kilo/agents/my-agent.md
-.kilo/agent/my-agent.md
+.devil/agents/my-agent.md
+.devil/agent/my-agent.md
 .opencode/agents/my-agent.md
 ```
 
 For global agents, place files in your global config directory:
 
 ```
-~/.config/kilo/agent/my-agent.md
+~/.config/devil/agent/my-agent.md
 ```
 
 The **filename** (minus `.md`) becomes the agent name. Nested directories create namespaced names (e.g., `agents/backend/sql.md` becomes agent `backend/sql`).
 
-**Example agent file** (`.kilo/agents/docs-writer.md`):
+**Example agent file** (`.devil/agents/docs-writer.md`):
 
 ```markdown
 ---
@@ -315,9 +315,9 @@ You are a technical documentation specialist. Your expertise includes:
 Focus on clarity and completeness. Only edit Markdown files.
 ```
 
-### 4. Config File (`kilo.jsonc`)
+### 4. Config File (`devil.jsonc`)
 
-Define agents under the `agent` key in your project's `kilo.jsonc`:
+Define agents under the `agent` key in your project's `devil.jsonc`:
 
 ```jsonc
 {
@@ -392,10 +392,10 @@ steps: 25
 Agent configurations merge from lowest to highest priority:
 
 1. Built-in (native) agent defaults
-2. Global config (`~/.config/kilo/kilo.jsonc`)
-3. Project config (`kilo.jsonc` at project root)
-4. `.kilo/` / `.opencode/` directory configs and agent `.md` files
-5. Environment variable overrides (`KILO_CONFIG_CONTENT`)
+2. Global config (`~/.config/devil/devil.jsonc`)
+3. Project config (`devil.jsonc` at project root)
+4. `.devil/` / `.opencode/` directory configs and agent `.md` files
+5. Environment variable overrides (`Devil_CONFIG_CONTENT`)
 
 When the same agent name appears at multiple levels, properties are merged (not replaced wholesale), so you can override just a model or temperature without redefining the entire agent.
 
@@ -404,7 +404,7 @@ When the same agent name appears at multiple levels, properties are merged (not 
 Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestrator**, **explore**, **general**) by defining an agent with the same name:
 
 ```jsonc
-// kilo.jsonc — override the built-in "code" agent
+// devil.jsonc — override the built-in "code" agent
 {
   "agent": {
     "code": {
@@ -421,7 +421,7 @@ Override any built-in agent (**code**, **plan**, **debug**, **ask**, **orchestra
 }
 ```
 
-Or as a `.md` file (`.kilo/agents/code.md`):
+Or as a `.md` file (`.devil/agents/code.md`):
 
 ```markdown
 ---
@@ -438,7 +438,7 @@ You are a Python specialist. Only edit Python files.
 
 ## Migration from VSCode Extension Modes
 
-If you have existing `.kilocodemodes` or `custom_modes.yaml` files from the VSCode extension, the CLI automatically migrates them on startup. The migration converts:
+If you have existing `.devilcodemodes` or `custom_modes.yaml` files from the VSCode extension, the CLI automatically migrates them on startup. The migration converts:
 
 - `slug` to the agent name (key)
 - `roleDefinition` + `customInstructions` to `prompt`
@@ -453,29 +453,29 @@ Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orches
 
 ## Sticky Models for Efficient Workflow
 
-Each mode—including custom ones—features **Sticky Models**. This means Kilo Code automatically remembers and selects the last model you used with a particular mode. This lets you assign different preferred models to different tasks without constant reconfiguration, as Kilo switches between models when you change modes.
+Each mode—including custom ones—features **Sticky Models**. This means devil Code automatically remembers and selects the last model you used with a particular mode. This lets you assign different preferred models to different tasks without constant reconfiguration, as devil switches between models when you change modes.
 
 {% callout type="tip" %}
 **Keep custom modes on track:** Limit the types of files that they're allowed to edit using the `fileRegex` option in the `groups` configuration. This prevents modes from accidentally modifying files outside their intended scope.
 {% /callout %}
 
-{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in Kilo Code" width="600" caption="Custom mode creation interface in Kilo Code" /%}
+{% image src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in devil Code" width="600" caption="Custom mode creation interface in devil Code" /%}
 
-_Kilo Code's interface for creating and managing custom modes._
+_Devil Code's interface for creating and managing custom modes._
 
 ## What's Included in a Custom Mode?
 
-Custom modes are defined by several key properties. Understanding these concepts will help you tailor Kilo's behavior effectively.
+Custom modes are defined by several key properties. Understanding these concepts will help you tailor devil's behavior effectively.
 
 | UI Field / YAML Property                       | Conceptual Description                                                                                                                                                               |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Slug** (`slug`)                              | A unique internal identifier for the mode. Used by Kilo Code to reference the mode, especially for associating mode-specific instruction files.                                      |
-| **Name** (`name`)                              | The display name for the mode as it appears in the Kilo Code user interface. Should be human-readable and descriptive.                                                               |
+| **Slug** (`slug`)                              | A unique internal identifier for the mode. Used by devil Code to reference the mode, especially for associating mode-specific instruction files.                                      |
+| **Name** (`name`)                              | The display name for the mode as it appears in the devil Code user interface. Should be human-readable and descriptive.                                                               |
 | **Description** (`description`)                | A short, user-friendly summary of the mode's purpose displayed in the mode selector UI. Keep this concise and focused on what the mode does for the user.                            |
-| **Role Definition** (`roleDefinition`)         | Defines the core identity and expertise of the mode. This text is placed at the beginning of the system prompt and defines Kilo's personality and behavior when this mode is active. |
+| **Role Definition** (`roleDefinition`)         | Defines the core identity and expertise of the mode. This text is placed at the beginning of the system prompt and defines devil's personality and behavior when this mode is active. |
 | **Available Tools** (`groups`)                 | Defines the allowed toolsets and file access permissions for the mode. Corresponds to selecting which general categories of tools the mode can use.                                  |
-| **When to Use** (`whenToUse`)                  | _(Optional)_ Provides guidance for Kilo's automated decision-making, particularly for mode selection and task orchestration. Used by the Orchestrator mode for task coordination.    |
-| **Custom Instructions** (`customInstructions`) | _(Optional)_ Specific behavioral guidelines or rules for the mode. Added near the end of the system prompt to further refine Kilo's behavior.                                        |
+| **When to Use** (`whenToUse`)                  | _(Optional)_ Provides guidance for devil's automated decision-making, particularly for mode selection and task orchestration. Used by the Orchestrator mode for task coordination.    |
+| **Custom Instructions** (`customInstructions`) | _(Optional)_ Specific behavioral guidelines or rules for the mode. Added near the end of the system prompt to further refine devil's behavior.                                        |
 
 {% callout type="tip" %}
 **Power Steering for Better Mode Adherence**
@@ -499,13 +499,13 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 
 **Exporting a Mode:**
 
-Modes are managed from the Modes area in Kilo Code. Depending on your UI layout, you can open this from the mode selector in the chat panel or from the notebook icon.
+Modes are managed from the Modes area in devil Code. Depending on your UI layout, you can open this from the mode selector in the chat panel or from the notebook icon.
 
 1. Open the Modes area from the mode selector in the chat panel (or via the <Codicon name="notebook" /> icon if shown)
 2. Select the mode you wish to export
 3. Click the Export Mode button (download icon)
 4. Choose a location to save the `.yaml` file
-5. Kilo packages the mode's configuration and any rules into the YAML file
+5. devil packages the mode's configuration and any rules into the YAML file
 
 **Importing a Mode:**
 
@@ -513,7 +513,7 @@ Modes are managed from the Modes area in Kilo Code. Depending on your UI layout,
 2. Click the Import Mode button (upload icon)
 3. Select the mode's YAML file (`.yaml`)
 4. Choose the import level:
-   - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
+   - **Project:** Available only in current workspace (saved to `.devilcodemodes` file)
    - **Global:** Available in all projects (saved to global settings)
 
 ### Changing Slugs on Import
@@ -531,8 +531,8 @@ When importing modes, you can change the slug in the exported YAML file before i
 
 Custom agents are defined as Markdown files with optional YAML frontmatter. You can place them in:
 
-- **Project agents:** `.kilo/agents/*.md` (or `.opencode/agents/*.md`)
-- **Global agents:** `~/.config/kilo/agents/*.md`
+- **Project agents:** `.devil/agents/*.md` (or `.opencode/agents/*.md`)
+- **Global agents:** `~/.config/devil/agents/*.md`
 
 ### Agent File Format
 
@@ -564,30 +564,30 @@ The filename (without `.md`) becomes the agent's slug and display name.
 
 You can also install community-contributed agents from the **Marketplace** tab in the extension sidebar.
 
-### Ask Kilo! (Recommended)
+### Ask devil! (Recommended)
 
-You can also have Kilo create an agent file for you. For example:
+You can also have devil create an agent file for you. For example:
 
 ```
 Create a new agent called "Documentation Writer". It should only be able to read files and write Markdown files.
 ```
 
-Kilo will create the appropriate `.kilo/agents/docs-writer.md` file with the right frontmatter.
+devil will create the appropriate `.devil/agents/docs-writer.md` file with the right frontmatter.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 You can create and configure custom modes in several ways:
 
-### 1. Ask Kilo! (Recommended)
+### 1. Ask devil! (Recommended)
 
-You can quickly create a basic custom mode by asking Kilo Code to do it for you. For example:
+You can quickly create a basic custom mode by asking devil Code to do it for you. For example:
 
 ```
 Create a new mode called "Documentation Writer". It should only be able to read files and write Markdown files.
 ```
 
-Kilo Code will guide you through the process, prompting for necessary information and creating the mode using the preferred YAML format.
+devil Code will guide you through the process, prompting for necessary information and creating the mode using the preferred YAML format.
 
 {% callout type="tip" %}
 **Create modes from job postings:** If there's a real world job posting for something you want a custom mode to do, try asking Code mode to `Create a custom mode based on the job posting at @[url]`. This can help you quickly create specialized modes with realistic role definitions.
@@ -603,20 +603,20 @@ Kilo Code will guide you through the process, prompting for necessary informatio
 
 _The custom mode creation interface showing fields for name, slug, description, save location, role definition, available tools, custom instructions._
 
-The interface provides fields for Name, Slug, Description, Save Location, Role Definition, When to Use (optional), Available Tools, and Custom Instructions. After filling these, click the "Create Mode" button. Kilo Code will save the new mode in YAML format.
+The interface provides fields for Name, Slug, Description, Save Location, Role Definition, When to Use (optional), Available Tools, and Custom Instructions. After filling these, click the "Create Mode" button. devil Code will save the new mode in YAML format.
 
 ### 3. Manual Configuration (YAML & JSON)
 
-You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. Kilo Code now supports both YAML (preferred) and JSON formats.
+You can directly edit the configuration files to create or modify custom modes. This method offers the most control over all properties. devil Code now supports both YAML (preferred) and JSON formats.
 
 - **Global Modes:** Edit `custom_modes.yaml` (primary). `custom_modes.json` is a legacy fallback and may still exist in older setups.
-- **Project Modes:** Edit `.kilocodemodes` in your project root (YAML preferred; JSON still supported for compatibility).
+- **Project Modes:** Edit `.devilcodemodes` in your project root (YAML preferred; JSON still supported for compatibility).
 - **Open from UI:** Open the Modes area, click <Codicon name="gear" /> next to Global or Project Modes, then choose **Edit Global Modes** or **Edit Project Modes**.
 
 These files define an array/list of custom modes.
 
 {% callout type="info" title="Why JSON Files May Still Exist" %}
-If you see both YAML and JSON mode files, this is usually from legacy configuration. Kilo Code reads YAML first and does not keep both files synchronized line-by-line. In practice, edit YAML unless you have a specific reason to stay on JSON.
+If you see both YAML and JSON mode files, this is usually from legacy configuration. devil Code reads YAML first and does not keep both files synchronized line-by-line. In practice, edit YAML unless you have a specific reason to stay on JSON.
 {% /callout %}
 
 ## YAML Configuration Format (Preferred)
@@ -666,7 +666,7 @@ customModes:
 
 - **Purpose:** A unique identifier for the mode
 - **Format:** Must match the pattern `/^[a-zA-Z0-9-]+$/` (only letters, numbers, and hyphens)
-- **Usage:** Used internally and in file/directory names for mode-specific rules (e.g., `.kilo/rules-{slug}/`)
+- **Usage:** Used internally and in file/directory names for mode-specific rules (e.g., `.devil/rules-{slug}/`)
 - **Recommendation:** Keep it short and descriptive
 
 **YAML Example:** `slug: docs-writer`
@@ -674,7 +674,7 @@ customModes:
 
 ### `name`
 
-- **Purpose:** The display name shown in the Kilo Code UI
+- **Purpose:** The display name shown in the devil Code UI
 - **Format:** Can include spaces and proper capitalization
 
 **YAML Example:** `name: 📝 Documentation Writer`
@@ -743,9 +743,9 @@ groups:
 
 ### `whenToUse` (Optional)
 
-- **Purpose:** Provides guidance for Kilo's automated decision-making, particularly for mode selection and task orchestration
+- **Purpose:** Provides guidance for devil's automated decision-making, particularly for mode selection and task orchestration
 - **Format:** A string describing ideal scenarios or task types for this mode
-- **Usage:** Used by Kilo for automated decisions and not displayed in the mode selector UI
+- **Usage:** Used by devil for automated decisions and not displayed in the mode selector UI
 
 **YAML Example:** `whenToUse: This mode is best for refactoring Python code.`
 **JSON Example:** `"whenToUse": "This mode is best for refactoring Python code."`
@@ -776,7 +776,7 @@ YAML is now the preferred format for defining custom modes due to several advant
 - **Less Punctuation:** YAML generally requires less punctuation compared to JSON, reducing syntax errors
 - **Editor Support:** Most modern code editors provide excellent syntax highlighting and validation for YAML files
 
-While JSON is still fully supported, new modes created via the UI or by asking Kilo will default to YAML.
+While JSON is still fully supported, new modes created via the UI or by asking devil will default to YAML.
 
 ## Migration to YAML Format
 
@@ -784,46 +784,46 @@ While JSON is still fully supported, new modes created via the UI or by asking K
 
 Automatic migration from `custom_modes.json` to `custom_modes.yaml` happens when:
 
-- Kilo Code starts up
+- devil Code starts up
 - A `custom_modes.json` file exists
 - No `custom_modes.yaml` file exists yet
 
 The migration process preserves the original JSON file for rollback purposes.
 
-### Project Modes (`.kilocodemodes`)
+### Project Modes (`.devilcodemodes`)
 
 - No automatic startup migration occurs for project-specific files
-- Kilo Code can read `.kilocodemodes` files in either YAML or JSON format
+- devil Code can read `.devilcodemodes` files in either YAML or JSON format
 - When editing through the UI, JSON files will be converted to YAML format
-- For manual conversion, you can ask Kilo to help reformat configurations
+- For manual conversion, you can ask devil to help reformat configurations
 
 ## Mode-Specific Instructions via Files/Directories
 
 You can provide instructions for custom modes using dedicated files or directories within your workspace, allowing for better organization and version control.
 
-### Preferred Method: Directory (`.kilo/rules-{mode-slug}/`)
+### Preferred Method: Directory (`.devil/rules-{mode-slug}/`)
 
 ```
 .
-├── .kilo/
+├── .devil/
 │   └── rules-docs-writer/  # Example for mode slug "docs-writer"
 │       ├── 01-style-guide.md
 │       └── 02-formatting.txt
 └── ... (other project files)
 ```
 
-### Fallback Method: Single File (`.kilorules-{mode-slug}`)
+### Fallback Method: Single File (`.Devilrules-{mode-slug}`)
 
 ```
 .
-├── .kilorules-docs-writer  # Example for mode slug "docs-writer"
+├── .Devilrules-docs-writer  # Example for mode slug "docs-writer"
 └── ... (other project files)
 ```
 
 **Rules Directory Scope:**
 
-- **Global modes:** Rules are stored in `~/.kilo/rules-{slug}/`
-- **Project modes:** Rules are stored in `{workspace}/.kilo/rules-{slug}/`
+- **Global modes:** Rules are stored in `~/.devil/rules-{slug}/`
+- **Project modes:** Rules are stored in `{workspace}/.devil/rules-{slug}/`
 
 The directory method takes precedence if it exists and contains files. Files within the directory are read recursively and appended in alphabetical order.
 
@@ -831,15 +831,15 @@ The directory method takes precedence if it exists and contains files. Files wit
 
 Mode configurations are applied in this order:
 
-1. **Project-level mode configurations** (from `.kilocodemodes` - YAML or JSON)
+1. **Project-level mode configurations** (from `.devilcodemodes` - YAML or JSON)
 2. **Global mode configurations** (from `custom_modes.yaml`, then `custom_modes.json` if YAML not found)
 3. **Default mode configurations**
 
-**Important:** When modes with the same slug exist in both `.kilocodemodes` and global settings, the `.kilocodemodes` version completely overrides the global one for ALL properties.
+**Important:** When modes with the same slug exist in both `.devilcodemodes` and global settings, the `.devilcodemodes` version completely overrides the global one for ALL properties.
 
 ## Overriding Default Modes
 
-You can override Kilo Code's built-in modes (like 💻 Code, 🪲 Debug, ❓ Ask, 🏗️ Architect, 🪃 Orchestrator) by creating a custom mode with the same slug.
+You can override devil Code's built-in modes (like 💻 Code, 🪲 Debug, ❓ Ask, 🏗️ Architect, 🪃 Orchestrator) by creating a custom mode with the same slug.
 
 ### Global Override Example
 
@@ -917,15 +917,15 @@ Regular expressions (`fileRegex`) in the **VSCode** version offer fine-grained c
 
 {% callout type="tip" %}
 
-**Let Kilo Build Your Regex Patterns**
+**Let devil Build Your Regex Patterns**
 
-Instead of writing complex regex manually, ask Kilo:
+Instead of writing complex regex manually, ask devil:
 
 ```
 Create a regex pattern that matches JavaScript files but excludes test files
 ```
 
-Kilo will generate the pattern. Remember to adapt it for YAML (usually single backslashes) or JSON (double backslashes).
+devil will generate the pattern. Remember to adapt it for YAML (usually single backslashes) or JSON (double backslashes).
 
 {% /callout %}
 
@@ -971,7 +971,7 @@ When a mode attempts to edit a file that doesn't match its `fileRegex` pattern, 
 {% tabs %}
 {% tab label="VSCode" %}
 
-### Basic Documentation Writer (`.kilo/agents/docs-writer.md`)
+### Basic Documentation Writer (`.devil/agents/docs-writer.md`)
 
 ```markdown
 ---
@@ -989,7 +989,7 @@ You are a technical writer specializing in clear documentation.
 Focus on clear explanations and examples.
 ```
 
-### Test Engineer (`.kilo/agents/test-engineer.md`)
+### Test Engineer (`.devil/agents/test-engineer.md`)
 
 ```markdown
 ---
@@ -1006,7 +1006,7 @@ You are a test engineer focused on code quality.
 Use for writing tests, debugging test failures, and improving test coverage.
 ```
 
-### Security Reviewer (`.kilo/agents/security-review.md`)
+### Security Reviewer (`.devil/agents/security-review.md`)
 
 ```markdown
 ---
@@ -1028,7 +1028,7 @@ Focus on:
 - Injection vulnerabilities
 ```
 
-### Config File Example (`kilo.jsonc`)
+### Config File Example (`devil.jsonc`)
 
 ```jsonc
 {
@@ -1058,7 +1058,7 @@ Focus on:
 {% /tab %}
 {% tab label="CLI" %}
 
-### Basic Documentation Writer (`.kilo/agents/docs-writer.md`)
+### Basic Documentation Writer (`.devil/agents/docs-writer.md`)
 
 ```markdown
 ---
@@ -1076,7 +1076,7 @@ You are a technical writer specializing in clear documentation.
 Focus on clear explanations and examples.
 ```
 
-### Test Engineer (`.kilo/agents/test-engineer.md`)
+### Test Engineer (`.devil/agents/test-engineer.md`)
 
 ```markdown
 ---
@@ -1093,7 +1093,7 @@ You are a test engineer focused on code quality.
 Use for writing tests, debugging test failures, and improving test coverage.
 ```
 
-### Security Reviewer (`.kilo/agents/security-review.md`)
+### Security Reviewer (`.devil/agents/security-review.md`)
 
 ```markdown
 ---
@@ -1115,7 +1115,7 @@ Focus on:
 - Injection vulnerabilities
 ```
 
-### Config File Example (`kilo.jsonc`)
+### Config File Example (`devil.jsonc`)
 
 ```jsonc
 {
@@ -1208,7 +1208,7 @@ customModes:
 
 ### Common Issues
 
-- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
+- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.devil/agents/`, `.devil/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
 - **Permission errors:** Permission rules are evaluated last-match-wins. If an agent can't use a tool you expect, check that an `allow` rule appears after any `deny` rules for that permission.
 - **YAML frontmatter parse errors:** Ensure the frontmatter block starts and ends with `---` on its own line. Validate that YAML keys match expected property names (e.g., `top_p` not `topP`).
 - **Agent overrides not working:** Config merges from global to project level. If a global config sets a property, your project config can override it, but both must use the same agent name.
@@ -1218,14 +1218,14 @@ customModes:
 - **Keep prompts focused:** The markdown body is your system prompt — write it as if briefing a colleague
 - **Use `mode: subagent`** for helper agents that shouldn't be directly selectable by users
 - **Use the Settings UI** to view and edit agents through the **Settings → Agent Behaviour → Agents** subtab
-- **Legacy modes are auto-migrated:** If you have `.kilocodemodes` files, they'll be converted on startup — no manual migration needed
+- **Legacy modes are auto-migrated:** If you have `.devilcodemodes` files, they'll be converted on startup — no manual migration needed
 
 {% /tab %}
 {% tab label="CLI" %}
 
 ### Common Issues
 
-- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.kilo/agents/`, `.kilo/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
+- **Agent not appearing:** Ensure the `.md` file is in a recognized directory (`.devil/agents/`, `.devil/agent/`, `.opencode/agents/`). Check that the `mode` property is `primary` or `all` if you expect it in the agent picker.
 - **Permission errors:** Permission rules are evaluated last-match-wins. If an agent can't use a tool you expect, check that an `allow` rule appears after any `deny` rules for that permission.
 - **YAML frontmatter parse errors:** Ensure the frontmatter block starts and ends with `---` on its own line. Validate that YAML keys match expected property names (e.g., `top_p` not `topP`).
 - **Agent overrides not working:** Config merges from global to project level. If a global config sets a property, your project config can override it, but both must use the same agent name.
@@ -1234,8 +1234,8 @@ customModes:
 
 - **Keep prompts focused:** The markdown body is your system prompt — write it as if briefing a colleague
 - **Use `mode: subagent`** for helper agents that shouldn't be directly selectable by users
-- **Test with `kilo agent create`** to see how the CLI generates agent definitions, then customize from there
-- **Legacy modes are auto-migrated:** If you have `.kilocodemodes` files, they'll be converted on startup — no manual migration needed
+- **Test with `devil agent create`** to see how the CLI generates agent definitions, then customize from there
+- **Legacy modes are auto-migrated:** If you have `.devilcodemodes` files, they'll be converted on startup — no manual migration needed
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -1259,4 +1259,4 @@ customModes:
 
 ## Community Gallery
 
-Ready to explore more? Check out the [Show and Tell](https://github.com/Kilo-Org/kilocode/discussions/categories/show-and-tell) to discover and share custom modes and agents created by the community!
+Ready to explore more? Check out the [Show and Tell](https://github.com/Devil-Org/devilcode/discussions/categories/show-and-tell) to discover and share custom modes and agents created by the community!

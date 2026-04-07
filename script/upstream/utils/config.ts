@@ -12,13 +12,13 @@ export interface MergeConfig {
   /** Package name mappings from opencode to kilo */
   packageMappings: PackageMapping[]
 
-  /** Files to always keep Kilo's version (never take upstream changes) */
+  /** Files to always keep Devil's version (never take upstream changes) */
   keepOurs: string[]
 
   /** Files to skip entirely (don't add from upstream, remove if added) */
   skipFiles: string[]
 
-  /** Files that should take upstream version and apply Kilo branding transforms */
+  /** Files that should take upstream version and apply Devil branding transforms */
   takeTheirsAndTransform: string[]
 
   /** Tauri/Desktop config files with predictable branding patterns */
@@ -36,7 +36,7 @@ export interface MergeConfig {
   /** Lock files to accept ours and regenerate after merge */
   lockFiles: string[]
 
-  /** Directories that are Kilo-specific and should be preserved */
+  /** Directories that are Devil-specific and should be preserved */
   kiloDirectories: string[]
 
   /** File patterns to exclude from codemods */
@@ -60,10 +60,10 @@ export interface MergeConfig {
 
 export const defaultConfig: MergeConfig = {
   packageMappings: [
-    { from: "opencode-ai", to: "@kilocode/cli" },
-    { from: "@opencode-ai/cli", to: "@kilocode/cli" },
-    { from: "@opencode-ai/sdk", to: "@kilocode/sdk" },
-    { from: "@opencode-ai/plugin", to: "@kilocode/plugin" },
+    { from: "opencode-ai", to: "@devilcode/cli" },
+    { from: "@opencode-ai/cli", to: "@devilcode/cli" },
+    { from: "@opencode-ai/sdk", to: "@devilcode/sdk" },
+    { from: "@opencode-ai/plugin", to: "@devilcode/plugin" },
   ],
 
   keepOurs: [
@@ -77,13 +77,13 @@ export const defaultConfig: MergeConfig = {
     ".github/workflows/publish.yml",
     ".github/workflows/close-stale-prs.yml",
     ".github/pull_request_template.md",
-    // Kilo-specific command files
+    // Devil-specific command files
     ".opencode/command/commit.md",
-    // Kilo-specific publish scripts
+    // Devil-specific publish scripts
     "packages/opencode/script/publish-registries.ts",
     // Generated OpenAPI spec - kept ours and regenerated post-merge via script/generate.ts
     "packages/sdk/openapi.json",
-    // GitHub Action - Kilo version is fully ported and complete
+    // GitHub Action - Devil version is fully ported and complete
     "github/action.yml",
     "github/README.md",
     "github/.gitignore",
@@ -91,10 +91,10 @@ export const defaultConfig: MergeConfig = {
     "github/script/publish",
   ],
 
-  // Files that only exist in upstream and should NOT be added to Kilo
+  // Files that only exist in upstream and should NOT be added to Devil
   // These are removed during merge if they appear
   skipFiles: [
-    // Translated README files (Kilo doesn't have these)
+    // Translated README files (Devil doesn't have these)
     "README.ar.md",
     "README.bn.md",
     "README.br.md",
@@ -118,17 +118,17 @@ export const defaultConfig: MergeConfig = {
     "README.zht.md",
     // Stats file
     "STATS.md",
-    // Workflows that don't exist in Kilo
+    // Workflows that don't exist in Devil
     ".github/workflows/update-nix-hashes.yml",
     ".github/workflows/deploy.yml",
     ".github/workflows/docs-update.yml",
     ".github/workflows/docs-locale-sync.yml",
-    // Vouch files (Kilo doesn't use Vouch)
+    // Vouch files (Devil doesn't use Vouch)
     ".github/VOUCHED.md",
     ".github/workflows/vouch-check-issue.yml",
     ".github/workflows/vouch-check-pr.yml",
     ".github/workflows/vouch-manage-by-issue.yml",
-    // SST infrastructure files (Kilo is CLI-only, no hosted platform)
+    // SST infrastructure files (Devil is CLI-only, no hosted platform)
     "sst.config.ts",
     "sst-env.d.ts",
     // Hosted platform packages (not needed for CLI)
@@ -140,7 +140,7 @@ export const defaultConfig: MergeConfig = {
     "packages/function/**",
     "packages/docs/**",
     "packages/identity/**",
-    // GitHub Action - Kilo version is fully ported and complete
+    // GitHub Action - Devil version is fully ported and complete
     "github/index.ts",
     "github/package.json",
     "github/tsconfig.json",
@@ -148,7 +148,7 @@ export const defaultConfig: MergeConfig = {
     "github/sst-env.d.ts",
   ],
 
-  // Files that should take upstream version and apply Kilo branding transforms
+  // Files that should take upstream version and apply Devil branding transforms
   // These are files with only branding differences, no logic changes
   takeTheirsAndTransform: [
     // App components with branding only
@@ -200,14 +200,14 @@ export const defaultConfig: MergeConfig = {
   ],
 
   kiloDirectories: [
-    "packages/opencode/src/kilocode",
-    "packages/opencode/test/kilocode",
-    "packages/kilo-gateway",
-    "packages/kilo-telemetry",
-    "packages/kilo-vscode",
-    "packages/kilo-ui",
-    "packages/kilo-docs",
-    "packages/kilo-i18n",
+    "packages/opencode/src/devilcode",
+    "packages/opencode/test/devilcode",
+    "packages/devil-gateway",
+    "packages/devil-telemetry",
+    "packages/devil-vscode",
+    "packages/devil-ui",
+    "packages/devil-docs",
+    "packages/devil-i18n",
     "script/upstream",
   ],
 
@@ -225,7 +225,7 @@ export const defaultConfig: MergeConfig = {
   upstreamRemote: "upstream",
   originRemote: "origin",
 
-  // i18n translation files that need Kilo branding transforms
+  // i18n translation files that need Devil branding transforms
   i18nPatterns: ["packages/*/src/i18n/*.ts", "packages/desktop/src/i18n/*.ts"],
 }
 

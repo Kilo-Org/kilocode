@@ -17,8 +17,8 @@ export const GettingStartedNav: NavSection[] = [
         children: "Setup & Authentication",
       },
       {
-        href: "/getting-started/using-kilo-for-free",
-        children: "Using Kilo for Free",
+        href: "/getting-started/using-devil-for-free",
+        children: "Using devil for Free",
       },
       {
         href: "/getting-started/byok",

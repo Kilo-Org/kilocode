@@ -3,7 +3,7 @@ import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { TuiEvent } from "../../src/cli/cmd/tui/event"
 import { Identifier } from "../../src/id/id"
-import { formatTodos, generateHandover, PlanFollowup } from "../../src/kilocode/plan-followup"
+import { formatTodos, generateHandover, PlanFollowup } from "../../src/devilcode/plan-followup"
 import { Instance } from "../../src/project/instance"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
@@ -19,7 +19,7 @@ import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
-process.env.KILO_CLIENT = "cli"
+process.env.DEVIL_CLIENT = "cli"
 
 const model = {
   providerID: "openai",

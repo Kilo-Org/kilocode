@@ -1,5 +1,5 @@
 {
-  description = "Kilo development flake";
+  description = "Devil development flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -21,15 +21,15 @@
       devShells = forEachSystem (pkgs: {
         default =
           let
-            kilo-dev = pkgs.writeShellScriptBin "kilo-dev" ''
-              cd "$KILO_ROOT"
+            devil-dev = pkgs.writeShellScriptBin "devil-dev" ''
+              cd "$DEVIL_ROOT"
               exec ${pkgs.bun}/bin/bun dev "$@"
             '';
 
-            kilo-install-bin = pkgs.writeShellScriptBin "kilo-install" ''
+            devil-install-bin = pkgs.writeShellScriptBin "devil-install" ''
               set -euo pipefail
 
-              CACHE_DIR="$HOME/.cache/kilo-nix"
+              CACHE_DIR="$HOME/.cache/devil-nix"
               VERSION="''${1:-latest}"
 
               # Platform detection
@@ -85,16 +85,16 @@
 
               # Build filename and URL
               target="$os-$arch$needs_baseline$is_musl"
-              filename="kilo-$target$ext"
+              filename="devil-$target$ext"
 
               if [ "$VERSION" = "latest" ]; then
-                url="https://github.com/Kilo-Org/kilocode/releases/latest/download/$filename"
-                echo "Installing latest version of kilo..." >&2
+                url="https://github.com/Devil-Org/devilcode/releases/latest/download/$filename"
+                echo "Installing latest version of devil..." >&2
               else
                 # Strip leading 'v' if present
                 VERSION="''${VERSION#v}"
-                url="https://github.com/Kilo-Org/kilocode/releases/download/v''${VERSION}/$filename"
-                echo "Installing kilo version $VERSION..." >&2
+                url="https://github.com/Devil-Org/devilcode/releases/download/v''${VERSION}/$filename"
+                echo "Installing devil version $VERSION..." >&2
               fi
 
               # Create cache directory
@@ -106,8 +106,8 @@
 
               echo "Downloading from $url..." >&2
               if ! ${pkgs.curl}/bin/curl -fsSL -o "$tmp_dir/$filename" "$url"; then
-                echo "Error: Failed to download kilo from $url" >&2
-                echo "Please check your internet connection or visit https://github.com/Kilo-Org/kilocode/releases" >&2
+                echo "Error: Failed to download devil from $url" >&2
+                echo "Please check your internet connection or visit https://github.com/Devil-Org/devilcode/releases" >&2
                 exit 1
               fi
 
@@ -120,33 +120,33 @@
               fi
 
               # Install the binary
-              KILO_BIN="$CACHE_DIR/kilo"
-              mv "$tmp_dir/kilo" "$KILO_BIN"
-              chmod +x "$KILO_BIN"
+              DEVIL_BIN="$CACHE_DIR/devil"
+              mv "$tmp_dir/devil" "$DEVIL_BIN"
+              chmod +x "$DEVIL_BIN"
 
               # Get the installed version
-              installed_version=$("$KILO_BIN" --version 2>/dev/null || echo "unknown")
-              echo "Successfully installed kilo $installed_version to $KILO_BIN" >&2
+              installed_version=$("$DEVIL_BIN" --version 2>/dev/null || echo "unknown")
+              echo "Successfully installed devil $installed_version to $DEVIL_BIN" >&2
             '';
 
-            kilo-bin = pkgs.writeShellScriptBin "kilo" ''
+            devil-bin = pkgs.writeShellScriptBin "devil" ''
               set -euo pipefail
 
-              CACHE_DIR="$HOME/.cache/kilo-nix"
-              KILO_BIN="$CACHE_DIR/kilo"
+              CACHE_DIR="$HOME/.cache/devil-nix"
+              DEVIL_BIN="$CACHE_DIR/devil"
 
-              if [ ! -f "$KILO_BIN" ]; then
-                echo "Error: kilo is not installed in the cache." >&2
-                echo "Please run 'kilo-install' first to download and install kilo." >&2
+              if [ ! -f "$DEVIL_BIN" ]; then
+                echo "Error: devil is not installed in the cache." >&2
+                echo "Please run 'devil-install' first to download and install devil." >&2
                 echo "" >&2
                 echo "Examples:" >&2
-                echo "  kilo-install          # Install latest version" >&2
-                echo "  kilo-install 1.0.180  # Install specific version" >&2
+                echo "  devil-install          # Install latest version" >&2
+                echo "  devil-install 1.0.180  # Install specific version" >&2
                 exit 1
               fi
 
               # Execute the cached binary with all arguments
-              exec "$KILO_BIN" "$@"
+              exec "$DEVIL_BIN" "$@"
             '';
           in
           pkgs.mkShell {
@@ -168,9 +168,9 @@
                 ripgrep
                 jetbrains.jdk
                 jdk21
-                kilo-dev
-                kilo-install-bin
-                kilo-bin
+                devil-dev
+                devil-install-bin
+                devil-bin
               ]
               ++ lib.optionals stdenv.isLinux [
                 libX11
@@ -182,7 +182,7 @@
                 freetype
               ];
             shellHook = ''
-              export KILO_ROOT="$PWD"
+              export DEVIL_ROOT="$PWD"
               export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
               export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
             ''
@@ -228,16 +228,16 @@
           node_modules = pkgs.callPackage ./nix/node_modules.nix {
             inherit rev;
           };
-          kilo = pkgs.callPackage ./nix/kilo.nix {
+          devil = pkgs.callPackage ./nix/devil.nix {
             inherit node_modules;
           };
           desktop = pkgs.callPackage ./nix/desktop.nix {
-            inherit kilo;
+            inherit devil;
           };
         in
         {
-          default = kilo;
-          inherit kilo desktop;
+          default = devil;
+          inherit devil desktop;
           # Updater derivation with fakeHash - build fails and reveals correct hash
           node_modules_updater = node_modules.override {
             hash = pkgs.lib.fakeHash;

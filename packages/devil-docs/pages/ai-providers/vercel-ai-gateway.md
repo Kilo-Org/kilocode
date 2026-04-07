@@ -1,7 +1,7 @@
 ---
-description: Configure the Vercel AI Gateway in Kilo Code to robustly access 100+ language models from various providers through a centralized interface.
+description: Configure the Vercel AI Gateway in devil Code to robustly access 100+ language models from various providers through a centralized interface.
 keywords:
-  - kilo code
+  - devil code
   - vercel ai gateway
   - ai provider
   - language models
@@ -13,7 +13,7 @@ keywords:
 sidebar_label: Vercel AI Gateway
 ---
 
-# Using Vercel AI Gateway With Kilo Code
+# Using Vercel AI Gateway With devil Code
 
 The AI Gateway provides a unified API to access hundreds of models through a single endpoint. It gives you the ability to set budgets, monitor usage, load-balance requests, and manage fallbacks.
 
@@ -37,7 +37,7 @@ An API key is required for authentication.
 
 ## Supported Models
 
-The Vercel AI Gateway supports a large and growing number of models. Kilo Code automatically fetches the list of available models from the `https://ai-gateway.vercel.sh/v1/models` endpoint. Only language models are shown.
+The Vercel AI Gateway supports a large and growing number of models. devil Code automatically fetches the list of available models from the `https://ai-gateway.vercel.sh/v1/models` endpoint. Only language models are shown.
 
 The default model is `anthropic/claude-sonnet-4` if no model is selected.
 
@@ -52,12 +52,12 @@ Check the model description in the dropdown for specific capabilities.
 
 ---
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+1.  **Open devil Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the devil Code panel.
 2.  **Select Provider:** Choose "Vercel AI Gateway" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your Vercel AI Gateway API key into the "Vercel AI Gateway API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -67,12 +67,12 @@ Check the model description in the dropdown for specific capabilities.
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Vercel AI Gateway and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores this in your `devil.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Set the API key as an environment variable or configure it in your `devil.json` config file:
 
 **Environment variable:**
 
@@ -80,7 +80,7 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 export AI_GATEWAY_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {

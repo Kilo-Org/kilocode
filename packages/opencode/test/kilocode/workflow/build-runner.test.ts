@@ -13,6 +13,10 @@ const mockWorktreeCreate = mock(() =>
   Promise.resolve({ name: "brave-cabin", branch: "opencode/brave-cabin", directory: "/tmp/worktree-1" }),
 )
 const mockWorktreeRemove = mock(() => Promise.resolve())
+const mockInstanceProvide = mock(
+  ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+)
+const mockInstanceDispose = mock(() => Promise.resolve())
 
 mock.module("@/session", () => ({
   Session: {
@@ -43,6 +47,14 @@ mock.module("@/bus", () => ({
   },
 }))
 
+mock.module("@/project/instance", () => ({
+  Instance: {
+    directory: "/repo/main",
+    provide: mockInstanceProvide,
+    dispose: mockInstanceDispose,
+  },
+}))
+
 mock.module("@/devilcode/workflow/prompts/build.txt", () => ({
   default: "You are executing a task...",
 }))
@@ -69,6 +81,8 @@ describe("BuildRunner", () => {
     mockSessionPrompt.mockReset()
     mockWorktreeCreate.mockReset()
     mockWorktreeRemove.mockReset()
+    mockInstanceProvide.mockReset()
+    mockInstanceDispose.mockReset()
     mockSessionCreate.mockImplementation(() =>
       Promise.resolve({ id: "session-001", slug: "test-session" }),
     )
@@ -80,6 +94,10 @@ describe("BuildRunner", () => {
       }),
     )
     mockWorktreeRemove.mockImplementation(() => Promise.resolve())
+    mockInstanceProvide.mockImplementation(
+      ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+    )
+    mockInstanceDispose.mockImplementation(() => Promise.resolve())
   })
 
   it("groups tasks by wave and returns them sorted", () => {
@@ -170,6 +188,9 @@ describe("BuildRunner", () => {
     await runner.executeWave(tasks)
 
     expect(mockWorktreeCreate).toHaveBeenCalledTimes(2)
+    expect(mockInstanceProvide).toHaveBeenCalledTimes(2)
+    const call = (mockInstanceProvide.mock.calls as Array<Array<{ directory?: string }>>)[0]
+    expect(call?.[0]?.directory).toBe("/tmp/worktree-1")
   })
 
   it("skips worktree for single-task wave", async () => {
@@ -209,5 +230,52 @@ describe("BuildRunner", () => {
 
     expect(completed).toHaveLength(1)
     expect(completed[0].status).toBe("failed")
+  })
+
+  it("passes the resolved role and model into workflow task sessions", async () => {
+    const runner = new BuildRunner({
+      teamConfig: {
+        enabled: true,
+        roles: {
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-5.4-mini",
+            effort: "high",
+            tier: 2,
+            canDelegate: [],
+            maxConcurrent: 2,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "worker",
+          escalationEnabled: true,
+        },
+      },
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [],
+      }),
+    )
+
+    await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(1)
+    const call = (mockSessionPrompt.mock.calls as Array<Array<Record<string, unknown>>>)[0]
+    expect(call?.[0]).toMatchObject({
+      agent: "worker",
+      model: {
+        providerID: "openai",
+        modelID: "gpt-5.4-mini",
+      },
+    })
   })
 })

@@ -2,11 +2,11 @@ import path from "node:path"
 import fs from "node:fs"
 import ignore, { type Ignore } from "ignore"
 
-const KILOCODEIGNORE = ".kilocodeignore"
+const KILOCODEIGNORE = ".devilcodeignore"
 const GITIGNORE = ".gitignore"
 
 /**
- * Patterns for sensitive environment files, applied only when no .kilocodeignore exists.
+ * Patterns for sensitive environment files, applied only when no .devilcodeignore exists.
  */
 const SENSITIVE_PATTERNS = [".env", ".env.*"]
 
@@ -37,16 +37,16 @@ export class FileIgnoreController {
       return
     }
 
-    // Try .kilocodeignore first — if it exists, use only that.
+    // Try .devilcodeignore first — if it exists, use only that.
     // Use existsSync to distinguish "missing" from "unreadable" — permission
     // errors on readFileSync will propagate instead of being silently swallowed.
-    const kilocodeignorePath = path.join(this.workspacePath, KILOCODEIGNORE)
-    if (fs.existsSync(kilocodeignorePath)) {
-      const kilocodeignoreContent = fs.readFileSync(kilocodeignorePath, "utf-8")
-      if (kilocodeignoreContent.trim()) {
-        this.ignoreInstance.add(kilocodeignoreContent)
+    const devilcodeignorePath = path.join(this.workspacePath, KILOCODEIGNORE)
+    if (fs.existsSync(devilcodeignorePath)) {
+      const devilcodeignoreContent = fs.readFileSync(devilcodeignorePath, "utf-8")
+      if (devilcodeignoreContent.trim()) {
+        this.ignoreInstance.add(devilcodeignoreContent)
         this.ignoreInstance.add(KILOCODEIGNORE)
-        this.loadedContents.push({ file: KILOCODEIGNORE, content: kilocodeignoreContent })
+        this.loadedContents.push({ file: KILOCODEIGNORE, content: devilcodeignoreContent })
         return
       }
     }

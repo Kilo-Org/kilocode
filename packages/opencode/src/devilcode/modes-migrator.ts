@@ -3,12 +3,12 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
 import { Config } from "../config/config"
-import { KilocodePaths } from "./paths"
-import type { OrganizationMode } from "@kilocode/kilo-gateway"
+import { DevilcodePaths } from "./paths"
+import type { OrganizationMode } from "@devilcode/kilo-gateway"
 
 export namespace ModesMigrator {
-  // Kilocode mode structure
-  export interface KilocodeMode {
+  // Devilcode mode structure
+  export interface DevilcodeMode {
     slug: string
     name: string
     roleDefinition: string
@@ -19,8 +19,8 @@ export namespace ModesMigrator {
     source?: "global" | "project" | "organization"
   }
 
-  export interface KilocodeModesFile {
-    customModes: KilocodeMode[]
+  export interface DevilcodeModesFile {
+    customModes: DevilcodeMode[]
   }
 
   // Default modes to skip - these have native Opencode equivalents
@@ -42,7 +42,7 @@ export namespace ModesMigrator {
     return DEFAULT_MODE_SLUGS.has(slug)
   }
 
-  export function convertPermissions(groups: KilocodeMode["groups"]): Config.Permission {
+  export function convertPermissions(groups: DevilcodeMode["groups"]): Config.Permission {
     const permission: Record<string, any> = {}
     const allowedPermissions = new Set<string>()
 
@@ -78,7 +78,7 @@ export namespace ModesMigrator {
     return permission
   }
 
-  export function convertMode(mode: KilocodeMode): Config.Agent {
+  export function convertMode(mode: DevilcodeMode): Config.Agent {
     const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
 
     return {
@@ -125,12 +125,12 @@ export namespace ModesMigrator {
     return result
   }
 
-  export async function readModesFile(filepath: string): Promise<KilocodeMode[]> {
+  export async function readModesFile(filepath: string): Promise<DevilcodeMode[]> {
     try {
       const content = await fs.readFile(filepath, "utf-8")
       // Wrap YAML content in frontmatter delimiters so gray-matter can parse it
       const wrapped = `---\n${content}\n---`
-      const parsed = matter(wrapped).data as KilocodeModesFile
+      const parsed = matter(wrapped).data as DevilcodeModesFile
       return parsed?.customModes ?? []
     } catch (err: any) {
       if (err.code === "ENOENT") return []
@@ -155,19 +155,19 @@ export namespace ModesMigrator {
     }
 
     // Collect modes from all sources
-    const allModes: KilocodeMode[] = []
+    const allModes: DevilcodeMode[] = []
 
     if (!options.skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global modes)
-      const vscodeGlobalPath = path.join(KilocodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml")
+      const vscodeGlobalPath = path.join(DevilcodePaths.vscodeGlobalStorage(), "settings", "custom_modes.yaml")
       allModes.push(...(await readModesFile(vscodeGlobalPath)))
 
       // 2. CLI global settings (fallback/alternative location)
-      const cliGlobalPath = path.join(os.homedir(), ".kilocode", "cli", "global", "settings", "custom_modes.yaml")
+      const cliGlobalPath = path.join(os.homedir(), ".devilcode", "cli", "global", "settings", "custom_modes.yaml")
       allModes.push(...(await readModesFile(cliGlobalPath)))
 
-      // 3. Home directory .kilocodemodes
-      const homeModesPath = path.join(os.homedir(), ".kilocodemodes")
+      // 3. Home directory .devilcodemodes
+      const homeModesPath = path.join(os.homedir(), ".devilcodemodes")
       if (homeModesPath !== options.projectDir) {
         allModes.push(...(await readModesFile(homeModesPath)))
       }
@@ -179,12 +179,12 @@ export namespace ModesMigrator {
       allModes.push(...(await readModesFile(legacyPath)))
     }
 
-    // 5. Project .kilocodemodes
-    const projectModesPath = path.join(options.projectDir, ".kilocodemodes")
+    // 5. Project .devilcodemodes
+    const projectModesPath = path.join(options.projectDir, ".devilcodemodes")
     allModes.push(...(await readModesFile(projectModesPath)))
 
     // Deduplicate by slug (later entries win)
-    const modesBySlug = new Map<string, KilocodeMode>()
+    const modesBySlug = new Map<string, DevilcodeMode>()
     for (const mode of allModes) {
       modesBySlug.set(mode.slug, mode)
     }

@@ -14,7 +14,7 @@ import { readFileSync, readdirSync, existsSync } from "fs"
 import * as schema from "./schema"
 import { Flag } from "../flag/flag"
 
-declare const KILO_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
+declare const DEVIL_MIGRATIONS: { sql: string; timestamp: number; name: string }[] | undefined
 
 export const NotFoundError = NamedError.create(
   "NotFoundError",
@@ -26,8 +26,8 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  // kilocode_change - always use kilo.db regardless of channel
-  export const Path = path.join(Global.Path.data, "kilo.db")
+  // devilcode_change - always use devil.db regardless of channel
+  export const Path = path.join(Global.Path.data, "devil.db")
 
   type Schema = typeof schema
   export type Transaction = SQLiteTransaction<"sync", void, Schema>
@@ -90,15 +90,15 @@ export namespace Database {
 
     // Apply schema migrations
     const entries =
-      typeof KILO_MIGRATIONS !== "undefined"
-        ? KILO_MIGRATIONS
+      typeof DEVIL_MIGRATIONS !== "undefined"
+        ? DEVIL_MIGRATIONS
         : migrations(path.join(import.meta.dirname, "../../migration"))
     if (entries.length > 0) {
       log.info("applying migrations", {
         count: entries.length,
-        mode: typeof KILO_MIGRATIONS !== "undefined" ? "bundled" : "dev",
+        mode: typeof DEVIL_MIGRATIONS !== "undefined" ? "bundled" : "dev",
       })
-      if (Flag.KILO_SKIP_MIGRATIONS) {
+      if (Flag.DEVIL_SKIP_MIGRATIONS) {
         for (const item of entries) {
           item.sql = "select 1;"
         }

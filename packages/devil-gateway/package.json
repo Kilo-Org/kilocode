@@ -1,13 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@kilocode/kilo-gateway",
+  "name": "@devilcode/kilo-gateway",
   "version": "7.1.20",
   "type": "module",
   "license": "MIT",
-  "description": "Unified Kilo Gateway package for OpenCode - authentication, provider, and API integration",
+  "description": "Unified Devil Gateway package for OpenCode - authentication, provider, and API integration",
   "keywords": [
     "kilo",
-    "kilocode",
+    "devilcode",
     "opencode",
     "auth",
     "plugin",
@@ -27,8 +27,8 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@kilocode/plugin": "workspace:*",
-    "@kilocode/sdk": "workspace:*",
+    "@devilcode/plugin": "workspace:*",
+    "@devilcode/sdk": "workspace:*",
     "@ai-sdk/anthropic": "2.0.65",
     "@ai-sdk/openai": "2.0.101",
     "@ai-sdk/openai-compatible": "1.0.32",

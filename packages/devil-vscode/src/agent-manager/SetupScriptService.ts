@@ -8,7 +8,7 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 import { SETUP_SCRIPT_TEMPLATE, SETUP_SCRIPT_TEMPLATE_POWERSHELL } from "./setup-script-template"
-import { KILO_DIR } from "./constants"
+import { DEVIL_DIR } from "./constants"
 
 const SETUP_SCRIPT_FILENAME = "setup-script"
 const SETUP_SCRIPT_SHELL_FILENAME = "setup-script.sh"
@@ -38,7 +38,7 @@ export class SetupScriptService {
   private readonly dir: string
 
   constructor(root: string) {
-    this.dir = path.join(root, KILO_DIR)
+    this.dir = path.join(root, DEVIL_DIR)
   }
 
   /** Resolve the setup script path and interpreter type for the current platform. */

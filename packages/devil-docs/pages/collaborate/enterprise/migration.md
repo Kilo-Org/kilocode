@@ -1,31 +1,31 @@
 ---
 title: "Migration"
-description: "Migrate your team to Kilo Code Enterprise"
+description: "Migrate your team to devil Code Enterprise"
 ---
 
 # Migration
 
-Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
+Switch to **devil Teams** or **devil Enterprise** from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
 
-## Why Teams Switch to Kilo
+## Why Teams Switch to devil
 
 ### Transparency vs. Opacity
 
 **Other AI coding vendors** hide their true costs behind opaque subscription models, leaving you wondering what you're actually paying for.
 
-**Kilo Teams** and **Kilo Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
+**devil Teams** and **devil Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
 
 ### No Rate Limiting
 
 **Other tools** slow you down with rate limits and model switching when you need AI most.
 
-**Kilo Teams** and **Kilo Enterprise** never limit your usage - pay for what you use, use what you need.
+**devil Teams** and **devil Enterprise** never limit your usage - pay for what you use, use what you need.
 
 ### True Team Management
 
 **Other solutions** offer basic user management with limited visibility.
 
-**Kilo Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights, while **Kilo Enterprise** adds advanced governance, audit logging, and enterprise-level security controls.
+**devil Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights, while **devil Enterprise** adds advanced governance, audit logging, and enterprise-level security controls.
 
 ## Migrating from Cursor
 
@@ -37,7 +37,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - **Vendor lock-in** with proprietary systems
 - **Hidden model switching** that degrades quality
 
-### What You Gain with Kilo Teams or Kilo Enterprise
+### What You Gain with devil Teams or devil Enterprise
 
 - **Transparent AI costs** - See exactly what providers charge
 - **No rate limiting** - Use AI when you need it most
@@ -52,33 +52,33 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 1. **Audit current Cursor usage** across your team
 2. **Identify active users** and their usage patterns
-3. **Calculate current costs** (if visible) vs. Kilo pricing
+3. **Calculate current costs** (if visible) vs. devil pricing
 4. **Plan migration timeline** to minimize disruption
 
-**Step 2: Kilo Setup**
+**Step 2: devil Setup**
 
-1. **Create organization** at [app.kilo.ai](https://app.kilo.ai)
-2. **Subscribe to Teams ($15/user/month)** or **Enterprise ([Contact Sales](https://kilo.ai/contact-sales))**
+1. **Create organization** at [app.devil.ai](https://app.devil.ai)
+2. **Subscribe to Teams ($15/user/month)** or **Enterprise ([Contact Sales](https://devil.ai/contact-sales))**
 3. **Configure team settings** and usage policies
 4. **Purchase initial AI credits** based on usage estimates
 
 **Step 3: Team Migration**
 
-1. **Invite team members** to Kilo
-2. **Install Kilo Code extension** alongside Cursor initially
+1. **Invite team members** to devil
+2. **Install devil Code extension** alongside Cursor initially
 3. **Migrate projects gradually** starting with non-critical work
-4. **Train team** on Kilo Code features and workflows
+4. **Train team** on devil Code features and workflows
 
 **Step 4: Full Transition**
 
-1. **Monitor usage patterns** in Kilo dashboard
+1. **Monitor usage patterns** in devil dashboard
 2. **Optimize settings** based on team feedback
 3. **Cancel Cursor subscriptions** once fully migrated
 4. **Uninstall Cursor** from team machines
 
 ### Cursor Feature Mapping
 
-| Cursor Feature         | Kilo Equivalent                                                |
+| Cursor Feature         | devil Equivalent                                                |
 | ---------------------- | -------------------------------------------------------------- |
 | AI Chat                | Chat interface with multiple modes                             |
 | Code Generation        | Code mode with advanced tools                                  |
@@ -97,7 +97,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - **Microsoft ecosystem lock-in** - Tied to Microsoft services
 - **Limited customization** - Few options for team-specific needs
 
-### Kilo Advantages
+### devil Advantages
 
 - **Multiple AI providers** - Choose from 18+ model providers
 - **Advanced team management** - Roles, permissions, and analytics
@@ -111,13 +111,13 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 **Phase 1: Parallel Usage (Week 1-2)**
 
 1. **Keep GitHub Copilot** active during transition
-2. **Install Kilo Code** extension for team members
-3. **Start with simple tasks** in Kilo Code
+2. **Install devil Code** extension for team members
+3. **Start with simple tasks** in devil Code
 4. **Compare results** and team satisfaction
 
 **Phase 2: Gradual Transition (Week 3-4)**
 
-1. **Use Kilo Code** for new projects
+1. **Use devil Code** for new projects
 2. **Migrate existing projects** one at a time
 3. **Train team** on advanced features
 4. **Optimize usage patterns** based on analytics
@@ -126,12 +126,12 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 1. **Disable GitHub Copilot** for most team members
 2. **Cancel GitHub Copilot** subscriptions
-3. **Optimize Kilo Plan** settings
+3. **Optimize devil Plan** settings
 4. **Document new workflows** and best practices
 
 ### GitHub Copilot Feature Comparison
 
-| GitHub Copilot   | Kilo                             | Advantage                     |
+| GitHub Copilot   | devil                             | Advantage                     |
 | ---------------- | -------------------------------- | ----------------------------- |
 | Code suggestions | AI-powered code generation       | ✅ More model choices         |
 | Chat interface   | Multi-mode chat system           | ✅ Specialized modes          |
@@ -167,16 +167,16 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 - [ ] Audit current AI coding tool usage
 - [ ] Identify team members and their roles
-- [ ] Calculate current costs vs. Kilo pricing
+- [ ] Calculate current costs vs. devil pricing
 - [ ] Plan migration timeline and milestones
 - [ ] Prepare team communication and training
 
 **Migration Execution**
 
-- [ ] Set up Kilo Organization
+- [ ] Set up devil Organization
 - [ ] Configure team settings and policies
 - [ ] Invite team members and assign roles
-- [ ] Install Kilo Code extension across team
+- [ ] Install devil Code extension across team
 - [ ] Start with pilot projects or non-critical work
 
 **Post-Migration Optimization**
@@ -189,16 +189,16 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 
 ## Technical Migration: Rules and Configurations
 
-Kilo Code uses a compatible rules system that supports Cursor and Windsurf patterns. Migrating your custom rules and configurations is straightforward and typically takes 5-10 minutes per project.
+devil Code uses a compatible rules system that supports Cursor and Windsurf patterns. Migrating your custom rules and configurations is straightforward and typically takes 5-10 minutes per project.
 
 **Quick Overview:**
 
-- **Project rules**: `.cursor/rules/*.mdc` → `.kilocode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
-- **Legacy rules**: `.cursorrules` → `.kilocode/rules/legacy-rules.md`
-- **AGENTS.md**: Works identically in Kilo Code (no conversion needed)
-- **Global rules**: Recreate in `~/.kilocode/rules/*.md` directory
+- **Project rules**: `.cursor/rules/*.mdc` → `.devilcode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
+- **Legacy rules**: `.cursorrules` → `.devilcode/rules/legacy-rules.md`
+- **AGENTS.md**: Works identically in devil Code (no conversion needed)
+- **Global rules**: Recreate in `~/.devilcode/rules/*.md` directory
 
-Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
+devil Code also supports mode-specific rules (`.devilcode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
 
 **👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/docs/getting-started/migrating).**
 
@@ -213,7 +213,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - Rate limiting forces inefficient workflows
 - Model switching without notification
 
-**Kilo Transparent Pricing**
+**devil Transparent Pricing**
 
 - Pay exactly what AI providers charge
 - See cost of every request in real-time
@@ -229,7 +229,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 3. **Opportunity costs** from limited model access
 4. **Management overhead** from poor team visibility
 
-**Kilo Benefits**
+**devil Benefits**
 
 1. **Transparent AI costs** (typically 30-50% lower)
 2. **Productivity gains** from no rate limiting
@@ -242,7 +242,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 
 **Week 1: Basics**
 
-- Kilo Code extension installation and setup
+- devil Code extension installation and setup
 - Basic chat interface and mode usage
 - Understanding transparent pricing model
 - Team dashboard overview
@@ -351,7 +351,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 
 ### Getting Migration Help
 
-- **Email:** migrations@kilo.ai
+- **Email:** migrations@devil.ai
 - **Discord:** Join our migration support channel
 - **Consultation:** Schedule free migration planning call
 - **Documentation:**
@@ -388,4 +388,4 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - [Understand billing and pricing](/docs/collaborate/teams/billing)
 - [Migrate your rules and configurations](/docs/getting-started/migrating) (technical guide)
 
-Ready to make the switch? Contact our migration team at migrations@kilo.ai to plan your transition to transparent AI coding.
+Ready to make the switch? Contact our migration team at migrations@devil.ai to plan your transition to transparent AI coding.

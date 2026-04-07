@@ -1,6 +1,6 @@
 import { Ripgrep } from "../file/ripgrep"
 
-import { Global } from "../global" // kilocode_change
+import { Global } from "../global" // devilcode_change
 import { Instance } from "../project/instance"
 
 import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
@@ -12,24 +12,24 @@ import PROMPT_CODEX from "./prompt/codex_header.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider/provider"
 
-// kilocode_change start
-import SOUL from "../kilocode/soul.txt"
-import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
-// kilocode_change end
+// devilcode_change start
+import SOUL from "../devilcode/soul.txt"
+import { staticEnvLines, type EditorContext } from "../devilcode/editor-context"
+// devilcode_change end
 
 export namespace SystemPrompt {
   export function instructions() {
     return PROMPT_CODEX.trim()
   }
 
-  // kilocode_change start
+  // devilcode_change start
   export function soul() {
     return SOUL.trim()
   }
-  // kilocode_change end
+  // devilcode_change end
 
   export function provider(model: Provider.Model) {
-    // kilocode_change start
+    // devilcode_change start
     switch (model.prompt) {
       case "anthropic":
         return [PROMPT_ANTHROPIC]
@@ -44,7 +44,7 @@ export namespace SystemPrompt {
       case "trinity":
         return [PROMPT_TRINITY]
     }
-    // kilocode_change end
+    // devilcode_change end
 
     if (model.api.id.includes("gpt-5")) return [PROMPT_CODEX]
     if (model.api.id.includes("gpt-") || model.api.id.includes("o1") || model.api.id.includes("o3"))
@@ -56,9 +56,9 @@ export namespace SystemPrompt {
     return [PROMPT_ANTHROPIC_WITHOUT_TODO]
   }
 
-  // kilocode_change start
+  // devilcode_change start
   export async function environment(model: Provider.Model, editorContext?: EditorContext) {
-    // kilocode_change end
+    // devilcode_change end
     const project = Instance.project
     return [
       [
@@ -68,9 +68,9 @@ export namespace SystemPrompt {
         `  Working directory: ${Instance.directory}`,
         `  Is directory a git repo: ${project.vcs === "git" ? "yes" : "no"}`,
         `  Platform: ${process.platform}`,
-        `  Project config: .kilo/command/*.md, .kilo/agent/*.md, kilo.json, AGENTS.md. Put new commands and agents in .kilo/. Do not use .kilocode/ or .opencode/.`, // kilocode_change
-        `  Global config: ${Global.Path.config}/ (same structure)`, // kilocode_change
-        ...staticEnvLines(editorContext), // kilocode_change
+        `  Project config: .devil/command/*.md, .devil/agent/*.md, devil.json, AGENTS.md. Put new commands and agents in .devil/. Do not use .devilcode/ or .opencode/ or .kilo/.`, // devilcode_change
+        `  Global config: ${Global.Path.config}/ (same structure)`, // devilcode_change
+        ...staticEnvLines(editorContext), // devilcode_change
         `</env>`,
         `<directories>`,
         `  ${

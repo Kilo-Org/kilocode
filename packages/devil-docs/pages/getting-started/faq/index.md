@@ -1,6 +1,6 @@
 ---
 title: "FAQ"
-description: "Frequently Asked Questions about Kilo Code"
+description: "Frequently Asked Questions about devil Code"
 ---
 
 # FAQ
@@ -9,11 +9,11 @@ This section contains the most frequently asked questions.
 
 ## General
 
-- [**General**](/docs/getting-started/faq/general) - General questions about Kilo Code
+- [**General**](/docs/getting-started/faq/general) - General questions about devil Code
 
 ## Setup and Installation
 
-- [**Setup and Installation**](/docs/getting-started/faq/setup-and-installation) - Questions about setting up and installing Kilo Code
+- [**Setup and Installation**](/docs/getting-started/faq/setup-and-installation) - Questions about setting up and installing devil Code
 
 ## Credits and Billing
 
@@ -25,4 +25,4 @@ This section contains the most frequently asked questions.
 
 ## Known Issues
 
-- [**Known Issues**](/docs/getting-started/faq/known-issues) - Known issues and limitations of Kilo Code
+- [**Known Issues**](/docs/getting-started/faq/known-issues) - Known issues and limitations of devil Code

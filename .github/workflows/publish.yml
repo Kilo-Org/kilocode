@@ -33,7 +33,7 @@ permissions:
 jobs:
   version:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Devil-Org/devilcode'
     steps:
       - uses: actions/checkout@v3
         with:
@@ -41,9 +41,9 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      - name: Install Kilo
+      - name: Install Devil
         if: inputs.bump || inputs.version
-        run: bun i -g @kilocode/cli
+        run: bun i -g @devilcode/cli
 
       - id: version
         run: |
@@ -51,10 +51,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          KILO_BUMP: ${{ inputs.bump }}
-          KILO_VERSION: ${{ inputs.version }}
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+          DEVIL_BUMP: ${{ inputs.bump }}
+          DEVIL_VERSION: ${{ inputs.version }}
+          DEVIL_API_KEY: ${{ secrets.DEVIL_API_KEY }}
+          DEVIL_ORG_ID: ${{ secrets.DEVIL_ORG_ID }}
     outputs:
       version: ${{ steps.version.outputs.version }}
       release: ${{ steps.version.outputs.release }}
@@ -63,7 +63,7 @@ jobs:
   build-cli:
     needs: version
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Devil-Org/devilcode'
     steps:
       - uses: actions/checkout@v3
         with:
@@ -76,14 +76,14 @@ jobs:
         run: |
           ./packages/opencode/script/build.ts
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          DEVIL_VERSION: ${{ needs.version.outputs.version }}
+          DEVIL_RELEASE: ${{ needs.version.outputs.release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kilo-cli
+          name: devil-cli
           path: packages/opencode/dist
 
     outputs:
@@ -92,7 +92,7 @@ jobs:
   build-vscode:
     needs: build-cli
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Devil-Org/devilcode'
     steps:
       - uses: actions/checkout@v3
 
@@ -108,21 +108,21 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: kilo-cli
+          name: devil-cli
           path: packages/opencode/dist
 
       - name: Build VSIX packages
         run: bun script/build.ts
-        working-directory: ./packages/kilo-vscode
+        working-directory: ./packages/devil-vscode
         env:
           CLI_DIST_DIR: ../../packages/opencode/dist
-          KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+          DEVIL_VERSION: ${{ needs.build-cli.outputs.version }}
           GH_REPO: ${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
         with:
-          name: kilo-vscode
-          path: packages/kilo-vscode/out
+          name: devil-vscode
+          path: packages/devil-vscode/out
 
   # build-tauri:
   #   needs:
@@ -240,7 +240,7 @@ jobs:
   #         APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
   #         APPLE_API_KEY_PATH: ${{ runner.temp }}/apple-api-key.p8
 
-  # kilocode_change start
+  # devilcode_change start
   # Smoke test disabled as a release gate due to infrastructure issues.
   # The job is skipped via `if: false` so it no longer blocks publishing.
   # Re-enable by restoring the original `if:` condition and uncommenting
@@ -250,17 +250,17 @@ jobs:
     needs:
       - version
       - build-cli
-    if: false # was: github.repository == 'Kilo-Org/kilocode'
+    if: false # was: github.repository == 'Devil-Org/devilcode'
     runs-on: ubuntu-24.04
     steps:
-      - name: Trigger kilo-bench smoke test
+      - name: Trigger devil-bench smoke test
         id: trigger
         env:
           GH_TOKEN: ${{ secrets.BENCH_GITHUB_TOKEN }}
         run: |
           BEFORE=$(date -u -d '60 seconds ago' +%Y-%m-%dT%H:%M:%SZ)
 
-          gh api repos/Kilo-Org/kilo-bench/dispatches \
+          gh api repos/Devil-Org/devil-bench/dispatches \
             --method POST \
             -f event_type=smoke-test \
             -f 'client_payload[release_tag]=${{ needs.version.outputs.tag }}' \
@@ -272,12 +272,12 @@ jobs:
           echo "Waiting for smoke-test run to appear (dispatched after $BEFORE)..."
           for attempt in $(seq 1 30); do
             RUN_ID=$(gh api \
-              "repos/Kilo-Org/kilo-bench/actions/workflows/smoke-test.yml/runs?event=repository_dispatch&created=>=$BEFORE" \
+              "repos/Devil-Org/devil-bench/actions/workflows/smoke-test.yml/runs?event=repository_dispatch&created=>=$BEFORE" \
               --jq '.workflow_runs | sort_by(.created_at) | .[0].id // empty')
 
             if [[ -n "$RUN_ID" && "$RUN_ID" != "null" ]]; then
               echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-              echo "::notice::Smoke test run: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
+              echo "::notice::Smoke test run: https://github.com/Devil-Org/devil-bench/actions/runs/$RUN_ID"
               exit 0
             fi
 
@@ -297,7 +297,7 @@ jobs:
 
           for i in $(seq 1 60); do
             CONCLUSION=$(gh run view "$RUN_ID" \
-              --repo Kilo-Org/kilo-bench \
+              --repo Devil-Org/devil-bench \
               --json conclusion \
               --jq '.conclusion')
 
@@ -308,7 +308,7 @@ jobs:
               exit 0
             elif [[ "$CONCLUSION" != "null" && "$CONCLUSION" != "" ]]; then
               echo "::error::Smoke test failed with conclusion: $CONCLUSION"
-              echo "See: https://github.com/Kilo-Org/kilo-bench/actions/runs/$RUN_ID"
+              echo "See: https://github.com/Devil-Org/devil-bench/actions/runs/$RUN_ID"
               exit 1
             fi
 
@@ -317,7 +317,7 @@ jobs:
 
           echo "::error::Smoke test did not complete within 30 minutes."
           exit 1
-  # kilocode_change end
+  # devilcode_change end
   publish:
     needs:
       - version
@@ -356,20 +356,20 @@ jobs:
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # kilocode_change end
+          # devilcode_change start
+          devil-maintainer-app-id: ${{ secrets.DEVIL_MAINTAINER_APP_ID }}
+          devil-maintainer-app-secret: ${{ secrets.DEVIL_MAINTAINER_APP_SECRET }}
+          # devilcode_change end
 
       - uses: actions/download-artifact@v4
         with:
-          name: kilo-cli
+          name: devil-cli
           path: packages/opencode/dist
 
       - uses: actions/download-artifact@v4
         with:
-          name: kilo-vscode
-          path: packages/kilo-vscode/out
+          name: devil-vscode
+          path: packages/devil-vscode/out
 
       - name: Cache apt packages (AUR)
         uses: actions/cache@v4
@@ -386,14 +386,14 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.AUR_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
-          git config --global user.name "kilo-maintainer[bot]"
+          git config --global user.email "devil-maintainer[bot]@users.noreply.github.com"
+          git config --global user.name "devil-maintainer[bot]"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
       - run: ./script/publish.ts
         env:
-          KILO_VERSION: ${{ needs.version.outputs.version }}
-          KILO_RELEASE: ${{ needs.version.outputs.release }}
+          DEVIL_VERSION: ${{ needs.version.outputs.version }}
+          DEVIL_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ github.repository }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}

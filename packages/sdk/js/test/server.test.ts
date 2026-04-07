@@ -1,19 +1,19 @@
-// kilocode_change start - Tests for KILO_CONFIG_CONTENT merging
+// devilcode_change start - Tests for DEVIL_CONFIG_CONTENT merging
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import { buildConfigEnv } from "../src/server"
 
 describe("buildConfigEnv", () => {
-  const originalEnv = process.env.KILO_CONFIG_CONTENT
+  const originalEnv = process.env.DEVIL_CONFIG_CONTENT
 
   beforeEach(() => {
-    delete process.env.KILO_CONFIG_CONTENT
+    delete process.env.DEVIL_CONFIG_CONTENT
   })
 
   afterEach(() => {
     if (originalEnv === undefined) {
-      delete process.env.KILO_CONFIG_CONTENT
+      delete process.env.DEVIL_CONFIG_CONTENT
     } else {
-      process.env.KILO_CONFIG_CONTENT = originalEnv
+      process.env.DEVIL_CONFIG_CONTENT = originalEnv
     }
   })
 
@@ -40,13 +40,13 @@ describe("buildConfigEnv", () => {
     expect(parsed.agent).toEqual({ custom: { mode: "primary", prompt: "test" } })
   })
 
-  test("preserves existing KILO_CONFIG_CONTENT when spawning with new config", () => {
-    // Simulate Kilocode having injected modes via KILO_CONFIG_CONTENT
-    process.env.KILO_CONFIG_CONTENT = JSON.stringify({
+  test("preserves existing DEVIL_CONFIG_CONTENT when spawning with new config", () => {
+    // Simulate Devilcode having injected modes via DEVIL_CONFIG_CONTENT
+    process.env.DEVIL_CONFIG_CONTENT = JSON.stringify({
       agent: {
         translate: { mode: "primary", prompt: "You are a translator" },
       },
-      instructions: [".kilo/rules/main.md"],
+      instructions: [".devil/rules/main.md"],
     })
 
     // Now spawn with additional config
@@ -61,12 +61,12 @@ describe("buildConfigEnv", () => {
     expect(parsed.agent.review).toEqual({ mode: "primary", prompt: "You are a reviewer" })
 
     // Both instructions should be present
-    expect(parsed.instructions).toContain(".kilo/rules/main.md")
+    expect(parsed.instructions).toContain(".devil/rules/main.md")
     expect(parsed.instructions).toContain("additional-rule.md")
   })
 
   test("incoming config overrides existing config for same keys", () => {
-    process.env.KILO_CONFIG_CONTENT = JSON.stringify({
+    process.env.DEVIL_CONFIG_CONTENT = JSON.stringify({
       agent: { code: { mode: "primary", prompt: "Original prompt" } },
       model: "original-model",
     })
@@ -83,8 +83,8 @@ describe("buildConfigEnv", () => {
     expect(parsed.model).toBe("new-model")
   })
 
-  test("handles invalid JSON in existing KILO_CONFIG_CONTENT gracefully", () => {
-    process.env.KILO_CONFIG_CONTENT = "invalid json {"
+  test("handles invalid JSON in existing DEVIL_CONFIG_CONTENT gracefully", () => {
+    process.env.DEVIL_CONFIG_CONTENT = "invalid json {"
 
     const result = buildConfigEnv({
       agent: { test: { mode: "primary", prompt: "test" } },
@@ -96,7 +96,7 @@ describe("buildConfigEnv", () => {
   })
 
   test("merges plugins from both sources", () => {
-    process.env.KILO_CONFIG_CONTENT = JSON.stringify({
+    process.env.DEVIL_CONFIG_CONTENT = JSON.stringify({
       plugin: ["plugin-a", "plugin-b"],
     })
 
@@ -108,4 +108,4 @@ describe("buildConfigEnv", () => {
     expect(parsed.plugin).toEqual(["plugin-a", "plugin-b", "plugin-c"])
   })
 })
-// kilocode_change end
+// devilcode_change end

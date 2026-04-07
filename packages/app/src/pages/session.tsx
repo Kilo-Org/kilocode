@@ -1,4 +1,4 @@
-import type { Project, UserMessage } from "@kilocode/sdk/v2"
+import type { Project, UserMessage } from "@devilcode/sdk/v2"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import {
   onCleanup,
@@ -44,7 +44,7 @@ import { TerminalPanel } from "@/pages/session/terminal-panel"
 import { useSessionCommands } from "@/pages/session/use-session-commands"
 import { useSessionHashScroll } from "@/pages/session/use-session-hash-scroll"
 import { same } from "@/utils/same"
-import { Identifier } from "@/utils/id" // kilocode_change
+import { Identifier } from "@/utils/id" // devilcode_change
 import { formatServerError } from "@/utils/server-errors"
 
 const emptyUserMessages: UserMessage[] = []
@@ -294,7 +294,7 @@ export default function Page() {
     },
   })
 
-  // kilocode_change start - handle mode switch from question options
+  // devilcode_change start - handle mode switch from question options
   let modeActionAbort: AbortController | undefined
 
   const waitForIdle = (sessionID: string, signal: AbortSignal) =>
@@ -391,7 +391,7 @@ export default function Page() {
         showToast({ title: language.t("common.requestFailed"), description: message })
       })
   }
-  // kilocode_change end
+  // devilcode_change end
 
   const composer = createSessionComposerState()
 
@@ -1475,7 +1475,7 @@ export default function Page() {
             setPromptDockRef={(el) => {
               promptDock = el
             }}
-            onModeAction={handleModeAction} // kilocode_change
+            onModeAction={handleModeAction} // devilcode_change
           />
 
           <Show when={desktopReviewOpen()}>

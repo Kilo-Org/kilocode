@@ -17,12 +17,12 @@ import { Tool } from "./tool"
 import { Instance } from "../project/instance"
 import { Config } from "../config/config"
 import path from "path"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@devilcode/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { WebSearchTool } from "./websearch"
 import { CodeSearchTool } from "./codesearch"
-import { CodebaseSearchTool } from "./warpgrep" // kilocode_change
+import { CodebaseSearchTool } from "./warpgrep" // devilcode_change
 import { Flag } from "@/flag/flag"
 import { Log } from "@/util/log"
 import { LspTool } from "./lsp"
@@ -99,11 +99,11 @@ export namespace ToolRegistry {
   async function all(): Promise<Tool.Info[]> {
     const custom = await state().then((x) => x.custom)
     const config = await Config.get()
-    const question = ["app", "cli", "desktop"].includes(Flag.KILO_CLIENT) || Flag.KILO_ENABLE_QUESTION_TOOL
+    const question = ["app", "cli", "desktop"].includes(Flag.DEVIL_CLIENT) || Flag.DEVIL_ENABLE_QUESTION_TOOL
 
     return [
       InvalidTool,
-      ...(["app", "cli", "desktop", "vscode"].includes(Flag.KILO_CLIENT) && question ? [QuestionTool] : []), // kilocode_change
+      ...(["app", "cli", "desktop", "vscode"].includes(Flag.DEVIL_CLIENT) && question ? [QuestionTool] : []), // devilcode_change
       BashTool,
       ReadTool,
       GlobTool,
@@ -116,12 +116,12 @@ export namespace ToolRegistry {
       // TodoReadTool,
       WebSearchTool,
       CodeSearchTool,
-      ...(config.experimental?.codebase_search === true ? [CodebaseSearchTool] : []), // kilocode_change
+      ...(config.experimental?.codebase_search === true ? [CodebaseSearchTool] : []), // devilcode_change
       SkillTool,
       ApplyPatchTool,
-      ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
+      ...(Flag.DEVIL_EXPERIMENTAL_LSP_TOOL ? [LspTool] : []),
       ...(config.experimental?.batch_tool === true ? [BatchTool] : []),
-      PlanExitTool, // kilocode_change - always registered; gated by agent permission instead
+      PlanExitTool, // devilcode_change - always registered; gated by agent permission instead
       ...custom,
     ]
   }
@@ -142,11 +142,11 @@ export namespace ToolRegistry {
       tools
         .filter((t) => {
           // Enable websearch/codesearch for zen/kilo users OR via enable flag
-          // kilocode_change start
+          // devilcode_change start
           if (t.id === "codesearch" || t.id === "websearch") {
-            return model.providerID === "opencode" || model.providerID === "kilo" || Flag.KILO_ENABLE_EXA
+            return model.providerID === "opencode" || model.providerID === "kilo" || Flag.DEVIL_ENABLE_EXA
           }
-          // kilocode_change end
+          // devilcode_change end
 
           // use apply tool in same format as codex
           const usePatch =

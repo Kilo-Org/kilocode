@@ -1,15 +1,15 @@
 ---
 title: "Slack"
-description: "Using Kilo Code in Slack"
+description: "Using devil Code in Slack"
 ---
 
-# Kilo for Slack
+# devil for Slack
 
-Kilo for Slack brings the power of Kilo Code directly into your Slack workspace. Ask questions about your repositories, request code implementations, or get help with issues—all without leaving Slack.
+devil for Slack brings the power of devil Code directly into your Slack workspace. Ask questions about your repositories, request code implementations, or get help with issues—all without leaving Slack.
 
 ---
 
-## What You Can Do With Kilo for Slack
+## What You Can Do With devil for Slack
 
 - **Ask questions about your repositories** — Get explanations about code, architecture, or implementation details
 - **Request code implementations** — Tell the bot to implement fixes or features suggested in Slack threads
@@ -29,22 +29,22 @@ Kilo for Slack brings the power of Kilo Code directly into your Slack workspace.
 
 ## Prerequisites
 
-Before using Kilo for Slack:
+Before using devil for Slack:
 
-- You must have a **Kilo Code account** with available credits
-- Your **Git provider integration must be configured** via the [Integrations tab](https://app.kilo.ai/integrations) so Kilo can access your repositories
+- You must have a **devil Code account** with available credits
+- Your **Git provider integration must be configured** via the [Integrations tab](https://app.devil.ai/integrations) so devil can access your repositories
 
-To install Kilo for Slack, simply go to the integrations menu in the sidebar on https://app.kilo.ai and set up the Slack integration.
+To install devil for Slack, simply go to the integrations menu in the sidebar on https://app.devil.ai and set up the Slack integration.
 
 ---
 
-## How to Interact with Kilo
+## How to Interact with devil
 
 ### Direct Messages
 
-You can message Kilo directly through Slack DMs for private conversations:
+You can message devil directly through Slack DMs for private conversations:
 
-1. Find **Kilo** in your Slack workspace's app list
+1. Find **devil** in your Slack workspace's app list
 2. Start a direct message conversation
 3. Ask your question or describe what you need
 
@@ -59,7 +59,7 @@ This is ideal for:
 Mention the bot in any channel where it's been added:
 
 ```
-@Kilo can you explain how the authentication flow works in our backend?
+@devil can you explain how the authentication flow works in our backend?
 ```
 
 This is great for:
@@ -77,11 +77,11 @@ This is great for:
 Get instant answers about your codebase without switching contexts:
 
 ```
-@Kilo what does the UserService class do in our main backend repo?
+@devil what does the UserService class do in our main backend repo?
 ```
 
 ```
-@Kilo how is error handling implemented in the payment processing module?
+@devil how is error handling implemented in the payment processing module?
 ```
 
 ### Implement Fixes from Slack Discussions
@@ -89,7 +89,7 @@ Get instant answers about your codebase without switching contexts:
 When your team identifies an issue or improvement in a Slack thread, ask the bot to implement it:
 
 ```
-@Kilo based on this thread, can you implement the fix for the null pointer exception in the order processing service?
+@devil based on this thread, can you implement the fix for the null pointer exception in the order processing service?
 ```
 
 The bot can:
@@ -104,7 +104,7 @@ The bot can:
 Share error messages or stack traces and get help:
 
 ```
-@Kilo I'm seeing this error in production:
+@devil I'm seeing this error in production:
 [paste error message]
 Can you help me understand what's causing it?
 ```
@@ -113,17 +113,17 @@ Can you help me understand what's causing it?
 
 ## How It Works
 
-1. **Message Kilo** — Either through DMs or by mentioning it in a channel
-2. **Kilo processes your request** — Kilo uses your connected repositories to understand context
-3. **AI generates a response** — Kilo Code's AI analyzes your request and provides helpful responses
-4. **Code changes (if requested)** — For implementation requests, Kilo can create pull or merge requests
+1. **Message devil** — Either through DMs or by mentioning it in a channel
+2. **devil processes your request** — devil uses your connected repositories to understand context
+3. **AI generates a response** — devil Code's AI analyzes your request and provides helpful responses
+4. **Code changes (if requested)** — For implementation requests, devil can create pull or merge requests
 
 ---
 
 ## Cost
 
-- **Kilo Code credits are used** when Kilo performs work (model usage, operations, etc.)
-- Credit usage is similar to using Kilo Code through other interfaces
+- **devil Code credits are used** when devil performs work (model usage, operations, etc.)
+- Credit usage is similar to using devil Code through other interfaces
 
 ---
 
@@ -138,7 +138,7 @@ Can you help me understand what's causing it?
 
 ## Limitations
 
-- Kilo can only access repositories you've connected through the [Integrations](https://app.kilo.ai/integrations) page
+- devil can only access repositories you've connected through the [Integrations](https://app.devil.ai/integrations) page
 - Complex multi-step implementations may require follow-up messages
 - Response times may vary based on the complexity of your request
 
@@ -146,30 +146,30 @@ Can you help me understand what's causing it?
 
 ## Changing the Model
 
-You can customize which AI model Kilo uses for generating responses. The model affects the quality, speed, and capabilities of Kilo's responses.
+You can customize which AI model devil uses for generating responses. The model affects the quality, speed, and capabilities of devil's responses.
 
-1. Go to your [Kilo Workspace](https://app.kilo.ai/)
+1. Go to your [devil Workspace](https://app.devil.ai/)
 2. Navigate to **Integrations** > **Slack**
-3. Select your preferred model for Kilo for Slack
+3. Select your preferred model for devil for Slack
 
-Kilo will start using the new model immediately for subsequent requests.
+devil will start using the new model immediately for subsequent requests.
 
 ### Available Models
 
-Kilo for Slack supports over 400+ models across different providers.
+devil for Slack supports over 400+ models across different providers.
 
 ---
 
 ## Troubleshooting
 
-**"Kilo isn't responding."**
-Ensure Kilo for Slack is installed in your workspace and has been added to the channel you're using.
+**"devil isn't responding."**
+Ensure devil for Slack is installed in your workspace and has been added to the channel you're using.
 
-**"Kilo can't access my repository."**
-Verify your Git provider integration is configured correctly in the [Integrations tab](https://app.kilo.ai/integrations).
+**"devil can't access my repository."**
+Verify your Git provider integration is configured correctly in the [Integrations tab](https://app.devil.ai/integrations).
 
 **"I'm getting incomplete responses."**
 Try breaking your request into smaller, more specific questions.
 
-**"Kilo doesn't understand my codebase."**
+**"devil doesn't understand my codebase."**
 Make sure the repository you're asking about is connected and accessible through your Git provider integration.

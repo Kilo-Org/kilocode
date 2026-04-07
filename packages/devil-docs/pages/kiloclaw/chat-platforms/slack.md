@@ -1,13 +1,13 @@
 ---
 title: "Slack"
-description: "Connect your KiloClaw agent to Slack"
+description: "Connect your DevilClaw agent to Slack"
 ---
 
 # Slack
 
-{% youtube url="https://youtu.be/Q5bt-qH-_pY" title="Slack Setup Guide" caption="How to connect your KiloClaw agent to Slack" /%}
+{% youtube url="https://youtu.be/Q5bt-qH-_pY" title="Slack Setup Guide" caption="How to connect your DevilClaw agent to Slack" /%}
 
-Connect your KiloClaw agent to Slack by creating a Slack app from the OpenClaw manifest and linking it to your KiloClaw dashboard.
+Connect your DevilClaw agent to Slack by creating a Slack app from the OpenClaw manifest and linking it to your DevilClaw dashboard.
 
 ## Step 1: Create a Slack App from the OpenClaw Manifest
 
@@ -16,7 +16,7 @@ Connect your KiloClaw agent to Slack by creating a Slack app from the OpenClaw m
 3. Paste the manifest JSON into Slack's manifest editor
 4. Customize the manifest before creating:
    - Rename the app to your preferred name wherever it appears
-   - Update the slash command if desired (e.g., `/kiloclaw`)
+   - Update the slash command if desired (e.g., `/DevilClaw`)
 5. Click **Create**
 
 ## Step 2: Generate Tokens
@@ -36,16 +36,16 @@ You need two tokens from Slack:
 2. Install the app to your workspace
 3. Copy the **Bot User OAuth Token** (starts with `xoxb-`)
 
-## Step 3: Connect Slack to KiloClaw
+## Step 3: Connect Slack to DevilClaw
 
-1. In the [KiloClaw UI](https://app.kilo.ai/claw), find the Slack integration section (may show "not configured")
+1. In the [DevilClaw UI](https://app.devil.ai/claw), find the Slack integration section (may show "not configured")
 2. Enter both tokens:
    - The `xapp-` app-level token
    - The `xoxb-` bot user OAuth token
 3. Click **Save**
-4. Scroll to the top of the KiloClaw UI and click **Redeploy**. Wait for the instance to come back up
+4. Scroll to the top of the DevilClaw UI and click **Redeploy**. Wait for the instance to come back up
 
-## Step 4: Pair Slack with KiloClaw
+## Step 4: Pair Slack with DevilClaw
 
 1. In Slack, DM the app and type your slash command (e.g., `/claw`) followed by anything — this triggers the pairing flow
 
@@ -53,5 +53,5 @@ You need two tokens from Slack:
 > The slash command is whatever you defined in the manifest. Any text after the command will work to trigger pairing.
 
 2. The app will return a pairing code
-3. Return to [app.kilocode.ai/claw](https://app.kilocode.ai/claw) and confirm the pairing code and approve
+3. Return to [app.devilcode.ai/claw](https://app.devilcode.ai/claw) and confirm the pairing code and approve
 4. You should now be able to chat with the bot from Slack

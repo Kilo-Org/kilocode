@@ -272,7 +272,7 @@ export class MarketplaceInstaller {
 // ── Helpers ─────────────────────────────────────────────────────────
 
 /**
- * Normalize a marketplace MCP entry from the old Kilocode format to the CLI's expected format.
+ * Normalize a marketplace MCP entry from the old Devilcode format to the CLI's expected format.
  *
  * Old format (from marketplace API):
  *   { "command": "npx", "args": [...], "env": {...} }

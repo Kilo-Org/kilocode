@@ -1,4 +1,4 @@
-import type { Message, Session, TextPart, UserMessage } from "@kilocode/sdk/v2/client"
+import type { Message, Session, TextPart, UserMessage } from "@devilcode/sdk/v2/client"
 import { Avatar } from "@opencode-ai/ui/avatar"
 import { HoverCard } from "@opencode-ai/ui/hover-card"
 import { Icon } from "@opencode-ai/ui/icon"
@@ -19,7 +19,7 @@ import { agentColor } from "@/utils/agent"
 import { sessionPermissionRequest } from "../session/composer/session-request-tree"
 import { hasProjectPermissions } from "./helpers"
 
-const KILO_PROJECT_ID = "4b0ea68d7af9a6031a7ffda7ad66e0cb83315750"
+const DEVIL_PROJECT_ID = "4b0ea68d7af9a6031a7ffda7ad66e0cb83315750"
 
 export const ProjectIcon = (props: { project: LocalProject; class?: string; notify?: boolean }): JSX.Element => {
   const globalSync = useGlobalSync()
@@ -43,7 +43,7 @@ export const ProjectIcon = (props: { project: LocalProject; class?: string; noti
       <div class="size-full rounded overflow-clip">
         <Avatar
           fallback={name()}
-          src={props.project.id === KILO_PROJECT_ID ? "https://kilo.ai/favicon.svg" : props.project.icon?.override}
+          src={props.project.id === DEVIL_PROJECT_ID ? "https://devil.ai/favicon.svg" : props.project.icon?.override}
           {...getAvatarColors(props.project.icon?.color)}
           class="size-full rounded"
           classList={{ "badge-mask": notify() }}

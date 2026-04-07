@@ -120,7 +120,7 @@ export const dict = {
   "dialog.model.expand": "Genişlet",
   "dialog.model.collapse": "Daralt",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo tarafından sunulan ücretsiz modeller",
+  "dialog.model.unpaid.freeModels.title": "Devil tarafından sunulan ücretsiz modeller",
   "dialog.model.unpaid.addMore.title": "Popüler sağlayıcılardan daha fazla model ekleyin",
 
   "dialog.provider.viewAll": "Daha fazla sağlayıcı göster",
@@ -133,7 +133,7 @@ export const dict = {
   "provider.connect.status.waiting": "Yetkilendirme bekleniyor...",
   "provider.connect.status.failed": "Yetkilendirme başarısız: {{error}}",
   "provider.connect.apiKey.description":
-    "{{provider}} hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
+    "{{provider}} hesabınızı bağlamak ve Devil'da {{provider}} modellerini kullanmak için {{provider}} API anahtarınızı girin.",
   "provider.connect.apiKey.label": "{{provider}} API anahtarı",
   "provider.connect.apiKey.placeholder": "API anahtarı",
   "provider.connect.apiKey.required": "API anahtarı gerekli",
@@ -144,7 +144,7 @@ export const dict = {
   "provider.connect.opencodeZen.visit.prefix": "",
   "provider.connect.opencodeZen.visit.link": "https://opencode.ai/zen",
   "provider.connect.opencodeZen.visit.suffix": " adresini ziyaret ederek API anahtarınızı alın.",
-  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve Kilo'da {{provider}} modellerini kullanmak için ",
+  "provider.connect.oauth.code.visit.prefix": "Hesabınızı bağlamak ve Devil'da {{provider}} modellerini kullanmak için ",
   "provider.connect.oauth.code.visit.link": "bu bağlantıya",
   "provider.connect.oauth.code.visit.suffix": " tıklayarak yetkilendirme kodunuzu alın.",
   "provider.connect.oauth.code.label": "{{method}} yetkilendirme kodu",
@@ -154,7 +154,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "",
   "provider.connect.oauth.auto.visit.link": "Bu bağlantıya",
   "provider.connect.oauth.auto.visit.suffix":
-    " tıklayarak aşağıdaki kodu girin ve hesabınızı bağlayarak Kilo'da {{provider}} modellerini kullanın.",
+    " tıklayarak aşağıdaki kodu girin ve hesabınızı bağlayarak Devil'da {{provider}} modellerini kullanın.",
   "provider.connect.oauth.auto.confirmationCode": "Onay kodu",
   "provider.connect.toast.connected.title": "{{provider}} bağlandı",
   "provider.connect.toast.connected.description": "{{provider}} modelleri artık kullanımda.",
@@ -279,7 +279,7 @@ export const dict = {
   "dialog.directory.empty": "Klasör bulunamadı",
 
   "dialog.server.title": "Sunucular",
-  "dialog.server.description": "Bu uygulamanın hangi Kilo sunucusuna bağlanacağını değiştirin.",
+  "dialog.server.description": "Bu uygulamanın hangi Devil sunucusuna bağlanacağını değiştirin.",
   "dialog.server.search.placeholder": "Sunucu ara",
   "dialog.server.empty": "Henüz sunucu yok",
   "dialog.server.add.title": "Sunucu ekle",
@@ -406,7 +406,7 @@ export const dict = {
   "toast.session.listFailed.title": "{{project}} için oturumlar yüklenemedi",
 
   "toast.update.title": "Güncelleme mevcut",
-  "toast.update.description": "Kilo'nun yeni bir sürümü ({{version}}) yüklemeye hazır.",
+  "toast.update.description": "Devil'nun yeni bir sürümü ({{version}}) yüklemeye hazır.",
   "toast.update.action.installRestart": "Yükle ve yeniden başlat",
   "toast.update.action.notYet": "Şimdi değil",
 
@@ -417,7 +417,7 @@ export const dict = {
   "error.page.action.checking": "Kontrol ediliyor...",
   "error.page.action.checkUpdates": "Güncellemeleri kontrol et",
   "error.page.action.updateTo": "{{version}} sürümüne güncelle",
-  "error.page.report.prefix": "Lütfen bu hatayı Kilo ekibine bildirin",
+  "error.page.report.prefix": "Lütfen bu hatayı Devil ekibine bildirin",
   "error.page.report.discord": "Discord üzerinden",
   "error.page.version": "Sürüm: {{version}}",
 
@@ -447,7 +447,7 @@ export const dict = {
   "error.chain.modelNotFound": "Model bulunamadı: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Yapılandırma dosyanızı (opencode.json) sağlayıcı/model adlarını kontrol edin",
   "error.chain.mcpFailed":
-    'MCP sunucusu "{{name}}" başarısız oldu. Not: Kilo henüz MCP kimlik doğrulamasını desteklemiyor.',
+    'MCP sunucusu "{{name}}" başarısız oldu. Not: Devil henüz MCP kimlik doğrulamasını desteklemiyor.',
   "error.chain.providerAuthFailed": "Sağlayıcı kimlik doğrulaması başarısız ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     '"{{provider}}" sağlayıcısı başlatılamadı. Kimlik bilgilerini ve yapılandırmayı kontrol edin.',
@@ -591,12 +591,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Çalışma alanlarını etkinleştir",
   "sidebar.workspaces.disable": "Çalışma alanlarını devre dışı bırak",
   "sidebar.gettingStarted.title": "Başlarken",
-  "sidebar.gettingStarted.line1": "Kilo ücretsiz modeller içerir, böylece hemen başlayabilirsiniz.",
+  "sidebar.gettingStarted.line1": "Devil ücretsiz modeller içerir, böylece hemen başlayabilirsiniz.",
   "sidebar.gettingStarted.line2": "Claude, GPT, Gemini vb. modelleri kullanmak için herhangi bir sağlayıcı bağlayın.",
   "sidebar.project.recentSessions": "Son oturumlar",
   "sidebar.project.viewAllSessions": "Tüm oturumları görüntüle",
 
-  "app.name.desktop": "Kilo Masaüstü",
+  "app.name.desktop": "Devil Masaüstü",
 
   "settings.section.desktop": "Masaüstü",
   "settings.section.server": "Sunucu",
@@ -609,11 +609,11 @@ export const dict = {
   "settings.general.section.sounds": "Ses efektleri",
 
   "settings.general.row.language.title": "Dil",
-  "settings.general.row.language.description": "Kilo'nun görünüm dilini değiştirin",
+  "settings.general.row.language.description": "Devil'nun görünüm dilini değiştirin",
   "settings.general.row.appearance.title": "Görünüm",
-  "settings.general.row.appearance.description": "Kilo'nun cihazınızdaki görünümünü özelleştirin",
+  "settings.general.row.appearance.description": "Devil'nun cihazınızdaki görünümünü özelleştirin",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Kilo'nun temasını özelleştirin.",
+  "settings.general.row.theme.description": "Devil'nun temasını özelleştirin.",
   "settings.general.row.font.title": "Yazı Tipi",
   "settings.general.row.font.description": "Kod bloklarında kullanılan monospace yazı tipini özelleştirin",
 
@@ -621,13 +621,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "Güncellemelerden sonra Yenilikler bildirimlerini göster",
 
   "settings.updates.row.startup.title": "Başlangıçta güncellemeleri kontrol et",
-  "settings.updates.row.startup.description": "Kilo başladığında otomatik güncelleme kontrolü yap",
+  "settings.updates.row.startup.description": "Devil başladığında otomatik güncelleme kontrolü yap",
   "settings.updates.row.check.title": "Güncellemeleri kontrol et",
   "settings.updates.row.check.description": "Elle güncelleme kontrolü yap ve varsa yükle",
   "settings.updates.action.checkNow": "Şimdi kontrol et",
   "settings.updates.action.checking": "Kontrol ediliyor...",
   "settings.updates.toast.latest.title": "Güncelsiniz",
-  "settings.updates.toast.latest.description": "Kilo'nun en son sürümünü kullanıyorsunuz.",
+  "settings.updates.toast.latest.description": "Devil'nun en son sürümünü kullanıyorsunuz.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -722,7 +722,7 @@ export const dict = {
   "settings.providers.title": "Sağlayıcılar",
   "settings.providers.description": "Sağlayıcı ayarları burada yapılandırılabilecek.",
   "settings.providers.betaNotice":
-    "Şu anda yalnızca Kilo Gateway sağlayıcısı ayarlar arayüzünde yapılandırılabilir. Diğer sağlayıcılar için destek beta döneminde yakında gelecek. Bu arada CLI veya yapılandırma dosyası ile sağlayıcıları yapılandırabilirsiniz. Kilo'yu açık tutmaya kararlıyız, kilitlenme yok.",
+    "Şu anda yalnızca Devil Gateway sağlayıcısı ayarlar arayüzünde yapılandırılabilir. Diğer sağlayıcılar için destek beta döneminde yakında gelecek. Bu arada CLI veya yapılandırma dosyası ile sağlayıcıları yapılandırabilirsiniz. Devil'yu açık tutmaya kararlıyız, kilitlenme yok.",
   "settings.providers.section.connected": "Bağlı sağlayıcılar",
   "settings.providers.connected.empty": "Bağlı sağlayıcı yok",
   "settings.providers.section.popular": "Popüler sağlayıcılar",
@@ -894,7 +894,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Kod panoya kopyalandı",
   "deviceAuth.toast.errorCopied": "Hata panoya kopyalandı",
   "deviceAuth.status.initiating": "Giriş başlatılıyor...",
-  "deviceAuth.title": "Kilo Code'a giriş yap",
+  "deviceAuth.title": "Devil Code'a giriş yap",
   "deviceAuth.step1": "Adım 1: Bu URL'yi açın",
   "deviceAuth.action.copyUrl": "URL'yi Kopyala",
   "deviceAuth.action.openBrowser": "Tarayıcıyı Aç",
@@ -915,7 +915,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Giriş yapılmadı",
-  "profile.action.login": "Kilo Code ile giriş yap",
+  "profile.action.login": "Devil Code ile giriş yap",
   "profile.balance.title": "Bakiye",
   "profile.balance.refresh": "Bakiyeyi yenile",
   "profile.action.dashboard": "Kontrol Paneli",
@@ -933,11 +933,11 @@ export const dict = {
 
   "settings.experimental.title": "Deneysel",
   "settings.language.title": "Dil",
-  "settings.aboutKiloCode.title": "Kilo Code Hakkında",
+  "settings.aboutDevilCode.title": "Devil Code Hakkında",
 
   "session.messages.empty": "Aşağıya bir mesaj yazarak sohbete başlayın.",
   "session.messages.welcome":
-    "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
+    "Devil Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
   "session.messages.scrollToBottom": "En alta kaydır",
   "session.status.writingResponse": "Yanıt yazılıyor...",
   "session.status.retry": "Yeniden deneniyor…",
@@ -964,42 +964,42 @@ export const dict = {
   "time.thisMonth": "Bu Ay",
   "time.older": "Daha Eski",
 
-  "settings.aboutKiloCode.status.connected": "Bağlı",
-  "settings.aboutKiloCode.status.connecting": "Bağlanıyor...",
-  "settings.aboutKiloCode.status.disconnected": "Bağlantı Kesildi",
-  "settings.aboutKiloCode.status.error": "Hata",
-  "settings.aboutKiloCode.cliServer": "CLI Sunucusu",
-  "settings.aboutKiloCode.status.label": "Durum:",
-  "settings.aboutKiloCode.port.label": "Port:",
-  "settings.aboutKiloCode.versionInfo": "Sürüm Bilgisi",
-  "settings.aboutKiloCode.version.label": "Sürüm:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code Uzantısı",
-  "settings.aboutKiloCode.community": "Topluluk ve Destek",
-  "settings.aboutKiloCode.feedback.prefix":
+  "settings.aboutDevilCode.status.connected": "Bağlı",
+  "settings.aboutDevilCode.status.connecting": "Bağlanıyor...",
+  "settings.aboutDevilCode.status.disconnected": "Bağlantı Kesildi",
+  "settings.aboutDevilCode.status.error": "Hata",
+  "settings.aboutDevilCode.cliServer": "CLI Sunucusu",
+  "settings.aboutDevilCode.status.label": "Durum:",
+  "settings.aboutDevilCode.port.label": "Port:",
+  "settings.aboutDevilCode.versionInfo": "Sürüm Bilgisi",
+  "settings.aboutDevilCode.version.label": "Sürüm:",
+  "settings.aboutDevilCode.extensionName": "Devil Code Uzantısı",
+  "settings.aboutDevilCode.community": "Topluluk ve Destek",
+  "settings.aboutDevilCode.feedback.prefix":
     "Herhangi bir sorunuz veya geri bildiriminiz varsa, lütfen şu adreste bir sorun açın:",
-  "settings.aboutKiloCode.feedback.or": "veya",
-  "settings.aboutKiloCode.support.prefix": "Faturalama veya hesap soruları için Müşteri Desteği ile iletişime geçin:",
-  "settings.aboutKiloCode.resetSettings.title": "Ayarları Sıfırla",
-  "settings.aboutKiloCode.resetSettings.description":
+  "settings.aboutDevilCode.feedback.or": "veya",
+  "settings.aboutDevilCode.support.prefix": "Faturalama veya hesap soruları için Müşteri Desteği ile iletişime geçin:",
+  "settings.aboutDevilCode.resetSettings.title": "Ayarları Sıfırla",
+  "settings.aboutDevilCode.resetSettings.description":
     "Bu, yalnızca VS Code uzantısına özgü ayarları varsayılan değerlerine sıfırlar. Modlar ve otomatik onay kuralları gibi CLI ile paylaşılan ayarlar, CLI yapılandırmasında depolanır ve sıfırlanmaz.",
-  "settings.aboutKiloCode.resetSettings.button": "Tüm Ayarları Sıfırla",
-  "settings.aboutKiloCode.settingsTransfer.title": "Ayar Aktarımı",
-  "settings.aboutKiloCode.settingsTransfer.description":
+  "settings.aboutDevilCode.resetSettings.button": "Tüm Ayarları Sıfırla",
+  "settings.aboutDevilCode.settingsTransfer.title": "Ayar Aktarımı",
+  "settings.aboutDevilCode.settingsTransfer.description":
     "Ayarlarınızı VS Code örnekleri arasında aktarmak için dışa veya içe aktarın.",
-  "settings.aboutKiloCode.exportSettings": "Dışa Aktar",
-  "settings.aboutKiloCode.importSettings": "İçe Aktar",
-  "settings.aboutKiloCode.importSettings.invalidJson": "Geçersiz JSON dosyası. Lütfen geçerli bir ayar dosyası seçin.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Dosya geçerli Kilo ayarları içermiyor.",
-  "settings.aboutKiloCode.importSettings.tooLarge": "Dosya çok büyük. Ayar dosyaları 1 MB altında olmalıdır.",
-  "settings.aboutKiloCode.importSettings.newerVersion":
-    "Bu dosya Kilo'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
-  "settings.aboutKiloCode.importSettings.success":
+  "settings.aboutDevilCode.exportSettings": "Dışa Aktar",
+  "settings.aboutDevilCode.importSettings": "İçe Aktar",
+  "settings.aboutDevilCode.importSettings.invalidJson": "Geçersiz JSON dosyası. Lütfen geçerli bir ayar dosyası seçin.",
+  "settings.aboutDevilCode.importSettings.invalidConfig": "Dosya geçerli Devil ayarları içermiyor.",
+  "settings.aboutDevilCode.importSettings.tooLarge": "Dosya çok büyük. Ayar dosyaları 1 MB altında olmalıdır.",
+  "settings.aboutDevilCode.importSettings.newerVersion":
+    "Bu dosya Devil'nun daha yeni bir sürümünden dışa aktarılmış. Bazı ayarlar göz ardı edilebilir.",
+  "settings.aboutDevilCode.importSettings.success":
     "Ayarlar içe aktarıldı. Yukarıdaki değişiklikleri gözden geçirin, ardından Kaydet'e tıklayın.",
 
-  "settings.aboutKiloCode.telemetry.title": "Telemetri",
-  "settings.aboutKiloCode.telemetry.description":
+  "settings.aboutDevilCode.telemetry.title": "Telemetri",
+  "settings.aboutDevilCode.telemetry.description":
     "Telemetri, VS Code'un yerleşik telemetri ayarı tarafından kontrol edilir. Devre dışı bırakmak için Ayarlar > Telemetri > Telemetri Düzeyi'ne gidin ve \"off\" olarak ayarlayın. Değişikliği uygulamak için VS Code'u yeniden başlatın.",
-  "settings.aboutKiloCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
+  "settings.aboutDevilCode.telemetry.openSettings": "Telemetri Ayarlarını Aç",
 
   "settings.agentBehaviour.subtab.modes": "Modlar",
   "settings.agentBehaviour.subtab.agents": "Ajanlar",
@@ -1018,7 +1018,7 @@ export const dict = {
   "settings.browser.headless.description": "Başsız modda çalıştır (görünür tarayıcı penceresi yok).",
 
   "settings.language.description":
-    '"Otomatik" VS Code görüntüleme dilinizi kullanır. Kilo Code arayüzü için dil seçin.',
+    '"Otomatik" VS Code görüntüleme dilinizi kullanır. Devil Code arayüzü için dil seçin.',
   "settings.language.auto": "Otomatik (VS Code dili)",
   "settings.language.current": "Mevcut:",
 
@@ -1124,7 +1124,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code Uyumluluğu",
   "settings.agentBehaviour.claudeCompat.title": "Claude Code Dosyalarını Yükle",
   "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Kilo'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
+    "Claude Code yapılandırma dizininizdeki CLAUDE.md talimatlarını ve becerilerini oturumlara yükleyin. Devil'nun Claude Code talimatlarınızı ve becerilerinizi kullanmasını istiyorsanız bunu etkinleştirin. Yeniden başlatma gerektirir.",
   "settings.agentBehaviour.removeMcp.title": "MCP sunucusunu kaldır",
   "settings.agentBehaviour.removeMcp.confirm":
     '"{{name}}" MCP sunucusu kaldırılsın mı? Bu, yapılandırmanızdan kaldırılacak.',
@@ -1239,12 +1239,12 @@ export const dict = {
 
   // legacy-migration start
   "settings.legacyMigration.link": "Eski Sürümden Taşı",
-  "settings.aboutKiloCode.legacyMigration.title": "Eski Sürüm Taşıma",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Kilo Code'un önceki yüklemesinden ayarları taşıyın.",
+  "settings.aboutDevilCode.legacyMigration.title": "Eski Sürüm Taşıma",
+  "settings.aboutDevilCode.legacyMigration.description":
+    "Sağlayıcı API anahtarları ve varsayılan model dahil olmak üzere Devil Code'un önceki yüklemesinden ayarları taşıyın.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code'daki Yenilikler",
+  "migration.whatsNew.title": "Devil Code'daki Yenilikler",
   "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle": "Uzantıyı daha hızlı ve daha verimli bir temel üzerine yeniden inşa ettik.",
   "migration.whatsNew.features.performance.title": "Daha Hızlı Ajan Performansı",
@@ -1257,7 +1257,7 @@ export const dict = {
     "Birden fazla ajanı paralel olarak çalıştırmak için birleşik bir arayüz, her biri kendi worktree'sinde — ilerlemeyi izleyin, bağlam değiştirin ve değişiklikleri tek bir yerden inceleyin.",
   "migration.whatsNew.features.foundation.title": "Paylaşılan Temel",
   "migration.whatsNew.features.foundation.detail":
-    "Her Kilo ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
+    "Her Devil ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
   "migration.whatsNew.blogLink": "Tam duyuruyu oku",
   "migration.whatsNew.continue": "Devam",
 

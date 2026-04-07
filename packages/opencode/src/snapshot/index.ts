@@ -9,13 +9,13 @@ import z from "zod"
 import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Scheduler } from "../scheduler"
-import * as KiloSnapshot from "../kilocode/snapshot" // kilocode_change
+import * as DevilSnapshot from "../devilcode/snapshot" // devilcode_change
 
 export namespace Snapshot {
   const log = Log.create({ service: "snapshot" })
   const hour = 60 * 60 * 1000
   const prune = "7.days"
-  export const MAX_DIFF_SIZE = 256 * 1024 // kilocode_change
+  export const MAX_DIFF_SIZE = 256 * 1024 // devilcode_change
 
   export function init() {
     Scheduler.register({
@@ -27,7 +27,7 @@ export namespace Snapshot {
   }
 
   export async function cleanup() {
-    if (Instance.project.vcs !== "git" || Flag.KILO_CLIENT === "acp") return
+    if (Instance.project.vcs !== "git" || Flag.DEVIL_CLIENT === "acp") return
     const cfg = await Config.get()
     if (cfg.snapshot === false) return
     const git = gitdir()
@@ -53,10 +53,10 @@ export namespace Snapshot {
   }
 
   export async function track() {
-    if (Instance.project.vcs !== "git" || Flag.KILO_CLIENT === "acp") return
+    if (Instance.project.vcs !== "git" || Flag.DEVIL_CLIENT === "acp") return
     const cfg = await Config.get()
     if (cfg.snapshot === false) return
-    const git = await KiloSnapshot.prepare() // kilocode_change
+    const git = await DevilSnapshot.prepare() // devilcode_change
     await add(git)
     const hash = await $`git --git-dir ${git} --work-tree ${Instance.worktree} write-tree`
       .quiet()
@@ -74,7 +74,7 @@ export namespace Snapshot {
   export type Patch = z.infer<typeof Patch>
 
   export async function patch(hash: string): Promise<Patch> {
-    const git = await KiloSnapshot.prepare() // kilocode_change
+    const git = await DevilSnapshot.prepare() // devilcode_change
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff --name-only ${hash} -- .`
@@ -102,7 +102,7 @@ export namespace Snapshot {
 
   export async function restore(snapshot: string) {
     log.info("restore", { commit: snapshot })
-    const git = await KiloSnapshot.prepare() // kilocode_change
+    const git = await DevilSnapshot.prepare() // devilcode_change
     const result =
       await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} read-tree ${snapshot} && git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} checkout-index -a -f`
         .quiet()
@@ -122,7 +122,7 @@ export namespace Snapshot {
   export async function revert(patches: Patch[]) {
     const files = new Set<string>()
     for (const item of patches) {
-      const git = await KiloSnapshot.prepare() // kilocode_change
+      const git = await DevilSnapshot.prepare() // devilcode_change
       for (const file of item.files) {
         if (files.has(file)) continue
         log.info("reverting", { file, hash: item.hash })
@@ -153,7 +153,7 @@ export namespace Snapshot {
   }
 
   export async function diff(hash: string) {
-    const git = await KiloSnapshot.prepare() // kilocode_change
+    const git = await DevilSnapshot.prepare() // devilcode_change
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff ${hash} -- .`
@@ -188,7 +188,7 @@ export namespace Snapshot {
     })
   export type FileDiff = z.infer<typeof FileDiff>
   export async function diffFull(from: string, to: string): Promise<FileDiff[]> {
-    const git = await KiloSnapshot.prepare() // kilocode_change
+    const git = await DevilSnapshot.prepare() // devilcode_change
     const result: FileDiff[] = []
     const status = new Map<string, "added" | "deleted" | "modified">()
 
@@ -215,7 +215,7 @@ export namespace Snapshot {
       if (!line) continue
       const [additions, deletions, file] = line.split("\t")
       const isBinaryFile = additions === "-" && deletions === "-"
-      // kilocode_change start
+      // devilcode_change start
       const oversized =
         !isBinaryFile &&
         ((parseInt(await $`git --git-dir ${git} cat-file -s ${from}:${file}`.quiet().nothrow().text()) || 0) >
@@ -223,7 +223,7 @@ export namespace Snapshot {
           (parseInt(await $`git --git-dir ${git} cat-file -s ${to}:${file}`.quiet().nothrow().text()) || 0) >
             MAX_DIFF_SIZE)
       const skip = isBinaryFile || oversized
-      // kilocode_change end
+      // devilcode_change end
       const before = skip
         ? ""
         : await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} show ${from}:${file}`
@@ -251,7 +251,7 @@ export namespace Snapshot {
   }
 
   function gitdir() {
-    return KiloSnapshot.gitdir() // kilocode_change
+    return DevilSnapshot.gitdir() // devilcode_change
   }
 
   async function add(git: string) {

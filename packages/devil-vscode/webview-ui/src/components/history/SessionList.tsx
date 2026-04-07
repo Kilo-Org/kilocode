@@ -6,13 +6,13 @@
  */
 
 import { Component, Show, createSignal, onMount, type JSX } from "solid-js"
-import { List } from "@kilocode/kilo-ui/list"
-import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { InlineInput } from "@kilocode/kilo-ui/inline-input"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { List } from "@devilcode/kilo-ui/list"
+import { ContextMenu } from "@devilcode/kilo-ui/context-menu"
+import { Dialog } from "@devilcode/kilo-ui/dialog"
+import { Button } from "@devilcode/kilo-ui/button"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
+import { InlineInput } from "@devilcode/kilo-ui/inline-input"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
@@ -49,7 +49,7 @@ const SessionList: Component<SessionListProps> = (props) => {
   const [renameValue, setRenameValue] = createSignal("")
 
   onMount(() => {
-    console.log("[Kilo New] SessionList mounted, loading sessions")
+    console.log("[Devil New] SessionList mounted, loading sessions")
     session.loadSessions()
   })
 

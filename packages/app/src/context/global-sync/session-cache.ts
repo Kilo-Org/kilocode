@@ -6,7 +6,7 @@ import type {
   QuestionRequest,
   SessionStatus,
   Todo,
-} from "@kilocode/sdk/v2/client"
+} from "@devilcode/sdk/v2/client"
 
 export const SESSION_CACHE_LIMIT = 40
 

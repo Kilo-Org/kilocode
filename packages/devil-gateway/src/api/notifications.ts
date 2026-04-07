@@ -1,10 +1,10 @@
 import { z } from "zod"
-import { KILO_API_BASE } from "./constants.js"
+import { DEVIL_API_BASE } from "./constants.js"
 
 /**
- * Kilo notification schema
+ * Devil notification schema
  */
-export const KilocodeNotificationSchema = z.object({
+export const DevilcodeNotificationSchema = z.object({
   id: z.string(),
   title: z.string(),
   message: z.string(),
@@ -18,28 +18,28 @@ export const KilocodeNotificationSchema = z.object({
   suggestModelId: z.string().optional(),
 })
 
-export type KilocodeNotification = z.infer<typeof KilocodeNotificationSchema>
+export type DevilcodeNotification = z.infer<typeof DevilcodeNotificationSchema>
 
 const NotificationsResponseSchema = z.object({
-  notifications: z.array(KilocodeNotificationSchema),
+  notifications: z.array(DevilcodeNotificationSchema),
 })
 
 const NOTIFICATIONS_TIMEOUT_MS = 5000
 
 /**
- * Fetch notifications from Kilo API
+ * Fetch notifications from Devil API
  *
  * @param options - Configuration with token and optional organization ID
- * @returns Array of notifications from the Kilo API (clients filter by showIn)
+ * @returns Array of notifications from the Devil API (clients filter by showIn)
  */
-export async function fetchKilocodeNotifications(options: {
-  kilocodeToken?: string
-  kilocodeOrganizationId?: string
-}): Promise<KilocodeNotification[]> {
-  const token = options.kilocodeToken
+export async function fetchDevilcodeNotifications(options: {
+  devilcodeToken?: string
+  devilcodeOrganizationId?: string
+}): Promise<DevilcodeNotification[]> {
+  const token = options.devilcodeToken
   if (!token) return []
 
-  const url = `${KILO_API_BASE}/api/users/notifications`
+  const url = `${DEVIL_API_BASE}/api/users/notifications`
 
   try {
     const response = await fetch(url, {

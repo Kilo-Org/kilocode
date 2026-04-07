@@ -6,10 +6,10 @@
  */
 
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Checkbox } from "@kilocode/kilo-ui/checkbox"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
+import { Tooltip } from "@devilcode/kilo-ui/tooltip"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Checkbox } from "@devilcode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { TodoItem } from "../../types/messages"

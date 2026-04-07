@@ -5,7 +5,7 @@ description: "Automatically generate meaningful git commit messages"
 
 # Generate Commit Messages
 
-Generate descriptive commit messages automatically based on your staged git changes. Kilo Code analyzes your staged files and creates conventional commit messages that follow best practices.
+Generate descriptive commit messages automatically based on your staged git changes. devil Code analyzes your staged files and creates conventional commit messages that follow best practices.
 
 {% callout type="info" %}
 This feature only analyzes **staged changes**. Make sure to stage your files using `git add` or via `VS Code` interface before generating commit messages.
@@ -24,7 +24,7 @@ The git commit message generator:
 ### Generating a Commit Message
 
 1. Stage your changes using `git add` or the VS Code git interface
-2. In the VS Code Source Control panel, look for the `Kilo Code` logo next to the commit message field)
+2. In the VS Code Source Control panel, look for the `devil Code` logo next to the commit message field)
 3. Click the logo to generate a commit message
 
 The generated message will appear in the commit message field, ready for you to review and modify if needed.
@@ -58,7 +58,7 @@ Common types include:
 
 The extension provides the same **SCM button** in the VS Code Source Control panel. Clicking it generates a commit message using the CLI backend's commit message generation API.
 
-Configuration is handled through the extension's settings or the shared `kilo.jsonc` config file.
+Configuration is handled through the extension's settings or the shared `devil.jsonc` config file.
 
 {% callout type="info" %}
 Git commit message generation is a **VS Code extension feature**. It is not available in the CLI/TUI.
@@ -176,4 +176,4 @@ The feature integrates with VS Code's built-in git functionality. If you encount
 ## Related Features
 
 - [API Configuration Profiles](/docs/ai-providers) - Use different models for commit generation
-- [Settings Management](/docs/getting-started/settings) - Manage all your Kilo Code preferences
+- [Settings Management](/docs/getting-started/settings) - Manage all your devil Code preferences

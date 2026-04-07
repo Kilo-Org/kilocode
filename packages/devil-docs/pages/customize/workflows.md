@@ -1,24 +1,24 @@
 ---
 title: "Workflows"
-description: "Create automated workflows with Kilo Code"
+description: "Create automated workflows with devil Code"
 platform: new
 ---
 
 # Workflows
 
-Workflows (also called **slash commands** in the new extension) automate repetitive tasks by defining step-by-step instructions for Kilo Code to execute.
+Workflows (also called **slash commands** in the new extension) automate repetitive tasks by defining step-by-step instructions for devil Code to execute.
 
-{% image src="/docs/img/slash-commands/workflows.png" alt="Workflows tab in Kilo Code" width="600" caption="Workflows tab in Kilo Code" /%}
+{% image src="/docs/img/slash-commands/workflows.png" alt="Workflows tab in devil Code" width="600" caption="Workflows tab in devil Code" /%}
 
 ## Creating Workflows
 
 {% tabs %}
 {% tab label="VSCode" %}
 
-Workflows are Markdown files stored as **slash commands** in `.kilo/commands/`:
+Workflows are Markdown files stored as **slash commands** in `.devil/commands/`:
 
-- **Global commands**: `~/.config/kilo/commands/` (available in all projects)
-- **Project commands**: `[project]/.kilo/commands/` (project-specific)
+- **Global commands**: `~/.config/devil/commands/` (available in all projects)
+- **Project commands**: `[project]/.devil/commands/` (project-specific)
 
 ### Basic Setup
 
@@ -26,7 +26,7 @@ Workflows are Markdown files stored as **slash commands** in `.kilo/commands/`:
 2. Save it in your commands directory
 3. Type `/command-name` in the chat (just the filename without `.md` extension) to execute
 
-For example, a file at `.kilo/commands/submit-pr.md` is invoked with `/submit-pr`.
+For example, a file at `.devil/commands/submit-pr.md` is invoked with `/submit-pr`.
 
 ### Optional Frontmatter
 
@@ -54,15 +54,15 @@ Workflows can leverage all built-in tools: `read`, `glob`, `grep`, `edit`, `writ
 
 ### Migration from Legacy Workflows
 
-The new extension automatically migrates legacy workflows from `.kilocode/workflows/` to the new command format on startup. You can also manually move files and remove the `.md` extension from invocations.
+The new extension automatically migrates legacy workflows from `.devilcode/workflows/` to the new command format on startup. You can also manually move files and remove the `.md` extension from invocations.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Workflows are markdown files stored in `.kilocode/workflows/`:
+Workflows are markdown files stored in `.devilcode/workflows/`:
 
-- **Global workflows**: `~/.kilocode/workflows/` (available in all projects)
-- **Project workflows**: `[project]/.kilocode/workflows/` (project-specific)
+- **Global workflows**: `~/.devilcode/workflows/` (available in all projects)
+- **Project workflows**: `[project]/.devilcode/workflows/` (project-specific)
 
 ### Basic Setup
 
@@ -120,7 +120,7 @@ Let's walk through creating a workflow for submitting a pull request.
 {% tabs %}
 {% tab label="VSCode" %}
 
-Create a file called `submit-pr.md` in your `.kilo/commands` directory:
+Create a file called `submit-pr.md` in your `.devil/commands` directory:
 
 ```markdown
 ---
@@ -148,7 +148,7 @@ Trigger this workflow by typing `/submit-pr` in the chat.
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Create a file called `submit-pr.md` in your `.kilocode/workflows` directory:
+Create a file called `submit-pr.md` in your `.devilcode/workflows` directory:
 
 ```markdown
 # Submit PR Workflow
@@ -172,7 +172,7 @@ Trigger this workflow by typing `/submit-pr.md` in the chat.
 {% /tab %}
 {% /tabs %}
 
-Kilo Code will:
+devil Code will:
 
 - Scan your code for common issues before committing
 - Run your test suite to catch problems early

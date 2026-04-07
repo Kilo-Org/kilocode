@@ -1,11 +1,11 @@
 export const dict = {
-  // Kilo Gateway provider translations
+  // Devil Gateway provider translations
   "provider.connect.kiloGateway.line1":
-    "Kilo Gateway надає доступ до добірки надійних оптимізованих моделей для агентів кодування.",
+    "Devil Gateway надає доступ до добірки надійних оптимізованих моделей для агентів кодування.",
   "provider.connect.kiloGateway.line2":
     "За допомогою одного API-ключа ви отримаєте доступ до таких моделей, як Claude, GPT, Gemini, GLM та інших.",
   "provider.connect.kiloGateway.visit.prefix": "Відвідайте ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
+  "provider.connect.kiloGateway.visit.link": "devil.ai",
   "provider.connect.kiloGateway.visit.suffix": " щоб отримати свій API-ключ.",
 
   // Provider dialog translations

@@ -21,7 +21,7 @@ export function SessionComposerRegion(props: {
   onSubmit: () => void
   onResponseSubmit: () => void
   setPromptDockRef: (el: HTMLDivElement) => void
-  onModeAction?: (input: { mode: string; text: string; description?: string }) => void // kilocode_change
+  onModeAction?: (input: { mode: string; text: string; description?: string }) => void // devilcode_change
   visualDuration?: number
   bounce?: number
   dockOpenVisualDuration?: number
@@ -147,7 +147,7 @@ export function SessionComposerRegion(props: {
         <Show when={props.state.questionRequest()} keyed>
           {(request) => (
             <div>
-              {/* kilocode_change: add onModeAction */}
+              {/* devilcode_change: add onModeAction */}
               <SessionQuestionDock
                 request={request}
                 onSubmit={props.onResponseSubmit}

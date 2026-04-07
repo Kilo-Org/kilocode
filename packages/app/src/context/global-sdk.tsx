@@ -1,4 +1,4 @@
-import type { Event } from "@kilocode/sdk/v2/client"
+import type { Event } from "@devilcode/sdk/v2/client"
 import { createSimpleContext } from "@opencode-ai/ui/context"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { batch, onCleanup } from "solid-js"

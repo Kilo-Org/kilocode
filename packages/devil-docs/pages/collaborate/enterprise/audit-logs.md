@@ -5,7 +5,7 @@ description: "Track and audit team activity"
 
 # Audit Logs
 
-Audit Logs record key actions that occur in the management of your Kilo seats, including user logins, adding or removing models, providers, and modes, and role changes.
+Audit Logs record key actions that occur in the management of your devil seats, including user logins, adding or removing models, providers, and modes, and role changes.
 
 Owners and Admins can search and filter logs to review access patterns and ensure compliance.
 
@@ -41,7 +41,7 @@ Each event includes:
 
 ## Logged Events
 
-Here is the list of all events included in the Kilo Code audit logs:
+Here is the list of all events included in the devil Code audit logs:
 
 - Organization: Create, Settings Change, Purchase Credits
 - Organization Member: Remove, Change Role

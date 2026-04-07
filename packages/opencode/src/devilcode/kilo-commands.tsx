@@ -1,7 +1,7 @@
 /**
- * Kilo Gateway Commands for TUI
+ * Devil Gateway Commands for TUI
  *
- * Provides /profile and /teams commands that are only visible when connected to Kilo Gateway.
+ * Provides /profile and /teams commands that are only visible when connected to Devil Gateway.
  */
 
 import { createMemo } from "solid-js"
@@ -11,10 +11,10 @@ import { useRoute } from "@tui/context/route"
 import { useDialog } from "@tui/ui/dialog"
 import { useToast } from "@tui/ui/toast"
 import { DialogAlert } from "@tui/ui/dialog-alert"
-import type { Organization } from "@kilocode/kilo-gateway"
+import type { Organization } from "@devilcode/kilo-gateway"
 import type { ClawStatus } from "./claw/types.js"
-import { DialogKiloTeamSelect } from "./components/dialog-kilo-team-select.js"
-import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
+import { DialogDevilTeamSelect } from "./components/dialog-kilo-team-select.js"
+import { DialogDevilProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 
@@ -23,12 +23,12 @@ type UseSDK = any
 type SDK = any
 
 /**
- * Register all Kilo Gateway commands
+ * Register all Devil Gateway commands
  * Call this from a component inside the TUI app
  *
  * @param useSDK - OpenCode's useSDK hook (passed from TUI context)
  */
-export function registerKiloCommands(useSDK: () => UseSDK) {
+export function registerDevilCommands(useSDK: () => UseSDK) {
   const command = useCommandDialog()
   const sync = useSync()
   const route = useRoute()
@@ -36,8 +36,8 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
   const sdk = useSDK()
   const toast = useToast()
 
-  // Only show Kilo commands when connected to Kilo Gateway
-  const isKiloConnected = createMemo(() => {
+  // Only show Devil commands when connected to Devil Gateway
+  const isDevilConnected = createMemo(() => {
     return sync.data.provider_next.connected.includes("kilo")
   })
 
@@ -45,12 +45,12 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
     // /kiloclaw command
     {
       value: "kilo.claw",
-      title: "KiloClaw",
-      description: "Open KiloClaw chat & dashboard",
-      category: "Kilo",
+      title: "DevilClaw",
+      description: "Open DevilClaw chat & dashboard",
+      category: "Devil",
       slash: { name: "kiloclaw", aliases: ["claw"] },
-      enabled: isKiloConnected(),
-      hidden: !isKiloConnected(),
+      enabled: isDevilConnected(),
+      hidden: !isDevilConnected(),
       onSelect: async () => {
         // Fetch profile (for org context) and instance status in parallel
         const [profileRes, res] = await Promise.all([
@@ -86,10 +86,10 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
       value: "remote.toggle",
       title: "Toggle remote",
       description: "Enable or disable remote session relay",
-      category: "Kilo",
+      category: "Devil",
       slash: { name: "remote" },
-      enabled: isKiloConnected(),
-      hidden: !isKiloConnected(),
+      enabled: isDevilConnected(),
+      hidden: !isDevilConnected(),
       onSelect: async () => {
         try {
           const current = await sdk.client.remote.status()
@@ -124,11 +124,11 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
     {
       value: "kilo.profile",
       title: "Profile",
-      description: "View your Kilo Gateway profile",
-      category: "Kilo",
+      description: "View your Devil Gateway profile",
+      category: "Devil",
       slash: { name: "profile", aliases: ["me", "whoami"] },
-      enabled: isKiloConnected(),
-      hidden: !isKiloConnected(),
+      enabled: isDevilConnected(),
+      hidden: !isDevilConnected(),
       onSelect: async () => {
         try {
           // Fetch profile and balance using server endpoint
@@ -138,7 +138,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             dialog.replace(() => (
               <DialogAlert
                 title="Error"
-                message="Failed to fetch profile. Please ensure you're authenticated with Kilo Gateway."
+                message="Failed to fetch profile. Please ensure you're authenticated with Devil Gateway."
               />
             ))
             return
@@ -147,7 +147,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
           const { profile, balance, currentOrgId } = response.data
 
           // Show profile dialog with clickable usage link
-          dialog.replace(() => <DialogKiloProfile profile={profile} balance={balance} currentOrgId={currentOrgId} />)
+          dialog.replace(() => <DialogDevilProfile profile={profile} balance={balance} currentOrgId={currentOrgId} />)
         } catch (error) {
           dialog.replace(() => <DialogAlert title="Error" message={`Failed to fetch profile: ${error}`} />)
         }
@@ -158,11 +158,11 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
     {
       value: "kilo.teams",
       title: "Teams",
-      description: "Switch between Kilo Gateway teams",
-      category: "Kilo",
+      description: "Switch between Devil Gateway teams",
+      category: "Devil",
       slash: { name: "teams", aliases: ["team", "org", "orgs"] },
-      enabled: isKiloConnected(),
-      hidden: !isKiloConnected(),
+      enabled: isDevilConnected(),
+      hidden: !isDevilConnected(),
       onSelect: async () => {
         try {
           // Fetch profile to get organizations
@@ -172,7 +172,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             dialog.replace(() => (
               <DialogAlert
                 title="Error"
-                message="Failed to fetch teams. Please ensure you're authenticated with Kilo Gateway."
+                message="Failed to fetch teams. Please ensure you're authenticated with Devil Gateway."
               />
             ))
             return
@@ -184,7 +184,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             dialog.replace(() => (
               <DialogAlert
                 title="No Teams Available"
-                message="You're not a member of any teams.\nVisit https://app.kilo.ai to create or join a team."
+                message="You're not a member of any teams.\nVisit https://app.devil.ai to create or join a team."
               />
             ))
             return
@@ -192,7 +192,7 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
 
           // Show team selection dialog
           dialog.replace(() => (
-            <DialogKiloTeamSelect
+            <DialogDevilTeamSelect
               organizations={profile.organizations!}
               currentOrgId={currentOrgId}
               onSelect={async (orgId) => {

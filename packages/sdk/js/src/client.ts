@@ -2,10 +2,10 @@ export * from "./gen/types.gen.js"
 
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
-import { KiloClient } from "./gen/sdk.gen.js"
-export { type Config as KiloClientConfig, KiloClient }
+import { DevilClient } from "./gen/sdk.gen.js"
+export { type Config as DevilClientConfig, DevilClient }
 
-export function createKiloClient(config?: Config & { directory?: string }) {
+export function createDevilClient(config?: Config & { directory?: string }) {
   if (!config?.fetch) {
     const customFetch: any = (req: any) => {
       // Pass duplex in the init arg so it survives VS Code's proxy-agent
@@ -35,5 +35,5 @@ export function createKiloClient(config?: Config & { directory?: string }) {
   ;(config as any).duplex = "half"
 
   const client = createClient(config)
-  return new KiloClient({ client })
+  return new DevilClient({ client })
 }

@@ -3,9 +3,9 @@ import path from "path"
 import { Database } from "../../src/storage/db"
 
 describe("Database.Path", () => {
-  // kilocode_change - always use kilo.db regardless of channel
-  test("always uses kilo.db", () => {
+  // devilcode_change - always use devil.db regardless of channel
+  test("always uses devil.db", () => {
     const file = path.basename(Database.Path)
-    expect(file).toBe("kilo.db")
+    expect(file).toBe("devil.db")
   })
 })

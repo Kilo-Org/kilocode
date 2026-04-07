@@ -1,4 +1,4 @@
-import type { KilocodeSessionImportPartData as Part } from "@kilocode/sdk/v2"
+import type { DevilcodeSessionImportPartData as Part } from "@devilcode/sdk/v2"
 import type { LegacyApiMessage } from "../legacy-types"
 import { getText, getToolUse, isToolResult, record } from "./parts-util"
 

@@ -5,15 +5,15 @@ description: "Automatically improve your prompts for better results"
 
 # Enhance Prompt
 
-The "Enhance Prompt" feature in Kilo Code helps you improve the quality and effectiveness of your prompts before sending them to the AI model. By clicking the {% codicon name="sparkle" /%} icon in the chat input, you can automatically refine your initial request, making it clearer, more specific, and more likely to produce the desired results.
+The "Enhance Prompt" feature in devil Code helps you improve the quality and effectiveness of your prompts before sending them to the AI model. By clicking the {% codicon name="sparkle" /%} icon in the chat input, you can automatically refine your initial request, making it clearer, more specific, and more likely to produce the desired results.
 
 ## Why Use Enhance Prompt?
 
-- **Improved Clarity:** Kilo Code can rephrase your prompt to make it more understandable for the AI model.
+- **Improved Clarity:** devil Code can rephrase your prompt to make it more understandable for the AI model.
 - **Added Context:** The enhancement process can add relevant context to your prompt, such as the current file path or selected code.
-- **Better Instructions:** Kilo Code can add instructions to guide the AI towards a more helpful response (e.g., requesting specific formatting or a particular level of detail).
-- **Reduced Ambiguity:** Enhance Prompt helps to eliminate ambiguity and ensure that Kilo Code understands your intent.
-- **Consistency**: Kilo will consistently format prompts the same way to the AI.
+- **Better Instructions:** devil Code can add instructions to guide the AI towards a more helpful response (e.g., requesting specific formatting or a particular level of detail).
+- **Reduced Ambiguity:** Enhance Prompt helps to eliminate ambiguity and ensure that devil Code understands your intent.
+- **Consistency**: devil will consistently format prompts the same way to the AI.
 
 ### Before and after
 
@@ -22,10 +22,10 @@ The "Enhance Prompt" feature in Kilo Code helps you improve the quality and effe
 
 ## How to Use Enhance Prompt
 
-1.  **Type your initial prompt:** Enter your request in the Kilo Code chat input box as you normally would. This can be a simple question, a complex task description, or anything in between.
+1.  **Type your initial prompt:** Enter your request in the devil Code chat input box as you normally would. This can be a simple question, a complex task description, or anything in between.
 2.  **Click the {% codicon name="sparkle" /%} Icon:** Instead of pressing Enter, click the {% codicon name="sparkle" /%} icon located in the bottom right of the chat input box.
-3.  **Review the Enhanced Prompt:** Kilo Code will replace your original prompt with an enhanced version. Review the enhanced prompt to make sure it accurately reflects your intent. You can further refine the enhanced prompt before sending.
-4.  **Send the Enhanced Prompt:** Press Enter or click the Send icon ({% codicon name="send" /%}) to send the enhanced prompt to Kilo Code.
+3.  **Review the Enhanced Prompt:** devil Code will replace your original prompt with an enhanced version. Review the enhanced prompt to make sure it accurately reflects your intent. You can further refine the enhanced prompt before sending.
+4.  **Send the Enhanced Prompt:** Press Enter or click the Send icon ({% codicon name="send" /%}) to send the enhanced prompt to devil Code.
 
 ## Customizing the Enhancement Process
 
@@ -33,7 +33,7 @@ The "Enhance Prompt" feature in Kilo Code helps you improve the quality and effe
 
 The "Enhance Prompt" feature uses a customizable prompt template. You can modify this template to tailor the enhancement process to your specific needs.
 
-1.  **Open the Prompts Tab:** Click the {% codicon name="notebook" /%} icon in the Kilo Code top menu bar.
+1.  **Open the Prompts Tab:** Click the {% codicon name="notebook" /%} icon in the devil Code top menu bar.
 2.  **Select "ENHANCE" Tab:** You should see listed out support prompts, including "ENHANCE". Click on this tab.
 3.  **Edit the Prompt Template:** Modify the text in the "Prompt" field.
 
@@ -52,8 +52,8 @@ For a detailed walkthrough: https://youtu.be/R1nDnCK-xzw
 ## Limitations and Best Practices
 
 - **Experimental Feature:** Prompt enhancement is an experimental feature. The quality of the enhanced prompt may vary depending on the complexity of your request and the capabilities of the underlying model.
-- **Review Carefully:** Always review the enhanced prompt before sending it. Kilo Code may make changes that don't align with your intentions.
+- **Review Carefully:** Always review the enhanced prompt before sending it. devil Code may make changes that don't align with your intentions.
 - **Iterative Process:** You can use the "Enhance Prompt" feature multiple times to iteratively refine your prompt.
 - **Not a Replacement for Clear Instructions:** While "Enhance Prompt" can help, it's still important to write clear and specific prompts from the start.
 
-By using the "Enhance Prompt" feature, you can improve the quality of your interactions with Kilo Code and get more accurate and helpful responses.
+By using the "Enhance Prompt" feature, you can improve the quality of your interactions with devil Code and get more accurate and helpful responses.

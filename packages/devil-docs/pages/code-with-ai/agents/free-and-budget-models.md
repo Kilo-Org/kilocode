@@ -1,17 +1,17 @@
 ---
 title: Free and Budget Models
-description: Learn how to use Kilo Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
+description: Learn how to use devil Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
 ---
 
 # Free and Budget Models
 
-**Why this matters:** AI model costs can add up quickly during development. This guide shows you how to use Kilo Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
+**Why this matters:** AI model costs can add up quickly during development. This guide shows you how to use devil Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
 
 ## Completely Free Options
 
-### Kilo Gateway Free Models
+### devil Gateway Free Models
 
-From time to time, Kilo works with AI inference providers to offer free models. These are available through the Kilo Gateway. Currently, we are offering these free models:
+From time to time, devil works with AI inference providers to offer free models. These are available through the devil Gateway. Currently, we are offering these free models:
 
 - **MiniMax M2.1 (free)** - A capable model from MiniMax with strong general-purpose performance.
 - **Z.AI: GLM 4.7 (free)** - Latest variant of the GLM family, purpose-built for agent-centric applications.
@@ -27,7 +27,7 @@ OpenRouter offers several models with generous free tiers. **Note:** You'll need
 
 1. Create a free [OpenRouter account](https://openrouter.ai)
 2. Get your API key from the dashboard
-3. Configure Kilo Code with the OpenRouter provider
+3. Configure devil Code with the OpenRouter provider
 
 **Available free models:**
 
@@ -227,7 +227,7 @@ When you need more capability than free models provide, these options deliver ex
 
 **Reduce system prompt size:**
 
-- [Disable MCP](/docs/automate/mcp/using-in-kilo-code) if not using external tools
+- [Disable MCP](/docs/automate/mcp/using-in-devil-code) if not using external tools
 - Use focused custom modes
 - Minimize unnecessary context
 
@@ -248,7 +248,7 @@ When you need more capability than free models provide, these options deliver ex
 ### Quick Setup Guide
 
 1. **Create OpenRouter account** for free models
-2. **Configure multiple providers** in Kilo Code
+2. **Configure multiple providers** in devil Code
 3. **Set up API Configuration Profiles** for easy switching
 4. **Escalate to budget models** when needed
 5. **Reserve premium models** for complex work

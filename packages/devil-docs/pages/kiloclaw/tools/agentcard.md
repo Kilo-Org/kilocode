@@ -1,11 +1,11 @@
 ---
 title: "AgentCard Integration"
-description: "Enable your KiloClaw agents to perform financial transactions with virtual debit cards"
+description: "Enable your DevilClaw agents to perform financial transactions with virtual debit cards"
 ---
 
 # AgentCard Integration
 
-Enable your KiloClaw agents to perform financial transactions by creating and managing virtual debit cards. This integration allows for automated purchasing and expense management within set limits.
+Enable your DevilClaw agents to perform financial transactions by creating and managing virtual debit cards. This integration allows for automated purchasing and expense management within set limits.
 
 ## AgentCard Setup
 
@@ -29,9 +29,9 @@ agent-cards payment-method
 
 Open your local configuration file located at `~/.agent-cards/config.json`. Copy the value assigned to the `jwt` key.
 
-### 4. Configure KiloClaw
+### 4. Configure DevilClaw
 
-1. Paste the **JWT** into the AgentCard setup field in your KiloClaw settings.
+1. Paste the **JWT** into the AgentCard setup field in your DevilClaw settings.
 2. Click **Save**.
 3. Use **Redeploy** to apply the new secret. Only use **Upgrade & Redeploy** if you also need the latest platform version.
 

@@ -29,7 +29,7 @@ import {
   RGBA,
 } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage, Part, ToolPart, UserMessage, TextPart, ReasoningPart } from "@devilcode/sdk/v2"
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -51,6 +51,7 @@ import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import type { DialogContext } from "@tui/ui/dialog"
 import { useKeybind } from "@tui/context/keybind"
+import { useTuiConfig } from "../../context/tui-config"
 import { Header } from "./header"
 import { parsePatch } from "diff"
 import { useDialog } from "../../ui/dialog"
@@ -58,7 +59,7 @@ import { TodoItem } from "../../component/todo-item"
 import { DialogMessage } from "./dialog-message"
 import type { PromptInfo } from "../../component/prompt/history"
 import { DialogConfirm } from "@tui/ui/dialog-confirm"
-import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display" // kilocode_change
+import { DevilErrorBlock } from "@/devilcode/components/kilo-error-display" // devilcode_change
 import { DialogTimeline } from "./dialog-timeline"
 import { DialogForkFromTimeline } from "./dialog-fork-from-timeline"
 import { DialogSessionRename } from "../../component/dialog-session-rename"
@@ -81,10 +82,8 @@ import { QuestionPrompt } from "./question"
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
-import { useTuiConfig } from "../../context/tui-config"
-
-import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
-import { bell } from "@/kilocode/bell" // kilocode_change
+import { formatMarkdownTables } from "../../util/markdown" // devilcode_change
+import { bell } from "@/devilcode/bell" // devilcode_change
 
 addDefaultParsers(parsers.parsers)
 
@@ -150,7 +149,7 @@ export function Session() {
     return messages().findLast((x) => x.role === "assistant")
   })
 
-  // kilocode_change start - ring terminal bell on task completion
+  // devilcode_change start - ring terminal bell on task completion
   createEffect(
     on(
       () => [route.sessionID, sync.data.session_status?.[route.sessionID]?.type] as const,
@@ -160,9 +159,9 @@ export function Session() {
       },
     ),
   )
-  // kilocode_change end
+  // devilcode_change end
 
-  // kilocode_change start - ring terminal bell when input is needed
+  // devilcode_change start - ring terminal bell when input is needed
   createEffect(
     on(
       () => [route.sessionID, permissions().length] as const,
@@ -181,7 +180,7 @@ export function Session() {
       },
     ),
   )
-  // kilocode_change end
+  // devilcode_change end
 
   const dimensions = useTerminalDimensions()
   const [sidebar, setSidebar] = kv.signal<"auto" | "hide">("sidebar", "auto")
@@ -260,7 +259,7 @@ export function Session() {
     if (part.state.status !== "completed") return
     if (part.id === lastSwitch) return
 
-    // kilocode_change - plan_exit no longer switches agent; PlanFollowup handles it
+    // devilcode_change - plan_exit no longer switches agent; PlanFollowup handles it
     if (part.tool === "plan_enter") {
       local.agent.set("plan")
       lastSwitch = part.id
@@ -278,7 +277,7 @@ export function Session() {
 
   createEffect(() => {
     const title = Locale.truncate(session()?.title ?? "", 50)
-    // kilocode_change start
+    // devilcode_change start
     return exit.message.set(
       [
         ``,
@@ -287,10 +286,10 @@ export function Session() {
         `  ██ ▀█▄ ██ ██████ ▀████▀  `,
       ].join("\n"),
     )
-    // kilocode_change end
+    // devilcode_change end
   })
 
-  // kilocode_change start - double ctrl+c to exit for child sessions
+  // devilcode_change start - double ctrl+c to exit for child sessions
   const [exitPress, setExitPress] = createSignal(0)
   useKeyboard((evt) => {
     if (!session()?.parentID) return
@@ -305,7 +304,7 @@ export function Session() {
       exit()
     }
   })
-  // kilocode_change end
+  // devilcode_change end
 
   // Helper: Find next visible message boundary in direction
   const findNextVisibleMessage = (direction: "next" | "prev"): string | null => {
@@ -1222,7 +1221,7 @@ export function Session() {
             </box>
           </Show>
           <Toast />
-          {/* kilocode_change */}
+          {/* devilcode_change */}
           <Footer />
         </box>
         <Show when={sidebarVisible()}>
@@ -1403,8 +1402,8 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
         </box>
       </Show>
       <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
-        {/* kilocode_change start - Kilo-specific error display */}
-        <KiloErrorBlock
+        {/* devilcode_change start - Devil-specific error display */}
+        <DevilErrorBlock
           error={props.message.error!}
           fallback={
             <box
@@ -1421,7 +1420,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
             </box>
           }
         />
-        {/* kilocode_change end */}
+        {/* devilcode_change end */}
       </Show>
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
@@ -1495,14 +1494,14 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
-  // kilocode_change start - format markdown tables with fixed-width columns
+  // devilcode_change start - format markdown tables with fixed-width columns
   const content = createMemo(() => formatMarkdownTables(props.part.text.trim()))
-  // kilocode_change end
+  // devilcode_change end
   return (
     <Show when={props.part.text.trim()}>
       <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
         <Switch>
-          <Match when={Flag.KILO_EXPERIMENTAL_MARKDOWN}>
+          <Match when={Flag.DEVIL_EXPERIMENTAL_MARKDOWN}>
             <markdown
               syntaxStyle={syntax()}
               streaming={true}
@@ -1510,7 +1509,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
               conceal={ctx.conceal()}
             />
           </Match>
-          <Match when={!Flag.KILO_EXPERIMENTAL_MARKDOWN}>
+          <Match when={!Flag.DEVIL_EXPERIMENTAL_MARKDOWN}>
             <code
               filetype="markdown"
               drawUnstyledText={false}

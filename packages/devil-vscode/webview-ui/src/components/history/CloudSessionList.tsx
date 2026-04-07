@@ -1,13 +1,13 @@
 /**
  * CloudSessionList component
- * Displays cloud sessions from the Kilo cloud API, grouped by date.
+ * Displays cloud sessions from the Devil cloud API, grouped by date.
  * Supports filtering by repository (git URL) and search by title.
  * Header/back button/import button are owned by the parent HistoryView.
  */
 
 import { Component, Show, createSignal, createEffect, onMount, onCleanup } from "solid-js"
-import { List } from "@kilocode/kilo-ui/list"
-import { Checkbox } from "@kilocode/kilo-ui/checkbox"
+import { List } from "@devilcode/kilo-ui/list"
+import { Checkbox } from "@devilcode/kilo-ui/checkbox"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"

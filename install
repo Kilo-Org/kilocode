@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP=kilo # kilocode_change
+APP=devil # devilcode_change
 
 MUTED='\033[0;2m'
 RED='\033[0;31m'
 ORANGE='\033[38;5;214m'
 NC='\033[0m' # No Color
 
-# kilocode_change start - usage text
+# devilcode_change start - usage text
 usage() {
     cat <<EOF
-Kilo Code Installer
+Devil Code Installer
 
 Usage: install [options]
 
@@ -21,12 +21,12 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://kilo.ai/cli/install | bash
-    curl -fsSL https://kilo.ai/cli/install | bash -s -- --version 1.0.180
-    ./install --binary /path/to/kilo
+    curl -fsSL https://devil.ai/cli/install | bash
+    curl -fsSL https://devil.ai/cli/install | bash -s -- --version 1.0.180
+    ./install --binary /path/to/devil
 EOF
 }
-# kilocode_change end
+# devilcode_change end
 
 requested_version=${VERSION:-}
 no_modify_path=false
@@ -67,7 +67,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-INSTALL_DIR=$HOME/.kilo/bin # kilocode_change
+INSTALL_DIR=$HOME/.devil/bin # devilcode_change
 mkdir -p "$INSTALL_DIR"
 
 # If --binary is provided, skip all download/detection logic
@@ -183,8 +183,8 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        url="https://github.com/Kilo-Org/kilocode/releases/latest/download/$filename"
-        specific_version=$(curl -s https://api.github.com/repos/Kilo-Org/kilocode/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+        url="https://github.com/Devil-Org/devilcode/releases/latest/download/$filename"
+        specific_version=$(curl -s https://api.github.com/repos/Devil-Org/devilcode/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 
         if [[ $? -ne 0 || -z "$specific_version" ]]; then
             echo -e "${RED}Failed to fetch version information${NC}"
@@ -193,14 +193,14 @@ else
     else
         # Strip leading 'v' if present
         requested_version="${requested_version#v}"
-        url="https://github.com/Kilo-Org/kilocode/releases/download/v${requested_version}/$filename"
+        url="https://github.com/Devil-Org/devilcode/releases/download/v${requested_version}/$filename"
         specific_version=$requested_version
 
         # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Kilo-Org/kilocode/releases/tag/v${requested_version}")
+        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Devil-Org/devilcode/releases/tag/v${requested_version}")
         if [ "$http_status" = "404" ]; then
             echo -e "${RED}Error: Release v${requested_version} not found${NC}"
-            echo -e "${MUTED}Available releases: https://github.com/Kilo-Org/kilocode/releases${NC}"
+            echo -e "${MUTED}Available releases: https://github.com/Devil-Org/devilcode/releases${NC}"
             exit 1
         fi
     fi
@@ -220,13 +220,13 @@ print_message() {
     echo -e "${color}${message}${NC}"
 }
 
-# kilocode_change start
+# devilcode_change start
 check_version() {
-    if command -v kilo >/dev/null 2>&1; then
-        kilo_path=$(which kilo)
+    if command -v devil >/dev/null 2>&1; then
+        devil_path=$(which devil)
 
         ## Check the installed version
-        installed_version=$(kilo --version 2>/dev/null || echo "")
+        installed_version=$(devil --version 2>/dev/null || echo "")
 
         if [[ "$installed_version" != "$specific_version" ]]; then
             print_message info "${MUTED}Installed version: ${NC}$installed_version."
@@ -236,7 +236,7 @@ check_version() {
         fi
     fi
 }
-# kilocode_change end
+# devilcode_change end
 
 unbuffered_sed() {
     if echo | sed -u -e "" >/dev/null 2>&1; then
@@ -279,7 +279,7 @@ download_with_progress() {
     fi
 
     local tmp_dir=${TMPDIR:-/tmp}
-    local basename="${tmp_dir}/kilo_install_$$" # kilocode_change
+    local basename="${tmp_dir}/devil_install_$$" # devilcode_change
     local tracefile="${basename}.trace"
 
     rm -f "$tracefile"
@@ -291,7 +291,7 @@ download_with_progress() {
     trap "trap - RETURN; rm -f \"$tracefile\"; printf '\033[?25h' >&4; exec 4>&-" RETURN
 
     (
-        curl --trace-ascii "$tracefile" -fsL -o "$output" "$url" # kilocode_change
+        curl --trace-ascii "$tracefile" -fsL -o "$output" "$url" # devilcode_change
     ) &
     local curl_pid=$!
 
@@ -329,15 +329,15 @@ download_with_progress() {
 }
 
 download_and_install() {
-    # kilocode_change start
-    print_message info "\n${MUTED}Installing ${NC}Kilo Code ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/kilo_install_$$"
-    # kilocode_change end
+    # devilcode_change start
+    print_message info "\n${MUTED}Installing ${NC}Devil Code ${MUTED}version: ${NC}$specific_version"
+    local tmp_dir="${TMPDIR:-/tmp}/devil_install_$$"
+    # devilcode_change end
     mkdir -p "$tmp_dir"
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
         # Fallback to standard curl on Windows, non-TTY environments, or if custom progress fails
-        curl -f# -L -o "$tmp_dir/$filename" "$url" # kilocode_change
+        curl -f# -L -o "$tmp_dir/$filename" "$url"
     fi
 
     if [ "$os" = "linux" ]; then
@@ -346,19 +346,19 @@ download_and_install() {
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    # kilocode_change start
-    mv "$tmp_dir/kilo" "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/kilo"
-    # kilocode_change end
+    # devilcode_change start
+    mv "$tmp_dir/devil" "$INSTALL_DIR"
+    chmod 755 "${INSTALL_DIR}/devil"
+    # devilcode_change end
     rm -rf "$tmp_dir"
 }
 
 install_from_binary() {
-    # kilocode_change start
-    print_message info "\n${MUTED}Installing ${NC}Kilo Code ${MUTED}from: ${NC}$binary_path"
-    cp "$binary_path" "${INSTALL_DIR}/kilo"
-    chmod 755 "${INSTALL_DIR}/kilo"
-    # kilocode_change end
+    # devilcode_change start
+    print_message info "\n${MUTED}Installing ${NC}Devil Code ${MUTED}from: ${NC}$binary_path"
+    cp "$binary_path" "${INSTALL_DIR}/devil"
+    chmod 755 "${INSTALL_DIR}/devil"
+    # devilcode_change end
 }
 
 if [ -n "$binary_path" ]; then
@@ -376,9 +376,9 @@ add_to_path() {
     if grep -Fxq "$command" "$config_file"; then
         print_message info "Command already exists in $config_file, skipping write."
     elif [[ -w $config_file ]]; then
-        echo -e "\n# kilo" >> "$config_file" # kilocode_change
+        echo -e "\n# devil" >> "$config_file" # devilcode_change
         echo "$command" >> "$config_file"
-        print_message info "${MUTED}Successfully added ${NC}kilo ${MUTED}to \$PATH in ${NC}$config_file" # kilocode_change
+        print_message info "${MUTED}Successfully added ${NC}devil ${MUTED}to \$PATH in ${NC}$config_file" # devilcode_change
     else
         print_message warning "Manually add the directory to $config_file (or similar):"
         print_message info "  $command"
@@ -453,19 +453,21 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
 fi
 
-# kilocode_change start
+# devilcode_change start
 echo -e ""
-echo -e "██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ "
-echo -e "████   ██ ██     ██  ██   ██     ██     ██ "
-echo -e "██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ "
+echo -e "██████  ███████ ██ ██      ██      ██████  "
+echo -e "██   ██ ██      ██ ██      ██      ██   ██ "
+echo -e "██   ██ █████   ██ ██      ██      ██   ██ "
+echo -e "██   ██ ██      ██ ██      ██      ██   ██ "
+echo -e "██████  ███████ ██ ███████ ███████ ██████  "
 echo -e ""
 echo -e ""
-echo -e "${MUTED}Kilo includes free models so you can start immediately:${NC}"
+echo -e "${MUTED}Devil includes free models so you can start immediately:${NC}"
 echo -e ""
 echo -e "cd <project>  ${MUTED}# Open directory${NC}"
-echo -e "kilo          ${MUTED}# Run Kilo${NC}"
+echo -e "devil          ${MUTED}# Run Devil${NC}"
 echo -e ""
-echo -e "${MUTED}For more information visit ${NC}https://kilo.ai/docs"
+echo -e "${MUTED}For more information visit ${NC}https://devil.ai/docs"
 echo -e ""
 echo -e ""
-# kilocode_change end
+# devilcode_change end

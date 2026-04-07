@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { shouldSummarize } from "../../src/kilocode/paste-summary"
+import { shouldSummarize } from "../../src/devilcode/paste-summary"
 
 describe("paste-summary", () => {
   it("does not summarize 4 lines", () => {

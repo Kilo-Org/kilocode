@@ -4,7 +4,7 @@ import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
 import { IgnoreMigrator } from "./ignore-migrator"
 
-export namespace KilocodeConfigInjector {
+export namespace DevilcodeConfigInjector {
   export interface InjectionResult {
     configJson: string
     warnings: string[]
@@ -81,7 +81,7 @@ export namespace KilocodeConfigInjector {
 
   /**
    * Merge permission configs, preserving order and handling duplicates.
-   * Incoming rules take precedence (kilocode patterns override).
+   * Incoming rules take precedence (devilcode patterns override).
    */
   function mergePermissions(existing: Config.Permission | undefined, incoming: Config.Permission): Config.Permission {
     if (!existing) return incoming
@@ -106,7 +106,7 @@ export namespace KilocodeConfigInjector {
       return {}
     }
     return {
-      KILO_CONFIG_CONTENT: configJson,
+      DEVIL_CONFIG_CONTENT: configJson,
     }
   }
 }

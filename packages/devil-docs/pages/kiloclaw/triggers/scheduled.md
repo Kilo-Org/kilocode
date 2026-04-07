@@ -5,17 +5,17 @@ description: "Run tasks on a schedule using cron expressions"
 
 # Scheduled Triggers
 
-Scheduled triggers let your KiloClaw agent run tasks automatically on a recurring schedule. Instead of waiting for an external event, a scheduled trigger fires at the times you define using cron expressions. When it fires, the prompt template is rendered and delivered as a chat message to your KiloClaw instance, just like a webhook.
+Scheduled triggers let your DevilClaw agent run tasks automatically on a recurring schedule. Instead of waiting for an external event, a scheduled trigger fires at the times you define using cron expressions. When it fires, the prompt template is rendered and delivered as a chat message to your DevilClaw instance, just like a webhook.
 
 ## Setup
 
-1. Go to **Settings** under the KiloClaw section in the sidebar
+1. Go to **Settings** under the DevilClaw section in the sidebar
 2. Find the **Scheduled Triggers** section and click **Add Scheduled Trigger**
 3. Give your trigger a name (minimum 8 characters)
 4. Configure the schedule and prompt template
 5. Click **Save**
 
-Each KiloClaw instance supports up to **5 scheduled triggers** alongside its single webhook.
+Each DevilClaw instance supports up to **5 scheduled triggers** alongside its single webhook.
 
 ## Configuring a Schedule
 
@@ -105,7 +105,7 @@ Scheduled trigger invocations appear in the same request history as webhooks. Th
 
 Create a scheduled trigger that fires every weekday morning and asks your agent to summarize overnight activity:
 
-1. Add a scheduled trigger in your KiloClaw Settings
+1. Add a scheduled trigger in your DevilClaw Settings
 2. Set the frequency to **Weekly** on **Monday through Friday** at **9:00 AM** in your local timezone
 3. Customize the prompt template:
 
@@ -117,7 +117,7 @@ Your agent will receive this message every weekday at 9:00 AM and respond with t
 
 ## Related
 
-- [Webhooks](/docs/kiloclaw/triggers/webhooks)
-- [Triggers Overview](/docs/kiloclaw/triggers)
-- [KiloClaw Overview](/docs/kiloclaw/overview)
-- [Dashboard Reference](/docs/kiloclaw/dashboard)
+- [Webhooks](/docs/DevilClaw/triggers/webhooks)
+- [Triggers Overview](/docs/DevilClaw/triggers)
+- [DevilClaw Overview](/docs/DevilClaw/overview)
+- [Dashboard Reference](/docs/DevilClaw/dashboard)

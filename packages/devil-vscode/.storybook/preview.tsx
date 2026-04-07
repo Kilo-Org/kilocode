@@ -2,12 +2,12 @@
 import type { Preview, SolidRenderer } from "storybook-solidjs-vite"
 import type { DecoratorFunction } from "storybook/internal/types"
 // Reference kilo-ui stories helpers directly — not exported via package.json
-import { applyKiloTheme, applyVscodeTheme, clearVscodeTheme } from "../../kilo-ui/src/stories/theme-decorator"
+import { applyDevilTheme, applyVscodeTheme, clearVscodeTheme } from "../../kilo-ui/src/stories/theme-decorator"
 import "../../kilo-ui/.storybook/fonts.css"
-import "@kilocode/kilo-ui/styles"
+import "@devilcode/kilo-ui/styles"
 import "../webview-ui/src/styles/chat.css"
 
-// Make the Kilo logo available in Storybook (normally injected by the extension host)
+// Make the Devil logo available in Storybook (normally injected by the extension host)
 ;(window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI = "/icons"
 
 const themeDecorator: DecoratorFunction<SolidRenderer> = (Story, context) => {
@@ -20,7 +20,7 @@ const themeDecorator: DecoratorFunction<SolidRenderer> = (Story, context) => {
     return (context.globals["colorScheme"] as "light" | "dark") ?? "dark"
   })()
 
-  applyKiloTheme(themeId, colorScheme)
+  applyDevilTheme(themeId, colorScheme)
   document.body.style.background = "var(--background-base)"
   document.body.style.color = "var(--text-base)"
   return Story()
@@ -44,8 +44,8 @@ const preview: Preview = {
         title: "Theme",
         icon: "paintbrush",
         items: [
-          { value: "kilo-vscode", title: "Kilo VSCode" },
-          { value: "kilo", title: "Kilo" },
+          { value: "kilo-vscode", title: "Devil VSCode" },
+          { value: "kilo", title: "Devil" },
         ],
         dynamicTitle: true,
       },

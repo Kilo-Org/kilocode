@@ -1,4 +1,4 @@
-import type { UserMessage } from "@kilocode/sdk/v2"
+import type { UserMessage } from "@devilcode/sdk/v2"
 import { batch } from "solid-js"
 
 type Local = {

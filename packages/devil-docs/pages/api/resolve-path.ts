@@ -25,11 +25,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (fs.existsSync(candidatePath)) {
-    return res.status(200).json({ filePath: `packages/kilo-docs/pages/${sanitizedPath}.md` })
+    return res.status(200).json({ filePath: `packages/devil-docs/pages/${sanitizedPath}.md` })
   }
 
   if (fs.existsSync(candidateIndexPath)) {
-    return res.status(200).json({ filePath: `packages/kilo-docs/pages/${sanitizedPath}/index.md` })
+    return res.status(200).json({ filePath: `packages/devil-docs/pages/${sanitizedPath}/index.md` })
   }
 
   return res.status(404).json({ error: "File not found" })

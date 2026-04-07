@@ -2,16 +2,16 @@
 sidebar_label: ChatGPT Plus/Pro
 ---
 
-# Using ChatGPT Subscriptions With Kilo Code
+# Using ChatGPT Subscriptions With devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1. Open Kilo Code settings (click the gear icon {% codicon name="gear" /%} in the Kilo Code panel).
+1. Open devil Code settings (click the gear icon {% codicon name="gear" /%} in the devil Code panel).
 2. In **API Provider**, select **OpenAI – ChatGPT Plus/Pro**.
 3. Click **Sign in to OpenAI Codex**.
 4. Finish the sign-in flow in your browser.
-5. Back in Kilo Code settings, pick a model from the dropdown.
+5. Back in devil Code settings, pick a model from the dropdown.
 6. Save.
 
 {% /tab %}
@@ -28,7 +28,7 @@ ChatGPT Plus/Pro uses OAuth authentication, which is only available in the VS Co
 export OPENAI_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {
@@ -60,5 +60,5 @@ Then set your default model:
 
 ## Limitations
 
-- **You can't use arbitrary OpenAI API models.** This provider only exposes the models listed in Kilo Code's Codex model catalog.
-- **You can't export/migrate your sign-in state with settings export.** OAuth tokens are stored in VS Code SecretStorage, which isn't included in Kilo Code's settings export.
+- **You can't use arbitrary OpenAI API models.** This provider only exposes the models listed in devil Code's Codex model catalog.
+- **You can't export/migrate your sign-in state with settings export.** OAuth tokens are stored in VS Code SecretStorage, which isn't included in devil Code's settings export.

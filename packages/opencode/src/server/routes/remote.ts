@@ -1,8 +1,8 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { Hono } from "hono"
 import { describeRoute, resolver } from "hono-openapi"
 import z from "zod"
-import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { DevilSessions } from "@/kilo-sessions/kilo-sessions"
 import { lazy } from "../../util/lazy"
 
 const Status = z.object({
@@ -31,11 +31,11 @@ export const RemoteRoutes = lazy(() =>
       }),
       async (c) => {
         try {
-          await KiloSessions.enableRemote()
+          await DevilSessions.enableRemote()
         } catch (err) {
           return c.json({ error: err instanceof Error ? err.message : String(err) }, 401)
         }
-        return c.json(KiloSessions.remoteStatus())
+        return c.json(DevilSessions.remoteStatus())
       },
     )
     .post(
@@ -56,8 +56,8 @@ export const RemoteRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        KiloSessions.disableRemote()
-        return c.json(KiloSessions.remoteStatus())
+        DevilSessions.disableRemote()
+        return c.json(DevilSessions.remoteStatus())
       },
     )
     .get(
@@ -78,7 +78,7 @@ export const RemoteRoutes = lazy(() =>
         },
       }),
       async (c) => {
-        return c.json(KiloSessions.remoteStatus())
+        return c.json(DevilSessions.remoteStatus())
       },
     ),
 )

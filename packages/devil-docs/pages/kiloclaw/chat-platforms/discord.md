@@ -1,11 +1,11 @@
 ---
 title: "Discord"
-description: "Connect your KiloClaw agent to Discord"
+description: "Connect your DevilClaw agent to Discord"
 ---
 
 # Discord
 
-Connect your KiloClaw agent to Discord by creating a bot in the Discord Developer Portal and linking it to your KiloClaw dashboard.
+Connect your DevilClaw agent to Discord by creating a bot in the Discord Developer Portal and linking it to your DevilClaw dashboard.
 
 ## Prerequisites
 
@@ -48,20 +48,20 @@ On the **Bot** page, scroll down to **Privileged Gateway Intents** and enable:
 > 📝 **Note**
 > Despite the name, this generates your first token — nothing is being "reset."
 
-2. Copy the token that appears and paste it into the **Discord Bot Token** field in your KiloClaw dashboard.
+2. Copy the token that appears and paste it into the **Discord Bot Token** field in your DevilClaw dashboard.
 
-{% image src="/docs/img/kiloclaw/discord.png" alt="Connect account screen" width="800" caption="Discord bot token entry" /%}
+{% image src="/docs/img/DevilClaw/discord.png" alt="Connect account screen" width="800" caption="Discord bot token entry" /%}
 
 Enter the token in the Settings tab and click **Save**. You can remove or replace a configured token at any time.
 
 ## Redeploy to Apply Changes
 
-After saving your token, click **Redeploy** (the yellow button at the top of the KiloClaw dashboard) to apply the changes. The server will restart in about 30–45 seconds. Wait for the redeploy to complete before pairing.
+After saving your token, click **Redeploy** (the yellow button at the top of the DevilClaw dashboard) to apply the changes. The server will restart in about 30–45 seconds. Wait for the redeploy to complete before pairing.
 
 ## Start Chatting with the Bot
 
 1. Right-click on the Bot in Discord and click **Message**
 2. DM the bot `/pair`
 3. You should get a response back with a pairing code
-4. Return to [app.kilo.ai/claw](https://app.kilo.ai/claw) and confirm the pairing code and approve
+4. Return to [app.devil.ai/claw](https://app.devil.ai/claw) and confirm the pairing code and approve
 5. You should now be able to chat with the bot from Discord

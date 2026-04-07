@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
 import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
@@ -55,7 +55,7 @@ describe("GitStatsPoller", () => {
           return { data: diff(2, 1) }
         },
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
@@ -95,7 +95,7 @@ describe("GitStatsPoller", () => {
           throw new Error("transient backend failure")
         },
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
@@ -213,7 +213,7 @@ describe("GitStatsPoller", () => {
           return { data: diff(1, 1) }
         },
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [
@@ -274,7 +274,7 @@ describe("GitStatsPoller", () => {
           throw new Error("transient backend failure")
         },
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
@@ -317,7 +317,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: { diffSummary: async () => ({ data: diff(10, 4) }) },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
@@ -367,7 +367,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
@@ -414,7 +414,7 @@ describe("GitStatsPoller", () => {
 
     const client = {
       worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     // Worktrees store remote="upstream" so aheadBehind receives "upstream/main"
     const poller = new GitStatsPoller({

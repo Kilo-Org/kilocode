@@ -16,7 +16,7 @@ import flexoki from "./theme/flexoki.json" with { type: "json" }
 import github from "./theme/github.json" with { type: "json" }
 import gruvbox from "./theme/gruvbox.json" with { type: "json" }
 import kanagawa from "./theme/kanagawa.json" with { type: "json" }
-import kilo from "./theme/kilo.json" with { type: "json" } // kilocode_change
+import kilo from "./theme/kilo.json" with { type: "json" } // devilcode_change
 import material from "./theme/material.json" with { type: "json" }
 import matrix from "./theme/matrix.json" with { type: "json" }
 import mercury from "./theme/mercury.json" with { type: "json" }
@@ -37,7 +37,7 @@ import vercel from "./theme/vercel.json" with { type: "json" }
 import vesper from "./theme/vesper.json" with { type: "json" }
 import zenburn from "./theme/zenburn.json" with { type: "json" }
 import carbonfox from "./theme/carbonfox.json" with { type: "json" }
-import colorblind from "./theme/colorblind.json" with { type: "json" } // kilocode_change
+import colorblind from "./theme/colorblind.json" with { type: "json" } // devilcode_change
 import { useKV } from "./kv"
 import { useRenderer } from "@opentui/solid"
 import { createStore, produce } from "solid-js/store"
@@ -154,7 +154,7 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   github,
   gruvbox,
   kanagawa,
-  kilo, // kilocode_change
+  kilo, // devilcode_change
   material,
   matrix,
   mercury,
@@ -175,20 +175,20 @@ export const DEFAULT_THEMES: Record<string, ThemeJson> = {
   vercel,
   zenburn,
   carbonfox,
-  colorblind, // kilocode_change
+  colorblind, // devilcode_change
 }
 
-// kilocode_change start
+// devilcode_change start
 function isValidTheme(t: unknown): t is ThemeJson {
   if (t == null || typeof t !== "object" || !("theme" in t)) return false
   const theme = (t as Record<string, unknown>).theme
   if (theme == null || typeof theme !== "object") return false
   return "background" in theme && "text" in theme && "primary" in theme
 }
-// kilocode_change end
+// devilcode_change end
 
 function resolveTheme(theme: ThemeJson, mode: "dark" | "light") {
-  if (!isValidTheme(theme)) return resolveTheme(kilo as ThemeJson, mode) // kilocode_change
+  if (!isValidTheme(theme)) return resolveTheme(kilo as ThemeJson, mode) // devilcode_change
   const defs = theme.defs ?? {}
   function resolveColor(c: ColorValue): RGBA {
     if (c instanceof RGBA) return c
@@ -299,7 +299,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const [store, setStore] = createStore({
       themes: DEFAULT_THEMES,
       mode: kv.get("theme_mode", props.mode),
-      active: (config.theme ?? kv.get("theme", "kilo")) as string, // kilocode_change
+      active: (config.theme ?? kv.get("theme", "kilo")) as string, // devilcode_change
       ready: false,
     })
 
@@ -319,7 +319,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
           )
         })
         .catch(() => {
-          setStore("active", "kilo") // kilocode_change
+          setStore("active", "kilo") // devilcode_change
         })
         .finally(() => {
           if (store.active !== "system") {
@@ -342,7 +342,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
             if (store.active === "system") {
               setStore(
                 produce((draft) => {
-                  draft.active = "kilo" // kilocode_change
+                  draft.active = "kilo" // devilcode_change
                   draft.ready = true
                 }),
               )
@@ -366,7 +366,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       init()
     })
 
-    // kilocode_change start - safe fallback to kilo import if store lookup fails
+    // devilcode_change start - safe fallback to kilo import if store lookup fails
     const values = createMemo(() => {
       try {
         const active = store.themes[store.active] ?? store.themes.kilo ?? (kilo as ThemeJson)
@@ -375,12 +375,12 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         return resolveTheme(kilo as ThemeJson, store.mode)
       }
     })
-    // kilocode_change end
+    // devilcode_change end
 
     const syntax = createMemo(() => generateSyntax(values()))
     const subtleSyntax = createMemo(() => generateSubtleSyntax(values()))
 
-    // kilocode_change - use empty object as proxy target; all reads go through the getter
+    // devilcode_change - use empty object as proxy target; all reads go through the getter
     return {
       theme: new Proxy({} as Theme, {
         get(_target, prop) {
@@ -419,7 +419,7 @@ async function getCustomThemes() {
     Global.Path.config,
     ...(await Array.fromAsync(
       Filesystem.up({
-        targets: [".kilo", ".opencode"], // kilocode_change
+        targets: [".kilo", ".opencode"], // devilcode_change
         start: process.cwd(),
       }),
     )),
@@ -434,12 +434,12 @@ async function getCustomThemes() {
       symlink: true,
     })) {
       const name = path.basename(item, ".json")
-      // kilocode_change start - validate custom theme JSON and protect built-in keys
+      // devilcode_change start - validate custom theme JSON and protect built-in keys
       if (name in DEFAULT_THEMES) continue
       const json = await Filesystem.readJson(item).catch(() => null)
       if (!isValidTheme(json)) continue
       result[name] = json
-      // kilocode_change end
+      // devilcode_change end
     }
   }
   return result

@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 // Lightweight TypeScript diagnostic client that shells out to tsgo/tsc
 // instead of spawning a persistent typescript-language-server process.
 // This drops memory from ~500MB persistent to ~50MB peak (0 idle).

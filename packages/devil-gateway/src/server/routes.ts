@@ -1,15 +1,15 @@
 /**
- * Kilo Gateway specific routes
- * Handles profile fetching and organization management for Kilo Gateway provider
+ * Devil Gateway specific routes
+ * Handles profile fetching and organization management for Devil Gateway provider
  *
- * This factory function accepts OpenCode dependencies to create Kilo-specific routes
+ * This factory function accepts OpenCode dependencies to create Devil-specific routes
  */
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
-import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
+import { fetchDevilcodeNotifications, DevilcodeNotificationSchema } from "../api/notifications.js"
 import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
-import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
-import { buildKiloHeaders } from "../headers.js"
+import { DEVIL_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
+import { buildDevilHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
 
@@ -23,7 +23,7 @@ type Auth = any
 type ModelCache = { clear: (providerID: string) => void }
 type Z = any
 
-interface KiloRoutesDeps extends ImportDeps {
+interface DevilRoutesDeps extends ImportDeps {
   Hono: new () => Hono
   describeRoute: DescribeRoute
   validator: Validator
@@ -35,18 +35,18 @@ interface KiloRoutesDeps extends ImportDeps {
 }
 
 /**
- * Create Kilo Gateway routes with OpenCode dependencies injected
+ * Create Devil Gateway routes with OpenCode dependencies injected
  *
  * @example
  * ```typescript
- * import { createKiloRoutes } from "@kilocode/kilo-gateway"
+ * import { createDevilRoutes } from "@devilcode/kilo-gateway"
  * import { Hono } from "hono"
  * import { describeRoute, validator, resolver } from "hono-openapi"
  * import z from "zod"
  * import { errors } from "../error"
  * import { Auth } from "../../auth"
  *
- * export const KiloRoutes = createKiloRoutes({
+ * export const DevilRoutes = createDevilRoutes({
  *   Hono,
  *   describeRoute,
  *   validator,
@@ -57,7 +57,7 @@ interface KiloRoutesDeps extends ImportDeps {
  * })
  * ```
  */
-export function createKiloRoutes(deps: KiloRoutesDeps) {
+export function createDevilRoutes(deps: DevilRoutesDeps) {
   const {
     Hono,
     describeRoute,
@@ -125,8 +125,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     .get(
       "/profile",
       describeRoute({
-        summary: "Get Kilo Gateway profile",
-        description: "Fetch user profile and organizations from Kilo Gateway",
+        summary: "Get Devil Gateway profile",
+        description: "Fetch user profile and organizations from Devil Gateway",
         operationId: "kilo.profile",
         responses: {
           200: {
@@ -141,11 +141,11 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         },
       }),
       async (c: any) => {
-        // Get Kilo auth
+        // Get Devil auth
         const auth = await Auth.get("kilo")
 
         if (!auth || auth.type !== "oauth") {
-          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
         }
 
         const token = auth.access
@@ -164,8 +164,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     .post(
       "/organization",
       describeRoute({
-        summary: "Update Kilo Gateway organization",
-        description: "Switch to a different Kilo Gateway organization",
+        summary: "Update Devil Gateway organization",
+        description: "Switch to a different Devil Gateway organization",
         operationId: "kilo.organization.set",
         responses: {
           200: {
@@ -188,11 +188,11 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         const { organizationId } = c.req.valid("json")
 
-        // Get current Kilo auth
+        // Get current Devil auth
         const auth = await Auth.get("kilo")
 
         if (!auth || auth.type !== "oauth") {
-          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
         }
 
         // Update auth with new organization ID
@@ -287,7 +287,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       "/fim",
       describeRoute({
         summary: "FIM completion",
-        description: "Proxy a Fill-in-the-Middle completion request to the Kilo Gateway",
+        description: "Proxy a Fill-in-the-Middle completion request to the Devil Gateway",
         operationId: "kilo.fim",
         responses: {
           200: {
@@ -315,7 +315,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const auth = await Auth.get("kilo")
 
         if (!auth) {
-          return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
         }
 
         const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
@@ -330,13 +330,13 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const fimMaxTokens = maxTokens ?? 256
         const fimTemperature = temperature ?? 0.2
 
-        const baseApiUrl = KILO_API_BASE + "/api/"
+        const baseApiUrl = DEVIL_API_BASE + "/api/"
         const endpoint = new URL("fim/completions", baseApiUrl)
 
         const headers = {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
-          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          ...buildDevilHeaders(undefined, { devilcodeOrganizationId: organizationId }),
           [HEADER_FEATURE]: "autocomplete",
         }
 
@@ -371,15 +371,15 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     .get(
       "/notifications",
       describeRoute({
-        summary: "Get Kilo notifications",
-        description: "Fetch notifications from Kilo Gateway for CLI display",
+        summary: "Get Devil notifications",
+        description: "Fetch notifications from Devil Gateway for CLI display",
         operationId: "kilo.notifications",
         responses: {
           200: {
             description: "Notifications list",
             content: {
               "application/json": {
-                schema: resolver(z.array(KilocodeNotificationSchema)),
+                schema: resolver(z.array(DevilcodeNotificationSchema)),
               },
             },
           },
@@ -394,9 +394,9 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         if (!token) return c.json([])
 
         const organizationId = auth.type === "oauth" ? auth.accountId : undefined
-        const notifications = await fetchKilocodeNotifications({
-          kilocodeToken: token,
-          kilocodeOrganizationId: organizationId,
+        const notifications = await fetchDevilcodeNotifications({
+          devilcodeToken: token,
+          devilcodeOrganizationId: organizationId,
         })
 
         return c.json(notifications)
@@ -406,7 +406,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       "/cloud/session/:id",
       describeRoute({
         summary: "Get cloud session",
-        description: "Fetch full session data from the Kilo cloud for preview",
+        description: "Fetch full session data from the Devil cloud for preview",
         operationId: "kilo.cloud.session.get",
         responses: {
           200: {
@@ -424,7 +424,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          if (!auth) return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
           const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
@@ -433,7 +433,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           if (!result.ok) return c.json({ error: result.error }, result.status)
           return c.json(result.data)
         } catch (err: any) {
-          console.error("[Kilo Gateway] cloud/session/get: unhandled error", err?.message ?? err)
+          console.error("[Devil Gateway] cloud/session/get: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
         }
       },
@@ -467,7 +467,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           const { sessionId } = c.req.valid("json")
 
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo" }, 401)
+          if (!auth) return c.json({ error: "Not authenticated with Devil" }, 401)
           const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
@@ -491,7 +491,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
           return c.json(info)
         } catch (err: any) {
-          console.error("[Kilo Gateway] cloud/session/import: unhandled error", err?.message ?? err)
+          console.error("[Devil Gateway] cloud/session/import: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
         }
       },
@@ -499,8 +499,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     .get(
       "/claw/status",
       describeRoute({
-        summary: "Get KiloClaw instance status",
-        description: "Fetch the user's KiloClaw instance status via the KiloClaw worker",
+        summary: "Get DevilClaw instance status",
+        description: "Fetch the user's DevilClaw instance status via the DevilClaw worker",
         operationId: "kilo.claw.status",
         responses: {
           200: {
@@ -532,7 +532,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          if (!auth) return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
           const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
@@ -545,25 +545,25 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             headers[HEADER_ORGANIZATIONID] = organizationId
           }
 
-          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
+          const response = await fetch(`${DEVIL_API_BASE}/api/kiloclaw/status`, { headers })
 
           if (!response.ok) {
             const text = await response.text()
-            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+            return c.json({ error: `DevilClaw request failed: ${response.status} ${text}` }, response.status as any)
           }
 
           return c.json(await response.json())
         } catch (err: any) {
-          console.error("[Kilo Gateway] claw/status: error", err?.message ?? err)
-          return c.json({ error: "Failed to reach KiloClaw" }, 502)
+          console.error("[Devil Gateway] claw/status: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach DevilClaw" }, 502)
         }
       },
     )
     .get(
       "/claw/chat-credentials",
       describeRoute({
-        summary: "Get KiloClaw chat credentials",
-        description: "Fetch Stream Chat credentials for the user's KiloClaw instance",
+        summary: "Get DevilClaw chat credentials",
+        description: "Fetch Stream Chat credentials for the user's DevilClaw instance",
         operationId: "kilo.claw.chatCredentials",
         responses: {
           200: {
@@ -589,7 +589,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          if (!auth) return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
           const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
           if (!token) return c.json({ error: "No valid token found" }, 401)
 
@@ -602,17 +602,17 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             headers[HEADER_ORGANIZATIONID] = organizationId
           }
 
-          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/chat-credentials`, { headers })
+          const response = await fetch(`${DEVIL_API_BASE}/api/kiloclaw/chat-credentials`, { headers })
 
           if (!response.ok) {
             const text = await response.text()
-            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+            return c.json({ error: `DevilClaw request failed: ${response.status} ${text}` }, response.status as any)
           }
 
           return c.json(await response.json())
         } catch (err: any) {
-          console.error("[Kilo Gateway] claw/chat-credentials: error", err?.message ?? err)
-          return c.json({ error: "Failed to reach KiloClaw" }, 502)
+          console.error("[Devil Gateway] claw/chat-credentials: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach DevilClaw" }, 502)
         }
       },
     )
@@ -620,7 +620,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       "/cloud-sessions",
       describeRoute({
         summary: "Get cloud sessions",
-        description: "Fetch cloud CLI sessions from Kilo API",
+        description: "Fetch cloud CLI sessions from Devil API",
         operationId: "kilo.cloudSessions",
         responses: {
           200: {
@@ -658,7 +658,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
       async (c: any) => {
         try {
           const auth = await Auth.get("kilo")
-          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          if (!auth) return c.json({ error: "Not authenticated with Devil Gateway" }, 401)
 
           const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
           if (!token) return c.json({ error: "No valid token found" }, 401)
@@ -675,19 +675,19 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             input: JSON.stringify({ "0": input }),
           })
 
-          const url = `${KILO_API_BASE}/api/trpc/cliSessionsV2.list?${params.toString()}`
+          const url = `${DEVIL_API_BASE}/api/trpc/cliSessionsV2.list?${params.toString()}`
 
           const response = await fetch(url, {
             headers: {
               Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
-              ...buildKiloHeaders(),
+              ...buildDevilHeaders(),
             },
           })
 
           if (!response.ok) {
             const text = await response.text()
-            console.error("[Kilo Gateway] cloud-sessions: tRPC request failed", {
+            console.error("[Devil Gateway] cloud-sessions: tRPC request failed", {
               status: response.status,
               body: text.slice(0, 500),
             })
@@ -720,7 +720,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
 
           return c.json({ cliSessions: sessions, nextCursor: result.nextCursor ?? null })
         } catch (err: any) {
-          console.error("[Kilo Gateway] cloud-sessions: unhandled error", err?.message ?? err)
+          console.error("[Devil Gateway] cloud-sessions: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
         }
       },

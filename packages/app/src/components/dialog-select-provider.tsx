@@ -16,9 +16,9 @@ export const DialogSelectProvider: Component = () => {
   const providers = useProviders()
   const language = useLanguage()
 
-  // kilocode_change start - Use "Recommended" terminology to match kilocode
+  // devilcode_change start - Use "Recommended" terminology to match devilcode
   const popularGroup = () => language.t("dialog.provider.group.recommended")
-  // kilocode_change end
+  // devilcode_change end
   const otherGroup = () => language.t("dialog.provider.group.other")
   const customLabel = () => language.t("settings.providers.tag.custom")
   const note = (id: string) => {
@@ -67,12 +67,12 @@ export const DialogSelectProvider: Component = () => {
           <div class="px-1.25 w-full flex items-center gap-x-3">
             <ProviderIcon data-slot="list-item-extra-icon" id={i.id} />
             <span>{i.name}</span>
-            {/* kilocode_change start - Provider tags and notes */}
+            {/* devilcode_change start - Provider tags and notes */}
             <Show when={i.id === "kilo"}>
               <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
               <div class="text-14-regular text-text-weak">{language.t("dialog.provider.kilo.note")}</div>
             </Show>
-            {/* kilocode_change end */}
+            {/* devilcode_change end */}
             <Show when={i.id === CUSTOM_ID}>
               <Tag>{language.t("settings.providers.tag.custom")}</Tag>
             </Show>

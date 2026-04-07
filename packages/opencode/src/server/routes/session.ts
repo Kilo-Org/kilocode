@@ -984,8 +984,8 @@ export const SessionRoutes = lazy(() =>
       }),
       validator("json", z.object({ sessionID: z.string().optional() })),
       async (c) => {
-        const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
-        await KiloSessions.setViewedSession(c.req.valid("json").sessionID)
+        const { DevilSessions } = await import("../../kilo-sessions/kilo-sessions")
+        await DevilSessions.setViewedSession(c.req.valid("json").sessionID)
         return c.json(true)
       },
     ),

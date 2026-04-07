@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 /**
- * Transform extension files (Zed, etc.) with Kilo branding
+ * Transform extension files (Zed, etc.) with Devil branding
  *
  * This script handles extension configuration files by transforming
- * OpenCode references to Kilo.
+ * OpenCode references to Devil.
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { oursHasKilocodeChanges } from "../utils/git"
+import { oursHasDevilcodeChanges } from "../utils/git"
 
 export interface ExtensionTransformResult {
   file: string
@@ -47,7 +47,7 @@ const EXTENSION_REPLACEMENTS: ExtensionReplacement[] = [
   },
   {
     pattern: /description\s*=\s*"OpenCode[^"]*"/g,
-    replacement: 'description = "Kilo - AI coding assistant"',
+    replacement: 'description = "Devil - AI coding assistant"',
     description: "Extension description",
     fileTypes: [".toml"],
   },
@@ -55,18 +55,18 @@ const EXTENSION_REPLACEMENTS: ExtensionReplacement[] = [
   // GitHub/Repository references
   {
     pattern: /repository\s*=\s*"[^"]*anomalyco\/opencode[^"]*"/g,
-    replacement: 'repository = "https://github.com/Kilo-Org/kilocode"',
+    replacement: 'repository = "https://github.com/Devil-Org/devilcode"',
     description: "Repository URL",
     fileTypes: [".toml"],
   },
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilocode",
+    replacement: "github.com/Devil-Org/devilcode",
     description: "GitHub URL",
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilocode",
+    replacement: "Devil-Org/devilcode",
     description: "GitHub repo",
   },
 
@@ -78,22 +78,22 @@ const EXTENSION_REPLACEMENTS: ExtensionReplacement[] = [
     fileTypes: [".toml"],
   },
 
-  // Generic OpenCode -> Kilo in strings
+  // Generic OpenCode -> Devil in strings
   {
     pattern: /"OpenCode"/g,
-    replacement: '"Kilo"',
+    replacement: '"Devil"',
     description: "Product name",
   },
 
   // Environment variables
   {
     pattern: /_EXTENSION_OPENCODE_/g,
-    replacement: "_EXTENSION_KILO_",
+    replacement: "_EXTENSION_DEVIL_",
     description: "Extension env var",
   },
   {
     pattern: /OpenCode\s+language\s+server/gi,
-    replacement: "Kilo language server",
+    replacement: "Devil language server",
     description: "Language server name",
   },
 ]
@@ -165,9 +165,9 @@ export async function transformExtensionFile(
     return { file, action: "transformed", replacements: 0, dryRun: true }
   }
 
-  // If our version has kilocode_change markers, flag for manual resolution
-  if (await oursHasKilocodeChanges(file)) {
-    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+  // If our version has devilcode_change markers, flag for manual resolution
+  if (await oursHasDevilcodeChanges(file)) {
+    warn(`${file} has devilcode_change markers — skipping auto-transform, needs manual resolution`)
     return { file, action: "flagged", replacements: 0, dryRun: false }
   }
 

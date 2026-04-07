@@ -3,7 +3,7 @@ name: vscode-visual-regression
 description: Write Storybook stories and visual regression tests for the Kilo VS Code extension webview UI
 ---
 
-Use this skill when the user asks you to add visual regression tests, screenshot tests, or Storybook stories for components in `packages/kilo-vscode/`.
+Use this skill when the user asks you to add visual regression tests, screenshot tests, or Storybook stories for components in `packages/devil-vscode/`.
 
 # Architecture
 
@@ -19,7 +19,7 @@ The test runner at `tests/visual-regression.spec.ts` is fully automatic — it f
 
 ## Step 1: Decide which story file to use
 
-Stories live in `packages/kilo-vscode/webview-ui/src/stories/`. Existing files and their scope:
+Stories live in `packages/devil-vscode/webview-ui/src/stories/`. Existing files and their scope:
 
 | File                        | Components covered                                       |
 | --------------------------- | -------------------------------------------------------- |
@@ -208,14 +208,14 @@ Baselines are generated on **Linux CI only** (font rendering differs on macOS). 
 To preview stories locally:
 
 ```bash
-# From packages/kilo-vscode/
+# From packages/devil-vscode/
 bun run storybook
 # Opens at http://localhost:6007
 ```
 
 # Reference: snapshot directory structure
 
-Snapshots live at `packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/`:
+Snapshots live at `packages/devil-vscode/tests/visual-regression.spec.ts-snapshots/`:
 
 ```
 tests/visual-regression.spec.ts-snapshots/
@@ -236,7 +236,7 @@ Example mapping:
 
 # Reference: Playwright config
 
-Key settings in `packages/kilo-vscode/playwright.config.ts`:
+Key settings in `packages/devil-vscode/playwright.config.ts`:
 
 - Default viewport: **420x720** (VS Code sidebar dimensions)
 - Narrow stories (ID ending `-200`): **200x720**
@@ -249,13 +249,13 @@ Key settings in `packages/kilo-vscode/playwright.config.ts`:
 
 The `visual-regression.yml` workflow triggers on PRs when these paths change:
 
-- `packages/kilo-ui/**`
+- `packages/devil-ui/**`
 - `packages/ui/**`
 - `packages/util/**`
 - `packages/sdk/js/**`
-- `packages/kilo-vscode/webview-ui/**`
-- `packages/kilo-vscode/.storybook/**`
-- `packages/kilo-vscode/tests/visual-regression*`
+- `packages/devil-vscode/webview-ui/**`
+- `packages/devil-vscode/.storybook/**`
+- `packages/devil-vscode/tests/visual-regression*`
 - `.github/workflows/visual-regression.yml`
 
 CI auto-commits new baselines via Git LFS and fails if screenshots changed, requiring developer review.

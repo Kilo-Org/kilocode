@@ -2,7 +2,7 @@
  * Types for extension <-> webview message communication
  */
 
-import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@devilcode/sdk/v2/client"
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -146,7 +146,7 @@ export interface SessionInfo {
   } | null
 }
 
-// Cloud session info (from Kilo cloud API)
+// Cloud session info (from Devil cloud API)
 export interface CloudSessionInfo {
   session_id: string
   title: string | null
@@ -242,23 +242,23 @@ export interface DeviceAuthState {
   error?: string
 }
 
-// Kilo notification types (mirrored from kilo-gateway)
-export interface KilocodeNotificationAction {
+// Devil notification types (mirrored from kilo-gateway)
+export interface DevilcodeNotificationAction {
   actionText: string
   actionURL: string
 }
 
-export interface KilocodeNotification {
+export interface DevilcodeNotification {
   id: string
   title: string
   message: string
-  action?: KilocodeNotificationAction
+  action?: DevilcodeNotificationAction
   showIn?: string[]
   suggestModelId?: string
 }
 
 // Profile types from kilo-gateway
-export interface KilocodeBalance {
+export interface DevilcodeBalance {
   balance: number
 }
 
@@ -268,7 +268,7 @@ export interface ProfileData {
     name?: string
     organizations?: Array<{ id: string; name: string; role: string }>
   }
-  balance: KilocodeBalance | null
+  balance: DevilcodeBalance | null
   currentOrgId: string | null
 }
 
@@ -745,7 +745,7 @@ export interface NotificationSettingsLoadedMessage {
 
 export interface NotificationsLoadedMessage {
   type: "notificationsLoaded"
-  notifications: KilocodeNotification[]
+  notifications: DevilcodeNotification[]
   dismissedIds: string[]
 }
 

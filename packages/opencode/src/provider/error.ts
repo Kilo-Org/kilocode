@@ -42,7 +42,7 @@ export namespace ProviderError {
 
   function error(providerID: string, error: APICallError) {
     if (providerID.includes("github-copilot") && error.statusCode === 403) {
-      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo." // kilocode_change
+      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Devil." // devilcode_change
     }
 
     return error.message
@@ -81,7 +81,7 @@ export namespace ProviderError {
       // provide a human-readable message instead of dumping raw markup
       if (/^\s*<!doctype|^\s*<html/i.test(e.responseBody)) {
         if (e.statusCode === 401) {
-          return "Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or expired — try running `kilo auth login <your provider URL>` to re-authenticate." // kilocode_change
+          return "Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or expired — try running `kilo auth login <your provider URL>` to re-authenticate." // devilcode_change
         }
         if (e.statusCode === 403) {
           return "Forbidden: request was blocked by a gateway or proxy. You may not have permission to access this resource — check your account and provider settings."

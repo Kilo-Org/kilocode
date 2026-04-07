@@ -51,7 +51,7 @@ If you want to contribute or modify the extension locally, see the [DEVELOPMENT.
 To build and share a development snapshot of the extension:
 
 ```bash
-# Run from packages/kilo-vscode/
+# Run from packages/devil-vscode/
 
 # Build only (outputs VSIX to system temp dir)
 bun run snapshot:build

@@ -9,7 +9,7 @@ import { BunProc } from "../bun"
 import { Hash } from "../util/hash"
 import { Plugin } from "../plugin"
 import { NamedError } from "@opencode-ai/util/error"
-import { AiSdkProvider, ModelsDev, Prompt } from "./models" // kilocode_change
+import { AiSdkProvider, ModelsDev, Prompt } from "./models" // devilcode_change
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Instance } from "../project/instance"
@@ -30,7 +30,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import { createOpenRouter, type LanguageModelV2 } from "@openrouter/ai-sdk-provider"
 import { createOpenaiCompatible as createGitHubCopilotOpenAICompatible } from "./sdk/copilot"
-import { createKilo, type KiloProvider } from "@kilocode/kilo-gateway" // kilocode_change
+import { createDevil, type DevilProvider } from "@devilcode/kilo-gateway" // devilcode_change
 import { createXai } from "@ai-sdk/xai"
 import { createMistral } from "@ai-sdk/mistral"
 import { createGroq } from "@ai-sdk/groq"
@@ -47,7 +47,9 @@ import { GoogleAuth } from "google-auth-library"
 import { ProviderTransform } from "./transform"
 import { Installation } from "../installation"
 
-import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
+import { DEFAULT_HEADERS } from "@/devilcode/const" // devilcode_change
+import { CLAUDE_CODE_ID, CLAUDE_CODE_RUNTIME } from "@/devilcode/claude-code" // devilcode_change
+import { AGENT_SDK_ID, AGENT_SDK_RUNTIME } from "@/devilcode/agent-sdk" // devilcode_change
 
 export namespace Provider {
   const log = Log.create({ service: "provider" })
@@ -98,7 +100,7 @@ export namespace Provider {
     "@ai-sdk/openai": createOpenAI,
     "@ai-sdk/openai-compatible": createOpenAICompatible,
     "@openrouter/ai-sdk-provider": createOpenRouter,
-    "@kilocode/kilo-gateway": createKilo, // kilocode_change
+    "@devilcode/kilo-gateway": createDevil, // devilcode_change
     "@ai-sdk/xai": createXai,
     "@ai-sdk/mistral": createMistral,
     "@ai-sdk/groq": createGroq,
@@ -127,7 +129,7 @@ export namespace Provider {
         autoload: false,
         options: {
           headers: {
-            // kilocode_change
+            // devilcode_change
             // TODO: Add adaptive thinking headers when @ai-sdk/anthropic supports it:
             // adaptive-thinking-2026-01-28,effort-2025-11-24,max-effort-2026-01-24
             "anthropic-beta":
@@ -346,7 +348,7 @@ export namespace Provider {
       return {
         autoload: false,
         options: {
-          headers: DEFAULT_HEADERS, // kilocode_change
+          headers: DEFAULT_HEADERS, // devilcode_change
         },
       }
     },
@@ -354,7 +356,7 @@ export namespace Provider {
       return {
         autoload: false,
         options: {
-          headers: DEFAULT_HEADERS, // kilocode_change
+          headers: DEFAULT_HEADERS, // devilcode_change
         },
       }
     },
@@ -437,11 +439,11 @@ export namespace Provider {
       return {
         autoload: false,
         options: {
-          headers: DEFAULT_HEADERS, // kilocode_change
+          headers: DEFAULT_HEADERS, // devilcode_change
         },
       }
     },
-    // kilocode_change start - prevent opencode zen from auto-connecting without credentials
+    // devilcode_change start - prevent opencode zen from auto-connecting without credentials
     opencode: async () => {
       return {
         autoload: false,
@@ -450,7 +452,7 @@ export namespace Provider {
         },
       }
     },
-    // kilocode_change end
+    // devilcode_change end
     gitlab: async (input) => {
       const instanceUrl = Env.get("GITLAB_INSTANCE_URL") || "https://gitlab.com"
 
@@ -465,7 +467,7 @@ export namespace Provider {
       const providerConfig = config.provider?.["gitlab"]
 
       const aiGatewayHeaders = {
-        "User-Agent": `kilo/${Installation.VERSION} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
+        "User-Agent": `kilo/${Installation.VERSION} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`, // devilcode_change
         "anthropic-beta": "context-1m-2025-08-07",
         ...(providerConfig?.options?.aiGatewayHeaders || {}),
       }
@@ -535,7 +537,7 @@ export namespace Provider {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // kilocode_change
+            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // devilcode_change
         )
       }
 
@@ -586,7 +588,7 @@ export namespace Provider {
         },
       }
     },
-    // kilocode_change start
+    // devilcode_change start
     kilo: async (input) => {
       const env = Env.all()
       const hasKey = await (async () => {
@@ -604,10 +606,10 @@ export namespace Provider {
         }
       }
 
-      // Build options from KILO_* env vars
+      // Build options from DEVIL_* env vars
       const options: Record<string, string> = {}
-      if (env.KILO_ORG_ID) {
-        options.kilocodeOrganizationId = env.KILO_ORG_ID
+      if (env.DEVIL_ORG_ID) {
+        options.devilcodeOrganizationId = env.DEVIL_ORG_ID
       }
       if (!hasKey) {
         options.apiKey = "anonymous"
@@ -616,7 +618,7 @@ export namespace Provider {
       return {
         autoload: Object.keys(input.models).length > 0,
         options,
-        async getModel(sdk: KiloProvider, modelID: string) {
+        async getModel(sdk: DevilProvider, modelID: string) {
           const aiSdkProvider = input.models[modelID]?.ai_sdk_provider
           if (aiSdkProvider === "anthropic") {
             return sdk.anthropic(modelID)
@@ -631,7 +633,51 @@ export namespace Provider {
         },
       }
     },
-    // kilocode_change end
+    // devilcode_change start
+    "claude-code": async () => {
+      if (Flag.DEVIL_DISABLE_CLAUDE_CODE) {
+        return {
+          autoload: false,
+        }
+      }
+      const auth = await Auth.get(CLAUDE_CODE_ID)
+      return {
+        autoload: !!auth,
+        options: {
+          runtime: CLAUDE_CODE_RUNTIME,
+        },
+      }
+    },
+    // devilcode_change end
+    // devilcode_change start
+    "agent-sdk": async () => {
+      // Agent SDK uses Claude Code subscription auth (~/.claude/.credentials.json)
+      // OR ANTHROPIC_API_KEY — either works.
+      const hasKey = !!process.env.ANTHROPIC_API_KEY
+      let hasClaudeLogin = false
+      try {
+        const os = await import("node:os")
+        const path = await import("node:path")
+        const { Filesystem } = await import("@/util/filesystem")
+        const configDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude")
+        const credFile = path.join(Filesystem.resolve(configDir), ".credentials.json")
+        const data = await Filesystem.readJson<Record<string, unknown>>(credFile)
+        hasClaudeLogin = typeof data === "object" && data !== null && Object.keys(data).length > 0
+      } catch {
+        if (process.platform === "darwin") {
+          // macOS doesn't reliably have the creds file — assume available if claude CLI exists
+          const { which } = await import("@/util/which")
+          hasClaudeLogin = !!which("claude")
+        }
+      }
+      return {
+        autoload: hasClaudeLogin || hasKey,
+        options: {
+          runtime: AGENT_SDK_RUNTIME,
+        },
+      }
+    },
+    // devilcode_change end
   }
 
   export const Model = z
@@ -700,12 +746,12 @@ export namespace Provider {
       release_date: z.string(),
       variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
 
-      // kilocode_change start
+      // devilcode_change start
       recommendedIndex: z.number().optional(),
       prompt: Prompt.optional().catch(undefined),
       isFree: z.boolean().optional(),
       ai_sdk_provider: AiSdkProvider.optional(),
-      // kilocode_change end
+      // devilcode_change end
     })
     .meta({
       ref: "Model",
@@ -787,13 +833,13 @@ export namespace Provider {
       },
       release_date: model.release_date,
 
-      // kilocode_change start
+      // devilcode_change start
       variants: provider.id === "kilo" ? (model.variants ?? {}) : {},
       recommendedIndex: model.recommendedIndex,
       prompt: model.prompt,
       isFree: model.isFree,
       ai_sdk_provider: model.ai_sdk_provider,
-      // kilocode_change end
+      // devilcode_change end
     }
 
     m.variants = mapValues(ProviderTransform.variants(m), (v) => v)
@@ -938,12 +984,12 @@ export namespace Provider {
           release_date: model.release_date ?? existingModel?.release_date ?? "",
           variants: {},
 
-          // kilocode_change start
+          // devilcode_change start
           recommendedIndex: model.recommendedIndex ?? existingModel?.recommendedIndex,
           prompt: model.prompt ?? existingModel?.prompt,
           isFree: model.isFree ?? existingModel?.isFree,
           ai_sdk_provider: model.ai_sdk_provider ?? existingModel?.ai_sdk_provider,
-          // kilocode_change end
+          // devilcode_change end
         }
         const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
         parsedModel.variants = mapValues(
@@ -1026,6 +1072,7 @@ export namespace Provider {
     }
 
     for (const [providerID, fn] of Object.entries(CUSTOM_LOADERS)) {
+      if (providerID === CLAUDE_CODE_ID && Flag.DEVIL_DISABLE_CLAUDE_CODE) continue
       if (disabled.has(providerID)) continue
       const data = database[providerID]
       if (!data) {
@@ -1062,7 +1109,7 @@ export namespace Provider {
         model.api.id = model.api.id ?? model.id ?? modelID
         if (modelID === "gpt-5-chat-latest" || (providerID === "openrouter" && modelID === "openai/gpt-5-chat"))
           delete provider.models[modelID]
-        if (model.status === "alpha" && !Flag.KILO_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
+        if (model.status === "alpha" && !Flag.DEVIL_ENABLE_EXPERIMENTAL_MODELS) delete provider.models[modelID]
         if (model.status === "deprecated") delete provider.models[modelID]
         if (
           (configProvider?.blacklist && configProvider.blacklist.includes(modelID)) ||
@@ -1102,6 +1149,19 @@ export namespace Provider {
   export async function list() {
     return state().then((state) => state.providers)
   }
+
+  // devilcode_change start
+  export function runtime(model: Pick<Model, "options">, provider?: Pick<Info, "options">) {
+    const value = model.options["runtime"] ?? provider?.options?.["runtime"]
+    if (value === CLAUDE_CODE_RUNTIME || value === AGENT_SDK_RUNTIME) return value
+    return "model"
+  }
+
+  export function external(model: Pick<Model, "options">, provider?: Pick<Info, "options">) {
+    const r = runtime(model, provider)
+    return r === CLAUDE_CODE_RUNTIME || r === AGENT_SDK_RUNTIME
+  }
+  // devilcode_change end
 
   async function getSDK(model: Model) {
     try {
@@ -1238,6 +1298,20 @@ export namespace Provider {
     if (s.models.has(key)) return s.models.get(key)!
 
     const provider = s.providers[model.providerID]
+    // devilcode_change start
+    if (external(model, provider)) {
+      throw new InitError(
+        {
+          providerID: model.providerID,
+        },
+        {
+          cause: new Error(
+            `${model.providerID} uses an external agent runtime and cannot be loaded as an AI SDK model`,
+          ),
+        },
+      )
+    }
+    // devilcode_change end
     const sdk = await getSDK(model)
 
     try {
@@ -1293,11 +1367,11 @@ export namespace Provider {
         "gemini-2.5-flash",
         "gpt-5-nano",
       ]
-      // kilocode_change start
+      // devilcode_change start
       if (providerID.startsWith("kilo")) {
         priority = ["kilo-auto/small"]
       }
-      // kilocode_change end
+      // devilcode_change end
       if (providerID.startsWith("github-copilot")) {
         // prioritize free models for github copilot
         priority = ["gpt-5-mini", "claude-haiku-4.5", ...priority]
@@ -1333,16 +1407,32 @@ export namespace Provider {
       }
     }
 
-    // kilocode_change start
+    // devilcode_change start
     // Check if kilo provider is available before using it
     const kiloProvider = await state().then((state) => state.providers["kilo"])
     if (kiloProvider && kiloProvider.models["kilo-auto/small"]) {
       return getModel("kilo", "kilo-auto/small")
     }
-    // kilocode_change end
+    // devilcode_change end
 
     return undefined
   }
+
+  // devilcode_change start
+  export async function usable() {
+    const providers = await list()
+    for (const provider of Object.values(providers)) {
+      const model = sort(Object.values(provider.models)).find((item) => !external(item, provider))
+      if (model) {
+        return {
+          providerID: provider.id,
+          modelID: model.id,
+        }
+      }
+    }
+    return undefined
+  }
+  // devilcode_change end
 
   const priority = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
   export function sort(models: Model[]) {

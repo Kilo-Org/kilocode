@@ -1,4 +1,4 @@
-# kilocode_change - new file
+# devilcode_change - new file
 name: "Setup Kilo"
 description: "Install Kilo CLI globally"
 runs:

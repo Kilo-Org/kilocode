@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Build the Kilo JetBrains plugin.
+ * Build the Devil JetBrains plugin.
  *
  * Usage:
  *   bun script/build.ts              # Local build — only current platform binary required
@@ -48,7 +48,7 @@ function log(msg: string) {
 }
 
 function distBinPath(os: string, exe: string): string {
-  return join(distDir, `@kilocode/cli-${os}`, "bin", exe)
+  return join(distDir, `@devilcode/cli-${os}`, "bin", exe)
 }
 
 function hasDist(): boolean {

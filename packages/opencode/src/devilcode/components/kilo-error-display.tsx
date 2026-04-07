@@ -1,19 +1,19 @@
 import { createMemo, Match, Switch, type JSX } from "solid-js"
 import { SplitBorder } from "@tui/component/border"
 import { useTheme } from "@tui/context/theme"
-import { parseKiloErrorCode, kiloErrorTitle, kiloErrorDescription } from "@/kilocode/kilo-errors"
-import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { parseDevilErrorCode, kiloErrorTitle, kiloErrorDescription } from "@/devilcode/kilo-errors"
+import type { AssistantMessage } from "@devilcode/sdk/v2"
 
-interface KiloErrorBlockProps {
+interface DevilErrorBlockProps {
   error: NonNullable<AssistantMessage["error"]>
   fallback: JSX.Element
 }
 
-export function KiloErrorBlock(props: KiloErrorBlockProps) {
+export function DevilErrorBlock(props: DevilErrorBlockProps) {
   const { theme } = useTheme()
 
   const kiloErrorCode = createMemo(() => {
-    return parseKiloErrorCode(props.error)
+    return parseDevilErrorCode(props.error)
   })
 
   const title = createMemo(() => {
@@ -41,7 +41,7 @@ export function KiloErrorBlock(props: KiloErrorBlockProps) {
         >
           <text fg={theme.text}>{title()}</text>
           <text fg={theme.textMuted}>{description()}</text>
-          <text fg={theme.primary}>{"Run /connect or `kilo auth login` to connect to Kilo Gateway"}</text>
+          <text fg={theme.primary}>{"Run /connect or `kilo auth login` to connect to Devil Gateway"}</text>
         </box>
       </Match>
     </Switch>

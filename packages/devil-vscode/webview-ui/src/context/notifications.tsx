@@ -9,11 +9,11 @@ import {
   Accessor,
 } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { KilocodeNotification, ExtensionMessage } from "../types/messages"
+import type { DevilcodeNotification, ExtensionMessage } from "../types/messages"
 
 interface NotificationsContextValue {
-  notifications: Accessor<KilocodeNotification[]>
-  filteredNotifications: Accessor<KilocodeNotification[]>
+  notifications: Accessor<DevilcodeNotification[]>
+  filteredNotifications: Accessor<DevilcodeNotification[]>
   dismiss: (id: string) => void
 }
 
@@ -21,7 +21,7 @@ export const NotificationsContext = createContext<NotificationsContextValue>()
 
 export const NotificationsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
-  const [notifications, setNotifications] = createSignal<KilocodeNotification[]>([])
+  const [notifications, setNotifications] = createSignal<DevilcodeNotification[]>([])
   const [dismissedIds, setDismissedIds] = createSignal<string[]>([])
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {

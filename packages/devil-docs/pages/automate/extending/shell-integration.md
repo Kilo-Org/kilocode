@@ -1,18 +1,18 @@
 ---
 title: "Shell Integration"
-description: "Integrate Kilo Code with your shell environment"
+description: "Integrate devil Code with your shell environment"
 ---
 
 # Terminal Shell Integration
 
-Terminal Shell Integration is a key feature that enables Kilo Code to execute commands in your terminal and intelligently process their output. This bidirectional communication between the AI and your development environment unlocks powerful automation capabilities.
+Terminal Shell Integration is a key feature that enables devil Code to execute commands in your terminal and intelligently process their output. This bidirectional communication between the AI and your development environment unlocks powerful automation capabilities.
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
 ## What is Shell Integration?
 
-Shell integration is automatically enabled in Kilo Code and connects directly to your terminal's command execution lifecycle without requiring any setup from you. This built-in feature allows Kilo Code to:
+Shell integration is automatically enabled in devil Code and connects directly to your terminal's command execution lifecycle without requiring any setup from you. This built-in feature allows devil Code to:
 
 - Execute commands on your behalf through the [`execute_command`](/docs/automate/tools/execute-command) tool
 - Read command output in real-time without manual copy-pasting
@@ -21,11 +21,11 @@ Shell integration is automatically enabled in Kilo Code and connects directly to
 - Track working directory changes as you navigate your project
 - React intelligently to terminal output without user intervention
 
-When Kilo Code needs to perform tasks like installing dependencies, starting a development server, or analyzing build errors, shell integration works behind the scenes to make these interactions smooth and effective.
+When devil Code needs to perform tasks like installing dependencies, starting a development server, or analyzing build errors, shell integration works behind the scenes to make these interactions smooth and effective.
 
 ## Getting Started with Shell Integration
 
-Shell integration is built into Kilo Code and works automatically in most cases. If you see "Shell Integration Unavailable" messages or experience issues with command execution, try these solutions:
+Shell integration is built into devil Code and works automatically in most cases. If you see "Shell Integration Unavailable" messages or experience issues with command execution, try these solutions:
 
 1. **Update VS Code/Cursor** to the latest version (VS Code 1.93+ required)
 2. **Ensure a compatible shell is selected**: Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P`) → "Terminal: Select Default Profile" → Choose bash, zsh, PowerShell, or fish
@@ -34,7 +34,7 @@ Shell integration is built into Kilo Code and works automatically in most cases.
 
 ## Terminal Integration Settings
 
-Kilo Code provides several settings to fine-tune shell integration. Access these in the Kilo Code panel under Settings → Terminal.
+devil Code provides several settings to fine-tune shell integration. Access these in the devil Code panel under Settings → Terminal.
 
 ### Basic Settings
 
@@ -53,7 +53,7 @@ Maximum time to wait for shell integration to initialize before executing comman
 
 {% image src="/docs/img/shell-integration/terminal-command-delay.png" alt="Terminal command delay slider set to 0ms" width="500" caption="Terminal command delay slider set to 0ms" /%}
 
-Adds a small pause after running commands to help Kilo Code capture all output correctly. This setting can significantly impact shell integration reliability due to VSCode's implementation of terminal integration across different operating systems and shell configurations:
+Adds a small pause after running commands to help devil Code capture all output correctly. This setting can significantly impact shell integration reliability due to VSCode's implementation of terminal integration across different operating systems and shell configurations:
 
 - **Default**: 0ms
 - **Common Values**:
@@ -82,31 +82,31 @@ Always restart all open terminals after changing any of these settings.
 
 {% image src="/docs/img/shell-integration/power-shell-workaround.png" alt="PowerShell counter workaround checkbox" width="600" caption="PowerShell counter workaround checkbox" /%}
 
-Helps PowerShell run the same command multiple times in a row. Enable this if you notice Kilo Code can't run identical commands consecutively in PowerShell.
+Helps PowerShell run the same command multiple times in a row. Enable this if you notice devil Code can't run identical commands consecutively in PowerShell.
 
 #### Clear ZSH EOL Mark
 
 {% image src="/docs/img/shell-integration/clear-zsh-eol-mark.png" alt="Clear ZSH EOL mark checkbox" width="600" caption="Clear ZSH EOL mark checkbox" /%}
 
-Prevents ZSH from adding special characters at the end of output lines that can confuse Kilo Code when reading terminal results.
+Prevents ZSH from adding special characters at the end of output lines that can confuse devil Code when reading terminal results.
 
 #### Oh My Zsh Integration
 
 {% image src="/docs/img/shell-integration/oh-my-zsh.png" alt="Enable Oh My Zsh integration checkbox" width="600" caption="Enable Oh My Zsh integration checkbox" /%}
 
-Makes Kilo Code work better with the popular [Oh My Zsh](https://ohmyz.sh/) shell customization framework. Turn this on if you use Oh My Zsh and experience terminal issues.
+Makes devil Code work better with the popular [Oh My Zsh](https://ohmyz.sh/) shell customization framework. Turn this on if you use Oh My Zsh and experience terminal issues.
 
 #### Powerlevel10k Integration
 
 {% image src="/docs/img/shell-integration/power10k.png" alt="Enable Powerlevel10k integration checkbox" width="600" caption="Enable Powerlevel10k integration checkbox" /%}
 
-Improves compatibility if you use the Powerlevel10k theme for ZSH. Turn this on if your fancy terminal prompt causes issues with Kilo Code.
+Improves compatibility if you use the Powerlevel10k theme for ZSH. Turn this on if your fancy terminal prompt causes issues with devil Code.
 
 #### ZDOTDIR Handling
 
 {% image src="/docs/img/shell-integration/zdotdir.png" alt="Enable ZDOTDIR handling checkbox" width="600" caption="Enable ZDOTDIR handling checkbox" /%}
 
-Helps Kilo Code work with custom ZSH configurations without interfering with your personal shell settings and customizations.
+Helps devil Code work with custom ZSH configurations without interfering with your personal shell settings and customizations.
 
 ## Troubleshooting Shell Integration
 
@@ -164,7 +164,7 @@ If you use terminal customization tools:
 typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 ```
 
-**Alternative**: Enable the Powerlevel10k Integration setting in Kilo Code.
+**Alternative**: Enable the Powerlevel10k Integration setting in devil Code.
 
 ### Verifying Shell Integration Status
 
@@ -263,39 +263,39 @@ If you use Fish in Cygwin, a minimal setup is usually enough:
 **Solutions**:
 
 1. **Set Terminal Command Delay**:
-   - Set the Terminal Command Delay to 50ms in Kilo Code settings
+   - Set the Terminal Command Delay to 50ms in devil Code settings
    - Restart all terminals after changing this setting
    - This matches older default behavior and may resolve the issue; some users report 0ms works better depending on shell and environment. This is a workaround for upstream VS Code behavior.
 
 2. **Roll Back VS Code Version**:
    - Download VS Code v1.98 from [VS Code Updates](https://code.visualstudio.com/updates/v1_98)
    - Replace your current VS Code installation
-   - No backup of Kilo settings needed
+   - No backup of devil settings needed
 
 3. **WSL-Specific Workaround**:
    - If using WSL, ensure you launch VSCode from within WSL using `code .`
 
 4. **ZSH Users**:
-   - Try enabling some or all ZSH-related workarounds in Kilo Code settings
+   - Try enabling some or all ZSH-related workarounds in devil Code settings
    - These settings can help regardless of your operating system
 
 ## Additional Known Issues
 
 ### Ctrl+C Behavior
 
-**Issue**: If text is already typed in the terminal when Kilo Code tries to run a command, Kilo Code will press Ctrl+C first to clear the line, which can interrupt running processes.
+**Issue**: If text is already typed in the terminal when devil Code tries to run a command, devil Code will press Ctrl+C first to clear the line, which can interrupt running processes.
 
-**Workaround**: Make sure your terminal prompt is empty (no partial commands typed) before asking Kilo Code to execute terminal commands.
+**Workaround**: Make sure your terminal prompt is empty (no partial commands typed) before asking devil Code to execute terminal commands.
 
 ### Multi-line Command Issues
 
-**Issue**: Commands that span multiple lines can confuse Kilo Code and may show output from previous commands mixed in with current output.
+**Issue**: Commands that span multiple lines can confuse devil Code and may show output from previous commands mixed in with current output.
 
 **Workaround**: Instead of multi-line commands, use command chaining with `&&` to keep everything on one line (e.g., `echo a && echo b` instead of typing each command on a separate line).
 
 ### PowerShell-Specific Issues
 
-1. **Premature Completion**: PowerShell sometimes tells Kilo Code a command is finished before all the output has been shown.
+1. **Premature Completion**: PowerShell sometimes tells devil Code a command is finished before all the output has been shown.
 2. **Repeated Commands**: PowerShell may refuse to run the same command twice in a row.
 
 **Workaround**: Enable the "PowerShell counter workaround" setting and set a terminal command delay of 150ms in the settings to give commands more time to complete.
@@ -381,7 +381,7 @@ The CLI automatically detects the appropriate shell for your platform using `She
 
 ## Agent Manager Terminals (VS Code Extension)
 
-When using the Kilo Code VS Code extension with the Agent Manager, each agent session gets its own dedicated VS Code terminal.
+When using the devil Code VS Code extension with the Agent Manager, each agent session gets its own dedicated VS Code terminal.
 
 ### Per-Session Terminals
 
@@ -421,7 +421,7 @@ If commands fail to execute, check the CLI's log output for error details. The C
 
 If you've followed these steps and are still experiencing problems, please:
 
-1. Check the [Kilo Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) to see if others have reported similar problems
+1. Check the [devil Code GitHub Issues](https://github.com/Devil-Org/devilcode/issues) to see if others have reported similar problems
 2. If not, create a new issue with details about your operating system, VS Code/Cursor version, and the steps you've tried
 
-For additional help, join our [Discord](https://kilo.ai/discord).
+For additional help, join our [Discord](https://devil.ai/discord).

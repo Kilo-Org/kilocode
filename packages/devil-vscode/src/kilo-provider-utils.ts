@@ -1,4 +1,4 @@
-import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type { Session, Agent, Event, ProviderListResponse } from "@devilcode/sdk/v2/client"
 import type { CloudSessionMessage } from "./services/cli-backend/types"
 
 /** A single provider entry as returned by the /provider list endpoint. */
@@ -52,7 +52,7 @@ export function getErrorMessage(error: unknown): string {
       const json = JSON.stringify(error)
       if (json !== "{}" && json.length < 500) return json
     } catch (err) {
-      console.warn("[Kilo New] getErrorMessage: JSON.stringify failed", err)
+      console.warn("[Devil New] getErrorMessage: JSON.stringify failed", err)
     }
   }
   return String(error)
@@ -88,8 +88,8 @@ export function filterVisibleAgents(agents: Agent[]): { visible: Agent[]; defaul
 }
 
 /**
- * Shared interface for the subset of KiloProvider state needed by session-refresh helpers.
- * Extracted here so the logic can be tested without importing KiloProvider (and vscode).
+ * Shared interface for the subset of DevilProvider state needed by session-refresh helpers.
+ * Extracted here so the logic can be tested without importing DevilProvider (and vscode).
  */
 export interface SessionRefreshContext {
   pendingSessionRefresh: boolean
@@ -123,7 +123,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
       list(dir).catch((err: unknown) => {
-        console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
+        console.error(`[Devil] Failed to list sessions for ${dir}:`, err)
         return [] as Session[]
       }),
     ),

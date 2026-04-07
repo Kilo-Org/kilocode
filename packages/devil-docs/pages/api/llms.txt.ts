@@ -99,14 +99,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sections: string[] = []
 
     // Add header
-    sections.push("# Kilo Code Documentation")
+    sections.push("# devil Code Documentation")
     sections.push("")
     sections.push(
-      "This file contains the complete documentation for Kilo Code, the leading open source agentic engineering platform.",
+      "This file contains the complete documentation for devil Code, the leading open source agentic engineering platform.",
     )
     sections.push("")
     const protocol = req.headers["x-forwarded-proto"] || "https"
-    const host = req.headers.host || "kilo.ai"
+    const host = req.headers.host || "devil.ai"
     const baseUrl = `${protocol}://${host}`
     const titleMap = buildTitleMap(markdownFiles, pagesDir)
 

@@ -4,7 +4,7 @@ import { createStore } from "solid-js/store"
 import { useTheme } from "../../context/theme"
 import { Locale } from "@/util/locale"
 import path from "path"
-import type { AssistantMessage } from "@kilocode/sdk/v2"
+import type { AssistantMessage } from "@devilcode/sdk/v2"
 import { Global } from "@/global"
 import { Installation } from "@/installation"
 import { useKeybind } from "../../context/keybind"
@@ -64,7 +64,7 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
   const kv = useKV()
 
   const hasProviders = createMemo(() =>
-    // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
+    // devilcode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
     sync.data.provider.some(
       (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
     ),
@@ -295,9 +295,9 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
                     ✕
                   </text>
                 </box>
-                {/* kilocode_change start */}
-                <text fg={theme.textMuted}>Kilo includes free models so you can start immediately.</text>
-                {/* kilocode_change end */}
+                {/* devilcode_change start */}
+                <text fg={theme.textMuted}>Devil includes free models so you can start immediately.</text>
+                {/* devilcode_change end */}
                 <text fg={theme.textMuted}>
                   Connect from 75+ providers to use other models, including Claude, GPT, Gemini etc
                 </text>
@@ -312,15 +312,15 @@ export function Sidebar(props: { sessionID: string; overlay?: boolean }) {
             <span style={{ fg: theme.textMuted }}>{directory().split("/").slice(0, -1).join("/")}/</span>
             <span style={{ fg: theme.text }}>{directory().split("/").at(-1)}</span>
           </text>
-          {/* kilocode_change start */}
+          {/* devilcode_change start */}
           <text fg={theme.textMuted}>
             <span style={{ fg: theme.success }}>•</span>{" "}
             <span style={{ fg: theme.text }}>
-              <b>Kilo</b>
+              <b>Devil</b>
             </span>{" "}
             <span>{Installation.VERSION}</span>
           </text>
-          {/* kilocode_change end */}
+          {/* devilcode_change end */}
         </box>
       </box>
     </Show>

@@ -1,7 +1,7 @@
 import { TextAttributes, RGBA } from "@opentui/core"
 import { For, type JSX } from "solid-js"
 import { useTheme, tint } from "@tui/context/theme"
-import { KiloLogo } from "./kilo-logo" // kilocode_change
+import { DevilLogo } from "./kilo-logo" // devilcode_change
 import { logo, marks } from "@/cli/logo"
 
 // Shadow markers (rendered chars in parens):
@@ -11,9 +11,9 @@ import { logo, marks } from "@/cli/logo"
 const SHADOW_MARKER = new RegExp(`[${marks}]`)
 
 export function Logo() {
-  // kilocode_change start
-  return <KiloLogo />
-  // kilocode_change end
+  // devilcode_change start
+  return <DevilLogo />
+  // devilcode_change end
   const { theme } = useTheme()
 
   const renderLine = (line: string, fg: RGBA, bold: boolean): JSX.Element[] => {

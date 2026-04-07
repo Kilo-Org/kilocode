@@ -34,7 +34,7 @@ val checkCli by tasks.registering {
         if (!resolved.exists() || resolved.listFiles()?.isEmpty() != false) {
             throw GradleException(
                 "CLI binaries not found at ${resolved.absolutePath}.\n" +
-                "Run 'bun run build' from packages/kilo-jetbrains/ to build CLI and plugin together."
+                "Run 'bun run build' from packages/devil-jetbrains/ to build CLI and plugin together."
             )
         }
         if (prod) {

@@ -1,11 +1,11 @@
 ---
 title: "Custom Rules"
-description: "Define custom rules for Kilo Code behavior"
+description: "Define custom rules for devil Code behavior"
 ---
 
 # Custom Rules
 
-Custom rules provide a powerful way to define project-specific and global behaviors and constraints for the Kilo Code AI agent. With custom rules, you can ensure consistent formatting, restrict access to sensitive files, enforce coding standards, and customize the AI's behavior for your specific project needs or across all projects.
+Custom rules provide a powerful way to define project-specific and global behaviors and constraints for the devil Code AI agent. With custom rules, you can ensure consistent formatting, restrict access to sensitive files, enforce coding standards, and customize the AI's behavior for your specific project needs or across all projects.
 
 ## Overview
 
@@ -21,7 +21,7 @@ Custom rules can be written in plain text, but Markdown format is recommended fo
 
 ## Rule Types
 
-Kilo Code supports two types of custom rules:
+devil Code supports two types of custom rules:
 
 - **Project Rules**: Apply only to the current project workspace
 - **Global Rules**: Apply across all projects and workspaces
@@ -33,35 +33,35 @@ Kilo Code supports two types of custom rules:
 
 ### Project Rules
 
-Project rules are configured via the `instructions` key in your project's `kilo.jsonc` file. You can edit this file directly or use the **Settings** webview to manage the `instructions` configuration. Each entry points to a file path or glob pattern:
+Project rules are configured via the `instructions` key in your project's `devil.jsonc` file. You can edit this file directly or use the **Settings** webview to manage the `instructions` configuration. Each entry points to a file path or glob pattern:
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
-  "instructions": [".kilo/rules/formatting.md", ".kilo/rules/*.md"],
+  "instructions": [".devil/rules/formatting.md", ".devil/rules/*.md"],
 }
 ```
 
-You can also place rule files in the **`.kilo/`** directory structure:
+You can also place rule files in the **`.devil/`** directory structure:
 
 ```
 project/
-├── .kilo/
+├── .devil/
 │   ├── rules/
 │   │   ├── formatting.md
 │   │   ├── restricted_files.md
 │   │   └── naming_conventions.md
-├── kilo.json
+├── devil.json
 ├── src/
 └── ...
 ```
 
 ### Global Rules
 
-Global rules are configured via the `instructions` key in your global `kilo.jsonc` config file (typically at `~/.config/kilo/kilo.jsonc`).
+Global rules are configured via the `instructions` key in your global `devil.jsonc` config file (typically at `~/.config/devil/devil.jsonc`).
 
 {% callout type="note" title="Migration" %}
-The extension is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended.
+The extension is backward compatible with `.devilcode/rules/` directories. Existing rules will continue to work, but migrating to `devil.jsonc` is recommended.
 {% /callout %}
 
 {% /tab %}
@@ -69,35 +69,35 @@ The extension is backward compatible with `.kilocode/rules/` directories. Existi
 
 ### Project Rules
 
-Project rules are configured via the `instructions` key in your project's `kilo.jsonc` file. Each entry points to a file path or glob pattern:
+Project rules are configured via the `instructions` key in your project's `devil.jsonc` file. Each entry points to a file path or glob pattern:
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
-  "instructions": [".kilo/rules/formatting.md", ".kilo/rules/*.md"],
+  "instructions": [".devil/rules/formatting.md", ".devil/rules/*.md"],
 }
 ```
 
-You can also place rule files in the **`.kilo/`** directory structure:
+You can also place rule files in the **`.devil/`** directory structure:
 
 ```
 project/
-├── .kilo/
+├── .devil/
 │   ├── rules/
 │   │   ├── formatting.md
 │   │   ├── restricted_files.md
 │   │   └── naming_conventions.md
-├── kilo.json
+├── devil.json
 ├── src/
 └── ...
 ```
 
 ### Global Rules
 
-Global rules are configured via the `instructions` key in your global `kilo.jsonc` config file (typically at `~/.config/kilo/kilo.jsonc`).
+Global rules are configured via the `instructions` key in your global `devil.jsonc` config file (typically at `~/.config/devil/devil.jsonc`).
 
 {% callout type="note" title="Migration" %}
-The CLI is backward compatible with `.kilocode/rules/` directories. Existing rules will continue to work, but migrating to `kilo.jsonc` is recommended.
+The CLI is backward compatible with `.devilcode/rules/` directories. Existing rules will continue to work, but migrating to `devil.jsonc` is recommended.
 {% /callout %}
 
 {% /tab %}
@@ -105,11 +105,11 @@ The CLI is backward compatible with `.kilocode/rules/` directories. Existing rul
 
 ### Project Rules
 
-Custom rules are primarily loaded from the **`.kilocode/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
+Custom rules are primarily loaded from the **`.devilcode/rules/` directory**. This is the recommended approach for organizing your project-specific rules. Each rule is typically placed in its own Markdown file with a descriptive name:
 
 ```
 project/
-├── .kilocode/
+├── .devilcode/
 │   ├── rules/
 │   │   ├── formatting.md
 │   │   ├── restricted_files.md
@@ -123,7 +123,7 @@ project/
 Global rules are stored in your home directory and apply to all projects:
 
 ```
-~/.kilocode/
+~/.devilcode/
 ├── rules/
 │   ├── coding_standards.md
 │   ├── security_guidelines.md
@@ -138,19 +138,19 @@ Global rules are stored in your home directory and apply to all projects:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Rules are managed by editing the `instructions` array in your `kilo.jsonc` config file. You can also use the **Settings** webview in VS Code to edit the configuration.
+Rules are managed by editing the `instructions` array in your `devil.jsonc` config file. You can also use the **Settings** webview in VS Code to edit the configuration.
 
 - **Add a rule**: Add a file path or glob pattern to the `instructions` array
 - **Remove a rule**: Remove the entry from the array
-- **Disable a rule temporarily**: Comment out the line in `kilo.jsonc` (JSONC supports `//` comments)
+- **Disable a rule temporarily**: Comment out the line in `devil.jsonc` (JSONC supports `//` comments)
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
   "instructions": [
-    ".kilo/rules/formatting.md",
-    // ".kilo/rules/experimental.md"  -- temporarily disabled
-    ".kilo/rules/naming_conventions.md",
+    ".devil/rules/formatting.md",
+    // ".devil/rules/experimental.md"  -- temporarily disabled
+    ".devil/rules/naming_conventions.md",
   ],
 }
 ```
@@ -158,19 +158,19 @@ Rules are managed by editing the `instructions` array in your `kilo.jsonc` confi
 {% /tab %}
 {% tab label="CLI" %}
 
-Rules are managed by editing the `instructions` array in your `kilo.jsonc` config file directly.
+Rules are managed by editing the `instructions` array in your `devil.jsonc` config file directly.
 
 - **Add a rule**: Add a file path or glob pattern to the `instructions` array
 - **Remove a rule**: Remove the entry from the array
-- **Disable a rule temporarily**: Comment out the line in `kilo.jsonc` (JSONC supports `//` comments)
+- **Disable a rule temporarily**: Comment out the line in `devil.jsonc` (JSONC supports `//` comments)
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
   "instructions": [
-    ".kilo/rules/formatting.md",
-    // ".kilo/rules/experimental.md"  -- temporarily disabled
-    ".kilo/rules/naming_conventions.md",
+    ".devil/rules/formatting.md",
+    // ".devil/rules/experimental.md"  -- temporarily disabled
+    ".devil/rules/naming_conventions.md",
   ],
 }
 ```
@@ -178,7 +178,7 @@ Rules are managed by editing the `instructions` array in your `kilo.jsonc` confi
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
+devil Code provides a built-in interface for managing your custom rules without manually editing files in the `.devilcode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the devil Code window.
 
 You can access the rules management UI to:
 
@@ -199,29 +199,29 @@ The built-in rules management UI is available for general rules only. Mode-speci
 {% tabs %}
 {% tab label="VSCode" %}
 
-Rules are loaded in the order they appear in the `instructions` array in `kilo.jsonc`:
+Rules are loaded in the order they appear in the `instructions` array in `devil.jsonc`:
 
-1. **Global instructions** from the global `kilo.jsonc` config
-2. **Project instructions** from the project's `kilo.jsonc`
+1. **Global instructions** from the global `devil.jsonc` config
+2. **Project instructions** from the project's `devil.jsonc`
 
 Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives.
 
 {% callout type="note" title="Backward Compatibility" %}
-If `.kilocode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `kilo.jsonc`.
+If `.devilcode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `devil.jsonc`.
 {% /callout %}
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Rules are loaded in the order they appear in the `instructions` array in `kilo.jsonc`:
+Rules are loaded in the order they appear in the `instructions` array in `devil.jsonc`:
 
-1. **Global instructions** from the global `kilo.jsonc` config
-2. **Project instructions** from the project's `kilo.jsonc`
+1. **Global instructions** from the global `devil.jsonc` config
+2. **Project instructions** from the project's `devil.jsonc`
 
 Files matched by glob patterns are loaded in filesystem order. Project-level instructions take precedence over global instructions for conflicting directives.
 
 {% callout type="note" title="Backward Compatibility" %}
-If `.kilocode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `kilo.jsonc`.
+If `.devilcode/rules/` directories exist in your project, their contents are automatically included for backward compatibility. To fully migrate, move your rule files and reference them in `devil.jsonc`.
 {% /callout %}
 
 {% /tab %}
@@ -231,25 +231,25 @@ If `.kilocode/rules/` directories exist in your project, their contents are auto
 
 Rules are loaded in the following priority order:
 
-1. **Global rules** from `~/.kilocode/rules/` directory
-2. **Project rules** from `.kilocode/rules/` directory
+1. **Global rules** from `~/.devilcode/rules/` directory
+2. **Project rules** from `.devilcode/rules/` directory
 3. **Legacy fallback files** (for backward compatibility):
    - `.roorules`
    - `.clinerules`
-   - `.kilocoderules` (deprecated)
+   - `.devilcoderules` (deprecated)
 
 When both global and project rules exist, they are combined with project rules taking precedence over global rules for conflicting directives.
 
 {% callout type="note" %}
-We strongly recommend keeping your rules in the `.kilocode/rules/` folder as it provides better organization and is the preferred approach for future versions. The legacy file-based approach is maintained for backward compatibility but may be subject to change in future releases.
+We strongly recommend keeping your rules in the `.devilcode/rules/` folder as it provides better organization and is the preferred approach for future versions. The legacy file-based approach is maintained for backward compatibility but may be subject to change in future releases.
 {% /callout %}
 
 ### Mode-Specific Rules
 
 The system also supports mode-specific rules with their own priority order:
 
-1. First, it checks for `.kilocode/rules-${mode}/` directory
-2. If that doesn't exist or is empty, it falls back to `.kilocoderules-${mode}` file (deprecated)
+1. First, it checks for `.devilcode/rules-${mode}/` directory
+2. If that doesn't exist or is empty, it falls back to `.devilcoderules-${mode}` file (deprecated)
 
 Mode-specific rules are only supported at the project level. When both generic and mode-specific rules exist, mode-specific rules take priority.
 
@@ -263,34 +263,34 @@ Mode-specific rules are only supported at the project level. When both generic a
 
 ### Using the Settings UI or Config File
 
-1. Create a `kilo.jsonc` file in your project root (if it doesn't exist)
-2. Create a `.kilo/rules/` directory (or any directory you prefer)
+1. Create a `devil.jsonc` file in your project root (if it doesn't exist)
+2. Create a `.devil/rules/` directory (or any directory you prefer)
 3. Write your rule as a Markdown file in that directory
-4. Add the file path or a glob pattern to the `instructions` array in `kilo.jsonc`
+4. Add the file path or a glob pattern to the `instructions` array in `devil.jsonc`
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
-  "instructions": [".kilo/rules/my-new-rule.md"],
+  "instructions": [".devil/rules/my-new-rule.md"],
 }
 ```
 
-Rules are applied on the next interaction. You can also edit `kilo.jsonc` through the **Settings** webview in VS Code.
+Rules are applied on the next interaction. You can also edit `devil.jsonc` through the **Settings** webview in VS Code.
 
 {% /tab %}
 {% tab label="CLI" %}
 
 ### Using the Config File
 
-1. Create a `kilo.jsonc` file in your project root (if it doesn't exist)
-2. Create a `.kilo/rules/` directory (or any directory you prefer)
+1. Create a `devil.jsonc` file in your project root (if it doesn't exist)
+2. Create a `.devil/rules/` directory (or any directory you prefer)
 3. Write your rule as a Markdown file in that directory
-4. Add the file path or a glob pattern to the `instructions` array in `kilo.jsonc`
+4. Add the file path or a glob pattern to the `instructions` array in `devil.jsonc`
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
-  "instructions": [".kilo/rules/my-new-rule.md"],
+  "instructions": [".devil/rules/my-new-rule.md"],
 }
 ```
 
@@ -301,11 +301,11 @@ Rules are applied on the next interaction.
 
 ### Using the UI Interface
 
-{% image src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Kilo Code" width="400" /%}
+{% image src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in devil Code" width="400" /%}
 
 The easiest way to create and manage rules is through the built-in UI:
 
-1. Access the rules management interface from the Kilo Code panel
+1. Access the rules management interface from the devil Code panel
 2. Choose between creating project-specific or global rules
 3. Use the interface to create, edit, or toggle rules
 4. Rules are automatically saved and applied immediately
@@ -316,19 +316,19 @@ To create rules manually:
 
 **For Project Rules:**
 
-1. Create the `.kilocode/rules/` directory if it doesn't already exist
+1. Create the `.devilcode/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
 
 **For Global Rules:**
 
-1. Create the `~/.kilocode/rules/` directory if it doesn't already exist
+1. Create the `~/.devilcode/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
 
-Rules will be automatically applied to all future Kilo Code interactions. Any new changes will be applied immediately.
+Rules will be automatically applied to all future devil Code interactions. Any new changes will be applied immediately.
 
 {% /tab %}
 {% /tabs %}
@@ -359,7 +359,7 @@ Files in the list contain sensitive data, they MUST NOT be read
 
 This rule prevents the AI from reading or accessing sensitive files, even if explicitly requested to do so.
 
-{% image src="/docs/img/custom-rules/custom-rules.png" alt="Kilo Code ignores request to read sensitive file" width="600" /%}
+{% image src="/docs/img/custom-rules/custom-rules.png" alt="devil Code ignores request to read sensitive file" width="600" /%}
 
 ## Use Cases
 
@@ -430,9 +430,9 @@ If your custom rules aren't being properly followed:
 3. **Check rule locations**:
    - **Check rule status in the UI**: Use the rules management interface to verify that your rules are active and properly loaded
    - Ensure rules are in supported locations:
-     - Global rules: `~/.kilocode/rules/` directory
-     - Project rules: `.kilocode/rules/` directory
-     - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
+     - Global rules: `~/.devilcode/rules/` directory
+     - Project rules: `.devilcode/rules/` directory
+     - Legacy files: `.devilcoderules`, `.roorules`, or `.clinerules`
    - **Restart VS Code** to ensure the rules are properly loaded
 
 {% /tab %}

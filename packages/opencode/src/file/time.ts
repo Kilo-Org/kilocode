@@ -54,7 +54,7 @@ export namespace FileTime {
   }
 
   export async function assert(sessionID: string, filepath: string) {
-    if (Flag.KILO_DISABLE_FILETIME_CHECK === true) {
+    if (Flag.DEVIL_DISABLE_FILETIME_CHECK === true) {
       return
     }
 

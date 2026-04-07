@@ -1,15 +1,15 @@
 ---
 title: "Custom Instructions"
-description: "Provide custom instructions to guide Kilo Code"
+description: "Provide custom instructions to guide devil Code"
 ---
 
 # Custom Instructions
 
-Custom Instructions allow you to personalize how Kilo Code behaves, providing specific guidance that shapes responses, coding style, and decision-making processes. Both the **VSCode** and **CLI** versions support custom instructions, though the mechanisms differ.
+Custom Instructions allow you to personalize how devil Code behaves, providing specific guidance that shapes responses, coding style, and decision-making processes. Both the **VSCode** and **CLI** versions support custom instructions, though the mechanisms differ.
 
 ## What Are Custom Instructions?
 
-Custom Instructions define specific Extension behaviors, preferences, and constraints beyond Kilo's basic role definition. Examples include coding style, documentation standards, testing requirements, and workflow guidelines.
+Custom Instructions define specific Extension behaviors, preferences, and constraints beyond devil's basic role definition. Examples include coding style, documentation standards, testing requirements, and workflow guidelines.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -29,9 +29,9 @@ These prompts are injected into the agent's system prompt and apply across all s
 
 ## Instruction Files
 
-Kilo automatically discovers instruction files at your project root and in parent directories (via `findUp`). The following filenames are recognized:
+devil automatically discovers instruction files at your project root and in parent directories (via `findUp`). The following filenames are recognized:
 
-- **`AGENTS.md`** — The primary instruction file for Kilo
+- **`AGENTS.md`** — The primary instruction file for devil
 - **`CLAUDE.md`** — Also supported for compatibility
 - **`CONTEXT.md`** — Additional project context
 
@@ -41,7 +41,7 @@ Place any of these files at your project root to provide project-wide instructio
 
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
-- **Kilo:** `~/.config/kilo/AGENTS.md`
+- **devil:** `~/.config/devil/AGENTS.md`
 - **Claude-compatible:** `~/.claude/CLAUDE.md`
 
 Project-level instructions are loaded before global instructions and apply to every session.
@@ -54,7 +54,7 @@ This is useful for providing context-specific guidance for different parts of a 
 
 ## Additional Instruction Sources
 
-The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. You can manage these in **Settings → Agent Behaviour → Rules** subtab.
+The `instructions` key in `devil.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. You can manage these in **Settings → Agent Behaviour → Rules** subtab.
 
 ```yaml
 # Examples of instruction sources
@@ -68,9 +68,9 @@ instructions:
 URL-based instruction sources are fetched at session start with a 5-second timeout. If the URL is unreachable, the instruction source is silently skipped.
 {% /callout %}
 
-## Legacy `.kilocoderules` Support
+## Legacy `.devilcoderules` Support
 
-If your project contains `.kilocoderules` files from the VSCode extension, these are still loaded via auto-migration. However, migrating to `AGENTS.md` is recommended for new projects.
+If your project contains `.devilcoderules` files from the VSCode extension, these are still loaded via auto-migration. However, migrating to `AGENTS.md` is recommended for new projects.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -79,10 +79,10 @@ The CLI provides multiple layers of instruction configuration — from per-agent
 
 ## Per-Agent Prompts
 
-Each agent can have its own custom prompt defined in its `.md` file (the markdown body) or via the `agent.<name>.prompt` key in `kilo.jsonc`:
+Each agent can have its own custom prompt defined in its `.md` file (the markdown body) or via the `agent.<name>.prompt` key in `devil.jsonc`:
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
   "agent": {
     "code": {
@@ -92,7 +92,7 @@ Each agent can have its own custom prompt defined in its `.md` file (the markdow
 }
 ```
 
-Or as the markdown body in `.kilo/agents/code.md`:
+Or as the markdown body in `.devil/agents/code.md`:
 
 ```markdown
 ---
@@ -106,9 +106,9 @@ These prompts are injected into the agent's system prompt and apply across all s
 
 ## Instruction Files
 
-Kilo automatically discovers instruction files at your project root and in parent directories (via `findUp`). The following filenames are recognized:
+devil automatically discovers instruction files at your project root and in parent directories (via `findUp`). The following filenames are recognized:
 
-- **`AGENTS.md`** — The primary instruction file for Kilo
+- **`AGENTS.md`** — The primary instruction file for devil
 - **`CLAUDE.md`** — Also supported for compatibility
 - **`CONTEXT.md`** — Additional project context
 
@@ -118,7 +118,7 @@ Place any of these files at your project root to provide project-wide instructio
 
 For instructions that apply across all your projects, place an `AGENTS.md` file in your global config directory:
 
-- **Kilo:** `~/.config/kilo/AGENTS.md`
+- **devil:** `~/.config/devil/AGENTS.md`
 - **Claude-compatible:** `~/.claude/CLAUDE.md`
 
 Project-level instructions are loaded before global instructions and apply to every session.
@@ -131,10 +131,10 @@ This is useful for providing context-specific guidance for different parts of a 
 
 ## Additional Instruction Sources
 
-The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. Configure these in your `kilo.jsonc`:
+The `instructions` key in `devil.jsonc` accepts an array of paths, globs, or URLs pointing to additional instruction files. Configure these in your `devil.jsonc`:
 
 ```jsonc
-// kilo.jsonc
+// devil.jsonc
 {
   "instructions": [
     "./docs/coding-standards.md",
@@ -148,9 +148,9 @@ The `instructions` key in `kilo.jsonc` accepts an array of paths, globs, or URLs
 URL-based instruction sources are fetched at session start with a 5-second timeout. If the URL is unreachable, the instruction source is silently skipped.
 {% /callout %}
 
-## Legacy `.kilocoderules` Support
+## Legacy `.devilcoderules` Support
 
-If your project contains `.kilocoderules` files from the VSCode extension, these are still loaded via auto-migration. However, migrating to `AGENTS.md` is recommended for new projects.
+If your project contains `.devilcoderules` files from the VSCode extension, these are still loaded via auto-migration. However, migrating to `AGENTS.md` is recommended for new projects.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -163,9 +163,9 @@ Custom Instructions are IDE-wide and are applied across all workspaces and maint
 
 **How to set them:**
 
-{% image src="/docs/img/custom-instructions/custom-instructions.png" alt="Kilo Code Modes tab showing global custom instructions interface" width="600" caption="Kilo Code Modes tab showing global custom instructions interface" /%}
+{% image src="/docs/img/custom-instructions/custom-instructions.png" alt="devil Code Modes tab showing global custom instructions interface" width="600" caption="devil Code Modes tab showing global custom instructions interface" /%}
 
-1.  **Open Modes Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
+1.  **Open Modes Tab:** Click the <Codicon name="notebook" /> icon in the devil Code top menu bar
 2.  **Find Section:** Find the "Custom Instructions for All Modes" section
 3.  **Enter Instructions:** Enter your instructions in the text area
 4.  **Save Changes:** Click "Done" to save your changes
@@ -174,8 +174,8 @@ Custom Instructions are IDE-wide and are applied across all workspaces and maint
 
 Mode-specific instructions can be set using the Modes Tab
 
-    {% image src="/docs/img/custom-instructions/custom-instructions-3.png" alt="Kilo Code Modes tab showing mode-specific custom instructions interface" width="600" caption="Kilo Code Modes tab showing mode-specific custom instructions interface" /%}
-    * **Open Tab:** Click the <Codicon name="notebook" /> icon in the Kilo Code top menu bar
+    {% image src="/docs/img/custom-instructions/custom-instructions-3.png" alt="devil Code Modes tab showing mode-specific custom instructions interface" width="600" caption="devil Code Modes tab showing mode-specific custom instructions interface" /%}
+    * **Open Tab:** Click the <Codicon name="notebook" /> icon in the devil Code top menu bar
     * **Select Mode:** Under the Modes heading, click the button for the mode you want to customize
     * **Enter Instructions:** Enter your instructions in the text area under "Mode-specific Custom Instructions (optional)"
     * **Save Changes:** Click "Done" to save your changes
@@ -189,11 +189,11 @@ If the mode itself is global (not workspace-specific), any custom instructions y
 
 For version-controlled mode instructions, use the mode rules file paths documented in [Custom Modes](/docs/customize/custom-modes#mode-specific-instructions-via-filesdirectories):
 
-- Preferred: `.kilo/rules-{mode-slug}/` (directory)
-- Fallback: `.kilocoderules-{mode-slug}` (single file)
+- Preferred: `.devil/rules-{mode-slug}/` (directory)
+- Fallback: `.devilcoderules-{mode-slug}` (single file)
 
 {% callout type="info" title="Legacy Naming Note" %}
-Only `.kilocoderules-{mode-slug}` is recognized as the legacy fallback. Older naming like `.clinerules-{mode-slug}` is not supported.
+Only `.devilcoderules-{mode-slug}` is recognized as the legacy fallback. Older naming like `.clinerules-{mode-slug}` is not supported.
 {% /callout %}
 
 {% /tab %}

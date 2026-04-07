@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
+import { createDevilClient, type DevilClient, type Event } from "@devilcode/sdk/v2/client"
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
@@ -22,12 +22,12 @@ type DirectoryProvider = () => string[]
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
 /**
- * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
- * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
+ * Shared connection service that owns the single ServerManager, DevilClient (SDK), and SdkSSEAdapter.
+ * Multiple DevilProvider instances subscribe to it for SSE events and state changes.
  */
-export class KiloConnectionService {
+export class DevilConnectionService {
   private readonly serverManager: ServerManager
-  private client: KiloClient | null = null
+  private client: DevilClient | null = null
   private sseClient: SdkSSEAdapter | null = null
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
@@ -84,7 +84,7 @@ export class KiloConnectionService {
   /**
    * Get the shared SDK client. Throws if not connected.
    */
-  getClient(): KiloClient {
+  getClient(): DevilClient {
     if (!this.client) {
       throw new Error("Not connected — call connect() first")
     }
@@ -159,7 +159,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Subscribe to notification dismiss events broadcast from any KiloProvider. Returns unsubscribe function.
+   * Subscribe to notification dismiss events broadcast from any DevilProvider. Returns unsubscribe function.
    */
   onNotificationDismissed(listener: NotificationDismissListener): () => void {
     this.notificationDismissListeners.add(listener)
@@ -169,7 +169,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a notification dismiss event to all subscribed KiloProvider instances.
+   * Broadcast a notification dismiss event to all subscribed DevilProvider instances.
    */
   notifyNotificationDismissed(notificationId: string): void {
     for (const listener of this.notificationDismissListeners) {
@@ -178,7 +178,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Subscribe to language change events broadcast from any KiloProvider. Returns unsubscribe function.
+   * Subscribe to language change events broadcast from any DevilProvider. Returns unsubscribe function.
    */
   onLanguageChanged(listener: LanguageChangeListener): () => void {
     this.languageChangeListeners.add(listener)
@@ -188,7 +188,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a language change event to all subscribed KiloProvider instances.
+   * Broadcast a language change event to all subscribed DevilProvider instances.
    */
   notifyLanguageChanged(locale: string): void {
     for (const listener of this.languageChangeListeners) {
@@ -197,7 +197,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Subscribe to profile change events broadcast from any KiloProvider. Returns unsubscribe function.
+   * Subscribe to profile change events broadcast from any DevilProvider. Returns unsubscribe function.
    */
   onProfileChanged(listener: ProfileChangeListener): () => void {
     this.profileChangeListeners.add(listener)
@@ -207,7 +207,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a profile change event to all subscribed KiloProvider instances.
+   * Broadcast a profile change event to all subscribed DevilProvider instances.
    */
   notifyProfileChanged(data: unknown): void {
     for (const listener of this.profileChangeListeners) {
@@ -216,7 +216,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
+   * Subscribe to migration-complete events broadcast from any DevilProvider. Returns unsubscribe function.
    */
   onMigrationComplete(listener: MigrationCompleteListener): () => void {
     this.migrationCompleteListeners.add(listener)
@@ -226,7 +226,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
+   * Broadcast a migration-complete event to all subscribed DevilProvider instances.
    */
   notifyMigrationComplete(): void {
     for (const listener of this.migrationCompleteListeners) {
@@ -235,7 +235,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Subscribe to favorites change events broadcast from any KiloProvider. Returns unsubscribe function.
+   * Subscribe to favorites change events broadcast from any DevilProvider. Returns unsubscribe function.
    */
   onFavoritesChanged(listener: FavoritesChangeListener): () => void {
     this.favoritesChangeListeners.add(listener)
@@ -245,7 +245,7 @@ export class KiloConnectionService {
   }
 
   /**
-   * Broadcast a favorites change event to all subscribed KiloProvider instances.
+   * Broadcast a favorites change event to all subscribed DevilProvider instances.
    */
   notifyFavoritesChanged(favorites: Array<{ providerID: string; modelID: string }>): void {
     for (const listener of this.favoritesChangeListeners) {
@@ -267,7 +267,7 @@ export class KiloConnectionService {
 
   /**
    * Register a callback that returns workspace directories tracked by a
-   * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
+   * DevilProvider (root + worktree dirs). Used by drainPendingPrompts() to
    * cover all active Instance directories across every provider.
    */
   registerDirectoryProvider(provider: DirectoryProvider): () => void {
@@ -279,7 +279,7 @@ export class KiloConnectionService {
 
   /**
    * Reject all pending permission requests and questions across every
-   * directory known to any KiloProvider **and** every project the CLI
+   * directory known to any DevilProvider **and** every project the CLI
    * backend has ever opened. The project list covers worktree sessions
    * whose provider was disposed (panel/sidebar closed) while the CLI
    * backend kept running.
@@ -303,7 +303,7 @@ export class KiloConnectionService {
     }
 
     // Also include every project directory the CLI backend knows about.
-    // This covers worktree sessions whose KiloProvider was already disposed.
+    // This covers worktree sessions whose DevilProvider was already disposed.
     const { data: projects, error: projectsErr } = await this.client.project.list()
     if (projectsErr) throw new Error(`Failed to list projects: ${String(projectsErr)}`)
     if (projects) {
@@ -391,7 +391,7 @@ export class KiloConnectionService {
       }
       const healthy = await this.checkHealth(baseUrl, password)
       if (!healthy && this.state === "connected") {
-        console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
+        console.warn("[Devil New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
         this.sseClient?.reconnect()
       }
     }, HEALTH_POLL_INTERVAL_MS)
@@ -439,7 +439,7 @@ export class KiloConnectionService {
 
     // Create SDK client with Basic Auth header
     const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
-    this.client = createKiloClient({
+    this.client = createDevilClient({
       baseUrl: config.baseUrl,
       headers: {
         Authorization: authHeader,

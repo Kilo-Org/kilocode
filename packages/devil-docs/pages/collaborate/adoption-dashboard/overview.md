@@ -20,7 +20,7 @@ This dashboard is designed for **team leads, engineering managers, and executive
 
 ## Accessing the Dashboard
 
-1. Navigate to [app.kilo.ai](https://app.kilo.ai) and sign in
+1. Navigate to [app.devil.ai](https://app.devil.ai) and sign in
 2. Select your organization
 3. Click the **Usage** tab in the dashboard navigation
 4. The AI Adoption Score card appears at the top of the usage view

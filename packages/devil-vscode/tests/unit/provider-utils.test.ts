@@ -81,7 +81,7 @@ describe("findModel", () => {
 
 describe("isModelValid", () => {
   const providers = {
-    kilo: makeProvider("kilo", "Kilo Gateway", ["kilo-auto/free"]),
+    kilo: makeProvider("kilo", "Devil Gateway", ["kilo-auto/free"]),
     openai: makeProvider("openai", "OpenAI", ["gpt-4o"]),
   }
 

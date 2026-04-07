@@ -1,16 +1,16 @@
 /**
- * Permission handlers — extracted from KiloProvider.
+ * Permission handlers — extracted from DevilProvider.
  *
  * Manages permission responses (once/always/reject) and recovery of
  * pending permissions after SSE reconnections. No vscode dependency.
  */
 
-import type { KiloClient, PermissionRequest } from "@kilocode/sdk/v2/client"
+import type { DevilClient, PermissionRequest } from "@devilcode/sdk/v2/client"
 
 export type RecoverablePermission = PermissionRequest
 
 export interface PermissionContext {
-  readonly client: KiloClient | null
+  readonly client: DevilClient | null
   readonly currentSessionId: string | undefined
   readonly trackedSessionIds: Set<string>
   readonly sessionDirectories: ReadonlyMap<string, string>
@@ -49,7 +49,7 @@ export async function handlePermissionResponse(
 
   const target = sessionID || ctx.currentSessionId
   if (!target) {
-    console.error("[Kilo New] KiloProvider: No sessionID for permission response")
+    console.error("[Devil New] DevilProvider: No sessionID for permission response")
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
     return
   }
@@ -75,7 +75,7 @@ export async function handlePermissionResponse(
       { throwOnError: true },
     )
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to respond to permission:", error)
+    console.error("[Devil New] DevilProvider: Failed to respond to permission:", error)
     ctx.postMessage({ type: "permissionError", permissionID: permissionId })
   }
 }
@@ -112,6 +112,6 @@ export async function fetchAndSendPendingPermissions(ctx: PermissionContext): Pr
       }
     }
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to fetch pending permissions:", error)
+    console.error("[Devil New] DevilProvider: Failed to fetch pending permissions:", error)
   }
 }

@@ -3,7 +3,7 @@
  *
  * These tests verify that:
  * 1. Every message type named in ExtensionMessage has a corresponding interface/type definition
- * 2. Every WebviewMessage type handled in KiloProvider has a corresponding member in the WebviewMessage union
+ * 2. Every WebviewMessage type handled in DevilProvider has a corresponding member in the WebviewMessage union
  * 3. The message types used by mapSSEEventToWebviewMessage exist in ExtensionMessage
  *
  * These are static analysis tests - they read source files and check consistency.
@@ -15,8 +15,8 @@ import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const MESSAGES_FILE = path.join(ROOT, "webview-ui/src/types/messages.ts")
-const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
-const KILO_PROVIDER_UTILS_FILE = path.join(ROOT, "src/kilo-provider-utils.ts")
+const DEVIL_PROVIDER_FILE = path.join(ROOT, "src/DevilProvider.ts")
+const DEVIL_PROVIDER_UTILS_FILE = path.join(ROOT, "src/kilo-provider-utils.ts")
 
 function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8")
@@ -65,9 +65,9 @@ describe("ExtensionMessage type members", () => {
   })
 })
 
-describe("KiloProvider message handler coverage", () => {
-  it("all WebviewMessage switch cases in KiloProvider exist in WebviewMessage union", () => {
-    const providerContent = readFile(KILO_PROVIDER_FILE)
+describe("DevilProvider message handler coverage", () => {
+  it("all WebviewMessage switch cases in DevilProvider exist in WebviewMessage union", () => {
+    const providerContent = readFile(DEVIL_PROVIDER_FILE)
     const messagesContent = readFile(MESSAGES_FILE)
 
     // Extract case labels from handleWebviewMessage switch
@@ -81,14 +81,14 @@ describe("KiloProvider message handler coverage", () => {
 
     expect(
       unrecognized,
-      `KiloProvider switch cases not found in any message type definition: ${unrecognized.join(", ")}`,
+      `DevilProvider switch cases not found in any message type definition: ${unrecognized.join(", ")}`,
     ).toEqual([])
   })
 })
 
 describe("mapSSEEventToWebviewMessage output types", () => {
   it("all output types from mapSSEEventToWebviewMessage exist in ExtensionMessage", () => {
-    const utilsContent = readFile(KILO_PROVIDER_UTILS_FILE)
+    const utilsContent = readFile(DEVIL_PROVIDER_UTILS_FILE)
     const messagesContent = readFile(MESSAGES_FILE)
 
     // Extract type literals used in the return values of mapSSEEventToWebviewMessage

@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./ChatTextAreaAutocomplete"
-import type { KiloConnectionService } from "../../cli-backend"
+import type { DevilConnectionService } from "../../cli-backend"
 
 export interface ChatCompletionRequestMessage {
   type: "requestChatCompletion"
@@ -21,7 +21,7 @@ export interface ChatCompletionResponseSender {
 export async function handleChatCompletionRequest(
   message: ChatCompletionRequestMessage,
   responseSender: ChatCompletionResponseSender,
-  connectionService: KiloConnectionService,
+  connectionService: DevilConnectionService,
 ): Promise<void> {
   const userText = message.text || ""
   const requestId = message.requestId || ""

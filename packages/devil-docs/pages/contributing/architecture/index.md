@@ -1,30 +1,30 @@
 ---
 title: "Architecture Overview"
-description: "Overview of the Kilo platform architecture"
+description: "Overview of the devil platform architecture"
 ---
 
 # Architecture Overview
 
-This document provides a high-level overview of the Kilo platform architecture to help contributors understand how the different components fit together.
+This document provides a high-level overview of the devil platform architecture to help contributors understand how the different components fit together.
 
 ## System Architecture
 
-Kilo is an AI coding platform built around a central CLI engine that powers every client surface — the terminal, VS Code, and the cloud. The architecture follows a layered approach where all clients communicate with the CLI over HTTP + SSE, and the CLI connects to AI providers either directly or through Kilo Cloud.
+devil is an AI coding platform built around a central CLI engine that powers every client surface — the terminal, VS Code, and the cloud. The architecture follows a layered approach where all clients communicate with the CLI over HTTP + SSE, and the CLI connects to AI providers either directly or through devil Cloud.
 
 ```mermaid
 graph LR
-  tui["Kilo CLI (TUI)"]
+  tui["devil CLI (TUI)"]
   vscode["VS Code Extension"]
 
-  subgraph cli ["Kilo CLI Engine"]
+  subgraph cli ["devil CLI Engine"]
     provider["Provider Router"]
   end
 
-  subgraph cloud ["Kilo Cloud"]
-    gateway["Kilo Gateway"]
+  subgraph cloud ["devil Cloud"]
+    gateway["devil Gateway"]
     cloudagent["Cloud Agent"]
-    bot["Kilo Bot"]
-    claw["KiloClaw"]
+    bot["devil Bot"]
+    claw["DevilClaw"]
     review["Code Review"]
     triage["Auto Triage"]
     appbuilder["App Builder"]
@@ -47,15 +47,15 @@ graph LR
   appbuilder --> cloudagent
 ```
 
-## Kilo CLI — The Foundation
+## devil CLI — The Foundation
 
-The CLI (`packages/opencode/`) is the core engine that all products are built on. It contains the AI agent runtime, tool execution, session management, provider integrations, and an HTTP server. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using the `@kilocode/sdk`.
+The CLI (`packages/opencode/`) is the core engine that all products are built on. It contains the AI agent runtime, tool execution, session management, provider integrations, and an HTTP server. Each client spawns or connects to a `devil serve` process and communicates via HTTP + SSE using the `@devilcode/sdk`.
 
 The CLI can run in several modes:
 
-- **`kilo`** — Interactive TUI for terminal-based coding
-- **`kilo run`** — Headless single-prompt execution
-- **`kilo serve`** — HTTP server mode for client integrations
+- **`devil`** — Interactive TUI for terminal-based coding
+- **`devil run`** — Headless single-prompt execution
+- **`devil serve`** — HTTP server mode for client integrations
 
 Key subsystems inside the CLI:
 
@@ -66,7 +66,7 @@ Key subsystems inside the CLI:
 | MCP Servers     | Model Context Protocol support for extending with external tools         |
 | LSP Client      | Language Server Protocol integration for code intelligence               |
 | Session Manager | Persistent session state, conversation history, and checkpoints          |
-| Provider Router | Connects to 500+ AI models via direct APIs or Kilo Gateway               |
+| Provider Router | Connects to 500+ AI models via direct APIs or devil Gateway               |
 | HTTP Server     | REST API + SSE streaming for client communication                        |
 | Config System   | Project and global configuration, modes, and permissions                 |
 
@@ -76,7 +76,7 @@ All clients are thin wrappers over the CLI engine.
 
 ### VS Code Extension
 
-The VS Code extension (`packages/kilo-vscode/`) bundles the CLI binary and spawns `kilo serve` as a child process. It includes:
+The VS Code extension (`packages/devil-vscode/`) bundles the CLI binary and spawns `devil serve` as a child process. It includes:
 
 - **Sidebar Chat** — Primary coding assistant interface
 - **Agent Manager** — Multi-session orchestration panel with git worktree isolation for running parallel tasks
@@ -85,36 +85,36 @@ The VS Code extension (`packages/kilo-vscode/`) bundles the CLI binary and spawn
 
 The built-in terminal UI ships with the CLI itself — a SolidJS interface rendered in the terminal via OpenTUI.
 
-## Kilo Cloud
+## devil Cloud
 
-Kilo Cloud is the hosted platform layer that provides authentication, provider routing, and autonomous agent services. The cloud infrastructure lives in a separate repository.
+devil Cloud is the hosted platform layer that provides authentication, provider routing, and autonomous agent services. The cloud infrastructure lives in a separate repository.
 
-### Kilo Gateway
+### devil Gateway
 
-The gateway (`packages/kilo-gateway/` in this repo, plus API routes in the cloud) handles:
+The gateway (`packages/devil-gateway/` in this repo, plus API routes in the cloud) handles:
 
 - **Authentication** — Device flow auth, token management, and account linking
-- **Provider Routing** — Routes AI requests through Kilo's managed API keys or the user's own keys
+- **Provider Routing** — Routes AI requests through devil's managed API keys or the user's own keys
 - **Model Catalog** — Serves the available model list and provider configuration
 - **Usage & Billing** — Tracks token consumption and manages credits
 
 ### Cloud Agent
 
-A Cloudflare Worker within Kilo Cloud that runs the Kilo CLI in isolated sandbox environments. It powers cloud-based AI coding tasks triggered via the web dashboard, webhooks, or automation workflows. It provides a secure API for:
+A Cloudflare Worker within devil Cloud that runs the devil CLI in isolated sandbox environments. It powers cloud-based AI coding tasks triggered via the web dashboard, webhooks, or automation workflows. It provides a secure API for:
 
 - Creating and managing coding sessions with full GitHub/GitLab integration
 - Running AI tasks in Docker containers with the CLI pre-installed
 - Streaming results back via WebSocket
 
-### Kilo Bot
+### devil Bot
 
 The GitHub/GitLab bot that responds to issue comments and PR mentions. It dispatches work to the Cloud Agent, enabling users to trigger AI coding tasks directly from their repositories.
 
-### KiloClaw
+### DevilClaw
 
 A multi-tenant compute platform running on Fly.io, orchestrated by a Cloudflare Worker. Each user gets a dedicated persistent machine running an OpenClaw gateway, coordinated via Durable Objects for state management and self-healing reconciliation.
 
-{% image src="/docs/img/kiloclaw/kiloclaw-architecture.png" alt="KiloClaw infrastructure architecture diagram" width="800" caption="KiloClaw infrastructure architecture" /%}
+{% image src="/docs/img/DevilClaw/DevilClaw-architecture.png" alt="DevilClaw infrastructure architecture diagram" width="800" caption="DevilClaw infrastructure architecture" /%}
 
 ### Code Review
 
@@ -176,12 +176,12 @@ Git worktree isolation for parallel task execution:
 
 ### Client-Server Communication
 
-All clients communicate with the CLI via its HTTP + SSE API. The `@kilocode/sdk` package provides a TypeScript client:
+All clients communicate with the CLI via its HTTP + SSE API. The `@devilcode/sdk` package provides a TypeScript client:
 
 ```typescript
-import { KiloClient } from "@kilocode/sdk"
+import { DevilClient } from "@devilcode/sdk"
 
-const client = new KiloClient({ baseUrl: "http://localhost:3000" })
+const client = new DevilClient({ baseUrl: "http://localhost:3000" })
 const session = await client.session.create({ ... })
 ```
 
@@ -232,8 +232,8 @@ The project uses:
 
 | Repository                                                | Contents                                                                                                             |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                   |
-| Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, code review, auto triage, billing, and supporting Cloudflare Workers |
+| [Devil-Org/devilcode](https://github.com/Devil-Org/devilcode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                   |
+| Cloud (private)                                           | Web dashboard, Cloud Agent, devil Bot, DevilClaw, code review, auto triage, billing, and supporting Cloudflare Workers |
 
 ## Further Reading
 

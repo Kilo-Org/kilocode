@@ -1,8 +1,8 @@
 import { ResponseMetaData } from "./types"
-import type { KiloConnectionService } from "../cli-backend"
+import type { DevilConnectionService } from "../cli-backend"
 
 const DEFAULT_MODEL = "mistralai/codestral-2508"
-const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
+const PROVIDER_DISPLAY_NAME = "Devil Gateway"
 
 /** Chunk from an LLM streaming response */
 export type ApiStreamChunk =
@@ -17,11 +17,11 @@ export type ApiStreamChunk =
     }
 
 export class AutocompleteModel {
-  private connectionService: KiloConnectionService | null = null
+  private connectionService: DevilConnectionService | null = null
   public profileName: string | null = null
   public profileType: string | null = null
 
-  constructor(connectionService?: KiloConnectionService) {
+  constructor(connectionService?: DevilConnectionService) {
     if (connectionService) {
       this.connectionService = connectionService
     }
@@ -30,7 +30,7 @@ export class AutocompleteModel {
   /**
    * Set the connection service (can be called after construction when service becomes available)
    */
-  public setConnectionService(service: KiloConnectionService): void {
+  public setConnectionService(service: DevilConnectionService): void {
     this.connectionService = service
   }
 

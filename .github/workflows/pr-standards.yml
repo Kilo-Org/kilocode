@@ -5,20 +5,20 @@ on:
     types: [opened, edited, synchronize]
 
 jobs:
-  # kilocode_change start
+  # devilcode_change start
   check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Devil-Org/devilcode' && false # devilcode_change - disabled: not needed in devilcode repo
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
     secrets:
-      kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-      kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
+      devil-maintainer-app-id: ${{ secrets.DEVIL_MAINTAINER_APP_ID }}
+      devil-maintainer-app-secret: ${{ secrets.DEVIL_MAINTAINER_APP_SECRET }}
 
   check-standards:
     needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    # kilocode_change end
+    if: github.repository == 'Devil-Org/devilcode' && false # devilcode_change - disabled: not needed in devilcode repo
+    # devilcode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       pull-requests: write
@@ -88,7 +88,7 @@ jobs:
             - \`refactor:\` or \`refactor(scope):\` code refactoring
             - \`test:\` or \`test(scope):\` adding or updating tests
 
-            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`kilo\`).
+            Where \`scope\` is the package name (e.g., \`app\`, \`desktop\`, \`devil\`).
 
             See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md#pr-titles) for details.`);
               return;
@@ -141,7 +141,7 @@ jobs:
             console.log('PR meets all standards');
 
   check-compliance:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Devil-Org/devilcode' && false # devilcode_change - disabled: not needed in devilcode repo
     runs-on: ubuntu-latest
     permissions:
       contents: read

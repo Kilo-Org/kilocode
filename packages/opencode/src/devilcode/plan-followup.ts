@@ -1,4 +1,4 @@
-import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Telemetry } from "@devilcode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
@@ -123,7 +123,7 @@ export namespace PlanFollowup {
 
   async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
     const state =
-      Flag.KILO_CLIENT === "cli"
+      Flag.DEVIL_CLIENT === "cli"
         ? await Bun.file(path.join(Global.Path.state, "model.json"))
             .text()
             .then(

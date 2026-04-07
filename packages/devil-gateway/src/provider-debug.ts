@@ -1,25 +1,25 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import type { Provider as SDK } from "ai"
-import type { KiloProviderOptions } from "./types.js"
-import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
-import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import type { DevilProviderOptions } from "./types.js"
+import { getDevilUrlFromToken, getApiKey } from "./auth/token.js"
+import { buildDevilHeaders, getDefaultHeaders } from "./headers.js"
+import { DEVIL_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 
 /**
- * Debug version of createKilo with extensive logging
+ * Debug version of createDevil with extensive logging
  */
-export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
-  console.log("\n🔍 [KILO DEBUG] Creating Kilo Provider")
+export function createDevilDebug(options: DevilProviderOptions = {}): SDK {
+  console.log("\n🔍 [KILO DEBUG] Creating Devil Provider")
   console.log("📋 [KILO DEBUG] Options received:", JSON.stringify(options, null, 2))
 
   // Get API key from options or environment
   const apiKey = getApiKey(options)
   console.log("🔑 [KILO DEBUG] API Key extracted:")
-  console.log("  - Source:", options.kilocodeToken ? "kilocodeToken" : options.apiKey ? "apiKey" : "none")
+  console.log("  - Source:", options.devilcodeToken ? "devilcodeToken" : options.apiKey ? "apiKey" : "none")
   console.log("  - Value:", apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : "MISSING!")
 
   // Determine base URL
-  const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
+  const baseApiUrl = getDevilUrlFromToken(options.baseURL ?? DEVIL_API_BASE, apiKey ?? "")
   console.log("🌐 [KILO DEBUG] Base URL resolved:", baseApiUrl)
 
   // Build OpenRouter URL - only append /openrouter/ if not already present
@@ -33,9 +33,9 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
   // Merge custom headers with defaults
   const customHeaders = {
     ...getDefaultHeaders(),
-    ...buildKiloHeaders(undefined, {
-      kilocodeOrganizationId: options.kilocodeOrganizationId,
-      kilocodeTesterWarningsDisabledUntil: undefined,
+    ...buildDevilHeaders(undefined, {
+      devilcodeOrganizationId: options.devilcodeOrganizationId,
+      devilcodeTesterWarningsDisabledUntil: undefined,
     }),
     ...options.headers,
   }
@@ -99,7 +99,7 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
 
   console.log("✅ [KILO DEBUG] Creating OpenRouter provider with configuration\n")
 
-  // Create OpenRouter provider with KiloCode configuration
+  // Create OpenRouter provider with DevilCode configuration
   return createOpenRouter({
     baseURL: openRouterUrl,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,

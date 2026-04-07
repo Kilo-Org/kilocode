@@ -240,14 +240,14 @@ export const TaskHeaderWithTodosAllDone: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// Welcome screen with AccountSwitcher + KiloNotifications
+// Welcome screen with AccountSwitcher + DevilNotifications
 // ---------------------------------------------------------------------------
 
 const MOCK_NOTIFICATION = {
   id: "notif-1",
-  title: "Try BYOK for Kilo Gateway",
-  message: "Bring your own API key for even more flexibility with Kilo Gateway models.",
-  action: { actionText: "Learn more", actionURL: "https://kilo.ai/docs" },
+  title: "Try BYOK for Devil Gateway",
+  message: "Bring your own API key for even more flexibility with Devil Gateway models.",
+  action: { actionText: "Learn more", actionURL: "https://devil.ai/docs" },
 }
 
 /** Mock server context with profile data so AccountSwitcher is visible */
@@ -262,7 +262,7 @@ const mockServer = {
     profile: {
       email: "dev@kilo.dev",
       name: "Dev User",
-      organizations: [{ id: "org-1", name: "Kilo Org", role: "member" }],
+      organizations: [{ id: "org-1", name: "Devil Org", role: "member" }],
     },
     balance: { balance: 5.0 },
     currentOrgId: "org-1",

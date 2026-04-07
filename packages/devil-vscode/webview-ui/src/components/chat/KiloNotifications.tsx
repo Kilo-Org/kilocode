@@ -4,11 +4,11 @@ import { useVSCode } from "../../context/vscode"
 import { useSession } from "../../context/session"
 import { useProvider } from "../../context/provider"
 import { useLanguage } from "../../context/language"
-import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { DEVIL_PROVIDER_ID } from "../../../../src/shared/provider-model"
 import { TelemetryEventName } from "../../../../src/services/telemetry/types"
 import { stripSubProviderPrefix } from "../shared/model-selector-utils"
 
-export const KiloNotifications: Component = () => {
+export const DevilNotifications: Component = () => {
   const { filteredNotifications, dismiss } = useNotifications()
   const vscode = useVSCode()
   const session = useSession()
@@ -49,7 +49,7 @@ export const KiloNotifications: Component = () => {
   const suggestedModel = createMemo(() => {
     const id = current()?.suggestModelId
     if (!id) return undefined
-    const sel = { providerID: KILO_PROVIDER_ID, modelID: id }
+    const sel = { providerID: DEVIL_PROVIDER_ID, modelID: id }
     if (!provider.isModelValid(sel)) return undefined
     return sel
   })

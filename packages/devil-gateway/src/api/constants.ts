@@ -1,19 +1,19 @@
 /**
- * Kilo Gateway Configuration Constants
+ * Devil Gateway Configuration Constants
  * Centralized configuration for all API endpoints, headers, and settings
  */
 
-/** Environment variable for custom Kilo API URL */
-export const ENV_KILO_API_URL = "KILO_API_URL"
+/** Environment variable for custom Devil API URL */
+export const ENV_DEVIL_API_URL = "DEVIL_API_URL"
 
-/** Default Kilo API URL */
-export const DEFAULT_KILO_API_URL = "https://api.kilo.ai"
+/** Default Devil API URL — points to Kilo backend (the rename didn't move infrastructure) */
+export const DEFAULT_DEVIL_API_URL = "https://api.kilo.ai"
 
-/** Base URL for Kilo API - can be overridden by KILO_API_URL env var */
-export const KILO_API_BASE = process.env[ENV_KILO_API_URL] || DEFAULT_KILO_API_URL
+/** Base URL for Devil API - can be overridden by DEVIL_API_URL env var */
+export const DEVIL_API_BASE = process.env[ENV_DEVIL_API_URL] || DEFAULT_DEVIL_API_URL
 
 /** Default base URL for OpenRouter-compatible endpoint */
-export const KILO_OPENROUTER_BASE = `${KILO_API_BASE}/api/openrouter`
+export const DEVIL_OPENROUTER_BASE = `${DEVIL_API_BASE}/api/openrouter`
 
 /** Device auth polling interval in milliseconds */
 export const POLL_INTERVAL_MS = 3000
@@ -43,7 +43,7 @@ export const ANONYMOUS_API_KEY = "anonymous"
 export const MODELS_FETCH_TIMEOUT_MS = 10 * 1000
 
 /**
- * Header constants for KiloCode API requests
+ * Header constants for DevilCode API requests
  */
 export const HEADER_ORGANIZATIONID = "X-KILOCODE-ORGANIZATIONID"
 export const HEADER_TASKID = "X-KILOCODE-TASKID"
@@ -53,7 +53,7 @@ export const HEADER_EDITORNAME = "X-KILOCODE-EDITORNAME"
 export const HEADER_MACHINEID = "X-KILOCODE-MACHINEID"
 
 /** Default editor name value */
-export const DEFAULT_EDITOR_NAME = "Kilo CLI"
+export const DEFAULT_EDITOR_NAME = "Devil CLI"
 
 /** Environment variable name for custom editor name */
 export const ENV_EDITOR_NAME = "KILOCODE_EDITOR_NAME"

@@ -4,7 +4,7 @@ import { Portal, useKeyboard, useRenderer, useTerminalDimensions, type JSX } fro
 import type { TextareaRenderable } from "@opentui/core"
 import { useKeybind } from "../../context/keybind"
 import { useTheme, selectedForeground } from "../../context/theme"
-import type { PermissionRequest } from "@kilocode/sdk/v2"
+import type { PermissionRequest } from "@devilcode/sdk/v2"
 import { useSDK } from "../../context/sdk"
 import { SplitBorder } from "../../component/border"
 import { useSync } from "../../context/sync"
@@ -16,7 +16,7 @@ import { Locale } from "@/util/locale"
 import { Global } from "@/global"
 import { useDialog } from "../../ui/dialog"
 import { useTuiConfig } from "../../context/tui-config"
-import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
+import { ConfigProtection } from "@/devilcode/permission/config-paths" // devilcode_change
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -158,12 +158,12 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
           body={
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
-                {/* kilocode_change */}
+                {/* devilcode_change */}
                 <TextBody title={"This will allow " + props.request.permission + " permanently."} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
-                  {/* kilocode_change */}
+                  {/* devilcode_change */}
                   <text fg={theme.textMuted}>This will allow the following patterns permanently</text>
                   <box>
                     <For each={props.request.always}>
@@ -429,11 +429,11 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             </box>
           )
 
-          // kilocode_change start — hide "Always allow" for config file edits
+          // devilcode_change start — hide "Always allow" for config file edits
           const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
             ? { once: "Allow once", reject: "Reject" }
             : { once: "Allow once", always: "Allow always", reject: "Reject" }
-          // kilocode_change end
+          // devilcode_change end
 
           const body = (
             <Prompt
@@ -510,8 +510,8 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
           <text fg={theme.text}>Reject permission</text>
         </box>
         <box paddingLeft={1}>
-          {/* kilocode_change */}
-          <text fg={theme.textMuted}>Tell Kilo what to do differently</text>
+          {/* devilcode_change */}
+          <text fg={theme.textMuted}>Tell Devil what to do differently</text>
         </box>
       </box>
       <box

@@ -3,10 +3,10 @@ import { useTheme } from "../../context/theme"
 import { useSync } from "../../context/sync"
 import { useDirectory } from "../../context/directory"
 import { useConnected } from "../../component/dialog-model"
-import { useSDK } from "../../context/sdk" // kilocode_change
+import { useSDK } from "../../context/sdk" // devilcode_change
 import { createStore } from "solid-js/store"
 import { useRoute } from "../../context/route"
-import { RemoteIndicator } from "@/kilocode/remote-tui" // kilocode_change
+import { RemoteIndicator } from "@/devilcode/remote-tui" // devilcode_change
 
 export function Footer() {
   const { theme } = useTheme()
@@ -21,7 +21,7 @@ export function Footer() {
   })
   const directory = useDirectory()
   const connected = useConnected()
-  const sdk = useSDK() // kilocode_change
+  const sdk = useSDK() // devilcode_change
 
   const [store, setStore] = createStore({
     welcome: false,

@@ -9,7 +9,7 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 **Why it matters**: Complex workflows have lots of moving parts. Without structure, it's easy to miss steps, duplicate work, or forget what comes next.
 
-{% image src="/docs/img/task-todo-list/task-todo-list-1.png" alt="Task Todo List overview showing interactive checklist in Kilo Code" width="500" /%}
+{% image src="/docs/img/task-todo-list/task-todo-list-1.png" alt="Task Todo List overview showing interactive checklist in devil Code" width="500" /%}
 
 ## How to trigger todo lists
 
@@ -21,18 +21,18 @@ description: "Track and manage tasks with AI-generated todo lists"
 
 **Manual triggers**:
 
-- Ask Kilo to "use the [update_todo_list tool](/docs/automate/tools/update-todo-list)"
+- Ask devil to "use the [update_todo_list tool](/docs/automate/tools/update-todo-list)"
 - Say "create a todo list"
 
-**The bottom line**: Kilo decides what goes in the list, but you can provide feedback during approval dialogs.
+**The bottom line**: devil decides what goes in the list, but you can provide feedback during approval dialogs.
 
 ---
 
 ## How todo lists are updated
 
-Todo lists are managed with the [`update_todo_list` tool](/docs/automate/tools/update-todo-list). Each time Kilo updates the list, it replaces the entire checklist with the latest view of the task.
+Todo lists are managed with the [`update_todo_list` tool](/docs/automate/tools/update-todo-list). Each time devil updates the list, it replaces the entire checklist with the latest view of the task.
 
-Kilo updates the list when:
+devil updates the list when:
 
 - New steps are discovered
 - Items are completed or reprioritized
@@ -44,7 +44,7 @@ Kilo updates the list when:
 
 **Before**: You juggled task steps in your head or scattered notes, constantly wondering "what's next?"
 
-**Now**: Kilo creates structured checklists that update automatically as work progresses. You see exactly where you are and what's coming up.
+**Now**: devil creates structured checklists that update automatically as work progresses. You see exactly where you are and what's coming up.
 
 ---
 
@@ -61,11 +61,11 @@ Click the task header summary to expand the full list inline and jump to the cur
 Full todo interface in chat where you can:
 
 - See all items and their status
-- Edit descriptions when Kilo asks for approval
+- Edit descriptions when devil asks for approval
 - Stage changes using the "Edit" button
 
 **3. Environment Details**
-Background "REMINDERS" table that keeps Kilo informed about current progress
+Background "REMINDERS" table that keeps devil informed about current progress
 
 ## Task status decoded
 
@@ -89,24 +89,24 @@ Background "REMINDERS" table that keeps Kilo informed about current progress
 
 ## Editing todo lists
 
-When Kilo proposes a todo list update, you can edit the list before approving. Use the "Edit" button in the tool block to update item text, add or remove steps, or adjust status. Once approved, Kilo continues with the updated list.
+When devil proposes a todo list update, you can edit the list before approving. Use the "Edit" button in the tool block to update item text, add or remove steps, or adjust status. Once approved, devil continues with the updated list.
 
 ## Common questions
 
 **"Can I create my own todo lists?"**
-Yes, just ask Kilo to use the update_todo_list tool. But Kilo stays in control of the content and workflow.
+Yes, just ask devil to use the update_todo_list tool. But devil stays in control of the content and workflow.
 
 **"What about simple tasks?"**
-Kilo typically skips todo lists for simple tasks. The overhead isn't worth it.
+devil typically skips todo lists for simple tasks. The overhead isn't worth it.
 
 **"Why can't I directly edit the list?"**
-Design choice. Kilo maintains authority over task management to ensure consistent progress tracking. You provide input, Kilo executes.
+Design choice. devil maintains authority over task management to ensure consistent progress tracking. You provide input, devil executes.
 
 ---
 
 ## Settings
 
-You can disable todo lists in Settings -> Advanced -> **Enable todo list tool**. When disabled, Kilo won't create or update todo lists, and the REMINDERS table won't appear in Environment Details.
+You can disable todo lists in Settings -> Advanced -> **Enable todo list tool**. When disabled, devil won't create or update todo lists, and the REMINDERS table won't appear in Environment Details.
 
 {% callout type="tip" title="Pro tip: Auto-approval" %}
 **What it does**: Automatically approves todo list updates without confirmation prompts.

@@ -6,9 +6,9 @@ on:
 
 jobs:
   check-guidelines:
-    # kilocode_change start - disabled for kilo-cli fork (requires OpenCode install and API keys)
+    # devilcode_change start - disabled for kilo-cli fork (requires OpenCode install and API keys)
     if: false
-    # kilocode_change end
+    # devilcode_change end
     # Original condition:
     # if: |
     #   github.event.issue.pull_request &&

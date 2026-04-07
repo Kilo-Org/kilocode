@@ -6,7 +6,7 @@ const RUST_TARGET = Bun.env.TAURI_ENV_TARGET_TRIPLE
 
 const sidecarConfig = getCurrentSidecar(RUST_TARGET)
 
-const binaryPath = windowsify(`../opencode/dist/${sidecarConfig.ocBinary}/bin/kilo`) // kilocode_change
+const binaryPath = windowsify(`../opencode/dist/${sidecarConfig.ocBinary}/bin/kilo`) // devilcode_change
 
 await (sidecarConfig.ocBinary.includes("-baseline")
   ? $`cd ../opencode && bun run build --single --baseline`

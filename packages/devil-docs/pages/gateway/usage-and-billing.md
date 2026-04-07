@@ -1,11 +1,11 @@
 ---
 title: "Usage & Billing"
-description: "Understand how the Kilo AI Gateway tracks costs, manages balances, and enforces organization-level spending controls."
+description: "Understand how the devil.ai Gateway tracks costs, manages balances, and enforces organization-level spending controls."
 ---
 
 # Usage & Billing
 
-The Kilo AI Gateway tracks usage and costs for every request with microdollar precision (1 USD = 1,000,000 microdollars). This enables accurate billing even for very low-cost requests.
+The devil.ai Gateway tracks usage and costs for every request with microdollar precision (1 USD = 1,000,000 microdollars). This enables accurate billing even for very low-cost requests.
 
 ## How billing works
 
@@ -28,13 +28,13 @@ Costs are determined by the upstream provider's pricing based on token usage:
 ### Free and BYOK requests
 
 - **Free models**: Models tagged with `:free` have zero cost -- usage is tracked but not billed
-- **BYOK requests**: When using your own API key, the cost is set to $0 on Kilo's side. You pay the provider directly based on your agreement with them
+- **BYOK requests**: When using your own API key, the cost is set to $0 on devil's side. You pay the provider directly based on your agreement with them
 
 ## Balance management
 
 ### Individual accounts
 
-Your account balance is the difference between total credits purchased and total usage. Check your balance in the [Kilo dashboard](https://app.kilo.ai).
+Your account balance is the difference between total credits purchased and total usage. Check your balance in the [devil dashboard](https://app.devil.ai).
 
 When your balance reaches zero, requests to paid models will return HTTP 402 with a link to add credits:
 
@@ -44,7 +44,7 @@ When your balance reaches zero, requests to paid models will return HTTP 402 wit
     "message": "Insufficient balance. Please add credits to continue.",
     "code": 402,
     "metadata": {
-      "buyCreditsUrl": "https://app.kilo.ai/credits"
+      "buyCreditsUrl": "https://app.devil.ai/credits"
     }
   }
 }

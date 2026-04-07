@@ -1,15 +1,15 @@
 import { test, expect, describe } from "bun:test"
-import { KilocodeConfigInjector } from "../../src/kilocode/config-injector"
+import { DevilcodeConfigInjector } from "../../src/devilcode/config-injector"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
 
-describe("KilocodeConfigInjector", () => {
+describe("DevilcodeConfigInjector", () => {
   describe("buildConfig", () => {
     test("returns empty config when no modes exist", async () => {
       await using tmp = await tmpdir()
 
-      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await DevilcodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
 
       expect(result.configJson).toBe("{}")
       expect(result.warnings).toHaveLength(0)
@@ -19,7 +19,7 @@ describe("KilocodeConfigInjector", () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
-            path.join(dir, ".kilocodemodes"),
+            path.join(dir, ".devilcodemodes"),
             `customModes:
   - slug: translate
     name: Translate
@@ -31,7 +31,7 @@ describe("KilocodeConfigInjector", () => {
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await DevilcodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
       const config = JSON.parse(result.configJson)
 
       expect(config.agent).toBeDefined()
@@ -43,7 +43,7 @@ describe("KilocodeConfigInjector", () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
-            path.join(dir, ".kilocodemodes"),
+            path.join(dir, ".devilcodemodes"),
             `customModes:
   - slug: code
     name: Code
@@ -54,7 +54,7 @@ describe("KilocodeConfigInjector", () => {
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await DevilcodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
 
       expect(result.warnings).toHaveLength(1)
       expect(result.warnings[0]).toContain("code")
@@ -64,7 +64,7 @@ describe("KilocodeConfigInjector", () => {
     test("includes workflows as commands in config", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".devilcode", "workflows")
           await Bun.write(
             path.join(workflowsDir, "code-review.md"),
             "# Code Review\n\nPerform a code review.\n\n## Steps\n\n1. Review",
@@ -72,7 +72,7 @@ describe("KilocodeConfigInjector", () => {
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await DevilcodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
       const config = JSON.parse(result.configJson)
 
       expect(config.command).toBeDefined()
@@ -86,7 +86,7 @@ describe("KilocodeConfigInjector", () => {
         init: async (dir) => {
           // Add a custom mode
           await Bun.write(
-            path.join(dir, ".kilocodemodes"),
+            path.join(dir, ".devilcodemodes"),
             `customModes:
   - slug: translate
     name: Translate
@@ -95,12 +95,12 @@ describe("KilocodeConfigInjector", () => {
       - read`,
           )
           // Add a workflow
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".devilcode", "workflows")
           await Bun.write(path.join(workflowsDir, "deploy.md"), "# Deploy\n\nDeploy the app.")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
+      const result = await DevilcodeConfigInjector.buildConfig({ projectDir: tmp.path, skipGlobalPaths: true })
       const config = JSON.parse(result.configJson)
 
       expect(config.agent).toBeDefined()
@@ -112,12 +112,12 @@ describe("KilocodeConfigInjector", () => {
     test("includes rules in config", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await fs.mkdir(path.join(dir, ".kilocode", "rules"), { recursive: true })
-          await Bun.write(path.join(dir, ".kilocode", "rules", "main.md"), "# Rules")
+          await fs.mkdir(path.join(dir, ".devilcode", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".devilcode", "rules", "main.md"), "# Rules")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -131,12 +131,12 @@ describe("KilocodeConfigInjector", () => {
     test("skips rules when includeRules is false", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await fs.mkdir(path.join(dir, ".kilocode", "rules"), { recursive: true })
-          await Bun.write(path.join(dir, ".kilocode", "rules", "main.md"), "# Rules")
+          await fs.mkdir(path.join(dir, ".devilcode", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".devilcode", "rules", "main.md"), "# Rules")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
         includeRules: false,
@@ -151,7 +151,7 @@ describe("KilocodeConfigInjector", () => {
         init: async (dir) => {
           // Add custom mode
           await Bun.write(
-            path.join(dir, ".kilocodemodes"),
+            path.join(dir, ".devilcodemodes"),
             `customModes:
   - slug: translate
     name: Translate
@@ -160,15 +160,15 @@ describe("KilocodeConfigInjector", () => {
       - read`,
           )
           // Add workflow
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".devilcode", "workflows")
           await Bun.write(path.join(workflowsDir, "deploy.md"), "# Deploy\n\nDeploy the app.")
           // Add rules
-          await fs.mkdir(path.join(dir, ".kilocode", "rules"), { recursive: true })
-          await Bun.write(path.join(dir, ".kilocode", "rules", "main.md"), "# Rules")
+          await fs.mkdir(path.join(dir, ".devilcode", "rules"), { recursive: true })
+          await Bun.write(path.join(dir, ".devilcode", "rules", "main.md"), "# Rules")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -185,11 +185,11 @@ describe("KilocodeConfigInjector", () => {
     test("adds warnings for legacy rule files", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await Bun.write(path.join(dir, ".kilocoderules"), "# Legacy rules")
+          await Bun.write(path.join(dir, ".devilcoderules"), "# Legacy rules")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -200,11 +200,11 @@ describe("KilocodeConfigInjector", () => {
     test("includes ignore patterns in config", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/\n*.env")
+          await Bun.write(path.join(dir, ".devilcodeignore"), "secrets/\n*.env")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -220,11 +220,11 @@ describe("KilocodeConfigInjector", () => {
     test("skips ignore when includeIgnore is false", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/")
+          await Bun.write(path.join(dir, ".devilcodeignore"), "secrets/")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
         includeIgnore: false,
@@ -239,7 +239,7 @@ describe("KilocodeConfigInjector", () => {
         init: async (dir) => {
           // Add custom mode
           await Bun.write(
-            path.join(dir, ".kilocodemodes"),
+            path.join(dir, ".devilcodemodes"),
             `customModes:
   - slug: translate
     name: Translate
@@ -248,11 +248,11 @@ describe("KilocodeConfigInjector", () => {
       - read`,
           )
           // Add ignore patterns
-          await Bun.write(path.join(dir, ".kilocodeignore"), "secrets/")
+          await Bun.write(path.join(dir, ".devilcodeignore"), "secrets/")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -267,11 +267,11 @@ describe("KilocodeConfigInjector", () => {
     test("handles negation patterns in ignore file", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await Bun.write(path.join(dir, ".kilocodeignore"), "*.env\n!.env.example")
+          await Bun.write(path.join(dir, ".devilcodeignore"), "*.env\n!.env.example")
         },
       })
 
-      const result = await KilocodeConfigInjector.buildConfig({
+      const result = await DevilcodeConfigInjector.buildConfig({
         projectDir: tmp.path,
         skipGlobalPaths: true,
       })
@@ -284,21 +284,21 @@ describe("KilocodeConfigInjector", () => {
 
   describe("getEnvVars", () => {
     test("returns empty object for empty config", () => {
-      const envVars = KilocodeConfigInjector.getEnvVars("{}")
+      const envVars = DevilcodeConfigInjector.getEnvVars("{}")
       expect(envVars).toEqual({})
     })
 
     test("returns empty object for empty string", () => {
-      const envVars = KilocodeConfigInjector.getEnvVars("")
+      const envVars = DevilcodeConfigInjector.getEnvVars("")
       expect(envVars).toEqual({})
     })
 
-    test("returns KILO_CONFIG_CONTENT for non-empty config", () => {
+    test("returns DEVIL_CONFIG_CONTENT for non-empty config", () => {
       const config = JSON.stringify({ agent: { test: {} } })
-      const envVars = KilocodeConfigInjector.getEnvVars(config)
+      const envVars = DevilcodeConfigInjector.getEnvVars(config)
 
       expect(envVars).toEqual({
-        KILO_CONFIG_CONTENT: config,
+        DEVIL_CONFIG_CONTENT: config,
       })
     })
   })

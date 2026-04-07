@@ -1,4 +1,4 @@
-import type { KilocodeSessionImportMessageData as Message } from "@kilocode/sdk/v2"
+import type { DevilcodeSessionImportMessageData as Message } from "@devilcode/sdk/v2"
 import type { LegacyApiMessage, LegacyHistoryItem } from "./legacy-types"
 import { createMessageID, createSessionID } from "./ids"
 

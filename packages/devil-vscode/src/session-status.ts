@@ -1,4 +1,4 @@
-import type { KiloClient, SessionStatus } from "@kilocode/sdk/v2/client"
+import type { DevilClient, SessionStatus } from "@devilcode/sdk/v2/client"
 
 /**
  * Returns the number of sessions currently in "busy" state.
@@ -23,7 +23,7 @@ export function getBusySessionCount(map: Map<string, SessionStatus["type"]>): nu
  * fetch briefly returns stale data and the spinner disappears mid-stream.
  */
 export async function seedSessionStatuses(
-  client: KiloClient,
+  client: DevilClient,
   dir: string,
   map: Map<string, SessionStatus["type"]>,
   post: (msg: unknown) => void,
@@ -58,6 +58,6 @@ export async function seedSessionStatuses(
       }
     }
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to seed session statuses:", error)
+    console.error("[Devil New] DevilProvider: Failed to seed session statuses:", error)
   }
 }

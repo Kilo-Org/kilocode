@@ -25,7 +25,7 @@ import "../public/globals.css"
 import type { AppProps } from "next/app"
 import type { MarkdocNextJsPageProps } from "@markdoc/next.js"
 
-const TITLE = "Kilo Code Documentation"
+const TITLE = "devil Code Documentation"
 const DESCRIPTION = "Build, ship, and iterate faster with the most popular open source coding agent."
 
 function collectHeadings(node, sections = []) {
@@ -146,7 +146,7 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
         <link rel="icon" href="/docs/favicon/android-chrome-192x192.png" sizes="192x192" type="image/png" />
         <link rel="icon" href="/docs/favicon/android-chrome-512x512.png" sizes="512x512" type="image/png" />
         <link rel="manifest" href="/docs/site.webmanifest" />
-        <meta name="apple-mobile-web-app-title" content="Kilo Code" />
+        <meta name="apple-mobile-web-app-title" content="devil Code" />
         <meta name="theme-color" content="#617A91" />
         {/* Preconnect to Algolia for better performance */}
         <link rel="preconnect" href="https://PMZUYBQDAK-dsn.algolia.net" crossOrigin="anonymous" />

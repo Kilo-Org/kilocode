@@ -1,13 +1,13 @@
-// Kilo-specific translations and overrides
+// Devil-specific translations and overrides
 // Keys here will override any matching keys from upstream translations
 export const dict = {
-  // Kilo Gateway provider translations
+  // Devil Gateway provider translations
   "provider.connect.kiloGateway.line1":
-    "Kilo Gateway geeft je toegang tot een gecureerde set van betrouwbare, geoptimaliseerde modellen voor coding agents.",
+    "Devil Gateway geeft je toegang tot een gecureerde set van betrouwbare, geoptimaliseerde modellen voor coding agents.",
   "provider.connect.kiloGateway.line2":
     "Met één enkele API key krijg je toegang tot modellen zoals Claude, GPT, Gemini, GLM en meer.",
   "provider.connect.kiloGateway.visit.prefix": "Bezoek ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
+  "provider.connect.kiloGateway.visit.link": "devil.ai",
   "provider.connect.kiloGateway.visit.suffix": " om je API key op te halen.",
 
   // Provider dialog translations

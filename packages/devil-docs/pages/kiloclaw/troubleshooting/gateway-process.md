@@ -1,6 +1,6 @@
 ---
 title: "Gateway Process States"
-description: "Understanding KiloClaw gateway process states"
+description: "Understanding DevilClaw gateway process states"
 ---
 
 # Gateway Process States

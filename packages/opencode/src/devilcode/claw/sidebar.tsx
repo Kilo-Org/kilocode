@@ -1,7 +1,7 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw status sidebar
+ * DevilClaw status sidebar
  *
  * Displays essential instance information: status, bot presence,
  * region, sandbox ID, uptime, and version.
@@ -60,7 +60,7 @@ export function ClawSidebar(props: {
         <box flexShrink={0} gap={1} paddingRight={1}>
           <box paddingRight={1}>
             <text fg={theme.text}>
-              <b>KiloClaw</b>
+              <b>DevilClaw</b>
             </text>
           </box>
 
@@ -133,7 +133,7 @@ export function ClawSidebar(props: {
           <Show when={!props.loading && !props.error && !props.status}>
             <box>
               <text fg={theme.textMuted}>No instance found.</text>
-              <text fg={theme.textMuted}>Visit kilo.ai/claw</text>
+              <text fg={theme.textMuted}>Visit devil.ai/claw</text>
               <text fg={theme.textMuted}>to set one up.</text>
             </box>
           </Show>

@@ -37,7 +37,7 @@ describe("file.ripgrep", () => {
     expect(hasHidden).toBe(false)
   })
 
-  // kilocode_change start - .kilo directory should also be skipped in tree()
+  // devilcode_change start - .kilo directory should also be skipped in tree()
   test("tree skips .kilo directory files", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
@@ -51,7 +51,7 @@ describe("file.ripgrep", () => {
     expect(result).not.toContain(".kilo")
     expect(result).toContain("src")
   })
-  // kilocode_change end
+  // devilcode_change end
 
   test("search returns empty when nothing matches", async () => {
     await using tmp = await tmpdir({

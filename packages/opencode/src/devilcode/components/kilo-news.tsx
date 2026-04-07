@@ -1,7 +1,7 @@
 /**
- * Kilo News Component
+ * Devil News Component
  *
- * Self-contained component that fetches and displays Kilo news/notifications.
+ * Self-contained component that fetches and displays Devil news/notifications.
  * Shows a banner on the home screen; clicking opens a dialog with all news items.
  */
 
@@ -9,23 +9,23 @@ import { createEffect, createMemo, createSignal, on, Show } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { useSDK } from "@tui/context/sdk"
 import { useDialog } from "@tui/ui/dialog"
-import type { KilocodeNotification } from "@kilocode/kilo-gateway"
+import type { DevilcodeNotification } from "@devilcode/kilo-gateway"
 import { NotificationBanner } from "./notification-banner.js"
-import { DialogKiloNotifications } from "./dialog-kilo-notifications.js"
+import { DialogDevilNotifications } from "./dialog-kilo-notifications.js"
 
-export function KiloNews() {
+export function DevilNews() {
   const sync = useSync()
   const sdk = useSDK()
   const dialog = useDialog()
 
-  const [notifications, setNotifications] = createSignal<KilocodeNotification[]>([])
+  const [notifications, setNotifications] = createSignal<DevilcodeNotification[]>([])
   const [fetched, setFetched] = createSignal(false)
-  const isKiloConnected = createMemo(() => sync.data.provider_next.connected.includes("kilo"))
+  const isDevilConnected = createMemo(() => sync.data.provider_next.connected.includes("kilo"))
 
   const openNewsDialog = () => {
     const items = notifications()
     if (items.length > 0) {
-      dialog.replace(() => <DialogKiloNotifications notifications={items} />)
+      dialog.replace(() => <DialogDevilNotifications notifications={items} />)
     }
   }
 
@@ -38,7 +38,7 @@ export function KiloNews() {
         if (fetched()) return
         setFetched(true)
 
-        if (!isKiloConnected()) return
+        if (!isDevilConnected()) return
 
         const result = await sdk.client.kilo.notifications()
         const items = result.data?.filter(({ showIn }) => !showIn || showIn.includes("cli"))

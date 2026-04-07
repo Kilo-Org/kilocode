@@ -7,9 +7,9 @@ import { Log } from "@/util/log"
 import { Auth } from "@/auth"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
-import type * as SDK from "@kilocode/sdk/v2"
+import type * as SDK from "@devilcode/sdk/v2"
 import z from "zod"
-import { KILO_API_BASE } from "@kilocode/kilo-gateway"
+import { DEVIL_API_BASE } from "@devilcode/kilo-gateway"
 import { Config } from "@/config/config"
 import { Instance } from "@/project/instance"
 import { Vcs } from "@/project/vcs"
@@ -18,7 +18,7 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { SessionStatus } from "@/session/status"
 
-export namespace KiloSessions {
+export namespace DevilSessions {
   const log = Log.create({ service: "kilo-sessions" })
 
   const Uuid = z.uuid()
@@ -52,7 +52,7 @@ export namespace KiloSessions {
     }
 
     return withInFlightCache(tokenValidKey, 15 * 60_000, async () => {
-      const response = await fetch(`${KILO_API_BASE}/api/user`, {
+      const response = await fetch(`${DEVIL_API_BASE}/api/user`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -66,7 +66,7 @@ export namespace KiloSessions {
     })
   }
 
-  async function kilocodeToken() {
+  async function devilcodeToken() {
     return withInFlightCache(tokenKey, ttlMs, async () => {
       const auth = await Auth.get("kilo")
       if (auth?.type === "api" && auth.key.length > 0) return auth.key
@@ -83,13 +83,13 @@ export namespace KiloSessions {
 
   async function getClient(): Promise<Client | undefined> {
     return withInFlightCache(clientKey, ttlMs, async () => {
-      const token = await kilocodeToken()
+      const token = await devilcodeToken()
       if (!token) return undefined
 
       const valid = await authValid(token)
       if (!valid) return undefined
 
-      const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+      const base = process.env["DEVIL_SESSION_INGEST_URL"] ?? "https://ingest.devilsessions.ai"
       const baseHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
@@ -111,11 +111,11 @@ export namespace KiloSessions {
     })
   }
 
-  const shareDisabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
+  const shareDisabled = process.env["DEVIL_DISABLE_SHARE"] === "true" || process.env["DEVIL_DISABLE_SHARE"] === "1"
   const ingestDisabled =
-    process.env["KILO_DISABLE_SESSION_INGEST"] === "true" || process.env["KILO_DISABLE_SESSION_INGEST"] === "1"
+    process.env["DEVIL_DISABLE_SESSION_INGEST"] === "true" || process.env["DEVIL_DISABLE_SESSION_INGEST"] === "1"
   const debugIngest =
-    process.env["KILO_DEBUG_SESSION_INGEST"] === "true" || process.env["KILO_DEBUG_SESSION_INGEST"] === "1"
+    process.env["DEVIL_DEBUG_SESSION_INGEST"] === "true" || process.env["DEVIL_DEBUG_SESSION_INGEST"] === "1"
 
   const ingest = IngestQueue.create({
     getShare: async (sessionId) => get(sessionId).catch(() => undefined),
@@ -131,7 +131,7 @@ export namespace KiloSessions {
     },
   })
 
-  const remoteEnabled = process.env["KILO_REMOTE"] === "1"
+  const remoteEnabled = process.env["DEVIL_REMOTE"] === "1"
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
@@ -218,18 +218,18 @@ export namespace KiloSessions {
     if (enabling) return enabling
     const seq = ++remoteSeq
     enabling = (async () => {
-      const token = await kilocodeToken()
+      const token = await devilcodeToken()
       if (!token) {
-        throw new Error("Unable to enable remote: no Kilo credentials found. Run `kilo auth login`.")
+        throw new Error("Unable to enable remote: no Devil credentials found. Run `kilo auth login`.")
       }
 
       const valid = await authValid(token)
       if (valid === false) {
-        throw new Error("Unable to enable remote: invalid or expired Kilo credentials. Run `kilo auth login`.")
+        throw new Error("Unable to enable remote: invalid or expired Devil credentials. Run `kilo auth login`.")
       }
-      if (valid === undefined) throw new Error("Unable to enable remote: failed to verify Kilo credentials.")
+      if (valid === undefined) throw new Error("Unable to enable remote: failed to verify Devil credentials.")
 
-      const url = (process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai")
+      const url = (process.env["DEVIL_SESSION_INGEST_URL"] ?? "https://ingest.devilsessions.ai")
         .replace(/^https:\/\//, "wss://")
         .replace(/^http:\/\//, "ws://")
 
@@ -263,7 +263,7 @@ export namespace KiloSessions {
 
       const conn = RemoteWS.connect({
         url,
-        getToken: kilocodeToken,
+        getToken: devilcodeToken,
         withContext: (fn) => Instance.provide({ directory, fn }),
         getSessions,
         log,
@@ -364,16 +364,16 @@ export namespace KiloSessions {
 
   export async function share(sessionId: string) {
     if (ingestDisabled) {
-      throw new Error("Session ingest is disabled (KILO_DISABLE_SESSION_INGEST=1)")
+      throw new Error("Session ingest is disabled (DEVIL_DISABLE_SESSION_INGEST=1)")
     }
 
     if (shareDisabled) {
-      throw new Error("Sharing is disabled (KILO_DISABLE_SHARE=1)")
+      throw new Error("Sharing is disabled (DEVIL_DISABLE_SHARE=1)")
     }
 
     const client = await getClient()
     if (!client) {
-      throw new Error("Unable to share session: no Kilo credentials found. Run `kilo auth login`.")
+      throw new Error("Unable to share session: no Devil credentials found. Run `kilo auth login`.")
     }
 
     const current = (await get(sessionId).catch(() => undefined)) ?? (await create(sessionId))
@@ -397,7 +397,7 @@ export namespace KiloSessions {
       throw new Error(`Unable to share session ${sessionId}: server did not return a public id`)
     }
 
-    const url = `https://app.kilo.ai/s/${result.public_id}`
+    const url = `https://app.devil.ai/s/${result.public_id}`
 
     await Storage.write(["session_share", sessionId], {
       ...current,
@@ -409,16 +409,16 @@ export namespace KiloSessions {
 
   export async function unshare(sessionId: string) {
     if (ingestDisabled) {
-      throw new Error("Session ingest is disabled (KILO_DISABLE_SESSION_INGEST=1)")
+      throw new Error("Session ingest is disabled (DEVIL_DISABLE_SESSION_INGEST=1)")
     }
 
     if (shareDisabled) {
-      throw new Error("Unshare is disabled (KILO_DISABLE_SHARE=1)")
+      throw new Error("Unshare is disabled (DEVIL_DISABLE_SHARE=1)")
     }
 
     const client = await getClient()
     if (!client) {
-      throw new Error("Unable to unshare session: no Kilo credentials found. Run `kilo auth login`.")
+      throw new Error("Unable to unshare session: no Devil credentials found. Run `kilo auth login`.")
     }
 
     log.info("unsharing", { sessionId })
@@ -563,7 +563,7 @@ export namespace KiloSessions {
 
   async function meta(sessionId?: string) {
     const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
-    const platform = override || process.env["KILO_PLATFORM"] || "cli"
+    const platform = override || process.env["DEVIL_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)
@@ -577,7 +577,7 @@ export namespace KiloSessions {
   }
 
   async function getOrgId(): Promise<Uuid | undefined> {
-    const env = process.env["KILO_ORG_ID"]
+    const env = process.env["DEVIL_ORG_ID"]
     if (isUuid(env)) return env
 
     return withInFlightCache(orgKey, ttlMs, async () => {

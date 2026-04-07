@@ -1,7 +1,7 @@
 /**
  * WorktreeManager - Manages git worktrees for agent sessions.
  *
- * Ported from kilocode/src/core/kilocode/agent-manager/WorktreeManager.ts.
+ * Ported from devilcode/src/core/devilcode/agent-manager/WorktreeManager.ts.
  * Handles creation, discovery, and cleanup of worktrees stored in
  * {projectRoot}/.kilo/worktrees/
  */
@@ -81,7 +81,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+import { DEVIL_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -96,13 +96,13 @@ export class WorktreeManager {
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
-    this.dir = path.join(root, KILO_DIR, "worktrees")
+    this.dir = path.join(root, DEVIL_DIR, "worktrees")
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
   }
 
-  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
+  /** Run once before first read/write to migrate Agent Manager data from .devilcode → .kilo. */
   private async ensureMigrated(): Promise<void> {
     if (this.migrated) return
     this.migrated = true
@@ -436,7 +436,7 @@ export class WorktreeManager {
   }
 
   async writeMetadata(worktreePath: string, sessionId: string, parentBranch: string, remote?: string): Promise<void> {
-    const dir = path.join(worktreePath, KILO_DIR)
+    const dir = path.join(worktreePath, DEVIL_DIR)
     if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
 
     const meta: Record<string, string> = { sessionId, parentBranch }
@@ -454,8 +454,8 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    // Check .kilo/ first, then legacy .kilocode/
-    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
+    // Check .kilo/ first, then legacy .devilcode/
+    for (const dirName of [DEVIL_DIR, LEGACY_DIR]) {
       const result = await this.readMetadataFrom(worktreePath, dirName)
       if (result) return result
     }
@@ -503,20 +503,20 @@ export class WorktreeManager {
     const gitDir = await this.resolveGitDir()
     const excludePath = path.join(gitDir, "info", "exclude")
     const items = [
-      [".kilo/worktrees/", "Kilo Code agent worktrees"],
-      [".kilo/agent-manager.json", "Kilo Agent Manager state"],
-      [".kilo/setup-script", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.sh", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
-      [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
-      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
-      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
-      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
+      [".kilo/worktrees/", "Devil Code agent worktrees"],
+      [".kilo/agent-manager.json", "Devil Agent Manager state"],
+      [".kilo/setup-script", "Devil Code worktree setup script"],
+      [".kilo/setup-script.sh", "Devil Code worktree setup script"],
+      [".kilo/setup-script.ps1", "Devil Code worktree setup script"],
+      [".kilo/setup-script.cmd", "Devil Code worktree setup script"],
+      [".kilo/setup-script.bat", "Devil Code worktree setup script"],
+      [".devilcode/worktrees/", "Devil Code legacy agent worktrees"],
+      [".devilcode/agent-manager.json", "Devil Agent Manager legacy state"],
+      [".devilcode/setup-script", "Devil Code legacy worktree setup script"],
+      [".devilcode/setup-script.sh", "Devil Code legacy worktree setup script"],
+      [".devilcode/setup-script.ps1", "Devil Code legacy worktree setup script"],
+      [".devilcode/setup-script.cmd", "Devil Code legacy worktree setup script"],
+      [".devilcode/setup-script.bat", "Devil Code legacy worktree setup script"],
     ] as const
 
     for (const [entry, comment] of items) {
@@ -532,7 +532,7 @@ export class WorktreeManager {
 
       const worktreeGitDir = path.resolve(worktreePath, match[1].trim())
       const mainGitDir = path.dirname(path.dirname(worktreeGitDir))
-      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${KILO_DIR}/`, "Kilo Code session metadata")
+      await this.addExcludeEntry(path.join(mainGitDir, "info", "exclude"), `${DEVIL_DIR}/`, "Devil Code session metadata")
     } catch (error) {
       this.log(`Warning: Failed to update git exclude for worktree: ${error}`)
     }

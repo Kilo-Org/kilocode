@@ -7,7 +7,7 @@ description: "Contextualize dependency vulnerabilities with AI"
 
 Most teams are drowning in Dependabot alerts. The majority of reported CVEs aren't actually exploitable because the vulnerable code path is never used — but figuring that out manually doesn't scale.
 
-Kilo's Security Agent fixes this. It syncs your Dependabot alerts, triages them with AI, and performs deep codebase analysis to determine whether each vulnerability is actually reachable in your code. Non-exploitable findings can be auto-dismissed and synced back to GitHub.
+devil's Security Agent fixes this. It syncs your Dependabot alerts, triages them with AI, and performs deep codebase analysis to determine whether each vulnerability is actually reachable in your code. Non-exploitable findings can be auto-dismissed and synced back to GitHub.
 
 Available on **Teams** and **Enterprise** plans.
 
@@ -17,15 +17,15 @@ Available on **Teams** and **Enterprise** plans.
 
 You need three things before enabling Security Reviews:
 
-1. The [KiloConnect GitHub App](/docs/automate/integrations#connecting-github) installed with `vulnerability_alerts` permission
+1. The [DevilConnect GitHub App](/docs/automate/integrations#connecting-github) installed with `vulnerability_alerts` permission
 2. [Dependabot alerts](https://docs.github.com/en/code-security/dependabot/dependabot-alerts) enabled on your target repositories
-3. Kilo Code credits for AI model usage
+3. devil Code credits for AI model usage
 
 ---
 
 ## Get started
 
-1. Go to the **Security Agent** page — either from your [personal dashboard](https://app.kilo.ai/security-agent) or your organization's dashboard
+1. Go to the **Security Agent** page — either from your [personal dashboard](https://app.devil.ai/security-agent) or your organization's dashboard
 2. Connect GitHub if you haven't already via the [Integrations page](/docs/automate/integrations)
 3. Choose which repositories the agent should monitor (all or specific ones)
 4. Toggle the agent on — this kicks off an initial sync of your Dependabot alerts
@@ -44,7 +44,7 @@ The Security Agent processes each vulnerability alert through four stages.
 
 **Deep analysis** kicks in for findings that warrant it. The Cloud Agent performs a full codebase search for actual usage of the vulnerable package, checks whether the vulnerable code paths are reachable, and suggests fixes when possible.
 
-**Auto-dismiss** (when enabled) automatically closes non-exploitable findings and syncs that dismissal back to GitHub with a `[Kilo Code auto-dismiss]` prefix.
+**Auto-dismiss** (when enabled) automatically closes non-exploitable findings and syncs that dismissal back to GitHub with a `[devil Code auto-dismiss]` prefix.
 
 ---
 
@@ -137,7 +137,7 @@ There are two ways findings get dismissed.
 
 **Manually**, you select a finding and choose **Dismiss**. You'll pick a reason — Fix started, No bandwidth, Tolerable risk, Inaccurate, or Not used — and optionally add a comment. The dismissal syncs back to GitHub and closes the corresponding Dependabot alert.
 
-**Automatically**, when auto-dismiss is enabled, the agent closes findings on its own. After deep analysis, any finding determined to be not exploitable is dismissed immediately. After triage, findings with a "dismiss" recommendation are dismissed if they meet your configured confidence threshold. All auto-dismissed alerts are written back to GitHub with a `[Kilo Code auto-dismiss]` prefix.
+**Automatically**, when auto-dismiss is enabled, the agent closes findings on its own. After deep analysis, any finding determined to be not exploitable is dismissed immediately. After triage, findings with a "dismiss" recommendation are dismissed if they meet your configured confidence threshold. All auto-dismissed alerts are written back to GitHub with a `[devil Code auto-dismiss]` prefix.
 
 ---
 
@@ -145,7 +145,7 @@ There are two ways findings get dismissed.
 
 All settings are on the Security Agent configuration page.
 
-**Repository selection** lets you monitor all repositories accessible to the KiloConnect App or pick specific ones from a list.
+**Repository selection** lets you monitor all repositories accessible to the DevilConnect App or pick specific ones from a list.
 
 **AI models** can be configured separately for triage and deep analysis. The default is Claude Opus 4.6.
 
@@ -180,7 +180,7 @@ Clearing orphaned findings is permanent and cannot be undone. Only do this when 
 
 ## Compare with Code Reviews
 
-Kilo offers two complementary security features that work best together.
+devil offers two complementary security features that work best together.
 
 [**Code Reviews**](/docs/automate/code-reviews/overview) analyzes PR diffs for code quality issues, including security patterns like `innerHTML` usage and hardcoded secrets. It catches problems in new code as it's written.
 

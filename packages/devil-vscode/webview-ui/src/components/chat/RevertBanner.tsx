@@ -5,9 +5,9 @@
  */
 
 import { Component, For, Show } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
+import { Button } from "@devilcode/kilo-ui/button"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { DiffChanges } from "@devilcode/kilo-ui/diff-changes"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 

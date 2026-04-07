@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
 
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
 const packageJson = await Bun.file(packageJsonPath).json()
-const version = process.env.KILO_VERSION ? process.env.KILO_VERSION : packageJson.version
+const version = process.env.DEVIL_VERSION ? process.env.DEVIL_VERSION : packageJson.version
 
 console.log(`Building VSCode extension version: ${version}`)
 
@@ -23,14 +23,14 @@ if (!existsSync(cliDistDir)) {
 }
 
 const targets = [
-  { target: "linux-x64", cliDir: "@kilocode/cli-linux-x64", binary: "kilo" },
-  { target: "linux-arm64", cliDir: "@kilocode/cli-linux-arm64", binary: "kilo" },
-  { target: "alpine-x64", cliDir: "@kilocode/cli-linux-x64-musl", binary: "kilo" },
-  { target: "alpine-arm64", cliDir: "@kilocode/cli-linux-arm64-musl", binary: "kilo" },
-  { target: "darwin-x64", cliDir: "@kilocode/cli-darwin-x64", binary: "kilo" },
-  { target: "darwin-arm64", cliDir: "@kilocode/cli-darwin-arm64", binary: "kilo" },
-  { target: "win32-x64", cliDir: "@kilocode/cli-windows-x64", binary: "kilo.exe" },
-  { target: "win32-arm64", cliDir: "@kilocode/cli-windows-arm64", binary: "kilo.exe" },
+  { target: "linux-x64", cliDir: "@devilcode/cli-linux-x64", binary: "kilo" },
+  { target: "linux-arm64", cliDir: "@devilcode/cli-linux-arm64", binary: "kilo" },
+  { target: "alpine-x64", cliDir: "@devilcode/cli-linux-x64-musl", binary: "kilo" },
+  { target: "alpine-arm64", cliDir: "@devilcode/cli-linux-arm64-musl", binary: "kilo" },
+  { target: "darwin-x64", cliDir: "@devilcode/cli-darwin-x64", binary: "kilo" },
+  { target: "darwin-arm64", cliDir: "@devilcode/cli-darwin-arm64", binary: "kilo" },
+  { target: "win32-x64", cliDir: "@devilcode/cli-windows-x64", binary: "kilo.exe" },
+  { target: "win32-arm64", cliDir: "@devilcode/cli-windows-arm64", binary: "kilo.exe" },
 ]
 
 const binDir = join(import.meta.dir, "..", "bin")

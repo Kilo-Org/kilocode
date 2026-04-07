@@ -4,11 +4,11 @@
  */
 
 import { Component, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Button } from "@devilcode/kilo-ui/button"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Spinner } from "@devilcode/kilo-ui/spinner"
+import { Tooltip } from "@devilcode/kilo-ui/tooltip"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"

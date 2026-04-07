@@ -25,7 +25,7 @@ export function convertToMentionPath(path: string, cwd: string): string {
       cleaned = cleaned.substring(1)
     }
   } catch (err) {
-    console.error("[Kilo New] Failed to decode dropped URI:", err, cleaned)
+    console.error("[Devil New] Failed to decode dropped URI:", err, cleaned)
   }
 
   const normalized = cleaned.replace(/\\/g, "/")

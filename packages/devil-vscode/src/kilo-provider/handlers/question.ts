@@ -1,14 +1,14 @@
 /**
- * Question handlers — extracted from KiloProvider.
+ * Question handlers — extracted from DevilProvider.
  *
  * Manages question reply and reject flows from the tool question UI.
  * No vscode dependency.
  */
 
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
 
 interface QuestionContext {
-  readonly client: KiloClient | null
+  readonly client: DevilClient | null
   readonly currentSessionId: string | undefined
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
@@ -35,7 +35,7 @@ export async function handleQuestionReply(
     )
     return true
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to reply to question:", error)
+    console.error("[Devil New] DevilProvider: Failed to reply to question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }
@@ -58,7 +58,7 @@ export async function handleQuestionReject(
     await ctx.client.question.reject({ requestID, directory: ctx.getWorkspaceDirectory(sid) }, { throwOnError: true })
     return true
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: Failed to reject question:", error)
+    console.error("[Devil New] DevilProvider: Failed to reject question:", error)
     ctx.postMessage({ type: "questionError", requestID })
     return false
   }

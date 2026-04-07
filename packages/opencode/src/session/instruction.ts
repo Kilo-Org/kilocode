@@ -19,25 +19,25 @@ const FILES = [
 
 function globalFiles() {
   const files = []
-  if (Flag.KILO_CONFIG_DIR) {
-    files.push(path.join(Flag.KILO_CONFIG_DIR, "AGENTS.md"))
+  if (Flag.DEVIL_CONFIG_DIR) {
+    files.push(path.join(Flag.DEVIL_CONFIG_DIR, "AGENTS.md"))
   }
   files.push(path.join(Global.Path.config, "AGENTS.md"))
-  if (!Flag.KILO_DISABLE_CLAUDE_CODE_PROMPT) {
+  if (!Flag.DEVIL_DISABLE_CLAUDE_CODE_PROMPT) {
     files.push(path.join(os.homedir(), ".claude", "CLAUDE.md"))
   }
   return files
 }
 
 async function resolveRelative(instruction: string): Promise<string[]> {
-  if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+  if (!Flag.DEVIL_DISABLE_PROJECT_CONFIG) {
     return Filesystem.globUp(instruction, Instance.directory, Instance.worktree).catch(() => [])
   }
-  if (!Flag.KILO_CONFIG_DIR) {
-    log.warn(`Skipping relative instruction "${instruction}" - no KILO_CONFIG_DIR set while project config is disabled`)
+  if (!Flag.DEVIL_CONFIG_DIR) {
+    log.warn(`Skipping relative instruction "${instruction}" - no DEVIL_CONFIG_DIR set while project config is disabled`)
     return []
   }
-  return Filesystem.globUp(instruction, Flag.KILO_CONFIG_DIR, Flag.KILO_CONFIG_DIR).catch(() => [])
+  return Filesystem.globUp(instruction, Flag.DEVIL_CONFIG_DIR, Flag.DEVIL_CONFIG_DIR).catch(() => [])
 }
 
 export namespace InstructionPrompt {
@@ -71,7 +71,7 @@ export namespace InstructionPrompt {
     const config = await Config.get()
     const paths = new Set<string>()
 
-    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+    if (!Flag.DEVIL_DISABLE_PROJECT_CONFIG) {
       for (const file of FILES) {
         const matches = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
         if (matches.length > 0) {

@@ -6,10 +6,10 @@ import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
 import DESCRIPTION from "./warpgrep.txt"
 
-// FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy
+// FREE_PERIOD_TODO: Remove DEVIL_WARPGREP_PROXY_URL constant and the proxy
 // fallback below. After the free period ends, require MORPH_API_KEY and
 // return an error when it is missing.
-const KILO_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
+const DEVIL_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
 
 export const CodebaseSearchTool = Tool.define("codebase_search", {
   description: DESCRIPTION,
@@ -34,7 +34,7 @@ export const CodebaseSearchTool = Tool.define("codebase_search", {
     //   if (!apiKey) return { title: ..., output: "Set MORPH_API_KEY to use codebase search.", metadata: {} }
     const client = new WarpGrepClient({
       morphApiKey: apiKey ?? "kilo-free",
-      ...(apiKey ? {} : { morphApiUrl: KILO_WARPGREP_PROXY_URL }),
+      ...(apiKey ? {} : { morphApiUrl: DEVIL_WARPGREP_PROXY_URL }),
       timeout: 60_000,
     })
 

@@ -1,6 +1,7 @@
 import type { TeamConfig } from "./config"
 import type { Agent } from "../../agent/agent"
 import type { PermissionNext } from "@/permission/next"
+import { effortToProviderOptions } from "./effort"
 
 const BUILTIN_AGENT_NAMES = new Set([
   "code", "plan", "debug", "orchestrator", "ask",
@@ -13,7 +14,7 @@ const BUILTIN_AGENT_NAMES = new Set([
  */
 export function createWorkflowAgents(
   teamConfig: TeamConfig | undefined,
-  defaults: PermissionNext.Ruleset,
+  permission: PermissionNext.Ruleset,
 ): Record<string, Agent.Info> | undefined {
   if (!teamConfig?.enabled) return undefined
 
@@ -28,12 +29,13 @@ export function createWorkflowAgents(
       description: `Team role: ${role.displayName} (${role.provider}/${role.model})`,
       mode: role.tier === 1 ? "primary" : "subagent",
       native: false,
-      permission: defaults,
+      permission,
       model: {
         providerID: role.provider,
         modelID: role.model,
       },
       options: {
+        ...effortToProviderOptions(role.effort),
         teamRole: roleName,
         teamTier: role.tier,
       },

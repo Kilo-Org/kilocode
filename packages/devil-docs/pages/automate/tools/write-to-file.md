@@ -16,8 +16,8 @@ This tool writes content to a specified file, either creating a new file if it d
 
 ## When is it used?
 
-- When Kilo Code needs to create a new file from scratch
-- When Kilo Code needs to completely rewrite an existing file
+- When devil Code needs to create a new file from scratch
+- When devil Code needs to completely rewrite an existing file
 - When creating multiple files for a new project
 - When generating configuration files, documentation, or source code
 - When you need to review changes before they're applied
@@ -29,7 +29,7 @@ This tool writes content to a specified file, either creating a new file if it d
 - Safety Measures: Detects code omission, validates paths, and prevents truncated content
 - Editor Integration: Opens a diff view that scrolls to the first difference automatically
 - Content Preprocessing: Handles artifacts from different AI models to ensure clean content
-- Access Control: Validates against `.kilocodeignore` restrictions before making changes
+- Access Control: Validates against `.devilcodeignore` restrictions before making changes
 - Parent Directories: May handle directory creation through system dependencies
 - Complete Replacement: Provides a fully transformed file in a single operation
 
@@ -48,7 +48,7 @@ When the `write_to_file` tool is invoked, it follows this process:
 
 1. **Parameter Validation**: Validates the required parameters and permissions
    - Checks that `path`, `content`, and `line_count` are provided
-   - Validates the file is allowed (not restricted by `.kilocodeignore`)
+   - Validates the file is allowed (not restricted by `.devilcodeignore`)
    - Ensures the path is within the workspace boundaries
    - Tracks consecutive mistake counts for missing parameters
    - Shows specific error messages for each validation failure
@@ -85,10 +85,10 @@ When the `write_to_file` tool is invoked, it follows this process:
 
 ## Examples When Used
 
-- When creating a new project, Kilo Code generates multiple files but lets you review each before committing changes.
-- When setting up configuration files, Kilo Code shows the proposed configuration in a diff view for approval.
-- When generating documentation, Kilo Code creates markdown files but lets you make final adjustments in the diff view.
-- When developing a prototype, Kilo Code shows complete source files in a diff view where you can fine-tune before saving.
+- When creating a new project, devil Code generates multiple files but lets you review each before committing changes.
+- When setting up configuration files, devil Code shows the proposed configuration in a diff view for approval.
+- When generating documentation, devil Code creates markdown files but lets you make final adjustments in the diff view.
+- When developing a prototype, devil Code shows complete source files in a diff view where you can fine-tune before saving.
 
 ## Usage Examples
 

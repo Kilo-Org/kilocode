@@ -15,39 +15,39 @@ const expectedBunVersionRange = `^${expectedBunVersion}`
 if (!semver.satisfies(process.versions.bun, expectedBunVersionRange)) {
   throw new Error(`This script requires bun@${expectedBunVersionRange}, but you are using bun@${process.versions.bun}`)
 }
-// kilocode_change start
+// devilcode_change start
 const env = {
-  KILO_CHANNEL: process.env["KILO_CHANNEL"],
-  KILO_BUMP: process.env["KILO_BUMP"],
-  KILO_VERSION: process.env["KILO_VERSION"],
-  KILO_RELEASE: process.env["KILO_RELEASE"],
+  DEVIL_CHANNEL: process.env["DEVIL_CHANNEL"],
+  DEVIL_BUMP: process.env["DEVIL_BUMP"],
+  DEVIL_VERSION: process.env["DEVIL_VERSION"],
+  DEVIL_RELEASE: process.env["DEVIL_RELEASE"],
 }
-// kilocode_change end
+// devilcode_change end
 const CHANNEL = await (async () => {
-  if (env.KILO_CHANNEL) return env.KILO_CHANNEL // kilocode_change
-  if (env.KILO_BUMP) return "latest" // kilocode_change
-  if (env.KILO_VERSION && !env.KILO_VERSION.startsWith("0.0.0-")) return "latest" // kilocode_change
+  if (env.DEVIL_CHANNEL) return env.DEVIL_CHANNEL // devilcode_change
+  if (env.DEVIL_BUMP) return "latest" // devilcode_change
+  if (env.DEVIL_VERSION && !env.DEVIL_VERSION.startsWith("0.0.0-")) return "latest" // devilcode_change
   return await $`git branch --show-current`.text().then((x) => x.trim())
 })()
 const IS_PREVIEW = CHANNEL !== "latest"
 
 const VERSION = await (async () => {
-  if (env.KILO_VERSION) return env.KILO_VERSION // kilocode_change
+  if (env.DEVIL_VERSION) return env.DEVIL_VERSION // devilcode_change
   if (IS_PREVIEW) return `0.0.0-${CHANNEL}-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`
-  const version = await fetch("https://registry.npmjs.org/@kilocode/cli/latest") // kilocode_change
+  const version = await fetch("https://registry.npmjs.org/@devilcode/cli/latest") // devilcode_change
     .then((res) => {
       if (!res.ok) throw new Error(res.statusText)
       return res.json()
     })
     .then((data: any) => data.version)
   const [major, minor, patch] = version.split(".").map((x: string) => Number(x) || 0)
-  const t = env.KILO_BUMP?.toLowerCase() // kilocode_change
+  const t = env.DEVIL_BUMP?.toLowerCase() // devilcode_change
   if (t === "major") return `${major + 1}.0.0`
   if (t === "minor") return `${major}.${minor + 1}.0`
   return `${major}.${minor}.${patch + 1}`
 })()
 
-// kilocode_change start
+// devilcode_change start
 const team = [
   "actions-user",
   "kilo-maintainer[bot]",
@@ -65,7 +65,7 @@ const team = [
   "DScdng",
   "emilieschario",
   "eshurakov",
-  "Helix-Kilo",
+  "Helix-Devil",
   "iscekic",
   "jeanduplessis",
   "jobrietbergen",
@@ -73,12 +73,12 @@ const team = [
   "kevinvandijk",
   "alex-alecu",
   "imanolmzd-svg",
-  "kilocode-bot",
+  "devilcode-bot",
   "kilo-code-bot[bot]",
   "kirillk",
   "lambertjosh",
   "LigiaZ",
-  "marius-kilocode",
+  "marius-devilcode",
   "markijbema",
   "olearycrew",
   "pandemicsyn",
@@ -88,7 +88,7 @@ const team = [
   "suhailkc2025",
   "Sureshkumars",
 ]
-// kilocode_change end
+// devilcode_change end
 
 export const Script = {
   get channel() {
@@ -101,10 +101,10 @@ export const Script = {
     return IS_PREVIEW
   },
   get release(): boolean {
-    return !!env.KILO_RELEASE // kilocode_change
+    return !!env.DEVIL_RELEASE // devilcode_change
   },
   get team() {
     return team
   },
 }
-console.log(`kilo script`, JSON.stringify(Script, null, 2)) // kilocode_change
+console.log(`kilo script`, JSON.stringify(Script, null, 2)) // devilcode_change

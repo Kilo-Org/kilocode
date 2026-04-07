@@ -8,7 +8,7 @@ import { bootstrap } from "../bootstrap"
 import { EOL } from "os"
 import { text as streamText } from "node:stream/consumers"
 import { Filesystem } from "../../util/filesystem"
-import { createKiloClient, type Message, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
+import { createDevilClient, type Message, type DevilClient, type ToolPart } from "@devilcode/sdk/v2"
 import { Server } from "../../server/server"
 import { Provider } from "../../provider/provider"
 import { Agent } from "../../agent/agent"
@@ -28,7 +28,7 @@ import { SkillTool } from "../../tool/skill"
 import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
 import { Locale } from "../../util/locale"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, validateCloudFork } from "@/devilcode/cloud-session" // devilcode_change
 
 type ToolProps<T extends Tool.Info> = {
   input: Tool.InferParameters<T>
@@ -222,7 +222,7 @@ function normalizePath(input?: string) {
 
 export const RunCommand = cmd({
   command: "run [message..]",
-  describe: "run kilo with a message", // kilocode_change
+  describe: "run kilo with a message", // devilcode_change
   builder: (yargs: Argv) => {
     return (
       yargs
@@ -287,13 +287,13 @@ export const RunCommand = cmd({
           type: "string",
           describe: "attach to a running opencode server (e.g., http://localhost:4096)",
         })
-        // kilocode_change start
+        // devilcode_change start
         .option("password", {
           alias: ["p"],
           type: "string",
-          describe: "basic auth password (defaults to KILO_SERVER_PASSWORD)",
+          describe: "basic auth password (defaults to DEVIL_SERVER_PASSWORD)",
         })
-        // kilocode_change end
+        // devilcode_change end
         .option("dir", {
           type: "string",
           describe: "directory to run in, path on remote server if attaching",
@@ -311,13 +311,13 @@ export const RunCommand = cmd({
           describe: "show thinking blocks",
           default: false,
         })
-        // kilocode_change start - auto approve all permissions
+        // devilcode_change start - auto approve all permissions
         .option("auto", {
           type: "boolean",
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-      // kilocode_change end
+      // devilcode_change end
     )
   },
   handler: async (args) => {
@@ -370,13 +370,13 @@ export const RunCommand = cmd({
       UI.error("--fork requires --continue or --session")
       process.exit(1)
     }
-    // kilocode_change start
+    // devilcode_change start
     const cloudForkError = validateCloudFork(args)
     if (cloudForkError) {
       UI.error(cloudForkError)
       process.exit(1)
     }
-    // kilocode_change end
+    // devilcode_change end
 
     const rules: PermissionNext.Ruleset = [
       {
@@ -402,10 +402,10 @@ export const RunCommand = cmd({
       return message.slice(0, 50) + (message.length > 50 ? "..." : "")
     }
 
-    async function session(sdk: KiloClient) {
+    async function session(sdk: DevilClient) {
       const baseID = args.continue ? (await sdk.session.list()).data?.find((s) => !s.parentID)?.id : args.session
 
-      // kilocode_change start
+      // devilcode_change start
       if (baseID && args.cloudFork) {
         const id = await importCloudSession(sdk, baseID).catch(() => undefined)
         if (!id) {
@@ -414,7 +414,7 @@ export const RunCommand = cmd({
         }
         return id
       }
-      // kilocode_change end
+      // devilcode_change end
 
       if (baseID && args.fork) {
         const forked = await sdk.session.fork({ sessionID: baseID })
@@ -428,10 +428,10 @@ export const RunCommand = cmd({
       return result.data?.id
     }
 
-    async function share(sdk: KiloClient, sessionID: string) {
+    async function share(sdk: DevilClient, sessionID: string) {
       const cfg = await sdk.config.get()
       if (!cfg.data) return
-      if (cfg.data.share !== "auto" && !Flag.KILO_AUTO_SHARE && !args.share) return
+      if (cfg.data.share !== "auto" && !Flag.DEVIL_AUTO_SHARE && !args.share) return
       const res = await sdk.session.share({ sessionID }).catch((error) => {
         if (error instanceof Error && error.message.includes("disabled")) {
           UI.println(UI.Style.TEXT_DANGER_BOLD + "!  " + error.message)
@@ -443,7 +443,7 @@ export const RunCommand = cmd({
       }
     }
 
-    async function execute(sdk: KiloClient) {
+    async function execute(sdk: DevilClient) {
       function tool(part: ToolPart) {
         try {
           if (part.tool === "bash") return bash(props<typeof BashTool>(part))
@@ -580,7 +580,7 @@ export const RunCommand = cmd({
             const permission = event.properties
             if (permission.sessionID !== sessionID) continue
 
-            // kilocode_change start - In auto mode, automatically approve all permissions without prompting
+            // devilcode_change start - In auto mode, automatically approve all permissions without prompting
             if (args.auto) {
               await sdk.permission.respond({
                 sessionID,
@@ -589,7 +589,7 @@ export const RunCommand = cmd({
               })
               continue
             }
-            // kilocode_change end
+            // devilcode_change end
 
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
@@ -701,15 +701,15 @@ export const RunCommand = cmd({
 
     if (args.attach) {
       const headers = (() => {
-        // kilocode_change start
-        const password = args.password ?? process.env.KILO_SERVER_PASSWORD
+        // devilcode_change start
+        const password = args.password ?? process.env.DEVIL_SERVER_PASSWORD
         if (!password) return undefined
-        const username = process.env.KILO_SERVER_USERNAME ?? "kilo"
-        // kilocode_change end
+        const username = process.env.DEVIL_SERVER_USERNAME ?? "kilo"
+        // devilcode_change end
         const auth = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()
-      const sdk = createKiloClient({ baseUrl: args.attach, directory, headers })
+      const sdk = createDevilClient({ baseUrl: args.attach, directory, headers })
       return await execute(sdk)
     }
 
@@ -718,7 +718,7 @@ export const RunCommand = cmd({
         const request = new Request(input, init)
         return Server.App().fetch(request)
       }) as typeof globalThis.fetch
-      const sdk = createKiloClient({ baseUrl: "http://kilo.internal", fetch: fetchFn })
+      const sdk = createDevilClient({ baseUrl: "http://kilo.internal", fetch: fetchFn })
       await execute(sdk)
     })
   },

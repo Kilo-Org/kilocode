@@ -22,13 +22,13 @@ This skill is loaded from the global home directory.
   )
 }
 
-// kilocode_change start
+// devilcode_change start
 test("discovers skills from .kilo/skill/ directory", async () => {
-  // kilocode_change end
+  // devilcode_change end
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".kilo", "skill", "test-skill") // kilocode_change: .kilo is primary
+      const skillDir = path.join(dir, ".kilo", "skill", "test-skill") // devilcode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -61,7 +61,7 @@ test("returns skill directories from Skill.dirs", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".kilo", "skill", "dir-skill") // kilocode_change: .kilo is primary
+      const skillDir = path.join(dir, ".kilo", "skill", "dir-skill") // devilcode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -75,32 +75,32 @@ description: Skill for dirs test.
     },
   })
 
-  const home = process.env.KILO_TEST_HOME
-  process.env.KILO_TEST_HOME = tmp.path
+  const home = process.env.DEVIL_TEST_HOME
+  process.env.DEVIL_TEST_HOME = tmp.path
 
   try {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
         const dirs = await Skill.dirs()
-        const skillDir = path.join(tmp.path, ".kilo", "skill", "dir-skill") // kilocode_change: .kilo is primary
+        const skillDir = path.join(tmp.path, ".kilo", "skill", "dir-skill") // devilcode_change: .kilo is primary
         expect(dirs).toContain(skillDir)
         expect(dirs.length).toBe(1)
       },
     })
   } finally {
-    process.env.KILO_TEST_HOME = home
+    process.env.DEVIL_TEST_HOME = home
   }
 })
 
-// kilocode_change start
+// devilcode_change start
 test("discovers multiple skills from .kilo/skill/ directory", async () => {
-  // kilocode_change end
+  // devilcode_change end
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir1 = path.join(dir, ".kilo", "skill", "skill-one") // kilocode_change: .kilo is primary
-      const skillDir2 = path.join(dir, ".kilo", "skill", "skill-two") // kilocode_change: .kilo is primary
+      const skillDir1 = path.join(dir, ".kilo", "skill", "skill-one") // devilcode_change: .kilo is primary
+      const skillDir2 = path.join(dir, ".kilo", "skill", "skill-two") // devilcode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir1, "SKILL.md"),
         `---
@@ -139,7 +139,7 @@ test("skips skills with missing frontmatter", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".kilo", "skill", "no-frontmatter") // kilocode_change: .kilo is primary
+      const skillDir = path.join(dir, ".kilo", "skill", "no-frontmatter") // devilcode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `# No Frontmatter
@@ -192,8 +192,8 @@ description: A skill in the .claude/skills directory.
 test("discovers global skills from ~/.claude/skills/ directory", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  const originalHome = process.env.KILO_TEST_HOME
-  process.env.KILO_TEST_HOME = tmp.path
+  const originalHome = process.env.DEVIL_TEST_HOME
+  process.env.DEVIL_TEST_HOME = tmp.path
 
   try {
     await createGlobalSkill(tmp.path)
@@ -208,7 +208,7 @@ test("discovers global skills from ~/.claude/skills/ directory", async () => {
       },
     })
   } finally {
-    process.env.KILO_TEST_HOME = originalHome
+    process.env.DEVIL_TEST_HOME = originalHome
   }
 })
 
@@ -257,8 +257,8 @@ description: A skill in the .agents/skills directory.
 test("discovers global skills from ~/.agents/skills/ directory", async () => {
   await using tmp = await tmpdir({ git: true })
 
-  const originalHome = process.env.KILO_TEST_HOME
-  process.env.KILO_TEST_HOME = tmp.path
+  const originalHome = process.env.DEVIL_TEST_HOME
+  process.env.DEVIL_TEST_HOME = tmp.path
 
   try {
     const skillDir = path.join(tmp.path, ".agents", "skills", "global-agent-skill")
@@ -287,7 +287,7 @@ This skill is loaded from the global home directory.
       },
     })
   } finally {
-    process.env.KILO_TEST_HOME = originalHome
+    process.env.DEVIL_TEST_HOME = originalHome
   }
 })
 
@@ -335,8 +335,8 @@ test("properly resolves directories that skills live in", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const opencodeSkillDir = path.join(dir, ".opencode", "skill", "agent-skill") // kilocode_change .opencode backward compat
-      const opencodeSkillsDir = path.join(dir, ".opencode", "skills", "agent-skill") // kilocode_change .opencode backward compat
+      const opencodeSkillDir = path.join(dir, ".opencode", "skill", "agent-skill") // devilcode_change .opencode backward compat
+      const opencodeSkillsDir = path.join(dir, ".opencode", "skills", "agent-skill") // devilcode_change .opencode backward compat
       const claudeDir = path.join(dir, ".claude", "skills", "claude-skill")
       const agentDir = path.join(dir, ".agents", "skills", "agent-skill")
       await Bun.write(

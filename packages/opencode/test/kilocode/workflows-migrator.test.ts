@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test"
-import { WorkflowsMigrator } from "../../src/kilocode/workflows-migrator"
+import { WorkflowsMigrator } from "../../src/devilcode/workflows-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 
@@ -83,10 +83,10 @@ Actual description here.`
       expect(workflows[0].source).toBe("project")
     })
 
-    test("discovers workflows from legacy .kilocode/workflows/", async () => {
+    test("discovers workflows from legacy .devilcode/workflows/", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const workflowsDir = path.join(dir, ".kilocode", "workflows")
+          const workflowsDir = path.join(dir, ".devilcode", "workflows")
           await Bun.write(path.join(workflowsDir, "legacy-workflow.md"), "# Legacy\n\nLegacy workflow")
         },
       })
@@ -140,7 +140,7 @@ Actual description here.`
 
   describe("convertToCommand", () => {
     test("converts workflow to command format", () => {
-      const workflow: WorkflowsMigrator.KilocodeWorkflow = {
+      const workflow: WorkflowsMigrator.DevilcodeWorkflow = {
         name: "code-review",
         path: "/path/to/code-review.md",
         content: "# Code Review\n\nReview the code changes.\n\n## Steps\n\n1. Check",
@@ -154,7 +154,7 @@ Actual description here.`
     })
 
     test("uses fallback description when none found", () => {
-      const workflow: WorkflowsMigrator.KilocodeWorkflow = {
+      const workflow: WorkflowsMigrator.DevilcodeWorkflow = {
         name: "simple",
         path: "/path/to/simple.md",
         content: "# Simple",

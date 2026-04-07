@@ -15,8 +15,8 @@ import { Config } from "@/config/config"
 import { SessionCompaction } from "./compaction"
 import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
-import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-import { Flag } from "@/flag/flag" // kilocode_change
+import { Telemetry } from "@devilcode/kilo-telemetry" // devilcode_change
+import { Flag } from "@/flag/flag" // devilcode_change
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -36,7 +36,7 @@ export namespace SessionProcessor {
     let blocked = false
     let attempt = 0
     let needsCompaction = false
-    let stepStart = 0 // kilocode_change
+    let stepStart = 0 // devilcode_change
 
     const result = {
       get message() {
@@ -135,7 +135,7 @@ export namespace SessionProcessor {
                   break
 
                 case "tool-call": {
-                  // kilocode_change start
+                  // devilcode_change start
                   // If tool-input-start was never emitted, this can happen if arguments are unparseable,
                   // create the tool part now to prevent missing tool results down the line.
                   if (!toolcalls[value.toolCallId] && !value.providerExecuted) {
@@ -158,7 +158,7 @@ export namespace SessionProcessor {
                     })
                     toolcalls[value.toolCallId] = created as MessageV2.ToolPart
                   }
-                  // kilocode_change end
+                  // devilcode_change end
                   const match = toolcalls[value.toolCallId]
                   if (match) {
                     const part = await Session.updatePart({
@@ -258,7 +258,7 @@ export namespace SessionProcessor {
                   throw value.error
 
                 case "start-step":
-                  stepStart = performance.now() // kilocode_change
+                  stepStart = performance.now() // devilcode_change
                   snapshot = await Snapshot.track()
                   await Session.updatePart({
                     id: Identifier.ascending("part"),
@@ -275,7 +275,7 @@ export namespace SessionProcessor {
                     usage: value.usage,
                     metadata: value.providerMetadata,
                   })
-                  // kilocode_change start
+                  // devilcode_change start
                   if (
                     usage.tokens.input > 0 ||
                     usage.tokens.output > 0 ||
@@ -294,7 +294,7 @@ export namespace SessionProcessor {
                       completionTime: Math.round(performance.now() - stepStart),
                     })
                   }
-                  // kilocode_change end
+                  // devilcode_change end
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens
@@ -414,9 +414,9 @@ export namespace SessionProcessor {
               const retry = SessionRetry.retryable(error)
               if (
                 retry !== undefined &&
-                (Flag.KILO_SESSION_RETRY_LIMIT === undefined || attempt < Flag.KILO_SESSION_RETRY_LIMIT)
+                (Flag.DEVIL_SESSION_RETRY_LIMIT === undefined || attempt < Flag.DEVIL_SESSION_RETRY_LIMIT)
               ) {
-                // kilocode_change
+                // devilcode_change
                 attempt++
                 const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
                 SessionStatus.set(input.sessionID, {
@@ -467,13 +467,13 @@ export namespace SessionProcessor {
               })
             }
           }
-          // kilocode_change start — guard empty tool-calls (#7756)
+          // devilcode_change start — guard empty tool-calls (#7756)
           const empty = input.assistantMessage.finish === "tool-calls" && !p.some((part) => part.type === "tool")
           if (empty) {
             log.warn("empty tool-calls", { messageID: input.assistantMessage.id })
             input.assistantMessage.finish = "stop"
           }
-          // kilocode_change end
+          // devilcode_change end
           input.assistantMessage.time.completed = Date.now()
           await Session.updateMessage(input.assistantMessage)
           if (needsCompaction) return "compact"

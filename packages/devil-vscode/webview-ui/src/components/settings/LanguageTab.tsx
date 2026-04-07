@@ -1,5 +1,5 @@
 import { Component } from "solid-js"
-import { Select } from "@kilocode/kilo-ui/select"
+import { Select } from "@devilcode/kilo-ui/select"
 import { useLanguage, LOCALES, LOCALE_LABELS, type Locale } from "../../context/language"
 
 const AUTO = "auto"

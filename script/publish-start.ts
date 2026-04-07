@@ -37,8 +37,8 @@ let notes: string[] = []
 
 console.log("=== publishing ===\n")
 
-const skipNotes = process.env["KILO_SKIP_NOTES"] === "1" // kilocode_change
-if (skipNotes) console.log("changelog skipped: KILO_SKIP_NOTES=1") // kilocode_change
+const skipNotes = process.env["DEVIL_SKIP_NOTES"] === "1" // devilcode_change
+if (skipNotes) console.log("changelog skipped: DEVIL_SKIP_NOTES=1") // devilcode_change
 
 if (!Script.preview && !skipNotes) {
   const previous = await getLatestRelease()
@@ -89,10 +89,10 @@ if (!Script.preview) {
   await $`git cherry-pick HEAD..origin/main`.nothrow()
   await $`git push origin HEAD --tags --no-verify --force-with-lease`
   await new Promise((resolve) => setTimeout(resolve, 5_000))
-  // kilocode_change start - skip draft flag when KILO_SKIP_NOTES=1 (used by publish-stable.yml which doesn't have a publish-complete step)
+  // devilcode_change start - skip draft flag when DEVIL_SKIP_NOTES=1 (used by publish-stable.yml which doesn't have a publish-complete step)
   const draftFlag = skipNotes ? [] : ["-d"]
   await $`gh release create v${Script.version} ${draftFlag} --title "v${Script.version}" --notes ${notes.join("\n") || "No notable changes"} ./packages/opencode/dist/archives/*.zip ./packages/opencode/dist/archives/*.tar.gz`
-  // kilocode_change end
+  // devilcode_change end
   const release = await $`gh release view v${Script.version} --json id,tagName`.json()
   output += `release=${release.id}\n`
   output += `tag=${release.tagName}\n`

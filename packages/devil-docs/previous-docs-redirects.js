@@ -1,6 +1,6 @@
 module.exports = [
   {
-    source: "/docs/contributing/cline-to-kilo-migration",
+    source: "/docs/contributing/cline-to-devil-migration",
     destination: "/docs/contributing",
     basePath: false,
     permanent: true,
@@ -395,7 +395,7 @@ module.exports = [
   },
 
   // ============================================
-  // COLLABORATE - Kilo for Teams
+  // COLLABORATE - devil for Teams
   // ============================================
   {
     source: "/docs/plans/about",
@@ -541,7 +541,7 @@ module.exports = [
   },
 
   // ============================================
-  // AUTOMATE - Extending Kilo
+  // AUTOMATE - Extending devil
   // ============================================
   {
     source: "/docs/advanced-usage/local-models",
@@ -566,8 +566,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: "/docs/features/mcp/using-mcp-in-kilo-code",
-    destination: "/docs/automate/mcp/using-in-kilo-code",
+    source: "/docs/features/mcp/using-mcp-in-devil-code",
+    destination: "/docs/automate/mcp/using-in-devil-code",
     basePath: false,
     permanent: true,
   },
@@ -802,8 +802,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: "/docs/automate/kiloclaw/:path*",
-    destination: "/docs/kiloclaw/:path*",
+    source: "/docs/automate/DevilClaw/:path*",
+    destination: "/docs/DevilClaw/:path*",
     basePath: false,
     permanent: true,
   },

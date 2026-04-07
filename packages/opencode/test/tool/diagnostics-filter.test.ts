@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { describe, expect, test } from "bun:test"
 import { filterDiagnostics } from "@/tool/diagnostics"
 import type { LSPClient } from "@/lsp/client"

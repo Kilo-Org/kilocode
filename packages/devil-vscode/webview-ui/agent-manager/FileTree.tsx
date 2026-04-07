@@ -1,6 +1,6 @@
 import { type Component, createSignal, createMemo, For, Show } from "solid-js"
-import { FileIcon } from "@kilocode/kilo-ui/file-icon"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { FileIcon } from "@devilcode/kilo-ui/file-icon"
+import { Icon } from "@devilcode/kilo-ui/icon"
 import type { WorktreeFileDiff } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { buildFileTree, flatten, type FileTreeNode } from "./file-tree-utils"

@@ -5,7 +5,7 @@ import type { DiffFile, DiffHunk, DiffResult } from "./types"
 
 const log = Log.create({ service: "review" })
 
-const REVIEW_PROMPT = `You are Kilo Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory — provide clear, actionable feedback but DO NOT modify any files. Do not use any file editing tools.
+const REVIEW_PROMPT = `You are Devil Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory — provide clear, actionable feedback but DO NOT modify any files. Do not use any file editing tools.
 
 You are reviewing: \${SCOPE_DESCRIPTION}
 
@@ -101,7 +101,7 @@ Example question tool call (ONLY after full review is written):
 }
 `
 
-const EMPTY_DIFF_PROMPT = `You are Kilo Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory — provide clear, actionable feedback but DO NOT modify any files. Do not use any file editing tools.
+const EMPTY_DIFF_PROMPT = `You are Devil Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory — provide clear, actionable feedback but DO NOT modify any files. Do not use any file editing tools.
 
 You are reviewing: \${SCOPE_DESCRIPTION}.
 

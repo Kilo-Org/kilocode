@@ -6,7 +6,7 @@ import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTele
 import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
-import type { KiloConnectionService } from "../../cli-backend"
+import type { DevilConnectionService } from "../../cli-backend"
 import type { ChatCompletionRequestMessage, ChatCompletionResponseSender } from "./handleChatCompletionRequest"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
 
@@ -14,7 +14,7 @@ import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-uti
  * Chat textarea autocomplete with cached per-request objects.
  *
  * Caches FileIgnoreController (refreshed when workspace changes or when
- * .kilocodeignore / .gitignore files are modified) and shares a single
+ * .devilcodeignore / .gitignore files are modified) and shares a single
  * AutocompleteTelemetry instance across requests so that request and
  * acceptance events correlate.
  */
@@ -25,10 +25,10 @@ export class ChatTextAreaAutocomplete {
   private dir = ""
   private watcher: vscode.FileSystemWatcher | undefined
 
-  constructor(connectionService: KiloConnectionService, telemetry?: AutocompleteTelemetry) {
+  constructor(connectionService: DevilConnectionService, telemetry?: AutocompleteTelemetry) {
     this.model = new AutocompleteModel(connectionService)
     this.telemetry = telemetry ?? new AutocompleteTelemetry("chat-textarea")
-    this.watcher = vscode.workspace.createFileSystemWatcher("**/{.kilocodeignore,.gitignore}")
+    this.watcher = vscode.workspace.createFileSystemWatcher("**/{.devilcodeignore,.gitignore}")
     const invalidate = () => {
       // Don't dispose — an in-flight request may still hold a reference.
       // The old instance will be garbage collected once no longer referenced.

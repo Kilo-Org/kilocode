@@ -1,8 +1,8 @@
 /**
- * legacy-migration - Types for legacy Kilo Code extension (v5.x) data structures.
+ * legacy-migration - Types for legacy Devil Code extension (v5.x) data structures.
  *
  * These types represent the shapes stored in VS Code SecretStorage and on disk
- * by the legacy extension (kilocode.kilo-code v5.x, a Roo Code fork).
+ * by the legacy extension (devilcode.kilo-code v5.x, a Roo Code fork).
  * They are intentionally loose (allowing [key: string]: unknown) to tolerate
  * schema drift between legacy versions.
  */
@@ -95,10 +95,10 @@ export interface LegacyProviderSettings {
   lmStudioBaseUrl?: string
   lmStudioModelId?: string
 
-  // Kilocode
-  kilocodeToken?: string
-  kilocodeModel?: string
-  kilocodeOrganizationId?: string
+  // Devilcode
+  devilcodeToken?: string
+  devilcodeModel?: string
+  devilcodeOrganizationId?: string
 
   // LiteLLM
   litellmApiKey?: string

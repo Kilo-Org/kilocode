@@ -5,7 +5,7 @@
  */
 
 import { Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Spinner } from "@devilcode/kilo-ui/spinner"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 

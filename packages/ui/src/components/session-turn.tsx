@@ -1,5 +1,5 @@
-import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@kilocode/sdk/v2/client"
-import type { SessionStatus } from "@kilocode/sdk/v2"
+import { AssistantMessage, type FileDiff, Message as MessageType, Part as PartType } from "@devilcode/sdk/v2/client"
+import type { SessionStatus } from "@devilcode/sdk/v2"
 import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 

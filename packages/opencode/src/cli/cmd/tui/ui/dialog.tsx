@@ -152,14 +152,14 @@ export function DialogProvider(props: ParentProps) {
       <box
         position="absolute"
         onMouseDown={(evt) => {
-          if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
+          if (!Flag.DEVIL_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
           if (evt.button !== MouseButton.RIGHT) return
 
           if (!Selection.copy(renderer, toast)) return
           evt.preventDefault()
           evt.stopPropagation()
         }}
-        onMouseUp={!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? () => Selection.copy(renderer, toast) : undefined}
+        onMouseUp={!Flag.DEVIL_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? () => Selection.copy(renderer, toast) : undefined}
       >
         <Show when={value.stack.length}>
           <Dialog onClose={() => value.clear()} size={value.size}>

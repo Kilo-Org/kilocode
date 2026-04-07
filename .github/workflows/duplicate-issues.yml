@@ -6,7 +6,7 @@ on:
 
 jobs:
   check-duplicates:
-    if: false # kilocode_change - disabled: not needed in kilocode repo
+    if: false # devilcode_change - disabled: not needed in kilocode repo
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -19,10 +19,10 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      # kilocode_change start
+      # devilcode_change start
       - name: Setup Kilo
         uses: ./.github/actions/setup-kilo
-      # kilocode_change end
+      # devilcode_change end
 
       - name: Check duplicates and compliance
         env:
@@ -134,17 +134,17 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      # kilocode_change start
+      # devilcode_change start
       - name: Setup Kilo
         uses: ./.github/actions/setup-kilo
-      # kilocode_change end
+      # devilcode_change end
 
       - name: Recheck compliance
         env:
-          # kilocode_change start
+          # devilcode_change start
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
-          # kilocode_change end
+          # devilcode_change end
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           KILO_PERMISSION: |
             {

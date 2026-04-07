@@ -1,1 +1,1 @@
-export const EXTENSION_DISPLAY_NAME = "Kilo Code"
+export const EXTENSION_DISPLAY_NAME = "Devil Code"

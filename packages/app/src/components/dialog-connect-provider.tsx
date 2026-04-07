@@ -1,4 +1,4 @@
-import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2/client"
+import type { ProviderAuthAuthorization } from "@devilcode/sdk/v2/client"
 import { Button } from "@opencode-ai/ui/button"
 import { useDialog } from "@opencode-ai/ui/context/dialog"
 import { Dialog } from "@opencode-ai/ui/dialog"
@@ -269,21 +269,21 @@ export function DialogConnectProvider(props: { provider: string }) {
     return (
       <div class="flex flex-col gap-6">
         <Switch>
-          {/* kilocode_change start */}
+          {/* devilcode_change start */}
           <Match when={provider().id === "kilo"}>
             <div class="flex flex-col gap-4">
               <div class="text-14-regular text-text-base">{language.t("provider.connect.kiloGateway.line1")}</div>
               <div class="text-14-regular text-text-base">{language.t("provider.connect.kiloGateway.line2")}</div>
               <div class="text-14-regular text-text-base">
                 {language.t("provider.connect.kiloGateway.visit.prefix")}
-                <Link href="https://kilo.ai" tabIndex={-1}>
+                <Link href="https://devil.ai" tabIndex={-1}>
                   {language.t("provider.connect.kiloGateway.visit.link")}
                 </Link>
                 {language.t("provider.connect.kiloGateway.visit.suffix")}
               </div>
             </div>
           </Match>
-          {/* kilocode_change end */}
+          {/* devilcode_change end */}
           <Match when={true}>
             <div class="text-14-regular text-text-base">
               {language.t("provider.connect.apiKey.description", { provider: provider().name })}

@@ -1,15 +1,15 @@
 ---
 title: "Cloud Agent"
-description: "Using Kilo Code in the browser"
+description: "Using devil Code in the browser"
 ---
 
 # {% $markdoc.frontmatter.title %}
 
-Cloud Agents let you run Kilo Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub and GitLab repositories, run commands, and auto-commit changes as work progresses.
+Cloud Agents let you run devil Code in the cloud from any device, without relying on your local machine. They provide a remote development environment that can read and modify your GitHub and GitLab repositories, run commands, and auto-commit changes as work progresses.
 
 ## What Cloud Agents Enable
 
-- Run Kilo Code remotely from a browser
+- Run devil Code remotely from a browser
 - Auto-create branches and push work continuously
 - Use env vars + startup commands to shape the workspace
 - Work from anywhere while keeping your repo in sync
@@ -19,20 +19,20 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 Before using Cloud Agents:
 
 - **GitHub or GitLab Integration must be configured**
-  Connect your account via the [Integrations tab](https://app.kilo.ai/integrations) so that Cloud Agents can access your repositories.
+  Connect your account via the [Integrations tab](https://app.devil.ai/integrations) so that Cloud Agents can access your repositories.
 
 ## Cost
 
 - **Compute is free during limited beta**
-  - Please provide any feedback in our Cloud Agents beta Discord channel: [Kilo Discord](https://kilo.ai/discord)
-- **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
+  - Please provide any feedback in our Cloud Agents beta Discord channel: [devil Discord](https://devil.ai/discord)
+- **devil Code credits are still used** when the agent performs work (model usage, operations, etc.).
 
 ## How to Use
 
-1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
+1. **Connect your GitHub or GitLab account** in the [Integrations](https://app.devil.ai/integrations) tab of your personal or organization dashboard.
 2. **Select a repository** to use as your workspace.
 3. **Add environment variables** (secrets supported) and set optional startup commands.
-4. **Start chatting with Kilo Code.**
+4. **Start chatting with devil Code.**
 
 Your work is always pushed to GitHub, ensuring nothing is lost.
 
@@ -85,31 +85,31 @@ You can customize each Cloud Agent session by also defining env vars and startup
   - Bootstrapping tooling
   - Running setup scripts
 
-### Setup Commands vs `.kilocode/setup-script`
+### Setup Commands vs `.devilcode/setup-script`
 
 - Cloud Agent executes **Setup Commands** configured in the Cloud UI/profile.
-- Cloud Agent does **not** automatically discover or run `.kilocode/setup-script`.
-- If you want to use `.kilocode/setup-script` in Cloud Agent, call it explicitly from Setup Commands, for example: `bash .kilocode/setup-script`.
+- Cloud Agent does **not** automatically discover or run `.devilcode/setup-script`.
+- If you want to use `.devilcode/setup-script` in Cloud Agent, call it explicitly from Setup Commands, for example: `bash .devilcode/setup-script`.
 - If both are present, execution order is:
   1. Setup Commands (in the order you define them)
-  2. Anything those commands invoke (such as `.kilocode/setup-script`)
+  2. Anything those commands invoke (such as `.devilcode/setup-script`)
 
 ## Skills
 
-Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
+Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.devilcode/skills/` are automatically available.
 
 {% callout type="note" %}
-Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
+Global skills (`~/.devilcode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
 {% /callout %}
 
 ## Perfect For
 
 Cloud Agents are great for:
 
-- **Remote debugging** using Kilo Code debug mode
+- **Remote debugging** using devil Code debug mode
 - **Exploration of unfamiliar codebases** without touching your local machine
 - **Architect-mode brainstorming** while on the go
-- **Automated refactors or tech debt cleanup** driven by Kilo Code
+- **Automated refactors or tech debt cleanup** driven by devil Code
 - **Offloading CI-like tasks**, experiments, or batch updates
 
 ## Triggers
@@ -122,7 +122,7 @@ Triggers are currently in beta and subject to change.
 
 ### Accessing Triggers
 
-Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.kilo.ai/cloud/triggers](https://app.kilo.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar.
+Triggers are accessible from the main sidebar under **Webhooks / Triggers** and link to [https://app.devil.ai/cloud/triggers](https://app.devil.ai/cloud/triggers) for personal accounts. Organization-level trigger configurations are available through your organization's sidebar.
 
 ### Activation Modes
 
@@ -188,7 +188,7 @@ Care should be taken when deciding to use webhooks as they are susceptible to pr
 - Each message can run for **up to 15 minutes**.
   Break large tasks into smaller steps; use a `plan.md` or `todo.md` file to keep scope clear.
 - **Context is persistent across messages.**
-  Kilo Code remembers previous turns within the same session.
+  devil Code remembers previous turns within the same session.
 - **Auto/YOLO mode is always on.**
   The agent will modify code without prompting for confirmation.
 - **Sessions are restorable locally** and local sessions can be resumed in Cloud Agent.

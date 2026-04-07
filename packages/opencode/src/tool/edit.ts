@@ -17,7 +17,7 @@ import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
-import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { filterDiagnostics } from "./diagnostics" // devilcode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 
@@ -158,7 +158,7 @@ export const EditTool = Tool.define("edit", {
 
     return {
       metadata: {
-        diagnostics: filterDiagnostics(diagnostics, [normalizedFilePath]), // kilocode_change
+        diagnostics: filterDiagnostics(diagnostics, [normalizedFilePath]), // devilcode_change
         diff,
         filediff,
       },

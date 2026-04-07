@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Watches packages/opencode/src/ for changes and rebuilds the CLI binary,
- * then copies it into packages/kilo-vscode/bin/kilo.
+ * then copies it into packages/devil-vscode/bin/kilo.
  *
  * Used during development so the VS Code extension always has an up-to-date
  * CLI backend without manual rebuild steps.
@@ -26,7 +26,7 @@ function log(msg: string) {
 }
 
 function sourceBinaryPath(): string {
-  return join(opencodeDir, "dist", `@kilocode/cli-${process.platform}-${process.arch}`, "bin", "kilo")
+  return join(opencodeDir, "dist", `@devilcode/cli-${process.platform}-${process.arch}`, "bin", "kilo")
 }
 
 async function rebuild() {

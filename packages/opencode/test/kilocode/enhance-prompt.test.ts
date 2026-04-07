@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { clean } from "../../src/kilocode/enhance-prompt"
+import { clean } from "../../src/devilcode/enhance-prompt"
 
 describe("enhance-prompt", () => {
   describe("clean", () => {

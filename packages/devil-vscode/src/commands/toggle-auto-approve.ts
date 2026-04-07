@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import type { KiloClient, Event } from "@kilocode/sdk/v2/client"
-import type { KiloConnectionService } from "../services/cli-backend/connection-service"
+import type { DevilClient, Event } from "@devilcode/sdk/v2/client"
+import type { DevilConnectionService } from "../services/cli-backend/connection-service"
 
 /**
  * Callback that resolves the correct working directory for a session.
@@ -24,7 +24,7 @@ export type AllDirectories = () => string[]
  */
 export function registerToggleAutoApprove(
   context: vscode.ExtensionContext,
-  connectionService: KiloConnectionService,
+  connectionService: DevilConnectionService,
   resolve: DirectoryResolver,
   directories: AllDirectories,
 ): void {
@@ -39,7 +39,7 @@ export function registerToggleAutoApprove(
     if (!client) return
     const dir = resolve(event.properties.sessionID)
     client.permission.reply({ requestID: event.properties.id, directory: dir, reply: "once" }).catch((err) => {
-      console.error("[Kilo New] toggleAutoApprove: failed to auto-reply:", err)
+      console.error("[Devil New] toggleAutoApprove: failed to auto-reply:", err)
     })
   })
 
@@ -63,11 +63,11 @@ export function registerToggleAutoApprove(
               for (const req of pending) {
                 if (generation !== snapshot) break
                 await client.permission.reply({ requestID: req.id, directory: dir, reply: "once" }).catch((err) => {
-                  console.error("[Kilo New] toggleAutoApprove: failed to drain pending:", err)
+                  console.error("[Devil New] toggleAutoApprove: failed to drain pending:", err)
                 })
               }
             } catch (err) {
-              console.error("[Kilo New] toggleAutoApprove: failed to list pending permissions:", err)
+              console.error("[Devil New] toggleAutoApprove: failed to list pending permissions:", err)
             }
           }
         }
@@ -78,7 +78,7 @@ export function registerToggleAutoApprove(
   )
 }
 
-function tryGetClient(connectionService: KiloConnectionService): KiloClient | undefined {
+function tryGetClient(connectionService: DevilConnectionService): DevilClient | undefined {
   try {
     return connectionService.getClient()
   } catch {

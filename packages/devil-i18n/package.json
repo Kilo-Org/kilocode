@@ -1,10 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@kilocode/kilo-i18n",
+  "name": "@devilcode/kilo-i18n",
   "version": "7.1.20",
   "type": "module",
   "license": "MIT",
-  "description": "Kilo-specific i18n translations and overrides",
+  "description": "Devil-specific i18n translations and overrides",
   "exports": {
     "./*": "./src/*.ts"
   },

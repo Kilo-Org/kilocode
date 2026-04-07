@@ -1,9 +1,9 @@
 import { describe, it, expect } from "bun:test"
 import { seedSessionStatuses, getBusySessionCount } from "../../src/session-status"
-import type { SessionStatus } from "@kilocode/sdk/v2/client"
+import type { SessionStatus } from "@devilcode/sdk/v2/client"
 
 /**
- * Minimal fake client that satisfies the KiloClient.session.status() call.
+ * Minimal fake client that satisfies the DevilClient.session.status() call.
  * Returns controlled data or throws to simulate server errors.
  */
 function createClient(response: { data: Record<string, SessionStatus> | null } | Error) {

@@ -1,7 +1,7 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
-import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { DevilSessions } from "@/kilo-sessions/kilo-sessions"
 import { Instance } from "@/project/instance"
 
 export const RemoteCommand = cmd({
@@ -10,13 +10,13 @@ export const RemoteCommand = cmd({
   builder: (yargs) => yargs,
   handler: async () => {
     await bootstrap(process.cwd(), async () => {
-      await KiloSessions.enableRemote()
+      await DevilSessions.enableRemote()
       console.log("Remote connection enabled.")
 
       const abort = new AbortController()
       const shutdown = async () => {
         try {
-          KiloSessions.disableRemote()
+          DevilSessions.disableRemote()
           await Instance.dispose()
         } finally {
           abort.abort()

@@ -25,13 +25,13 @@ export {
 export const kiloTheme = kiloJson as DesktopTheme
 export const kiloVscodeTheme = kiloVscodeJson as DesktopTheme
 
-export const KILO_THEMES: Record<string, DesktopTheme> = {
+export const DEVIL_THEMES: Record<string, DesktopTheme> = {
   kilo: kiloTheme,
   "kilo-vscode": kiloVscodeTheme,
 }
 
-// Override DEFAULT_THEMES: Kilo themes first, then upstream
+// Override DEFAULT_THEMES: Devil themes first, then upstream
 export const DEFAULT_THEMES: Record<string, DesktopTheme> = {
-  ...KILO_THEMES,
+  ...DEVIL_THEMES,
   ...UPSTREAM_THEMES,
 }

@@ -12,8 +12,8 @@ import open from "open"
 import { spinner } from "@clack/prompts"
 import type { DeviceAuthInitiateResponse, DeviceAuthPollResponse } from "../types.js"
 import { poll, formatTimeRemaining } from "./polling.js"
-import { getKiloProfile, getKiloDefaultModel, promptOrganizationSelection } from "../api/profile.js"
-import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
+import { getDevilProfile, getDevilDefaultModel, promptOrganizationSelection } from "../api/profile.js"
+import { DEVIL_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
 
 /**
  * Initiate device authorization flow
@@ -21,7 +21,7 @@ import { KILO_API_BASE, POLL_INTERVAL_MS } from "../api/constants.js"
  * @throws Error if initiation fails
  */
 async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes`, {
+  const response = await fetch(`${DEVIL_API_BASE}/api/device-auth/codes`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -46,7 +46,7 @@ async function initiateDeviceAuth(): Promise<DeviceAuthInitiateResponse> {
  * @throws Error if polling fails
  */
 async function pollDeviceAuth(code: string): Promise<DeviceAuthPollResponse> {
-  const response = await fetch(`${KILO_API_BASE}/api/device-auth/codes/${code}`)
+  const response = await fetch(`${DEVIL_API_BASE}/api/device-auth/codes/${code}`)
 
   if (response.status === 202) {
     // Still pending
@@ -169,7 +169,7 @@ export async function authenticateWithDeviceAuth(): Promise<DeviceAuthResult> {
 
   // Step 4: Fetch profile to get organizations
   s.start("Fetching profile")
-  const profileData = await getKiloProfile(token)
+  const profileData = await getDevilProfile(token)
   s.stop("Profile fetched")
 
   // Step 5: Prompt for organization selection
@@ -181,7 +181,7 @@ export async function authenticateWithDeviceAuth(): Promise<DeviceAuthResult> {
 
   // Step 6: Fetch default model
   s.start("Fetching default model")
-  const model = await getKiloDefaultModel(token, organizationId)
+  const model = await getDevilDefaultModel(token, organizationId)
   s.stop(`Default model: ${model}`)
 
   // Step 7: Return auth result

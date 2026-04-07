@@ -4,10 +4,10 @@ on:
   push:
     branches: [main]
     paths:
-      - "packages/kilo-docs/**"
+      - "packages/devil-docs/**"
   pull_request:
     paths:
-      - "packages/kilo-docs/**"
+      - "packages/devil-docs/**"
   workflow_dispatch:
 
 jobs:

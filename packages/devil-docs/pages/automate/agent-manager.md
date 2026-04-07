@@ -5,12 +5,12 @@ description: "Manage and orchestrate multiple AI agents"
 
 # Agent Manager
 
-The Agent Manager is a control panel for running and orchestrating multiple Kilo Code agents, with support for parallel worktree-isolated sessions.
+The Agent Manager is a control panel for running and orchestrating multiple devil Code agents, with support for parallel worktree-isolated sessions.
 
 {% tabs %}
 {% tab label="VSCode" %}
 
-The Agent Manager is a **full-panel editor tab** built directly into the extension. All sessions share the single `kilo serve` backend process. It supports:
+The Agent Manager is a **full-panel editor tab** built directly into the extension. All sessions share the single `devil serve` backend process. It supports:
 
 - Multiple parallel sessions, each in its own git worktree
 - A diff/review panel showing changes vs. the parent branch
@@ -22,7 +22,7 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 ## Opening the Agent Manager
 
 - Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
-- Command Palette: "Kilo Code: Open Agent Manager"
+- Command Palette: "devil Code: Open Agent Manager"
 - Click the Agent Manager icon in the sidebar toolbar
 
 The panel opens as an editor tab and stays active across focus changes.
@@ -34,7 +34,7 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree
-2. Enter a branch name (or let Kilo generate one)
+2. Enter a branch name (or let devil generate one)
 3. Type your first message to start the agent
 
 A new git worktree is created from your current branch. The agent works in isolation — your main branch is unaffected.
@@ -45,7 +45,7 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 
 1. Click the multi-version button and enter a prompt
 2. Optionally assign different models to each version
-3. Kilo creates one worktree + session per version and runs them in parallel
+3. devil creates one worktree + session per version and runs them in parallel
 
 ### Importing Existing Work
 
@@ -82,11 +82,11 @@ A common workflow is letting the agent work, then switching to the terminal to r
 
 ## Setup Scripts
 
-Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+Place an executable script at `.devil/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
 
 ## Session State and Persistence
 
-Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktrees, and their order are restored on reload.
+Agent Manager state is persisted in `.devil/agent-manager.json`. Sessions, worktrees, and their order are restored on reload.
 
 ## Keyboard Shortcuts (Agent Manager Panel)
 
@@ -114,7 +114,7 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-The Agent Manager is a dedicated control panel for running and supervising Kilo Code agents as interactive CLI processes. It supports:
+The Agent Manager is a dedicated control panel for running and supervising devil Code agents as interactive CLI processes. It supports:
 
 - Local sessions
 - Resuming existing sessions
@@ -125,14 +125,14 @@ This page reflects the actual implementation in the extension.
 
 ## Prerequisites
 
-- Install/update the Kilo Code CLI (latest) — see [CLI setup](/docs/code-with-ai/platforms/cli)
+- Install/update the devil Code CLI (latest) — see [CLI setup](/docs/code-with-ai/platforms/cli)
 - Open a project in VS Code (workspace required)
-- Authentication: You must be logged in via the extension settings OR use CLI with kilocode as provider (see [Authentication Requirements](#authentication-requirements))
+- Authentication: You must be logged in via the extension settings OR use CLI with devilcode as provider (see [Authentication Requirements](#authentication-requirements))
 
 ## Opening the Agent Manager
 
-- Command Palette: "Kilo Code: Open Agent Manager"
-- Or use the title/menu entry if available in your Kilo Code UI
+- Command Palette: "devil Code: Open Agent Manager"
+- Or use the title/menu entry if available in your devil Code UI
 
 The panel opens as a webview and stays active across focus changes.
 
@@ -163,14 +163,14 @@ Parallel Mode runs the agent in an isolated Git worktree branch, keeping your ma
 
 ### Worktree Location
 
-Worktrees are created in `.kilocode/worktrees/` within your project directory. This folder is automatically excluded from git via `.git/info/exclude` (a local-only ignore file that doesn't require a commit).
+Worktrees are created in `.devilcode/worktrees/` within your project directory. This folder is automatically excluded from git via `.git/info/exclude` (a local-only ignore file that doesn't require a commit).
 
 ```
 your-project/
 ├── .git/
 │   └── info/
-│       └── exclude   # local ignore rules (includes .kilocode/worktrees/)
-├── .kilocode/
+│       └── exclude   # local ignore rules (includes .devilcode/worktrees/)
+├── .devilcode/
 │   └── worktrees/
 │       └── feature-branch-1234567890/   # isolated working directory
 └── ...
@@ -203,14 +203,14 @@ The Agent Manager requires proper authentication for full functionality, includi
 
 ### Supported Authentication Methods
 
-1. **Kilo Code Extension (Recommended)**
+1. **devil Code Extension (Recommended)**
    - Sign in through the extension settings
    - Provides seamless authentication for the Agent Manager
    - Enables session syncing and cloud features
 
-2. **CLI with Kilo Code Provider**
-   - Use the CLI configured with `kilocode` as the provider
-   - Run `kilocode config` to set up authentication
+2. **CLI with devil Code Provider**
+   - Use the CLI configured with `devilcode` as the provider
+   - Run `devilcode config` to set up authentication
    - See [CLI setup](/docs/code-with-ai/platforms/cli) for details
 
 ### BYOK Limitations
@@ -223,11 +223,11 @@ If you're using BYOK with providers like Anthropic, OpenAI, or OpenRouter:
 - Session syncing features will be unavailable
 - You must use one of the supported authentication methods above for full functionality
 
-To use the Agent Manager with all features enabled, switch to the Kilo Code provider or sign in through the extension.
+To use the Agent Manager with all features enabled, switch to the devil Code provider or sign in through the extension.
 
 ## Remote sessions (Cloud)
 
-When signed in (Kilo Cloud), the Agent Manager lists your recent cloud-synced sessions:
+When signed in (devil Cloud), the Agent Manager lists your recent cloud-synced sessions:
 
 - Up to 50 sessions are fetched
 - Sessions are filtered to the current repository via normalized Git remote URL
@@ -248,9 +248,9 @@ Message transcripts are fetched from a signed blob and exclude internal checkpoi
   - Open the main repository (where .git is a directory), not a worktree checkout
 - Remote sessions not visible
   - Ensure you're signed in and the repo's remote URL matches the sessions you expect to see
-  - If using BYOK, session syncing is not available — switch to Kilo Code provider or sign in through the extension
+  - If using BYOK, session syncing is not available — switch to devil Code provider or sign in through the extension
 - Authentication errors
-  - Verify you're logged in via extension settings or using CLI with kilocode provider
+  - Verify you're logged in via extension settings or using CLI with devilcode provider
   - BYOK configurations do not support Agent Manager authentication
 
 {% /tab %}

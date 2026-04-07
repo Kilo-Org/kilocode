@@ -15,25 +15,25 @@ import { ServerProvider } from "../context/server"
 import { ProviderContext } from "../context/provider"
 import { flattenModels, findModel as _findModel } from "../context/provider-utils"
 import { ConfigProvider, ConfigContext } from "../context/config"
-import { DataProvider } from "@kilocode/kilo-ui/context/data"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { I18nProvider } from "@kilocode/kilo-ui/context"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { Code } from "@kilocode/kilo-ui/code"
-import { File } from "@kilocode/kilo-ui/file"
+import { DataProvider } from "@devilcode/kilo-ui/context/data"
+import { DiffComponentProvider } from "@devilcode/kilo-ui/context/diff"
+import { CodeComponentProvider } from "@devilcode/kilo-ui/context/code"
+import { FileComponentProvider } from "@devilcode/kilo-ui/context/file"
+import { DialogProvider } from "@devilcode/kilo-ui/context/dialog"
+import { MarkedProvider } from "@devilcode/kilo-ui/context/marked"
+import { I18nProvider } from "@devilcode/kilo-ui/context"
+import { Diff } from "@devilcode/kilo-ui/diff"
+import { Code } from "@devilcode/kilo-ui/code"
+import { File } from "@devilcode/kilo-ui/file"
 import { SessionContext } from "../context/session"
 import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
-import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
+import { dict as uiEn } from "@devilcode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
-import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
+import { dict as kiloEn } from "@devilcode/kilo-i18n/en"
 import { resolveTemplate } from "../context/language-utils"
-import type { Config, KilocodeNotification, PermissionRequest, QuestionRequest } from "../types/messages"
+import type { Config, DevilcodeNotification, PermissionRequest, QuestionRequest } from "../types/messages"
 
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
@@ -47,13 +47,13 @@ function t(key: string, params?: Record<string, string | number | boolean | unde
 // ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
-// Mock providers — pre-loaded Kilo Gateway model for stories
+// Mock providers — pre-loaded Devil Gateway model for stories
 // ---------------------------------------------------------------------------
 
 const MOCK_PROVIDERS = {
   kilo: {
     id: "kilo",
-    name: "Kilo",
+    name: "Devil",
     env: [] as string[],
     models: {
       "anthropic/claude-sonnet-4-6": {
@@ -104,7 +104,7 @@ export const defaultMockData = {
 
 function noop() {}
 
-function mockNotificationsValue(items: KilocodeNotification[] = []) {
+function mockNotificationsValue(items: DevilcodeNotification[] = []) {
   return {
     notifications: () => items,
     filteredNotifications: () => items,
@@ -210,7 +210,7 @@ interface StoryProvidersProps {
   data?: any
   permissions?: PermissionRequest[]
   questions?: QuestionRequest[]
-  notifications?: KilocodeNotification[]
+  notifications?: DevilcodeNotification[]
   status?: string
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */

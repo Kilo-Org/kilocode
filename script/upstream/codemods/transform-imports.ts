@@ -3,10 +3,10 @@
  * jscodeshift codemod: Transform import statements
  *
  * Transforms imports from opencode packages to kilo packages:
- * - opencode-ai -> @kilocode/cli
- * - @opencode-ai/cli -> @kilocode/cli
- * - @opencode-ai/sdk -> @kilocode/sdk
- * - @opencode-ai/plugin -> @kilocode/plugin
+ * - opencode-ai -> @devilcode/cli
+ * - @opencode-ai/cli -> @devilcode/cli
+ * - @opencode-ai/sdk -> @devilcode/sdk
+ * - @opencode-ai/plugin -> @devilcode/plugin
  *
  * Usage with jscodeshift:
  *   npx jscodeshift -t script/upstream/codemods/transform-imports.ts src/
@@ -21,18 +21,18 @@ import { info, success, warn } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
 
 const IMPORT_MAPPINGS: Record<string, string> = {
-  "opencode-ai": "@kilocode/cli",
-  "@opencode-ai/cli": "@kilocode/cli",
-  "@opencode-ai/sdk": "@kilocode/sdk",
-  "@opencode-ai/plugin": "@kilocode/plugin",
+  "opencode-ai": "@devilcode/cli",
+  "@opencode-ai/cli": "@devilcode/cli",
+  "@opencode-ai/sdk": "@devilcode/sdk",
+  "@opencode-ai/plugin": "@devilcode/plugin",
 }
 
 /**
  * Get the transformed module specifier, handling subpaths.
  * Examples:
- *   "@opencode-ai/sdk" -> "@kilocode/sdk"
- *   "@opencode-ai/sdk/v2" -> "@kilocode/sdk/v2"
- *   "@opencode-ai/sdk/v2/client" -> "@kilocode/sdk/v2/client"
+ *   "@opencode-ai/sdk" -> "@devilcode/sdk"
+ *   "@opencode-ai/sdk/v2" -> "@devilcode/sdk/v2"
+ *   "@opencode-ai/sdk/v2/client" -> "@devilcode/sdk/v2/client"
  */
 function getTransformedModule(specifier: string): string | undefined {
   // Check exact match first

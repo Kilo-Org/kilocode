@@ -10,7 +10,7 @@ import { createRequire } from "module"
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
-// kilocode_change start - variant detection matching bin/kilo logic
+// devilcode_change start - variant detection matching bin/kilo logic
 const platformMap = {
   darwin: "darwin",
   linux: "linux",
@@ -76,7 +76,7 @@ function isMusl() {
 
 function getPackageNames() {
   const { platform, arch } = detectPlatformAndArch()
-  const base = `@kilocode/cli-${platform}-${arch}`
+  const base = `@devilcode/cli-${platform}-${arch}`
   const avx2 = supportsAvx2()
   const baseline = arch === "x64" && !avx2
 
@@ -105,7 +105,7 @@ function getPackageNames() {
 
 function findBinary() {
   const { platform } = detectPlatformAndArch()
-  const binaryName = platform === "windows" ? "kilo.exe" : "kilo"
+  const binaryName = platform === "windows" ? "devil.exe" : "devil"
   const names = getPackageNames()
 
   for (const packageName of names) {
@@ -124,7 +124,7 @@ function findBinary() {
 
   throw new Error(`Could not find any binary package. Tried: ${names.map((n) => `"${n}"`).join(", ")}`)
 }
-// kilocode_change end
+// devilcode_change end
 
 function main() {
   if (os.platform() === "win32") {
@@ -134,7 +134,7 @@ function main() {
   }
 
   const { binaryPath } = findBinary()
-  const target = path.join(__dirname, "bin", ".kilo") // kilocode_change
+  const target = path.join(__dirname, "bin", ".devil") // devilcode_change
   if (fs.existsSync(target)) fs.unlinkSync(target)
   try {
     fs.linkSync(binaryPath, target)
@@ -147,6 +147,6 @@ function main() {
 try {
   main()
 } catch (error) {
-  console.error("Failed to setup kilo binary:", error.message)
+  console.error("Failed to setup devil binary:", error.message)
   process.exit(1)
 }

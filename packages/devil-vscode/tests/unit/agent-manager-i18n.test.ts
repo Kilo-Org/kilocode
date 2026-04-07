@@ -82,7 +82,7 @@ function isProgrammatic(text: string): boolean {
   // CSS selector strings
   if (/^\[data-/.test(trimmed) || /^\.am-/.test(trimmed)) return true
   // Log prefixes
-  if (/^\[Kilo/.test(trimmed)) return true
+  if (/^\[Devil/.test(trimmed)) return true
   // Platform-specific modifier display (already keybinding tokens)
   if (/^(Ctrl\+|⌘|⇧|⌃|⌥)/.test(trimmed) && trimmed.length <= 6) return true
   return false

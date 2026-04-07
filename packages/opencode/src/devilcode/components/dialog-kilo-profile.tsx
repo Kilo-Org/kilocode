@@ -1,5 +1,5 @@
 /**
- * Kilo Gateway Profile Dialog
+ * Devil Gateway Profile Dialog
  *
  * Displays user profile information with a clickable usage details link.
  */
@@ -9,15 +9,15 @@ import { useTheme } from "@tui/context/theme"
 import { useDialog } from "@tui/ui/dialog"
 import { Link } from "@tui/ui/link"
 import { TextAttributes } from "@opentui/core"
-import type { KilocodeProfile, KilocodeBalance } from "@kilocode/kilo-gateway"
+import type { DevilcodeProfile, DevilcodeBalance } from "@devilcode/kilo-gateway"
 
-interface DialogKiloProfileProps {
-  profile: KilocodeProfile
-  balance: KilocodeBalance | null
+interface DialogDevilProfileProps {
+  profile: DevilcodeProfile
+  balance: DevilcodeBalance | null
   currentOrgId?: string | null
 }
 
-export function DialogKiloProfile(props: DialogKiloProfileProps) {
+export function DialogDevilProfile(props: DialogDevilProfileProps) {
   const { theme } = useTheme()
   const dialog = useDialog()
 
@@ -42,14 +42,14 @@ export function DialogKiloProfile(props: DialogKiloProfileProps) {
 
   // Generate usage URL based on organization context
   const usageUrl = props.currentOrgId
-    ? `https://app.kilo.ai/organizations/${props.currentOrgId}/usage-details`
-    : "https://app.kilo.ai/usage"
+    ? `https://app.devil.ai/organizations/${props.currentOrgId}/usage-details`
+    : "https://app.devil.ai/usage"
 
   return (
     <box paddingLeft={2} paddingRight={2} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text}>
-          Kilo Gateway Profile
+          Devil Gateway Profile
         </text>
         <text fg={theme.textMuted}>esc</text>
       </box>

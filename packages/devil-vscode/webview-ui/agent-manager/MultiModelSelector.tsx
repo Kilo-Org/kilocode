@@ -1,9 +1,9 @@
 import { type Component, createSignal, createMemo, For, Show, onMount } from "solid-js"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { Icon } from "@devilcode/kilo-ui/icon"
 import { useProvider } from "../src/context/provider"
 import type { EnrichedModel } from "../src/context/provider"
 import { useLanguage } from "../src/context/language"
-import { KILO_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
+import { DEVIL_GATEWAY_ID, providerSortKey } from "../src/components/shared/model-selector-utils"
 import {
   type ModelAllocations,
   MAX_MULTI_VERSIONS,
@@ -35,7 +35,7 @@ export const MultiModelSelector: Component<{
 
   const visibleModels = createMemo(() => {
     const c = connected()
-    return models().filter((m) => m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID))
+    return models().filter((m) => m.providerID === DEVIL_GATEWAY_ID || c.includes(m.providerID))
   })
 
   const filtered = createMemo(() => {

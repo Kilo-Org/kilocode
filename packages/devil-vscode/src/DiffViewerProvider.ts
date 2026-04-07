@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
-import type { KiloConnectionService } from "./services/cli-backend"
+import type { FileDiff } from "@devilcode/sdk/v2/client"
+import type { DevilConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
 import {
@@ -28,10 +28,10 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly connectionService: KiloConnectionService,
+    private readonly connectionService: DevilConnectionService,
   ) {
     this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
-    this.outputChannel = vscode.window.createOutputChannel("Kilo Diff Viewer")
+    this.outputChannel = vscode.window.createOutputChannel("Devil Diff Viewer")
   }
 
   private log(...args: unknown[]) {

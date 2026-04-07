@@ -6,15 +6,15 @@ import { chmodSync, statSync, rmSync, readdirSync, existsSync } from "node:fs"
 const forceRebuild = process.argv.includes("--force")
 
 /**
- * Ensures the VS Code extension has a CLI binary at `packages/kilo-vscode/bin/kilo`.
+ * Ensures the VS Code extension has a CLI binary at `packages/devil-vscode/bin/kilo`.
  *
  * Strategy:
  * 1) If `bin/kilo` already exists -> ok.
  * 2) Else try to locate a prebuilt binary produced by `packages/opencode` build.
  * 3) Else try to build it via `bun run build --single` in `packages/opencode`.
- * 4) Copy the resulting binary into `packages/kilo-vscode/bin/kilo` and chmod +x.
+ * 4) Copy the resulting binary into `packages/devil-vscode/bin/kilo` and chmod +x.
  *
- * This script is intended to be run from `packages/kilo-vscode` as part of build/package.
+ * This script is intended to be run from `packages/devil-vscode` as part of build/package.
  */
 
 const kiloVscodeDir = join(import.meta.dir, "..")
@@ -65,7 +65,7 @@ function platformTag(): string {
   return `cli-${os}-${process.arch}`
 }
 
-async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
+async function findDevilBinaryInOpencodeDist(): Promise<string | null> {
   const distDir = join(opencodeDir, "dist")
 
   try {
@@ -76,7 +76,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
 
   // Prefer the binary matching the current platform (e.g. cli-darwin-arm64)
   const tag = platformTag()
-  const preferred = join(distDir, `@kilocode`, tag, "bin", binName)
+  const preferred = join(distDir, `@devilcode`, tag, "bin", binName)
   try {
     statSync(preferred)
     return preferred
@@ -112,7 +112,7 @@ async function findKiloBinaryInOpencodeDist(): Promise<string | null> {
 }
 
 async function ensureBuiltBinary(): Promise<string> {
-  const found = await findKiloBinaryInOpencodeDist()
+  const found = await findDevilBinaryInOpencodeDist()
   if (found) return found
 
   log(
@@ -134,7 +134,7 @@ async function ensureBuiltBinary(): Promise<string> {
   // Build using the opencode package script.
   await $`bun run build --single`.cwd(opencodeDir)
 
-  const built = await findKiloBinaryInOpencodeDist()
+  const built = await findDevilBinaryInOpencodeDist()
   if (!built) {
     throw new Error(
       `CLI build completed but no binary was found in ${join(opencodeDir, "dist")} (expected dist/**/bin/kilo).`,

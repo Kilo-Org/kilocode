@@ -31,7 +31,7 @@ export function findModel(models: EnrichedModel[], selection: ModelSelection | n
 
 /**
  * True when the selection points to an existing model in a connected provider.
- * Kilo gateway models remain usable whenever the provider catalog exposes them.
+ * Devil gateway models remain usable whenever the provider catalog exposes them.
  */
 export function isModelValid(
   providers: Record<string, Provider>,

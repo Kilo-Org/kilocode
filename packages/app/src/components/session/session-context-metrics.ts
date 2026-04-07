@@ -1,4 +1,4 @@
-import type { AssistantMessage, Message } from "@kilocode/sdk/v2/client"
+import type { AssistantMessage, Message } from "@devilcode/sdk/v2/client"
 
 type Provider = {
   id: string

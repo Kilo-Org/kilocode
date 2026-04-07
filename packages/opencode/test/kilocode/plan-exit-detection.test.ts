@@ -3,7 +3,7 @@ import fs from "fs/promises"
 import path from "path"
 import { Identifier } from "../../src/id/id"
 import { Instance } from "../../src/project/instance"
-import { PlanFollowup } from "../../src/kilocode/plan-followup"
+import { PlanFollowup } from "../../src/devilcode/plan-followup"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -122,7 +122,7 @@ describe("plan_exit detection", () => {
           {
             tool: "plan_exit",
             input: {},
-            output: "Plan is ready at .kilo/plans/plan.md. Ending planning turn.", // kilocode_change
+            output: "Plan is ready at .kilo/plans/plan.md. Ending planning turn.", // devilcode_change
           },
         ],
       })

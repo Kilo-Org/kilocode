@@ -272,12 +272,12 @@ export function Markdown(
   )
 
   let copyCleanup: (() => void) | undefined
-  // kilocode_change start: generation counter prevents stale deferredHighlight
+  // devilcode_change start: generation counter prevents stale deferredHighlight
   // callbacks from overwriting copyCleanup set by a newer render (issue #6221).
   // The abort signal cancels the previous in-flight highlight pass so rapid
   // streaming tokens don't spawn concurrent passes racing on the same DOM nodes.
   const highlightState = { gen: 0, signal: { aborted: false } }
-  // kilocode_change end
+  // devilcode_change end
 
   createEffect(() => {
     const container = root()
@@ -298,7 +298,7 @@ export function Markdown(
     }
     decorate(temp, labels)
 
-    // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
+    // devilcode_change start: morphdom guard for highlighted blocks (issue #6221)
     // During streaming, morphdom re-runs on every token. Without this guard,
     // it would revert already-highlighted <pre> blocks back to plain code.
     morphdom(container, temp, {
@@ -331,9 +331,9 @@ export function Markdown(
         return true
       },
     })
-    // kilocode_change end
+    // devilcode_change end
 
-    // kilocode_change start: deferred syntax highlighting (issue #6221)
+    // devilcode_change start: deferred syntax highlighting (issue #6221)
     // DOM is now painted with plain <pre><code> blocks.
     // Progressively highlight via setTimeout(0) to avoid blocking.
     // onComplete re-runs setupCodeCopy since highlighting replaces DOM nodes.
@@ -354,7 +354,7 @@ export function Markdown(
       },
       signal,
     )
-    // kilocode_change end
+    // devilcode_change end
   })
 
   onCleanup(() => {

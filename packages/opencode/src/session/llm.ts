@@ -22,13 +22,15 @@ import { SystemPrompt } from "./system"
 import { Flag } from "@/flag/flag"
 import { PermissionNext } from "@/permission/next"
 import { Auth } from "@/auth"
-import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
-import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-// kilocode_change start
-import { getKiloProjectId } from "@/kilocode/project-id"
-import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@kilocode/kilo-gateway"
-import { Identity } from "@kilocode/kilo-telemetry"
-// kilocode_change end
+import { DEFAULT_HEADERS } from "@/devilcode/const" // devilcode_change
+import { Telemetry } from "@devilcode/kilo-telemetry" // devilcode_change
+// devilcode_change start
+import { getDevilProjectId } from "@/devilcode/project-id"
+import { stream as streamClaude } from "@/devilcode/claude-code"
+import { stream as streamAgentSdk, AGENT_SDK_ID } from "@/devilcode/agent-sdk" // devilcode_change
+import { HEADER_PROJECTID, HEADER_MACHINEID, HEADER_TASKID } from "@devilcode/kilo-gateway"
+import { Identity } from "@devilcode/kilo-telemetry"
+// devilcode_change end
 
 export namespace LLM {
   const log = Log.create({ service: "llm" })
@@ -48,7 +50,7 @@ export namespace LLM {
     toolChoice?: "auto" | "required" | "none"
   }
 
-  export type StreamOutput = StreamTextResult<ToolSet, unknown>
+  export type StreamOutput = Pick<StreamTextResult<ToolSet, unknown>, "fullStream" | "textStream" | "text">
 
   export async function stream(input: StreamInput) {
     const l = log
@@ -63,20 +65,22 @@ export namespace LLM {
       modelID: input.model.id,
       providerID: input.model.providerID,
     })
-    const [language, cfg, provider, auth] = await Promise.all([
-      Provider.getLanguage(input.model),
+    const [cfg, provider, auth] = await Promise.all([
       Config.get(),
       Provider.getProvider(input.model.providerID),
       Auth.get(input.model.providerID),
     ])
+    if (!provider) {
+      throw new Error(`Provider not found: ${input.model.providerID}`)
+    }
     const isCodex = provider.id === "openai" && auth?.type === "oauth"
 
     const system = []
     system.push(
       [
-        // kilocode_change start - soul defines core identity and personality
+        // devilcode_change start - soul defines core identity and personality
         ...(isCodex ? [] : [SystemPrompt.soul()]),
-        // kilocode_change end
+        // devilcode_change end
         // use agent prompt otherwise provider prompt
         // For Codex sessions, skip SystemPrompt.provider() since it's sent via options.instructions
         ...(input.agent.prompt ? [input.agent.prompt] : isCodex ? [] : SystemPrompt.provider(input.model)),
@@ -102,6 +106,31 @@ export namespace LLM {
       system.push(header, rest.join("\n"))
     }
 
+    // devilcode_change start
+    if (Provider.external(input.model, provider)) {
+      if (input.model.providerID === AGENT_SDK_ID) {
+        return streamAgentSdk({
+          abort: input.abort,
+          agent: input.agent,
+          cwd: Instance.directory,
+          messages: input.messages,
+          small: input.small ?? false,
+          system,
+          model: input.model.id,
+        })
+      }
+      return streamClaude({
+        abort: input.abort,
+        cwd: Instance.directory,
+        messages: input.messages,
+        small: input.small ?? false,
+        system,
+      })
+    }
+    // devilcode_change end
+
+    const language = await Provider.getLanguage(input.model)
+
     const variant =
       !input.small && input.model.variants && input.user.variant ? input.model.variants[input.user.variant] : {}
     const base = input.small
@@ -118,9 +147,9 @@ export namespace LLM {
       mergeDeep(variant),
     )
     if (isCodex) {
-      // kilocode_change start - prepend soul to codex instructions
+      // devilcode_change start - prepend soul to codex instructions
       options.instructions = SystemPrompt.soul() + "\n" + SystemPrompt.instructions()
-      // kilocode_change end
+      // devilcode_change end
     }
 
     const params = await Plugin.trigger(
@@ -156,11 +185,11 @@ export namespace LLM {
       },
     )
 
-    // kilocode_change start - resolve project ID and machine ID for kilo provider
-    const isKilo = input.model.api.npm === "@kilocode/kilo-gateway"
-    const kiloProjectId = isKilo ? await getKiloProjectId().catch(() => undefined) : undefined
-    const machineId = isKilo ? await Identity.getMachineId().catch(() => undefined) : undefined
-    // kilocode_change end
+    // devilcode_change start - resolve project ID and machine ID for kilo provider
+    const isDevil = input.model.api.npm === "@devilcode/kilo-gateway"
+    const kiloProjectId = isDevil ? await getDevilProjectId().catch(() => undefined) : undefined
+    const machineId = isDevil ? await Identity.getMachineId().catch(() => undefined) : undefined
+    // devilcode_change end
 
     const maxOutputTokens =
       isCodex || provider.id.includes("github-copilot") ? undefined : ProviderTransform.maxOutputTokens(input.model)
@@ -229,17 +258,17 @@ export namespace LLM {
               "x-kilo-project": Instance.project.id,
               "x-kilo-session": input.sessionID,
               "x-kilo-request": input.user.id,
-              "x-kilo-client": Flag.KILO_CLIENT,
+              "x-kilo-client": Flag.DEVIL_CLIENT,
             }
           : input.model.providerID !== "anthropic"
-            ? DEFAULT_HEADERS // kilocode_change
+            ? DEFAULT_HEADERS // devilcode_change
             : undefined),
-        ...(isKilo && input.agent.name ? { "x-kilocode-mode": input.agent.name.toLowerCase() } : {}),
-        // kilocode_change start - add project ID, machine ID, and task ID headers for kilo provider
-        ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
-        ...(isKilo && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
-        ...(isKilo ? { [HEADER_TASKID]: input.sessionID } : {}),
-        // kilocode_change end
+        ...(isDevil && input.agent.name ? { "x-devilcode-mode": input.agent.name.toLowerCase() } : {}),
+        // devilcode_change start - add project ID, machine ID, and task ID headers for kilo provider
+        ...(isDevil && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
+        ...(isDevil && machineId ? { [HEADER_MACHINEID]: machineId } : {}),
+        ...(isDevil ? { [HEADER_TASKID]: input.sessionID } : {}),
+        // devilcode_change end
         ...input.model.headers,
         ...headers,
       },
@@ -267,14 +296,14 @@ export namespace LLM {
           },
         ],
       }),
-      // kilocode_change start - enable telemetry by default with custom PostHog tracer
+      // devilcode_change start - enable telemetry by default with custom PostHog tracer
       experimental_telemetry: {
         isEnabled: cfg.experimental?.openTelemetry !== false,
         recordInputs: false, // Prevent recording prompts, messages, tool args
         recordOutputs: false, // Prevent recording completions, tool results
         tracer: Telemetry.getTracer() ?? undefined,
       },
-      // kilocode_change end
+      // devilcode_change end
     })
   }
 

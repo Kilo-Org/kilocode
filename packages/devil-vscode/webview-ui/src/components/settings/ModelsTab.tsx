@@ -1,5 +1,5 @@
 import { Component, For, createMemo } from "solid-js"
-import { Card } from "@kilocode/kilo-ui/card"
+import { Card } from "@devilcode/kilo-ui/card"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"

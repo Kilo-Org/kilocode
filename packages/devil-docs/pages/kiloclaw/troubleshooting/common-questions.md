@@ -1,6 +1,6 @@
 ---
 title: "Common Questions"
-description: "Answers to common KiloClaw troubleshooting questions"
+description: "Answers to common DevilClaw troubleshooting questions"
 ---
 
 # Common Questions
@@ -12,7 +12,7 @@ OpenClaw Doctor is the recommended first step when something isn't working. It r
 To use it:
 
 1. Make sure your instance is running
-2. Click **OpenClaw Doctor** on your [dashboard](/docs/kiloclaw/dashboard)
+2. Click **OpenClaw Doctor** on your [dashboard](/docs/DevilClaw/dashboard)
 3. Watch the output as it runs — results appear in real time
 
 ## Does Redeploy reset my instance?
@@ -26,14 +26,14 @@ No. Redeploy does **not** delete your files, git repos, or cron jobs. It stops t
 
 ## My bot isn't responding on Telegram/Discord/Slack
 
-1. Check that the channel token is configured in [Settings](/docs/kiloclaw/dashboard#channels)
+1. Check that the channel token is configured in [Settings](/docs/DevilClaw/dashboard#channels)
 2. Make sure you **Redeployed** or **Restarted OpenClaw** after saving tokens
 3. Check for pending pairing requests — the user may need to be approved
 4. Try running **OpenClaw Doctor**
 
 ## Accessing and Restoring Config Files
 
-You can directly access the files in `/root/.openclaw/` on the [KiloClaw Dashboard](https://app.kilo.ai/claw) using the file browser of the edit files dialog. This can be a useful way to examine or update the config files (especially `openclaw.json`) if you run into an issue. There may also be backups in the form of `openclaw.bak` files that you can manually restore from if needed.
+You can directly access the files in `/root/.openclaw/` on the [DevilClaw Dashboard](https://app.devil.ai/claw) using the file browser of the edit files dialog. This can be a useful way to examine or update the config files (especially `openclaw.json`) if you run into an issue. There may also be backups in the form of `openclaw.bak` files that you can manually restore from if needed.
 
 ## The gateway shows "Crashed"
 
@@ -41,7 +41,7 @@ The OpenClaw process is automatically restarted when it crashes. Check the Gatew
 
 1. Run **OpenClaw Doctor**
 2. Try a **Redeploy** to apply the latest platform image
-3. If the issue persists, join the [Kilo Discord](https://kilo.ai/discord) and share details in the KiloClaw channel
+3. If the issue persists, join the [devil Discord](https://devil.ai/discord) and share details in the DevilClaw channel
 
 ## I changed the model but the agent is still using the old one
 

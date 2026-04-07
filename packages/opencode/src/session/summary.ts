@@ -101,10 +101,10 @@ export namespace SessionSummary {
     const messages = input.messages.filter(
       (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
     )
-    // kilocode_change start - session may have been deleted before summarization completed
+    // devilcode_change start - session may have been deleted before summarization completed
     const msgWithParts = messages.find((m) => m.info.id === input.messageID)
     if (!msgWithParts) return
-    // kilocode_change end
+    // devilcode_change end
     const userMsg = msgWithParts.info as MessageV2.User
     const diffs = await computeDiff({ messages })
     userMsg.summary = {
@@ -121,7 +121,7 @@ export namespace SessionSummary {
     }),
     async (input) => {
       const diffs = await Storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).catch(() => [])
-      // kilocode_change start — scrub oversized diffs from stored session_diff
+      // devilcode_change start — scrub oversized diffs from stored session_diff
       const next = diffs.map((item) => {
         const file = unquoteGitPath(item.file)
         const oversized =
@@ -137,7 +137,7 @@ export namespace SessionSummary {
       })
       const changed = next.some((item, i) => item !== diffs[i])
       if (changed) Storage.write(["session_diff", input.sessionID], next).catch(() => {})
-      // kilocode_change end
+      // devilcode_change end
       return next
     },
   )

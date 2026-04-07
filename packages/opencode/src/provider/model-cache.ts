@@ -1,5 +1,5 @@
-// kilocode_change new file
-import { fetchKiloModels } from "@kilocode/kilo-gateway"
+// devilcode_change new file
+import { fetchDevilModels } from "@devilcode/kilo-gateway"
 import { Config } from "../config/config"
 import { Auth } from "../auth"
 import { Env } from "../env"
@@ -161,21 +161,21 @@ export namespace ModelCache {
    */
   async function fetchModels(providerID: string, options: any): Promise<Record<string, any>> {
     if (providerID === "kilo") {
-      return fetchKiloModels(options)
+      return fetchDevilModels(options)
     }
 
-    // kilocode_change start
+    // devilcode_change start
     if (providerID === "apertis") {
       return fetchApertisModels(options)
     }
-    // kilocode_change end
+    // devilcode_change end
 
     // Other providers not implemented yet
     log.debug("provider not implemented", { providerID })
     return {}
   }
 
-  // kilocode_change start
+  // devilcode_change start
   const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
 
   async function fetchApertisModels(options: any): Promise<Record<string, any>> {
@@ -225,7 +225,7 @@ export namespace ModelCache {
 
     return models
   }
-  // kilocode_change end
+  // devilcode_change end
 
   /**
    * Get authentication options from multiple sources
@@ -241,47 +241,47 @@ export namespace ModelCache {
       const config = await Config.get()
       const providerConfig = config.provider?.[providerID]
       if (providerConfig?.options?.apiKey) {
-        options.kilocodeToken = providerConfig.options.apiKey
+        options.devilcodeToken = providerConfig.options.apiKey
       }
 
-      // kilocode_change start
-      if (providerConfig?.options?.kilocodeOrganizationId) {
-        options.kilocodeOrganizationId = providerConfig.options.kilocodeOrganizationId
+      // devilcode_change start
+      if (providerConfig?.options?.devilcodeOrganizationId) {
+        options.devilcodeOrganizationId = providerConfig.options.devilcodeOrganizationId
       }
-      // kilocode_change end
+      // devilcode_change end
 
       // Get from Auth
       const auth = await Auth.get(providerID)
       if (auth) {
         if (auth.type === "api") {
-          options.kilocodeToken = auth.key
+          options.devilcodeToken = auth.key
         } else if (auth.type === "oauth") {
-          options.kilocodeToken = auth.access
-          // kilocode_change start - read org ID from OAuth accountId for enterprise model filtering
+          options.devilcodeToken = auth.access
+          // devilcode_change start - read org ID from OAuth accountId for enterprise model filtering
           if (auth.accountId) {
-            options.kilocodeOrganizationId = auth.accountId
+            options.devilcodeOrganizationId = auth.accountId
           }
-          // kilocode_change end
+          // devilcode_change end
         }
       }
 
       // Get from Env
       const env = Env.all()
-      if (env.KILO_API_KEY) {
-        options.kilocodeToken = env.KILO_API_KEY
+      if (env.DEVIL_API_KEY) {
+        options.devilcodeToken = env.DEVIL_API_KEY
       }
-      if (env.KILO_ORG_ID) {
-        options.kilocodeOrganizationId = env.KILO_ORG_ID
+      if (env.DEVIL_ORG_ID) {
+        options.devilcodeOrganizationId = env.DEVIL_ORG_ID
       }
 
       log.debug("auth options resolved", {
         providerID,
-        hasToken: !!options.kilocodeToken,
-        hasOrganizationId: !!options.kilocodeOrganizationId,
+        hasToken: !!options.devilcodeToken,
+        hasOrganizationId: !!options.devilcodeOrganizationId,
       })
     }
 
-    // kilocode_change start
+    // devilcode_change start
     if (providerID === "apertis") {
       const config = await Config.get()
       const providerConfig = config.provider?.[providerID]
@@ -311,7 +311,7 @@ export namespace ModelCache {
         hasBaseURL: !!options.baseURL,
       })
     }
-    // kilocode_change end
+    // devilcode_change end
 
     return options
   }

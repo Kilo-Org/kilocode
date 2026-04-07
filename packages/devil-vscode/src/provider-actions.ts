@@ -1,11 +1,11 @@
 /**
- * Provider action handlers extracted from KiloProvider to stay under max-lines.
+ * Provider action handlers extracted from DevilProvider to stay under max-lines.
  * These are pure async functions that operate on the SDK client — no vscode dependency.
  */
-import type { KiloClient } from "@kilocode/sdk/v2"
+import type { DevilClient } from "@devilcode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
 import { resolveCustomProviderAuth, sanitizeCustomProviderConfig } from "./shared/custom-provider"
-import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { DEVIL_AUTO, parseModelString } from "./shared/provider-model"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
@@ -14,7 +14,7 @@ import { KILO_AUTO, parseModelString } from "./shared/provider-model"
 type AuthState = "api" | "oauth" | "wellknown"
 
 /** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
-export async function fetchProviderData(client: KiloClient, dir: string) {
+export async function fetchProviderData(client: DevilClient, dir: string) {
   const authRequest =
     typeof client.provider.auth === "function"
       ? client.provider
@@ -42,7 +42,7 @@ export async function fetchProviderData(client: KiloClient, dir: string) {
 }
 
 export function buildActionContext(
-  client: KiloClient,
+  client: DevilClient,
   post: (msg: unknown) => void,
   errFn: (err: unknown) => string,
   dir: string,
@@ -58,7 +58,7 @@ export function buildActionContext(
       // Shared State.dispose() now has a hard per-disposer timeout, so this
       // wait is bounded without needing a client-side timeout here.
       await client.global.dispose().catch((error: unknown) => {
-        console.warn(`[Kilo New] KiloProvider: global.dispose() after ${reason} failed:`, error)
+        console.warn(`[Devil New] DevilProvider: global.dispose() after ${reason} failed:`, error)
       })
     },
     fetchAndSendProviders: refresh,
@@ -97,14 +97,14 @@ export function computeDefaultSelection(
   const configured = parseModelString(cachedConfig?.config?.model)
   if (configured) return configured
   if (vscodePID && vscodeMID) return { providerID: vscodePID, modelID: vscodeMID }
-  return { ...KILO_AUTO }
+  return { ...DEVIL_AUTO }
 }
 
 type PostMessage = (message: unknown) => void
 type GetErrorMessage = (error: unknown) => string
 
 interface ActionContext {
-  client: KiloClient
+  client: DevilClient
   postMessage: PostMessage
   getErrorMessage: GetErrorMessage
   workspaceDir: string
@@ -224,7 +224,7 @@ export async function disconnectProvider(
       await ctx.client.auth.remove({ providerID: id }, { throwOnError: true })
     } catch (err) {
       if (!configured) throw err
-      console.warn(`[Kilo New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
+      console.warn(`[Devil New] auth.remove failed for configured provider ${id} (non-fatal):`, err)
     }
 
     if (id === "kilo") {

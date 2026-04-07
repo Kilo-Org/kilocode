@@ -921,7 +921,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
       // Command is attached to track acceptance telemetry
       expect(result[0].command).toEqual({
-        command: "kilocode.autocomplete.inline-completion.accepted",
+        command: "devilcode.autocomplete.inline-completion.accepted",
         title: "Autocomplete Accepted",
       })
     })
@@ -2431,7 +2431,7 @@ describe("AutocompleteInlineCompletionProvider", () => {
       let acceptCallback: (() => void) | undefined
       const originalMock = vi.mocked(vscode.commands.registerCommand)
       originalMock.mockImplementation((cmd, callback) => {
-        if (cmd === "kilocode.autocomplete.inline-completion.accepted") {
+        if (cmd === "devilcode.autocomplete.inline-completion.accepted") {
           acceptCallback = callback as () => void
         }
         return { dispose: vi.fn() }

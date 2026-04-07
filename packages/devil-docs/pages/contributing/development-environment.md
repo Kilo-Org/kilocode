@@ -6,7 +6,7 @@ description: "Set up your development environment for contributing"
 # Development Environment
 
 {% callout type="info" %}
-**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). For extension and CLI development, please head over to that repository.
+**New versions of the VS Code extension and CLI are being developed in [Devil-Org/devilcode](https://github.com/Devil-Org/devilcode)** (extension at `packages/devil-vscode`, CLI at `packages/opencode`). For extension and CLI development, please head over to that repository.
 {% /callout %}
 
 This document will help you set up your development environment and understand how to work with the codebase. Whether you're fixing bugs, adding features, or just exploring the code, this guide will get you started.
@@ -25,12 +25,12 @@ Before you begin, make sure you have the following installed:
 
 1. **Fork and Clone the Repository**:
    - **Fork the Repository**:
-     - Visit the [Kilo Code GitHub repository](https://github.com/Kilo-Org/kilocode)
+     - Visit the [devil Code GitHub repository](https://github.com/Devil-Org/devilcode)
      - Click the "Fork" button in the top-right corner to create your own copy.
    - **Clone Your Fork**:
      ```bash
-     git clone https://github.com/[YOUR-USERNAME]/kilocode.git
-     cd kilocode
+     git clone https://github.com/[YOUR-USERNAME]/devilcode.git
+     cd devilcode
      ```
      Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
@@ -86,7 +86,7 @@ This will:
 To run the extension in development mode:
 
 1. Press `F5` (or select **Run** → **Start Debugging**) in VSCode
-2. This will open a new VSCode window with Kilo Code loaded
+2. This will open a new VSCode window with devil Code loaded
 
 ### Hot Reloading
 
@@ -108,14 +108,14 @@ In development mode (NODE_ENV="development"), changing the core code will trigge
 To install your built extension:
 
 ```bash
-code --install-extension "$(ls -1v bin/kilo-code-*.vsix | tail -n1)"
+code --install-extension "$(ls -1v bin/devil-code-*.vsix | tail -n1)"
 ```
 
 Replace `[version]` with the current version number.
 
 ## Testing
 
-Kilo Code uses several types of tests to ensure quality:
+devil Code uses several types of tests to ensure quality:
 
 ### Unit Tests
 
@@ -194,5 +194,5 @@ These hooks help maintain code quality and consistency. If you encounter issues 
 ### Debugging Tips
 
 - Use `console.log()` statements in your code for debugging
-- Check the Output panel in VSCode (View > Output) and select "Kilo Code" from the dropdown
+- Check the Output panel in VSCode (View > Output) and select "devil Code" from the dropdown
 - For webview issues, use the browser developer tools in the webview (right-click > "Inspect Element")

@@ -1,12 +1,12 @@
 import { select } from "@clack/prompts"
-import type { KilocodeProfile, Organization, KilocodeBalance } from "../types.js"
-import { KILO_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL } from "./constants.js"
+import type { DevilcodeProfile, Organization, DevilcodeBalance } from "../types.js"
+import { DEVIL_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL } from "./constants.js"
 
 /**
- * Fetch user profile from Kilo API
+ * Fetch user profile from Devil API
  */
-export async function fetchProfile(token: string): Promise<KilocodeProfile> {
-  const response = await fetch(`${KILO_API_BASE}/api/profile`, {
+export async function fetchProfile(token: string): Promise<DevilcodeProfile> {
+  const response = await fetch(`${DEVIL_API_BASE}/api/profile`, {
     headers: {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -27,7 +27,7 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
     organizations?: Organization[]
   }
   // Backend returns { user: { email, name, ... }, organizations }
-  // Transform to flat KilocodeProfile structure
+  // Transform to flat DevilcodeProfile structure
   return {
     email: data.user?.email ?? data.email ?? "",
     name: data.user?.name ?? data.name,
@@ -38,24 +38,24 @@ export async function fetchProfile(token: string): Promise<KilocodeProfile> {
 /**
  * Alias for compatibility with existing code
  */
-export const getKiloProfile = fetchProfile
+export const getDevilProfile = fetchProfile
 
 /**
- * Fetch user balance from Kilo API
+ * Fetch user balance from Devil API
  * @param token - Authentication token
  * @param organizationId - Optional organization ID for team balance
  */
-export async function fetchBalance(token: string, organizationId?: string): Promise<KilocodeBalance | null> {
+export async function fetchBalance(token: string, organizationId?: string): Promise<DevilcodeBalance | null> {
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     }
     if (organizationId) {
-      headers["x-kilocode-organizationid"] = organizationId
+      headers["x-devilcode-organizationid"] = organizationId
     }
 
-    const response = await fetch(`${KILO_API_BASE}/api/profile/balance`, { headers })
+    const response = await fetch(`${DEVIL_API_BASE}/api/profile/balance`, { headers })
 
     if (!response.ok) {
       console.warn(`Failed to fetch balance: ${response.status}`)
@@ -73,7 +73,7 @@ export async function fetchBalance(token: string, organizationId?: string): Prom
 /**
  * Alias for compatibility with existing code
  */
-export const getKiloBalance = fetchBalance
+export const getDevilBalance = fetchBalance
 
 /**
  * Fetch default model for a given organization context
@@ -82,7 +82,7 @@ export const getKiloBalance = fetchBalance
  */
 export async function fetchDefaultModel(token?: string, organizationId?: string): Promise<string> {
   const path = organizationId ? `/api/organizations/${organizationId}/defaults` : `/api/defaults`
-  const url = `${KILO_API_BASE}${path}`
+  const url = `${DEVIL_API_BASE}${path}`
 
   try {
     const headers: Record<string, string> = {
@@ -111,14 +111,14 @@ export async function fetchDefaultModel(token?: string, organizationId?: string)
 /**
  * Alias for compatibility with existing code
  */
-export const getKiloDefaultModel = fetchDefaultModel
+export const getDevilDefaultModel = fetchDefaultModel
 
 /**
  * Fetch both profile and balance in parallel
  */
 export async function fetchProfileWithBalance(token: string): Promise<{
-  profile: KilocodeProfile
-  balance: KilocodeBalance | null
+  profile: DevilcodeProfile
+  balance: DevilcodeBalance | null
 }> {
   const [profile, balance] = await Promise.all([fetchProfile(token), fetchBalance(token)])
   return { profile, balance }

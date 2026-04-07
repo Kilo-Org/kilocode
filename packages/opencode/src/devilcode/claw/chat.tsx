@@ -1,10 +1,10 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw chat panel
+ * DevilClaw chat panel
  *
  * Renders a scrollable message list and a textarea input for chatting
- * with the KiloClaw bot via Stream Chat.
+ * with the DevilClaw bot via Stream Chat.
  *
  * Visual style mirrors the session chat TUI (routes/session/index.tsx).
  */

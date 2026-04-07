@@ -6,7 +6,7 @@
  *   bun run script/upstream/list-versions.ts
  */
 
-import { getAvailableUpstreamVersions, getCurrentKiloVersion } from "./utils/version"
+import { getAvailableUpstreamVersions, getCurrentDevilVersion } from "./utils/version"
 import { fetchUpstream, hasUpstreamRemote } from "./utils/git"
 import { header, info, success, warn, error } from "./utils/logger"
 
@@ -24,10 +24,10 @@ async function main() {
   await fetchUpstream()
 
   const versions = await getAvailableUpstreamVersions()
-  const kiloVersion = await getCurrentKiloVersion()
+  const kiloVersion = await getCurrentDevilVersion()
 
   console.log()
-  success(`Current Kilo version: ${kiloVersion}`)
+  success(`Current Devil version: ${kiloVersion}`)
   console.log()
 
   info("Available upstream versions (newest first):")

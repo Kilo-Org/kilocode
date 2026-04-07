@@ -24,8 +24,8 @@ export default defineConfig({
     reuseExistingServer: reuse,
     timeout: 120_000,
     env: {
-      VITE_KILO_SERVER_HOST: serverHost,
-      VITE_KILO_SERVER_PORT: serverPort,
+      VITE_DEVIL_SERVER_HOST: serverHost,
+      VITE_DEVIL_SERVER_PORT: serverPort,
     },
   },
   use: {

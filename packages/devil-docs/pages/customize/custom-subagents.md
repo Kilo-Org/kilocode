@@ -1,15 +1,15 @@
 ---
 title: "Custom Subagents"
-description: "Create and configure custom subagents in Kilo Code's CLI"
+description: "Create and configure custom subagents in devil Code's CLI"
 platform: new
 ---
 
 # Custom Subagents
 
-Kilo Code's CLI supports **custom subagents** — specialized AI assistants that can be invoked by primary agents or manually via `@` mentions. Subagents run in their own isolated sessions with tailored prompts, models, tool access, and permissions, enabling you to build purpose-built workflows for tasks like code review, documentation, security audits, and more.
+devil Code's CLI supports **custom subagents** — specialized AI assistants that can be invoked by primary agents or manually via `@` mentions. Subagents run in their own isolated sessions with tailored prompts, models, tool access, and permissions, enabling you to build purpose-built workflows for tasks like code review, documentation, security audits, and more.
 
 {% callout type="info" %}
-Custom subagents are currently configured through the config file (`kilo.jsonc`) or via markdown agent files. UI-based configuration is not yet available.
+Custom subagents are currently configured through the config file (`devil.jsonc`) or via markdown agent files. UI-based configuration is not yet available.
 {% /callout %}
 
 ## What Are Subagents?
@@ -25,7 +25,7 @@ Key characteristics of subagents:
 
 ### Built-in Subagents
 
-Kilo Code includes two built-in subagents:
+devil Code includes two built-in subagents:
 
 | Name        | Description                                                                                                                                                        |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -48,11 +48,11 @@ There are two ways to define custom subagents: through JSON configuration or mar
 
 ### Method 1: JSON Configuration
 
-Add agents to the `agent` section of your `kilo.jsonc` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
+Add agents to the `agent` section of your `devil.jsonc` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "agent": {
     "code-reviewer": {
       "description": "Reviews code for best practices and potential issues",
@@ -88,8 +88,8 @@ The file path is relative to the config file location, so this works for both gl
 
 Define agents as markdown files with YAML frontmatter. Place them in:
 
-- **Global**: `~/.config/kilo/agents/`
-- **Project-specific**: `.kilo/agents/`
+- **Global**: `~/.config/devil/agents/`
+- **Project-specific**: `.devil/agents/`
 
 The **filename** (without `.md`) becomes the agent name.
 
@@ -123,7 +123,7 @@ Markdown files are often preferred for subagents with longer prompts because the
 Create agents interactively using the CLI:
 
 ```bash
-kilo agent create
+devil agent create
 ```
 
 This command will:
@@ -138,8 +138,8 @@ This command will:
 You can also run it non-interactively:
 
 ```bash
-kilo agent create \
-  --path .kilo \
+devil agent create \
+  --path .devil \
   --description "Reviews code for security vulnerabilities" \
   --mode subagent \
   --tools "read,grep,glob"
@@ -235,7 +235,7 @@ This creates a subtask that runs in the subagent's isolated context with its con
 To see all available agents (both built-in and custom):
 
 ```bash
-kilo agent list
+devil agent list
 ```
 
 This displays each agent's name, mode, and permission configuration.
@@ -245,10 +245,10 @@ This displays each agent's name, mode, and permission configuration.
 Agent configurations are merged from multiple sources. Later sources override earlier ones:
 
 1. **Built-in agent defaults** (native agents defined in the codebase)
-2. **Global config** (`~/.config/kilo/config.json`)
-3. **Project config** (`kilo.jsonc` in the project root)
-4. **Global agent markdown files** (`~/.config/kilo/agents/*.md`)
-5. **Project agent markdown files** (`.kilo/agents/*.md`)
+2. **Global config** (`~/.config/devil/config.json`)
+3. **Project config** (`devil.jsonc` in the project root)
+4. **Global agent markdown files** (`~/.config/devil/agents/*.md`)
+5. **Project agent markdown files** (`.devil/agents/*.md`)
 
 When overriding a built-in agent, properties are merged — only the fields you specify are overridden. When creating a new custom agent, unspecified fields use sensible defaults (`mode: "all"`, full permissions inherited from global config).
 

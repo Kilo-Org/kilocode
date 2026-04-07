@@ -646,7 +646,7 @@ describe("WorktreeManager.discoverWorktrees", () => {
     const gitdir = path.join(root, ".git", "worktrees", "partial", "gitdir")
     await fs.mkdir(worktree, { recursive: true })
     await fs.mkdir(path.dirname(gitdir), { recursive: true })
-    await fs.writeFile(gitdir, path.join(root, ".kilocode", "worktrees", "partial", ".git"), "utf-8")
+    await fs.writeFile(gitdir, path.join(root, ".devilcode", "worktrees", "partial", ".git"), "utf-8")
 
     await mgr.discoverWorktrees()
 
@@ -677,10 +677,10 @@ describe("WorktreeManager.ensureGitExclude", () => {
     await mgr.ensureGitExclude()
 
     const content = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
-    expect(content).toContain(".kilocode/worktrees/")
-    expect(content).toContain(".kilocode/agent-manager.json")
-    expect(content).toContain(".kilocode/setup-script")
-    expect(content).not.toContain("\n.kilocode/\n")
+    expect(content).toContain(".devilcode/worktrees/")
+    expect(content).toContain(".devilcode/agent-manager.json")
+    expect(content).toContain(".devilcode/setup-script")
+    expect(content).not.toContain("\n.devilcode/\n")
   })
 
   it("is idempotent -- does not duplicate entries", async () => {

@@ -44,8 +44,8 @@ export const CustomizeNav: NavSection[] = [
         children: "Context Condensing",
       },
       {
-        href: "/customize/context/kilocodeignore",
-        children: ".kilocodeignore",
+        href: "/customize/context/devilcodeignore",
+        children: ".devilcodeignore",
       },
       {
         href: "/customize/context/large-projects",

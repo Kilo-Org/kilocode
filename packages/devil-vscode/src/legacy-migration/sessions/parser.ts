@@ -1,10 +1,10 @@
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import type {
-  KilocodeSessionImportMessageData as Message,
-  KilocodeSessionImportPartData as Part,
-  KilocodeSessionImportProjectData as Project,
-  KilocodeSessionImportSessionData as Session,
-} from "@kilocode/sdk/v2"
+  DevilcodeSessionImportMessageData as Message,
+  DevilcodeSessionImportPartData as Part,
+  DevilcodeSessionImportProjectData as Project,
+  DevilcodeSessionImportSessionData as Session,
+} from "@devilcode/sdk/v2"
 import { getApiConversationHistory, parseFile } from "./lib/legacy-conversation"
 import { parseMessagesFromConversation } from "./lib/messages"
 import { parsePartsFromConversation } from "./lib/parts/parts"

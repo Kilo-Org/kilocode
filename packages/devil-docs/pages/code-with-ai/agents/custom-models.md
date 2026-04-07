@@ -6,7 +6,7 @@ platform: new
 
 # Custom Models
 
-Kilo Code ships with a curated list of models for each provider, but you can use **any model** your provider supports — including models that aren't in the built-in list. This is useful for:
+devil Code ships with a curated list of models for each provider, but you can use **any model** your provider supports — including models that aren't in the built-in list. This is useful for:
 
 - Using a newly released model before it's added to the built-in catalog
 - Running a custom or fine-tuned model via LM Studio, Ollama, or another local provider
@@ -20,11 +20,11 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 {% tabs %}
 {% tab label="CLI" %}
 
-**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
+**Config file** (`~/.config/devil/devil.jsonc` or `./devil.jsonc`):
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "lmstudio/my-custom-model",
   "provider": {
     "lmstudio": {
@@ -53,7 +53,7 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 
 - **Provider ID** — A unique identifier using lowercase letters, numbers, hyphens, or underscores (e.g., `myprovider`). This becomes the `provider_id` in the `provider_id/model_id` format.
 - **Display name** — A human-readable name shown in the UI (e.g., `My AI Provider`).
-- **Base URL** — The OpenAI-compatible API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, Kilo automatically fetches available models from the endpoint.
+- **Base URL** — The OpenAI-compatible API endpoint (e.g., `https://api.myprovider.com/v1`). When a valid URL is entered, devil automatically fetches available models from the endpoint.
 - **API key** — Your provider's API key. Optional — leave empty if you manage authentication via headers.
 - **Models** — Add models manually by ID and display name, or select from the auto-fetched list that appears after entering a valid base URL.
 - **Headers** (optional) — Add custom HTTP headers as key-value pairs if your provider requires them.
@@ -62,7 +62,7 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 
 To edit an existing custom provider, click the **Edit provider** button next to it in the connected providers section.
 
-For additional model configuration (token limits, tool calling, reasoning, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab for the format.
+For additional model configuration (token limits, tool calling, reasoning, variants), edit the `devil.jsonc` config file directly — see the **CLI** tab for the format.
 
 {% /tab %}
 {% /tabs %}
@@ -99,7 +99,7 @@ Register a model that LM Studio serves under a custom name:
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "lmstudio/deepseek-r1-0528",
   "provider": {
     "lmstudio": {
@@ -117,7 +117,7 @@ Register a model that LM Studio serves under a custom name:
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "ollama/my-finetune:latest",
   "provider": {
     "ollama": {
@@ -142,7 +142,7 @@ Use a model that's not yet in the built-in catalog:
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "openai/gpt-6-preview",
   "provider": {
     "openai": {
@@ -168,7 +168,7 @@ Connect to any provider that exposes an OpenAI-compatible API:
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "openai-compatible/my-model",
   "provider": {
     "openai-compatible": {
@@ -197,7 +197,7 @@ Override options or define reasoning variants for a built-in model:
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "provider": {
     "anthropic": {
       "models": {
@@ -232,7 +232,7 @@ If the model key in your config differs from what the provider expects, use the 
 
 ```jsonc
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "lmstudio/my-local-llama",
   "provider": {
     "lmstudio": {
@@ -251,7 +251,7 @@ Here `my-local-llama` is the key you use in your config and model picker, while 
 
 ## Model Loading Priority
 
-When Kilo starts, it resolves the active model in this order:
+When devil starts, it resolves the active model in this order:
 
 1. The `--model` (or `-m`) command-line flag
 2. The `model` key in your config file
@@ -308,7 +308,7 @@ Control which models appear in the model picker for a provider using allowlists 
 
 - Verify the provider has valid credentials configured (API key, or local server running)
 - Check that the model key matches what you set in `"model": "provider/model-key"`
-- Run `kilo models` to list all available models and confirm your provider is active
+- Run `devil models` to list all available models and confirm your provider is active
 
 **Model errors or unexpected behavior:**
 

@@ -8,7 +8,7 @@
  */
 
 import { Dynamic } from "solid-js/web"
-import { ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { ToolRegistry } from "@devilcode/kilo-ui/message-part"
 
 /** Tools that should be open by default in the VS Code sidebar. */
 const DEFAULT_OPEN_TOOLS = ["bash"]

@@ -3,19 +3,19 @@ import * as path from "path"
 import os from "os"
 import type { Config } from "../config/config"
 import { Filesystem } from "../util/filesystem"
-import { KilocodePaths } from "./paths"
+import { DevilcodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
   const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
 
-  // .kilocode first (lower precedence), .kilo second (higher precedence / wins)
-  const KILO_WORKFLOWS_DIRS = [".kilocode/workflows", ".kilo/workflows"]
+  // .devilcode first (lower precedence), .kilo second (higher precedence / wins)
+  const DEVIL_WORKFLOWS_DIRS = [".devilcode/workflows", ".kilo/workflows"]
   const globalWorkflowsDirs = () => [
-    path.join(home(), ".kilocode", "workflows"),
+    path.join(home(), ".devilcode", "workflows"),
     path.join(home(), ".kilo", "workflows"),
   ]
 
-  export interface KilocodeWorkflow {
+  export interface DevilcodeWorkflow {
     name: string
     path: string
     content: string
@@ -53,10 +53,10 @@ export namespace WorkflowsMigrator {
     return undefined
   }
 
-  async function loadWorkflowsFromDir(dir: string, source: "global" | "project"): Promise<KilocodeWorkflow[]> {
+  async function loadWorkflowsFromDir(dir: string, source: "global" | "project"): Promise<DevilcodeWorkflow[]> {
     if (!(await Filesystem.isDir(dir))) return []
     const files = await findWorkflowFiles(dir)
-    const workflows: KilocodeWorkflow[] = []
+    const workflows: DevilcodeWorkflow[] = []
     for (const file of files) {
       const content = await fs.readFile(file, "utf-8")
       workflows.push({
@@ -69,29 +69,29 @@ export namespace WorkflowsMigrator {
     return workflows
   }
 
-  export async function discoverWorkflows(projectDir: string, skipGlobalPaths?: boolean): Promise<KilocodeWorkflow[]> {
-    const workflows: KilocodeWorkflow[] = []
+  export async function discoverWorkflows(projectDir: string, skipGlobalPaths?: boolean): Promise<DevilcodeWorkflow[]> {
+    const workflows: DevilcodeWorkflow[] = []
 
     if (!skipGlobalPaths) {
       // 1. VSCode extension global storage (primary location for global workflows)
-      const vscodeWorkflowsDir = path.join(KilocodePaths.vscodeGlobalStorage(), "workflows")
+      const vscodeWorkflowsDir = path.join(DevilcodePaths.vscodeGlobalStorage(), "workflows")
       workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global")))
 
-      // 2. Home directories ~/.kilocode/workflows and ~/.kilo/workflows
+      // 2. Home directories ~/.devilcode/workflows and ~/.kilo/workflows
       for (const dir of globalWorkflowsDirs()) {
         workflows.push(...(await loadWorkflowsFromDir(dir, "global")))
       }
     }
 
-    // 3. Project workflows (.kilo/workflows/ and .kilocode/workflows/)
-    for (const dir of KILO_WORKFLOWS_DIRS) {
+    // 3. Project workflows (.kilo/workflows/ and .devilcode/workflows/)
+    for (const dir of DEVIL_WORKFLOWS_DIRS) {
       workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project")))
     }
 
     return workflows
   }
 
-  export function convertToCommand(workflow: KilocodeWorkflow): Config.Command {
+  export function convertToCommand(workflow: DevilcodeWorkflow): Config.Command {
     return {
       template: workflow.content,
       description: extractDescription(workflow.content) ?? `Workflow: ${workflow.name}`,
@@ -109,7 +109,7 @@ export namespace WorkflowsMigrator {
     const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths)
 
     // Deduplicate by name (project takes precedence over global)
-    const workflowsByName = new Map<string, KilocodeWorkflow>()
+    const workflowsByName = new Map<string, DevilcodeWorkflow>()
 
     // Add global first
     for (const workflow of workflows.filter((w) => w.source === "global")) {

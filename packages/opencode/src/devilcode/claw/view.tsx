@@ -1,7 +1,7 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw full-screen view
+ * DevilClaw full-screen view
  *
  * Main layout component for the /kiloclaw route.
  * Renders a chat panel on the left and a status sidebar on the right.
@@ -18,7 +18,7 @@ import { ClawChat } from "./chat"
 import { ClawSidebar } from "./sidebar"
 import { createClawStatus, createClawChat } from "./hooks"
 
-export function KiloClawView() {
+export function DevilClawView() {
   const route = useRoute()
   const sdk = useSDK()
   const command = useCommandDialog()
@@ -49,7 +49,7 @@ export function KiloClawView() {
     {
       value: "kiloclaw.back",
       title: "Back",
-      category: "KiloClaw",
+      category: "DevilClaw",
       hidden: true,
       keybind: "escape" as any,
       onSelect: () => {

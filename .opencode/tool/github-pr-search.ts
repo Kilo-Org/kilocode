@@ -1,5 +1,5 @@
 /// <reference path="../env.d.ts" />
-import { tool } from "@kilocode/plugin"
+import { tool } from "@devilcode/plugin"
 import DESCRIPTION from "./github-pr-search.txt"
 
 async function githubFetch(endpoint: string, options: RequestInit = {}) {

@@ -5,7 +5,7 @@ import { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
 import { ModelsDev } from "../../provider/models"
 import { ProviderAuth } from "../../provider/auth"
-import { mapValues, pickBy } from "remeda" // kilocode_change
+import { mapValues, pickBy } from "remeda" // devilcode_change
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
 
@@ -52,7 +52,7 @@ export const ProviderRoutes = lazy(() =>
           mapValues(filteredProviders, (x) => Provider.fromModelsDevProvider(x)),
           connected,
         )
-        // kilocode_change start: Filter out providers with no models to prevent crashes
+        // devilcode_change start: Filter out providers with no models to prevent crashes
         const validProviders = pickBy(providers, (item) => Object.keys(item.models).length > 0)
 
         return c.json({
@@ -63,7 +63,7 @@ export const ProviderRoutes = lazy(() =>
           }),
           connected: Object.keys(connected),
         })
-        // kilocode_change end
+        // devilcode_change end
       },
     )
     .get(

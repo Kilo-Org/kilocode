@@ -261,7 +261,7 @@ export async function openSessionMoreMenu(page: Page, sessionID: string) {
 
   const menuTrigger = scroller.getByRole("button", { name: /more options/i }).first()
   await expect(menuTrigger).toBeVisible()
-  await page.waitForTimeout(100) // kilocode_change - wait before menu trigger click
+  await page.waitForTimeout(100) // devilcode_change - wait before menu trigger click
   await menuTrigger.click()
 
   await expect(menu).toBeVisible()
@@ -271,8 +271,8 @@ export async function openSessionMoreMenu(page: Page, sessionID: string) {
 export async function clickMenuItem(menu: Locator, itemName: string | RegExp, options?: { force?: boolean }) {
   const item = menu.getByRole("menuitem").filter({ hasText: itemName }).first()
   await expect(item).toBeVisible()
-  await item.waitFor({ state: "visible", timeout: 5000 }) // kilocode_change - wait for menu item to be visible in case of animation
-  await menu.page().waitForTimeout(100) // kilocode_change - wait for menu animation
+  await item.waitFor({ state: "visible", timeout: 5000 }) // devilcode_change - wait for menu item to be visible in case of animation
+  await menu.page().waitForTimeout(100) // devilcode_change - wait for menu animation
   await item.click({ force: options?.force })
 }
 
@@ -705,11 +705,11 @@ export async function openWorkspaceMenu(page: Page, workspaceSlug: string) {
   const item = page.locator(workspaceItemSelector(workspaceSlug)).first()
   await expect(item).toBeVisible()
   await item.hover()
-  await page.waitForTimeout(200) // kilocode_change - wait for hover state
+  await page.waitForTimeout(200) // devilcode_change - wait for hover state
 
   const trigger = page.locator(workspaceMenuTriggerSelector(workspaceSlug)).first()
   await expect(trigger).toBeVisible()
-  await page.waitForTimeout(100) // kilocode_change - wait before trigger click
+  await page.waitForTimeout(100) // devilcode_change - wait before trigger click
   await trigger.click({ force: true })
 
   const menu = page.locator(dropdownMenuContentSelector).first()

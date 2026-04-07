@@ -6,7 +6,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { Database, eq } from "@/storage/db"
 import { SessionShareTable } from "./share.sql"
 import { Log } from "@/util/log"
-import type * as SDK from "@kilocode/sdk/v2"
+import type * as SDK from "@devilcode/sdk/v2"
 
 export namespace ShareNext {
   const log = Log.create({ service: "share-next" })
@@ -15,7 +15,7 @@ export namespace ShareNext {
     return Config.get().then((x) => x.enterprise?.url ?? "https://opncd.ai")
   }
 
-  const disabled = process.env["KILO_DISABLE_SHARE"] === "true" || process.env["KILO_DISABLE_SHARE"] === "1"
+  const disabled = process.env["DEVIL_DISABLE_SHARE"] === "true" || process.env["DEVIL_DISABLE_SHARE"] === "1"
 
   export async function init() {
     if (disabled) return

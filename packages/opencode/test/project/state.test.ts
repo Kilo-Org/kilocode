@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Log } from "../../src/util/log"
 import { State } from "../../src/project/state"

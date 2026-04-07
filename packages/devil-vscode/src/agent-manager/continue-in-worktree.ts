@@ -1,4 +1,4 @@
-import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import type { DevilClient, Session } from "@devilcode/sdk/v2/client"
 import type { CreateWorktreeResult } from "./WorktreeManager"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { capture as captureGitState, apply as applyGitState, type GitSnapshot } from "./git-transfer"
@@ -7,7 +7,7 @@ import { PLATFORM } from "./constants"
 
 export interface ContinueContext {
   root: string
-  getClient: () => KiloClient
+  getClient: () => DevilClient
   createWorktreeOnDisk: (opts: { baseBranch: string }) => Promise<{
     worktree: { id: string }
     result: CreateWorktreeResult
@@ -73,7 +73,7 @@ export async function transferState(
 
 /** Fork the session into the worktree directory. */
 export async function forkSession(ctx: ContinueContext, sessionId: string, dir: string): Promise<StepResult<Session>> {
-  let client: KiloClient
+  let client: DevilClient
   try {
     client = ctx.getClient()
   } catch (err) {

@@ -1,7 +1,7 @@
 import { Installation } from "@/installation"
 
 export const DEFAULT_HEADERS = {
-  "HTTP-Referer": "https://kilocode.ai",
-  "X-Title": "Kilo Code",
-  "User-Agent": `Kilo-Code/${Installation.VERSION}`,
+  "HTTP-Referer": "https://devilcode.ai",
+  "X-Title": "Devil Code",
+  "User-Agent": `Devil-Code/${Installation.VERSION}`,
 }

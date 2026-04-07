@@ -49,7 +49,7 @@ export const PermissionRoutes = lazy(() =>
         return c.json(true)
       },
     )
-    // kilocode_change start
+    // devilcode_change start
     .post(
       "/:requestID/always-rules",
       describeRoute({
@@ -92,7 +92,7 @@ export const PermissionRoutes = lazy(() =>
         return c.json(true)
       },
     )
-    // kilocode_change end
+    // devilcode_change end
     .get(
       "/",
       describeRoute({

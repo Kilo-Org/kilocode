@@ -29,10 +29,10 @@ async function createTempWorkspace(): Promise<string> {
 }
 
 describe("FileIgnoreController", () => {
-  describe("when .kilocodeignore exists", () => {
-    it("applies only .kilocodeignore patterns", async () => {
+  describe("when .devilcodeignore exists", () => {
+    it("applies only .devilcodeignore patterns", async () => {
       const workspace = await createTempWorkspace()
-      await fs.writeFile(path.join(workspace, ".kilocodeignore"), "secret/**\n*.snap\n")
+      await fs.writeFile(path.join(workspace, ".devilcodeignore"), "secret/**\n*.snap\n")
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
@@ -40,12 +40,12 @@ describe("FileIgnoreController", () => {
       expect(controller.validateAccess("secret/keys.txt")).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "a.snap"))).toBe(false)
       expect(controller.validateAccess(path.join(workspace, "src", "main.ts"))).toBe(true)
-      expect(controller.getInstructions()).toContain(".kilocodeignore")
+      expect(controller.getInstructions()).toContain(".devilcodeignore")
     })
 
     it("does NOT block .env files unless explicitly listed", async () => {
       const workspace = await createTempWorkspace()
-      await fs.writeFile(path.join(workspace, ".kilocodeignore"), "dist/\n")
+      await fs.writeFile(path.join(workspace, ".devilcodeignore"), "dist/\n")
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
@@ -58,19 +58,19 @@ describe("FileIgnoreController", () => {
     it("does NOT apply .gitignore patterns", async () => {
       const workspace = await createTempWorkspace()
       await fs.writeFile(path.join(workspace, ".gitignore"), "node_modules/\n")
-      await fs.writeFile(path.join(workspace, ".kilocodeignore"), "dist/\n")
+      await fs.writeFile(path.join(workspace, ".devilcodeignore"), "dist/\n")
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
 
       // .gitignore pattern should NOT apply
       expect(controller.validateAccess(path.join(workspace, "node_modules", "foo.js"))).toBe(true)
-      // .kilocodeignore pattern should apply
+      // .devilcodeignore pattern should apply
       expect(controller.validateAccess(path.join(workspace, "dist", "bundle.js"))).toBe(false)
     })
   })
 
-  describe("when no .kilocodeignore exists (fallback)", () => {
+  describe("when no .devilcodeignore exists (fallback)", () => {
     it("applies .gitignore patterns", async () => {
       const workspace = await createTempWorkspace()
       await fs.writeFile(path.join(workspace, ".gitignore"), "node_modules/\nbuild/\n")
@@ -86,7 +86,7 @@ describe("FileIgnoreController", () => {
 
     it("blocks .env files via hardcoded sensitive patterns", async () => {
       const workspace = await createTempWorkspace()
-      // No .kilocodeignore, no .gitignore
+      // No .devilcodeignore, no .gitignore
 
       const controller = new FileIgnoreController(workspace)
       await controller.initialize()
@@ -127,7 +127,7 @@ describe("FileIgnoreController", () => {
       // producing "c:/Users/..." as the relative portion — still detected as
       // a Windows drive letter by ignore's setupWindows() regex.
       const cross =
-        "c:/Users/User/AppData/Roaming/Code/User/globalStorage/kilocode.kilo-code/settings/mcp_settings.json"
+        "c:/Users/User/AppData/Roaming/Code/User/globalStorage/devilcode.kilo-code/settings/mcp_settings.json"
 
       expect(() => controller.validateAccess(cross)).not.toThrow()
       expect(controller.validateAccess(cross)).toBe(false)
@@ -141,7 +141,7 @@ describe("FileIgnoreController", () => {
       await controller.initialize()
 
       const uri =
-        "file:///c:/Users/User/AppData/Roaming/Code/User/globalStorage/kilocode.kilo-code/settings/mcp_settings.json"
+        "file:///c:/Users/User/AppData/Roaming/Code/User/globalStorage/devilcode.kilo-code/settings/mcp_settings.json"
 
       expect(() => controller.validateAccess(uri)).not.toThrow()
       expect(controller.validateAccess(uri)).toBe(false)

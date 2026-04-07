@@ -10,18 +10,18 @@
 import { createSignal, createMemo, createEffect, onCleanup, For, Show, createSelector, useContext } from "solid-js"
 import type { Component } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
-import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Tag } from "@kilocode/kilo-ui/tag"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Button } from "@devilcode/kilo-ui/button"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
+import { Tag } from "@devilcode/kilo-ui/tag"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Tooltip } from "@devilcode/kilo-ui/tooltip"
 import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { ModelSelection } from "../../types/messages"
 import {
-  KILO_GATEWAY_ID,
+  DEVIL_GATEWAY_ID,
   isSmall,
   providerSortKey,
   isFree,
@@ -145,13 +145,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     window.addEventListener("mouseup", onUp)
   }
 
-  // Only show models from Kilo Gateway or connected providers.
+  // Only show models from Devil Gateway or connected providers.
   // kilo-auto/small is excluded unless includeAutoSmall is explicitly true.
   const visibleModels = createMemo(() => {
     const c = connected()
     return models().filter((m) => {
       if (!props.includeAutoSmall && isSmall(m)) return false
-      return m.providerID === KILO_GATEWAY_ID || c.includes(m.providerID)
+      return m.providerID === DEVIL_GATEWAY_ID || c.includes(m.providerID)
     })
   })
 

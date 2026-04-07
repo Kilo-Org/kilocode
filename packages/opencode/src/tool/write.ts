@@ -12,7 +12,7 @@ import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { trimDiff } from "./edit"
 import { assertExternalDirectory } from "./external-directory"
-import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { filterDiagnostics } from "./diagnostics" // devilcode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -75,7 +75,7 @@ export const WriteTool = Tool.define("write", {
     return {
       title: path.relative(Instance.worktree, filepath),
       metadata: {
-        diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
+        diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // devilcode_change
         filepath,
         exists: exists,
       },

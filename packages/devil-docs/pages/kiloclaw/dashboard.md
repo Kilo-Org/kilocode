@@ -1,13 +1,13 @@
 ---
-title: "KiloClaw Dashboard Reference"
-description: "Managing your KiloClaw instance from the dashboard"
+title: "DevilClaw Dashboard Reference"
+description: "Managing your DevilClaw instance from the dashboard"
 ---
 
-# KiloClaw Dashboard
+# DevilClaw Dashboard
 
-This page covers everything you can do from the KiloClaw dashboard. For getting started, see [KiloClaw Overview](/docs/kiloclaw/overview).
+This page covers everything you can do from the DevilClaw dashboard. For getting started, see [DevilClaw Overview](/docs/DevilClaw/overview).
 
-{% image src="/docs/img/kiloclaw/dashboard.png" alt="Connect account screen" width="800" caption="The KiloClaw Dashboard" /%}
+{% image src="/docs/img/DevilClaw/dashboard.png" alt="Connect account screen" width="800" caption="The DevilClaw Dashboard" /%}
 
 ## Instance Status
 
@@ -84,11 +84,11 @@ The specs of your instance, including number of CPUs, memory, and storage, are v
 
 Select a model from the dropdown and click **Save & Provision**. The API key is platform-managed and refreshes automatically when you save — you never need to enter one. The key has a 30-day expiry.
 
-For access to the full catalog of 335+ models, use the `/model` and `/models` commands in the [Control UI Chat](/docs/kiloclaw/control-ui#changing-models).
+For access to the full catalog of 335+ models, use the `/model` and `/models` commands in the [Control UI Chat](/docs/DevilClaw/control-ui#changing-models).
 
 ### Channels
 
-You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
+You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/DevilClaw/chat-platforms) for setup instructions.
 
 {% callout type="info" %}
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
@@ -100,7 +100,7 @@ You can pin your instance to a specific OpenClaw version and variant from the Se
 
 Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
 
-See [Version Pinning](/docs/kiloclaw/control-ui/version-pinning) for details.
+See [Version Pinning](/docs/DevilClaw/control-ui/version-pinning) for details.
 
 ### Version Status Indicators
 
@@ -124,7 +124,7 @@ In **Settings > Danger Zone**, click **Restore Config**. This will:
 Your files, workspace, and persistent data are not affected. Only the OpenClaw configuration file is reset.
 
 > 💡 **Tip**
-> If your instance is in a crash loop and you can't access the Control UI, try **Restore Config** from the KiloClaw dashboard first before redeploying.
+> If your instance is in a crash loop and you can't access the Control UI, try **Restore Config** from the DevilClaw dashboard first before redeploying.
 
 {% callout type="warning" %}
 This action cannot be undone. Make sure you've saved any important changes to your configuration before restoring.
@@ -140,14 +140,14 @@ At the bottom of Settings:
 
 ## Accessing the Control UI
 
-When your instance is running you can access the [OpenClaw Control UI](/docs/kiloclaw/control-ui) — a browser-based dashboard for managing your agent, channels, sessions, exec approvals, and more:
+When your instance is running you can access the [OpenClaw Control UI](/docs/DevilClaw/control-ui) — a browser-based dashboard for managing your agent, channels, sessions, exec approvals, and more:
 
 1. Click **Open** to launch the OpenClaw web interface in a new tab
 
-See the [Control UI reference](/docs/kiloclaw/control-ui) for a full overview of its capabilities.
+See the [Control UI reference](/docs/DevilClaw/control-ui) for a full overview of its capabilities.
 
 {% callout type="warning" %}
-Do not use the **Update** feature in the OpenClaw Control UI to update KiloClaw. Use **Redeploy** from the KiloClaw Dashboard instead. Updating via the Control UI will not apply the correct KiloClaw platform image and may break your instance.
+Do not use the **Update** feature in the OpenClaw Control UI to update DevilClaw. Use **Redeploy** from the DevilClaw Dashboard instead. Updating via the Control UI will not apply the correct DevilClaw platform image and may break your instance.
 {% /callout %}
 
 ## Pairing Requests
@@ -157,11 +157,11 @@ When your instance is running, the dashboard shows any pending pairing requests.
 - Someone messages your bot on Telegram, Discord, or Slack for the first time
 - A new browser or device connects to the Control UI
 
-You need to **approve** each request before the user or device can interact with your agent. See [Pairing Requests](/docs/kiloclaw/chat-platforms#pairing-requests) for details.
+You need to **approve** each request before the user or device can interact with your agent. See [Pairing Requests](/docs/DevilClaw/chat-platforms#pairing-requests) for details.
 
 ## Changelog
 
-The dashboard shows recent KiloClaw platform updates. Each entry is tagged as a **feature** or **bugfix**, and some include a deploy hint:
+The dashboard shows recent DevilClaw platform updates. Each entry is tagged as a **feature** or **bugfix**, and some include a deploy hint:
 
 - **Redeploy Required** — You must redeploy for this change to take effect on your instance
 - **Redeploy Suggested** — Redeploying is recommended but not strictly necessary
@@ -195,8 +195,8 @@ These are the beta specifications for machines and subject to change without not
 
 ## Related
 
-- [KiloClaw Overview](/docs/kiloclaw/overview)
-- [OpenClaw Control UI](/docs/kiloclaw/control-ui)
-- [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
-- [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)
+- [DevilClaw Overview](/docs/DevilClaw/overview)
+- [OpenClaw Control UI](/docs/DevilClaw/control-ui)
+- [Connecting Chat Platforms](/docs/DevilClaw/chat-platforms)
+- [Troubleshooting](/docs/DevilClaw/troubleshooting)
+- [DevilClaw Pricing](/docs/DevilClaw/faq/pricing)

@@ -161,7 +161,7 @@ ${lineCommentStyles}
 
 export function createDefaultOptions<T>(style: FileDiffOptions<T>["diffStyle"]) {
   return {
-    theme: "Kilo", // kilocode_change
+    theme: "Devil", // devilcode_change
     themeType: "system",
     disableLineNumbers: false,
     overflow: "wrap",

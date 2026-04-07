@@ -217,7 +217,7 @@ export async function checkoutTheirs(files: string[]): Promise<void> {
 
 /**
  * Remove untracked files and directories from specific directories.
- * Used to clean build artifacts from Kilo-specific directories after checking
+ * Used to clean build artifacts from Devil-specific directories after checking
  * out the upstream branch, where package-level .gitignore files don't exist.
  */
 export async function cleanDirectories(dirs: string[]): Promise<void> {
@@ -227,14 +227,14 @@ export async function cleanDirectories(dirs: string[]): Promise<void> {
 }
 
 /**
- * Check if the "ours" version of a conflicted file contains kilocode_change markers.
+ * Check if the "ours" version of a conflicted file contains devilcode_change markers.
  * Uses git stage :2: which is the "ours" side during a merge conflict.
  * Returns false if the file doesn't exist in ours (new file from upstream).
  */
-export async function oursHasKilocodeChanges(file: string): Promise<boolean> {
+export async function oursHasDevilcodeChanges(file: string): Promise<boolean> {
   const result = await $`git show :2:${file}`.quiet().nothrow()
   if (result.exitCode !== 0) return false
-  return result.stdout.toString().includes("kilocode_change")
+  return result.stdout.toString().includes("devilcode_change")
 }
 
 /**

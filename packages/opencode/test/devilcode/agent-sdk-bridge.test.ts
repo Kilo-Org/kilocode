@@ -272,13 +272,15 @@ describe("agent-sdk-bridge", () => {
   })
 
   describe("error result handling", () => {
-    test("result with error subtype produces finish-step with error reason", async () => {
+    test("result with error subtype produces error event and rejects text", async () => {
       const messages = toAsyncIterable([assistantText("Partial response"), resultError(["Max turns exceeded"])])
       const output = bridgeMessages(messages)
       const events = await collect(output.fullStream)
+      const eventTypes = types(events as { type: string }[])
 
-      const finishStep = events.find((e: any) => e.type === "finish-step") as any
-      expect(finishStep.finishReason).toBe("error")
+      expect(eventTypes).toContain("error")
+      expect(eventTypes).not.toContain("finish-step")
+      await expect(output.text).rejects.toThrow("Max turns exceeded")
     })
 
     test("success result produces finish-step with stop reason", async () => {

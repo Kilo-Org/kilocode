@@ -15,7 +15,7 @@ process.chdir(dir)
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 
-const modelsUrl = process.env.KILO_MODELS_URL || "https://models.dev"
+const modelsUrl = process.env.DEVIL_MODELS_URL || "https://models.dev"
 // Fetch and generate models.dev snapshot
 const modelsData = process.env.MODELS_DEV_API_JSON
   ? await Bun.file(process.env.MODELS_DEV_API_JSON).text()
@@ -117,12 +117,12 @@ const allTargets: {
     arch: "x64",
     avx2: false,
   },
-  // kilocode_change start - added Windows ARM64 target
+  // devilcode_change start - added Windows ARM64 target
   {
     os: "win32",
     arch: "arm64",
   },
-  // kilocode_change end
+  // devilcode_change end
 ]
 
 const targets = singleFlag
@@ -187,22 +187,22 @@ for (const item of targets) {
       autoloadTsconfig: true,
       autoloadPackageJson: true,
       target: name.replace(pkg.name, "bun") as any,
-      outfile: `dist/${name}/bin/kilo`, // kilocode_change
-      execArgv: [`--user-agent=kilo/${Script.version}`, "--use-system-ca", "--"], // kilocode_change
+      outfile: `dist/${name}/bin/devil`, // devilcode_change
+      execArgv: [`--user-agent=devil/${Script.version}`, "--use-system-ca", "--"], // devilcode_change
       windows: {},
     },
     entrypoints: ["./src/index.ts", parserWorker, workerPath],
     define: {
-      KILO_VERSION: `'${Script.version}'`,
-      KILO_MIGRATIONS: JSON.stringify(migrations),
+      DEVIL_VERSION: `'${Script.version}'`,
+      DEVIL_MIGRATIONS: JSON.stringify(migrations),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
-      KILO_WORKER_PATH: workerPath,
-      KILO_CHANNEL: `'${Script.channel}'`,
-      KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
+      DEVIL_WORKER_PATH: workerPath,
+      DEVIL_CHANNEL: `'${Script.channel}'`,
+      DEVIL_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
     },
   })
 
-  // kilocode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
+  // devilcode_change start - fix Nix-specific ELF interpreter paths for Linux binaries
   if (item.os === "linux") {
     const interpreters: Record<string, string> = {
       x64: "/lib64/ld-linux-x86-64.so.2",
@@ -214,14 +214,14 @@ for (const item of targets) {
     const interpreter = interpreters[key]
     if (interpreter) {
       try {
-        await $`patchelf --set-interpreter ${interpreter} dist/${name}/bin/kilo`
+        await $`patchelf --set-interpreter ${interpreter} dist/${name}/bin/devil`
         console.log(`patched interpreter for ${name} -> ${interpreter}`)
       } catch {
         console.warn(`patchelf not available, skipping interpreter fix for ${name}`)
       }
     }
   }
-  // kilocode_change end
+  // devilcode_change end
 
   await $`rm -rf ./dist/${name}/bin/tui`
   await Bun.file(`dist/${name}/package.json`).write(
@@ -231,12 +231,12 @@ for (const item of targets) {
         version: Script.version,
         os: [item.os],
         cpu: [item.arch],
-        // kilocode_change start
+        // devilcode_change start
         repository: {
           type: "git",
-          url: "https://github.com/Kilo-Org/kilocode",
+          url: "https://github.com/Devil-Org/devilcode",
         },
-        // kilocode_change end
+        // devilcode_change end
       },
       null,
       2,
@@ -246,20 +246,20 @@ for (const item of targets) {
 }
 
 if (Script.release) {
-  const archives: string[] = [] // kilocode_change
+  const archives: string[] = [] // devilcode_change
   for (const key of Object.keys(binaries)) {
-    const archive = key.replace(pkg.name, "kilo") // kilocode_change
+    const archive = key.replace(pkg.name, "devil") // devilcode_change
     if (key.includes("linux")) {
-      const out = path.resolve("dist", `${archive}.tar.gz`) // kilocode_change
-      await $`tar -czf ${out} *`.cwd(`dist/${key}/bin`) // kilocode_change
-      archives.push(out) // kilocode_change
+      const out = path.resolve("dist", `${archive}.tar.gz`) // devilcode_change
+      await $`tar -czf ${out} *`.cwd(`dist/${key}/bin`) // devilcode_change
+      archives.push(out) // devilcode_change
     } else {
-      const out = path.resolve("dist", `${archive}.zip`) // kilocode_change
-      await $`zip -r ${out} *`.cwd(`dist/${key}/bin`) // kilocode_change
-      archives.push(out) // kilocode_change
+      const out = path.resolve("dist", `${archive}.zip`) // devilcode_change
+      await $`zip -r ${out} *`.cwd(`dist/${key}/bin`) // devilcode_change
+      archives.push(out) // devilcode_change
     }
   }
-  await $`gh release upload v${Script.version} ${archives} --clobber` // kilocode_change
+  await $`gh release upload v${Script.version} ${archives} --clobber` // devilcode_change
 }
 
 export { binaries }

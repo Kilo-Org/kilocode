@@ -470,6 +470,13 @@ export namespace Agent {
       item.permission = PermissionNext.merge(item.permission, PermissionNext.fromConfig(value.permission ?? {}))
     }
 
+    // devilcode_change start — register team workflow agents
+    const workflowAgents = createWorkflowAgents(cfg.team, PermissionNext.merge(defaults, user))
+    if (workflowAgents) {
+      Object.assign(result, workflowAgents)
+    }
+    // devilcode_change end
+
     // Ensure Truncate.GLOB is allowed unless explicitly configured
     for (const name in result) {
       const agent = result[name]
@@ -485,13 +492,6 @@ export namespace Agent {
         PermissionNext.fromConfig({ external_directory: { [Truncate.GLOB]: "allow" } }),
       )
     }
-
-    // devilcode_change start — register team workflow agents
-    const workflowAgents = createWorkflowAgents(cfg.team, defaults)
-    if (workflowAgents) {
-      Object.assign(result, workflowAgents)
-    }
-    // devilcode_change end
 
     return result
   })

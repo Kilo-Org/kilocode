@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { TeamConfig, TeamRole, TeamRouting, EffortLevel } from "@/devilcode/team/config"
+import { createWorkflowAgents } from "@/devilcode/team/agents"
+import { PermissionNext } from "@/permission/next"
 
 describe("TeamRole", () => {
   test("parses a valid role with all fields", () => {
@@ -220,5 +222,34 @@ describe("EffortLevel", () => {
 
   test("rejects invalid effort level", () => {
     expect(() => EffortLevel.parse("ultra")).toThrow()
+  })
+})
+
+describe("createWorkflowAgents", () => {
+  test("inherits merged permissions and team effort options", () => {
+    const team = TeamConfig.parse({
+      enabled: true,
+      roles: {
+        senior: {
+          displayName: "Senior",
+          provider: "openai",
+          model: "gpt-5.4-codex",
+          effort: "xhigh",
+          tier: 2,
+        },
+      },
+      routing: { defaultRole: "senior" },
+    })
+    const permission = PermissionNext.merge(
+      PermissionNext.fromConfig({ "*": "allow" }),
+      PermissionNext.fromConfig({ bash: "deny" }),
+    )
+
+    const agents = createWorkflowAgents(team, permission)
+
+    expect(agents?.senior.permission).toEqual(permission)
+    expect(agents?.senior.options.teamRole).toBe("senior")
+    expect(agents?.senior.options.reasoning).toEqual({ enabled: true, effort: "high" })
+    expect(agents?.senior.options.verbosity).toBe("high")
   })
 })

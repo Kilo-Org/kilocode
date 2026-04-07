@@ -1,4 +1,4 @@
-import type { KilocodeSessionImportPartData as Part } from "@kilocode/sdk/v2"
+import type { DevilcodeSessionImportPartData as Part } from "@devilcode/sdk/v2"
 import { cleanLegacyTaskText, isLegacySystemErrorText, record } from "./parts-util"
 
 type Body = NonNullable<Part["body"]>

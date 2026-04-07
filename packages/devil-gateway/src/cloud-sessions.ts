@@ -1,4 +1,4 @@
-import { buildKiloHeaders } from "./headers.js"
+import { buildDevilHeaders } from "./headers.js"
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -6,7 +6,7 @@ export interface DrizzleDb {
   insert(table: object): { values(data: object): { onConflictDoNothing(): { run(): void } } }
 }
 
-const INGEST_BASE = process.env.KILO_SESSION_INGEST_URL ?? "https://ingest.kilosessions.ai"
+const INGEST_BASE = process.env.DEVIL_SESSION_INGEST_URL ?? "https://ingest.devilsessions.ai"
 
 function exportUrl(sessionId: string) {
   return UUID_RE.test(sessionId)
@@ -20,7 +20,7 @@ export async function fetchCloudSession(token: string, sessionId: string): Promi
   const response = await fetch(exportUrl(sessionId), {
     headers: {
       Authorization: `Bearer ${token}`,
-      ...buildKiloHeaders(),
+      ...buildDevilHeaders(),
     },
   })
 
@@ -35,14 +35,14 @@ export async function fetchCloudSessionForImport(token: string, sessionId: strin
   const response = await fetch(exportUrl(sessionId), {
     headers: {
       Authorization: `Bearer ${token}`,
-      ...buildKiloHeaders(),
+      ...buildDevilHeaders(),
     },
   })
 
   if (response.status === 404) return { ok: false, status: 404, error: "Session not found in cloud" }
   if (!response.ok) {
     const text = await response.text()
-    console.error("[Kilo Gateway] cloud/session/import: export failed", {
+    console.error("[Devil Gateway] cloud/session/import: export failed", {
       status: response.status,
       body: text.slice(0, 500),
     })

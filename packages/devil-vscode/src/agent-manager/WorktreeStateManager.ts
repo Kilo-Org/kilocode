@@ -53,7 +53,7 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
-import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
+import { DEVIL_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
 
@@ -81,7 +81,7 @@ export class WorktreeStateManager {
 
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
-    this.file = path.join(root, KILO_DIR, STATE_FILE)
+    this.file = path.join(root, DEVIL_DIR, STATE_FILE)
     this.log = log
   }
 
@@ -303,7 +303,7 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   async load(): Promise<MigrationResult> {
-    // Migrate Agent Manager data from .kilocode → .kilo before first read
+    // Migrate Agent Manager data from .devilcode → .kilo before first read
     let migration: MigrationResult = { refsFixed: 0 }
     if (!this.migrated) {
       this.migrated = true
@@ -319,9 +319,9 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode paths while preserving the separator style already stored.
+        // Rewrite stale .devilcode paths while preserving the separator style already stored.
         const fixed =
-          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
+          wt.path?.replace(/([/\\])\.devilcode([/\\])/g, (_match, leadingSep, trailingSep) => {
             return `${leadingSep}.kilo${trailingSep}`
           }) ?? wt.path
         this.worktrees.set(id, { id, ...wt, path: fixed })

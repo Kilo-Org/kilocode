@@ -89,7 +89,7 @@ export function applyFirstLineOnly(
  * Command ID for tracking inline completion acceptance.
  * This command is executed after the user accepts an inline completion.
  */
-export const INLINE_COMPLETION_ACCEPTED_COMMAND = "kilocode.autocomplete.inline-completion.accepted"
+export const INLINE_COMPLETION_ACCEPTED_COMMAND = "devilcode.autocomplete.inline-completion.accepted"
 
 export function countLines(text: string): number {
   return _countLines(text)

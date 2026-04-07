@@ -4,7 +4,7 @@ This file provides guidance to agents when working with code in this repository.
 
 ## Product Context
 
-Kilo Code is an open source AI coding agent platform. It ships as multiple products that all build on the same backend. This package (`packages/kilo-vscode/`) is the **VS Code extension** — one of several clients.
+Kilo Code is an open source AI coding agent platform. It ships as multiple products that all build on the same backend. This package (`packages/devil-vscode/`) is the **VS Code extension** — one of several clients.
 
 ### Products and How They Relate
 
@@ -30,7 +30,7 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 | -------------------------- | -------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------- |
 | Kilo CLI (TUI)             | `packages/opencode/`                   | Interactive terminal UI (SolidJS + OpenTUI)         | In-process — TUI and server run together                          |
 | Kilo CLI (`kilo run`)      | `packages/opencode/`                   | Non-interactive headless mode for scripting         | In-process — no network socket                                    |
-| **Kilo VS Code Extension** | **`packages/kilo-vscode/`**            | VS Code extension with sidebar chat + Agent Manager | Bundles CLI binary, spawns `kilo serve --port 0` as child process |
+| **Kilo VS Code Extension** | **`packages/devil-vscode/`**           | VS Code extension with sidebar chat + Agent Manager | Bundles CLI binary, spawns `kilo serve --port 0` as child process |
 | OpenCode Desktop           | `packages/desktop/`                    | Standalone native app (Tauri)                       | Bundles CLI binary as sidecar, spawns `kilo serve`                |
 | OpenCode Web (`kilo web`)  | `packages/opencode/` + `packages/app/` | Browser-based UI                                    | CLI starts server + opens browser                                 |
 
@@ -38,14 +38,14 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 
 ### Kilo-Domain Packages
 
-| Package                    | Name                       | Role                                                                                                                         |
-| -------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `packages/kilo-vscode/`    | `kilo-code`                | **This package.** VS Code extension.                                                                                         |
-| `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
-| `packages/kilo-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
-| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
-| `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
-| `packages/kilo-docs/`      | `@kilocode/kilo-docs`      | Documentation site (Next.js + Markdoc)                                                                                       |
+| Package                     | Name                       | Role                                                                                                                         |
+| --------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `packages/devil-vscode/`    | `kilo-code`                | **This package.** VS Code extension.                                                                                         |
+| `packages/devil-gateway/`   | `@kilocode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
+| `packages/devil-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
+| `packages/devil-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
+| `packages/devil-i18n/`      | `@kilocode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
+| `packages/devil-docs/`      | `@kilocode/kilo-docs`      | Documentation site (Next.js + Markdoc)                                                                                       |
 
 ### Upstream OpenCode Packages (not Kilo-specific)
 
@@ -199,7 +199,7 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 
 ## Kilocode Change Markers
 
-This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
+This package is entirely Kilo-specific — `devilcode_change` markers are NOT needed in any files under `packages/devil-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
 
 ## Process Spawning (Windows)
 

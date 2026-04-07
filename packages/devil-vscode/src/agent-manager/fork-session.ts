@@ -1,11 +1,11 @@
-import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
+import type { DevilClient, Session } from "@devilcode/sdk/v2/client"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { TelemetryProxy, TelemetryEventName } from "../services/telemetry"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import { PLATFORM } from "./constants"
 
 export interface ForkContext {
-  getClient: () => KiloClient
+  getClient: () => DevilClient
   state: WorktreeStateManager | undefined
   postError: (message: string) => void
   registerWorktreeSession: (sessionId: string, directory: string) => void
@@ -22,7 +22,7 @@ export interface ForkContext {
  * Pure orchestration — no vscode imports.
  */
 export async function forkSession(ctx: ForkContext, sessionId: string, worktreeId?: string): Promise<null> {
-  let client: KiloClient
+  let client: DevilClient
   try {
     client = ctx.getClient()
   } catch (err) {

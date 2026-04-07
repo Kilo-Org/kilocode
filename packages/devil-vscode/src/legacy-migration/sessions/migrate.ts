@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
 import { getMigrationErrorMessage } from "../errors/migration-error"
 import type { LegacyHistoryItem } from "./lib/legacy-types"
 import { parseSession } from "./parser"
@@ -16,16 +16,16 @@ type Result =
       message: string
     }
 
-export async function migrate(id: string, context: vscode.ExtensionContext, client: KiloClient): Promise<Result> {
+export async function migrate(id: string, context: vscode.ExtensionContext, client: DevilClient): Promise<Result> {
   const dir = vscode.Uri.joinPath(context.globalStorageUri, "tasks").fsPath
   const items = context.globalState.get<LegacyHistoryItem[]>("taskHistory", [])
   const item = items.find((item) => item.id === id)
   const payload = await parseSession(id, dir, item)
 
   try {
-    const project = await client.kilocode.sessionImport.project(payload.project, { throwOnError: true })
+    const project = await client.devilcode.sessionImport.project(payload.project, { throwOnError: true })
     const projectID = project.data?.id ?? payload.project.id
-    const session = await client.kilocode.sessionImport.session(
+    const session = await client.devilcode.sessionImport.session(
       {
         ...payload.session,
         projectID,
@@ -44,11 +44,11 @@ export async function migrate(id: string, context: vscode.ExtensionContext, clie
     }
 
     for (const msg of payload.messages) {
-      await client.kilocode.sessionImport.message(msg, { throwOnError: true })
+      await client.devilcode.sessionImport.message(msg, { throwOnError: true })
     }
 
     for (const part of payload.parts) {
-      await client.kilocode.sessionImport.part(part, { throwOnError: true })
+      await client.devilcode.sessionImport.part(part, { throwOnError: true })
     }
 
     return {

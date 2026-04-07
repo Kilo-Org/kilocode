@@ -1357,7 +1357,7 @@ export type Config = {
   logLevel?: LogLevel
   server?: ServerConfig
   /**
-   * Command configuration, see https://kilo.ai/docs/commands
+   * Command configuration, see https://devil.ai/docs/commands
    */
   command?: {
     [key: string]: {
@@ -1395,7 +1395,7 @@ export type Config = {
    */
   autoshare?: boolean
   /**
-   * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
+   * Enable remote control of sessions via Devil Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
   /**
@@ -1435,7 +1435,7 @@ export type Config = {
     [key: string]: AgentConfig | undefined
   }
   /**
-   * Agent configuration, see https://kilo.ai/docs/agents
+   * Agent configuration, see https://devil.ai/docs/agents
    */
   agent?: {
     plan?: AgentConfig
@@ -4539,7 +4539,7 @@ export type EnhancePromptEnhanceResponses = {
 
 export type EnhancePromptEnhanceResponse = EnhancePromptEnhanceResponses[keyof EnhancePromptEnhanceResponses]
 
-export type KilocodeSessionImportProjectData = {
+export type DevilcodeSessionImportProjectData = {
   body?: {
     id: string
     worktree: string
@@ -4560,20 +4560,20 @@ export type KilocodeSessionImportProjectData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/session-import/project"
+  url: "/devilcode/session-import/project"
 }
 
-export type KilocodeSessionImportProjectErrors = {
+export type DevilcodeSessionImportProjectErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeSessionImportProjectError =
-  KilocodeSessionImportProjectErrors[keyof KilocodeSessionImportProjectErrors]
+export type DevilcodeSessionImportProjectError =
+  DevilcodeSessionImportProjectErrors[keyof DevilcodeSessionImportProjectErrors]
 
-export type KilocodeSessionImportProjectResponses = {
+export type DevilcodeSessionImportProjectResponses = {
   /**
    * Project import result
    */
@@ -4584,10 +4584,10 @@ export type KilocodeSessionImportProjectResponses = {
   }
 }
 
-export type KilocodeSessionImportProjectResponse =
-  KilocodeSessionImportProjectResponses[keyof KilocodeSessionImportProjectResponses]
+export type DevilcodeSessionImportProjectResponse =
+  DevilcodeSessionImportProjectResponses[keyof DevilcodeSessionImportProjectResponses]
 
-export type KilocodeSessionImportSessionData = {
+export type DevilcodeSessionImportSessionData = {
   body?: {
     id: string
     projectID: string
@@ -4625,20 +4625,20 @@ export type KilocodeSessionImportSessionData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/session-import/session"
+  url: "/devilcode/session-import/session"
 }
 
-export type KilocodeSessionImportSessionErrors = {
+export type DevilcodeSessionImportSessionErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeSessionImportSessionError =
-  KilocodeSessionImportSessionErrors[keyof KilocodeSessionImportSessionErrors]
+export type DevilcodeSessionImportSessionError =
+  DevilcodeSessionImportSessionErrors[keyof DevilcodeSessionImportSessionErrors]
 
-export type KilocodeSessionImportSessionResponses = {
+export type DevilcodeSessionImportSessionResponses = {
   /**
    * Session import result
    */
@@ -4649,10 +4649,10 @@ export type KilocodeSessionImportSessionResponses = {
   }
 }
 
-export type KilocodeSessionImportSessionResponse =
-  KilocodeSessionImportSessionResponses[keyof KilocodeSessionImportSessionResponses]
+export type DevilcodeSessionImportSessionResponse =
+  DevilcodeSessionImportSessionResponses[keyof DevilcodeSessionImportSessionResponses]
 
-export type KilocodeSessionImportMessageData = {
+export type DevilcodeSessionImportMessageData = {
   body?: {
     id: string
     sessionID: string
@@ -4709,20 +4709,20 @@ export type KilocodeSessionImportMessageData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/session-import/message"
+  url: "/devilcode/session-import/message"
 }
 
-export type KilocodeSessionImportMessageErrors = {
+export type DevilcodeSessionImportMessageErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeSessionImportMessageError =
-  KilocodeSessionImportMessageErrors[keyof KilocodeSessionImportMessageErrors]
+export type DevilcodeSessionImportMessageError =
+  DevilcodeSessionImportMessageErrors[keyof DevilcodeSessionImportMessageErrors]
 
-export type KilocodeSessionImportMessageResponses = {
+export type DevilcodeSessionImportMessageResponses = {
   /**
    * Message import result
    */
@@ -4733,10 +4733,10 @@ export type KilocodeSessionImportMessageResponses = {
   }
 }
 
-export type KilocodeSessionImportMessageResponse =
-  KilocodeSessionImportMessageResponses[keyof KilocodeSessionImportMessageResponses]
+export type DevilcodeSessionImportMessageResponse =
+  DevilcodeSessionImportMessageResponses[keyof DevilcodeSessionImportMessageResponses]
 
-export type KilocodeSessionImportPartData = {
+export type DevilcodeSessionImportPartData = {
   body?: {
     id: string
     messageID: string
@@ -4832,19 +4832,19 @@ export type KilocodeSessionImportPartData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/session-import/part"
+  url: "/devilcode/session-import/part"
 }
 
-export type KilocodeSessionImportPartErrors = {
+export type DevilcodeSessionImportPartErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeSessionImportPartError = KilocodeSessionImportPartErrors[keyof KilocodeSessionImportPartErrors]
+export type DevilcodeSessionImportPartError = DevilcodeSessionImportPartErrors[keyof DevilcodeSessionImportPartErrors]
 
-export type KilocodeSessionImportPartResponses = {
+export type DevilcodeSessionImportPartResponses = {
   /**
    * Part import result
    */
@@ -4855,10 +4855,10 @@ export type KilocodeSessionImportPartResponses = {
   }
 }
 
-export type KilocodeSessionImportPartResponse =
-  KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
+export type DevilcodeSessionImportPartResponse =
+  DevilcodeSessionImportPartResponses[keyof DevilcodeSessionImportPartResponses]
 
-export type KilocodeRemoveSkillData = {
+export type DevilcodeRemoveSkillData = {
   body?: {
     location: string
   }
@@ -4867,28 +4867,28 @@ export type KilocodeRemoveSkillData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/skill/remove"
+  url: "/devilcode/skill/remove"
 }
 
-export type KilocodeRemoveSkillErrors = {
+export type DevilcodeRemoveSkillErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeRemoveSkillError = KilocodeRemoveSkillErrors[keyof KilocodeRemoveSkillErrors]
+export type DevilcodeRemoveSkillError = DevilcodeRemoveSkillErrors[keyof DevilcodeRemoveSkillErrors]
 
-export type KilocodeRemoveSkillResponses = {
+export type DevilcodeRemoveSkillResponses = {
   /**
    * Skill removed
    */
   200: boolean
 }
 
-export type KilocodeRemoveSkillResponse = KilocodeRemoveSkillResponses[keyof KilocodeRemoveSkillResponses]
+export type DevilcodeRemoveSkillResponse = DevilcodeRemoveSkillResponses[keyof DevilcodeRemoveSkillResponses]
 
-export type KilocodeRemoveAgentData = {
+export type DevilcodeRemoveAgentData = {
   body?: {
     name: string
   }
@@ -4897,28 +4897,28 @@ export type KilocodeRemoveAgentData = {
     directory?: string
     workspace?: string
   }
-  url: "/kilocode/agent/remove"
+  url: "/devilcode/agent/remove"
 }
 
-export type KilocodeRemoveAgentErrors = {
+export type DevilcodeRemoveAgentErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KilocodeRemoveAgentError = KilocodeRemoveAgentErrors[keyof KilocodeRemoveAgentErrors]
+export type DevilcodeRemoveAgentError = DevilcodeRemoveAgentErrors[keyof DevilcodeRemoveAgentErrors]
 
-export type KilocodeRemoveAgentResponses = {
+export type DevilcodeRemoveAgentResponses = {
   /**
    * Agent removed
    */
   200: boolean
 }
 
-export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+export type DevilcodeRemoveAgentResponse = DevilcodeRemoveAgentResponses[keyof DevilcodeRemoveAgentResponses]
 
-export type KiloProfileData = {
+export type DevilProfileData = {
   body?: never
   path?: never
   query?: {
@@ -4928,16 +4928,16 @@ export type KiloProfileData = {
   url: "/kilo/profile"
 }
 
-export type KiloProfileErrors = {
+export type DevilProfileErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KiloProfileError = KiloProfileErrors[keyof KiloProfileErrors]
+export type DevilProfileError = DevilProfileErrors[keyof DevilProfileErrors]
 
-export type KiloProfileResponses = {
+export type DevilProfileResponses = {
   /**
    * Profile data
    */
@@ -4958,9 +4958,9 @@ export type KiloProfileResponses = {
   }
 }
 
-export type KiloProfileResponse = KiloProfileResponses[keyof KiloProfileResponses]
+export type DevilProfileResponse = DevilProfileResponses[keyof DevilProfileResponses]
 
-export type KiloOrganizationSetData = {
+export type DevilOrganizationSetData = {
   body?: {
     organizationId: string | null
   }
@@ -4972,25 +4972,25 @@ export type KiloOrganizationSetData = {
   url: "/kilo/organization"
 }
 
-export type KiloOrganizationSetErrors = {
+export type DevilOrganizationSetErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KiloOrganizationSetError = KiloOrganizationSetErrors[keyof KiloOrganizationSetErrors]
+export type DevilOrganizationSetError = DevilOrganizationSetErrors[keyof DevilOrganizationSetErrors]
 
-export type KiloOrganizationSetResponses = {
+export type DevilOrganizationSetResponses = {
   /**
    * Organization updated successfully
    */
   200: boolean
 }
 
-export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
+export type DevilOrganizationSetResponse = DevilOrganizationSetResponses[keyof DevilOrganizationSetResponses]
 
-export type KiloModesData = {
+export type DevilModesData = {
   body?: never
   path?: never
   query?: {
@@ -5000,7 +5000,7 @@ export type KiloModesData = {
   url: "/kilo/modes"
 }
 
-export type KiloModesResponses = {
+export type DevilModesResponses = {
   /**
    * Organization modes list
    */
@@ -5033,9 +5033,9 @@ export type KiloModesResponses = {
   }
 }
 
-export type KiloModesResponse = KiloModesResponses[keyof KiloModesResponses]
+export type DevilModesResponse = DevilModesResponses[keyof DevilModesResponses]
 
-export type KiloFimData = {
+export type DevilFimData = {
   body?: {
     prefix: string
     suffix: string
@@ -5051,16 +5051,16 @@ export type KiloFimData = {
   url: "/kilo/fim"
 }
 
-export type KiloFimErrors = {
+export type DevilFimErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KiloFimError = KiloFimErrors[keyof KiloFimErrors]
+export type DevilFimError = DevilFimErrors[keyof DevilFimErrors]
 
-export type KiloFimResponses = {
+export type DevilFimResponses = {
   /**
    * Streaming FIM completion response
    */
@@ -5078,9 +5078,9 @@ export type KiloFimResponses = {
   }
 }
 
-export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
+export type DevilFimResponse = DevilFimResponses[keyof DevilFimResponses]
 
-export type KiloNotificationsData = {
+export type DevilNotificationsData = {
   body?: never
   path?: never
   query?: {
@@ -5090,16 +5090,16 @@ export type KiloNotificationsData = {
   url: "/kilo/notifications"
 }
 
-export type KiloNotificationsErrors = {
+export type DevilNotificationsErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KiloNotificationsError = KiloNotificationsErrors[keyof KiloNotificationsErrors]
+export type DevilNotificationsError = DevilNotificationsErrors[keyof DevilNotificationsErrors]
 
-export type KiloNotificationsResponses = {
+export type DevilNotificationsResponses = {
   /**
    * Notifications list
    */
@@ -5116,9 +5116,9 @@ export type KiloNotificationsResponses = {
   }>
 }
 
-export type KiloNotificationsResponse = KiloNotificationsResponses[keyof KiloNotificationsResponses]
+export type DevilNotificationsResponse = DevilNotificationsResponses[keyof DevilNotificationsResponses]
 
-export type KiloCloudSessionGetData = {
+export type DevilCloudSessionGetData = {
   body?: never
   path: {
     id: string
@@ -5130,23 +5130,23 @@ export type KiloCloudSessionGetData = {
   url: "/kilo/cloud/session/{id}"
 }
 
-export type KiloCloudSessionGetErrors = {
+export type DevilCloudSessionGetErrors = {
   /**
    * Not found
    */
   404: NotFoundError
 }
 
-export type KiloCloudSessionGetError = KiloCloudSessionGetErrors[keyof KiloCloudSessionGetErrors]
+export type DevilCloudSessionGetError = DevilCloudSessionGetErrors[keyof DevilCloudSessionGetErrors]
 
-export type KiloCloudSessionGetResponses = {
+export type DevilCloudSessionGetResponses = {
   /**
    * Cloud session data
    */
   200: unknown
 }
 
-export type KiloCloudSessionImportData = {
+export type DevilCloudSessionImportData = {
   body?: {
     sessionId: string
   }
@@ -5158,7 +5158,7 @@ export type KiloCloudSessionImportData = {
   url: "/kilo/cloud/session/import"
 }
 
-export type KiloCloudSessionImportErrors = {
+export type DevilCloudSessionImportErrors = {
   /**
    * Bad request
    */
@@ -5169,16 +5169,16 @@ export type KiloCloudSessionImportErrors = {
   404: NotFoundError
 }
 
-export type KiloCloudSessionImportError = KiloCloudSessionImportErrors[keyof KiloCloudSessionImportErrors]
+export type DevilCloudSessionImportError = DevilCloudSessionImportErrors[keyof DevilCloudSessionImportErrors]
 
-export type KiloCloudSessionImportResponses = {
+export type DevilCloudSessionImportResponses = {
   /**
    * Imported session info
    */
   200: unknown
 }
 
-export type KiloClawStatusData = {
+export type DevilClawStatusData = {
   body?: never
   path?: never
   query?: {
@@ -5188,7 +5188,7 @@ export type KiloClawStatusData = {
   url: "/kilo/claw/status"
 }
 
-export type KiloClawStatusResponses = {
+export type DevilClawStatusResponses = {
   /**
    * Instance status
    */
@@ -5209,9 +5209,9 @@ export type KiloClawStatusResponses = {
   }
 }
 
-export type KiloClawStatusResponse = KiloClawStatusResponses[keyof KiloClawStatusResponses]
+export type DevilClawStatusResponse = DevilClawStatusResponses[keyof DevilClawStatusResponses]
 
-export type KiloClawChatCredentialsData = {
+export type DevilClawChatCredentialsData = {
   body?: never
   path?: never
   query?: {
@@ -5221,7 +5221,7 @@ export type KiloClawChatCredentialsData = {
   url: "/kilo/claw/chat-credentials"
 }
 
-export type KiloClawChatCredentialsResponses = {
+export type DevilClawChatCredentialsResponses = {
   /**
    * Stream Chat credentials or null
    */
@@ -5233,9 +5233,9 @@ export type KiloClawChatCredentialsResponses = {
   } | null
 }
 
-export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
+export type DevilClawChatCredentialsResponse = DevilClawChatCredentialsResponses[keyof DevilClawChatCredentialsResponses]
 
-export type KiloCloudSessionsData = {
+export type DevilCloudSessionsData = {
   body?: never
   path?: never
   query?: {
@@ -5248,16 +5248,16 @@ export type KiloCloudSessionsData = {
   url: "/kilo/cloud-sessions"
 }
 
-export type KiloCloudSessionsErrors = {
+export type DevilCloudSessionsErrors = {
   /**
    * Bad request
    */
   400: BadRequestError
 }
 
-export type KiloCloudSessionsError = KiloCloudSessionsErrors[keyof KiloCloudSessionsErrors]
+export type DevilCloudSessionsError = DevilCloudSessionsErrors[keyof DevilCloudSessionsErrors]
 
-export type KiloCloudSessionsResponses = {
+export type DevilCloudSessionsResponses = {
   /**
    * Cloud sessions list
    */
@@ -5273,7 +5273,7 @@ export type KiloCloudSessionsResponses = {
   }
 }
 
-export type KiloCloudSessionsResponse = KiloCloudSessionsResponses[keyof KiloCloudSessionsResponses]
+export type DevilCloudSessionsResponse = DevilCloudSessionsResponses[keyof DevilCloudSessionsResponses]
 
 export type FindTextData = {
   body?: never

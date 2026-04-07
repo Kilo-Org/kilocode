@@ -1,7 +1,7 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw Stream Chat client wrapper
+ * DevilClaw Stream Chat client wrapper
  *
  * Headless Stream Chat JS SDK integration for the TUI.
  * Uses the same channel/credentials as the web dashboard's ChatTab.

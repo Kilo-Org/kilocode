@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { handleQuestionReject, handleQuestionReply } from "../../src/kilo-provider/handlers/question"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
+import { handleQuestionReject, handleQuestionReply } from "../../src/devil-provider/handlers/question"
 
 describe("question handlers", () => {
   it("routes replies using the question session when provided", async () => {
@@ -13,7 +13,7 @@ describe("question handlers", () => {
         },
         reject: async () => true,
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const ok = await handleQuestionReply(
       {
@@ -49,7 +49,7 @@ describe("question handlers", () => {
         },
         reject: async () => true,
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const ok = await handleQuestionReply(
       {
@@ -78,7 +78,7 @@ describe("question handlers", () => {
           return true
         },
       },
-    } as unknown as KiloClient
+    } as unknown as DevilClient
 
     const ok = await handleQuestionReject(
       {

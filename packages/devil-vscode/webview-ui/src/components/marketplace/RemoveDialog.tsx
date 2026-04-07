@@ -1,5 +1,5 @@
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { Button } from "@kilocode/kilo-ui/button"
+import { Dialog } from "@devilcode/kilo-ui/dialog"
+import { Button } from "@devilcode/kilo-ui/button"
 import type { MarketplaceItem } from "../../types/marketplace"
 import { useLanguage } from "../../context/language"
 

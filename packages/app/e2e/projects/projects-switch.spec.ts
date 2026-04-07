@@ -68,7 +68,7 @@ test("can switch between projects from sidebar", async ({ page, withProject }) =
 })
 
 test("switching back to a project opens the latest workspace session", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   const other = await createTestProject()

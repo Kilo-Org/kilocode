@@ -1,22 +1,22 @@
 ---
 title: "Auto Model Tiers"
-description: "Architecture of Kilo Auto — a family of smart model tiers that match users to the right models without requiring AI expertise"
+description: "Architecture of devil Auto — a family of smart model tiers that match users to the right models without requiring AI expertise"
 ---
 
 # Auto Model Tiers
 
 ## Overview
 
-Kilo Auto is a model routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
+devil Auto is a model routing system that automatically selects the optimal AI model based on the user's current mode (Code, Architect, Debug, etc.). It comes in multiple tiers so that every user — regardless of budget, preference, or expertise — gets a "just works" experience without needing to understand the AI model landscape.
 
 Three tiers are user-facing, and one is internal:
 
 | Tier ID              | Audience                       | Pricing |
 | -------------------- | ------------------------------ | ------- |
-| `kilo-auto/frontier` | Best paid models               | Paid    |
-| `kilo-auto/balanced` | Strong performance, lower cost | Paid    |
-| `kilo-auto/free`     | Best available free models     | Free    |
-| `kilo-auto/small`    | Internal — background tasks    | Varies  |
+| `devil-auto/frontier` | Best paid models               | Paid    |
+| `devil-auto/balanced` | Strong performance, lower cost | Paid    |
+| `devil-auto/free`     | Best available free models     | Free    |
+| `devil-auto/small`    | Internal — background tasks    | Varies  |
 
 ## Problem
 
@@ -30,7 +30,7 @@ Without Auto Model, three groups are underserved:
 
 2. **Cost-conscious users** — They want something better than free but cheaper than frontier. Open-weight models are useful and significantly cheaper, but which one? Which version? The answer changes every few weeks.
 
-3. **Background tasks** — Kilo uses small models for things like generating session titles and commit messages. These should be invisible and reliable, not dependent on the user's model selection or credit status.
+3. **Background tasks** — devil uses small models for things like generating session titles and commit messages. These should be invisible and reliable, not dependent on the user's model selection or credit status.
 
 ### Free model churn creates a moving target
 
@@ -60,7 +60,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 ### Auto: Free
 
-**Who it's for**: Users who want to try Kilo without a credit card, students, hobbyists, and anyone exploring AI-assisted coding.
+**Who it's for**: Users who want to try devil without a credit card, students, hobbyists, and anyone exploring AI-assisted coding.
 
 **What it does**: Automatically maps to the best available free model(s) for each mode. As free model availability changes due to promotional periods, the mapping updates transparently. Users always get the best free option without having to track which models are currently available.
 
@@ -70,13 +70,13 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 ### Auto: Small (internal)
 
-**Who it's for**: Not user-facing. Used internally by Kilo for lightweight background tasks (session titles, commit messages, conversation summaries).
+**Who it's for**: Not user-facing. Used internally by devil for lightweight background tasks (session titles, commit messages, conversation summaries).
 
 **What it does**: Automatically selects the right small model for lightweight tasks. When credits are available, it uses a fast paid small model.
 
 **Why it matters**: Users never think about background tasks, and they shouldn't have to. Auto: Small ensures these tasks always work, always feel fast, and never waste credits on an expensive model when a cheap one will do.
 
-**Implementation**: The `getSmallModel()` function in `packages/opencode/src/provider/provider.ts` prioritizes `kilo-auto/small` when the Kilo provider is active. If the user's provider doesn't have a dedicated small model, it falls back globally to `kilo-auto/small` when available.
+**Implementation**: The `getSmallModel()` function in `packages/opencode/src/provider/provider.ts` prioritizes `devil-auto/small` when the devil provider is active. If the user's provider doesn't have a dedicated small model, it falls back globally to `devil-auto/small` when available.
 
 ## User experience
 
@@ -90,12 +90,12 @@ The three user-facing tiers appear in the model selector:
 | Auto: Balanced | Strong performance at lower cost                     |
 | Auto: Free     | Best free models, no credits required                |
 
-Auto: Small does not appear in the model picker. It is filtered out by the UI (see `KILO_AUTO_SMALL_IDS` in the VS Code extension).
+Auto: Small does not appear in the model picker. It is filtered out by the UI (see `Devil_AUTO_SMALL_IDS` in the VS Code extension).
 
 ### Defaults
 
-- **Authenticated users**: Default to `kilo-auto/balanced` (defined in `packages/kilo-gateway/src/api/constants.ts`)
-- **Unauthenticated users**: Default to `kilo-auto/free`
+- **Authenticated users**: Default to `devil-auto/balanced` (defined in `packages/devil-gateway/src/api/constants.ts`)
+- **Unauthenticated users**: Default to `devil-auto/free`
 
 This means a brand-new user who hasn't signed in gets a working experience immediately — no model selection required.
 
@@ -105,11 +105,11 @@ The UI shows the tier name (e.g., "Auto: Frontier"), not the underlying model. U
 
 ## Implementation architecture
 
-Auto Model uses a split client/server architecture. The actual model-to-mode mappings are not hardcoded in the client — they're served dynamically from the Kilo API, making it possible to update routing without client releases.
+Auto Model uses a split client/server architecture. The actual model-to-mode mappings are not hardcoded in the client — they're served dynamically from the devil API, making it possible to update routing without client releases.
 
-### Server side (Kilo API)
+### Server side (devil API)
 
-The Kilo API at `api.kilo.ai` defines which underlying models each `kilo-auto/*` tier routes to per mode. Each auto model is returned with an `opencode.variants` field — a map of mode-specific provider options:
+The devil API at `api.devil.ai` defines which underlying models each `devil-auto/*` tier routes to per mode. Each auto model is returned with an `opencode.variants` field — a map of mode-specific provider options:
 
 ```json
 {
@@ -122,17 +122,17 @@ The Kilo API at `api.kilo.ai` defines which underlying models each `kilo-auto/*`
 }
 ```
 
-This is fetched via `packages/kilo-gateway/src/api/models.ts` which parses the `opencode.variants` field from the API response.
+This is fetched via `packages/devil-gateway/src/api/models.ts` which parses the `opencode.variants` field from the API response.
 
 ### Client side
 
 The client-side chain works as follows:
 
-1. **Model fetching**: `packages/opencode/src/provider/model-cache.ts` caches Kilo Gateway models with a 5-minute TTL, fetching from the Kilo API.
+1. **Model fetching**: `packages/opencode/src/provider/model-cache.ts` caches devil Gateway models with a 5-minute TTL, fetching from the devil API.
 
-2. **Variant passthrough**: `packages/opencode/src/provider/transform.ts` — the `variants()` function passes through server-defined variants for Kilo Gateway models directly, rather than computing them locally.
+2. **Variant passthrough**: `packages/opencode/src/provider/transform.ts` — the `variants()` function passes through server-defined variants for devil Gateway models directly, rather than computing them locally.
 
-3. **Variant storage**: `packages/opencode/src/provider/provider.ts` stores `variants` on the model object when the provider is `kilo`.
+3. **Variant storage**: `packages/opencode/src/provider/provider.ts` stores `variants` on the model object when the provider is `devil`.
 
 4. **Agent variant resolution**: Each agent (mode) specifies a `variant` in its config (`packages/opencode/src/config/config.ts`). At prompt time, `packages/opencode/src/session/prompt.ts` resolves the variant from the agent config and attaches it to the user message.
 
@@ -142,18 +142,18 @@ The client-side chain works as follows:
 
 | File                                            | Role                                                                                  |
 | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `packages/kilo-gateway/src/api/constants.ts`    | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`)                       |
-| `packages/kilo-gateway/src/api/models.ts`       | Fetches models from Kilo API, parses `opencode.variants`                              |
-| `packages/opencode/src/provider/model-cache.ts` | Caches Kilo Gateway models with 5-min TTL                                             |
-| `packages/opencode/src/provider/provider.ts`    | Preserves variants for kilo provider; `getSmallModel()` prioritizes `kilo-auto/small` |
-| `packages/opencode/src/provider/transform.ts`   | Passes through server-defined variants for Kilo Gateway models                        |
+| `packages/devil-gateway/src/api/constants.ts`    | Default model constants (`DEFAULT_MODEL`, `DEFAULT_FREE_MODEL`)                       |
+| `packages/devil-gateway/src/api/models.ts`       | Fetches models from devil API, parses `opencode.variants`                              |
+| `packages/opencode/src/provider/model-cache.ts` | Caches devil Gateway models with 5-min TTL                                             |
+| `packages/opencode/src/provider/provider.ts`    | Preserves variants for devil provider; `getSmallModel()` prioritizes `devil-auto/small` |
+| `packages/opencode/src/provider/transform.ts`   | Passes through server-defined variants for devil Gateway models                        |
 | `packages/opencode/src/session/prompt.ts`       | Resolves variant from agent config, attaches to user messages                         |
 | `packages/opencode/src/session/llm.ts`          | Merges variant options into LLM call parameters                                       |
 | `packages/opencode/src/config/config.ts`        | Agent config schema includes `variant` field                                          |
 
 ## Requirements
 
-- Unauthenticated users default to `kilo-auto/free` with no configuration required
+- Unauthenticated users default to `devil-auto/free` with no configuration required
 - All tiers use mode-based routing where the underlying models support it
 - When a tier routes to different model families across turns in a conversation, thinking/reasoning blocks from the previous model are stripped to prevent compatibility errors
 - Auto Model requires **VS Code/JetBrains extension v5.2.3+** or **CLI v1.0.15+** for mode-based switching. Older versions fall back to a single model for all requests.

@@ -5,14 +5,14 @@ on:
     branches:
       - dev
     paths:
-      - "packages/kilo-vscode/**"
+      - "packages/devil-vscode/**"
       - "packages/ui/**"
-      - "packages/kilo-ui/**"
+      - "packages/devil-ui/**"
   pull_request:
     paths:
-      - "packages/kilo-vscode/**"
+      - "packages/devil-vscode/**"
       - "packages/ui/**"
-      - "packages/kilo-ui/**"
+      - "packages/devil-ui/**"
   workflow_dispatch:
 
 jobs:
@@ -32,17 +32,17 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Run unit tests
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
         run: bun run test:unit
 
       - name: Check formatting (prettier)
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
         run: bun run format:check
 
       - name: Check for dead code (knip)
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
         run: bun run knip
 
-      - name: Check for kilocode_change markers
-        working-directory: packages/kilo-vscode
-        run: bun run check-kilocode-change
+      - name: Check for devilcode_change markers
+        working-directory: packages/devil-vscode
+        run: bun run check-devilcode-change

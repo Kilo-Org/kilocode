@@ -7,7 +7,7 @@ description: "Manage conversation context to optimize token usage and maintain l
 
 ## Overview
 
-When working on complex tasks, conversations with Kilo Code can grow long and consume a significant portion of the AI model's context window. **Context Condensing** is a feature that intelligently summarizes your conversation history, reducing token usage while preserving the essential information needed to continue your work effectively.
+When working on complex tasks, conversations with devil Code can grow long and consume a significant portion of the AI model's context window. **Context Condensing** is a feature that intelligently summarizes your conversation history, reducing token usage while preserving the essential information needed to continue your work effectively.
 
 ## The Problem: Context Window Limits
 
@@ -64,7 +64,7 @@ When compaction is triggered:
 
 ## Configuration Options
 
-Compaction is configured in your `kilo.jsonc` file:
+Compaction is configured in your `devil.jsonc` file:
 
 ```jsonc
 {
@@ -129,7 +129,7 @@ When compaction is triggered:
 
 ## Configuration Options
 
-Compaction is configured in your `kilo.jsonc` file:
+Compaction is configured in your `devil.jsonc` file:
 
 ```jsonc
 {
@@ -165,7 +165,7 @@ This summary replaces the detailed conversation history, freeing up context wind
 
 ### Automatic Triggering
 
-Kilo Code monitors your context usage and may suggest condensing when you approach the context window limit. You'll see a notification indicating that condensing is recommended.
+devil Code monitors your context usage and may suggest condensing when you approach the context window limit. You'll see a notification indicating that condensing is recommended.
 
 ### Manual Condensing
 
@@ -178,7 +178,7 @@ You can also trigger context condensing manually at any time using:
 
 When condensing is triggered:
 
-1. **Analysis**: Kilo Code analyzes the entire conversation history
+1. **Analysis**: devil Code analyzes the entire conversation history
 2. **Summarization**: A summary is generated using the configured API, capturing essential context
 3. **Replacement**: The detailed history is replaced with the condensed summary
 4. **Continuation**: You can continue working with the freed-up context space
@@ -212,7 +212,7 @@ If the condensed summary doesn't capture important details:
 
 - Consider condensing earlier, before the conversation becomes too long
 - Use clear, specific language when describing your tasks
-- Important context can be reinforced after condensing by reminding Kilo Code of key details
+- Important context can be reinforced after condensing by reminding devil Code of key details
 
 {% /tab %}
 {% /tabs %}
@@ -223,7 +223,7 @@ If the condensed summary doesn't capture important details:
 
 - **Long sessions**: If you've been working for an extended period on a complex task
 - **Before major transitions**: When switching to a different aspect of your project
-- **When prompted**: When Kilo Code suggests condensing or compaction due to context limits
+- **When prompted**: When devil Code suggests condensing or compaction due to context limits
 
 ### Maintaining Context Quality
 

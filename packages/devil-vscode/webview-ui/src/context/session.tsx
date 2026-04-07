@@ -12,7 +12,7 @@ import { useServer } from "./server"
 import { useProvider } from "./provider"
 import { useConfig } from "./config"
 import { useLanguage } from "./language"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import type {
   SessionInfo,
   Message,
@@ -42,7 +42,7 @@ import {
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
-import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
+import { DEVIL_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
 
@@ -360,7 +360,7 @@ export const SessionProvider: ParentComponent = (props) => {
       mode: getModeModel(agentName),
       global: getGlobalModel(),
       recent: store.recentModels,
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
   }
 
@@ -730,7 +730,7 @@ export const SessionProvider: ParentComponent = (props) => {
             title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
             description: message.error,
           })
-          console.error("[Kilo New] Cloud session import failed:", message.error)
+          console.error("[Devil New] Cloud session import failed:", message.error)
           break
 
         case "worktreeStatsLoaded":
@@ -850,7 +850,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const effectiveMessageID = messageID || part.messageID
 
     if (!effectiveMessageID) {
-      console.warn("[Kilo New] Part updated without messageID:", part.id, part.type)
+      console.warn("[Devil New] Part updated without messageID:", part.id, part.type)
       return
     }
 
@@ -1338,7 +1338,7 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
   ) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot send message: not connected")
+      console.warn("[Devil New] Cannot send message: not connected")
       return
     }
 
@@ -1389,7 +1389,7 @@ export const SessionProvider: ParentComponent = (props) => {
     draftID?: string,
   ) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot send command: not connected")
+      console.warn("[Devil New] Cannot send command: not connected")
       return
     }
 
@@ -1438,7 +1438,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function abort() {
     const sessionID = currentSessionID()
     if (!sessionID) {
-      console.warn("[Kilo New] Cannot abort: no current session")
+      console.warn("[Devil New] Cannot abort: no current session")
       return
     }
 
@@ -1450,13 +1450,13 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function compact() {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot compact: not connected")
+      console.warn("[Devil New] Cannot compact: not connected")
       return
     }
 
     const sessionID = currentSessionID()
     if (!sessionID) {
-      console.warn("[Kilo New] Cannot compact: no current session")
+      console.warn("[Devil New] Cannot compact: no current session")
       return
     }
 
@@ -1527,7 +1527,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function createSession() {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot create session: not connected")
+      console.warn("[Devil New] Cannot create session: not connected")
       return
     }
 
@@ -1547,7 +1547,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function loadSessions() {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot load sessions: not connected")
+      console.warn("[Devil New] Cannot load sessions: not connected")
       return
     }
     vscode.postMessage({ type: "loadSessions" })
@@ -1555,11 +1555,11 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectSession(id: string) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot select session: not connected")
+      console.warn("[Devil New] Cannot select session: not connected")
       return
     }
     if (id.startsWith("cloud:")) {
-      console.warn("[Kilo New] Cannot select cloud preview session via selectSession")
+      console.warn("[Devil New] Cannot select cloud preview session via selectSession")
       return
     }
     setCurrentSessionID(id)
@@ -1570,7 +1570,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectCloudSession(cloudSessionId: string) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot select cloud session: not connected")
+      console.warn("[Devil New] Cannot select cloud session: not connected")
       return
     }
     const key = `cloud:${cloudSessionId}`
@@ -1583,7 +1583,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function deleteSession(id: string) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot delete session: not connected")
+      console.warn("[Devil New] Cannot delete session: not connected")
       return
     }
     // Optimistically remove from the list so the UI updates immediately
@@ -1604,7 +1604,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function renameSession(id: string, title: string) {
     if (!server.isConnected()) {
-      console.warn("[Kilo New] Cannot rename session: not connected")
+      console.warn("[Devil New] Cannot rename session: not connected")
       return
     }
     vscode.postMessage({ type: "renameSession", sessionID: id, title })

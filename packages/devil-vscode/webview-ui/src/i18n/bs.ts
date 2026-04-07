@@ -120,7 +120,7 @@ export const dict = {
   "dialog.model.expand": "Proširi",
   "dialog.model.collapse": "Skupi",
 
-  "dialog.model.unpaid.freeModels.title": "Besplatni modeli koje obezbjeđuje Kilo",
+  "dialog.model.unpaid.freeModels.title": "Besplatni modeli koje obezbjeđuje Devil",
   "dialog.model.unpaid.addMore.title": "Dodaj još modela od popularnih provajdera",
 
   "dialog.provider.viewAll": "Prikaži više provajdera",
@@ -133,7 +133,7 @@ export const dict = {
   "provider.connect.status.waiting": "Čekanje na autorizaciju...",
   "provider.connect.status.failed": "Autorizacija nije uspjela: {{error}}",
   "provider.connect.apiKey.description":
-    "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
+    "Unesi svoj {{provider}} API ključ da povežeš račun i koristiš {{provider}} modele u Devil-u.",
   "provider.connect.apiKey.label": "{{provider}} API ključ",
   "provider.connect.apiKey.placeholder": "API ključ",
   "provider.connect.apiKey.required": "API ključ je obavezan",
@@ -147,7 +147,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Posjeti ",
   "provider.connect.oauth.code.visit.link": "ovaj link",
   "provider.connect.oauth.code.visit.suffix":
-    " da preuzmeš autorizacijski kod i povežeš račun te koristiš {{provider}} modele u Kilo-u.",
+    " da preuzmeš autorizacijski kod i povežeš račun te koristiš {{provider}} modele u Devil-u.",
   "provider.connect.oauth.code.label": "{{method}} autorizacijski kod",
   "provider.connect.oauth.code.placeholder": "Autorizacijski kod",
   "provider.connect.oauth.code.required": "Autorizacijski kod je obavezan",
@@ -155,7 +155,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Posjeti ",
   "provider.connect.oauth.auto.visit.link": "ovaj link",
   "provider.connect.oauth.auto.visit.suffix":
-    " i unesi kod ispod da povežeš račun i koristiš {{provider}} modele u Kilo-u.",
+    " i unesi kod ispod da povežeš račun i koristiš {{provider}} modele u Devil-u.",
   "provider.connect.oauth.auto.confirmationCode": "Kod za potvrdu",
   "provider.connect.toast.connected.title": "{{provider}} povezan",
   "provider.connect.toast.connected.description": "{{provider}} modeli su sada dostupni za korištenje.",
@@ -280,7 +280,7 @@ export const dict = {
   "dialog.directory.empty": "Nema pronađenih foldera",
 
   "dialog.server.title": "Serveri",
-  "dialog.server.description": "Promijeni na koji se Kilo server ova aplikacija povezuje.",
+  "dialog.server.description": "Promijeni na koji se Devil server ova aplikacija povezuje.",
   "dialog.server.search.placeholder": "Pretraži servere",
   "dialog.server.empty": "Još nema servera",
   "dialog.server.add.title": "Dodaj server",
@@ -408,7 +408,7 @@ export const dict = {
   "toast.session.listFailed.title": "Neuspjelo učitavanje sesija za {{project}}",
 
   "toast.update.title": "Dostupno ažuriranje",
-  "toast.update.description": "Nova verzija Kilo-a ({{version}}) je dostupna za instalaciju.",
+  "toast.update.description": "Nova verzija Devil-a ({{version}}) je dostupna za instalaciju.",
   "toast.update.action.installRestart": "Instaliraj i restartuj",
   "toast.update.action.notYet": "Ne još",
 
@@ -419,7 +419,7 @@ export const dict = {
   "error.page.action.checking": "Provjera...",
   "error.page.action.checkUpdates": "Provjeri ažuriranja",
   "error.page.action.updateTo": "Ažuriraj na {{version}}",
-  "error.page.report.prefix": "Molimo prijavi ovu grešku Kilo timu",
+  "error.page.report.prefix": "Molimo prijavi ovu grešku Devil timu",
   "error.page.report.discord": "na Discordu",
   "error.page.version": "Verzija: {{version}}",
 
@@ -448,7 +448,7 @@ export const dict = {
   "error.chain.didYouMean": "Da li si mislio: {{suggestions}}",
   "error.chain.modelNotFound": "Model nije pronađen: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Provjeri konfiguraciju (opencode.json) - nazive provajdera/modela",
-  "error.chain.mcpFailed": 'MCP server "{{name}}" nije uspio. Napomena: Kilo još ne podržava MCP autentifikaciju.',
+  "error.chain.mcpFailed": 'MCP server "{{name}}" nije uspio. Napomena: Devil još ne podržava MCP autentifikaciju.',
   "error.chain.providerAuthFailed": "Autentifikacija provajdera nije uspjela ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Neuspjelo inicijalizovanje provajdera "{{provider}}". Provjeri kredencijale i konfiguraciju.',
@@ -590,12 +590,12 @@ export const dict = {
   "sidebar.workspaces.enable": "Omogući radne prostore",
   "sidebar.workspaces.disable": "Onemogući radne prostore",
   "sidebar.gettingStarted.title": "Početak",
-  "sidebar.gettingStarted.line1": "Kilo uključuje besplatne modele, tako da možeš odmah početi.",
+  "sidebar.gettingStarted.line1": "Devil uključuje besplatne modele, tako da možeš odmah početi.",
   "sidebar.gettingStarted.line2": "Poveži bilo kojeg provajdera da koristiš modele, npr. Claude, GPT, Gemini itd.",
   "sidebar.project.recentSessions": "Nedavne sesije",
   "sidebar.project.viewAllSessions": "Prikaži sve sesije",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Devil Desktop",
 
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
@@ -608,11 +608,11 @@ export const dict = {
   "settings.general.section.sounds": "Zvučni efekti",
 
   "settings.general.row.language.title": "Jezik",
-  "settings.general.row.language.description": "Promijeni jezik prikaza u Kilo-u",
+  "settings.general.row.language.description": "Promijeni jezik prikaza u Devil-u",
   "settings.general.row.appearance.title": "Izgled",
-  "settings.general.row.appearance.description": "Prilagodi kako Kilo izgleda na tvom uređaju",
+  "settings.general.row.appearance.description": "Prilagodi kako Devil izgleda na tvom uređaju",
   "settings.general.row.theme.title": "Tema",
-  "settings.general.row.theme.description": "Prilagodi temu Kilo-a.",
+  "settings.general.row.theme.description": "Prilagodi temu Devil-a.",
   "settings.general.row.font.title": "Font",
   "settings.general.row.font.description": "Prilagodi monospace font koji se koristi u blokovima koda",
 
@@ -620,13 +620,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Prikaži iskačuće prozore "Šta je novo" nakon ažuriranja',
 
   "settings.updates.row.startup.title": "Provjeri ažuriranja pri pokretanju",
-  "settings.updates.row.startup.description": "Automatski provjerava ažuriranja kada se Kilo pokrene",
+  "settings.updates.row.startup.description": "Automatski provjerava ažuriranja kada se Devil pokrene",
   "settings.updates.row.check.title": "Provjeri ažuriranja",
   "settings.updates.row.check.description": "Ručno provjeri ažuriranja i instaliraj ako su dostupna",
   "settings.updates.action.checkNow": "Provjeri sada",
   "settings.updates.action.checking": "Provjera...",
   "settings.updates.toast.latest.title": "Sve je ažurno",
-  "settings.updates.toast.latest.description": "Koristiš najnoviju verziju Kilo-a.",
+  "settings.updates.toast.latest.description": "Koristiš najnoviju verziju Devil-a.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -721,7 +721,7 @@ export const dict = {
   "settings.providers.title": "Provajderi",
   "settings.providers.description": "Postavke provajdera će se ovdje moći podešavati.",
   "settings.providers.betaNotice":
-    "Trenutno se samo Kilo Gateway provajder može konfigurisati u interfejsu za postavke. Podrška za konfigurisanje drugih provajdera stiže uskoro tokom beta perioda. U međuvremenu, provajdere možete konfigurisati koristeći CLI ili konfiguracijsku datoteku. Posvećeni smo tome da Kilo ostane otvoren, bez vezivanja.",
+    "Trenutno se samo Devil Gateway provajder može konfigurisati u interfejsu za postavke. Podrška za konfigurisanje drugih provajdera stiže uskoro tokom beta perioda. U međuvremenu, provajdere možete konfigurisati koristeći CLI ili konfiguracijsku datoteku. Posvećeni smo tome da Devil ostane otvoren, bez vezivanja.",
   "settings.providers.section.connected": "Povezani provajderi",
   "settings.providers.connected.empty": "Nema povezanih provajdera",
   "settings.providers.section.popular": "Popularni provajderi",
@@ -898,7 +898,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Kod kopiran u međuspremnik",
   "deviceAuth.toast.errorCopied": "Greška kopirana u međuspremnik",
   "deviceAuth.status.initiating": "Pokretanje prijave...",
-  "deviceAuth.title": "Prijavite se u Kilo Code",
+  "deviceAuth.title": "Prijavite se u Devil Code",
   "deviceAuth.step1": "Korak 1: Otvorite ovaj URL",
   "deviceAuth.action.copyUrl": "Kopiraj URL",
   "deviceAuth.action.openBrowser": "Otvori preglednik",
@@ -919,7 +919,7 @@ export const dict = {
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Niste prijavljeni",
-  "profile.action.login": "Prijavite se putem Kilo Code",
+  "profile.action.login": "Prijavite se putem Devil Code",
   "profile.balance.title": "Stanje",
   "profile.balance.refresh": "Osvježi stanje",
   "profile.action.dashboard": "Kontrolna ploča",
@@ -937,11 +937,11 @@ export const dict = {
 
   "settings.experimental.title": "Eksperimentalno",
   "settings.language.title": "Jezik",
-  "settings.aboutKiloCode.title": "O Kilo Code-u",
+  "settings.aboutDevilCode.title": "O Devil Code-u",
 
   "session.messages.empty": "Započnite razgovor unosom poruke ispod.",
   "session.messages.welcome":
-    "Kilo Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
+    "Devil Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
   "session.messages.scrollToBottom": "Pomakni se na dno",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
@@ -968,41 +968,41 @@ export const dict = {
   "time.thisMonth": "Ovog mjeseca",
   "time.older": "Starije",
 
-  "settings.aboutKiloCode.status.connected": "Povezano",
-  "settings.aboutKiloCode.status.connecting": "Povezivanje...",
-  "settings.aboutKiloCode.status.disconnected": "Odspojeno",
-  "settings.aboutKiloCode.status.error": "Greška",
-  "settings.aboutKiloCode.cliServer": "CLI server",
-  "settings.aboutKiloCode.status.label": "Status:",
-  "settings.aboutKiloCode.port.label": "Port:",
-  "settings.aboutKiloCode.versionInfo": "Informacije o verziji",
-  "settings.aboutKiloCode.version.label": "Verzija:",
-  "settings.aboutKiloCode.extensionName": "Kilo Code ekstenzija",
-  "settings.aboutKiloCode.community": "Zajednica i podrška",
-  "settings.aboutKiloCode.feedback.prefix": "Ako imate pitanja ili povratne informacije, slobodno otvorite issue na",
-  "settings.aboutKiloCode.feedback.or": "ili",
-  "settings.aboutKiloCode.support.prefix": "Za pitanja o naplati ili računu, kontaktirajte korisničku podršku na",
-  "settings.aboutKiloCode.resetSettings.title": "Resetovanje postavki",
-  "settings.aboutKiloCode.resetSettings.description":
+  "settings.aboutDevilCode.status.connected": "Povezano",
+  "settings.aboutDevilCode.status.connecting": "Povezivanje...",
+  "settings.aboutDevilCode.status.disconnected": "Odspojeno",
+  "settings.aboutDevilCode.status.error": "Greška",
+  "settings.aboutDevilCode.cliServer": "CLI server",
+  "settings.aboutDevilCode.status.label": "Status:",
+  "settings.aboutDevilCode.port.label": "Port:",
+  "settings.aboutDevilCode.versionInfo": "Informacije o verziji",
+  "settings.aboutDevilCode.version.label": "Verzija:",
+  "settings.aboutDevilCode.extensionName": "Devil Code ekstenzija",
+  "settings.aboutDevilCode.community": "Zajednica i podrška",
+  "settings.aboutDevilCode.feedback.prefix": "Ako imate pitanja ili povratne informacije, slobodno otvorite issue na",
+  "settings.aboutDevilCode.feedback.or": "ili",
+  "settings.aboutDevilCode.support.prefix": "Za pitanja o naplati ili računu, kontaktirajte korisničku podršku na",
+  "settings.aboutDevilCode.resetSettings.title": "Resetovanje postavki",
+  "settings.aboutDevilCode.resetSettings.description":
     "Ovo resetuje samo postavke specifične za VS Code ekstenziju na njihove zadane vrijednosti. Postavke koje se dijele s CLI-jem, kao što su načini rada i pravila automatskog odobravanja, pohranjene su u CLI konfiguraciji i neće biti resetovane.",
-  "settings.aboutKiloCode.resetSettings.button": "Resetuj sve postavke",
-  "settings.aboutKiloCode.settingsTransfer.title": "Prijenos postavki",
-  "settings.aboutKiloCode.settingsTransfer.description":
+  "settings.aboutDevilCode.resetSettings.button": "Resetuj sve postavke",
+  "settings.aboutDevilCode.settingsTransfer.title": "Prijenos postavki",
+  "settings.aboutDevilCode.settingsTransfer.description":
     "Izvezite ili uvezite postavke za prijenos između VS Code instanci.",
-  "settings.aboutKiloCode.exportSettings": "Izvezi",
-  "settings.aboutKiloCode.importSettings": "Uvezi",
-  "settings.aboutKiloCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Kilo postavke.",
-  "settings.aboutKiloCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
-  "settings.aboutKiloCode.importSettings.newerVersion":
-    "Ovaj fajl je izvezen iz novije verzije Kilo-a. Neke postavke mogu biti zanemarene.",
-  "settings.aboutKiloCode.importSettings.success":
+  "settings.aboutDevilCode.exportSettings": "Izvezi",
+  "settings.aboutDevilCode.importSettings": "Uvezi",
+  "settings.aboutDevilCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
+  "settings.aboutDevilCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Devil postavke.",
+  "settings.aboutDevilCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
+  "settings.aboutDevilCode.importSettings.newerVersion":
+    "Ovaj fajl je izvezen iz novije verzije Devil-a. Neke postavke mogu biti zanemarene.",
+  "settings.aboutDevilCode.importSettings.success":
     "Postavke su uvezene. Pregledajte promjene iznad, a zatim kliknite Sačuvaj.",
 
-  "settings.aboutKiloCode.telemetry.title": "Telemetrija",
-  "settings.aboutKiloCode.telemetry.description":
+  "settings.aboutDevilCode.telemetry.title": "Telemetrija",
+  "settings.aboutDevilCode.telemetry.description":
     'Telemetrija je kontrolisana ugrađenom postavkom za telemetriju u VS Code-u. Da biste je onemogućili, idite na Postavke > Telemetrija > Nivo telemetrije i postavite na "off". Ponovo pokrenite VS Code da biste primijenili promjenu.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Otvori postavke telemetrije",
+  "settings.aboutDevilCode.telemetry.openSettings": "Otvori postavke telemetrije",
 
   "settings.agentBehaviour.subtab.modes": "Modovi",
   "settings.agentBehaviour.subtab.agents": "Agenti",
@@ -1021,7 +1021,7 @@ export const dict = {
   "settings.browser.headless.title": "Headless način",
   "settings.browser.headless.description": "Pokreni u headless načinu (bez vidljivog prozora preglednika).",
 
-  "settings.language.description": 'Odaberite jezik za Kilo Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
+  "settings.language.description": 'Odaberite jezik za Devil Code sučelje. "Auto" koristi jezik prikaza VS Code-a.',
   "settings.language.auto": "Auto (VS Code jezik)",
   "settings.language.current": "Trenutni:",
 
@@ -1163,7 +1163,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
   "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
   "settings.agentBehaviour.claudeCompat.description":
-    "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Kilo koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje.",
+    "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Devil koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje.",
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",
@@ -1253,12 +1253,12 @@ export const dict = {
 
   // legacy-migration start
   "settings.legacyMigration.link": "Migriraj sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.title": "Migracija sa prethodne verzije",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Migrirajte postavke iz prethodne instalacije Kilo Code, uključujući API ključeve provajdera i podrazumijevani model.",
+  "settings.aboutDevilCode.legacyMigration.title": "Migracija sa prethodne verzije",
+  "settings.aboutDevilCode.legacyMigration.description":
+    "Migrirajte postavke iz prethodne instalacije Devil Code, uključujući API ključeve provajdera i podrazumijevani model.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Šta je novo u Kilo Code",
+  "migration.whatsNew.title": "Šta je novo u Devil Code",
   "migration.whatsNew.subtitle": "Ponovo smo izgradili ekstenziju na bržem i efikasnijem temelju.",
   "migration.whatsNew.features.performance.title": "Brže performanse agenta",
   "migration.whatsNew.features.performance.detail":
@@ -1270,7 +1270,7 @@ export const dict = {
     "Jedinstveni interfejs za pokretanje više agenata paralelno, svaki na svom worktree-u — pratite napredak, mijenjajte kontekst i pregledajte promjene na jednom mjestu.",
   "migration.whatsNew.features.foundation.title": "Zajednički temelj",
   "migration.whatsNew.features.foundation.detail":
-    "Jedno malo, efikasno jezgro kroz sve Kilo proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
+    "Jedno malo, efikasno jezgro kroz sve Devil proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
   "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
   "migration.whatsNew.continue": "Nastavi",
 

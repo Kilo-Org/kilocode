@@ -40,26 +40,26 @@ import { dict as uiBs } from "@opencode-ai/ui/i18n/bs"
 import { dict as uiNl } from "@opencode-ai/ui/i18n/nl"
 import { dict as uiTr } from "@opencode-ai/ui/i18n/tr"
 
-// kilocode_change start
-import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
-import { dict as kiloZh } from "@kilocode/kilo-i18n/zh"
-import { dict as kiloZht } from "@kilocode/kilo-i18n/zht"
-import { dict as kiloKo } from "@kilocode/kilo-i18n/ko"
-import { dict as kiloDe } from "@kilocode/kilo-i18n/de"
-import { dict as kiloEs } from "@kilocode/kilo-i18n/es"
-import { dict as kiloFr } from "@kilocode/kilo-i18n/fr"
-import { dict as kiloDa } from "@kilocode/kilo-i18n/da"
-import { dict as kiloJa } from "@kilocode/kilo-i18n/ja"
-import { dict as kiloPl } from "@kilocode/kilo-i18n/pl"
-import { dict as kiloRu } from "@kilocode/kilo-i18n/ru"
-import { dict as kiloAr } from "@kilocode/kilo-i18n/ar"
-import { dict as kiloNo } from "@kilocode/kilo-i18n/no"
-import { dict as kiloBr } from "@kilocode/kilo-i18n/br"
-import { dict as kiloTh } from "@kilocode/kilo-i18n/th"
-import { dict as kiloBs } from "@kilocode/kilo-i18n/bs"
-import { dict as kiloNl } from "@kilocode/kilo-i18n/nl"
-import { dict as kiloTr } from "@kilocode/kilo-i18n/tr"
-// kilocode_change end
+// devilcode_change start
+import { dict as kiloEn } from "@devilcode/kilo-i18n/en"
+import { dict as kiloZh } from "@devilcode/kilo-i18n/zh"
+import { dict as kiloZht } from "@devilcode/kilo-i18n/zht"
+import { dict as kiloKo } from "@devilcode/kilo-i18n/ko"
+import { dict as kiloDe } from "@devilcode/kilo-i18n/de"
+import { dict as kiloEs } from "@devilcode/kilo-i18n/es"
+import { dict as kiloFr } from "@devilcode/kilo-i18n/fr"
+import { dict as kiloDa } from "@devilcode/kilo-i18n/da"
+import { dict as kiloJa } from "@devilcode/kilo-i18n/ja"
+import { dict as kiloPl } from "@devilcode/kilo-i18n/pl"
+import { dict as kiloRu } from "@devilcode/kilo-i18n/ru"
+import { dict as kiloAr } from "@devilcode/kilo-i18n/ar"
+import { dict as kiloNo } from "@devilcode/kilo-i18n/no"
+import { dict as kiloBr } from "@devilcode/kilo-i18n/br"
+import { dict as kiloTh } from "@devilcode/kilo-i18n/th"
+import { dict as kiloBs } from "@devilcode/kilo-i18n/bs"
+import { dict as kiloNl } from "@devilcode/kilo-i18n/nl"
+import { dict as kiloTr } from "@devilcode/kilo-i18n/tr"
+// devilcode_change end
 
 export type Locale =
   | "en"
@@ -81,7 +81,7 @@ export type Locale =
   | "nl"
   | "tr"
 
-type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // kilocode_change
+type RawDictionary = typeof en & typeof uiEn & typeof kiloEn // devilcode_change
 type Dictionary = i18n.Flatten<RawDictionary>
 
 function cookie(locale: Locale) {

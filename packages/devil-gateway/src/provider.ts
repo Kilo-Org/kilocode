@@ -2,33 +2,33 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
-import type { KiloProvider, KiloProviderOptions } from "./types.js"
-import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
-import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
-import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
+import type { DevilProvider, DevilProviderOptions } from "./types.js"
+import { getDevilUrlFromToken, getApiKey } from "./auth/token.js"
+import { buildDevilHeaders, getDefaultHeaders } from "./headers.js"
+import { DEVIL_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 
 /**
- * Create a KiloCode provider instance
+ * Create a DevilCode provider instance
  *
- * This provider wraps the OpenRouter SDK with KiloCode-specific configuration
+ * This provider wraps the OpenRouter SDK with DevilCode-specific configuration
  * including custom authentication, headers, and base URL.
  *
  * @example
  * ```typescript
- * const provider = createKilo({
- *   kilocodeToken: "your-token-here",
- *   kilocodeOrganizationId: "org-123"
+ * const provider = createDevil({
+ *   devilcodeToken: "your-token-here",
+ *   devilcodeOrganizationId: "org-123"
  * })
  *
  * const model = provider.languageModel("anthropic/claude-sonnet-4")
  * ```
  */
-export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
+export function createDevil(options: DevilProviderOptions = {}): DevilProvider {
   // Get API key from options or environment
   const apiKey = getApiKey(options)
 
   // Determine base URL
-  const baseApiUrl = getKiloUrlFromToken(options.baseURL ?? KILO_API_BASE, apiKey ?? "")
+  const baseApiUrl = getDevilUrlFromToken(options.baseURL ?? DEVIL_API_BASE, apiKey ?? "")
 
   // Build OpenRouter URL - only append /openrouter/ if not already present
   const openRouterUrl = baseApiUrl.includes("/openrouter")
@@ -40,9 +40,9 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   // Merge custom headers with defaults
   const customHeaders = {
     ...getDefaultHeaders(),
-    ...buildKiloHeaders(undefined, {
-      kilocodeOrganizationId: options.kilocodeOrganizationId,
-      kilocodeTesterWarningsDisabledUntil: undefined,
+    ...buildDevilHeaders(undefined, {
+      devilcodeOrganizationId: options.devilcodeOrganizationId,
+      devilcodeTesterWarningsDisabledUntil: undefined,
     }),
     ...options.headers,
   }
