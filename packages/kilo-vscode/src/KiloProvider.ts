@@ -2478,11 +2478,31 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Resolves relative paths against the current session's directory (which may be
    * a worktree path registered via setSessionDirectory), falling back to workspace root.
    * Absolute paths (Unix `/…` or Windows `C:\…`) are used as-is.
+   * kilocode_change start: bare filenames (no path separator) are resolved via
+   * workspace.findFiles so that clicking a "ShapeEditorContext.cs:129" link in chat
+   * works without knowing the full path.
    */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
+    const hasSeparator = filePath.includes("/") || filePath.includes("\\")
+    if (!isAbsolutePath(filePath) && !hasSeparator) {
+      vscode.workspace.findFiles(`**/${filePath}`, "**/node_modules/**", 1).then((files) => {
+        if (files.length > 0) {
+          this.openUriAtLine(files[0], line, column)
+        } else {
+          console.warn(`[Kilo New] KiloProvider: File not found in workspace: ${filePath}`)
+        }
+      })
+      return
+    }
     const uri = isAbsolutePath(filePath)
       ? vscode.Uri.file(filePath)
       : vscode.Uri.joinPath(vscode.Uri.file(this.getWorkspaceDirectory(this.currentSession?.id)), filePath)
+    this.openUriAtLine(uri, line, column)
+  }
+
+  /** Open a resolved URI at an optional line/column in the editor. */
+  private openUriAtLine(uri: vscode.Uri, line?: number, column?: number): void {
+    // kilocode_change end
     vscode.workspace.openTextDocument(uri).then(
       (doc) => {
         const options: vscode.TextDocumentShowOptions = { preview: true }

@@ -212,6 +212,15 @@ const AppContent: Component = () => {
     }
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
+
+    // kilocode_change start: handle file:line link clicks from the markdown renderer
+    const fileLinkHandler = (e: Event) => {
+      const { file, line } = (e as CustomEvent<{ file: string; line: number }>).detail
+      vscode.postMessage({ type: "openFile", filePath: file, line })
+    }
+    document.addEventListener("kilo:openFileAtLine", fileLinkHandler)
+    onCleanup(() => document.removeEventListener("kilo:openFileAtLine", fileLinkHandler))
+    // kilocode_change end
   })
 
   const handleSelectSession = (id: string) => {

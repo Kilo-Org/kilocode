@@ -75,6 +75,43 @@ function codeUrl(text: string) {
   }
 }
 
+// kilocode_change start: file:line link detection
+const fileLinkPattern =
+  /^([\w.\-/\\]*?\.(?:cs|ts|tsx|js|jsx|mts|mjs|cjs|cts|py|go|rs|cpp|cxx|c|h|hpp|java|kt|swift|rb|php|lua|sh|bash|zsh|json|xml|yaml|yml|toml)):(\d+)$/i
+
+function codeFileLink(text: string): { file: string; line: number } | undefined {
+  const trimmed = text.trim()
+  const match = fileLinkPattern.exec(trimmed)
+  if (!match) return undefined
+  return { file: match[1], line: parseInt(match[2], 10) }
+}
+
+function markFileLinks(root: HTMLDivElement) {
+  const codeNodes = Array.from(root.querySelectorAll(":not(pre) > code"))
+  for (const code of codeNodes) {
+    if (!(code instanceof HTMLElement)) continue
+    // Skip elements already wrapped in an external URL link
+    if (
+      code.parentElement instanceof HTMLAnchorElement &&
+      code.parentElement.classList.contains("external-link")
+    )
+      continue
+    const link = codeFileLink(code.textContent ?? "")
+    if (!link) {
+      if (code.classList.contains("file-link")) {
+        code.classList.remove("file-link")
+        delete code.dataset.fileLink
+        delete code.dataset.fileLine
+      }
+      continue
+    }
+    code.classList.add("file-link")
+    code.dataset.fileLink = link.file
+    code.dataset.fileLine = String(link.line)
+  }
+}
+// kilocode_change end
+
 function createIcon(path: string, slot: string) {
   const icon = document.createElement("div")
   icon.setAttribute("data-component", "icon")
@@ -178,6 +215,9 @@ function decorate(root: HTMLDivElement, labels: CopyLabels) {
     ensureCodeWrapper(block, labels)
   }
   markCodeLinks(root)
+  // kilocode_change start: mark inline code containing file:line references
+  markFileLinks(root)
+  // kilocode_change end
 }
 
 function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
@@ -191,6 +231,22 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
   const handleClick = async (event: MouseEvent) => {
     const target = event.target
     if (!(target instanceof Element)) return
+
+    // kilocode_change start: handle clicks on file:line code links
+    const fileCode = target.closest("code.file-link")
+    if (fileCode instanceof HTMLElement && fileCode.dataset.fileLink) {
+      event.preventDefault()
+      document.dispatchEvent(
+        new CustomEvent("kilo:openFileAtLine", {
+          detail: {
+            file: fileCode.dataset.fileLink,
+            line: parseInt(fileCode.dataset.fileLine ?? "1", 10),
+          },
+        }),
+      )
+      return
+    }
+    // kilocode_change end
 
     const button = target.closest('[data-slot="markdown-copy-button"]')
     if (!(button instanceof HTMLButtonElement)) return
