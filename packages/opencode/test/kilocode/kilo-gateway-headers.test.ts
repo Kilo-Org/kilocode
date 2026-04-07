@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "bun:test"
 import { buildKiloHeaders, getFeatureHeader, getEditorNameHeader } from "@kilocode/kilo-gateway"
-import { HEADER_FEATURE, ENV_FEATURE, ENV_VERSION, DEFAULT_EDITOR_NAME } from "@kilocode/kilo-gateway"
+import { HEADER_FEATURE, ENV_FEATURE, ENV_EDITOR_VERSION, DEFAULT_EDITOR_NAME } from "@kilocode/kilo-gateway"
 
 describe("getFeatureHeader", () => {
   const original = process.env[ENV_FEATURE]
@@ -30,23 +30,23 @@ describe("getFeatureHeader", () => {
 })
 
 describe("getEditorNameHeader", () => {
-  const originalVersion = process.env[ENV_VERSION]
+  const originalVersion = process.env[ENV_EDITOR_VERSION]
 
   afterEach(() => {
     if (originalVersion === undefined) {
-      delete process.env[ENV_VERSION]
+      delete process.env[ENV_EDITOR_VERSION]
     } else {
-      process.env[ENV_VERSION] = originalVersion
+      process.env[ENV_EDITOR_VERSION] = originalVersion
     }
   })
 
-  it("returns default editor name without version when KILOCODE_VERSION is not set", () => {
-    delete process.env[ENV_VERSION]
+  it("returns default editor name without version when KILOCODE_EDITOR_VERSION is not set", () => {
+    delete process.env[ENV_EDITOR_VERSION]
     expect(getEditorNameHeader()).toBe(DEFAULT_EDITOR_NAME)
   })
 
-  it("appends version when KILOCODE_VERSION is set", () => {
-    process.env[ENV_VERSION] = "1.2.3"
+  it("appends version when KILOCODE_EDITOR_VERSION is set", () => {
+    process.env[ENV_EDITOR_VERSION] = "1.2.3"
     expect(getEditorNameHeader()).toBe(`${DEFAULT_EDITOR_NAME} 1.2.3`)
   })
 })

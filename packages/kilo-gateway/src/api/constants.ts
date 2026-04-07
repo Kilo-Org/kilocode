@@ -61,6 +61,9 @@ export const ENV_EDITOR_NAME = "KILOCODE_EDITOR_NAME"
 /** Environment variable name for version (set by CLI at startup) */
 export const ENV_VERSION = "KILOCODE_VERSION"
 
+/** Environment variable name for editor version (e.g., VS Code version) */
+export const ENV_EDITOR_VERSION = "KILOCODE_EDITOR_VERSION"
+
 /** Tester header value for suppressing warnings */
 export const TESTER_SUPPRESS_VALUE = "SUPPRESS"
 

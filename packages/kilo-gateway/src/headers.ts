@@ -11,6 +11,7 @@ import {
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
   ENV_VERSION,
+  ENV_EDITOR_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
 } from "./api/constants.js"
@@ -58,11 +59,11 @@ export function getDefaultHeaders(): Record<string, string> {
 /**
  * Get editor name header value
  * Defaults to "Kilo CLI" but can be customized via KILOCODE_EDITOR_NAME.
- * Appends the version from KILOCODE_VERSION when available.
+ * Appends the version from KILOCODE_EDITOR_VERSION when available.
  */
 export function getEditorNameHeader(): string {
   const name = process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
-  const version = process.env[ENV_VERSION]
+  const version = process.env[ENV_EDITOR_VERSION]
   return version ? `${name} ${version}` : name
 }
 
