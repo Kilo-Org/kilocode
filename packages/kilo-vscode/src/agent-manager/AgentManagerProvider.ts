@@ -1918,6 +1918,7 @@ export class AgentManagerProvider implements Disposable {
   public dispose(): void {
     this.stopDiffPolling()
     this.statsPoller.stop()
+    this.gitOps.dispose()
     this.prBridge.poller.stop()
     this.terminalManager.dispose()
     this.panel?.dispose()

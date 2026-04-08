@@ -171,6 +171,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private pendingFollowup: Followup | null = null
   /** Worktree diff stats poller for the sidebar badge — reuses GitStatsPoller (local stats only) */
   private statsPoller: GitStatsPoller | null = null
+  private statsGitOps: GitOps | null = null
   private cachedStats: unknown = null
 
   /** Optional interceptor called before the standard message handler.
@@ -3148,7 +3149,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private startStatsPolling(): void {
     this.statsPoller?.stop()
+    this.statsGitOps?.dispose()
     const git = new GitOps({ log: () => {} })
+    this.statsGitOps = git
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => getWorkspaceRoot(),
@@ -3176,6 +3179,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   dispose(): void {
     this.statsPoller?.stop()
+    this.statsGitOps?.dispose()
     this.unsubscribeEvent?.()
     this.unsubscribeState?.()
     this.unsubscribeNotificationDismiss?.()

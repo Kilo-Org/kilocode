@@ -212,6 +212,7 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.gitOps.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
   }

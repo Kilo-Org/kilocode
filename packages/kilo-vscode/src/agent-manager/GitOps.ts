@@ -62,19 +62,45 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
 export class GitOps {
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
+  private readonly controller = new AbortController()
+
+  get disposed(): boolean {
+    return this.controller.signal.aborted
+  }
 
   constructor(options: GitOpsOptions) {
     this.log = options.log
     this.runGit =
       options.runGit ??
       ((args, cwd) =>
-        simpleGit(cwd)
+        simpleGit(cwd, { abort: this.controller.signal })
           .raw(args)
           .then((out) => out.trim()))
   }
 
+  dispose(): void {
+    if (!this.controller.signal.aborted) {
+      this.controller.abort()
+    }
+  }
+
   private raw(args: string[], cwd: string): Promise<string> {
-    return this.runGit(args, cwd)
+    const signal = this.controller.signal
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    return new Promise<string>((resolve, reject) => {
+      const onAbort = () => reject(new Error("GitOps disposed"))
+      signal.addEventListener("abort", onAbort, { once: true })
+      this.runGit(args, cwd).then(
+        (value) => {
+          signal.removeEventListener("abort", onAbort)
+          resolve(value)
+        },
+        (err) => {
+          signal.removeEventListener("abort", onAbort)
+          reject(err)
+        },
+      )
+    })
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -335,10 +361,14 @@ export class GitOps {
   }
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+    if (this.controller.signal.aborted) {
+      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+    }
     return new Promise((resolve) => {
       const child = spawn("git", args, {
         cwd,
         env: options?.env,
+        signal: this.controller.signal,
         stdio: ["pipe", "pipe", "pipe"],
       })
 
