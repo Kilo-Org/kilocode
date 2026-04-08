@@ -1155,6 +1155,7 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 
 PART_MAPPING["text"] = function TextPartDisplay(props) {
   const data = useData()
+  const i18n = useI18n()
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
@@ -1165,6 +1166,21 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (props.showAssistantCopyPartID !== part().id) return
     return props.turnDiffSummary
   })
+
+  const showCopy = createMemo(() => {
+    if (props.message.role !== "assistant") return false
+    if (props.showAssistantCopyPartID === null) return false
+    return props.showAssistantCopyPartID === part().id
+  })
+  const [copied, setCopied] = createSignal(false)
+
+  const handleCopy = async () => {
+    const content = displayText()
+    if (!content) return
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleMarkdownClick = (e: MouseEvent) => {
     if (!data.openFile) return
@@ -1200,6 +1216,24 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
         </div>
+        <Show when={showCopy()}>
+          <div data-slot="assistant-copy-wrapper">
+            <Tooltip
+              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              placement="right"
+              gutter={4}
+            >
+              <IconButton
+                icon={copied() ? "check" : "copy"}
+                size="normal"
+                variant="ghost"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleCopy}
+                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              />
+            </Tooltip>
+          </div>
+        </Show>
         <Show when={summary()}>
           {(render) => (
             <GrowBox animate={!!props.animate} fade gap={4} class="w-full min-w-0">
