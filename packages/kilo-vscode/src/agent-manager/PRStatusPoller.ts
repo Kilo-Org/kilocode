@@ -14,6 +14,7 @@ interface PRStatusPollerOptions {
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
+const PR_LOOKUP_TTL = 60_000 // 1 minute — PR number for a branch rarely changes
 
 export class PRStatusPoller {
   private timer: ReturnType<typeof setTimeout> | undefined
@@ -27,6 +28,7 @@ export class PRStatusPoller {
   private ghProbeTime = 0
   private activeWorktreeId: string | undefined
   private cachedRepo: { owner: string; name: string; cwd: string } | undefined
+  private prCache = new Map<string, { result: PRResult | null; expires: number }>()
   private readonly intervalMs: number
 
   constructor(private readonly options: PRStatusPollerOptions) {
@@ -48,9 +50,12 @@ export class PRStatusPoller {
     this.visible = visible
     if (!this.active) return
     if (visible) {
-      // Resume — poll immediately then schedule normally
+      // Resume — expire all PR caches and fetch all worktrees once to catch up,
+      // then resume the normal active-only poll cycle.
       if (this.timer) clearTimeout(this.timer)
       this.timer = undefined
+      this.prCache.clear()
+      this.lastHash.clear()
       void this.poll()
       return
     }
@@ -74,16 +79,22 @@ export class PRStatusPoller {
     this.ghAvailable = undefined
     this.ghProbeTime = 0
     this.cachedRepo = undefined
+    this.prCache.clear()
   }
 
-  /** Force-refresh a specific worktree immediately. */
+  /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
     if (!this.active) return
+    this.prCache.delete(worktreeId)
     void this.fetchOne(worktreeId)
   }
 
   setActiveWorktreeId(id: string | undefined): void {
+    const prev = this.activeWorktreeId
     this.activeWorktreeId = id
+    // When switching to a different worktree, fetch it immediately so the
+    // badge updates without waiting for the next poll cycle.
+    if (id && id !== prev && this.active) void this.fetchOne(id)
   }
 
   private start(): void {
@@ -146,8 +157,20 @@ export class PRStatusPoller {
     }
 
     this.lastError = undefined
+
+    // Only poll the active worktree on each timer tick. Inactive worktrees
+    // refresh when selected (setActiveWorktreeId) or manually (refresh()).
+    // On first poll (lastHash empty) fetch all worktrees once to populate badges.
     const worktrees = this.options.getWorktrees()
-    const results = await Promise.allSettled(worktrees.map((wt) => this.fetchOne(wt.id)))
+    const initial = this.lastHash.size === 0
+    const targets = initial ? worktrees : worktrees.filter((wt) => wt.id === this.activeWorktreeId)
+
+    if (targets.length === 0) {
+      this.failures = 0
+      return
+    }
+
+    const results = await Promise.allSettled(targets.map((wt) => this.fetchOne(wt.id)))
     const ok = results.every((r) => r.status === "fulfilled")
     if (ok) {
       this.failures = 0
@@ -164,7 +187,7 @@ export class PRStatusPoller {
     if (!this.options.getWorkspaceRoot()) return
 
     try {
-      const pr = await this.fetchPRForBranch(wt.branch, wt.path)
+      const pr = await this.cachedFetchPR(worktreeId, wt.branch, wt.path)
       if (!pr) {
         const hash = `${worktreeId}:none`
         if (this.lastHash.get(worktreeId) === hash) return
@@ -216,6 +239,15 @@ export class PRStatusPoller {
 
   private static readonly PR_JSON_FIELDS =
     "number,title,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
+
+  /** Return a cached PR lookup if still fresh, otherwise fetch and cache. */
+  private async cachedFetchPR(worktreeId: string, branch: string, cwd: string): Promise<PRResult | null> {
+    const cached = this.prCache.get(worktreeId)
+    if (cached && Date.now() < cached.expires) return cached.result
+    const result = await this.fetchPRForBranch(branch, cwd)
+    this.prCache.set(worktreeId, { result, expires: Date.now() + PR_LOOKUP_TTL })
+    return result
+  }
 
   private async fetchPRForBranch(branch: string, cwd: string): Promise<PRResult | null> {
     // Strategy 1: bare `gh pr view` — resolves via the branch's tracking ref.
