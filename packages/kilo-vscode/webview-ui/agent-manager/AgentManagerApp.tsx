@@ -2332,6 +2332,7 @@ const AgentManagerContent: Component = () => {
                                 <WorktreeItem
                                   worktree={wt}
                                   label={worktreeLabel(wt)}
+                                  subtitle={worktreeSubtitle(wt)}
                                   active={selection() === wt.id}
                                   pendingDelete={pendingDelete() === wt.id}
                                   busy={busyWorktrees().has(wt.id)}
@@ -2349,6 +2350,12 @@ const AgentManagerContent: Component = () => {
                                   renameValue={renameValue()}
                                   closeKeybind={kb().closeWorktree ?? ""}
                                   openKeybind={kb().openWorktree ?? ""}
+                                  pr={
+                                    prStatuses()[wt.id] !== undefined ? (prStatuses()[wt.id] ?? undefined) : undefined
+                                  }
+                                  onOpenPR={() =>
+                                    vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id })
+                                  }
                                   sections={sections()}
                                   currentSectionId={wt.sectionId}
                                   onMoveToSection={(secId) => moveToSection([wt.id], secId)}
