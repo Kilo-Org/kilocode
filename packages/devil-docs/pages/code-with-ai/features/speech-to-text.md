@@ -1,6 +1,6 @@
 ---
 title: Voice Transcription
-description: Kilo Code now includes experimental support for voice input in the chat interface.
+description: devil Code now includes experimental support for voice input in the chat interface.
 ---
 
 # Voice Transcription
@@ -9,7 +9,7 @@ description: Kilo Code now includes experimental support for voice input in the 
 Voice Transcription / speech-to-text (STT) is currently in experimental status. Expect potential issues and changes as the feature matures.
 {% /callout %}
 
-Kilo Code now includes experimental support for voice input in the chat interface. This feature allows you to dictate your messages using speech-to-text (STT) technology powered by OpenAI's Whisper API.
+devil Code now includes experimental support for voice input in the chat interface. This feature allows you to dictate your messages using speech-to-text (STT) technology powered by OpenAI's Whisper API.
 
 ## Prerequisites
 
@@ -37,9 +37,9 @@ Download from [ffmpeg.org/download.html](https://ffmpeg.org/download.html) and a
 
 ### 2. OpenAI API Key
 
-Voice transcription uses OpenAI's Whisper API for speech recognition. You need an OpenAI API configuration in Kilo Code:
+Voice transcription uses OpenAI's Whisper API for speech recognition. You need an OpenAI API configuration in devil Code:
 
-1. Configure an OpenAI provider profile in Kilo Code settings
+1. Configure an OpenAI provider profile in devil Code settings
 2. Add your OpenAI API key to the profile
 3. Either **OpenAI** or **OpenAI Native** provider types will work
 
@@ -47,7 +47,7 @@ Voice transcription uses OpenAI's Whisper API for speech recognition. You need a
 
 Voice transcription is an experimental feature that must be enabled:
 
-1. Open Kilo Code settings
+1. Open devil Code settings
 2. Navigate to **Experimental Features**
 3. Enable the **Speech to Text** experiment
 

@@ -3,14 +3,14 @@ sidebar_label: Claude Code
 ---
 
 {% callout type="warning" title="Important Notice" %}
-In January 2026, Anthropic decided to restrict Claude Code CLI to official Claude Code clients. Claude Code credentials cannot be used in Kilo Code or other third-party harnesses.
+In January 2026, Anthropic decided to restrict Claude Code CLI to official Claude Code clients. Claude Code credentials cannot be used in devil Code or other third-party harnesses.
 
-For continued use of Anthropic models in Kilo Code, please use the [Anthropic API provider](/docs/ai-providers/anthropic) with an API key instead.
+For continued use of Anthropic models in devil Code, please use the [Anthropic API provider](/docs/ai-providers/anthropic) with an API key instead.
 {% /callout %}
 
-# Using Claude Code With Kilo Code
+# Using Claude Code With devil Code
 
-Claude Code is Anthropic's official CLI that provides direct access to Claude models from your terminal. Using Claude Code with Kilo Code lets you leverage your existing CLI setup without needing separate API keys.
+Claude Code is Anthropic's official CLI that provides direct access to Claude models from your terminal. Using Claude Code with devil Code lets you leverage your existing CLI setup without needing separate API keys.
 
 **Website:** [https://docs.anthropic.com/en/docs/claude-code/setup](https://docs.anthropic.com/en/docs/claude-code/setup)
 
@@ -23,7 +23,7 @@ Claude Code is Anthropic's official CLI that provides direct access to Claude mo
 {% callout type="warning" title="Environment Variable Usage" %}
 The `claude` command-line tool, like other Anthropic SDKs, can use the `ANTHROPIC_API_KEY` environment variable for authentication. This is a common method for authorizing CLI tools in non-interactive environments.
 
-If this environment variable is set on your system, the `claude` tool may use it for authentication instead of the interactive `/login` method. When Kilo Code executes the tool, it will accurately reflect that an API key is being used, as this is the underlying behavior of the `claude` CLI itself.
+If this environment variable is set on your system, the `claude` tool may use it for authentication instead of the interactive `/login` method. When devil Code executes the tool, it will accurately reflect that an API key is being used, as this is the underlying behavior of the `claude` CLI itself.
 {% /callout %}
 
 **Website:** [https://docs.anthropic.com/en/docs/claude-code/setup](https://docs.anthropic.com/en/docs/claude-code/setup)
@@ -32,12 +32,12 @@ If this environment variable is set on your system, the `claude` tool may use it
 
 The specific models available depend on your Claude subscription and plan. See [Anthropic's Model Documentation](https://docs.anthropic.com/en/docs/about-claude/models) for more details on each model's capabilities.
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+1. **Open devil Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the devil Code panel.
 2. **Select Provider:** Choose "Claude Code" from the "API Provider" dropdown.
 3. **Select Model:** Choose your desired Claude model from the "Model" dropdown.
 4. **(Optional) Custom CLI Path:** If you installed Claude Code to a location other than the default `claude` command, enter the full path to your Claude executable in the "Claude Code Path" field. Most users won't need to change this.
@@ -46,7 +46,7 @@ The specific models available depend on your Claude subscription and plan. See [
 {% tab label="VSCode" %}
 
 {% callout type="warning" %}
-Claude Code credentials no longer work in Kilo Code. Please use the [Anthropic provider](/docs/ai-providers/anthropic) with an API key instead.
+Claude Code credentials no longer work in devil Code. Please use the [Anthropic provider](/docs/ai-providers/anthropic) with an API key instead.
 {% /callout %}
 
 {% /tab %}
@@ -65,7 +65,7 @@ If you have an `ANTHROPIC_API_KEY` environment variable set, the Claude CLI will
 export ANTHROPIC_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {
@@ -94,7 +94,7 @@ Then set your default model:
 - **Cost Transparency:** Usage costs are reported directly by the Claude CLI, giving you clear visibility into your spending.
 - **Advanced Reasoning:** Full support for Claude's thinking modes and reasoning capabilities when available.
 - **Context Windows:** Claude models have large context windows, allowing you to include significant amounts of code and context in your prompts.
-- **Enhance Prompt Feature:** Full compatibility with Kilo Code's Enhance Prompt feature, allowing you to automatically improve and refine your prompts before sending them to Claude.
+- **Enhance Prompt Feature:** Full compatibility with devil Code's Enhance Prompt feature, allowing you to automatically improve and refine your prompts before sending them to Claude.
 - **Custom Paths:** If you installed Claude Code in a non-standard location, you can specify the full path in the settings. Examples:
   - Windows: `C:\tools\claude\claude.exe`
   - macOS/Linux: `/usr/local/bin/claude` or `~/bin/claude`

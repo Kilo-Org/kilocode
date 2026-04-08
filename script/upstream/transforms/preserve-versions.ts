@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * Preserve Kilo package versions during upstream merge
+ * Preserve Devil package versions during upstream merge
  *
- * This script ensures that Kilo's package versions are not overwritten
+ * This script ensures that Devil's package versions are not overwritten
  * by upstream versions during merge.
  */
 
@@ -24,7 +24,7 @@ export interface PreserveOptions {
 }
 
 /**
- * Get the current Kilo version from the main package.json
+ * Get the current Devil version from the main package.json
  */
 export async function getCurrentVersion(): Promise<string> {
   const pkg = await Bun.file("packages/opencode/package.json").json()

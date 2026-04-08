@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { KILO_API_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { DEVIL_API_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
 import { getDefaultHeaders } from "../headers.js"
 
 /**
@@ -54,20 +54,25 @@ export function clearModesCache() {
 }
 
 /**
- * Fetch custom modes for an organization from the Kilo Cloud API.
+ * Fetch custom modes for an organization from the Devil Cloud API.
  *
  * @param token - Bearer authentication token
  * @param organizationId - Organization UUID
  * @returns Array of organization modes, or empty array on error
  */
 export async function fetchOrganizationModes(token: string, organizationId: string): Promise<OrganizationMode[]> {
+  // Skip real HTTP calls in test environment to avoid 401 noise and network dependency
+  if (process.env.NODE_ENV === "test") {
+    return []
+  }
+
   const cached = cache.get(organizationId)
   if (cached && Date.now() - cached.timestamp < TTL) {
     return cached.modes
   }
 
   try {
-    const url = `${KILO_API_BASE}/api/organizations/${encodeURIComponent(organizationId)}/modes`
+    const url = `${DEVIL_API_BASE}/api/organizations/${encodeURIComponent(organizationId)}/modes`
     const response = await fetch(url, {
       headers: {
         ...getDefaultHeaders(),
@@ -77,7 +82,7 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
     })
 
     if (!response.ok) {
-      console.warn(`[Kilo Gateway] Failed to fetch organization modes: ${response.status}`)
+      console.warn(`[Devil Gateway] Failed to fetch organization modes: ${response.status}`)
       return []
     }
 
@@ -85,7 +90,7 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
     const parsed = ResponseSchema.safeParse(json)
 
     if (!parsed.success) {
-      console.warn("[Kilo Gateway] Organization modes response validation failed:", parsed.error.format())
+      console.warn("[Devil Gateway] Organization modes response validation failed:", parsed.error.format())
       return []
     }
 
@@ -93,7 +98,7 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
     cache.set(organizationId, { modes, timestamp: Date.now() })
     return modes
   } catch (err) {
-    console.warn("[Kilo Gateway] Error fetching organization modes:", err)
+    console.warn("[Devil Gateway] Error fetching organization modes:", err)
     return []
   }
 }

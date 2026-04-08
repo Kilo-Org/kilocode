@@ -12,9 +12,9 @@ test("agent color parsed from project config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
-            code: { color: "#FFA500" }, // kilocode_change
+            code: { color: "#FFA500" }, // devilcode_change
             plan: { color: "primary" },
           },
         }),
@@ -25,7 +25,7 @@ test("agent color parsed from project config", async () => {
     directory: tmp.path,
     fn: async () => {
       const cfg = await Config.get()
-      expect(cfg.agent?.["code"]?.color).toBe("#FFA500") // kilocode_change
+      expect(cfg.agent?.["code"]?.color).toBe("#FFA500") // devilcode_change
       expect(cfg.agent?.["plan"]?.color).toBe("primary")
     },
   })
@@ -37,7 +37,7 @@ test("Agent.get includes color from config", async () => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             plan: { color: "#A855F7" },
             build: { color: "accent" },

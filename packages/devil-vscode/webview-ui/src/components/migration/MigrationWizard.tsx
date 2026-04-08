@@ -8,7 +8,7 @@
 
 import { Show, createSignal, onMount, onCleanup } from "solid-js"
 import type { Component, JSX } from "solid-js"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import type {
@@ -25,17 +25,17 @@ import type {
 import "./migration.css"
 
 // ---------------------------------------------------------------------------
-// KiloLogo — replicates the pattern from MessageList.tsx
+// DevilLogo — replicates the pattern from MessageList.tsx
 // ---------------------------------------------------------------------------
 
-const KiloLogo = (): JSX.Element => {
+const DevilLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
   const isLight =
     document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
   const icon = isLight ? "kilo-light.svg" : "kilo-dark.svg"
   return (
     <div class="migration-wizard__logo">
-      <img src={`${iconsBaseUri}/${icon}`} alt="Kilo Code" />
+      <img src={`${iconsBaseUri}/${icon}`} alt="Devil Code" />
     </div>
   )
 }
@@ -500,7 +500,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         {/* ---- Screen 1: What's New ---- */}
         <div class={screen() === "whats-new" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
           <div class="migration-wizard__header">
-            <KiloLogo />
+            <DevilLogo />
             <h1>{language.t("migration.whatsNew.title")}</h1>
             <p>{language.t("migration.whatsNew.subtitle")}</p>
           </div>
@@ -548,7 +548,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           </div>
 
           <div class="migration-wizard__blog-link">
-            <a href="https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live">
+            <a href="https://blog.devil.ai/p/new-kilo-for-vs-code-is-live">
               {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
             </a>
           </div>
@@ -569,7 +569,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         {/* ---- Screen 2: Migrate Settings ---- */}
         <div class={screen() === "migrate" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
           <div class="migration-wizard__header">
-            <KiloLogo />
+            <DevilLogo />
             <h1>{language.t("migration.migrate.title")}</h1>
             <p>{language.t("migration.migrate.subtitle")}</p>
           </div>

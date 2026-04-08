@@ -1,6 +1,6 @@
 // Main exports for cli-backend services
 
-export type { KilocodeNotification } from "./types"
+export type { DevilcodeNotification } from "./types"
 
-export { KiloConnectionService } from "./connection-service"
+export { DevilConnectionService } from "./connection-service"
 export { ServerStartupError } from "./server-manager"

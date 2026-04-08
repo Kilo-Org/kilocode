@@ -122,9 +122,9 @@ export async function getAvailableUpstreamVersions(): Promise<VersionInfo[]> {
 }
 
 /**
- * Get current Kilo version from package.json
+ * Get current Devil version from package.json
  */
-export async function getCurrentKiloVersion(): Promise<string> {
+export async function getCurrentDevilVersion(): Promise<string> {
   // Resolve path relative to repo root (script is in script/upstream/)
   const path = new URL("../../../packages/opencode/package.json", import.meta.url).pathname
   const pkg = await Bun.file(path).json()

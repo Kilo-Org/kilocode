@@ -3,7 +3,7 @@
  *
  * ## Why this exists
  *
- * The sidebar KiloProvider always uses `getWorkspaceDirectory()`, which returns
+ * The sidebar DevilProvider always uses `getWorkspaceDirectory()`, which returns
  * `workspaceFolders[0]`. That works because the sidebar is tied to the window
  * and there's an implicit "current workspace" context.
  *
@@ -24,10 +24,10 @@
  *    **disable project-scope operations** (e.g. marketplace installs default
  *    to global scope). This prevents silently writing config into the wrong project.
  *
- * ## How KiloProvider uses this
+ * ## How DevilProvider uses this
  *
- * Each KiloProvider instance can receive an explicit `projectDirectory` via
- * `KiloProviderOptions`. When set:
+ * Each DevilProvider instance can receive an explicit `projectDirectory` via
+ * `DevilProviderOptions`. When set:
  *
  * - A string value overrides the workspace directory for project-scoped operations
  * - `null` explicitly disables project scope (forces global-only)
@@ -52,13 +52,13 @@ export function resolvePanelProjectDirectory(
 }
 
 /**
- * Resolve the effective project directory for a KiloProvider instance.
+ * Resolve the effective project directory for a DevilProvider instance.
  *
- * @param override - Explicit directory from KiloProviderOptions. `undefined`
+ * @param override - Explicit directory from DevilProviderOptions. `undefined`
  *   means "not set" (fall through), `null` means "disable project scope",
  *   and a string is a direct override.
  * @param fallback - Callback to get the default workspace directory (typically
- *   `getWorkspaceDirectory(sessionId)` from KiloProvider).
+ *   `getWorkspaceDirectory(sessionId)` from DevilProvider).
  */
 export function resolveProjectDirectory(
   override: string | null | undefined,

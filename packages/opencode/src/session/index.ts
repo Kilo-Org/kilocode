@@ -23,7 +23,7 @@ import { fn } from "@/util/fn"
 import { Command } from "../command"
 import { Snapshot } from "@/snapshot"
 import { WorkspaceContext } from "../control-plane/workspace-context"
-import { Filesystem } from "../util/filesystem" // kilocode_change: normalize directory for Windows drive-letter casing
+import { Filesystem } from "../util/filesystem" // devilcode_change: normalize directory for Windows drive-letter casing
 
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
@@ -130,7 +130,7 @@ export namespace Session {
           additions: z.number(),
           deletions: z.number(),
           files: z.number(),
-          // kilocode_change start - lightweight diff summary (no file contents)
+          // devilcode_change start - lightweight diff summary (no file contents)
           diffs: z
             .array(
               z.object({
@@ -141,7 +141,7 @@ export namespace Session {
               }),
             )
             .optional(),
-          // kilocode_change end
+          // devilcode_change end
         })
         .optional(),
       share: z
@@ -223,7 +223,7 @@ export namespace Session {
         error: MessageV2.Assistant.shape.error,
       }),
     ),
-    // kilocode_change start
+    // devilcode_change start
     TurnOpen: BusEvent.define(
       "session.turn.open",
       z.object({
@@ -237,10 +237,10 @@ export namespace Session {
         reason: z.enum(["completed", "error", "interrupted"]),
       }),
     ),
-    // kilocode_change end
+    // devilcode_change end
   }
 
-  // kilocode_change
+  // devilcode_change
   export type CloseReason = z.infer<typeof Event.TurnClose.properties>["reason"]
 
   export const create = fn(
@@ -249,7 +249,7 @@ export namespace Session {
         parentID: Identifier.schema("session").optional(),
         title: z.string().optional(),
         permission: Info.shape.permission,
-        platform: z.string().optional(), // kilocode_change - per-session platform override for telemetry attribution
+        platform: z.string().optional(), // devilcode_change - per-session platform override for telemetry attribution
       })
       .optional(),
     async (input) => {
@@ -259,22 +259,22 @@ export namespace Session {
         title: input?.title,
         permission: input?.permission,
       })
-      // kilocode_change start - store platform override for session ingest
+      // devilcode_change start - store platform override for session ingest
       if (input?.platform) {
         platformOverrides.set(session.id, input.platform)
       }
-      // kilocode_change end
+      // devilcode_change end
       return session
     },
   )
 
-  // kilocode_change start - per-session platform overrides for telemetry attribution
+  // devilcode_change start - per-session platform overrides for telemetry attribution
   const platformOverrides = new Map<string, string>()
 
   export function getPlatformOverride(sessionId: string): string | undefined {
     return platformOverrides.get(sessionId)
   }
-  // kilocode_change end
+  // devilcode_change end
 
   export const fork = fn(
     z.object({
@@ -365,7 +365,7 @@ export namespace Session {
       )
     })
     const cfg = await Config.get()
-    if (!result.parentID && (Flag.KILO_AUTO_SHARE || cfg.share === "auto"))
+    if (!result.parentID && (Flag.DEVIL_AUTO_SHARE || cfg.share === "auto"))
       share(result.id).catch(() => {
         // Silently ignore sharing errors during session creation
       })
@@ -377,7 +377,7 @@ export namespace Session {
 
   export function plan(input: { slug: string; time: { created: number } }) {
     const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".kilo", "plans") // kilocode_change
+      ? path.join(Instance.worktree, ".kilo", "plans") // devilcode_change
       : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
@@ -393,8 +393,8 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    const share = await KiloSessions.share(id) // kilocode_change
+    const { DevilSessions } = await import("@/kilo-sessions/kilo-sessions")
+    const share = await DevilSessions.share(id) // devilcode_change
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
@@ -406,8 +406,8 @@ export namespace Session {
 
   export const unshare = fn(Identifier.schema("session"), async (id) => {
     // Use ShareNext to remove the share (same as share function uses ShareNext to create)
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-    await KiloSessions.unshare(id) // kilocode_change
+    const { DevilSessions } = await import("@/kilo-sessions/kilo-sessions")
+    await DevilSessions.unshare(id) // devilcode_change
     Database.use((db) => {
       const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
       if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
@@ -494,7 +494,7 @@ export namespace Session {
             summary_additions: input.summary?.additions,
             summary_deletions: input.summary?.deletions,
             summary_files: input.summary?.files,
-            summary_diffs: input.summary?.diffs ?? null, // kilocode_change
+            summary_diffs: input.summary?.diffs ?? null, // devilcode_change
             time_updated: Date.now(),
           })
           .where(eq(SessionTable.id, input.sessionID))
@@ -591,9 +591,9 @@ export namespace Session {
       conditions.push(eq(SessionTable.workspace_id, WorkspaceContext.workspaceID))
     }
     if (input?.directory) {
-      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
+      // devilcode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
       conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
-      // kilocode_change end
+      // devilcode_change end
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
@@ -633,9 +633,9 @@ export namespace Session {
     const conditions: SQL[] = []
 
     if (input?.directory) {
-      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
+      // devilcode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
       conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
-      // kilocode_change end
+      // devilcode_change end
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
@@ -711,12 +711,12 @@ export namespace Session {
       for (const child of await children(sessionID)) {
         await remove(child.id)
       }
-      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-      await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
-      platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
-      // kilocode_change start - cancel running processor before deleting to avoid FK constraint errors
+      const { DevilSessions } = await import("@/kilo-sessions/kilo-sessions")
+      await DevilSessions.remove(sessionID).catch(() => {}) // devilcode_change
+      platformOverrides.delete(sessionID) // devilcode_change - clean up platform override
+      // devilcode_change start - cancel running processor before deleting to avoid FK constraint errors
       SessionPrompt.cancel(sessionID)
-      // kilocode_change end
+      // devilcode_change end
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
@@ -734,7 +734,7 @@ export namespace Session {
   export const updateMessage = fn(MessageV2.Info, async (msg) => {
     const time_created = msg.time.created
     const { id, sessionID, ...data } = msg
-    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    // devilcode_change start - ignore FK errors when session was deleted while processor was still running
     try {
       Database.use((db) => {
         db.insert(MessageTable)
@@ -759,7 +759,7 @@ export namespace Session {
         throw e
       }
     }
-    // kilocode_change end
+    // devilcode_change end
     return msg
   })
 
@@ -813,7 +813,7 @@ export namespace Session {
   export const updatePart = fn(UpdatePartInput, async (part) => {
     const { id, messageID, sessionID, ...data } = part
     const time = Date.now()
-    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    // devilcode_change start - ignore FK errors when session was deleted while processor was still running
     try {
       Database.use((db) => {
         db.insert(PartTable)
@@ -839,7 +839,7 @@ export namespace Session {
         throw e
       }
     }
-    // kilocode_change end
+    // devilcode_change end
     return part
   })
 
@@ -861,7 +861,7 @@ export namespace Session {
       model: z.custom<Provider.Model>(),
       usage: z.custom<LanguageModelV2Usage>(),
       metadata: z.custom<ProviderMetadata>().optional(),
-      provider: z.custom<Provider.Info>().optional(), // kilocode_change
+      provider: z.custom<Provider.Info>().optional(), // devilcode_change
     }),
     (input) => {
       const safe = (value: number) => {
@@ -915,7 +915,7 @@ export namespace Session {
         },
       }
 
-      // kilocode_change start - Use provider-reported cost when available for OpenRouter/Kilo
+      // devilcode_change start - Use provider-reported cost when available for OpenRouter/Devil
       // The OpenRouter AI SDK provider exposes cost at providerMetadata.openrouter.usage
       // Reference: https://openrouter.ai/docs/use-cases/usage-accounting
       // Note: The AI SDK uses camelCase (upstreamInferenceCost), not snake_case
@@ -927,15 +927,15 @@ export namespace Session {
         | undefined
 
       if (openrouterUsage) {
-        // For Kilo provider (BYOK), always prefer upstreamInferenceCost when available
+        // For Devil provider (BYOK), always prefer upstreamInferenceCost when available
         // The 'cost' field from OpenRouter is just their 5% fee for BYOK requests
         // For regular OpenRouter, use the cost field
-        const isKiloProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
+        const isDevilProvider = (input.provider?.id ?? input.model.providerID) === "kilo"
         const upstreamCost = openrouterUsage.costDetails?.upstreamInferenceCost
         const openrouterCost = openrouterUsage.cost
 
-        // Kilo is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
-        const providerCost = isKiloProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
+        // Devil is always BYOK, so prefer upstream cost. For OpenRouter, use regular cost.
+        const providerCost = isDevilProvider && upstreamCost !== undefined ? upstreamCost : openrouterCost
 
         if (providerCost !== undefined && providerCost !== null && Number.isFinite(providerCost)) {
           return {
@@ -944,7 +944,7 @@ export namespace Session {
           }
         }
       }
-      // kilocode_change end
+      // devilcode_change end
 
       const costInfo =
         input.model.cost?.experimentalOver200K && tokens.input + tokens.cache.read > 200_000

@@ -85,7 +85,7 @@ export const McpListCommand = cmd({
 
         if (servers.length === 0) {
           prompts.log.warn("No MCP servers configured")
-          prompts.outro("Add servers with: kilo mcp add") // kilocode_change
+          prompts.outro("Add servers with: kilo mcp add") // devilcode_change
           return
         }
 
@@ -162,7 +162,7 @@ export const McpAuthCommand = cmd({
 
         if (oauthServers.length === 0) {
           prompts.log.warn("No OAuth-capable MCP servers configured")
-          prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in kilo.json:") // kilocode_change
+          prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in kilo.json:") // devilcode_change
           prompts.log.info(`
   "mcp": {
     "my-server": {
@@ -381,7 +381,7 @@ export const McpLogoutCommand = cmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // kilocode_change start - prefer kilo.json/.kilo over opencode.json/.opencode
+  // devilcode_change start - prefer kilo.json/.kilo over opencode.json/.opencode
   // Check for existing config files (prefer .jsonc over .json, check .kilo/ and .opencode/ subdirectory too)
   const candidates = [
     path.join(baseDir, "kilo.json"),
@@ -409,7 +409,7 @@ async function resolveConfigPath(baseDir: string, global = false) {
 
   // Default to kilo.json if none exist
   return path.join(baseDir, "kilo.json")
-  // kilocode_change end
+  // devilcode_change end
 }
 
 async function addMcpToConfig(name: string, mcpConfig: Config.Mcp, configPath: string) {
@@ -495,7 +495,7 @@ export const McpAddCommand = cmd({
         if (type === "local") {
           const command = await prompts.text({
             message: "Enter command to run",
-            placeholder: "e.g., kilo x @modelcontextprotocol/server-filesystem", // kilocode_change
+            placeholder: "e.g., kilo x @modelcontextprotocol/server-filesystem", // devilcode_change
             validate: (x) => (x && x.length > 0 ? undefined : "Required"),
           })
           if (prompts.isCancel(command)) throw new UI.CancelledError()
@@ -676,7 +676,7 @@ export const McpDebugCommand = cmd({
               params: {
                 protocolVersion: "2024-11-05",
                 capabilities: {},
-                clientInfo: { name: "kilo-debug", version: Installation.VERSION }, // kilocode_change
+                clientInfo: { name: "kilo-debug", version: Installation.VERSION }, // devilcode_change
               },
               id: 1,
             }),
@@ -717,7 +717,7 @@ export const McpDebugCommand = cmd({
 
             try {
               const client = new Client({
-                name: "kilo-debug", // kilocode_change
+                name: "kilo-debug", // devilcode_change
                 version: Installation.VERSION,
               })
               await client.connect(transport)

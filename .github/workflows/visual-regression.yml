@@ -13,20 +13,20 @@ jobs:
       is_fork: ${{ steps.fork-check.outputs.is_fork }}
     steps:
       - uses: actions/checkout@v4
-      - uses: Kilo-Org/paths-filter@master
+      - uses: Devil-Org/paths-filter@master
         id: filter
         with:
           filters: |
             matched:
-              - "packages/kilo-ui/**"
+              - "packages/devil-ui/**"
               - "packages/ui/**"
               - "packages/util/**"
               - "packages/sdk/js/**"
-              - "packages/kilo-vscode/webview-ui/**"
-              - "packages/kilo-vscode/.storybook/**"
-              - "packages/kilo-vscode/tests/visual-regression*"
-              - "packages/kilo-vscode/tests/permission-dock-dropdown*"
-              - "packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
+              - "packages/devil-vscode/webview-ui/**"
+              - "packages/devil-vscode/.storybook/**"
+              - "packages/devil-vscode/tests/visual-regression*"
+              - "packages/devil-vscode/tests/permission-dock-dropdown*"
+              - "packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
               - ".github/workflows/visual-regression.yml"
       - name: Check if PR is from a fork
         id: fork-check
@@ -40,7 +40,7 @@ jobs:
   visual-regression:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
-    name: Visual Regression (kilo-ui)
+    name: Visual Regression (devil-ui)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
 
@@ -64,7 +64,7 @@ jobs:
         id: check-baseline-commit
         run: |
           COMMIT_MSG=$(git log -1 --format=%s)
-          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update devil-vscode visual regression baselines" ]; then
             echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
             echo "HEAD commit is a baseline update commit — will not auto-commit again."
           else
@@ -90,32 +90,32 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ hashFiles('packages/kilo-ui/package.json') }}
+          key: playwright-${{ hashFiles('packages/devil-ui/package.json') }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: bunx playwright install chromium
-        working-directory: packages/kilo-ui
+        working-directory: packages/devil-ui
 
       - name: Install Playwright system deps
         run: bunx playwright install-deps chromium
-        working-directory: packages/kilo-ui
+        working-directory: packages/devil-ui
 
       - name: Cache Storybook build
         id: storybook-cache
         uses: actions/cache@v4
         with:
-          path: packages/kilo-ui/storybook-static
-          key: storybook-${{ hashFiles('packages/kilo-ui/src/**', 'packages/kilo-ui/.storybook/**', 'packages/ui/src/**', 'packages/kilo-ui/package.json') }}
+          path: packages/devil-ui/storybook-static
+          key: storybook-${{ hashFiles('packages/devil-ui/src/**', 'packages/devil-ui/.storybook/**', 'packages/ui/src/**', 'packages/devil-ui/package.json') }}
 
       - name: Build Storybook
         if: steps.storybook-cache.outputs.cache-hit != 'true'
         run: bun run build-storybook
-        working-directory: packages/kilo-ui
+        working-directory: packages/devil-ui
 
       - name: Generate baselines for new/missing stories
         run: bun run test:visual:update
-        working-directory: packages/kilo-ui
+        working-directory: packages/devil-ui
         env:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
@@ -138,18 +138,18 @@ jobs:
               }
             }
           "
-        working-directory: packages/kilo-ui
+        working-directory: packages/devil-ui
 
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/devil-ui/tests/visual-regression.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No visual regression detected."
           else
             echo "::error::Visual regression detected. Screenshot baselines have changed."
             echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
-            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            echo "::error::Please ask a Devil developer for help updating the screenshots."
             git diff --cached --stat
             exit 1
           fi
@@ -157,7 +157,7 @@ jobs:
       - name: Fail if baselines still changing after auto-update
         if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
         run: |
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/devil-ui/tests/visual-regression.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "Baselines are stable after auto-update."
           else
@@ -176,7 +176,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          git add packages/devil-ui/tests/visual-regression.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -198,13 +198,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-results
-          path: packages/kilo-ui/test-results/
+          path: packages/devil-ui/test-results/
           retention-days: 7
 
   visual-regression-vscode:
     needs: check-paths
     if: needs.check-paths.outputs.matched == 'true'
-    name: Visual Regression (kilo-vscode webview)
+    name: Visual Regression (devil-vscode webview)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
 
@@ -228,7 +228,7 @@ jobs:
         id: check-baseline-commit-vscode
         run: |
           COMMIT_MSG=$(git log -1 --format=%s)
-          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update devil-vscode visual regression baselines" ]; then
             echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
             echo "HEAD commit is a baseline update commit — will not auto-commit again."
           else
@@ -254,32 +254,32 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-vscode-${{ hashFiles('packages/kilo-vscode/package.json') }}
+          key: playwright-vscode-${{ hashFiles('packages/devil-vscode/package.json') }}
 
       - name: Install Playwright browsers
         if: steps.playwright-cache-vscode.outputs.cache-hit != 'true'
         run: bunx playwright install chromium
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
 
       - name: Install Playwright system deps
         run: bunx playwright install-deps chromium
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
 
       - name: Cache Storybook build
         id: storybook-cache-vscode
         uses: actions/cache@v4
         with:
-          path: packages/kilo-vscode/storybook-static
-          key: storybook-vscode-${{ hashFiles('packages/kilo-vscode/webview-ui/src/**', 'packages/kilo-vscode/.storybook/**', 'packages/kilo-ui/src/**', 'packages/ui/src/**', 'packages/kilo-vscode/package.json') }}
+          path: packages/devil-vscode/storybook-static
+          key: storybook-vscode-${{ hashFiles('packages/devil-vscode/webview-ui/src/**', 'packages/devil-vscode/.storybook/**', 'packages/devil-ui/src/**', 'packages/ui/src/**', 'packages/devil-vscode/package.json') }}
 
       - name: Build Storybook
         if: steps.storybook-cache-vscode.outputs.cache-hit != 'true'
         run: bun run build-storybook
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
 
       - name: Generate baselines for new/missing stories
         run: bun run test:visual:update
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
         env:
           CI: true
           PLAYWRIGHT_WORKERS: "4"
@@ -302,7 +302,7 @@ jobs:
               }
             }
           "
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
 
       - name: Remove stale baselines for permission-dock-dropdown tests
         run: |
@@ -333,19 +333,19 @@ jobs:
               }
             }
           "
-        working-directory: packages/kilo-vscode
+        working-directory: packages/devil-vscode
 
       - name: Check for baseline changes (fork PRs)
         if: needs.check-paths.outputs.is_fork == 'true'
         run: |
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/devil-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No visual regression detected."
           else
             echo "::error::Visual regression detected. Screenshot baselines have changed."
             echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
-            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            echo "::error::Please ask a Devil developer for help updating the screenshots."
             git diff --cached --stat
             exit 1
           fi
@@ -353,8 +353,8 @@ jobs:
       - name: Fail if baselines still changing after auto-update
         if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
         run: |
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/devil-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "Baselines are stable after auto-update."
           else
@@ -373,13 +373,13 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
-          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          git add packages/devil-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/devil-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
           if git diff --cached --quiet; then
             echo "No new baselines — nothing to commit."
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "chore: update kilo-vscode visual regression baselines"
+            git commit -m "chore: update devil-vscode visual regression baselines"
             git lfs push --all origin
             git push --no-verify
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -396,5 +396,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: visual-regression-vscode-results
-          path: packages/kilo-vscode/test-results/
+          path: packages/devil-vscode/test-results/
+          retention-days: 7
           retention-days: 7

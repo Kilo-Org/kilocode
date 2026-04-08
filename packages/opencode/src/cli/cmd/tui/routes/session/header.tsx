@@ -4,7 +4,7 @@ import { useSync } from "@tui/context/sync"
 import { pipe, sumBy } from "remeda"
 import { useTheme } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
-import type { AssistantMessage, Session } from "@kilocode/sdk/v2"
+import type { AssistantMessage, Session } from "@devilcode/sdk/v2"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useKeybind } from "../../context/keybind"
 import { Flag } from "@/flag/flag"
@@ -103,7 +103,7 @@ export function Header() {
           <Match when={session()?.parentID}>
             <box flexDirection="column" gap={1}>
               <box flexDirection={narrow() ? "column" : "row"} justifyContent="space-between" gap={narrow() ? 1 : 0}>
-                {Flag.KILO_EXPERIMENTAL_WORKSPACES_TUI ? (
+                {Flag.DEVIL_EXPERIMENTAL_WORKSPACES_TUI ? (
                   <box flexDirection="column">
                     <text fg={theme.text}>
                       <b>Subagent session</b>
@@ -154,7 +154,7 @@ export function Header() {
           </Match>
           <Match when={true}>
             <box flexDirection={narrow() ? "column" : "row"} justifyContent="space-between" gap={1}>
-              {Flag.KILO_EXPERIMENTAL_WORKSPACES_TUI ? (
+              {Flag.DEVIL_EXPERIMENTAL_WORKSPACES_TUI ? (
                 <box flexDirection="column">
                   <Title session={session} />
                   <WorkspaceInfo workspace={workspace} />

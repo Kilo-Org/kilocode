@@ -1,5 +1,5 @@
 import { ulid } from "ulid"
-import type * as SDK from "@kilocode/sdk/v2"
+import type * as SDK from "@devilcode/sdk/v2"
 import type { Session } from "@/session"
 
 export namespace IngestQueue {

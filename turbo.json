@@ -1,7 +1,7 @@
 {
   "$schema": "https://v2-8-13.turborepo.dev/schema.json",
-  "globalEnv": ["CI", "KILO_DISABLE_SHARE"],
-  "globalPassThroughEnv": ["CI", "KILO_DISABLE_SHARE"],
+  "globalEnv": ["CI", "DEVIL_DISABLE_SHARE"],
+  "globalPassThroughEnv": ["CI", "DEVIL_DISABLE_SHARE"],
   "tasks": {
     "typecheck": {
       "dependsOn": ["^typecheck"]
@@ -18,13 +18,13 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
-    "@kilocode/kilo-docs#build": {
+    "@devilcode/devil-docs#build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**"],
       "env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
     },
-    "@kilocode/kilo-jetbrains#build": {
-      "dependsOn": ["@kilocode/cli#build"],
+    "@devilcode/devil-jetbrains#build": {
+      "dependsOn": ["@devilcode/cli#build"],
       "outputs": ["build/distributions/**"]
     }
   }

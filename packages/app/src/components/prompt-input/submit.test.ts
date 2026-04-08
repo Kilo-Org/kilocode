@@ -53,8 +53,8 @@ beforeAll(async () => {
     useParams: () => params,
   }))
 
-  mock.module("@kilocode/sdk/v2/client", () => ({
-    createKiloClient: (input: { directory: string }) => {
+  mock.module("@devilcode/sdk/v2/client", () => ({
+    createDevilClient: (input: { directory: string }) => {
       createdClients.push(input.directory)
       return clientFor(input.directory)
     },

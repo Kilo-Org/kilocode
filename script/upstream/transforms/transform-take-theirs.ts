@@ -1,20 +1,20 @@
 #!/usr/bin/env bun
 /**
- * Transform files by taking upstream version and applying Kilo branding
+ * Transform files by taking upstream version and applying Devil branding
  *
  * This script handles files that have only branding differences (no logic changes).
- * It takes the upstream version and applies Kilo branding transforms.
+ * It takes the upstream version and applies Devil branding transforms.
  *
  * Use this for:
- * - UI components with OpenCode -> Kilo branding
+ * - UI components with OpenCode -> Devil branding
  * - Config files with predictable patterns
- * - Files without kilocode_change logic blocks
+ * - Files without devilcode_change logic blocks
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { oursHasKilocodeChanges } from "../utils/git"
+import { oursHasDevilcodeChanges } from "../utils/git"
 
 export interface TakeTheirsResult {
   file: string
@@ -40,31 +40,31 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   // GitHub repo references
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilocode",
+    replacement: "github.com/Devil-Org/devilcode",
     description: "GitHub URL",
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilocode",
+    replacement: "Devil-Org/devilcode",
     description: "GitHub repo reference",
   },
 
   // Domain replacements (specific first)
   {
     pattern: /app\.opencode\.ai/g,
-    replacement: "app.kilo.ai",
+    replacement: "app.devil.ai",
     description: "App domain",
   },
   {
     pattern: /opencode\.ai(?!\/zen)/g,
-    replacement: "kilo.ai",
+    replacement: "devil.ai",
     description: "Main domain (excluding zen)",
   },
 
   // Product name (specific phrases first)
   {
     pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
+    replacement: "Devil Desktop",
     description: "Desktop app name",
   },
 
@@ -101,24 +101,24 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   // Only replace "OpenCode" when it's a standalone word
   {
     pattern: /\bOpenCode\b(?!\.json|\/| Zen)/g,
-    replacement: "Kilo",
+    replacement: "Devil",
     description: "Product name",
   },
 
   // Environment variables (exclude OPENCODE_API_KEY)
   {
     pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g,
-    replacement: "KILO_$1",
+    replacement: "DEVIL_$1",
     description: "Environment variable",
   },
   {
     pattern: /VITE_OPENCODE_/g,
-    replacement: "VITE_KILO_",
+    replacement: "VITE_DEVIL_",
     description: "Vite env var",
   },
   {
     pattern: /window\.__OPENCODE__/g,
-    replacement: "window.__KILO__",
+    replacement: "window.__DEVIL__",
     description: "Window global",
   },
   {
@@ -128,7 +128,7 @@ const BRANDING_REPLACEMENTS: BrandingReplacement[] = [
   },
   {
     pattern: /_EXTENSION_OPENCODE_/g,
-    replacement: "_EXTENSION_KILO_",
+    replacement: "_EXTENSION_DEVIL_",
     description: "Extension env var",
   },
 ]
@@ -140,7 +140,7 @@ const PRESERVE_PATTERNS = [
   /\.opencode`/g, // Directory name in template strings
   /"\.opencode"/g, // Directory name in quotes
   /'\.opencode'/g, // Directory name in single quotes
-  /\/\/\s*kilocode_change/g, // Already has marker
+  /\/\/\s*devilcode_change/g, // Already has marker
 ]
 
 /**
@@ -163,8 +163,8 @@ export function applyBrandingTransforms(content: string, verbose = false): { res
   let total = 0
 
   for (const line of lines) {
-    // Skip lines with kilocode_change marker (already customized)
-    if (line.includes("// kilocode_change")) {
+    // Skip lines with devilcode_change marker (already customized)
+    if (line.includes("// devilcode_change")) {
       transformed.push(line)
       continue
     }
@@ -214,9 +214,9 @@ export async function transformTakeTheirs(file: string, options: TakeTheirsOptio
     return { file, action: "transformed", replacements: 0, dryRun: true }
   }
 
-  // If our version has kilocode_change markers, flag for manual resolution
-  if (await oursHasKilocodeChanges(file)) {
-    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+  // If our version has devilcode_change markers, flag for manual resolution
+  if (await oursHasDevilcodeChanges(file)) {
+    warn(`${file} has devilcode_change markers — skipping auto-transform, needs manual resolution`)
     return { file, action: "flagged", replacements: 0, dryRun: false }
   }
 

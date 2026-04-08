@@ -120,7 +120,7 @@ export const dict = {
   "dialog.model.expand": "Развернуть",
   "dialog.model.collapse": "Свернуть",
 
-  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Kilo",
+  "dialog.model.unpaid.freeModels.title": "Бесплатные модели от Devil",
   "dialog.model.unpaid.addMore.title": "Добавьте больше моделей от популярных провайдеров",
 
   "dialog.provider.viewAll": "Показать больше провайдеров",
@@ -133,7 +133,7 @@ export const dict = {
   "provider.connect.status.waiting": "Ожидание авторизации...",
   "provider.connect.status.failed": "Ошибка авторизации: {{error}}",
   "provider.connect.apiKey.description":
-    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    "Введите ваш API ключ {{provider}} для подключения аккаунта и использования моделей {{provider}} в Devil.",
   "provider.connect.apiKey.label": "{{provider}} API ключ",
   "provider.connect.apiKey.placeholder": "API ключ",
   "provider.connect.apiKey.required": "API ключ обязателен",
@@ -147,7 +147,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Посетите ",
   "provider.connect.oauth.code.visit.link": "эту ссылку",
   "provider.connect.oauth.code.visit.suffix":
-    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    " чтобы получить код авторизации для подключения аккаунта и использования моделей {{provider}} в Devil.",
   "provider.connect.oauth.code.label": "{{method}} код авторизации",
   "provider.connect.oauth.code.placeholder": "Код авторизации",
   "provider.connect.oauth.code.required": "Код авторизации обязателен",
@@ -155,7 +155,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Посетите ",
   "provider.connect.oauth.auto.visit.link": "эту ссылку",
   "provider.connect.oauth.auto.visit.suffix":
-    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Kilo.",
+    " и введите код ниже для подключения аккаунта и использования моделей {{provider}} в Devil.",
   "provider.connect.oauth.auto.confirmationCode": "Код подтверждения",
   "provider.connect.toast.connected.title": "{{provider}} подключён",
   "provider.connect.toast.connected.description": "Модели {{provider}} теперь доступны.",
@@ -279,7 +279,7 @@ export const dict = {
   "dialog.directory.empty": "Папки не найдены",
 
   "dialog.server.title": "Серверы",
-  "dialog.server.description": "Переключите сервер Kilo к которому подключается приложение.",
+  "dialog.server.description": "Переключите сервер Devil к которому подключается приложение.",
   "dialog.server.search.placeholder": "Поиск серверов",
   "dialog.server.empty": "Серверов пока нет",
   "dialog.server.add.title": "Добавить сервер",
@@ -406,7 +406,7 @@ export const dict = {
   "toast.session.listFailed.title": "Не удалось загрузить сессии для {{project}}",
 
   "toast.update.title": "Доступно обновление",
-  "toast.update.description": "Новая версия Kilo ({{version}}) доступна для установки.",
+  "toast.update.description": "Новая версия Devil ({{version}}) доступна для установки.",
   "toast.update.action.installRestart": "Установить и перезапустить",
   "toast.update.action.notYet": "Пока нет",
 
@@ -417,7 +417,7 @@ export const dict = {
   "error.page.action.checking": "Проверка...",
   "error.page.action.checkUpdates": "Проверить обновления",
   "error.page.action.updateTo": "Обновить до {{version}}",
-  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Kilo",
+  "error.page.report.prefix": "Пожалуйста, сообщите об этой ошибке команде Devil",
   "error.page.report.discord": "в Discord",
   "error.page.version": "Версия: {{version}}",
 
@@ -447,7 +447,7 @@ export const dict = {
   "error.chain.modelNotFound": "Модель не найдена: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Проверьте названия провайдера/модели в конфиге (opencode.json)",
   "error.chain.mcpFailed":
-    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Kilo пока не поддерживает MCP авторизацию.',
+    'MCP сервер "{{name}}" завершился с ошибкой. Обратите внимание, что Devil пока не поддерживает MCP авторизацию.',
   "error.chain.providerAuthFailed": "Ошибка аутентификации провайдера ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Не удалось инициализировать провайдера "{{provider}}". Проверьте учётные данные и конфигурацию.',
@@ -590,13 +590,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Включить рабочие пространства",
   "sidebar.workspaces.disable": "Отключить рабочие пространства",
   "sidebar.gettingStarted.title": "Начало работы",
-  "sidebar.gettingStarted.line1": "Kilo включает бесплатные модели, чтобы вы могли начать сразу.",
+  "sidebar.gettingStarted.line1": "Devil включает бесплатные модели, чтобы вы могли начать сразу.",
   "sidebar.gettingStarted.line2":
     "Подключите любого провайдера для использования моделей, включая Claude, GPT, Gemini и др.",
   "sidebar.project.recentSessions": "Недавние сессии",
   "sidebar.project.viewAllSessions": "Посмотреть все сессии",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Devil Desktop",
   "settings.section.desktop": "Приложение",
   "settings.section.server": "Сервер",
   "settings.tab.general": "Основные",
@@ -608,11 +608,11 @@ export const dict = {
   "settings.general.section.sounds": "Звуковые эффекты",
 
   "settings.general.row.language.title": "Язык",
-  "settings.general.row.language.description": "Изменить язык отображения Kilo",
+  "settings.general.row.language.description": "Изменить язык отображения Devil",
   "settings.general.row.appearance.title": "Внешний вид",
-  "settings.general.row.appearance.description": "Настройте как Kilo выглядит на вашем устройстве",
+  "settings.general.row.appearance.description": "Настройте как Devil выглядит на вашем устройстве",
   "settings.general.row.theme.title": "Тема",
-  "settings.general.row.theme.description": "Настройте оформление Kilo.",
+  "settings.general.row.theme.description": "Настройте оформление Devil.",
   "settings.general.row.font.title": "Шрифт",
   "settings.general.row.font.description": "Настройте моноширинный шрифт для блоков кода",
 
@@ -620,13 +620,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'Показывать всплывающие окна "Что нового" после обновлений',
 
   "settings.updates.row.startup.title": "Проверять обновления при запуске",
-  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске Kilo",
+  "settings.updates.row.startup.description": "Автоматически проверять обновления при запуске Devil",
   "settings.updates.row.check.title": "Проверить обновления",
   "settings.updates.row.check.description": "Проверить обновления вручную и установить, если доступны",
   "settings.updates.action.checkNow": "Проверить сейчас",
   "settings.updates.action.checking": "Проверка...",
   "settings.updates.toast.latest.title": "У вас последняя версия",
-  "settings.updates.toast.latest.description": "Вы используете последнюю версию Kilo.",
+  "settings.updates.toast.latest.description": "Вы используете последнюю версию Devil.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -722,7 +722,7 @@ export const dict = {
   "settings.providers.title": "Провайдеры",
   "settings.providers.description": "Настройки провайдеров будут доступны здесь.",
   "settings.providers.betaNotice":
-    "В настоящее время в интерфейсе настроек можно настроить только провайдер Kilo Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Kilo открытым — без привязки к поставщикам.",
+    "В настоящее время в интерфейсе настроек можно настроить только провайдер Devil Gateway. Поддержка настройки других провайдеров скоро появится в период бета-тестирования. А пока вы можете настраивать провайдеров с помощью CLI или конфигурационного файла. Мы стремимся сохранить Devil открытым — без привязки к поставщикам.",
   "settings.providers.section.connected": "Подключённые провайдеры",
   "settings.providers.connected.empty": "Нет подключённых провайдеров",
   "settings.providers.section.popular": "Популярные провайдеры",
@@ -898,7 +898,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "Код скопирован в буфер обмена",
   "deviceAuth.toast.errorCopied": "Ошибка скопирована в буфер обмена",
   "deviceAuth.status.initiating": "Начинаем вход...",
-  "deviceAuth.title": "Войти в Kilo Code",
+  "deviceAuth.title": "Войти в Devil Code",
   "deviceAuth.step1": "Шаг 1: Откройте этот URL",
   "deviceAuth.action.copyUrl": "Копировать URL",
   "deviceAuth.action.openBrowser": "Открыть браузер",
@@ -919,7 +919,7 @@ export const dict = {
 
   "profile.title": "Профиль",
   "profile.notLoggedIn": "Не авторизован",
-  "profile.action.login": "Войти через Kilo Code",
+  "profile.action.login": "Войти через Devil Code",
   "profile.balance.title": "Баланс",
   "profile.balance.refresh": "Обновить баланс",
   "profile.action.dashboard": "Панель управления",
@@ -937,11 +937,11 @@ export const dict = {
 
   "settings.experimental.title": "Экспериментальное",
   "settings.language.title": "Язык",
-  "settings.aboutKiloCode.title": "О Kilo Code",
+  "settings.aboutDevilCode.title": "О Devil Code",
 
   "session.messages.empty": "Начните разговор, введя сообщение ниже.",
   "session.messages.welcome":
-    "Kilo Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
+    "Devil Code — это AI-помощник для программирования. Попросите его создать функции, исправить ошибки или объяснить вашу кодовую базу.",
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.status.writingResponse": "Пишу ответ…",
   "session.status.retry": "Повторная попытка…",
@@ -968,41 +968,41 @@ export const dict = {
   "time.thisMonth": "В этом месяце",
   "time.older": "Ранее",
 
-  "settings.aboutKiloCode.status.connected": "Подключено",
-  "settings.aboutKiloCode.status.connecting": "Подключение...",
-  "settings.aboutKiloCode.status.disconnected": "Отключено",
-  "settings.aboutKiloCode.status.error": "Ошибка",
-  "settings.aboutKiloCode.cliServer": "CLI-сервер",
-  "settings.aboutKiloCode.status.label": "Статус:",
-  "settings.aboutKiloCode.port.label": "Порт:",
-  "settings.aboutKiloCode.versionInfo": "Информация о версии",
-  "settings.aboutKiloCode.version.label": "Версия:",
-  "settings.aboutKiloCode.extensionName": "Расширение Kilo Code",
-  "settings.aboutKiloCode.community": "Сообщество и поддержка",
-  "settings.aboutKiloCode.feedback.prefix": "Если у вас есть вопросы или отзывы, создайте issue на",
-  "settings.aboutKiloCode.feedback.or": "или",
-  "settings.aboutKiloCode.support.prefix": "По вопросам оплаты или аккаунта обращайтесь в службу поддержки по адресу",
-  "settings.aboutKiloCode.resetSettings.title": "Сброс настроек",
-  "settings.aboutKiloCode.resetSettings.description":
+  "settings.aboutDevilCode.status.connected": "Подключено",
+  "settings.aboutDevilCode.status.connecting": "Подключение...",
+  "settings.aboutDevilCode.status.disconnected": "Отключено",
+  "settings.aboutDevilCode.status.error": "Ошибка",
+  "settings.aboutDevilCode.cliServer": "CLI-сервер",
+  "settings.aboutDevilCode.status.label": "Статус:",
+  "settings.aboutDevilCode.port.label": "Порт:",
+  "settings.aboutDevilCode.versionInfo": "Информация о версии",
+  "settings.aboutDevilCode.version.label": "Версия:",
+  "settings.aboutDevilCode.extensionName": "Расширение Devil Code",
+  "settings.aboutDevilCode.community": "Сообщество и поддержка",
+  "settings.aboutDevilCode.feedback.prefix": "Если у вас есть вопросы или отзывы, создайте issue на",
+  "settings.aboutDevilCode.feedback.or": "или",
+  "settings.aboutDevilCode.support.prefix": "По вопросам оплаты или аккаунта обращайтесь в службу поддержки по адресу",
+  "settings.aboutDevilCode.resetSettings.title": "Сброс настроек",
+  "settings.aboutDevilCode.resetSettings.description":
     "Это сбрасывает только настройки, специфичные для расширения VS Code, до значений по умолчанию. Настройки, общие с CLI, такие как режимы и правила автоматического утверждения, хранятся в конфигурации CLI и не будут сброшены.",
-  "settings.aboutKiloCode.resetSettings.button": "Сбросить все настройки",
-  "settings.aboutKiloCode.settingsTransfer.title": "Перенос настроек",
-  "settings.aboutKiloCode.settingsTransfer.description":
+  "settings.aboutDevilCode.resetSettings.button": "Сбросить все настройки",
+  "settings.aboutDevilCode.settingsTransfer.title": "Перенос настроек",
+  "settings.aboutDevilCode.settingsTransfer.description":
     "Экспортируйте или импортируйте настройки для переноса между экземплярами VS Code.",
-  "settings.aboutKiloCode.exportSettings": "Экспорт",
-  "settings.aboutKiloCode.importSettings": "Импорт",
-  "settings.aboutKiloCode.importSettings.invalidJson": "Недопустимый файл JSON. Выберите корректный файл настроек.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "Файл не содержит допустимых настроек Kilo.",
-  "settings.aboutKiloCode.importSettings.tooLarge": "Файл слишком большой. Файлы настроек должны быть менее 1 MB.",
-  "settings.aboutKiloCode.importSettings.newerVersion":
-    "Этот файл был экспортирован из более новой версии Kilo. Некоторые настройки могут быть проигнорированы.",
-  "settings.aboutKiloCode.importSettings.success":
+  "settings.aboutDevilCode.exportSettings": "Экспорт",
+  "settings.aboutDevilCode.importSettings": "Импорт",
+  "settings.aboutDevilCode.importSettings.invalidJson": "Недопустимый файл JSON. Выберите корректный файл настроек.",
+  "settings.aboutDevilCode.importSettings.invalidConfig": "Файл не содержит допустимых настроек Devil.",
+  "settings.aboutDevilCode.importSettings.tooLarge": "Файл слишком большой. Файлы настроек должны быть менее 1 MB.",
+  "settings.aboutDevilCode.importSettings.newerVersion":
+    "Этот файл был экспортирован из более новой версии Devil. Некоторые настройки могут быть проигнорированы.",
+  "settings.aboutDevilCode.importSettings.success":
     "Настройки импортированы. Просмотрите изменения выше и нажмите «Сохранить».",
 
-  "settings.aboutKiloCode.telemetry.title": "Телеметрия",
-  "settings.aboutKiloCode.telemetry.description":
+  "settings.aboutDevilCode.telemetry.title": "Телеметрия",
+  "settings.aboutDevilCode.telemetry.description":
     'Телеметрия управляется встроенной настройкой телеметрии VS Code. Чтобы отключить её, перейдите в Настройки > Телеметрия > Уровень телеметрии и установите значение "off". Перезапустите VS Code, чтобы применить изменение.',
-  "settings.aboutKiloCode.telemetry.openSettings": "Открыть настройки телеметрии",
+  "settings.aboutDevilCode.telemetry.openSettings": "Открыть настройки телеметрии",
 
   "settings.agentBehaviour.subtab.modes": "Режимы",
   "settings.agentBehaviour.subtab.agents": "Агенты",
@@ -1021,7 +1021,7 @@ export const dict = {
   "settings.browser.headless.title": "Безголовый режим",
   "settings.browser.headless.description": "Запуск в безголовом режиме (без видимого окна браузера).",
 
-  "settings.language.description": "Выберите язык интерфейса Kilo Code. «Авто» использует язык отображения VS Code.",
+  "settings.language.description": "Выберите язык интерфейса Devil Code. «Авто» использует язык отображения VS Code.",
   "settings.language.auto": "Авто (язык VS Code)",
   "settings.language.current": "Текущий:",
 
@@ -1164,7 +1164,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Совместимость с Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "Загружать файлы Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Kilo использовал ваши инструкции и навыки Claude Code. Требуется перезапуск.",
+    "Загружать инструкции CLAUDE.md и навыки из каталога конфигурации Claude Code в сессии. Включите эту опцию, если хотите, чтобы Devil использовал ваши инструкции и навыки Claude Code. Требуется перезапуск.",
   "settings.agentBehaviour.mcpDetail.command": "Команда",
   "settings.agentBehaviour.mcpDetail.args": "Аргументы",
   "settings.agentBehaviour.mcpDetail.env": "Окружение",
@@ -1251,12 +1251,12 @@ export const dict = {
 
   // legacy-migration start
   "settings.legacyMigration.link": "Миграция с устаревшей версии",
-  "settings.aboutKiloCode.legacyMigration.title": "Миграция с устаревшей версии",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "Перенос настроек из предыдущей установки Kilo Code, включая API-ключи провайдеров и модель по умолчанию.",
+  "settings.aboutDevilCode.legacyMigration.title": "Миграция с устаревшей версии",
+  "settings.aboutDevilCode.legacyMigration.description":
+    "Перенос настроек из предыдущей установки Devil Code, включая API-ключи провайдеров и модель по умолчанию.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Что нового в Kilo Code",
+  "migration.whatsNew.title": "Что нового в Devil Code",
   "migration.whatsNew.subtitle": "Мы перестроили расширение на более быстрой и эффективной основе.",
   "migration.whatsNew.features.performance.title": "Более быстрая работа агента",
   "migration.whatsNew.features.performance.detail":
@@ -1268,7 +1268,7 @@ export const dict = {
     "Единый интерфейс для запуска нескольких агентов параллельно, каждый в своём worktree — отслеживайте прогресс, переключайте контекст и просматривайте изменения в одном месте.",
   "migration.whatsNew.features.foundation.title": "Общая основа",
   "migration.whatsNew.features.foundation.detail":
-    "Одно компактное и эффективное ядро для всех продуктов Kilo. Знакомый опыт независимо от выбранного способа работы.",
+    "Одно компактное и эффективное ядро для всех продуктов Devil. Знакомый опыт независимо от выбранного способа работы.",
   "migration.whatsNew.blogLink": "Читать полный анонс",
   "migration.whatsNew.continue": "Продолжить",
 

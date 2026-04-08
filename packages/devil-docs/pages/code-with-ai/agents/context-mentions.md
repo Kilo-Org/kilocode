@@ -1,11 +1,11 @@
 ---
 title: "Context & Mentions"
-description: "How to provide context to Kilo Code using mentions"
+description: "How to provide context to devil Code using mentions"
 ---
 
 # Context Mentions
 
-Providing the right context helps Kilo Code understand your project and perform tasks accurately. All platforms support `@`-mentions for referencing files, and the agent can also discover context on its own using built-in tools like `read`, `grep`, and `glob`.
+Providing the right context helps devil Code understand your project and perform tasks accurately. All platforms support `@`-mentions for referencing files, and the agent can also discover context on its own using built-in tools like `read`, `grep`, and `glob`.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -24,7 +24,7 @@ Type `@` in the chat input followed by a filename to get autocomplete suggestion
 
 The extension automatically includes context from your editor with each message — your currently focused file and all open editor tabs. You don't need to mention these explicitly.
 
-Selected code and editor diagnostics (errors/warnings) are not included automatically. However, you can send these to Kilo Code through VS Code's Code Actions: select code or hover over an error, then use the lightbulb menu to find context-dependent actions like "Explain with Kilo Code" or "Fix with Kilo Code."
+Selected code and editor diagnostics (errors/warnings) are not included automatically. However, you can send these to devil Code through VS Code's Code Actions: select code or hover over an error, then use the lightbulb menu to find context-dependent actions like "Explain with devil Code" or "Fix with devil Code."
 
 ### Tool-Based File Access
 
@@ -63,7 +63,7 @@ In the terminal-based TUI, you can provide context in several ways:
 
 - **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. You can limit how much is included by appending a line range, e.g. `@src/utils.ts#10-50`.
 - **Mention file paths in your message** — Simply refer to files by path in your conversation text (e.g., "look at src/utils.ts") and the agent will read them.
-- **Use `kilo run -f`** — When using the non-interactive `kilo run` command, pass `-f path/to/file.ts` to explicitly include a file's contents in the context.
+- **Use `devil run -f`** — When using the non-interactive `devil run` command, pass `-f path/to/file.ts` to explicitly include a file's contents in the context.
 - **Let the agent find files itself** — The agent has access to `glob` (find files by pattern), `grep` (search file contents), and `read` (read file contents) tools. Describe what you're looking for and it will locate the relevant code.
 
 ### Tool-Based File Access
@@ -85,13 +85,13 @@ This means the agent can explore your entire project as needed, rather than bein
 | ------------------------------ | -------------------------------------------------------------------------------------------------- |
 | **Describe the task clearly**  | The agent finds context on its own — focus on _what_ you want done rather than _where_ the code is |
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step                       |
-| **Use `kilo run -f`**          | Pass key files with `-f` when using `kilo run` for immediate context                               |
+| **Use `devil run -f`**          | Pass key files with `-f` when using `devil run` for immediate context                               |
 | **Trust the agent's tools**    | The agent can search, read, and explore your codebase — let it do the discovery work               |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Context mentions are a powerful way to provide Kilo Code with specific information about your project, allowing it to perform tasks more accurately and efficiently. You can use mentions to refer to files, folders, problems, and Git commits. Context mentions start with the `@` symbol.
+Context mentions are a powerful way to provide devil Code with specific information about your project, allowing it to perform tasks more accurately and efficiently. You can use mentions to refer to files, folders, problems, and Git commits. Context mentions start with the `@` symbol.
 
 {% image src="/docs/img/context-mentions/context-mentions.png" alt="Context Mentions Overview - showing the @ symbol dropdown menu in the chat interface" width="600" caption="Context mentions overview showing the @ symbol dropdown menu in the chat interface." /%}
 
@@ -147,7 +147,7 @@ Context mentions are a powerful way to provide Kilo Code with specific informati
 
 ### Terminal Mention
 
-{% image src="/docs/img/context-mentions/context-mentions-4.png" alt="Terminal mention example showing terminal output being included in Kilo Code's context" width="600" caption="Terminal mentions capture recent command output for debugging and analysis." /%}
+{% image src="/docs/img/context-mentions/context-mentions-4.png" alt="Terminal mention example showing terminal output being included in devil Code's context" width="600" caption="Terminal mentions capture recent command output for debugging and analysis." /%}
 
 | Capability     | Details                                            |
 | -------------- | -------------------------------------------------- |
@@ -159,7 +159,7 @@ Context mentions are a powerful way to provide Kilo Code with specific informati
 
 ### Git Mentions
 
-{% image src="/docs/img/context-mentions/context-mentions-5.png" alt="Git commit mention example showing commit details being analyzed by Kilo Code" width="600" caption="Git mentions provide commit details and diffs for context-aware version analysis." /%}
+{% image src="/docs/img/context-mentions/context-mentions-5.png" alt="Git commit mention example showing commit details being analyzed by devil Code" width="600" caption="Git mentions provide commit details and diffs for context-aware version analysis." /%}
 
 | Type                | Format         | Provides                                            | Limitations                    |
 | ------------------- | -------------- | --------------------------------------------------- | ------------------------------ |

@@ -120,7 +120,7 @@ export const dict = {
   "dialog.model.expand": "توسيع",
   "dialog.model.collapse": "طي",
 
-  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من Kilo",
+  "dialog.model.unpaid.freeModels.title": "نماذج مجانية مقدمة من Devil",
   "dialog.model.unpaid.addMore.title": "إضافة المزيد من النماذج من موفرين مشهورين",
 
   "dialog.provider.viewAll": "عرض المزيد من الموفرين",
@@ -133,7 +133,7 @@ export const dict = {
   "provider.connect.status.waiting": "في انتظار التفويض...",
   "provider.connect.status.failed": "فشل التفويض: {{error}}",
   "provider.connect.apiKey.description":
-    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+    "أدخل مفتاح واجهة برمجة تطبيقات {{provider}} الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Devil.",
   "provider.connect.apiKey.label": "مفتاح واجهة برمجة تطبيقات {{provider}}",
   "provider.connect.apiKey.placeholder": "مفتاح API",
   "provider.connect.apiKey.required": "مفتاح API مطلوب",
@@ -147,14 +147,14 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.code.visit.link": "هذا الرابط",
   "provider.connect.oauth.code.visit.suffix":
-    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+    " للحصول على رمز التفويض الخاص بك لتوصيل حسابك واستخدام نماذج {{provider}} في Devil.",
   "provider.connect.oauth.code.label": "رمز تفويض {{method}}",
   "provider.connect.oauth.code.placeholder": "رمز التفويض",
   "provider.connect.oauth.code.required": "رمز التفويض مطلوب",
   "provider.connect.oauth.code.invalid": "رمز التفويض غير صالح",
   "provider.connect.oauth.auto.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.auto.visit.link": "هذا الرابط",
-  "provider.connect.oauth.auto.visit.suffix": " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+  "provider.connect.oauth.auto.visit.suffix": " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Devil.",
   "provider.connect.oauth.auto.confirmationCode": "رمز التأكيد",
   "provider.connect.toast.connected.title": "تم توصيل {{provider}}",
   "provider.connect.toast.connected.description": "نماذج {{provider}} متاحة الآن للاستخدام.",
@@ -278,7 +278,7 @@ export const dict = {
   "dialog.directory.empty": "لم يتم العثور على مجلدات",
 
   "dialog.server.title": "الخوادم",
-  "dialog.server.description": "تبديل خادم Kilo الذي يتصل به هذا التطبيق.",
+  "dialog.server.description": "تبديل خادم Devil الذي يتصل به هذا التطبيق.",
   "dialog.server.search.placeholder": "البحث في الخوادم",
   "dialog.server.empty": "لا توجد خوادم بعد",
   "dialog.server.add.title": "إضافة خادم",
@@ -403,7 +403,7 @@ export const dict = {
   "toast.session.listFailed.title": "فشل تحميل الجلسات لـ {{project}}",
 
   "toast.update.title": "تحديث متاح",
-  "toast.update.description": "نسخة جديدة من Kilo ({{version}}) متاحة الآن للتثبيت.",
+  "toast.update.description": "نسخة جديدة من Devil ({{version}}) متاحة الآن للتثبيت.",
   "toast.update.action.installRestart": "تثبيت وإعادة تشغيل",
   "toast.update.action.notYet": "ليس الآن",
 
@@ -414,7 +414,7 @@ export const dict = {
   "error.page.action.checking": "جارٍ التحقق...",
   "error.page.action.checkUpdates": "التحقق من وجود تحديثات",
   "error.page.action.updateTo": "تحديث إلى {{version}}",
-  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق Kilo",
+  "error.page.report.prefix": "يرجى الإبلاغ عن هذا الخطأ لفريق Devil",
   "error.page.report.discord": "على Discord",
   "error.page.version": "الإصدار: {{version}}",
 
@@ -443,7 +443,7 @@ export const dict = {
   "error.chain.didYouMean": "هل كنت تعني: {{suggestions}}",
   "error.chain.modelNotFound": "النموذج غير موجود: {{provider}}/{{model}}",
   "error.chain.checkConfig": "تحقق من أسماء الموفر/النموذج في التكوين (opencode.json)",
-  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن Kilo لا يدعم مصادقة MCP بعد.',
+  "error.chain.mcpFailed": 'فشل خادم MCP "{{name}}". لاحظ أن Devil لا يدعم مصادقة MCP بعد.',
   "error.chain.providerAuthFailed": "فشلت مصادقة الموفر ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": 'فشل تهيئة الموفر "{{provider}}". تحقق من بيانات الاعتماد والتكوين.',
   "error.chain.configJsonInvalid": "ملف التكوين في {{path}} ليس JSON(C) صالحًا",
@@ -581,12 +581,12 @@ export const dict = {
   "sidebar.workspaces.enable": "تمكين مساحات العمل",
   "sidebar.workspaces.disable": "تعطيل مساحات العمل",
   "sidebar.gettingStarted.title": "البدء",
-  "sidebar.gettingStarted.line1": "يتضمن Kilo نماذج مجانية حتى تتمكن من البدء فورًا.",
+  "sidebar.gettingStarted.line1": "يتضمن Devil نماذج مجانية حتى تتمكن من البدء فورًا.",
   "sidebar.gettingStarted.line2": "قم بتوصيل أي موفر لاستخدام النماذج، بما في ذلك Claude و GPT و Gemini وما إلى ذلك.",
   "sidebar.project.recentSessions": "الجلسات الحديثة",
   "sidebar.project.viewAllSessions": "عرض جميع الجلسات",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Devil Desktop",
   "settings.section.desktop": "سطح المكتب",
   "settings.section.server": "الخادم",
   "settings.tab.general": "عام",
@@ -598,11 +598,11 @@ export const dict = {
   "settings.general.section.sounds": "المؤثرات الصوتية",
 
   "settings.general.row.language.title": "اللغة",
-  "settings.general.row.language.description": "تغيير لغة العرض لـ Kilo",
+  "settings.general.row.language.description": "تغيير لغة العرض لـ Devil",
   "settings.general.row.appearance.title": "المظهر",
-  "settings.general.row.appearance.description": "تخصيص كيفية ظهور Kilo على جهازك",
+  "settings.general.row.appearance.description": "تخصيص كيفية ظهور Devil على جهازك",
   "settings.general.row.theme.title": "السمة",
-  "settings.general.row.theme.description": "تخصيص سمة Kilo.",
+  "settings.general.row.theme.description": "تخصيص سمة Devil.",
   "settings.general.row.font.title": "الخط",
   "settings.general.row.font.description": "تخصيص الخط الأحادي المستخدم في كتل التعليمات البرمجية",
 
@@ -610,13 +610,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": 'عرض نوافذ "ما الجديد" المنبثقة بعد التحديثات',
 
   "settings.updates.row.startup.title": "التحقق من التحديثات عند بدء التشغيل",
-  "settings.updates.row.startup.description": "التحقق تلقائيًا من التحديثات عند تشغيل Kilo",
+  "settings.updates.row.startup.description": "التحقق تلقائيًا من التحديثات عند تشغيل Devil",
   "settings.updates.row.check.title": "التحقق من التحديثات",
   "settings.updates.row.check.description": "التحقق يدويًا من التحديثات وتثبيتها إذا كانت متاحة",
   "settings.updates.action.checkNow": "تحقق الآن",
   "settings.updates.action.checking": "جارٍ التحقق...",
   "settings.updates.toast.latest.title": "أنت على آخر إصدار",
-  "settings.updates.toast.latest.description": "أنت تستخدم أحدث إصدار من Kilo.",
+  "settings.updates.toast.latest.description": "أنت تستخدم أحدث إصدار من Devil.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",
@@ -710,7 +710,7 @@ export const dict = {
   "settings.providers.title": "الموفرون",
   "settings.providers.description": "ستكون إعدادات الموفر قابلة للتكوين هنا.",
   "settings.providers.betaNotice":
-    "حالياً، يمكن إعداد مزود Kilo Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء Kilo مفتوحاً، دون تقييد.",
+    "حالياً، يمكن إعداد مزود Devil Gateway فقط في واجهة الإعدادات. سيتوفر دعم إعداد المزودين الآخرين قريباً خلال الفترة التجريبية. في غضون ذلك، يمكنك إعداد المزودين باستخدام CLI أو ملف التكوين. نحن ملتزمون بإبقاء Devil مفتوحاً، دون تقييد.",
   "settings.providers.section.connected": "الموفرون المتصلون",
   "settings.providers.connected.empty": "لا يوجد موفرون متصلون",
   "settings.providers.section.popular": "الموفرون الشائعون",
@@ -885,7 +885,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "تم نسخ الرمز إلى الحافظة",
   "deviceAuth.toast.errorCopied": "تم نسخ الخطأ إلى الحافظة",
   "deviceAuth.status.initiating": "جارٍ بدء تسجيل الدخول...",
-  "deviceAuth.title": "تسجيل الدخول إلى Kilo Code",
+  "deviceAuth.title": "تسجيل الدخول إلى Devil Code",
   "deviceAuth.step1": "الخطوة 1: افتح هذا الرابط",
   "deviceAuth.action.copyUrl": "نسخ الرابط",
   "deviceAuth.action.openBrowser": "فتح المتصفح",
@@ -906,7 +906,7 @@ export const dict = {
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
-  "profile.action.login": "تسجيل الدخول باستخدام Kilo Code",
+  "profile.action.login": "تسجيل الدخول باستخدام Devil Code",
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
@@ -924,11 +924,11 @@ export const dict = {
 
   "settings.experimental.title": "تجريبي",
   "settings.language.title": "اللغة",
-  "settings.aboutKiloCode.title": "حول Kilo Code",
+  "settings.aboutDevilCode.title": "حول Devil Code",
 
   "session.messages.empty": "ابدأ محادثة بكتابة رسالة أدناه.",
   "session.messages.welcome":
-    "Kilo Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
+    "Devil Code هو مساعد ترميز بالذكاء الاصطناعي. اطلب منه بناء ميزات أو إصلاح أخطاء أو شرح قاعدة الشيفرة.",
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retry": "جارٍ إعادة المحاولة…",
@@ -955,39 +955,39 @@ export const dict = {
   "time.thisMonth": "هذا الشهر",
   "time.older": "أقدم",
 
-  "settings.aboutKiloCode.status.connected": "متصل",
-  "settings.aboutKiloCode.status.connecting": "جارٍ الاتصال...",
-  "settings.aboutKiloCode.status.disconnected": "غير متصل",
-  "settings.aboutKiloCode.status.error": "خطأ",
-  "settings.aboutKiloCode.cliServer": "خادم CLI",
-  "settings.aboutKiloCode.status.label": "الحالة:",
-  "settings.aboutKiloCode.port.label": "المنفذ:",
-  "settings.aboutKiloCode.versionInfo": "معلومات الإصدار",
-  "settings.aboutKiloCode.version.label": "الإصدار:",
-  "settings.aboutKiloCode.extensionName": "إضافة Kilo Code",
-  "settings.aboutKiloCode.community": "المجتمع والدعم",
-  "settings.aboutKiloCode.feedback.prefix": "إذا كان لديك أي أسئلة أو ملاحظات، لا تتردد في فتح مشكلة على",
-  "settings.aboutKiloCode.feedback.or": "أو",
-  "settings.aboutKiloCode.support.prefix": "لأسئلة الفوترة أو الحساب، تواصل مع دعم العملاء على",
-  "settings.aboutKiloCode.resetSettings.title": "إعادة تعيين الإعدادات",
-  "settings.aboutKiloCode.resetSettings.description":
+  "settings.aboutDevilCode.status.connected": "متصل",
+  "settings.aboutDevilCode.status.connecting": "جارٍ الاتصال...",
+  "settings.aboutDevilCode.status.disconnected": "غير متصل",
+  "settings.aboutDevilCode.status.error": "خطأ",
+  "settings.aboutDevilCode.cliServer": "خادم CLI",
+  "settings.aboutDevilCode.status.label": "الحالة:",
+  "settings.aboutDevilCode.port.label": "المنفذ:",
+  "settings.aboutDevilCode.versionInfo": "معلومات الإصدار",
+  "settings.aboutDevilCode.version.label": "الإصدار:",
+  "settings.aboutDevilCode.extensionName": "إضافة Devil Code",
+  "settings.aboutDevilCode.community": "المجتمع والدعم",
+  "settings.aboutDevilCode.feedback.prefix": "إذا كان لديك أي أسئلة أو ملاحظات، لا تتردد في فتح مشكلة على",
+  "settings.aboutDevilCode.feedback.or": "أو",
+  "settings.aboutDevilCode.support.prefix": "لأسئلة الفوترة أو الحساب، تواصل مع دعم العملاء على",
+  "settings.aboutDevilCode.resetSettings.title": "إعادة تعيين الإعدادات",
+  "settings.aboutDevilCode.resetSettings.description":
     "يؤدي هذا إلى إعادة تعيين الإعدادات الخاصة بامتداد VS Code فقط إلى قيمها الافتراضية. الإعدادات المشتركة مع CLI، مثل الأوضاع وقواعد الموافقة التلقائية، مخزّنة في تكوين CLI ولن تتأثر.",
-  "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
-  "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
-  "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
-  "settings.aboutKiloCode.exportSettings": "تصدير",
-  "settings.aboutKiloCode.importSettings": "استيراد",
-  "settings.aboutKiloCode.importSettings.invalidJson": "ملف JSON غير صالح. يرجى اختيار ملف إعدادات صالح.",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "الملف لا يحتوي على إعدادات Kilo صالحة.",
-  "settings.aboutKiloCode.importSettings.tooLarge": "الملف كبير جدًا. يجب أن تكون ملفات الإعدادات أقل من 1 MB.",
-  "settings.aboutKiloCode.importSettings.newerVersion":
-    "تم تصدير هذا الملف من إصدار أحدث من Kilo. قد يتم تجاهل بعض الإعدادات.",
-  "settings.aboutKiloCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
+  "settings.aboutDevilCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
+  "settings.aboutDevilCode.settingsTransfer.title": "نقل الإعدادات",
+  "settings.aboutDevilCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
+  "settings.aboutDevilCode.exportSettings": "تصدير",
+  "settings.aboutDevilCode.importSettings": "استيراد",
+  "settings.aboutDevilCode.importSettings.invalidJson": "ملف JSON غير صالح. يرجى اختيار ملف إعدادات صالح.",
+  "settings.aboutDevilCode.importSettings.invalidConfig": "الملف لا يحتوي على إعدادات Devil صالحة.",
+  "settings.aboutDevilCode.importSettings.tooLarge": "الملف كبير جدًا. يجب أن تكون ملفات الإعدادات أقل من 1 MB.",
+  "settings.aboutDevilCode.importSettings.newerVersion":
+    "تم تصدير هذا الملف من إصدار أحدث من Devil. قد يتم تجاهل بعض الإعدادات.",
+  "settings.aboutDevilCode.importSettings.success": "تم استيراد الإعدادات. راجع التغييرات أعلاه، ثم انقر على حفظ.",
 
-  "settings.aboutKiloCode.telemetry.title": "Telemetry",
-  "settings.aboutKiloCode.telemetry.description":
+  "settings.aboutDevilCode.telemetry.title": "Telemetry",
+  "settings.aboutDevilCode.telemetry.description":
     'يتم التحكم في Telemetry بواسطة إعداد Telemetry المدمج في VS Code. لتعطيله، انتقل إلى الإعدادات > Telemetry > Telemetry Level واضبطه على "off". أعد تشغيل VS Code لتطبيق التغيير.',
-  "settings.aboutKiloCode.telemetry.openSettings": "فتح إعدادات Telemetry",
+  "settings.aboutDevilCode.telemetry.openSettings": "فتح إعدادات Telemetry",
 
   "settings.agentBehaviour.subtab.modes": "الأوضاع",
   "settings.agentBehaviour.subtab.agents": "الوكلاء",
@@ -1005,7 +1005,7 @@ export const dict = {
   "settings.browser.headless.title": "الوضع بدون واجهة",
   "settings.browser.headless.description": "التشغيل في الوضع بدون واجهة (بدون نافذة متصفح مرئية).",
 
-  "settings.language.description": 'اختر اللغة لواجهة Kilo Code. "تلقائي" يستخدم لغة عرض VS Code.',
+  "settings.language.description": 'اختر اللغة لواجهة Devil Code. "تلقائي" يستخدم لغة عرض VS Code.',
   "settings.language.auto": "تلقائي (لغة VS Code)",
   "settings.language.current": "الحالية:",
 
@@ -1146,7 +1146,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "توافق Claude Code",
   "settings.agentBehaviour.claudeCompat.title": "تحميل ملفات Claude Code",
   "settings.agentBehaviour.claudeCompat.description":
-    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Kilo مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل.",
+    "تحميل تعليمات ومهارات CLAUDE.md من مجلد إعدادات Claude Code إلى الجلسات. قم بتمكين هذا الخيار إذا كنت ترغب في أن يستخدم Devil مهارات وتعليمات Claude Code الخاصة بك. يتطلب إعادة التشغيل.",
   "settings.agentBehaviour.mcpDetail.command": "الأمر",
   "settings.agentBehaviour.mcpDetail.args": "الوسائط",
   "settings.agentBehaviour.mcpDetail.env": "البيئة",
@@ -1228,12 +1228,12 @@ export const dict = {
 
   // legacy-migration start
   "settings.legacyMigration.link": "الترحيل من الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.title": "ترحيل الإصدار القديم",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "ترحيل الإعدادات من تثبيت سابق لـ Kilo Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
+  "settings.aboutDevilCode.legacyMigration.title": "ترحيل الإصدار القديم",
+  "settings.aboutDevilCode.legacyMigration.description":
+    "ترحيل الإعدادات من تثبيت سابق لـ Devil Code، بما في ذلك مفاتيح API لمقدمي الخدمة والنموذج الافتراضي.",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "ما الجديد في Kilo Code",
+  "migration.whatsNew.title": "ما الجديد في Devil Code",
   "migration.whatsNew.subtitle": "لقد أعدنا بناء الإضافة على أساس أسرع وأكثر كفاءة.",
   "migration.whatsNew.features.performance.title": "أداء أسرع للوكيل",
   "migration.whatsNew.features.performance.detail":
@@ -1245,7 +1245,7 @@ export const dict = {
     "واجهة موحدة لتشغيل عدة وكلاء بالتوازي، كل منهم في شجرة عمل خاصة — راقب التقدم، وبدّل السياق، وراجع التغييرات في مكان واحد.",
   "migration.whatsNew.features.foundation.title": "أساس مشترك",
   "migration.whatsNew.features.foundation.detail":
-    "نواة صغيرة وفعالة واحدة عبر كل منتجات Kilo. تجربة مألوفة بغض النظر عن طريقة عملك.",
+    "نواة صغيرة وفعالة واحدة عبر كل منتجات Devil. تجربة مألوفة بغض النظر عن طريقة عملك.",
   "migration.whatsNew.blogLink": "اقرأ الإعلان الكامل",
   "migration.whatsNew.continue": "متابعة",
 

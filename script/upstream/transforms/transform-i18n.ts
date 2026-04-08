@@ -1,32 +1,32 @@
 #!/usr/bin/env bun
 /**
- * Transform i18n translation files with Kilo branding
+ * Transform i18n translation files with Devil branding
  *
  * This script handles i18n files by:
  * 1. Taking upstream's version as the base (to get new translation keys)
- * 2. Applying intelligent string replacements for Kilo branding
- * 3. Preserving lines marked with `// kilocode_change`
+ * 2. Applying intelligent string replacements for Devil branding
+ * 3. Preserving lines marked with `// devilcode_change`
  *
  * String replacement rules:
- * - opencode.ai -> kilo.ai (domain)
- * - app.opencode.ai -> app.kilo.ai (app domain)
- * - OpenCode Desktop -> Kilo Desktop (desktop app name)
- * - OpenCode -> Kilo (product name in user-visible text)
+ * - opencode.ai -> devil.ai (domain)
+ * - app.opencode.ai -> app.devil.ai (app domain)
+ * - OpenCode Desktop -> Devil Desktop (desktop app name)
+ * - OpenCode -> Devil (product name in user-visible text)
  * - opencode upgrade -> kilo upgrade (CLI commands)
  * - npx opencode -> npx kilo (CLI invocation)
- * - anomalyco/opencode -> Kilo-Org/kilocode (GitHub repo)
+ * - anomalyco/opencode -> Devil-Org/devilcode (GitHub repo)
  *
  * Preserved (not replaced):
  * - opencode.json (actual config filename)
  * - .opencode/ (actual directory name)
- * - Lines with `// kilocode_change`
+ * - Lines with `// devilcode_change`
  */
 
 import { $ } from "bun"
 import { Glob } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { oursHasKilocodeChanges } from "../utils/git"
+import { oursHasDevilcodeChanges } from "../utils/git"
 
 export interface I18nTransformResult {
   file: string
@@ -53,31 +53,31 @@ const I18N_REPLACEMENTS: StringReplacement[] = [
   // GitHub repo references
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilocode",
+    replacement: "github.com/Devil-Org/devilcode",
     description: "GitHub URL",
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilocode",
+    replacement: "Devil-Org/devilcode",
     description: "GitHub repo reference",
   },
 
   // Domain replacements (specific first)
   {
     pattern: /app\.opencode\.ai/g,
-    replacement: "app.kilo.ai",
+    replacement: "app.devil.ai",
     description: "App domain",
   },
   {
     pattern: /opencode\.ai(?!\/zen)/g,
-    replacement: "kilo.ai",
+    replacement: "devil.ai",
     description: "Main domain (excluding zen)",
   },
 
   // Product name (specific phrases first)
   {
     pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
+    replacement: "Devil Desktop",
     description: "Desktop app name",
   },
 
@@ -122,14 +122,14 @@ const I18N_REPLACEMENTS: StringReplacement[] = [
   // Only replace "OpenCode" when it's a standalone word (not part of opencode.json, etc.)
   {
     pattern: /\bOpenCode\b(?!\.json|\/| Zen)/g,
-    replacement: "Kilo",
+    replacement: "Devil",
     description: "Product name",
   },
 
   // Environment variables (exclude OPENCODE_API_KEY)
   {
     pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g,
-    replacement: "KILO_$1",
+    replacement: "DEVIL_$1",
     description: "Environment variable",
   },
 ]
@@ -144,14 +144,14 @@ const PRESERVE_PATTERNS = [
 ]
 
 /**
- * Check if a line should be preserved (has kilocode_change marker)
+ * Check if a line should be preserved (has devilcode_change marker)
  */
 function shouldPreserveLine(line: string): boolean {
-  return line.includes("// kilocode_change")
+  return line.includes("// devilcode_change")
 }
 
 /**
- * Apply string replacements to content, preserving kilocode_change lines
+ * Apply string replacements to content, preserving devilcode_change lines
  */
 export function transformI18nContent(
   content: string,
@@ -163,7 +163,7 @@ export function transformI18nContent(
   let preservedCount = 0
 
   for (const line of lines) {
-    // Skip lines marked with kilocode_change
+    // Skip lines marked with devilcode_change
     if (shouldPreserveLine(line)) {
       transformedLines.push(line)
       preservedCount++
@@ -291,7 +291,7 @@ export async function transformAllI18n(options: I18nTransformOptions = {}): Prom
 
 /**
  * Transform i18n files that are in conflict during merge
- * Takes upstream version (theirs) and applies Kilo branding
+ * Takes upstream version (theirs) and applies Devil branding
  */
 export async function transformConflictedI18n(
   files: string[],
@@ -305,9 +305,9 @@ export async function transformConflictedI18n(
       continue
     }
 
-    // If our version has kilocode_change markers, flag for manual resolution
-    if (!options.dryRun && (await oursHasKilocodeChanges(file))) {
-      warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+    // If our version has devilcode_change markers, flag for manual resolution
+    if (!options.dryRun && (await oursHasDevilcodeChanges(file))) {
+      warn(`${file} has devilcode_change markers — skipping auto-transform, needs manual resolution`)
       results.push({ file, replacements: 0, preserved: 0, dryRun: false, flagged: true })
       continue
     }
@@ -318,14 +318,14 @@ export async function transformConflictedI18n(
       await $`git add ${file}`.quiet().nothrow()
     }
 
-    // Then apply Kilo branding transformations
+    // Then apply Devil branding transformations
     const result = await transformI18nFile(file, options)
     results.push(result)
 
     if (options.dryRun) {
       info(`[DRY-RUN] Would take upstream and transform ${file}: ${result.replacements} replacements`)
     } else if (result.replacements > 0) {
-      success(`Transformed ${file}: took upstream + ${result.replacements} Kilo branding replacements`)
+      success(`Transformed ${file}: took upstream + ${result.replacements} Devil branding replacements`)
     }
   }
 

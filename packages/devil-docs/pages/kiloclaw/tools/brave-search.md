@@ -1,11 +1,11 @@
 ---
 title: "Brave Search Integration"
-description: "Equip your KiloClaw agent with real-time web browsing via the Brave Search API"
+description: "Equip your DevilClaw agent with real-time web browsing via the Brave Search API"
 ---
 
 # Brave Search Integration
 
-Equip your KiloClaw agent with real-time web browsing capabilities by integrating the Brave Search API. This allows the agent to fetch up-to-date information, perform market research, and verify facts beyond its training data.
+Equip your DevilClaw agent with real-time web browsing capabilities by integrating the Brave Search API. This allows the agent to fetch up-to-date information, perform market research, and verify facts beyond its training data.
 
 ## How to Generate a Brave Search API Key
 

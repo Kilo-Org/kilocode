@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 /**
- * Transform Tauri/Desktop config files with Kilo branding
+ * Transform Tauri/Desktop config files with Devil branding
  *
  * This script handles Tauri configuration files (JSON, TOML, Rust) by:
  * 1. Taking upstream's version as the base
- * 2. Applying predictable Kilo branding transforms
+ * 2. Applying predictable Devil branding transforms
  *
  * Handles:
  * - tauri.conf.json / tauri.prod.conf.json
@@ -15,7 +15,7 @@
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { oursHasKilocodeChanges } from "../utils/git"
+import { oursHasDevilcodeChanges } from "../utils/git"
 
 export interface TauriTransformResult {
   file: string
@@ -41,13 +41,13 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   // JSON config - product names
   {
     pattern: /"productName":\s*"OpenCode[^"]*"/g,
-    replacement: '"productName": "Kilo"',
+    replacement: '"productName": "Devil"',
     description: "Product name in JSON",
     fileTypes: [".json"],
   },
   {
     pattern: /"title":\s*"OpenCode[^"]*"/g,
-    replacement: '"title": "Kilo"',
+    replacement: '"title": "Devil"',
     description: "Title in JSON",
     fileTypes: [".json"],
   },
@@ -72,7 +72,7 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   },
   {
     pattern: /"mainBinaryName":\s*"[Oo]pen[Cc]ode"/g,
-    replacement: '"mainBinaryName": "Kilo"',
+    replacement: '"mainBinaryName": "Devil"',
     description: "Main binary name",
     fileTypes: [".json"],
   },
@@ -80,12 +80,12 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   // GitHub references
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilocode",
+    replacement: "github.com/Devil-Org/devilcode",
     description: "GitHub URL",
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilocode",
+    replacement: "Devil-Org/devilcode",
     description: "GitHub repo",
   },
 
@@ -98,7 +98,7 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   },
   {
     pattern: /authors\s*=\s*\["OpenCode"\]/g,
-    replacement: 'authors = ["Kilo"]',
+    replacement: 'authors = ["Devil"]',
     description: "Cargo authors",
     fileTypes: [".toml"],
   },
@@ -150,26 +150,26 @@ const TAURI_REPLACEMENTS: TauriReplacement[] = [
   // Domain
   {
     pattern: /opencode\.ai/g,
-    replacement: "kilo.ai",
+    replacement: "devil.ai",
     description: "Domain",
   },
 
   // Environment variables (exclude OPENCODE_API_KEY)
   {
     pattern: /OPENCODE_(?!API_KEY)([A-Z_]+)/g,
-    replacement: "KILO_$1",
+    replacement: "DEVIL_$1",
     description: "Env variable",
     fileTypes: [".rs"],
   },
   {
     pattern: /__OPENCODE__/g,
-    replacement: "__KILO__",
+    replacement: "__DEVIL__",
     description: "Window global",
     fileTypes: [".rs", ".tsx"],
   },
   {
     pattern: /OPENCODE_PORT/g,
-    replacement: "KILO_PORT",
+    replacement: "DEVIL_PORT",
     description: "Port env var",
   },
 ]
@@ -241,9 +241,9 @@ export async function transformTauriFile(
     return { file, action: "transformed", replacements: 0, dryRun: true }
   }
 
-  // If our version has kilocode_change markers, flag for manual resolution
-  if (await oursHasKilocodeChanges(file)) {
-    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+  // If our version has devilcode_change markers, flag for manual resolution
+  if (await oursHasDevilcodeChanges(file)) {
+    warn(`${file} has devilcode_change markers — skipping auto-transform, needs manual resolution`)
     return { file, action: "flagged", replacements: 0, dryRun: false }
   }
 

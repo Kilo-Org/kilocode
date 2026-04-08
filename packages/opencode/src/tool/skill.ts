@@ -7,7 +7,7 @@ import { PermissionNext } from "../permission/next"
 import { Ripgrep } from "../file/ripgrep"
 import { iife } from "@/util/iife"
 
-const BUILTIN = Skill.BUILTIN_LOCATION // kilocode_change
+const BUILTIN = Skill.BUILTIN_LOCATION // devilcode_change
 
 export const SkillTool = Tool.define("skill", async (ctx) => {
   const skills = await Skill.all()
@@ -37,7 +37,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
           "Invoke this tool to load a skill when a task matches one of the available skills listed below:",
           "",
           "<available_skills>",
-          // kilocode_change start - guard pathToFileURL for builtin skills
+          // devilcode_change start - guard pathToFileURL for builtin skills
           ...accessibleSkills.flatMap((skill) => {
             const loc = skill.location === BUILTIN ? BUILTIN : pathToFileURL(skill.location).href
             return [
@@ -48,7 +48,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
               `  </skill>`,
             ]
           }),
-          // kilocode_change end
+          // devilcode_change end
           "</available_skills>",
         ].join("\n")
 
@@ -80,7 +80,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
         metadata: {},
       })
 
-      // kilocode_change start - built-in skills have no filesystem directory
+      // devilcode_change start - built-in skills have no filesystem directory
       if (skill.location === BUILTIN) {
         return {
           title: `Loaded skill: ${skill.name}`,
@@ -97,7 +97,7 @@ export const SkillTool = Tool.define("skill", async (ctx) => {
           },
         }
       }
-      // kilocode_change end
+      // devilcode_change end
 
       const dir = path.dirname(skill.location)
       const base = pathToFileURL(dir).href

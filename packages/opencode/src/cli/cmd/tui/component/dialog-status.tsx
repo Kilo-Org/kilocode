@@ -5,7 +5,7 @@ import { useDialog } from "@tui/ui/dialog"
 import { useSync } from "@tui/context/sync"
 import { For, Match, Switch, Show, createMemo } from "solid-js"
 import { Installation } from "../../../../installation"
-import { Global } from "@/global" // kilocode_change
+import { Global } from "@/global" // devilcode_change
 
 export type DialogStatusProps = {}
 
@@ -51,10 +51,10 @@ export function DialogStatus() {
           esc
         </text>
       </box>
-      {/* kilocode_change start */}
-      <text fg={theme.textMuted}>Kilo v{Installation.VERSION}</text>
-      {/* kilocode_change end */}
-      {/* kilocode_change start */}
+      {/* devilcode_change start */}
+      <text fg={theme.textMuted}>Devil v{Installation.VERSION}</text>
+      {/* devilcode_change end */}
+      {/* devilcode_change start */}
       <box>
         <text fg={theme.text}>Paths</text>
         <text fg={theme.textMuted}>
@@ -68,7 +68,7 @@ export function DialogStatus() {
           </text>
         </Show>
       </box>
-      {/* kilocode_change end */}
+      {/* devilcode_change end */}
       <Show when={Object.keys(sync.data.mcp).length > 0} fallback={<text fg={theme.text}>No MCP Servers</text>}>
         <box>
           <text fg={theme.text}>{Object.keys(sync.data.mcp).length} MCP Servers</text>
@@ -99,7 +99,7 @@ export function DialogStatus() {
                       <Match when={item.status === "failed" && item}>{(val) => val().error}</Match>
                       <Match when={item.status === "disabled"}>Disabled in configuration</Match>
                       <Match when={(item.status as string) === "needs_auth"}>
-                        Needs authentication (run: kilo mcp auth {key}){/* kilocode_change */}
+                        Needs authentication (run: kilo mcp auth {key}){/* devilcode_change */}
                       </Match>
                       <Match when={(item.status as string) === "needs_client_registration" && item}>
                         {(val) => (val() as { error: string }).error}

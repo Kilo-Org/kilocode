@@ -18,13 +18,13 @@ jobs:
   build:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
-      # kilocode_change start
+      # devilcode_change start
       - name: Set lowercase repository owner
         id: repo
         run: echo "owner_lc=${OWNER,,}" >> $GITHUB_OUTPUT
         env:
           OWNER: ${{ github.repository_owner }}
-      # kilocode_change end
+      # devilcode_change end
 
       - uses: actions/checkout@v4
 
@@ -46,7 +46,7 @@ jobs:
       - name: Build and push containers
         run: bun ./packages/containers/script/build.ts --push
         env:
-          # kilocode_change start
+          # devilcode_change start
           REGISTRY: ghcr.io/${{ steps.repo.outputs.owner_lc }}
           TAG: "24.04"
-          # kilocode_change end
+          # devilcode_change end

@@ -10,12 +10,12 @@ import fs from "fs/promises"
 import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { Flag } from "../flag/flag"
-import { TsCheck } from "../kilocode/ts-check" // kilocode_change
+import { TsCheck } from "../devilcode/ts-check" // devilcode_change
 import { Archive } from "../util/archive"
 import { Process } from "../util/process"
 import { which } from "../util/which"
 
-// kilocode_change start - prevent CMD window flash on Windows for all LSP server spawns
+// devilcode_change start - prevent CMD window flash on Windows for all LSP server spawns
 function spawn(cmd: string, opts?: SpawnOptions): ChildProcessWithoutNullStreams
 function spawn(cmd: string, args: readonly string[], opts?: SpawnOptions): ChildProcessWithoutNullStreams
 function spawn(cmd: string, ...rest: any[]): ChildProcessWithoutNullStreams {
@@ -23,7 +23,7 @@ function spawn(cmd: string, ...rest: any[]): ChildProcessWithoutNullStreams {
   const args = rest[0] as readonly string[] | undefined
   return args ? _spawn(cmd, args, { ...opts, windowsHide: true }) : _spawn(cmd, { ...opts, windowsHide: true })
 }
-// kilocode_change end
+// devilcode_change end
 
 export namespace LSPServer {
   const log = Log.create({ service: "lsp.server" })
@@ -100,8 +100,8 @@ export namespace LSPServer {
     },
   }
 
-  // kilocode_change start - tsgo native LSP or lightweight diagnostic client
-  // When KILO_EXPERIMENTAL_LSP_TOOL is enabled, spawn tsgo --lsp --stdio as a
+  // devilcode_change start - tsgo native LSP or lightweight diagnostic client
+  // When DEVIL_EXPERIMENTAL_LSP_TOOL is enabled, spawn tsgo --lsp --stdio as a
   // persistent LSP server (full diagnostics, hover, go-to-definition, etc.).
   // Otherwise spawn() returns undefined and getClients() in index.ts falls
   // through to the lightweight TsClient that shells out to tsgo --noEmit on demand.
@@ -113,7 +113,7 @@ export namespace LSPServer {
     ),
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
     async spawn(root) {
-      if (!Flag.KILO_EXPERIMENTAL_LSP_TOOL) return undefined
+      if (!Flag.DEVIL_EXPERIMENTAL_LSP_TOOL) return undefined
       const bin = await TsCheck.native_tsgo(root)
       if (!bin) {
         log.info("tsgo native binary not found, falling back to lightweight client")
@@ -125,7 +125,7 @@ export namespace LSPServer {
       }
     },
   }
-  // kilocode_change end
+  // devilcode_change end
 
   export const Vue: Info = {
     id: "vue",
@@ -144,7 +144,7 @@ export namespace LSPServer {
           "vue-language-server.js",
         )
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "@vue/language-server"], {
             cwd: Global.Path.bin,
             env: {
@@ -186,7 +186,7 @@ export namespace LSPServer {
       log.info("spawning eslint server")
       const serverPath = path.join(Global.Path.bin, "vscode-eslint", "server", "out", "eslintServer.js")
       if (!(await Filesystem.exists(serverPath))) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading and building VS Code ESLint server")
         const response = await fetch("https://github.com/microsoft/vscode-eslint/archive/refs/heads/main.zip")
         if (!response.ok) return
@@ -383,7 +383,7 @@ export namespace LSPServer {
       })
       if (!bin) {
         if (!which("go")) return
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
 
         log.info("installing gopls")
         const proc = Process.spawn(["go", "install", "golang.org/x/tools/gopls@latest"], {
@@ -425,7 +425,7 @@ export namespace LSPServer {
           log.info("Ruby not found, please install Ruby first")
           return
         }
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("installing rubocop")
         const proc = Process.spawn(["gem", "install", "rubocop", "--bindir", Global.Path.bin], {
           stdout: "pipe",
@@ -463,7 +463,7 @@ export namespace LSPServer {
       "pyrightconfig.json",
     ]),
     async spawn(root) {
-      if (!Flag.KILO_EXPERIMENTAL_LSP_TY) {
+      if (!Flag.DEVIL_EXPERIMENTAL_LSP_TY) {
         return undefined
       }
 
@@ -524,7 +524,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "pyright", "dist", "pyright-langserver.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "pyright"], {
             cwd: Global.Path.bin,
             env: {
@@ -590,7 +590,7 @@ export namespace LSPServer {
             return
           }
 
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           log.info("downloading elixir-ls from GitHub releases")
 
           const response = await fetch("https://github.com/elixir-lsp/elixir-ls/archive/refs/heads/master.zip")
@@ -646,7 +646,7 @@ export namespace LSPServer {
           return
         }
 
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading zls from GitHub releases")
 
         const releaseResponse = await fetch("https://api.github.com/repos/zigtools/zls/releases/latest")
@@ -756,7 +756,7 @@ export namespace LSPServer {
           return
         }
 
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("installing csharp-ls via dotnet tool")
         const proc = Process.spawn(["dotnet", "tool", "install", "csharp-ls", "--tool-path", Global.Path.bin], {
           stdout: "pipe",
@@ -795,7 +795,7 @@ export namespace LSPServer {
           return
         }
 
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("installing fsautocomplete via dotnet tool")
         const proc = Process.spawn(["dotnet", "tool", "install", "fsautocomplete", "--tool-path", Global.Path.bin], {
           stdout: "pipe",
@@ -939,7 +939,7 @@ export namespace LSPServer {
         }
       }
 
-      if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+      if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
       log.info("downloading clangd from GitHub releases")
 
       const releaseResponse = await fetch("https://api.github.com/repos/clangd/clangd/releases/latest")
@@ -1056,7 +1056,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "svelte-language-server", "bin", "server.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "svelte-language-server"], {
             cwd: Global.Path.bin,
             env: {
@@ -1103,7 +1103,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "@astrojs", "language-server", "bin", "nodeServer.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "@astrojs/language-server"], {
             cwd: Global.Path.bin,
             env: {
@@ -1162,7 +1162,7 @@ export namespace LSPServer {
       const launcherDir = path.join(distPath, "plugins")
       const installed = await pathExists(launcherDir)
       if (!installed) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("Downloading JDTLS LSP server.")
         await fs.mkdir(distPath, { recursive: true })
         const releaseURL =
@@ -1260,7 +1260,7 @@ export namespace LSPServer {
         process.platform === "win32" ? path.join(distPath, "kotlin-lsp.cmd") : path.join(distPath, "kotlin-lsp.sh")
       const installed = await Filesystem.exists(launcherScript)
       if (!installed) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("Downloading Kotlin Language Server from GitHub.")
 
         const releaseResponse = await fetch("https://api.github.com/repos/Kotlin/kotlin-lsp/releases/latest")
@@ -1348,7 +1348,7 @@ export namespace LSPServer {
         )
         const exists = await Filesystem.exists(js)
         if (!exists) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "yaml-language-server"], {
             cwd: Global.Path.bin,
             env: {
@@ -1395,7 +1395,7 @@ export namespace LSPServer {
       })
 
       if (!bin) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading lua-language-server from GitHub releases")
 
         const releaseResponse = await fetch("https://api.github.com/repos/LuaLS/lua-language-server/releases/latest")
@@ -1527,7 +1527,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "intelephense", "lib", "intelephense.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "intelephense"], {
             cwd: Global.Path.bin,
             env: {
@@ -1624,7 +1624,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "bash-language-server", "out", "cli.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "bash-language-server"], {
             cwd: Global.Path.bin,
             env: {
@@ -1663,7 +1663,7 @@ export namespace LSPServer {
       })
 
       if (!bin) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading terraform-ls from HashiCorp releases")
 
         const releaseResponse = await fetch("https://api.releases.hashicorp.com/v1/releases/terraform-ls/latest")
@@ -1746,7 +1746,7 @@ export namespace LSPServer {
       })
 
       if (!bin) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading texlab from GitHub releases")
 
         const response = await fetch("https://api.github.com/repos/latex-lsp/texlab/releases/latest")
@@ -1836,7 +1836,7 @@ export namespace LSPServer {
       if (!binary) {
         const js = path.join(Global.Path.bin, "node_modules", "dockerfile-language-server-nodejs", "lib", "server.js")
         if (!(await Filesystem.exists(js))) {
-          if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+          if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
           await Process.spawn([BunProc.which(), "install", "dockerfile-language-server-nodejs"], {
             cwd: Global.Path.bin,
             env: {
@@ -1945,7 +1945,7 @@ export namespace LSPServer {
       })
 
       if (!bin) {
-        if (Flag.KILO_DISABLE_LSP_DOWNLOAD) return
+        if (Flag.DEVIL_DISABLE_LSP_DOWNLOAD) return
         log.info("downloading tinymist from GitHub releases")
 
         const response = await fetch("https://api.github.com/repos/Myriad-Dreamin/tinymist/releases/latest")

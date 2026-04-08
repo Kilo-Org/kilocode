@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { inspect } from "util"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
+import type { FileDiff } from "@devilcode/sdk/v2/client"
 import { GitOps } from "./agent-manager/GitOps"
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
@@ -75,7 +75,7 @@ export function openFileInEditor(
   line?: number,
   column?: number,
   viewColumn: vscode.ViewColumn = vscode.ViewColumn.Beside,
-  prefix = "Kilo",
+  prefix = "Devil",
 ): void {
   const uri = vscode.Uri.file(filePath)
   const target = Math.max(1, Math.floor(line ?? 1))
@@ -85,7 +85,7 @@ export function openFileInEditor(
 
   vscode.workspace.openTextDocument(uri).then(
     (doc) => vscode.window.showTextDocument(doc, { viewColumn, preview: true, selection }),
-    (err) => console.error(`[Kilo New] ${prefix}: Failed to open file:`, uri.fsPath, err),
+    (err) => console.error(`[Devil New] ${prefix}: Failed to open file:`, uri.fsPath, err),
   )
 }
 

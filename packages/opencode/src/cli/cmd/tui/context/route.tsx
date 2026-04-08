@@ -13,28 +13,33 @@ export type SessionRoute = {
   initialPrompt?: PromptInfo
 }
 
-// kilocode_change start
-export type KiloClawRoute = {
+// devilcode_change start
+export type DevilClawRoute = {
   type: "kiloclaw"
 }
-// kilocode_change end
 
-export type Route = HomeRoute | SessionRoute | KiloClawRoute // kilocode_change
+export type WorkflowRoute = {
+  type: "workflow"
+  initialAction?: string
+}
+// devilcode_change end
+
+export type Route = HomeRoute | SessionRoute | DevilClawRoute | WorkflowRoute // devilcode_change
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
   init: () => {
     const [store, setStore] = createStore<Route>(
-      process.env["KILO_ROUTE"]
-        ? JSON.parse(process.env["KILO_ROUTE"])
+      process.env["DEVIL_ROUTE"]
+        ? JSON.parse(process.env["DEVIL_ROUTE"])
         : {
             type: "home",
           },
     )
 
-    // kilocode_change start
+    // devilcode_change start
     let previous: Route | undefined
-    // kilocode_change end
+    // devilcode_change end
 
     return {
       get data() {
@@ -42,17 +47,17 @@ export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
       },
       navigate(route: Route) {
         console.log("navigate", route)
-        previous = structuredClone(unwrap(store)) // kilocode_change
+        previous = structuredClone(unwrap(store)) // devilcode_change
         setStore(route)
       },
-      // kilocode_change start
+      // devilcode_change start
       back() {
         const target = previous ?? ({ type: "home" } as const)
         previous = undefined
         console.log("navigate", target)
         setStore(target)
       },
-      // kilocode_change end
+      // devilcode_change end
     }
   },
 })

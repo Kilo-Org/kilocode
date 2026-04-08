@@ -1,6 +1,6 @@
 root_dir = "."
 fallback_extensions = ["md"]
-remap = ["kilo-docs/docs kilo-docs/pages"]
+remap = ["devil-docs/docs devil-docs/pages"]
 
 format = "detailed"
 max_redirects = 2

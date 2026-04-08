@@ -1,4 +1,4 @@
-// kilocode_change start
+// devilcode_change start
 export const logo = {
   left: ["", "", ""],
   right: [
@@ -7,5 +7,5 @@ export const logo = {
     `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
   ],
 }
-// kilocode_change end
+// devilcode_change end
 export const marks = "_^~"

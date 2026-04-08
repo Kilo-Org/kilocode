@@ -56,11 +56,11 @@ Examples:
 
 #### vscode
 
-Use for issues related to the VS Code extension in `packages/kilo-vscode/`.
+Use for issues related to the VS Code extension in `packages/devil-vscode/`.
 
 #### gateway
 
-Use for issues related to the Kilo Gateway in `packages/kilo-gateway/`.
+Use for issues related to the Kilo Gateway in `packages/devil-gateway/`.
 
 When assigning to people here are the following rules:
 
@@ -86,11 +86,11 @@ Core (`packages/opencode/...`):
 - marius-kilocode
 - catrielmuller
 
-VSCode Extension (`packages/kilo-vscode/...`):
+VSCode Extension (`packages/devil-vscode/...`):
 
 - markijbema
 
-Kilo Gateway (`packages/kilo-gateway/...`):
+Kilo Gateway (`packages/devil-gateway/...`):
 
 - jrf0110
 

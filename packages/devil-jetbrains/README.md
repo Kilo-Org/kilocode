@@ -16,13 +16,13 @@ AI coding agent plugin for JetBrains IDEs.
 
 ## Open in IntelliJ
 
-When you open the monorepo root in IntelliJ IDEA, the Gradle project at `packages/kilo-jetbrains/` should be auto-detected via `.idea/gradle.xml`. If not, link it manually: **File > Settings > Build Tools > Gradle > +** and select `packages/kilo-jetbrains/settings.gradle.kts`.
+When you open the monorepo root in IntelliJ IDEA, the Gradle project at `packages/devil-jetbrains/` should be auto-detected via `.idea/gradle.xml`. If not, link it manually: **File > Settings > Build Tools > Gradle > +** and select `packages/devil-jetbrains/settings.gradle.kts`.
 
 ---
 
 ## Build locally
 
-From `packages/kilo-jetbrains/`:
+From `packages/devil-jetbrains/`:
 
 ```
 bun run build
@@ -40,7 +40,7 @@ bun turbo build --filter=@kilocode/kilo-jetbrains
 
 ## Build for production
 
-From `packages/kilo-jetbrains/`:
+From `packages/devil-jetbrains/`:
 
 ```
 bun run build:production

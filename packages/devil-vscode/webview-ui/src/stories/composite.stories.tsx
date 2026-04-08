@@ -1,18 +1,18 @@
 /** @jsxImportSource solid-js */
 /**
- * Composite visual regression stories for the kilo-vscode webview.
+ * Composite visual regression stories for the devil-vscode webview.
  *
- * These test the *composed* UI — how kilo-ui components look together
+ * These test the *composed* UI — how devil-ui components look together
  * in the extension webview context with extension-specific styling,
  * inline permission prompts, and tool card overrides.
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@devilcode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { ChatView } from "../components/chat/ChatView"
-import { Part } from "@kilocode/kilo-ui/message-part"
+import { Part } from "@devilcode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"

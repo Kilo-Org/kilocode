@@ -2,27 +2,27 @@
 sidebar_label: Switching from Cline
 ---
 
-# Migrating from Cline to Kilo
+# Migrating from Cline to devil
 
-A practical guide for developers switching from Cline to Kilo.
+A practical guide for developers switching from Cline to devil.
 
 ## Why Switch?
 
-**Speed.** The Kilo Platform is designed to reduce friction across the entire development workflow. Beyond feature parity with Cline, Kilo includes Code Reviews, App Builder, Cloud Agents, and one-click Deploy.
+**Speed.** The devil Platform is designed to reduce friction across the entire development workflow. Beyond feature parity with Cline, devil includes Code Reviews, App Builder, Cloud Agents, and one-click Deploy.
 
 **Multi-platform.** Work in VS Code, JetBrains IDEs, CLI, or the web. Your Sessions sync across all of them automatically.
 
-**Specialized modes.** Instead of one agent doing everything, Kilo has five specialized modes optimized for different parts of your workflow.
+**Specialized modes.** Instead of one agent doing everything, devil has five specialized modes optimized for different parts of your workflow.
 
 **500+ models.** More providers, more options, better pricing flexibility. Switch models mid-conversation if you want.
 
 ---
 
-## Understanding Kilo's Mode System
+## Understanding devil's Mode System
 
-Cline uses a single agent with a Plan/Act toggle. Kilo takes a different approach: five specialized modes, each optimized for a specific part of development. You select modes from a dropdown in the interface in the Kilo Extension, or with slash commands in the CLI.
+Cline uses a single agent with a Plan/Act toggle. devil takes a different approach: five specialized modes, each optimized for a specific part of development. You select modes from a dropdown in the interface in the devil Extension, or with slash commands in the CLI.
 
-### Kilo's Five Modes
+### devil's Five Modes
 
 #### Code Mode (default)
 
@@ -63,7 +63,7 @@ Cline uses a single agent with a Plan/Act toggle. Kilo takes a different approac
 
 **Cline workflow:** Toggle Plan/Act → Submit task → Plan phase → Approve → Act phase → Checkpoint
 
-**Kilo workflow:**  
+**devil workflow:**  
 Select mode from dropdown → Build → Switch modes as needed → Checkpoint → Session auto-saves
 
 Or
@@ -80,7 +80,7 @@ Select Orchestrator mode → autonomously define subtasks → intelligently dist
 4. Watch step-by-step execution
 5. Checkpoint when done
 
-**Kilo:**
+**devil:**
 
 1. Select **Orchestrator** from the mode dropdown
 2. "Implement OAuth2 refactor for our authentication"
@@ -93,13 +93,13 @@ Select Orchestrator mode → autonomously define subtasks → intelligently dist
 
 **Cline:** Use Plan mode (but risk accidentally switching to Act)
 
-**Kilo:** Select **Ask** from the dropdown
+**devil:** Select **Ask** from the dropdown
 
 - "Explain how the payment processing flow works"
 - "What external services does this integrate with?"
 - Ask mode never writes files, so exploration is always safe
 
-**Why this matters:** In Cline, you might accidentally make changes while exploring. In Kilo, Ask and Architect modes can't write files, so you're safe to explore without worry. Kilo's **Orchestrator** mode lets you intelligently generate and execute subtasks that are optimized for each mode.
+**Why this matters:** In Cline, you might accidentally make changes while exploring. In devil, Ask and Architect modes can't write files, so you're safe to explore without worry. devil's **Orchestrator** mode lets you intelligently generate and execute subtasks that are optimized for each mode.
 
 ---
 
@@ -108,9 +108,9 @@ Select Orchestrator mode → autonomously define subtasks → intelligently dist
 ### VS Code / Cursor
 
 1. Open Extensions (`Cmd/Ctrl + Shift + X`)
-2. Search "Kilo Code"
+2. Search "devil Code"
 3. Click Install
-4. Find the Kilo icon in your sidebar
+4. Find the devil icon in your sidebar
 
 ### JetBrains IDEs
 
@@ -124,24 +124,24 @@ Supports IntelliJ, PyCharm, WebStorm, and all JetBrains IDEs.
 **Install:**
 
 1. Settings → Plugins → Marketplace
-2. Search "Kilo Code"
+2. Search "devil Code"
 3. Install and restart
-4. Find Kilo icon in right sidebar
+4. Find devil icon in right sidebar
 
 ### CLI
 
 ```shell
-npm install -g @kilocode/cli
-kilo
+npm install -g @devilcode/cli
+devil
 ```
 
 ### Web (Cloud Agents & App Builder)
 
-Visit [app.kilo.ai](https://app.kilo.ai/) and sign in. This gives you access to:
+Visit [app.devil.ai](https://app.devil.ai/) and sign in. This gives you access to:
 
-- **Cloud Agents:** Run Kilo without a local machine
+- **Cloud Agents:** Run devil without a local machine
 - **App Builder:** Build and preview apps directly in your browser
-- **Kilo Deploy:** One-click deployments
+- **devil Deploy:** One-click deployments
 - **Code Reviews:** AI-powered PR analysis
 
 ---
@@ -150,16 +150,16 @@ Visit [app.kilo.ai](https://app.kilo.ai/) and sign in. This gives you access to:
 
 ### Create account
 
-1. Click "Try Kilo Code for Free" in the Kilo panel
-2. Sign in with OAuth at kilo.ai
+1. Click "Try devil Code for Free" in the devil panel
+2. Sign in with OAuth at devil.ai
 3. You'll be redirected back to your IDE
 
 ### Configure your provider
 
-**Option 1: Use Kilo Gateway (easiest)**
+**Option 1: Use devil Gateway (easiest)**
 
 1. Open settings (⚙️ icon)
-2. Select "Kilo Gateway" as provider
+2. Select "devil Gateway" as provider
 3. Choose a model (such as Claude Opus 4.5, Gemini 3, MiniMax M2.1)
 
 **Option 2: Bring your own API keys**
@@ -170,13 +170,13 @@ Visit [app.kilo.ai](https://app.kilo.ai/) and sign in. This gives you access to:
 
 ---
 
-## Beyond the IDE: Kilo's Platform Features
+## Beyond the IDE: devil's Platform Features
 
-One of the biggest differences from Cline is that Kilo isn't just an IDE extension. It's a platform with multiple interfaces that can all share your Sessions and context.
+One of the biggest differences from Cline is that devil isn't just an IDE extension. It's a platform with multiple interfaces that can all share your Sessions and context.
 
 ### Cloud Agents
 
-Run Kilo from [app.kilo.ai/cloud](https://app.kilo.ai/cloud) without needing your local machine. Great for:
+Run devil from [app.devil.ai/cloud](https://app.devil.ai/cloud) without needing your local machine. Great for:
 
 - Working from a tablet or phone
 - Offloading heavy tasks
@@ -192,11 +192,11 @@ Your conversation history, context, and state sync across all interfaces automat
 
 ### App Builder
 
-Build live apps and sites directly from the web with a real-time preview. Similar to Lovable, but integrated with your Kilo Sessions. Deploy with one click when you're ready.
+Build live apps and sites directly from the web with a real-time preview. Similar to Lovable, but integrated with your devil Sessions. Deploy with one click when you're ready.
 
-### Kilo Deploy
+### devil Deploy
 
-One-click deployments from directly within Kilo. Go from code to production without leaving your workflow.
+One-click deployments from directly within devil. Go from code to production without leaving your workflow.
 
 ### Code Reviews
 
@@ -204,7 +204,7 @@ Automatically analyzes your PRs using your choice of AI model. Reviews happen th
 
 ### Managed Indexing
 
-Semantic search across your repositories using cloud-hosted embeddings. Kilo indexes your codebase to deliver more relevant, context-aware responses.
+Semantic search across your repositories using cloud-hosted embeddings. devil indexes your codebase to deliver more relevant, context-aware responses.
 
 ### Autocomplete
 
@@ -216,7 +216,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ### New Feature Development
 
-**Kilo approach:**
+**devil approach:**
 
 1. **Architect mode:** "Design a user notification system"
 2. Review architecture, discuss trade-offs
@@ -228,7 +228,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ### Debugging Production Issues
 
-**Kilo approach:**
+**devil approach:**
 
 1. **Debug mode:** "Checkout fails with 'payment_intent_not_found'"
 2. Debug mode systematically checks logs, traces API calls
@@ -237,7 +237,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ### Large Refactoring
 
-**Kilo approach:**
+**devil approach:**
 
 1. **Ask mode:** "Explain our current auth implementation"
 2. **Architect mode:** "Design migration to JWT tokens"
@@ -247,7 +247,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ### Learning Unfamiliar Code
 
-**Kilo approach:**
+**devil approach:**
 
 1. **Ask mode:** "Explain how payment processing works"
 2. "What happens when a payment fails?"
@@ -259,7 +259,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ## Feature Mapping
 
-| Cline Feature      | Kilo Equivalent                    | Notes                                                                           |
+| Cline Feature      | devil Equivalent                    | Notes                                                                           |
 | ------------------ | ---------------------------------- | ------------------------------------------------------------------------------- |
 | Plan mode          | Orchestrator, Architect, Ask modes | Architect plans, Ask explains, Orchestrate distributes tasks across other modes |
 | Act mode           | Code mode                          | Implementation                                                                  |
@@ -281,7 +281,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 - **500+ models:** More provider options, switch anytime
 - **Cloud Agents:** Work without your local machine
 - **App Builder:** Build and preview apps in the browser
-- **One-click Deploy:** Ship directly from Kilo
+- **One-click Deploy:** Ship directly from devil
 - **Code Reviews:** AI-powered PR analysis
 - **Parallel Agents:** Run multiple agents simultaneously
 
@@ -295,7 +295,7 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 **Q: Can I customize what each mode does?** Yes. Add mode-specific instructions in settings, or create custom modes.
 
-**Q: Can I use both Cline and Kilo side-by-side?** Yes. They're separate extensions.
+**Q: Can I use both Cline and devil side-by-side?** Yes. They're separate extensions.
 
 **Q: What's the difference between Cloud Agents and the IDE extension?** Same capabilities, different interface. Cloud Agents run in the browser, so you can work from any device without your local machine.
 
@@ -303,13 +303,13 @@ In-line ghost-text completions with tab to complete. Works alongside the agent m
 
 ## Next Steps
 
-1. Install Kilo in your primary IDE
+1. Install devil in your primary IDE
 2. Try each mode with a small task:
    - **Code:** "Add a hello world endpoint"
    - **Ask:** "Explain what this file does"
    - **Debug:** "Why is this function returning undefined?"
    - **Architect:** "Design a logging system"
    - **Orchestrator:** "Build an app, end-to-end, that…"
-3. Try Cloud Agents at [app.kilo.ai](https://app.kilo.ai/)
-4. Install the Kilo CLI with `npm install -g @kilocode/cli`
+3. Try Cloud Agents at [app.devil.ai](https://app.devil.ai/)
+4. Install the devil CLI with `npm install -g @devilcode/cli`
 5. Enable Autocomplete for inline suggestions

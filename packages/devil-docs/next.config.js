@@ -15,8 +15,8 @@ module.exports = withMarkdoc(/* config: https://markdoc.io/docs/nextjs#options *
         permanent: true,
       },
       {
-        source: "/kiloclaw",
-        destination: "/kiloclaw/overview",
+        source: "/DevilClaw",
+        destination: "/DevilClaw/overview",
         permanent: false,
       },
       ...previousDocsRedirects,

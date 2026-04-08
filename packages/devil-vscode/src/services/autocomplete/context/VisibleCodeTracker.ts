@@ -33,7 +33,7 @@ export class VisibleCodeTracker {
 
   /**
    * Captures the currently visible code across all visible editors.
-   * Excludes files matching security patterns or .kilocodeignore rules.
+   * Excludes files matching security patterns or .devilcodeignore rules.
    *
    * @returns VisibleCodeContext containing information about all visible editors
    * and their visible code ranges
@@ -61,7 +61,7 @@ export class VisibleCodeTracker {
         continue
       }
       if (this.ignoreController && !this.ignoreController.validateAccess(relativePath)) {
-        console.log(`[VisibleCodeTracker] Filtered (.kilocodeignore): ${relativePath}`)
+        console.log(`[VisibleCodeTracker] Filtered (.devilcodeignore): ${relativePath}`)
         continue
       }
 

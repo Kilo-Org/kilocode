@@ -3,10 +3,10 @@ name: Check Source Links
 on:
   pull_request:
     paths:
-      - "packages/kilo-vscode/src/**"
-      - "packages/kilo-vscode/webview-ui/**"
+      - "packages/devil-vscode/src/**"
+      - "packages/devil-vscode/webview-ui/**"
       - "packages/opencode/src/**"
-      - "packages/kilo-docs/source-links.md"
+      - "packages/devil-docs/source-links.md"
       - "script/extract-source-links.ts"
       - ".github/workflows/source-check-links.yml"
   workflow_dispatch: # Allow manual trigger

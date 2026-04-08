@@ -15,40 +15,40 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
 - **SDK regen**: After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
-- **Knip** (unused exports): `bun run knip` from `packages/kilo-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
-- **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
-- **kilocode_change check**: `bun run check-kilocode-change` from `packages/kilo-vscode/`. CI runs this — `kilocode_change` is a marker for upstream merge conflicts and must not appear in `packages/kilo-vscode/` or `packages/kilo-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
+- **Knip** (unused exports): `bun run knip` from `packages/devil-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
+- **Source links**: After adding or changing URLs in `packages/devil-vscode/`, `packages/devil-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/devil-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
+- **devilcode_change check**: `bun run check-kilocode-change` from `packages/devil-vscode/`. CI runs this — `devilcode_change` is a marker for upstream merge conflicts and must not appear in `packages/devil-vscode/` or `packages/devil-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
 
 ## Products
 
 All products are clients of the **CLI** (`packages/opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@kilocode/sdk`.
 
-| Product                | Package                 | Description                                                                                                                                                                          |
-| ---------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Kilo CLI               | `packages/opencode/`    | Core engine. TUI, `kilo run`, `kilo serve`, `kilo web`. Fork of upstream OpenCode.                                                                                                   |
-| Kilo VS Code Extension | `packages/kilo-vscode/` | VS Code extension. Bundles the CLI binary, spawns `kilo serve` as a child process. Includes the **Agent Manager** — a multi-session orchestration panel with git worktree isolation. |
-| OpenCode Desktop       | `packages/desktop/`     | Standalone Tauri native app. Bundles CLI as sidecar. Single-session UI. Unrelated to the VS Code extension. Not actively maintained — synced from upstream fork.                     |
-| OpenCode Web           | `packages/app/`         | Shared SolidJS frontend used by both the desktop app and `kilo web` CLI command. Not actively maintained — synced from upstream fork.                                                |
+| Product                | Package                  | Description                                                                                                                                                                          |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kilo CLI               | `packages/opencode/`     | Core engine. TUI, `kilo run`, `kilo serve`, `kilo web`. Fork of upstream OpenCode.                                                                                                   |
+| Kilo VS Code Extension | `packages/devil-vscode/` | VS Code extension. Bundles the CLI binary, spawns `kilo serve` as a child process. Includes the **Agent Manager** — a multi-session orchestration panel with git worktree isolation. |
+| OpenCode Desktop       | `packages/desktop/`      | Standalone Tauri native app. Bundles CLI as sidecar. Single-session UI. Unrelated to the VS Code extension. Not actively maintained — synced from upstream fork.                     |
+| OpenCode Web           | `packages/app/`          | Shared SolidJS frontend used by both the desktop app and `kilo web` CLI command. Not actively maintained — synced from upstream fork.                                                |
 
-**Agent Manager** refers to a feature inside `packages/kilo-vscode/` (extension code in `src/agent-manager/`, webview in `webview-ui/agent-manager/`). It is not a standalone product. See the extension's `AGENTS.md` for details.
+**Agent Manager** refers to a feature inside `packages/devil-vscode/` (extension code in `src/agent-manager/`, webview in `webview-ui/agent-manager/`). It is not a standalone product. See the extension's `AGENTS.md` for details.
 
 ## Monorepo Structure
 
 Turborepo + Bun workspaces. The packages you'll work with most:
 
-| Package                    | Name                       | Purpose                                                                                    |
-| -------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
-| `packages/opencode/`       | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
-| `packages/sdk/js/`         | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
-| `packages/kilo-vscode/`    | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. See its own `AGENTS.md` for details.  |
-| `packages/kilo-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
-| `packages/kilo-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
-| `packages/kilo-i18n/`      | `@kilocode/kilo-i18n`      | Internationalization / translations                                                        |
-| `packages/kilo-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library shared by the extension webview and `packages/app/`              |
-| `packages/app/`            | `@opencode-ai/app`         | Shared SolidJS web UI for desktop app and `kilo web`                                       |
-| `packages/desktop/`        | `@opencode-ai/desktop`     | Tauri desktop app shell                                                                    |
-| `packages/util/`           | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
-| `packages/plugin/`         | `@kilocode/plugin`         | Plugin/tool interface definitions                                                          |
+| Package                     | Name                       | Purpose                                                                                    |
+| --------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
+| `packages/opencode/`        | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
+| `packages/sdk/js/`          | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
+| `packages/devil-vscode/`    | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. See its own `AGENTS.md` for details.  |
+| `packages/devil-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
+| `packages/devil-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
+| `packages/devil-i18n/`      | `@kilocode/kilo-i18n`      | Internationalization / translations                                                        |
+| `packages/devil-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library shared by the extension webview and `packages/app/`              |
+| `packages/app/`             | `@opencode-ai/app`         | Shared SolidJS web UI for desktop app and `kilo web`                                       |
+| `packages/desktop/`         | `@opencode-ai/desktop`     | Tauri desktop app shell                                                                    |
+| `packages/util/`            | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
+| `packages/plugin/`          | `@kilocode/plugin`         | Plugin/tool interface definitions                                                          |
 
 ## Style Guide
 
@@ -180,11 +180,11 @@ We regularly merge upstream changes from opencode. To minimize merge conflicts a
 1. **Prefer `kilocode` directories** - Place Kilo-specific code in dedicated directories whenever possible:
    - `packages/opencode/src/kilocode/` - Kilo-specific source code
    - `packages/opencode/test/kilocode/` - Kilo-specific tests
-   - `packages/kilo-gateway/` - The Kilo Gateway package
+   - `packages/devil-gateway/` - The Kilo Gateway package
 
 2. **Minimize changes to shared files** - When you must modify files that exist in upstream opencode, keep changes as small and isolated as possible.
 
-3. **Use `kilocode_change` markers** - When modifying shared code, mark your changes with `kilocode_change` comments so they can be easily identified during merges.
+3. **Use `devilcode_change` markers** - When modifying shared code, mark your changes with `devilcode_change` comments so they can be easily identified during merges.
    Do not use these markers in files within directories with kilo in the name
 
 4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from opencode unless absolutely necessary.
@@ -193,32 +193,32 @@ The goal is to keep our diff from upstream as small as possible, making regular 
 
 ### Kilocode Change Markers
 
-To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `kilocode_change` comments.
+To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `devilcode_change` comments.
 
 **Single line:**
 
 ```typescript
-const value = 42 // kilocode_change
+const value = 42 // devilcode_change
 ```
 
 **Multi-line:**
 
 ```typescript
-// kilocode_change start
+// devilcode_change start
 const foo = 1
 const bar = 2
-// kilocode_change end
+// devilcode_change end
 ```
 
 **New files:**
 
 ```typescript
-// kilocode_change - new file
+// devilcode_change - new file
 ```
 
 #### When markers are NOT needed
 
-Code in these paths is Kilo Code-specific and does NOT need `kilocode_change` markers:
+Code in these paths is Kilo Code-specific and does NOT need `devilcode_change` markers:
 
 - `packages/opencode/src/kilocode/` - All files in this directory
 - `packages/opencode/test/kilocode/` - All test files for kilocode

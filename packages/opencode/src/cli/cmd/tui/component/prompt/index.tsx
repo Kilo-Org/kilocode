@@ -21,7 +21,7 @@ import { useRenderer } from "@opentui/solid"
 import { Editor } from "@tui/util/editor"
 import { useExit } from "../../context/exit"
 import { Clipboard } from "../../util/clipboard"
-import type { FilePart } from "@kilocode/sdk/v2"
+import type { FilePart } from "@devilcode/sdk/v2"
 import { TuiEvent } from "../../event"
 import { iife } from "@/util/iife"
 import { Locale } from "@/util/locale"
@@ -34,7 +34,7 @@ import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
 import { useTextareaKeybindings } from "../textarea-keybindings"
 import { DialogSkill } from "../dialog-skill"
-import { shouldSummarize as shouldPasteSummary } from "@/kilocode/paste-summary"
+import { shouldSummarize as shouldPasteSummary } from "@/devilcode/paste-summary"
 
 export type PromptProps = {
   sessionID?: string
@@ -126,7 +126,7 @@ export function Prompt(props: PromptProps) {
     mode: "normal" | "shell"
     extmarkToPartIndex: Map<number, number>
     interrupt: number
-    exitPress: number // kilocode_change - track double ctrl+c to exit
+    exitPress: number // devilcode_change - track double ctrl+c to exit
     placeholder: number
   }>({
     placeholder: Math.floor(Math.random() * PLACEHOLDERS.length),
@@ -137,7 +137,7 @@ export function Prompt(props: PromptProps) {
     mode: "normal",
     extmarkToPartIndex: new Map(),
     interrupt: 0,
-    exitPress: 0, // kilocode_change
+    exitPress: 0, // devilcode_change
   })
 
   createEffect(
@@ -150,7 +150,7 @@ export function Prompt(props: PromptProps) {
     ),
   )
 
-  // kilocode_change start - sync local agent/model whenever newest user message changes
+  // devilcode_change start - sync local agent/model whenever newest user message changes
   let syncedKey: string | undefined
   createEffect(() => {
     const sessionID = props.sessionID
@@ -167,7 +167,7 @@ export function Prompt(props: PromptProps) {
     if (msg.model) local.model.set(msg.model)
     if (msg.variant) local.model.variant.set(msg.variant)
   })
-  // kilocode_change end
+  // devilcode_change end
 
   command.register(() => {
     return [
@@ -575,7 +575,7 @@ export function Prompt(props: PromptProps) {
     if (store.mode === "shell") {
       sdk.client.session.shell({
         sessionID,
-        agent: local.agent.current()?.name ?? "", // kilocode_change
+        agent: local.agent.current()?.name ?? "", // devilcode_change
         model: {
           providerID: selectedModel.providerID,
           modelID: selectedModel.modelID,
@@ -602,7 +602,7 @@ export function Prompt(props: PromptProps) {
         sessionID,
         command: command.slice(1),
         arguments: args,
-        agent: local.agent.current()?.name ?? "", // kilocode_change
+        agent: local.agent.current()?.name ?? "", // devilcode_change
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         messageID,
         variant,
@@ -619,7 +619,7 @@ export function Prompt(props: PromptProps) {
           sessionID,
           ...selectedModel,
           messageID,
-          agent: local.agent.current()?.name ?? "", // kilocode_change
+          agent: local.agent.current()?.name ?? "", // devilcode_change
           model: selectedModel,
           variant,
           parts: [
@@ -740,7 +740,7 @@ export function Prompt(props: PromptProps) {
   const highlight = createMemo(() => {
     if (keybind.leader) return theme.border
     if (store.mode === "shell") return theme.primary
-    return local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
+    return local.agent.color(local.agent.current()?.name ?? "") // devilcode_change
   })
 
   const showVariant = createMemo(() => {
@@ -760,7 +760,7 @@ export function Prompt(props: PromptProps) {
   })
 
   const spinnerDef = createMemo(() => {
-    const color = local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
+    const color = local.agent.color(local.agent.current()?.name ?? "") // devilcode_change
     return {
       frames: createFrames({
         color,
@@ -831,11 +831,11 @@ export function Prompt(props: PromptProps) {
                 autocomplete.onInput(value)
                 syncExtmarksWithPromptParts()
               }}
-              // kilocode_change start
+              // devilcode_change start
               onCursorChange={() => {
                 if (store.mode === "normal") autocomplete.onCursorChange()
               }}
-              // kilocode_change end
+              // devilcode_change end
               keyBindings={textareaKeybindings()}
               onKeyDown={async (e) => {
                 if (props.disabled) {
@@ -871,7 +871,7 @@ export function Prompt(props: PromptProps) {
                 }
                 if (keybind.match("app_exit", e)) {
                   if (store.prompt.input === "") {
-                    // kilocode_change start - double ctrl+c to exit, single ctrl+d exits immediately
+                    // devilcode_change start - double ctrl+c to exit, single ctrl+d exits immediately
                     if (e.ctrl && e.name === "c") {
                       setStore("exitPress", store.exitPress + 1)
                       setTimeout(() => {
@@ -885,7 +885,7 @@ export function Prompt(props: PromptProps) {
                       e.preventDefault()
                       return
                     }
-                    // kilocode_change end
+                    // devilcode_change end
                     await exit()
                     // Don't preventDefault - let textarea potentially handle the event
                     e.preventDefault()
@@ -982,14 +982,14 @@ export function Prompt(props: PromptProps) {
                   } catch {}
                 }
 
-                // kilocode_change start
+                // devilcode_change start
                 const summary = shouldPasteSummary(pastedContent)
                 if (summary.summarize && !sync.data.config.experimental?.disable_paste_summary) {
                   event.preventDefault()
                   pasteText(pastedContent, `[Pasted ~${summary.lines} lines]`)
                   return
                 }
-                // kilocode_change end
+                // devilcode_change end
 
                 // Force layout update and render for the pasted content
                 setTimeout(() => {
@@ -1018,11 +1018,11 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1}>
               <text fg={highlight()}>
-                {/* kilocode_change start */}
+                {/* devilcode_change start */}
                 {store.mode === "shell"
                   ? "Shell"
                   : (local.agent.current()?.displayName ?? Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
-                {/* kilocode_change end */}
+                {/* devilcode_change end */}
               </text>
               <Show when={store.mode === "normal"}>
                 <box flexDirection="row" gap={1}>
@@ -1150,13 +1150,13 @@ export function Prompt(props: PromptProps) {
           </Show>
           <Show when={status().type !== "retry"}>
             <box gap={2} flexDirection="row">
-              {/* kilocode_change start - show "ctrl+c again to exit" hint */}
+              {/* devilcode_change start - show "ctrl+c again to exit" hint */}
               <Show when={store.exitPress > 0}>
                 <text fg={theme.primary}>
                   ctrl+c <span style={{ fg: theme.primary }}>again to exit</span>
                 </text>
               </Show>
-              {/* kilocode_change end */}
+              {/* devilcode_change end */}
               <Switch>
                 <Match when={store.mode === "normal"}>
                   <Show when={local.model.variant.list().length > 0}>

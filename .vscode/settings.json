@@ -4,12 +4,12 @@
     "editor.defaultFormatter": null
   },
   "files.exclude": {
-    "packages/kilo-vscode/out": false,
-    "packages/kilo-vscode/dist": false
+    "packages/devil-vscode/out": false,
+    "packages/devil-vscode/dist": false
   },
   "search.exclude": {
-    "packages/kilo-vscode/out": true,
-    "packages/kilo-vscode/dist": true
+    "packages/devil-vscode/out": true,
+    "packages/devil-vscode/dist": true
   },
   "typescript.tsc.autoDetect": "off"
 }

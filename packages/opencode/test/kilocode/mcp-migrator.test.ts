@@ -1,12 +1,12 @@
 import { test, expect, describe } from "bun:test"
-import { McpMigrator } from "../../src/kilocode/mcp-migrator"
+import { McpMigrator } from "../../src/devilcode/mcp-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 
 describe("McpMigrator", () => {
   describe("convertServer", () => {
     test("converts local server with command and args", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "npx",
         args: ["-y", "@modelcontextprotocol/server-filesystem"],
         env: { NODE_ENV: "production" },
@@ -22,7 +22,7 @@ describe("McpMigrator", () => {
     })
 
     test("converts server with command only (no args)", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "my-mcp-server",
       }
 
@@ -35,7 +35,7 @@ describe("McpMigrator", () => {
     })
 
     test("converts disabled servers with enabled: false", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "npx",
         args: ["-y", "some-package"],
         disabled: true,
@@ -51,7 +51,7 @@ describe("McpMigrator", () => {
     })
 
     test("omits environment when env is empty object", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "npx",
         env: {},
       }
@@ -66,7 +66,7 @@ describe("McpMigrator", () => {
     })
 
     test("omits environment when env is undefined", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "npx",
       }
 
@@ -76,7 +76,7 @@ describe("McpMigrator", () => {
     })
 
     test("preserves multiple environment variables", () => {
-      const server: McpMigrator.KilocodeMcpServer = {
+      const server: McpMigrator.DevilcodeMcpServer = {
         command: "node",
         args: ["server.js"],
         env: {
@@ -207,10 +207,10 @@ describe("McpMigrator", () => {
       })
     })
 
-    test("reads from legacy .kilocode/mcp.json when .kilo/mcp.json is absent", async () => {
+    test("reads from legacy .devilcode/mcp.json when .kilo/mcp.json is absent", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".devilcode")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -237,11 +237,11 @@ describe("McpMigrator", () => {
       })
     })
 
-    // Regression: malformed .kilocode/mcp.json must not prevent .kilo/mcp.json from loading
-    test("loads .kilo/mcp.json even when .kilocode/mcp.json is malformed", async () => {
+    // Regression: malformed .devilcode/mcp.json must not prevent .kilo/mcp.json from loading
+    test("loads .kilo/mcp.json even when .devilcode/mcp.json is malformed", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          await Bun.write(path.join(dir, ".kilocode", "mcp.json"), "{ corrupt json !!!")
+          await Bun.write(path.join(dir, ".devilcode", "mcp.json"), "{ corrupt json !!!")
           await Bun.write(
             path.join(dir, ".kilo", "mcp.json"),
             JSON.stringify({
@@ -265,11 +265,11 @@ describe("McpMigrator", () => {
       })
     })
 
-    test(".kilo/mcp.json overrides .kilocode/mcp.json for same server name", async () => {
+    test(".kilo/mcp.json overrides .devilcode/mcp.json for same server name", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Bun.write(
-            path.join(dir, ".kilocode", "mcp.json"),
+            path.join(dir, ".devilcode", "mcp.json"),
             JSON.stringify({
               mcpServers: {
                 myserver: { command: "old-cmd", args: ["old"] },

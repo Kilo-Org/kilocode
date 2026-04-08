@@ -1,37 +1,37 @@
 ---
 title: "Code with AI"
-description: "Learn how to code with AI using Kilo Code across different platforms and interfaces"
+description: "Learn how to code with AI using devil Code across different platforms and interfaces"
 ---
 
 # {% $markdoc.frontmatter.title %}
 
 {% callout type="generic" %}
-Kilo Code is your AI pair programmer that works in your IDE, terminal, or browser. Generate code, refactor, debug, and ship faster with AI that understands your codebase and context.
+devil Code is your AI pair programmer that works in your IDE, terminal, or browser. Generate code, refactor, debug, and ship faster with AI that understands your codebase and context.
 {% /callout %}
 
 ## Getting Started
 
-New to Kilo Code? Start here to understand the core concepts:
+New to devil Code? Start here to understand the core concepts:
 
-- [**Install Kilo Code**](/docs/getting-started/installing) — Get started in VS Code, JetBrains, CLI, or mobile
+- [**Install devil Code**](/docs/getting-started/installing) — Get started in VS Code, JetBrains, CLI, or mobile
 - [**Connect an AI Provider**](/docs/ai-providers) — Set up your preferred model
 - [**Quick Start Guide**](/docs/getting-started/quickstart) — Run your first task in minutes
 
 ## Platforms
 
-Use Kilo Code wherever you work:
+Use devil Code wherever you work:
 
 - [**VS Code**](/docs/code-with-ai/platforms/vscode) — The most popular IDE integration
 - [**JetBrains**](/docs/code-with-ai/platforms/jetbrains) — IntelliJ, PyCharm, WebStorm, and more
 - [**CLI**](/docs/code-with-ai/platforms/cli) — Terminal-based AI coding for scripts and automation
-- [**Cloud Agent**](/docs/code-with-ai/platforms/cloud-agent) — Run Kilo in the cloud
+- [**Cloud Agent**](/docs/code-with-ai/platforms/cloud-agent) — Run devil in the cloud
 - [**Mobile Apps**](/docs/code-with-ai/platforms/mobile) — iOS and Android support
-- [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with Kilo in your workspace
+- [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with devil in your workspace
 - [**App Builder**](/docs/code-with-ai/app-builder) — Create full-stack applications with AI
 
 ## Working with Agents
 
-Kilo uses specialized agents to help with different tasks:
+devil uses specialized agents to help with different tasks:
 
 - [**Chat Interface**](/docs/code-with-ai/agents/chat-interface) — Conversation-based coding
 - [**Using Agents**](/docs/code-with-ai/agents/using-agents) — Switch between Code, Ask, Plan, Debug, and other agents
@@ -55,7 +55,7 @@ Core capabilities to boost your productivity:
 
 ## Next Steps
 
-- Explore [**Customize**](/docs/customize) to tailor Kilo to your workflow
+- Explore [**Customize**](/docs/customize) to tailor devil to your workflow
 - Learn about [**Collaborating**](/docs/collaborate) with your team
 - Set up [**Automate**](/docs/automate) for CI/CD integration
 - Configure [**Deploy & Secure**](/docs/deploy-secure) deployments

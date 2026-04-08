@@ -67,10 +67,10 @@ if (Script.release) {
     await new Promise((resolve) => setTimeout(resolve, 5_000))
   }
 
-  // kilocode_change start
+  // devilcode_change start
   // await import(`../packages/desktop/scripts/finalize-latest-json.ts`)
   // await import(`../packages/desktop-electron/scripts/finalize-latest-yml.ts`)
-  // kilocode_change end
+  // devilcode_change end
 
   await $`gh release edit v${Script.version} --draft=false --repo ${process.env.GH_REPO}`
 }
@@ -84,10 +84,10 @@ await import(`../packages/sdk/js/script/publish.ts`)
 console.log("\n=== plugin ===\n")
 await import(`../packages/plugin/script/publish.ts`)
 
-// kilocode_change start
+// devilcode_change start
 console.log("\n=== vscode ===\n")
-await import(`../packages/kilo-vscode/script/publish.ts`)
-// kilocode_change end
+await import(`../packages/devil-vscode/script/publish.ts`)
+// devilcode_change end
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)

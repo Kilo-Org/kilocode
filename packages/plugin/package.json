@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@kilocode/plugin",
+  "name": "@devilcode/plugin",
   "version": "7.1.20",
   "type": "module",
   "license": "MIT",
@@ -16,7 +16,7 @@
     "dist"
   ],
   "dependencies": {
-    "@kilocode/sdk": "workspace:*",
+    "@devilcode/sdk": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -28,7 +28,7 @@
   "peerDependencies": {},
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode",
+    "url": "https://github.com/Devil-Org/devilcode",
     "directory": "packages/plugin"
   }
 }

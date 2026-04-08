@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
-const { KiloProvider } = await import("../../src/KiloProvider")
+const { DevilProvider } = await import("../../src/DevilProvider")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
 
@@ -92,7 +92,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
   }
 }
 
-describe("KiloProvider pending session refresh", () => {
+describe("DevilProvider pending session refresh", () => {
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
     const ctx = createContext()
@@ -113,7 +113,7 @@ describe("KiloProvider pending session refresh", () => {
   it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new DevilProvider({} as never, connection as never)
     const internal = provider as unknown as ProviderInternals
 
     provider.setSessionDirectory("ses_1", "/worktree")
@@ -130,7 +130,7 @@ describe("KiloProvider pending session refresh", () => {
   it("does not post not-connected errors while still connecting", async () => {
     const client = createClient()
     const connection = createConnection(client)
-    const provider = new KiloProvider({} as never, connection as never)
+    const provider = new DevilProvider({} as never, connection as never)
     const internal = provider as unknown as ProviderInternals
     const sent: unknown[] = []
 

@@ -3,8 +3,8 @@
  * jscodeshift codemod: Transform string literals
  *
  * Transforms string literals containing opencode references to kilo:
- * - "opencode-ai" -> "@kilocode/cli"
- * - "npx opencode" -> "npx @kilocode/cli"
+ * - "opencode-ai" -> "@devilcode/cli"
+ * - "npx opencode" -> "npx @devilcode/cli"
  * - etc.
  *
  * Usage:
@@ -23,16 +23,16 @@ interface StringReplacement {
 
 const STRING_REPLACEMENTS: StringReplacement[] = [
   // Package names in strings (no trailing \b to allow subpath matching like @opencode-ai/sdk/v2)
-  { pattern: /\bopencode-ai\b/g, replacement: "@kilocode/cli" },
-  { pattern: /@opencode-ai\/cli(?=\/|"|'|`|$)/g, replacement: "@kilocode/cli" },
-  { pattern: /@opencode-ai\/sdk(?=\/|"|'|`|$)/g, replacement: "@kilocode/sdk" },
-  { pattern: /@opencode-ai\/plugin(?=\/|"|'|`|$)/g, replacement: "@kilocode/plugin" },
+  { pattern: /\bopencode-ai\b/g, replacement: "@devilcode/cli" },
+  { pattern: /@opencode-ai\/cli(?=\/|"|'|`|$)/g, replacement: "@devilcode/cli" },
+  { pattern: /@opencode-ai\/sdk(?=\/|"|'|`|$)/g, replacement: "@devilcode/sdk" },
+  { pattern: /@opencode-ai\/plugin(?=\/|"|'|`|$)/g, replacement: "@devilcode/plugin" },
 
   // CLI commands
-  { pattern: /\bnpx opencode\b/g, replacement: "npx @kilocode/cli" },
-  { pattern: /\bbun add opencode\b/g, replacement: "bun add @kilocode/cli" },
-  { pattern: /\bnpm install opencode\b/g, replacement: "npm install @kilocode/cli" },
-  { pattern: /\bnpm i opencode\b/g, replacement: "npm i @kilocode/cli" },
+  { pattern: /\bnpx opencode\b/g, replacement: "npx @devilcode/cli" },
+  { pattern: /\bbun add opencode\b/g, replacement: "bun add @devilcode/cli" },
+  { pattern: /\bnpm install opencode\b/g, replacement: "npm install @devilcode/cli" },
+  { pattern: /\bnpm i opencode\b/g, replacement: "npm i @devilcode/cli" },
 
   // Database filename
   { pattern: /\bopencode\.db\b/g, replacement: "kilo.db" },
@@ -44,9 +44,9 @@ const STRING_REPLACEMENTS: StringReplacement[] = [
   { pattern: /x-opencode-/g, replacement: "x-kilo-" },
 
   // Environment variables (exclude OPENCODE_API_KEY - upstream Zen SaaS key)
-  { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "KILO_$1" },
-  { pattern: /\bVITE_OPENCODE_/g, replacement: "VITE_KILO_" },
-  { pattern: /\b_EXTENSION_OPENCODE_/g, replacement: "_EXTENSION_KILO_" },
+  { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "DEVIL_$1" },
+  { pattern: /\bVITE_OPENCODE_/g, replacement: "VITE_DEVIL_" },
+  { pattern: /\b_EXTENSION_OPENCODE_/g, replacement: "_EXTENSION_DEVIL_" },
 ]
 
 export interface TransformResult {

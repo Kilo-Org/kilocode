@@ -8,7 +8,7 @@ const ctx = {
   sessionID: "test",
   messageID: "",
   callID: "",
-  agent: "code", // kilocode_change
+  agent: "code", // devilcode_change
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},

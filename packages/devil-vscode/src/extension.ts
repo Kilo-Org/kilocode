@@ -1,32 +1,32 @@
 import * as vscode from "vscode"
-import { KiloProvider } from "./KiloProvider"
+import { DevilProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
-import { KiloConnectionService } from "./services/cli-backend"
+import { DevilConnectionService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
 import { BrowserAutomationService } from "./services/browser-automation"
 import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
-import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
+import { registerCodeActions, registerTerminalActions, DevilCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
-// requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
+// requiring the user to open a Devil sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
-  console.log("Kilo Code extension is now active")
+  console.log("Devil Code extension is now active")
 
   const telemetry = TelemetryProxy.getInstance()
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context)
+  const connectionService = new DevilConnectionService(context)
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext) {
   // NOTE: The editor/title toolbar for tab panels intentionally omits Agent Manager
   // and Marketplace buttons (unlike the sidebar). Too many icons causes VS Code to
   // collapse them into a "..." overflow menu, hiding important buttons like Settings.
-  const tabPanels = new Map<vscode.WebviewPanel, KiloProvider>()
+  const tabPanels = new Map<vscode.WebviewPanel, DevilProvider>()
   const activeTabProvider = () => {
     for (const [panel, p] of tabPanels) {
       if (panel.active) return p
@@ -58,12 +58,12 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new DevilProvider(context.extensionUri, connectionService, context)
 
   // Register the webview view provider for the sidebar.
   // retainContextWhenHidden keeps the webview alive when switching to other sidebar panels.
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(KiloProvider.viewType, provider, {
+    vscode.window.registerWebviewViewProvider(DevilProvider.viewType, provider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
   )
@@ -101,7 +101,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        const tabProvider = new DevilProvider(context.extensionUri, connectionService, context)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
         )
@@ -109,7 +109,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels.set(panel, tabProvider)
         panel.onDidDispose(
           () => {
-            console.log("[Kilo New] Tab panel restored from restart disposed")
+            console.log("[Devil New] Tab panel restored from restart disposed")
             tabPanels.delete(panel)
             tabProvider.dispose()
           },
@@ -217,7 +217,7 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
+      return openDevilInNewTab(context, connectionService, agentManagerProvider, tabPanels)
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
       diffViewerProvider.openPanel()
@@ -272,15 +272,15 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   )
 
-  // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})
+  // Register URI handler for session imports (vscode://devilcode.kilo-code/devilcode/s/{sessionId})
   context.subscriptions.push(
     vscode.window.registerUriHandler({
       async handleUri(uri: vscode.Uri) {
-        const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
+        const match = uri.path.match(/^\/devilcode\/s\/([a-zA-Z0-9_-]+)$/)
         if (!match) return
         const sessionId = match[1]
-        console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
-        await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+        console.log("[Devil New] URI handler: opening cloud session:", sessionId)
+        await vscode.commands.executeCommand(`${DevilProvider.viewType}.focus`)
         provider.openCloudSession(sessionId)
       },
     }),
@@ -289,7 +289,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
 
-  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
+  // Start the CLI backend server eagerly so autocomplete works without opening a Devil tab.
   ensureBackendForAutocomplete(connectionService)
 
   // Register commit message generation
@@ -324,8 +324,8 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
       { scheme: "file" },
-      new KiloCodeActionProvider(),
-      KiloCodeActionProvider.metadata,
+      new DevilCodeActionProvider(),
+      DevilCodeActionProvider.metadata,
     ),
   )
 
@@ -344,11 +344,11 @@ export function deactivate() {
   TelemetryProxy.getInstance().shutdown()
 }
 
-async function openKiloInNewTab(
+async function openDevilInNewTab(
   context: vscode.ExtensionContext,
-  connectionService: KiloConnectionService,
+  connectionService: DevilConnectionService,
   agentManagerProvider: AgentManagerProvider,
-  tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
+  tabPanels: Map<vscode.WebviewPanel, DevilProvider>,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -370,7 +370,7 @@ async function openKiloInNewTab(
     dark: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "kilo-dark.svg"),
   }
 
-  const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+  const tabProvider = new DevilProvider(context.extensionUri, connectionService, context)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
@@ -384,7 +384,7 @@ async function openKiloInNewTab(
 
   panel.onDidDispose(
     () => {
-      console.log("[Kilo New] Tab panel disposed")
+      console.log("[Devil New] Tab panel disposed")
       tabPanels.delete(panel)
       tabProvider.dispose()
     },

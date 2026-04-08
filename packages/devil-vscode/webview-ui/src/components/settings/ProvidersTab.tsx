@@ -1,10 +1,10 @@
-import { Button } from "@kilocode/kilo-ui/button"
-import { Card } from "@kilocode/kilo-ui/card"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
-import { Tag } from "@kilocode/kilo-ui/tag"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Button } from "@devilcode/kilo-ui/button"
+import { Card } from "@devilcode/kilo-ui/card"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { ProviderIcon } from "@devilcode/kilo-ui/provider-icon"
+import { Tag } from "@devilcode/kilo-ui/tag"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { Component, For, Show, createMemo, onCleanup } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
@@ -17,7 +17,7 @@ import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
 import { visibleConnectedIds } from "./provider-visibility"
-import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
+import { DEVIL_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
 type ProviderSource = "env" | "api" | "config" | "custom"
@@ -39,7 +39,7 @@ const ProvidersTab: Component = () => {
     const ids = visibleConnectedIds(provider.connected(), provider.authStates())
     const all = provider.providers()
     return ids
-      .filter((id) => id !== KILO_PROVIDER_ID)
+      .filter((id) => id !== DEVIL_PROVIDER_ID)
       .map((id) => all[id])
       .filter((item): item is Provider => !!item)
   })
@@ -51,7 +51,7 @@ const ProvidersTab: Component = () => {
     return sortProviders(
       all.filter(
         (item) =>
-          item.id !== KILO_PROVIDER_ID &&
+          item.id !== DEVIL_PROVIDER_ID &&
           isPopularProvider(item.id) &&
           !connected.has(item.id) &&
           !disabled.has(item.id),
@@ -114,7 +114,7 @@ const ProvidersTab: Component = () => {
   }
 
   function connectProvider(item: Provider) {
-    if (item.id === KILO_PROVIDER_ID) {
+    if (item.id === DEVIL_PROVIDER_ID) {
       server.startLogin()
       return
     }
@@ -123,7 +123,7 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
-      {/* Kilo Gateway — always at the top, not editable */}
+      {/* Devil Gateway — always at the top, not editable */}
       <Card>
         <div
           style={{
@@ -136,7 +136,7 @@ const ProvidersTab: Component = () => {
         >
           <ProviderIcon id="synthetic" width={20} height={20} />
           <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
-            Kilo Gateway
+            Devil Gateway
           </span>
           <Show
             when={kiloLoggedIn()}
@@ -151,7 +151,7 @@ const ProvidersTab: Component = () => {
         </div>
       </Card>
 
-      {/* Connected providers (excluding Kilo) */}
+      {/* Connected providers (excluding Devil) */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
         {language.t("settings.providers.section.connected")}
       </h4>

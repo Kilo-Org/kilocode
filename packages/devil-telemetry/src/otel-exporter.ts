@@ -97,7 +97,7 @@ export class PostHogSpanExporter implements SpanExporter {
       $ai_span_id: span.spanContext().spanId,
       $ai_span_name: name,
       $ai_latency: duration,
-      ...(orgId && { kilocodeOrganizationId: orgId }),
+      ...(orgId && { devilcodeOrganizationId: orgId }),
     }
 
     // Add parent ID if present

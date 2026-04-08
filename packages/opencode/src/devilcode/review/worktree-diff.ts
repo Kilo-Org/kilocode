@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { $ } from "bun"
 import fs from "node:fs/promises"
 import path from "node:path"

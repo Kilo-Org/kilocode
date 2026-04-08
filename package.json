@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "name": "@kilocode/kilo",
+  "name": "@devilcode/devil",
   "description": "AI-powered development tool",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
+    "extension": "bun --cwd packages/devil-vscode script/launch.ts"
   },
   "workspaces": {
     "packages": [
@@ -80,15 +80,15 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.933.0",
-    "@kilocode/plugin": "workspace:*",
+    "@devilcode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
-    "@kilocode/sdk": "workspace:*",
+    "@devilcode/sdk": "workspace:*",
     "typescript": "catalog:",
     "@morphllm/morphsdk": "0.2.141"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kilo-Org/kilocode"
+    "url": "https://github.com/Devil-Org/devilcode"
   },
   "license": "MIT",
   "prettier": {

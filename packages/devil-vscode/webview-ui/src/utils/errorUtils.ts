@@ -1,4 +1,4 @@
-import type { AssistantMessage } from "@kilocode/sdk/v2"
+import type { AssistantMessage } from "@devilcode/sdk/v2"
 
 export function unwrapError(message: string): string {
   const text = message.replace(/^Error:\s*/, "").trim()

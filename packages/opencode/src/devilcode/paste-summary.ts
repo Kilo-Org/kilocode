@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 export function count(text: string) {
   return (text.match(/\n/g)?.length ?? 0) + 1

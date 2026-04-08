@@ -5,12 +5,12 @@ import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
 import { Instance } from "@/project/instance"
 import { existsSync } from "fs"
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { createDevilClient } from "@devilcode/sdk/v2" // devilcode_change
+import { importCloudSession, validateCloudFork } from "@/devilcode/cloud-session" // devilcode_change
 
 export const AttachCommand = cmd({
   command: "attach <url>",
-  describe: "attach to a running kilo server", // kilocode_change
+  describe: "attach to a running kilo server", // devilcode_change
   builder: (yargs) =>
     yargs
       .positional("url", {
@@ -43,7 +43,7 @@ export const AttachCommand = cmd({
       .option("password", {
         alias: ["p"],
         type: "string",
-        describe: "basic auth password (defaults to KILO_SERVER_PASSWORD)",
+        describe: "basic auth password (defaults to DEVIL_SERVER_PASSWORD)",
       }),
   handler: async (args) => {
     const unguard = win32InstallCtrlCGuard()
@@ -56,14 +56,14 @@ export const AttachCommand = cmd({
         return
       }
 
-      // kilocode_change start
+      // devilcode_change start
       const cloudForkError = validateCloudFork(args)
       if (cloudForkError) {
         UI.error(cloudForkError)
         process.exitCode = 1
         return
       }
-      // kilocode_change end
+      // devilcode_change end
 
       const directory = (() => {
         if (!args.dir) return undefined
@@ -76,7 +76,7 @@ export const AttachCommand = cmd({
         }
       })()
       const headers = (() => {
-        const password = args.password ?? process.env.KILO_SERVER_PASSWORD
+        const password = args.password ?? process.env.DEVIL_SERVER_PASSWORD
         if (!password) return undefined
         const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
         return { Authorization: auth }
@@ -85,10 +85,10 @@ export const AttachCommand = cmd({
         directory: directory && existsSync(directory) ? directory : process.cwd(),
         fn: () => TuiConfig.get(),
       })
-      // kilocode_change start - import cloud session before TUI renders
+      // devilcode_change start - import cloud session before TUI renders
       if (args.cloudFork && args.session) {
         UI.println("Importing session from cloud...")
-        const sdk = createKiloClient({
+        const sdk = createDevilClient({
           baseUrl: args.url,
           directory,
           headers,
@@ -102,7 +102,7 @@ export const AttachCommand = cmd({
         args.session = id
         args.cloudFork = false
       }
-      // kilocode_change end
+      // devilcode_change end
       await tui({
         url: args.url,
         config,

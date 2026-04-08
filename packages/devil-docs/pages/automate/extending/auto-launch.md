@@ -5,7 +5,7 @@ description: "Configure automatic agent launching"
 
 # Auto-Launch Configuration
 
-Auto-Launch Configuration allows you to automatically start a Kilo Code task when opening a workspace, with support for specific profiles and modes. This was originally developed as an internal test feature, but we decided to expose it to users in case anyone finds it useful!
+Auto-Launch Configuration allows you to automatically start a devil Code task when opening a workspace, with support for specific profiles and modes. This was originally developed as an internal test feature, but we decided to expose it to users in case anyone finds it useful!
 
 {% callout type="info" %}
 Auto-Launch Configuration is particularly useful for testing the same prompt against multiple models or project directories.
@@ -13,7 +13,7 @@ Auto-Launch Configuration is particularly useful for testing the same prompt aga
 
 ## How It Works
 
-When you open a workspace in VS Code, Kilo Code automatically checks for a launch configuration JSON file. If found, it:
+When you open a workspace in VS Code, devil Code automatically checks for a launch configuration JSON file. If found, it:
 
 - Switches to the specified provider profile (if provided)
 - Changes to the specified mode (if provided)
@@ -25,8 +25,8 @@ This happens seamlessly in the background, requiring no manual intervention.
 
 ### Basic Setup
 
-1. Create a `.kilocode` directory in your workspace root (if it doesn't exist)
-2. Create a `launchConfig.json` file inside the `.kilocode` directory
+1. Create a `.devilcode` directory in your workspace root (if it doesn't exist)
+2. Create a `launchConfig.json` file inside the `.devilcode` directory
 3. Configure your launch settings using the JSON format below
 
 ### Configuration Format
@@ -47,7 +47,7 @@ This happens seamlessly in the background, requiring no manual intervention.
 
 - **`profile`** (string): Name of an existing [API Configuration Profile](/docs/ai-providers) to use for this task. Must exactly match a profile name from your settings.
 
-- **`mode`** (string): The Kilo Code mode to use for this task. Available modes:
+- **`mode`** (string): The devil Code mode to use for this task. Available modes:
   - `"code"` - General-purpose coding tasks
   - `"architect"` - Planning and technical design
   - `"ask"` - Questions and explanations
@@ -120,7 +120,7 @@ The configuration file must be located at:
 
 ```
 your-workspace/
-└── .kilocode/
+└── .devilcode/
     └── launchConfig.json
 ```
 
@@ -128,7 +128,7 @@ This file should be at the root of your workspace (the same level as your main p
 
 ## Behavior and Timing
 
-- Auto-launch triggers approximately 500ms after Kilo Code extension activation
+- Auto-launch triggers approximately 500ms after devil Code extension activation
 - The sidebar automatically receives focus before the task launches
 - Profile switching happens before mode switching (if both are specified)
 - The task launches after all configuration changes are applied
@@ -138,7 +138,7 @@ This file should be at the root of your workspace (the same level as your main p
 
 ### Configuration Not Loading
 
-1. Verify file location: `.kilocode/launchConfig.json` in workspace root
+1. Verify file location: `.devilcode/launchConfig.json` in workspace root
 2. Check JSON syntax with a JSON validator
 3. Ensure `prompt` field is present and not empty
 4. Check VS Code Developer Console for error messages

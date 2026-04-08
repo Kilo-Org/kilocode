@@ -1,11 +1,11 @@
 ---
 title: "Browser Use"
-description: "Using Kilo Code to interact with web browsers"
+description: "Using devil Code to interact with web browsers"
 ---
 
 # Browser Use
 
-Kilo Code provides browser automation capabilities that let you interact with websites directly from your coding workflow. This feature supports testing web applications, automating browser tasks, and capturing screenshots without leaving your editor.
+devil Code provides browser automation capabilities that let you interact with websites directly from your coding workflow. This feature supports testing web applications, automating browser tasks, and capturing screenshots without leaving your editor.
 
 {% callout type="info" title="Model Support Required" %}
 Browser Use requires an advanced agentic model. It is typically most reliable with recent high-capability models (for example Claude Sonnet 4 class models).
@@ -16,12 +16,12 @@ Browser Use requires an advanced agentic model. It is typically most reliable wi
 {% tabs %}
 {% tab label="VSCode" %}
 
-Browser automation is built into the extension and requires no manual setup. Enable it from **Settings → Browser** and Kilo handles the rest automatically.
+Browser automation is built into the extension and requires no manual setup. Enable it from **Settings → Browser** and devil handles the rest automatically.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Kilo Code uses [Playwright](https://playwright.dev/) for browser automation. Add it to your `kilo.jsonc` configuration:
+devil Code uses [Playwright](https://playwright.dev/) for browser automation. Add it to your `devil.jsonc` configuration:
 
 ```json
 {
@@ -39,11 +39,11 @@ Playwright downloads Chromium automatically on first use.
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-By default, Kilo Code uses a built-in browser that:
+By default, devil Code uses a built-in browser that:
 
-- Launches automatically when you ask Kilo to visit a website
+- Launches automatically when you ask devil to visit a website
 - Captures screenshots of web pages
-- Allows Kilo to interact with web elements
+- Allows devil to interact with web elements
 - Runs invisibly in the background
 
 All of this happens directly within VS Code, with no setup required.
@@ -55,15 +55,15 @@ All of this happens directly within VS Code, with no setup required.
 
 A typical browser interaction follows this pattern:
 
-1. Ask Kilo to visit a website
-2. Kilo launches the browser and shows you a screenshot
+1. Ask devil to visit a website
+2. devil launches the browser and shows you a screenshot
 3. Request additional actions (clicking, typing, scrolling)
-4. Kilo closes the browser when finished
+4. devil closes the browser when finished
 
 For example:
 
 - `Open the browser and view our site.`
-- `Can you check if my website at https://kilocode.ai is displaying correctly?`
+- `Can you check if my website at https://devilcode.ai is displaying correctly?`
 - `Browse http://localhost:3000, scroll down to the bottom of the page and check if the footer information is displaying correctly.`
 
 ## How Browser Actions Work
@@ -71,7 +71,7 @@ For example:
 {% tabs %}
 {% tab label="VSCode" %}
 
-Kilo launches a browser automatically when asked and returns screenshots after each action so you can see what's happening. It can navigate to URLs, click elements, fill in forms, scroll, hover, select from dropdowns, and drag and drop — all driven by natural language instructions in chat.
+devil launches a browser automatically when asked and returns screenshots after each action so you can see what's happening. It can navigate to URLs, click elements, fill in forms, scroll, hover, select from dropdowns, and drag and drop — all driven by natural language instructions in chat.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -137,7 +137,7 @@ Browser automation settings are available under **Settings → Browser**:
 {% /tab %}
 {% tab label="CLI" %}
 
-Browser automation is configured in your `kilo.jsonc` file. No additional settings are required — Playwright manages the browser lifecycle automatically.
+Browser automation is configured in your `devil.jsonc` file. No additional settings are required — Playwright manages the browser lifecycle automatically.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -153,14 +153,14 @@ Browser automation is configured in your `kilo.jsonc` file. No additional settin
 
 ### Accessing Settings
 
-To change Browser / Computer Use settings in Kilo:
+To change Browser / Computer Use settings in devil:
 
-1. Click the gear icon {% codicon name="gear" /%} in Kilo Code
+1. Click the gear icon {% codicon name="gear" /%} in devil Code
 2. Open `Browser / Computer Use`
 
 ### Enable/Disable Browser Use
 
-**Purpose**: Master toggle that enables Kilo to interact with websites using a Puppeteer-controlled browser.
+**Purpose**: Master toggle that enables devil to interact with websites using a Puppeteer-controlled browser.
 
 To change this setting:
 
@@ -168,7 +168,7 @@ To change this setting:
 
 ### Viewport Size
 
-**Purpose**: Determines the resolution of the browser session Kilo Code uses.
+**Purpose**: Determines the resolution of the browser session devil Code uses.
 
 **Tradeoff**: Higher values provide a larger viewport but increase token usage.
 
@@ -199,7 +199,7 @@ To change this setting:
 
 ### Remote Browser Connection
 
-**Purpose**: Connect Kilo to an existing Chrome browser instead of using the built-in browser.
+**Purpose**: Connect devil to an existing Chrome browser instead of using the built-in browser.
 
 **Benefits**:
 
@@ -223,7 +223,7 @@ To enable this feature:
 
 #### Connecting to a Visible Chrome Window
 
-Connect to a visible Chrome window to observe Kilo's interactions in real-time:
+Connect to a visible Chrome window to observe devil's interactions in real-time:
 
 **macOS**
 

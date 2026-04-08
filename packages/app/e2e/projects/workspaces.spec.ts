@@ -50,9 +50,9 @@ async function setupWorkspaceTest(page: Page, project: { slug: string }) {
   return { rootSlug, slug, directory: dir }
 }
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can enable and disable workspaces from project menu", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async ({ slug }) => {
@@ -71,9 +71,9 @@ test.skip("can enable and disable workspaces from project menu", async ({ page, 
   })
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can create a workspace", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace creation issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace creation issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async ({ slug }) => {
@@ -109,7 +109,7 @@ test.skip("can create a workspace", async ({ page, withProject }) => {
   })
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("non-git projects keep workspace mode disabled", async ({ page, withProject }) => {
   await page.setViewportSize({ width: 1400, height: 800 })
 
@@ -153,9 +153,9 @@ test.skip("non-git projects keep workspace mode disabled", async ({ page, withPr
   }
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can rename a workspace", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async (project) => {
@@ -177,9 +177,9 @@ test.skip("can rename a workspace", async ({ page, withProject }) => {
   })
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can reset a workspace", async ({ page, sdk, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async (project) => {
@@ -241,9 +241,9 @@ test.skip("can reset a workspace", async ({ page, sdk, withProject }) => {
   })
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can delete a workspace", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async (project) => {
@@ -290,9 +290,9 @@ test.skip("can delete a workspace", async ({ page, withProject }) => {
   })
 })
 
-// kilocode_change: skip
+// devilcode_change: skip
 test.skip("can reorder workspaces by drag and drop", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
   await withProject(async ({ slug: rootSlug }) => {
     const workspaces = [] as { directory: string; slug: string }[]

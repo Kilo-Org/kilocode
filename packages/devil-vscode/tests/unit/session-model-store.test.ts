@@ -16,7 +16,7 @@ function makeProvider(id: string, models: string[]): Provider {
   return result
 }
 
-const KILO_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
+const DEVIL_AUTO: ModelSelection = { providerID: "kilo", modelID: "kilo-auto/free" }
 
 const providers: Record<string, Provider> = {
   kilo: makeProvider("kilo", ["kilo-auto/free"]),
@@ -28,7 +28,7 @@ function env(): ResolveEnv {
   return {
     providers,
     connected: ["kilo", "anthropic", "openai"],
-    fallback: KILO_AUTO,
+    fallback: DEVIL_AUTO,
     getModeModel: () => null,
     getGlobalModel: () => null,
   }
@@ -60,7 +60,7 @@ describe("per-session model selection", () => {
 
     // Session B should NOT see claude — it should fall back to the default
     const sessionB = getSessionModel(updated, e, "session-b", "code")
-    expect(sessionB).toEqual(KILO_AUTO)
+    expect(sessionB).toEqual(DEVIL_AUTO)
   })
 
   it("each session preserves its own model independently", () => {

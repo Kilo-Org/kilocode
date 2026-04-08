@@ -237,8 +237,8 @@ async function loadLanguageForFileExt(fileExtension: string): Promise<Language> 
   const repoRoot = path.resolve(__dirname, "..", "..", "..", "..", "..")
 
   // The WASM files are copied to src/dist/ during build
-  // In production (compiled): __dirname = /path/to/kilocode/src/dist or dist/
-  // In development: __dirname = /path/to/kilocode/src/services/autocomplete/continuedev/core/util
+  // In production (compiled): __dirname = /path/to/devilcode/src/dist or dist/
+  // In development: __dirname = /path/to/devilcode/src/services/autocomplete/continuedev/core/util
   const candidatePaths: string[] = [
     // Production: WASM files are in the same directory as the compiled code
     path.join(__dirname, filename),

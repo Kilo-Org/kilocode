@@ -133,7 +133,7 @@ function git(args: string[], cwd: string): string {
     cwd,
     stdout: "pipe",
     stderr: "pipe",
-    windowsHide: true, // kilocode_change - prevent cmd.exe flash on Windows
+    windowsHide: true, // devilcode_change - prevent cmd.exe flash on Windows
   })
   return result.stdout.toString().trimEnd()
 }

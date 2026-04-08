@@ -64,7 +64,7 @@
 | New Item                              | Existing Page(s)                                    |
 | ------------------------------------- | --------------------------------------------------- |
 | Sessions & Sharing                    | `advanced-usage/sessions`                           |
-| **Kilo for Teams** (subheader)        |                                                     |
+| **devil for Teams** (subheader)        |                                                     |
 | About Plans                           | `plans/about`                                       |
 | Getting Started with Teams            | `plans/getting-started`                             |
 | Dashboard                             | `plans/dashboard`                                   |
@@ -92,13 +92,13 @@
 | Integrations Overview          | `advanced-usage/integrations`         |
 | Code Reviews                   | `advanced-usage/code-reviews`         |
 | Agent Manager                  | `advanced-usage/agent-manager`        |
-| **Extending Kilo** (subheader) |                                       |
+| **Extending devil** (subheader) |                                       |
 | Local Models                   | `advanced-usage/local-models`         |
 | Shell Integration              | `features/shell-integration`          |
 | Auto-launch Configuration      | `features/auto-launch-configuration`  |
 | **MCP** (subheader)            |                                       |
 | MCP Overview                   | `features/mcp/overview`               |
-| Using MCP in Kilo Code         | `features/mcp/using-mcp-in-kilo-code` |
+| Using MCP in devil Code         | `features/mcp/using-mcp-in-devil-code` |
 | Using MCP in CLI               | `features/mcp/using-mcp-in-cli`       |
 | What is MCP                    | `features/mcp/what-is-mcp`            |
 | Server Transports              | `features/mcp/server-transports`      |

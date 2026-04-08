@@ -1,11 +1,11 @@
 ---
 title: "Integrations"
-description: "Overview of Kilo Code integrations"
+description: "Overview of devil Code integrations"
 ---
 
-# Kilo Code Integrations
+# devil Code Integrations
 
-Kilo Integrations lets you connect your GitHub or GitLab account (soon Bitbucket) to enable advanced features inside Kilo Code. Once connected, Kilo can access your repositories securely, enabling features like **Code Reviews**, **Cloud Agents**, and **Kilo Deploy**.
+devil Integrations lets you connect your GitHub or GitLab account (soon Bitbucket) to enable advanced features inside devil Code. Once connected, devil can access your repositories securely, enabling features like **Code Reviews**, **Cloud Agents**, and **devil Deploy**.
 
 ## Supported Platforms
 
@@ -16,16 +16,16 @@ Kilo Integrations lets you connect your GitHub or GitLab account (soon Bitbucket
 
 ## What You Can Do With Integrations
 
-- **Connect GitHub or GitLab to Kilo Code** in a few clicks
-- **Enable advanced features** like Cloud Agents, Code Reviews, and Kilo Deploy
-- **Authorize repository access** so Kilo can analyze and work with your code
+- **Connect GitHub or GitLab to devil Code** in a few clicks
+- **Enable advanced features** like Cloud Agents, Code Reviews, and devil Deploy
+- **Authorize repository access** so devil can analyze and work with your code
 
 ## Prerequisites
 
 Before connecting:
 
 - You must have a **GitHub** or **GitLab** account.
-- For GitHub: You need permission to install GitHub Apps for the repositories you want Kilo to access.
+- For GitHub: You need permission to install GitHub Apps for the repositories you want devil to access.
 - For GitLab: You need **Maintainer** role (or higher) on the projects you want to connect.
 - (Optional) If you're connecting an organization, you must be an admin or have app installation permissions.
 
@@ -35,17 +35,17 @@ Before connecting:
 
 ### 1. Open the Integrations Page
 
-Go to your **Personal** or **Organization Dashboard**, and navigate to the [Integrations](https://app.kilo.ai/integrations) tab.
+Go to your **Personal** or **Organization Dashboard**, and navigate to the [Integrations](https://app.devil.ai/integrations) tab.
 
 ### 2. Start the Connection Flow
 
 1. Click **Configure** on the GitHub panel.
-2. You'll be redirected to GitHub to authorize the **KiloConnect** App.
+2. You'll be redirected to GitHub to authorize the **DevilConnect** App.
 3. Select the GitHub account or organization you want to connect.
 
 ### 3. Choose Repository Access
 
-GitHub will ask which repositories you want Kilo to access:
+GitHub will ask which repositories you want devil to access:
 
 - **All repositories** (recommended if you plan to use Cloud Agents or Deploy across multiple projects)
 - **Only selected repositories** (choose specific repos)
@@ -56,9 +56,9 @@ Click **Install & Authorize** to continue.
 
 Once approved:
 
-- You'll return to the Kilo Integrations page.
+- You'll return to the devil Integrations page.
 - GitHub will show a **Connected** status.
-- Your Kilo workspace can now access GitHub repositories securely.
+- Your devil workspace can now access GitHub repositories securely.
 
 ---
 
@@ -70,11 +70,11 @@ You can connect GitLab using **OAuth** or a **Personal Access Token (PAT)**. Bot
 {% tab label="OAuth (GitLab.com)" %}
 
 1. Go to the **Integrations** page:
-   - **Personal**: [app.kilo.ai/integrations/gitlab](https://app.kilo.ai/integrations/gitlab)
+   - **Personal**: [app.devil.ai/integrations/gitlab](https://app.devil.ai/integrations/gitlab)
    - **Organization**: Your organization → Integrations → GitLab
 2. Click **Connect GitLab**
 3. Authorize the application on GitLab
-4. You'll be redirected back to Kilo with the connection active
+4. You'll be redirected back to devil with the connection active
 
 {% /tab %}
 {% tab label="OAuth (Self-Hosted)" %}
@@ -83,12 +83,12 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 
 1. In your GitLab instance, go to **Admin Area → Applications** (or **User Settings → Applications**)
 2. Create a new application:
-   - **Name**: `Kilo Code`
-   - **Redirect URI**: `https://app.kilo.ai/api/integrations/gitlab/callback`
+   - **Name**: `devil Code`
+   - **Redirect URI**: `https://app.devil.ai/api/integrations/gitlab/callback`
    - **Scopes**: `api`, `read_user`, `read_repository`, `write_repository`
    - **Confidential**: Yes
 3. Copy the **Application ID** and **Secret**
-4. In Kilo, go to the GitLab integration page
+4. In devil, go to the GitLab integration page
 5. Enter your **Instance URL**, **Client ID**, and **Client Secret**
 6. Click **Connect** and authorize
 
@@ -98,11 +98,11 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 1. In GitLab, go to **User Settings → Access Tokens**
 2. Create a token with the `api` scope
 3. Copy the token
-4. In Kilo, go to the GitLab integration page
+4. In devil, go to the GitLab integration page
 5. Paste the token (and enter your Instance URL for self-hosted)
 6. Click **Connect**
 
-> PAT tokens cannot be refreshed automatically. When your token expires, create a new one in GitLab and reconnect in Kilo.
+> PAT tokens cannot be refreshed automatically. When your token expires, create a new one in GitLab and reconnect in devil.
 
 {% /tab %}
 {% /tabs %}
@@ -111,11 +111,11 @@ For self-hosted GitLab instances using OAuth, you need to register an OAuth appl
 
 ## What Happens After Connecting
 
-Once your Git provider is connected, the following features are enabled in Kilo:
+Once your Git provider is connected, the following features are enabled in devil:
 
 ### Cloud Agents
 
-- Run Kilo Code in the cloud from any device
+- Run devil Code in the cloud from any device
 - Auto-create branches and push work continuously
 - Work from anywhere while keeping your repo in sync
 
@@ -125,9 +125,9 @@ Once your Git provider is connected, the following features are enabled in Kilo:
 - Consistent feedback based on your team's standards
 - See the [Code Reviews guide](/docs/automate/code-reviews/overview) for setup
 
-### Kilo Deploy
+### devil Deploy
 
-- Deploy Next.js 14 & 15 apps directly from Kilo
+- Deploy Next.js 14 & 15 apps directly from devil
 - Trigger rebuilds automatically on push
 - Manage deployment logs and history
 
@@ -144,7 +144,7 @@ Once your Git provider is connected, the following features are enabled in Kilo:
 From the **Integrations** page, click "Manage on GitHub" to:
 
 - View the GitHub account you connected
-- Update which repositories Kilo has access to
+- Update which repositories devil has access to
 - Disconnect GitHub entirely
 - Reauthorize the app if permissions change
 
@@ -155,7 +155,7 @@ From the **Integrations** page:
 - Click **Disconnect** to remove the GitLab connection
 - Your tokens are cleared, but webhook configuration is preserved so reconnecting restores your setup
 
-> Disconnecting from Kilo does not revoke OAuth tokens on GitLab's side. You can manually revoke them from **GitLab → User Settings → Applications → Authorized Applications**.
+> Disconnecting from devil does not revoke OAuth tokens on GitLab's side. You can manually revoke them from **GitLab → User Settings → Applications → Authorized Applications**.
 
 ---
 
@@ -164,7 +164,7 @@ From the **Integrations** page:
 ### GitHub
 
 **"I don't see my repositories."**
-Ensure the KiloConnect App is installed for the correct GitHub org and that repo access includes the repositories you need.
+Ensure the DevilConnect App is installed for the correct GitHub org and that repo access includes the repositories you need.
 
 **"My organization blocks third-party apps."**
 You may need an admin to approve installing GitHub Apps.
@@ -183,11 +183,11 @@ You need **Maintainer role** on the GitLab project for webhook and bot token cre
 **"Token expired."**
 
 - **OAuth**: Tokens refresh automatically. If refresh fails, reconnect from the integration page.
-- **PAT**: Create a new token in GitLab and reconnect in Kilo.
+- **PAT**: Create a new token in GitLab and reconnect in devil.
 
 **"Self-hosted connection issues."**
 
 - Verify your instance URL is accessible from the internet
 - Ensure HTTPS is configured
 - Check that OAuth application scopes include all required scopes
-- Verify the redirect URI matches: `https://app.kilo.ai/api/integrations/gitlab/callback`
+- Verify the redirect URI matches: `https://app.devil.ai/api/integrations/gitlab/callback`

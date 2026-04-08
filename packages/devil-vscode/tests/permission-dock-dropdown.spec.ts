@@ -20,7 +20,7 @@ if (IS_DARWIN) {
   test.skip()
 }
 
-const GLOBALS = "colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern"
+const GLOBALS = "colorScheme:dark;theme:devil-vscode;vscodeTheme:dark-modern"
 
 function storyUrl(storyId: string) {
   return `/iframe.html?id=${storyId}&viewMode=story&globals=${GLOBALS}`

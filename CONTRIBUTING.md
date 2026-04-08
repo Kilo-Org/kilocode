@@ -1,6 +1,6 @@
-# Contributing to Kilo CLI
+# Contributing to Devil CLI
 
-See [the Documentation for details on contributing](https://kilo.ai/docs/contributing).
+See [the Documentation for details on contributing](https://devil.ai/docs/contributing).
 
 ## TL;DR
 
@@ -12,9 +12,9 @@ There are lots of ways to contribute to the project:
 - **Feature Requests:** Suggest new features or improvements
 - **Community Support:** Help other users in the community
 
-The Kilo Community is [on Discord](https://kilo.ai/discord).
+The Devil Community is [on Discord](https://devil.ai/discord).
 
-## Developing Kilo CLI
+## Developing Devil CLI
 
 - **Requirements:** Bun 1.3.10+
 - Install dependencies and start the dev server from the repo root:
@@ -36,13 +36,13 @@ This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-pat
 
 ### Running against a different directory
 
-By default, `bun dev` runs Kilo CLI in the `packages/opencode` directory. To run it against a different directory or repository:
+By default, `bun dev` runs Devil CLI in the `packages/opencode` directory. To run it against a different directory or repository:
 
 ```bash
 bun dev <directory>
 ```
 
-To run Kilo CLI in the root of the repo itself:
+To run Devil CLI in the root of the repo itself:
 
 ```bash
 bun dev .
@@ -59,14 +59,14 @@ To compile a standalone executable:
 Then run it with:
 
 ```bash
-./packages/opencode/dist/@kilocode/cli-<platform>/bin/kilo
+./packages/opencode/dist/@devilcode/cli-<platform>/bin/devil
 ```
 
 Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
 
-### Understanding bun dev vs kilo
+### Understanding bun dev vs devil
 
-During development, `bun dev` is the local equivalent of the built `kilo` command. Both run the same CLI interface:
+During development, `bun dev` is the local equivalent of the built `devil` command. Both run the same CLI interface:
 
 ```bash
 # Development (from project root)
@@ -75,30 +75,30 @@ bun dev serve            # Start headless API server
 bun dev web              # Start server + open web interface
 
 # Production
-kilo --help          # Show all available commands
-kilo serve           # Start headless API server
-kilo web             # Start server + open web interface
+devil --help          # Show all available commands
+devil serve           # Start headless API server
+devil web             # Start server + open web interface
 ```
 
 ### Testing with a local backend
 
-To point the CLI at a local backend (e.g., a locally running Kilo API server on port 3000), set the `KILO_API_URL` environment variable:
+To point the CLI at a local backend (e.g., a locally running Devil API server on port 3000), set the `DEVIL_API_URL` environment variable:
 
 ```bash
-KILO_API_URL=http://localhost:3000 bun dev
+DEVIL_API_URL=http://localhost:3000 bun dev
 ```
 
-This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
+This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.devil.ai`.
 
 There are also optional overrides for other services:
 
-| Variable                  | Default                          | Purpose                                   |
-| ------------------------- | -------------------------------- | ----------------------------------------- |
-| `KILO_API_URL`            | `https://api.kilo.ai`            | Kilo API (gateway, auth, models, profile) |
-| `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync               |
-| `KILO_MODELS_URL`         | `https://models.dev`             | Model metadata                            |
+| Variable                   | Default                           | Purpose                                    |
+| -------------------------- | --------------------------------- | ------------------------------------------ |
+| `DEVIL_API_URL`            | `https://api.devil.ai`            | Devil API (gateway, auth, models, profile) |
+| `DEVIL_SESSION_INGEST_URL` | `https://ingest.devilsessions.ai` | Session export / cloud sync                |
+| `DEVIL_MODELS_URL`         | `https://models.dev`              | Model metadata                             |
 
-> **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
+> **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `DEVIL_API_URL=http://localhost:3000` automatically.
 
 ### Pull Request Expectations
 

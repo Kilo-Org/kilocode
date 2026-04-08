@@ -10,16 +10,16 @@ import { Log } from "@/util/log"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
-import type { Event } from "@kilocode/sdk/v2"
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
+import type { Event } from "@devilcode/sdk/v2"
+import { createDevilClient } from "@devilcode/sdk/v2" // devilcode_change
 import type { EventSource } from "./context/sdk"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
 import { Instance } from "@/project/instance"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, validateCloudFork } from "@/devilcode/cloud-session" // devilcode_change
 
 declare global {
-  const KILO_WORKER_PATH: string // kilocode_change
+  const DEVIL_WORKER_PATH: string // devilcode_change
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
@@ -52,7 +52,7 @@ function createEventSource(client: RpcClient): EventSource {
 }
 
 async function target() {
-  if (typeof KILO_WORKER_PATH !== "undefined") return KILO_WORKER_PATH
+  if (typeof DEVIL_WORKER_PATH !== "undefined") return DEVIL_WORKER_PATH
   const dist = new URL("./cli/cmd/tui/worker.js", import.meta.url)
   if (await Filesystem.exists(fileURLToPath(dist))) return dist
   return new URL("./worker.ts", import.meta.url)
@@ -67,12 +67,12 @@ async function input(value?: string) {
 
 export const TuiThreadCommand = cmd({
   command: "$0 [project]",
-  describe: "start kilo tui", // kilocode_change
+  describe: "start kilo tui", // devilcode_change
   builder: (yargs) =>
     withNetworkOptions(yargs)
       .positional("project", {
         type: "string",
-        describe: "path to start kilo in", // kilocode_change
+        describe: "path to start kilo in", // devilcode_change
       })
       .option("model", {
         type: "string",
@@ -123,14 +123,14 @@ export const TuiThreadCommand = cmd({
         process.exitCode = 1
         return
       }
-      // kilocode_change start
+      // devilcode_change start
       const cloudForkError = validateCloudFork(args)
       if (cloudForkError) {
         UI.error(cloudForkError)
         process.exitCode = 1
         return
       }
-      // kilocode_change end
+      // devilcode_change end
 
       // Resolve relative --project paths from PWD, then use the real cwd after
       // chdir so the thread and worker share the same directory key.
@@ -185,7 +185,7 @@ export const TuiThreadCommand = cmd({
         })
         worker.terminate()
       }
-      // kilocode_change start - graceful shutdown on external signals
+      // devilcode_change start - graceful shutdown on external signals
       // The worker's postMessage for the RPC result may never be delivered
       // after shutdown because the worker's event loop drains. Send the
       // shutdown request without awaiting the response, wait for the worker
@@ -248,7 +248,7 @@ export const TuiThreadCommand = cmd({
         shutdownAndExit({ reason: "parent-exit", code: 0 })
       }, 1000)
       orphanWatch.unref()
-      // kilocode_change end
+      // devilcode_change end
 
       const prompt = await input(args.prompt)
       const config = await Instance.provide({
@@ -282,10 +282,10 @@ export const TuiThreadCommand = cmd({
       }, 1000).unref?.()
 
       try {
-        // kilocode_change start - import cloud session before TUI renders
+        // devilcode_change start - import cloud session before TUI renders
         if (args.cloudFork && args.session) {
           UI.println("Importing session from cloud...")
-          const sdk = createKiloClient({
+          const sdk = createDevilClient({
             baseUrl: transport.url,
             fetch: transport.fetch,
             directory: cwd,
@@ -299,7 +299,7 @@ export const TuiThreadCommand = cmd({
           args.session = id
           args.cloudFork = false
         }
-        // kilocode_change end
+        // devilcode_change end
 
         await tui({
           url: transport.url,

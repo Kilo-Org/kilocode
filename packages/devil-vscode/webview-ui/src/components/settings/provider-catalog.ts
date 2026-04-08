@@ -1,9 +1,9 @@
 import { iconNames, type IconName } from "@opencode-ai/ui/icons/provider"
 import type { Provider } from "../../types/messages"
 import {
-  KILO_PROVIDER_ID,
+  DEVIL_PROVIDER_ID,
   PROVIDER_PRIORITY as POPULAR_PROVIDER_IDS,
-  createKiloFallbackProvider,
+  createDevilFallbackProvider,
   providerOrderIndex,
 } from "../../../../src/shared/provider-model"
 
@@ -21,19 +21,18 @@ export function popularProviderIndex(providerID: string) {
 }
 
 export function providerIcon(providerID: string): IconName {
-  if (providerID === KILO_PROVIDER_ID) return "synthetic"
+  if (providerID === DEVIL_PROVIDER_ID) return "synthetic"
   if (iconNames.includes(providerID as IconName)) return providerID as IconName
   return "synthetic"
 }
 
 export function kiloFallbackProvider(): Provider {
-  return createKiloFallbackProvider()
+  return createDevilFallbackProvider()
 }
 
 export function providerNoteKey(providerID: string) {
   if (providerID === "kilo") return "dialog.provider.kilo.note"
   if (providerID === "opencode") return "dialog.provider.opencode.note"
-  if (providerID === "anthropic") return "dialog.provider.anthropic.note"
   if (providerID.startsWith("github-copilot")) return "dialog.provider.copilot.note"
   if (providerID === "openai") return "dialog.provider.openai.note"
   if (providerID === "google") return "dialog.provider.google.note"

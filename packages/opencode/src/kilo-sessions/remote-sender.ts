@@ -28,7 +28,7 @@ function normalizeModel(model: z.infer<typeof RemotePromptInput.shape.model>) {
   if (!model) return undefined
   return {
     providerID: "kilo",
-    modelID: model.startsWith("kilocode/") ? model.slice("kilocode/".length) : model,
+    modelID: model.startsWith("devilcode/") ? model.slice("devilcode/".length) : model,
   }
 }
 

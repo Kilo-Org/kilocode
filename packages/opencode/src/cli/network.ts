@@ -19,8 +19,8 @@ const options = {
   },
   "mdns-domain": {
     type: "string" as const,
-    describe: "custom domain name for mDNS service (default: kilo.local)", // kilocode_change
-    default: "kilo.local", // kilocode_change
+    describe: "custom domain name for mDNS service (default: devil.local)", // devilcode_change
+    default: "devil.local", // devilcode_change
   },
   cors: {
     type: "string" as const,

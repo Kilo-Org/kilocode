@@ -124,7 +124,7 @@ export const dict = {
   "dialog.model.expand": "展開",
   "dialog.model.collapse": "收起",
 
-  "dialog.model.unpaid.freeModels.title": "Kilo 提供的免費模型",
+  "dialog.model.unpaid.freeModels.title": "Devil 提供的免費模型",
   "dialog.model.unpaid.addMore.title": "從熱門供應商新增更多模型",
 
   "dialog.provider.viewAll": "查看更多供應商",
@@ -137,7 +137,7 @@ export const dict = {
   "provider.connect.status.waiting": "等待授權...",
   "provider.connect.status.failed": "授權失敗：{{error}}",
   "provider.connect.apiKey.description":
-    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Kilo 中使用 {{provider}} 模型。",
+    "輸入你的 {{provider}} API 金鑰以連線帳戶，並在 Devil 中使用 {{provider}} 模型。",
   "provider.connect.apiKey.label": "{{provider}} API 金鑰",
   "provider.connect.apiKey.placeholder": "API 金鑰",
   "provider.connect.apiKey.required": "API 金鑰為必填",
@@ -148,14 +148,14 @@ export const dict = {
   "provider.connect.opencodeZen.visit.suffix": " 取得你的 API 金鑰。",
   "provider.connect.oauth.code.visit.prefix": "造訪 ",
   "provider.connect.oauth.code.visit.link": "此連結",
-  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.code.visit.suffix": " 取得授權碼，以連線你的帳戶並在 Devil 中使用 {{provider}} 模型。",
   "provider.connect.oauth.code.label": "{{method}} 授權碼",
   "provider.connect.oauth.code.placeholder": "授權碼",
   "provider.connect.oauth.code.required": "授權碼為必填",
   "provider.connect.oauth.code.invalid": "授權碼無效",
   "provider.connect.oauth.auto.visit.prefix": "造訪 ",
   "provider.connect.oauth.auto.visit.link": "此連結",
-  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Kilo 中使用 {{provider}} 模型。",
+  "provider.connect.oauth.auto.visit.suffix": " 並輸入以下程式碼，以連線你的帳戶並在 Devil 中使用 {{provider}} 模型。",
   "provider.connect.oauth.auto.confirmationCode": "確認碼",
   "provider.connect.toast.connected.title": "{{provider}} 已連線",
   "provider.connect.toast.connected.description": "現在可以使用 {{provider}} 模型了。",
@@ -279,7 +279,7 @@ export const dict = {
   "dialog.directory.empty": "找不到資料夾",
 
   "dialog.server.title": "伺服器",
-  "dialog.server.description": "切換此應用程式連線的 Kilo 伺服器。",
+  "dialog.server.description": "切換此應用程式連線的 Devil 伺服器。",
   "dialog.server.search.placeholder": "搜尋伺服器",
   "dialog.server.empty": "暫無伺服器",
   "dialog.server.add.title": "新增伺服器",
@@ -404,7 +404,7 @@ export const dict = {
   "toast.session.listFailed.title": "無法載入 {{project}} 的工作階段",
 
   "toast.update.title": "有可用更新",
-  "toast.update.description": "Kilo 有新版本 ({{version}}) 可安裝。",
+  "toast.update.description": "Devil 有新版本 ({{version}}) 可安裝。",
   "toast.update.action.installRestart": "安裝並重新啟動",
   "toast.update.action.notYet": "稍後",
 
@@ -415,7 +415,7 @@ export const dict = {
   "error.page.action.checking": "檢查中...",
   "error.page.action.checkUpdates": "檢查更新",
   "error.page.action.updateTo": "更新到 {{version}}",
-  "error.page.report.prefix": "請將此錯誤回報給 Kilo 團隊",
+  "error.page.report.prefix": "請將此錯誤回報給 Devil 團隊",
   "error.page.report.discord": "在 Discord 上",
   "error.page.version": "版本：{{version}}",
 
@@ -441,7 +441,7 @@ export const dict = {
   "error.chain.didYouMean": "你是不是想輸入：{{suggestions}}",
   "error.chain.modelNotFound": "找不到模型：{{provider}}/{{model}}",
   "error.chain.checkConfig": "請檢查你的設定 (opencode.json) 中的 provider/model 名稱",
-  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意：Kilo 暫不支援 MCP 認證。',
+  "error.chain.mcpFailed": 'MCP 伺服器 "{{name}}" 啟動失敗。注意：Devil 暫不支援 MCP 認證。',
   "error.chain.providerAuthFailed": "供應商認證失敗 ({{provider}}): {{message}}",
   "error.chain.providerInitFailed": '無法初始化供應商 "{{provider}}"。請檢查憑證和設定。',
   "error.chain.configJsonInvalid": "設定檔 {{path}} 不是有效的 JSON(C)",
@@ -579,12 +579,12 @@ export const dict = {
   "sidebar.workspaces.enable": "啟用工作區",
   "sidebar.workspaces.disable": "停用工作區",
   "sidebar.gettingStarted.title": "開始使用",
-  "sidebar.gettingStarted.line1": "Kilo 提供免費模型，你可以立即開始使用。",
+  "sidebar.gettingStarted.line1": "Devil 提供免費模型，你可以立即開始使用。",
   "sidebar.gettingStarted.line2": "連線任意供應商即可使用更多模型，如 Claude、GPT、Gemini 等。",
   "sidebar.project.recentSessions": "最近工作階段",
   "sidebar.project.viewAllSessions": "查看全部工作階段",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Devil Desktop",
   "settings.section.desktop": "桌面",
   "settings.section.server": "伺服器",
   "settings.tab.general": "一般",
@@ -596,11 +596,11 @@ export const dict = {
   "settings.general.section.sounds": "音效",
 
   "settings.general.row.language.title": "語言",
-  "settings.general.row.language.description": "變更 Kilo 的顯示語言",
+  "settings.general.row.language.description": "變更 Devil 的顯示語言",
   "settings.general.row.appearance.title": "外觀",
-  "settings.general.row.appearance.description": "自訂 Kilo 在你的裝置上的外觀",
+  "settings.general.row.appearance.description": "自訂 Devil 在你的裝置上的外觀",
   "settings.general.row.theme.title": "主題",
-  "settings.general.row.theme.description": "自訂 Kilo 的主題。",
+  "settings.general.row.theme.description": "自訂 Devil 的主題。",
   "settings.general.row.font.title": "字型",
   "settings.general.row.font.description": "自訂程式碼區塊使用的等寬字型",
 
@@ -608,13 +608,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "更新後顯示「新功能」彈出視窗",
 
   "settings.updates.row.startup.title": "啟動時檢查更新",
-  "settings.updates.row.startup.description": "在 Kilo 啟動時自動檢查更新",
+  "settings.updates.row.startup.description": "在 Devil 啟動時自動檢查更新",
   "settings.updates.row.check.title": "檢查更新",
   "settings.updates.row.check.description": "手動檢查更新並在有更新時安裝",
   "settings.updates.action.checkNow": "立即檢查",
   "settings.updates.action.checking": "檢查中...",
   "settings.updates.toast.latest.title": "已是最新版本",
-  "settings.updates.toast.latest.description": "你正在使用最新版本的 Kilo。",
+  "settings.updates.toast.latest.description": "你正在使用最新版本的 Devil。",
 
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
@@ -708,7 +708,7 @@ export const dict = {
   "settings.providers.title": "供應商",
   "settings.providers.description": "可在此調整供應商設定。",
   "settings.providers.betaNotice":
-    "目前在設定介面中僅能配置 Kilo Gateway 供應商。在測試期間，即將推出配置其他供應商的支援。在此期間，您可以使用 CLI 或設定檔來配置供應商。我們致力於保持 Kilo 開放，絕不綁定。",
+    "目前在設定介面中僅能配置 Devil Gateway 供應商。在測試期間，即將推出配置其他供應商的支援。在此期間，您可以使用 CLI 或設定檔來配置供應商。我們致力於保持 Devil 開放，絕不綁定。",
   "settings.providers.section.connected": "已連線的供應商",
   "settings.providers.connected.empty": "沒有已連線的供應商",
   "settings.providers.section.popular": "熱門供應商",
@@ -881,7 +881,7 @@ export const dict = {
   "deviceAuth.toast.codeCopied": "驗證碼已複製到剪貼簿",
   "deviceAuth.toast.errorCopied": "錯誤已複製到剪貼簿",
   "deviceAuth.status.initiating": "正在啟動登入...",
-  "deviceAuth.title": "登入 Kilo Code",
+  "deviceAuth.title": "登入 Devil Code",
   "deviceAuth.step1": "步驟 1：開啟此 URL",
   "deviceAuth.action.copyUrl": "複製 URL",
   "deviceAuth.action.openBrowser": "開啟瀏覽器",
@@ -902,7 +902,7 @@ export const dict = {
 
   "profile.title": "個人資料",
   "profile.notLoggedIn": "尚未登入",
-  "profile.action.login": "使用 Kilo Code 登入",
+  "profile.action.login": "使用 Devil Code 登入",
   "profile.balance.title": "餘額",
   "profile.balance.refresh": "重新整理餘額",
   "profile.action.dashboard": "控制面板",
@@ -920,10 +920,10 @@ export const dict = {
 
   "settings.experimental.title": "實驗性功能",
   "settings.language.title": "語言",
-  "settings.aboutKiloCode.title": "關於 Kilo Code",
+  "settings.aboutDevilCode.title": "關於 Devil Code",
 
   "session.messages.empty": "在下方輸入訊息以開始對話。",
-  "session.messages.welcome": "Kilo Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
+  "session.messages.welcome": "Devil Code 是一個 AI 程式設計助手。讓它幫你建構功能、修復 bug 或解釋程式碼庫。",
   "session.messages.scrollToBottom": "捲動至底部",
   "session.status.writingResponse": "正在撰寫回覆…",
   "session.status.retry": "正在重試…",
@@ -950,38 +950,38 @@ export const dict = {
   "time.thisMonth": "本月",
   "time.older": "更早",
 
-  "settings.aboutKiloCode.status.connected": "已連線",
-  "settings.aboutKiloCode.status.connecting": "連線中...",
-  "settings.aboutKiloCode.status.disconnected": "已中斷",
-  "settings.aboutKiloCode.status.error": "錯誤",
-  "settings.aboutKiloCode.cliServer": "CLI 伺服器",
-  "settings.aboutKiloCode.status.label": "狀態：",
-  "settings.aboutKiloCode.port.label": "連接埠：",
-  "settings.aboutKiloCode.versionInfo": "版本資訊",
-  "settings.aboutKiloCode.version.label": "版本：",
-  "settings.aboutKiloCode.extensionName": "Kilo Code 擴充功能",
-  "settings.aboutKiloCode.community": "社群與支援",
-  "settings.aboutKiloCode.feedback.prefix": "如果您有任何問題或回饋，歡迎在以下平台提交 issue",
-  "settings.aboutKiloCode.feedback.or": "或",
-  "settings.aboutKiloCode.support.prefix": "如有帳單或帳戶問題，請聯繫客戶支援",
-  "settings.aboutKiloCode.resetSettings.title": "重置設定",
-  "settings.aboutKiloCode.resetSettings.description":
+  "settings.aboutDevilCode.status.connected": "已連線",
+  "settings.aboutDevilCode.status.connecting": "連線中...",
+  "settings.aboutDevilCode.status.disconnected": "已中斷",
+  "settings.aboutDevilCode.status.error": "錯誤",
+  "settings.aboutDevilCode.cliServer": "CLI 伺服器",
+  "settings.aboutDevilCode.status.label": "狀態：",
+  "settings.aboutDevilCode.port.label": "連接埠：",
+  "settings.aboutDevilCode.versionInfo": "版本資訊",
+  "settings.aboutDevilCode.version.label": "版本：",
+  "settings.aboutDevilCode.extensionName": "Devil Code 擴充功能",
+  "settings.aboutDevilCode.community": "社群與支援",
+  "settings.aboutDevilCode.feedback.prefix": "如果您有任何問題或回饋，歡迎在以下平台提交 issue",
+  "settings.aboutDevilCode.feedback.or": "或",
+  "settings.aboutDevilCode.support.prefix": "如有帳單或帳戶問題，請聯繫客戶支援",
+  "settings.aboutDevilCode.resetSettings.title": "重置設定",
+  "settings.aboutDevilCode.resetSettings.description":
     "此操作僅將 VS Code 擴充功能專屬設定重置為預設值。與 CLI 共享的設定（例如模式和自動核准規則）儲存在 CLI 設定中，不會被重置。",
-  "settings.aboutKiloCode.resetSettings.button": "重置所有設定",
-  "settings.aboutKiloCode.settingsTransfer.title": "設定轉移",
-  "settings.aboutKiloCode.settingsTransfer.description": "匯出或匯入設定，以便在 VS Code 實例之間轉移。",
-  "settings.aboutKiloCode.exportSettings": "匯出",
-  "settings.aboutKiloCode.importSettings": "匯入",
-  "settings.aboutKiloCode.importSettings.invalidJson": "無效的 JSON 檔案。請選擇有效的設定檔。",
-  "settings.aboutKiloCode.importSettings.invalidConfig": "檔案不包含有效的 Kilo 設定。",
-  "settings.aboutKiloCode.importSettings.tooLarge": "檔案過大。設定檔必須小於 1 MB。",
-  "settings.aboutKiloCode.importSettings.newerVersion": "此檔案由較新版本的 Kilo 匯出。部分設定可能會被忽略。",
-  "settings.aboutKiloCode.importSettings.success": "設定已匯入。請檢視上方的變更，然後點擊儲存。",
+  "settings.aboutDevilCode.resetSettings.button": "重置所有設定",
+  "settings.aboutDevilCode.settingsTransfer.title": "設定轉移",
+  "settings.aboutDevilCode.settingsTransfer.description": "匯出或匯入設定，以便在 VS Code 實例之間轉移。",
+  "settings.aboutDevilCode.exportSettings": "匯出",
+  "settings.aboutDevilCode.importSettings": "匯入",
+  "settings.aboutDevilCode.importSettings.invalidJson": "無效的 JSON 檔案。請選擇有效的設定檔。",
+  "settings.aboutDevilCode.importSettings.invalidConfig": "檔案不包含有效的 Devil 設定。",
+  "settings.aboutDevilCode.importSettings.tooLarge": "檔案過大。設定檔必須小於 1 MB。",
+  "settings.aboutDevilCode.importSettings.newerVersion": "此檔案由較新版本的 Devil 匯出。部分設定可能會被忽略。",
+  "settings.aboutDevilCode.importSettings.success": "設定已匯入。請檢視上方的變更，然後點擊儲存。",
 
-  "settings.aboutKiloCode.telemetry.title": "遙測",
-  "settings.aboutKiloCode.telemetry.description":
+  "settings.aboutDevilCode.telemetry.title": "遙測",
+  "settings.aboutDevilCode.telemetry.description":
     '遙測由 VS Code 內建的遙測設定控制。若要停用，請前往「設定」>「遙測」>「遙測層級」並將其設為 "off"。重新啟動 VS Code 以套用變更。',
-  "settings.aboutKiloCode.telemetry.openSettings": "開啟遙測設定",
+  "settings.aboutDevilCode.telemetry.openSettings": "開啟遙測設定",
 
   "settings.agentBehaviour.subtab.modes": "模式",
   "settings.agentBehaviour.subtab.agents": "代理程式",
@@ -999,7 +999,7 @@ export const dict = {
   "settings.browser.headless.title": "無頭模式",
   "settings.browser.headless.description": "以無頭模式執行（無可見瀏覽器視窗）。",
 
-  "settings.language.description": "選擇 Kilo Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
+  "settings.language.description": "選擇 Devil Code 介面的語言。「自動」使用 VS Code 的顯示語言。",
   "settings.language.auto": "自動（VS Code 語言）",
   "settings.language.current": "目前：",
 
@@ -1134,7 +1134,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 相容性",
   "settings.agentBehaviour.claudeCompat.title": "載入 Claude Code 檔案",
   "settings.agentBehaviour.claudeCompat.description":
-    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Kilo 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。",
+    "從您的 Claude Code 設定目錄將 CLAUDE.md 指示與技能載入至工作階段中。如果您希望 Devil 使用您的 Claude Code 指示與技能，請啟用此選項。需要重新啟動。",
   "settings.agentBehaviour.mcpDetail.command": "指令",
   "settings.agentBehaviour.mcpDetail.args": "引數",
   "settings.agentBehaviour.mcpDetail.env": "環境",
@@ -1207,12 +1207,12 @@ export const dict = {
 
   // legacy-migration start
   "settings.legacyMigration.link": "從舊版遷移",
-  "settings.aboutKiloCode.legacyMigration.title": "舊版遷移",
-  "settings.aboutKiloCode.legacyMigration.description":
-    "從舊版 Kilo Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
+  "settings.aboutDevilCode.legacyMigration.title": "舊版遷移",
+  "settings.aboutDevilCode.legacyMigration.description":
+    "從舊版 Devil Code 安裝遷移設定，包括供應商 API 金鑰和預設模型。",
 
   // Screen 1 — What's New
-  "migration.whatsNew.title": "Kilo Code 新功能",
+  "migration.whatsNew.title": "Devil Code 新功能",
   "migration.whatsNew.subtitle": "我們在更快、更高效的基礎上重新建構了擴充功能。",
   "migration.whatsNew.features.performance.title": "更快的 Agent 效能",
   "migration.whatsNew.features.performance.detail":
@@ -1224,7 +1224,7 @@ export const dict = {
     "一個統一的介面，可以平行執行多個 Agent，每個 Agent 各自使用獨立的 worktree——在同一個地方監控進度、切換上下文和審查變更。",
   "migration.whatsNew.features.foundation.title": "共享基礎",
   "migration.whatsNew.features.foundation.detail":
-    "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
+    "所有 Devil 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
   "migration.whatsNew.blogLink": "閱讀完整公告",
   "migration.whatsNew.continue": "繼續",
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { AutocompleteModel } from "../AutocompleteModel"
-import type { KiloConnectionService } from "../../cli-backend"
+import type { DevilConnectionService } from "../../cli-backend"
 
 function createMockConnectionService(state: "connecting" | "connected" | "disconnected" | "error" = "connected") {
   return {
@@ -11,7 +11,7 @@ function createMockConnectionService(state: "connecting" | "connected" | "discon
       },
     }),
     onStateChange: vi.fn().mockReturnValue(() => {}),
-  } as unknown as KiloConnectionService
+  } as unknown as DevilConnectionService
 }
 
 describe("AutocompleteModel", () => {
@@ -80,9 +80,9 @@ describe("AutocompleteModel", () => {
   })
 
   describe("getProviderDisplayName", () => {
-    it("returns Kilo Gateway", () => {
+    it("returns Devil Gateway", () => {
       const model = new AutocompleteModel()
-      expect(model.getProviderDisplayName()).toBe("Kilo Gateway")
+      expect(model.getProviderDisplayName()).toBe("Devil Gateway")
     })
   })
 

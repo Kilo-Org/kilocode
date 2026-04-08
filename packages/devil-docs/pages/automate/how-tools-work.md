@@ -1,15 +1,15 @@
 ---
 title: How Tools Work
-description: Learn how Kilo Code's tools automate your development workflow
+description: Learn how devil Code's tools automate your development workflow
 ---
 
 # How Tools Work
 
-Kilo Code uses tools to interact with your code and environment. These specialized helpers perform specific actions like reading files, making edits, running commands, or searching your codebase. Tools provide automation for common development tasks without requiring manual execution.
+devil Code uses tools to interact with your code and environment. These specialized helpers perform specific actions like reading files, making edits, running commands, or searching your codebase. Tools provide automation for common development tasks without requiring manual execution.
 
 ## Tool Workflow
 
-Describe what you want to accomplish in natural language, and Kilo Code will:
+Describe what you want to accomplish in natural language, and devil Code will:
 
 1. Select the appropriate tool based on your request
 2. Present the tool with its parameters for your review
@@ -56,7 +56,7 @@ When a tool is proposed, you'll see an approval prompt in the **Permission Dock*
 
 **User:** Create a file named `greeting.js` that logs a greeting message
 
-**Kilo Code:** (Proposes the `write` tool)
+**devil Code:** (Proposes the `write` tool)
 
 The extension shows the file path and proposed content for review. Click **Approve** to execute or **Deny** to cancel.
 
@@ -69,7 +69,7 @@ When a tool is proposed, you'll see Save and Reject buttons along with an option
 
 **User:** Create a file named `greeting.js` that logs a greeting message
 
-**Kilo Code:** (Proposes the `write_to_file` tool as shown in the image above)
+**devil Code:** (Proposes the `write_to_file` tool as shown in the image above)
 
 ```xml
 <write_to_file>
@@ -87,7 +87,7 @@ greet('World');
 
 **User:** (Clicks "Save" in the interface)
 
-**Kilo Code:** (Confirms file creation)
+**devil Code:** (Confirms file creation)
 
 {% /tab %}
 {% /tabs %}
@@ -97,7 +97,7 @@ greet('World');
 {% tabs %}
 {% tab label="VSCode" %}
 
-Every tool use is subject to a permission check. The default action for any tool with no matching rule in your config is **`ask`** — meaning Kilo will pause and prompt you before executing it.
+Every tool use is subject to a permission check. The default action for any tool with no matching rule in your config is **`ask`** — meaning devil will pause and prompt you before executing it.
 
 **Default permissions by tool:**
 
@@ -138,7 +138,7 @@ This safety mechanism ensures you maintain control over which files are modified
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
-Every tool use requires your explicit approval. When Kilo proposes a tool, you'll see:
+Every tool use requires your explicit approval. When devil proposes a tool, you'll see:
 
 - A "Save" button to approve and execute the tool
 - A "Reject" button to decline the proposed tool
@@ -165,8 +165,8 @@ This safety mechanism ensures you maintain control over which files are modified
 | `apply_patch` | Applies unified diffs (used with certain models)       | Edit     |
 | `bash`        | Runs shell commands                                    | Execute  |
 | `webfetch`    | Fetches a URL                                          | Web      |
-| `websearch`   | Searches the web (Kilo/OpenRouter users)               | Web      |
-| `codesearch`  | Semantic code search (Kilo/OpenRouter users)           | Web      |
+| `websearch`   | Searches the web (devil/OpenRouter users)               | Web      |
+| `codesearch`  | Semantic code search (devil/OpenRouter users)           | Web      |
 | `question`    | Asks you a clarifying question with selectable options | Workflow |
 | `task`        | Spawns a sub-agent session                             | Workflow |
 | `todowrite`   | Creates and updates a session TODO list                | Workflow |

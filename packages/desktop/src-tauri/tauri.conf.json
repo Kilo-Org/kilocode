@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Kilo",
+  "productName": "Devil",
   "identifier": "ai.kilo.desktop.dev",
-  "mainBinaryName": "Kilo",
+  "mainBinaryName": "Devil",
   "version": "../package.json",
   "build": {
     "beforeDevCommand": "bun run dev",

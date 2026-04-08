@@ -1,7 +1,7 @@
-import { KiloCodeIcon } from "../../components"
+import { devilcodeIcon } from "../../components"
 
-export const kiloCodeIcon = {
-  render: KiloCodeIcon,
+export const devilcodeIcon = {
+  render: devilcodeIcon,
   selfClosing: true,
   attributes: {
     size: {

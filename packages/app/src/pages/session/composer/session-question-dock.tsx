@@ -4,19 +4,19 @@ import { Button } from "@opencode-ai/ui/button"
 import { DockPrompt } from "@opencode-ai/ui/dock-prompt"
 import { Icon } from "@opencode-ai/ui/icon"
 import { showToast } from "@opencode-ai/ui/toast"
-import type { QuestionAnswer, QuestionRequest } from "@kilocode/sdk/v2"
+import type { QuestionAnswer, QuestionRequest } from "@devilcode/sdk/v2"
 import { useLanguage } from "@/context/language"
 import { useSDK } from "@/context/sdk"
 
 const cache = new Map<string, { tab: number; answers: QuestionAnswer[]; custom: string[]; customOn: boolean[] }>()
 
-// kilocode_change start - add onModeAction prop for mode-switching support
+// devilcode_change start - add onModeAction prop for mode-switching support
 export const SessionQuestionDock: Component<{
   request: QuestionRequest
   onSubmit: () => void
   onModeAction?: (input: { mode: string; text: string; description?: string }) => void
 }> = (props) => {
-  // kilocode_change end
+  // devilcode_change end
   const sdk = useSDK()
   const language = useLanguage()
 
@@ -167,10 +167,10 @@ export const SessionQuestionDock: Component<{
   const submit = () => void reply(questions().map((_, i) => store.answers[i] ?? []))
 
   const pick = (answer: string, custom: boolean = false) => {
-    // kilocode_change start - find option to check for mode
+    // devilcode_change start - find option to check for mode
     // Custom answers won't match a predefined option, so mode switching is intentionally skipped
     const option = options().find((o) => o.label === answer)
-    // kilocode_change end
+    // devilcode_change end
 
     setStore("editing", false)
 
@@ -178,7 +178,7 @@ export const SessionQuestionDock: Component<{
     if (custom) setStore("custom", store.tab, answer)
     if (!custom) setStore("customOn", store.tab, false)
 
-    // kilocode_change start - trigger mode switch after question reply completes
+    // devilcode_change start - trigger mode switch after question reply completes
     if (!multi()) {
       const pending = reply([[answer]])
       if (option?.mode && props.onModeAction) {
@@ -191,7 +191,7 @@ export const SessionQuestionDock: Component<{
       }
       return
     }
-    // kilocode_change end
+    // devilcode_change end
   }
 
   const toggle = (answer: string) => {

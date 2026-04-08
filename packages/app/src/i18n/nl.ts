@@ -115,7 +115,7 @@ export const dict = {
   "dialog.model.manage.description": "Pas aan welke modellen in de modelkiezer verschijnen.",
   "dialog.model.manage.provider.toggle": "Alle {{provider}} modellen in-/uitschakelen",
 
-  "dialog.model.unpaid.freeModels.title": "Gratis modellen aangeboden door Kilo",
+  "dialog.model.unpaid.freeModels.title": "Gratis modellen aangeboden door Devil",
   "dialog.model.unpaid.addMore.title": "Meer modellen toevoegen van populaire providers",
 
   "dialog.provider.viewAll": "Toon meer providers",
@@ -128,7 +128,7 @@ export const dict = {
   "provider.connect.status.waiting": "Wachten op autorisatie...",
   "provider.connect.status.failed": "Autorisatie mislukt: {{error}}",
   "provider.connect.apiKey.description":
-    "Voer uw {{provider}} API key in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+    "Voer uw {{provider}} API key in om uw account te verbinden en {{provider}} modellen te gebruiken in Devil.",
   "provider.connect.apiKey.label": "{{provider}} API key",
   "provider.connect.apiKey.placeholder": "API key",
   "provider.connect.apiKey.required": "API key is vereist",
@@ -142,7 +142,7 @@ export const dict = {
   "provider.connect.oauth.code.visit.prefix": "Bezoek ",
   "provider.connect.oauth.code.visit.link": "deze link",
   "provider.connect.oauth.code.visit.suffix":
-    " om uw autorisatiecode te verkrijgen, uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+    " om uw autorisatiecode te verkrijgen, uw account te verbinden en {{provider}} modellen te gebruiken in Devil.",
   "provider.connect.oauth.code.label": "{{method}} autorisatiecode",
   "provider.connect.oauth.code.placeholder": "Autorisatiecode",
   "provider.connect.oauth.code.required": "Autorisatiecode is vereist",
@@ -150,7 +150,7 @@ export const dict = {
   "provider.connect.oauth.auto.visit.prefix": "Bezoek ",
   "provider.connect.oauth.auto.visit.link": "deze link",
   "provider.connect.oauth.auto.visit.suffix":
-    " en voer de onderstaande code in om uw account te verbinden en {{provider}} modellen te gebruiken in Kilo.",
+    " en voer de onderstaande code in om uw account te verbinden en {{provider}} modellen te gebruiken in Devil.",
   "provider.connect.oauth.auto.confirmationCode": "Bevestigingscode",
   "provider.connect.toast.connected.title": "{{provider}} verbonden",
   "provider.connect.toast.connected.description": "{{provider}} modellen zijn nu beschikbaar om te gebruiken.",
@@ -307,7 +307,7 @@ export const dict = {
   "dialog.directory.empty": "Geen mappen gevonden",
 
   "dialog.server.title": "Servers",
-  "dialog.server.description": "Wissel met welke Kilo server deze app verbindt.",
+  "dialog.server.description": "Wissel met welke Devil server deze app verbindt.",
   "dialog.server.search.placeholder": "Zoek servers",
   "dialog.server.empty": "Nog geen servers",
   "dialog.server.add.title": "Server toevoegen",
@@ -448,7 +448,7 @@ export const dict = {
   "toast.project.reloadFailed.title": "Herladen van {{project}} mislukt",
 
   "toast.update.title": "Update beschikbaar",
-  "toast.update.description": "Een nieuwe versie van Kilo ({{version}}) is nu beschikbaar om te installeren.",
+  "toast.update.description": "Een nieuwe versie van Devil ({{version}}) is nu beschikbaar om te installeren.",
   "toast.update.action.installRestart": "Installeren en herstarten",
   "toast.update.action.notYet": "Nog niet",
 
@@ -459,7 +459,7 @@ export const dict = {
   "error.page.action.checking": "Controleren...",
   "error.page.action.checkUpdates": "Controleren op updates",
   "error.page.action.updateTo": "Updaten naar {{version}}",
-  "error.page.report.prefix": "Meld deze fout alstublieft aan het Kilo team",
+  "error.page.report.prefix": "Meld deze fout alstublieft aan het Devil team",
   "error.page.report.discord": "op Discord",
   "error.page.version": "Versie: {{version}}",
 
@@ -479,7 +479,7 @@ export const dict = {
   "error.chain.didYouMean": "Bedoelde u: {{suggestions}}",
   "error.chain.modelNotFound": "Model niet gevonden: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Controleer uw config (opencode.json) provider/modelnamen",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op, Kilo ondersteunt nog geen MCP-authenticatie.',
+  "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op, Devil ondersteunt nog geen MCP-authenticatie.',
   "error.chain.providerAuthFailed": "Providerauthenticatie mislukt ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Initialiseren van provider "{{provider}}" mislukt. Controleer referenties en configuratie.',
@@ -610,13 +610,13 @@ export const dict = {
   "sidebar.workspaces.enable": "Werkruimtes inschakelen",
   "sidebar.workspaces.disable": "Werkruimtes uitschakelen",
   "sidebar.gettingStarted.title": "Aan de slag",
-  "sidebar.gettingStarted.line1": "Kilo bevat gratis modellen zodat u direct kunt beginnen.",
+  "sidebar.gettingStarted.line1": "Devil bevat gratis modellen zodat u direct kunt beginnen.",
   "sidebar.gettingStarted.line2": "Verbind een provider om modellen te gebruiken, incl. Claude, GPT, Gemini etc.",
   "sidebar.project.recentSessions": "Recente sessies",
   "sidebar.project.viewAllSessions": "Bekijk alle sessies",
   "sidebar.project.clearNotifications": "Meldingen wissen",
 
-  "app.name.desktop": "Kilo Desktop",
+  "app.name.desktop": "Devil Desktop",
 
   "settings.section.desktop": "Desktop",
   "settings.section.server": "Server",
@@ -624,7 +624,7 @@ export const dict = {
   "settings.tab.shortcuts": "Sneltoetsen",
   "settings.desktop.section.wsl": "WSL",
   "settings.desktop.wsl.title": "WSL-integratie",
-  "settings.desktop.wsl.description": "Draai de Kilo server binnen WSL op Windows.",
+  "settings.desktop.wsl.description": "Draai de Devil server binnen WSL op Windows.",
 
   "settings.general.section.appearance": "Uiterlijk",
   "settings.general.section.notifications": "Systeemmeldingen",
@@ -634,11 +634,11 @@ export const dict = {
   "settings.general.section.display": "Weergave",
 
   "settings.general.row.language.title": "Taal",
-  "settings.general.row.language.description": "Wijzig de weergavetaal voor Kilo",
+  "settings.general.row.language.description": "Wijzig de weergavetaal voor Devil",
   "settings.general.row.appearance.title": "Uiterlijk",
-  "settings.general.row.appearance.description": "Pas aan hoe Kilo eruitziet op uw apparaat",
+  "settings.general.row.appearance.description": "Pas aan hoe Devil eruitziet op uw apparaat",
   "settings.general.row.theme.title": "Thema",
-  "settings.general.row.theme.description": "Pas het thema van Kilo aan.",
+  "settings.general.row.theme.description": "Pas het thema van Devil aan.",
   "settings.general.row.font.title": "Lettertype",
   "settings.general.row.font.description": "Pas het monospace-lettertype in codeblokken aan",
   "settings.general.row.reasoningSummaries.title": "Redeneersamenvattingen weergeven",
@@ -659,13 +659,13 @@ export const dict = {
   "settings.general.row.releaseNotes.description": "Toon Wat is nieuw pop-ups na updates",
 
   "settings.updates.row.startup.title": "Controleren op updates bij opstarten",
-  "settings.updates.row.startup.description": "Automatisch op updates controleren wanneer Kilo start",
+  "settings.updates.row.startup.description": "Automatisch op updates controleren wanneer Devil start",
   "settings.updates.row.check.title": "Controleren op updates",
   "settings.updates.row.check.description": "Handmatig op updates controleren en installeren indien beschikbaar",
   "settings.updates.action.checkNow": "Nu controleren",
   "settings.updates.action.checking": "Controleren...",
   "settings.updates.toast.latest.title": "U bent up-to-date",
-  "settings.updates.toast.latest.description": "U draait de nieuwste versie van Kilo.",
+  "settings.updates.toast.latest.description": "U draait de nieuwste versie van Devil.",
   "font.option.ibmPlexMono": "IBM Plex Mono",
   "font.option.cascadiaCode": "Cascadia Code",
   "font.option.firaCode": "Fira Code",

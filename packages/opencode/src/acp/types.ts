@@ -1,5 +1,5 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
-import type { KiloClient } from "@kilocode/sdk/v2"
+import type { DevilClient } from "@devilcode/sdk/v2"
 
 export interface ACPSessionState {
   id: string
@@ -15,7 +15,7 @@ export interface ACPSessionState {
 }
 
 export interface ACPConfig {
-  sdk: KiloClient
+  sdk: DevilClient
   defaultModel?: {
     providerID: string
     modelID: string

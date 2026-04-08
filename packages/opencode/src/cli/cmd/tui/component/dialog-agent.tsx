@@ -11,7 +11,7 @@ export function DialogAgent() {
     local.agent.list().map((item) => {
       return {
         value: item.name,
-        title: item.displayName ?? item.name, // kilocode_change
+        title: item.displayName ?? item.name, // devilcode_change
         description:
           [item.deprecated && "deprecated", item.native && "native"].filter(Boolean).join(", ") || item.description,
       }
@@ -21,7 +21,7 @@ export function DialogAgent() {
   return (
     <DialogSelect
       title="Select agent"
-      current={local.agent.current()?.name ?? ""} // kilocode_change
+      current={local.agent.current()?.name ?? ""} // devilcode_change
       options={options()}
       onSelect={(option) => {
         local.agent.set(option.value)

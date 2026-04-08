@@ -3,11 +3,11 @@ import { Plugin } from "../plugin"
 import { map, filter, pipe, fromEntries, mapValues } from "remeda"
 import z from "zod"
 import { fn } from "@/util/fn"
-import type { AuthOuathResult, Hooks } from "@kilocode/plugin"
+import type { AuthOuathResult, Hooks } from "@devilcode/plugin"
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "@/auth"
-import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
-import { ModelCache } from "./model-cache" // kilocode_change
+import { Telemetry } from "@devilcode/kilo-telemetry" // devilcode_change
+import { ModelCache } from "./model-cache" // devilcode_change
 
 export namespace ProviderAuth {
   const state = Instance.state(async () => {
@@ -113,18 +113,18 @@ export namespace ProviderAuth {
           await Auth.set(input.providerID, info)
         }
 
-        // kilocode_change start - Update telemetry identity on Kilo auth
+        // devilcode_change start - Update telemetry identity on Devil auth
         if (input.providerID === "kilo") {
           const token = "refresh" in result ? result.access : result.key
           const accountId = "refresh" in result ? result.accountId : undefined
           await Telemetry.updateIdentity(token, accountId)
         }
         Telemetry.trackAuthSuccess(input.providerID)
-        // kilocode_change end
+        // devilcode_change end
 
-        // kilocode_change start - invalidate provider/model cache after auth change
+        // devilcode_change start - invalidate provider/model cache after auth change
         ModelCache.clear(input.providerID)
-        // kilocode_change end
+        // devilcode_change end
 
         return
       }
@@ -143,9 +143,9 @@ export namespace ProviderAuth {
         type: "api",
         key: input.key,
       })
-      // kilocode_change start - invalidate provider/model cache after auth change
+      // devilcode_change start - invalidate provider/model cache after auth change
       ModelCache.clear(input.providerID)
-      // kilocode_change end
+      // devilcode_change end
     },
   )
 

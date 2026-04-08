@@ -1,11 +1,11 @@
 import * as vscode from "vscode"
 import { AutocompleteServiceManager } from "./AutocompleteServiceManager"
 import { ensureBackendForAutocomplete } from "./ensure-backend"
-import type { KiloConnectionService } from "../cli-backend"
+import type { DevilConnectionService } from "../cli-backend"
 
 export const registerAutocompleteProvider = (
   context: vscode.ExtensionContext,
-  connectionService: KiloConnectionService,
+  connectionService: DevilConnectionService,
 ) => {
   const autocompleteManager = new AutocompleteServiceManager(context, connectionService)
   context.subscriptions.push(autocompleteManager)

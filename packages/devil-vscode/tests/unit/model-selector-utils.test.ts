@@ -4,7 +4,7 @@ import {
   buildTriggerLabel,
   stripSubProviderPrefix,
   sanitizeName,
-  KILO_GATEWAY_ID,
+  DEVIL_GATEWAY_ID,
   PROVIDER_ORDER,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
@@ -12,7 +12,7 @@ const labels = { select: "Select model", noProviders: "No providers", notSet: "N
 
 describe("providerSortKey", () => {
   it("returns 0 for kilo gateway", () => {
-    expect(providerSortKey(KILO_GATEWAY_ID)).toBe(0)
+    expect(providerSortKey(DEVIL_GATEWAY_ID)).toBe(0)
   })
 
   it("returns correct index for known providers", () => {
@@ -55,8 +55,8 @@ describe("stripSubProviderPrefix", () => {
     expect(stripSubProviderPrefix("claude-3-5-sonnet")).toBe("claude-3-5-sonnet")
   })
 
-  it("does not strip 'Kilo: ' prefix", () => {
-    expect(stripSubProviderPrefix("Kilo: Auto")).toBe("Kilo: Auto")
+  it("does not strip 'Devil: ' prefix", () => {
+    expect(stripSubProviderPrefix("Devil: Auto")).toBe("Devil: Auto")
     expect(stripSubProviderPrefix("kilo: Auto")).toBe("kilo: Auto")
   })
 })
@@ -105,7 +105,7 @@ describe("buildTriggerLabel", () => {
 
   it("strips sub-provider prefix from resolved name for kilo gateway models", () => {
     expect(
-      buildTriggerLabel("Anthropic: Claude Sonnet", KILO_GATEWAY_ID, undefined, null, false, "", true, labels),
+      buildTriggerLabel("Anthropic: Claude Sonnet", DEVIL_GATEWAY_ID, undefined, null, false, "", true, labels),
     ).toBe("Claude Sonnet")
   })
 

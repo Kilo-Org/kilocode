@@ -2,7 +2,7 @@
 sidebar_label: OVHcloud AI Endpoints
 ---
 
-# Using OVHcloud AI Endpoints with Kilo Code
+# Using OVHcloud AI Endpoints with devil Code
 
 OVHcloud is a French leading Cloud provider in Europe with data sovereignty and privacy.
 
@@ -22,12 +22,12 @@ You can report any bugs or feedbacks by chatting with us in our [Discord server]
 2.  **Navigate to Public Cloud:** Go to the Public Cloud section, and create a new project. Navigate to AI Endpoints in the _AI & Machine Learning_ section.
 3.  **Create a Key:** Click to _API keys_ and create a new key.
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+1.  **Open devil Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the devil Code panel.
 2.  **Select Provider:** Choose "OVHcloud AI Endpoints" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your AI Endpoints API key into the "OVHcloud AI Endpoints API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -37,12 +37,12 @@ You can report any bugs or feedbacks by chatting with us in our [Discord server]
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add OVHcloud AI Endpoints and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores this in your `devil.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Set the API key as an environment variable or configure it in your `devil.json` config file:
 
 **Environment variable:**
 
@@ -50,7 +50,7 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 export OVHCLOUD_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {

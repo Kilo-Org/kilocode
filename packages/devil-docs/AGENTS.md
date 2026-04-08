@@ -1,6 +1,6 @@
 ## Project Overview
 
-This is the Kilo Code documentation site. Kilo Code is the leading open source agentic engineering platform.
+This is the devil Code documentation site. devil Code is the leading open source agentic engineering platform.
 
 ## Dev Server
 
@@ -25,10 +25,10 @@ This project uses [Markdoc](https://markdoc.dev/) for rendering markdown with cu
 Use the Markdoc image tag format:
 
 ```markdown
-{% image src="/docs/img/kilo-provider/connected-accounts.png" alt="Connect account screen" width="800" caption="Connect account screen" /%}
+{% image src="/docs/img/devil-provider/connected-accounts.png" alt="Connect account screen" width="800" caption="Connect account screen" /%}
 ```
 
-Note that this site is served under kilo.ai/docs so the `/docs` prefix **must** be present in every image path.
+Note that this site is served under devil.ai/docs so the `/docs` prefix **must** be present in every image path.
 
 Image attributes:
 

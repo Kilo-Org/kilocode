@@ -2,7 +2,7 @@
 
 ## Overview
 
-This extension is a **ground-up rebuild** of the [old Kilo Code extension](https://github.com/Kilo-Org/kilocode-legacy) using Kilo CLI as the backend. Rather than migrating the old extension's codebase, we started fresh with a Solid.js webview, a CLI server manager, and a message-based protocol between extension host and webview. This new extension lives in the [kilocode monorepo](https://github.com/Kilo-Org/kilocode/tree/main/packages/kilo-vscode).
+This extension is a **ground-up rebuild** of the [old Kilo Code extension](https://github.com/Kilo-Org/kilocode-legacy) using Kilo CLI as the backend. Rather than migrating the old extension's codebase, we started fresh with a Solid.js webview, a CLI server manager, and a message-based protocol between extension host and webview. This new extension lives in the [kilocode monorepo](https://github.com/Kilo-Org/kilocode/tree/main/packages/devil-vscode).
 
 This document tracks remaining work needed for feature parity with the old extension. Each feature links to its detailed parity requirement doc. Features sourced from the [GitHub project board](https://github.com/orgs/Kilo-Org/projects/25/views/1) include issue links.
 
@@ -82,7 +82,7 @@ Open issues from the [GitHub project board](https://github.com/orgs/Kilo-Org/pro
 
 | Feature                                                                                   | Remaining Work                                                               | Priority |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------- |
-| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md)                | Fix race condition / process conflict when switching release ↔ pre-release   | P0       |
+| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md)                | Fix race condition / process conflict when switching release ↔ pre-release  | P0       |
 | [Extension View Doesn't Refresh on Update](error-handling/extension-refresh-on-update.md) | Force webview reload when extension version changes                          | P1       |
 | [Propagate CLI Errors to UI](error-handling/propagate-cli-errors-to-ui.md)                | Surface CLI stderr errors in chat or as VS Code notifications                | P1       |
 | [CLI Startup Errors](error-handling/cli-startup-errors.md)                                | Detect CLI process exit before connection; show error with details and retry | P1       |

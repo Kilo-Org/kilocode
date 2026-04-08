@@ -1,15 +1,15 @@
 ---
 title: "Pre-installed Software"
-description: "Default system utilities, languages, and CLI tools included in the KiloClaw Docker image"
+description: "Default system utilities, languages, and CLI tools included in the DevilClaw Docker image"
 ---
 
 # Pre-installed Software
 
-Every KiloClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the KiloClaw Docker image so you know what's available out of the box. Where a specific version is listed it reflects the pin in the Dockerfile as of March 2026. Entries marked **unpinned** install the latest available version at image build time and may differ between releases.
+Every DevilClaw instance ships with a curated set of system utilities, language runtimes, package managers, and CLI tools. This page documents everything that comes pre-installed in the DevilClaw Docker image so you know what's available out of the box. Where a specific version is listed it reflects the pin in the Dockerfile as of March 2026. Entries marked **unpinned** install the latest available version at image build time and may differ between releases.
 
 ## Base Image
 
-KiloClaw is built on **Debian Bookworm** (`debian:bookworm-slim`). Since it's Debian-based, you can use `apt` to install additional packages at any time:
+DevilClaw is built on **Debian Bookworm** (`debian:bookworm-slim`). Since it's Debian-based, you can use `apt` to install additional packages at any time:
 
 ```bash
 apt update && apt install -y <package>
@@ -101,12 +101,12 @@ Your agent can install additional tools at runtime:
 - **Python packages:** `pip install <package>`
 
 {% callout type="tip" %}
-These tools receive updates when you **Upgrade & Redeploy** your instance from the [KiloClaw Dashboard](/docs/kiloclaw/dashboard#redeploy). Check the changelog for image update announcements.
+These tools receive updates when you **Upgrade & Redeploy** your instance from the [DevilClaw Dashboard](/docs/DevilClaw/dashboard#redeploy). Check the changelog for image update announcements.
 {% /callout %}
 
 ## Related
 
-- [KiloClaw Overview](/docs/kiloclaw/overview)
-- [Dashboard Reference](/docs/kiloclaw/dashboard)
-- [Machine Specs](/docs/kiloclaw/dashboard#machine-specs)
-- [Troubleshooting](/docs/kiloclaw/troubleshooting)
+- [DevilClaw Overview](/docs/DevilClaw/overview)
+- [Dashboard Reference](/docs/DevilClaw/dashboard)
+- [Machine Specs](/docs/DevilClaw/dashboard#machine-specs)
+- [Troubleshooting](/docs/DevilClaw/troubleshooting)

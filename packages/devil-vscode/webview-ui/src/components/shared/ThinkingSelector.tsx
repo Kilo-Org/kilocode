@@ -5,8 +5,8 @@
  */
 
 import { Component, createSignal, For, Show } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
-import { Button } from "@kilocode/kilo-ui/button"
+import { Popover } from "@devilcode/kilo-ui/popover"
+import { Button } from "@devilcode/kilo-ui/button"
 import { useSession } from "../../context/session"
 
 export const ThinkingSelector: Component = () => {

@@ -9,7 +9,7 @@ import {
 } from "../actions"
 import { sessionItemSelector, inlineInputSelector } from "../selectors"
 
-const shareDisabled = process.env.KILO_DISABLE_SHARE === "true" || process.env.KILO_DISABLE_SHARE === "1"
+const shareDisabled = process.env.DEVIL_DISABLE_SHARE === "true" || process.env.DEVIL_DISABLE_SHARE === "1"
 
 type Sdk = Parameters<typeof withSession>[0]
 
@@ -66,7 +66,7 @@ test("session can be renamed via header menu", async ({ page, sdk, gotoSession }
 })
 
 test("session can be archived via header menu", async ({ page, sdk, gotoSession }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // devilcode_change
   const stamp = Date.now()
   const title = `e2e archive test ${stamp}`
 
@@ -92,7 +92,7 @@ test("session can be archived via header menu", async ({ page, sdk, gotoSession 
 })
 
 test("session can be deleted via header menu", async ({ page, sdk, gotoSession }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // devilcode_change
   const stamp = Date.now()
   const title = `e2e delete test ${stamp}`
 
@@ -122,7 +122,7 @@ test("session can be deleted via header menu", async ({ page, sdk, gotoSession }
 })
 
 test("session can be shared and unshared via header button", async ({ page, sdk, gotoSession }) => {
-  test.skip(shareDisabled, "Share is disabled in this environment (KILO_DISABLE_SHARE).")
+  test.skip(shareDisabled, "Share is disabled in this environment (DEVIL_DISABLE_SHARE).")
 
   const stamp = Date.now()
   const title = `e2e share test ${stamp}`

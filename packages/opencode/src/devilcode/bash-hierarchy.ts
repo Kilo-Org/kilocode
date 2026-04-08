@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import { BashArity } from "@/permission/arity"
 
 /**

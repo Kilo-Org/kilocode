@@ -1,11 +1,11 @@
 ---
 title: "Using MCP in CLI"
-description: "How to configure and use MCP servers in the Kilo CLI"
+description: "How to configure and use MCP servers in the devil CLI"
 ---
 
 # Using MCP in the CLI
 
-The Kilo CLI supports both local and remote MCP servers. Once added, MCP tools are automatically available to the LLM alongside built-in tools.
+The devil CLI supports both local and remote MCP servers. Once added, MCP tools are automatically available to the LLM alongside built-in tools.
 
 {% callout type="tip" %}
 MCP servers add to your context, so be careful with which ones you enable. Certain MCP servers with many tools can quickly add up and exceed the context limit.
@@ -13,12 +13,12 @@ MCP servers add to your context, so be careful with which ones you enable. Certa
 
 ## Configuration Location
 
-The CLI accepts several config filenames. The recommended file is `kilo.json`:
+The CLI accepts several config filenames. The recommended file is `devil.json`:
 
 | Scope       | Recommended Path                     | Also supported              |
 | ----------- | ------------------------------------ | --------------------------- |
-| **Global**  | `~/.config/kilo/kilo.json`           | `kilo.jsonc`, `config.json` |
-| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`                |
+| **Global**  | `~/.config/devil/devil.json`           | `devil.jsonc`, `config.json` |
+| **Project** | `./devil.json` or `./.devil/devil.json` | `devil.jsonc`                |
 
 Project-level configuration takes precedence over global settings.
 
@@ -106,9 +106,9 @@ You can manage MCP servers from the CLI:
 
 | Command         | Description                     |
 | --------------- | ------------------------------- |
-| `kilo mcp list` | List all configured MCP servers |
-| `kilo mcp add`  | Add an MCP server               |
-| `kilo mcp auth` | Authenticate with an MCP server |
+| `devil mcp list` | List all configured MCP servers |
+| `devil mcp add`  | Add an MCP server               |
+| `devil mcp auth` | Authenticate with an MCP server |
 
 Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.
 
@@ -179,4 +179,4 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 
 ## Finding MCP Servers
 
-Browse community-contributed MCP server configurations and agent skills in the [Kilo Marketplace](https://github.com/Kilo-Org/kilo-marketplace). The marketplace includes ready-to-use configs for popular tools like Figma, Sentry, and more.
+Browse community-contributed MCP server configurations and agent skills in the [devil Marketplace](https://github.com/Devil-Org/devil-marketplace). The marketplace includes ready-to-use configs for popular tools like Figma, Sentry, and more.

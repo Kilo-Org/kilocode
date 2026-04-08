@@ -8,9 +8,9 @@ on:
 
 jobs:
   daily-recap:
-    # kilocode_change start - disabled for kilo-cli fork (OpenCode Discord integration)
+    # devilcode_change start - disabled for kilo-cli fork (OpenCode Discord integration)
     if: false
-    # kilocode_change end
+    # devilcode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read

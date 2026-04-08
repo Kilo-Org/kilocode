@@ -1,8 +1,8 @@
-import { createKiloClient, createKiloServer } from "@kilocode/sdk"
+import { createDevilClient, createDevilServer } from "@devilcode/sdk"
 import { pathToFileURL } from "bun"
 
-const server = await createKiloServer()
-const client = createKiloClient({ baseUrl: server.url })
+const server = await createDevilServer()
+const client = createDevilClient({ baseUrl: server.url })
 
 const input = await Array.fromAsync(new Bun.Glob("packages/core/*.ts").scan())
 

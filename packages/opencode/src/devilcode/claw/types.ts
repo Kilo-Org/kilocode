@@ -1,9 +1,9 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw TUI types
+ * DevilClaw TUI types
  *
- * Types for the KiloClaw chat and dashboard feature in the TUI.
+ * Types for the DevilClaw chat and dashboard feature in the TUI.
  */
 
 export type ClawStatus = {

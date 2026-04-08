@@ -3,7 +3,7 @@ import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
 import { Instance } from "../../src/project/instance"
-import { getKiloProjectId } from "../../src/kilocode/project-id"
+import { getDevilProjectId } from "../../src/devilcode/project-id"
 
 describe("project-id", () => {
   describe("normalization", () => {
@@ -12,13 +12,13 @@ describe("project-id", () => {
         git: true,
         init: async (dir) => {
           // Set git origin to HTTPS URL
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -29,13 +29,13 @@ describe("project-id", () => {
         git: true,
         init: async (dir) => {
           // Set git origin to SSH URL
-          await Bun.$`git remote add origin git@github.com:Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin git@github.com:Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -45,13 +45,13 @@ describe("project-id", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -61,13 +61,13 @@ describe("project-id", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.$`git remote add origin ssh://git@github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin ssh://git@github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -78,13 +78,13 @@ describe("project-id", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/${longName}.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/${longName}.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe(longName.slice(-100))
@@ -108,25 +108,25 @@ describe("project-id", () => {
           )
 
           // Also set git origin - config should take priority
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("my-custom-project")
     })
 
-    test("falls back to .kilocode/config.json when .kilo/config.json is absent", async () => {
+    test("falls back to .devilcode/config.json when .kilo/config.json is absent", async () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await fs.mkdir(path.join(dir, ".devilcode"), { recursive: true })
           await Bun.write(
-            path.join(dir, ".kilocode", "config.json"),
+            path.join(dir, ".devilcode", "config.json"),
             JSON.stringify({
               project: {
                 id: "legacy-project",
@@ -138,21 +138,21 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("legacy-project")
     })
 
-    test("prefers .kilo/config.json over .kilocode/config.json", async () => {
+    test("prefers .kilo/config.json over .devilcode/config.json", async () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
           await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
           await Bun.write(path.join(dir, ".kilo", "config.json"), JSON.stringify({ project: { id: "new-project" } }))
-          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await fs.mkdir(path.join(dir, ".devilcode"), { recursive: true })
           await Bun.write(
-            path.join(dir, ".kilocode", "config.json"),
+            path.join(dir, ".devilcode", "config.json"),
             JSON.stringify({ project: { id: "old-project" } }),
           )
         },
@@ -160,7 +160,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("new-project")
@@ -175,7 +175,7 @@ describe("project-id", () => {
             path.join(dir, ".kilo", "config.json"),
             JSON.stringify({
               project: {
-                id: "https://github.com/Kilo-Org/another-repo.git",
+                id: "https://github.com/Devil-Org/another-repo.git",
               },
             }),
           )
@@ -184,7 +184,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("another-repo")
@@ -204,13 +204,13 @@ describe("project-id", () => {
             }),
           )
 
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -230,13 +230,13 @@ describe("project-id", () => {
             }),
           )
 
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -260,7 +260,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("my-project")
@@ -280,13 +280,13 @@ describe("project-id", () => {
             }),
           )
 
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -299,7 +299,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBeUndefined()
@@ -310,7 +310,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBeUndefined()
@@ -323,13 +323,13 @@ describe("project-id", () => {
           await fs.mkdir(path.join(dir, ".kilo"), { recursive: true })
           await Bun.write(path.join(dir, ".kilo", "config.json"), "{ invalid json")
 
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       // Should fall back to git origin
@@ -350,13 +350,13 @@ describe("project-id", () => {
             }),
           )
 
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       // Should fall back to git origin
@@ -369,18 +369,18 @@ describe("project-id", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.$`git remote add origin https://github.com/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id1 = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       const id2 = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id1).toBe(id2)
@@ -393,13 +393,13 @@ describe("project-id", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.$`git remote add origin https://github.com:443/Kilo-Org/handbook.git`.cwd(dir).quiet()
+          await Bun.$`git remote add origin https://github.com:443/Devil-Org/handbook.git`.cwd(dir).quiet()
         },
       })
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("handbook")
@@ -422,7 +422,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe("simple-name")
@@ -446,7 +446,7 @@ describe("project-id", () => {
 
       const id = await Instance.provide({
         directory: tmp.path,
-        fn: () => getKiloProjectId(),
+        fn: () => getDevilProjectId(),
       })
 
       expect(id).toBe(longId.slice(-100))

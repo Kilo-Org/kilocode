@@ -7,8 +7,8 @@
 
 import * as vscode from "vscode"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
-import type { KiloConnectionService } from "../services/cli-backend"
-import { KiloProvider } from "../KiloProvider"
+import type { DevilConnectionService } from "../services/cli-backend"
+import { DevilProvider } from "../KiloProvider"
 import { buildWebviewHtml } from "../utils"
 import { openFileInEditor, getWorkspaceRoot } from "../review-utils"
 import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
@@ -16,7 +16,7 @@ import { TelemetryProxy, type TelemetryEventName } from "../services/telemetry"
 export class VscodeHost implements Host {
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly connectionService: KiloConnectionService,
+    private readonly connectionService: DevilConnectionService,
     private readonly context: vscode.ExtensionContext,
   ) {}
 
@@ -71,7 +71,7 @@ export class VscodeHost implements Host {
       port,
     })
 
-    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context, {
+    const provider = new DevilProvider(this.extensionUri, this.connectionService, this.context, {
       slimEditMetadata: true,
     })
     provider.attachToWebview(panel.webview, {
@@ -144,7 +144,7 @@ export class VscodeHost implements Host {
   }
 
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
-    const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+    const ext = vscode.extensions.getExtension("devilcode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
 

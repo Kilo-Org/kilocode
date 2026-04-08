@@ -3,7 +3,7 @@ import { $ } from "bun"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { tmpdir } from "../fixture/fixture"
-import { WorktreeDiff } from "../../src/kilocode/review/worktree-diff"
+import { WorktreeDiff } from "../../src/devilcode/review/worktree-diff"
 
 describe("WorktreeDiff summary", () => {
   async function setup() {

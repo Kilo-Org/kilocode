@@ -1,29 +1,29 @@
 ---
-title: "Using Kilo for Free"
-description: "Learn how to use Kilo Code without spending money by configuring free models for agentic tasks, autocomplete, and CLI background tasks"
+title: "Using devil for Free"
+description: "Learn how to use devil Code without spending money by configuring free models for agentic tasks, autocomplete, and CLI background tasks"
 ---
 
-# Using Kilo for Free
+# Using devil for Free
 
-Kilo Code can be used completely free of charge, but you need to understand where Kilo uses AI models and configure each one appropriately.
+devil Code can be used completely free of charge, but you need to understand where devil uses AI models and configure each one appropriately.
 
-## When Kilo Uses Model Inference
+## When devil Uses Model Inference
 
-Kilo uses AI model inference in three places:
+devil uses AI model inference in three places:
 
 1. **Agentic interactions** - Coding assistant conversations in IDE extensions (VS Code, JetBrains), CLI, and cloud services like App Builder and Code Reviewer
 2. **Autocomplete** - In-editor code completions as you type (IDE extensions only)
 3. **CLI Background tasks** - Automatic session titles and context summarization (CLI only)
 
-Each of these can consume credits by default. **For a completely free Kilo experience, you must configure all three to use free models.**
+Each of these can consume credits by default. **For a completely free devil experience, you must configure all three to use free models.**
 
 ## Free Agentic Usage
 
-Kilo Code provides access to [free models](/docs/code-with-ai/agents/free-and-budget-models) for your coding tasks through the Kilo Gateway and partner providers.
+devil Code provides access to [free models](/docs/code-with-ai/agents/free-and-budget-models) for your coding tasks through the devil Gateway and partner providers.
 
 ### Finding Free Models
 
-Free models are clearly labeled in the model picker across all Kilo platforms. To find and use them:
+Free models are clearly labeled in the model picker across all devil platforms. To find and use them:
 
 **In the IDE Extensions (VS Code, JetBrains):**
 
@@ -33,30 +33,30 @@ Free models are clearly labeled in the model picker across all Kilo platforms. T
 
 **In the CLI:**
 
-1. Open the CLI by running `kilo`
+1. Open the CLI by running `devil`
 2. Use the `/models` command to browse available models
 3. Free models are labeled as "free"
 4. Select a free model for your tasks
 
 ### Free Models for Cloud Tasks
 
-Kilo's cloud services—including App Builder, Code Reviewer, and other cloud-based features—also support free models. When configuring a cloud task:
+devil's cloud services—including App Builder, Code Reviewer, and other cloud-based features—also support free models. When configuring a cloud task:
 
 1. Look for the model selection dropdown
 2. Free models are labeled as "(free)" in the dropdown
 3. Select any free model to avoid using credits
 
 {% callout type="tip" %}
-The available free models change over time as Kilo partners with different AI inference providers. Check our [free and budget models guide](/docs/code-with-ai/agents/free-and-budget-models) for the latest options, and subscribe to our blog or join our Discord for updates.
+The available free models change over time as devil partners with different AI inference providers. Check our [free and budget models guide](/docs/code-with-ai/agents/free-and-budget-models) for the latest options, and subscribe to our blog or join our Discord for updates.
 {% /callout %}
 
 ## Free Autocomplete
 
-Kilo Code's autocomplete feature provides AI-powered code completions as you type in the IDE extensions.
+devil Code's autocomplete feature provides AI-powered code completions as you type in the IDE extensions.
 
 ### Default Behavior
 
-By default, autocomplete is routed through the Kilo Code provider and uses credits from your account.
+By default, autocomplete is routed through the devil Code provider and uses credits from your account.
 
 ### If You Don't Have Credits
 
@@ -64,13 +64,13 @@ If you run out of credits and haven't configured a free alternative, autocomplet
 
 ### How to Get It Free
 
-Configure Mistral directly as your autocomplete provider. Mistral offers free access to their Codestral model, which is optimized for code completions. When you configure Mistral directly, it takes precedence over the default Kilo Code routing.
+Configure Mistral directly as your autocomplete provider. Mistral offers free access to their Codestral model, which is optimized for code completions. When you configure Mistral directly, it takes precedence over the default devil Code routing.
 
 For step-by-step instructions with screenshots, see our [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup).
 
 ## Free CLI Background Tasks
 
-The Kilo CLI uses AI in the background for quality-of-life features that enhance your experience like context compression and titling sessions.
+The devil CLI uses AI in the background for quality-of-life features that enhance your experience like context compression and titling sessions.
 
 ### Default Behavior
 
@@ -86,7 +86,7 @@ Background tasks degrade gracefully when you don't have credits:
 
 ### How to Get It Free
 
-Configure the `small_model` parameter in `~/.config/kilo/config.json` to use a free model:
+Configure the `small_model` parameter in `~/.config/devil/config.json` to use a free model:
 
 ```json
 {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { MessageV2 } from "../../src/session/message-v2"
-import { KILO_ERROR_CODES, isKiloError, parseKiloErrorCode } from "../../src/kilocode/kilo-errors"
+import { DEVIL_ERROR_CODES, isDevilError, parseDevilErrorCode } from "../../src/devilcode/kilo-errors"
 import { SessionRetry } from "../../src/session/retry"
 import { NamedError } from "@opencode-ai/util/error"
 
@@ -21,13 +21,13 @@ function makeAPIError(opts: {
   }).toObject()
 }
 
-describe("parseKiloErrorCode", () => {
+describe("parseDevilErrorCode", () => {
   it("extracts PAID_MODEL_AUTH_REQUIRED from { error: { code } }", () => {
     const error = makeAPIError({
       statusCode: 401,
       responseBody: JSON.stringify({ error: { code: "PAID_MODEL_AUTH_REQUIRED" } }),
     })
-    expect(parseKiloErrorCode(error)).toBe("PAID_MODEL_AUTH_REQUIRED")
+    expect(parseDevilErrorCode(error)).toBe("PAID_MODEL_AUTH_REQUIRED")
   })
 
   it("extracts PROMOTION_MODEL_LIMIT_REACHED from { code } (top-level)", () => {
@@ -35,7 +35,7 @@ describe("parseKiloErrorCode", () => {
       statusCode: 429,
       responseBody: JSON.stringify({ code: "PROMOTION_MODEL_LIMIT_REACHED" }),
     })
-    expect(parseKiloErrorCode(error)).toBe("PROMOTION_MODEL_LIMIT_REACHED")
+    expect(parseDevilErrorCode(error)).toBe("PROMOTION_MODEL_LIMIT_REACHED")
   })
 
   it("extracts PROMOTION_MODEL_LIMIT_REACHED from { error: { code } }", () => {
@@ -48,20 +48,20 @@ describe("parseKiloErrorCode", () => {
         },
       }),
     })
-    expect(parseKiloErrorCode(error)).toBe("PROMOTION_MODEL_LIMIT_REACHED")
+    expect(parseDevilErrorCode(error)).toBe("PROMOTION_MODEL_LIMIT_REACHED")
   })
 
-  it("returns undefined for non-Kilo error codes", () => {
+  it("returns undefined for non-Devil error codes", () => {
     const error = makeAPIError({
       statusCode: 429,
       responseBody: JSON.stringify({ error: { code: "SOME_OTHER_ERROR" } }),
     })
-    expect(parseKiloErrorCode(error)).toBeUndefined()
+    expect(parseDevilErrorCode(error)).toBeUndefined()
   })
 
   it("returns undefined for non-APIError types", () => {
     const error = new MessageV2.AbortedError({ message: "aborted" }).toObject()
-    expect(parseKiloErrorCode(error)).toBeUndefined()
+    expect(parseDevilErrorCode(error)).toBeUndefined()
   })
 
   it("returns undefined for malformed responseBody", () => {
@@ -69,24 +69,24 @@ describe("parseKiloErrorCode", () => {
       statusCode: 401,
       responseBody: "not valid json",
     })
-    expect(parseKiloErrorCode(error)).toBeUndefined()
+    expect(parseDevilErrorCode(error)).toBeUndefined()
   })
 
   it("returns undefined when responseBody is missing", () => {
     const error = makeAPIError({
       statusCode: 401,
     })
-    expect(parseKiloErrorCode(error)).toBeUndefined()
+    expect(parseDevilErrorCode(error)).toBeUndefined()
   })
 })
 
-describe("isKiloError", () => {
+describe("isDevilError", () => {
   it("returns true for PAID_MODEL_AUTH_REQUIRED", () => {
     const error = makeAPIError({
       statusCode: 401,
       responseBody: JSON.stringify({ error: { code: "PAID_MODEL_AUTH_REQUIRED" } }),
     })
-    expect(isKiloError(error)).toBe(true)
+    expect(isDevilError(error)).toBe(true)
   })
 
   it("returns true for PROMOTION_MODEL_LIMIT_REACHED", () => {
@@ -94,25 +94,25 @@ describe("isKiloError", () => {
       statusCode: 429,
       responseBody: JSON.stringify({ code: "PROMOTION_MODEL_LIMIT_REACHED" }),
     })
-    expect(isKiloError(error)).toBe(true)
+    expect(isDevilError(error)).toBe(true)
   })
 
-  it("returns false for regular 429 errors without Kilo code", () => {
+  it("returns false for regular 429 errors without Devil code", () => {
     const error = makeAPIError({
       statusCode: 429,
       isRetryable: true,
       message: "Too Many Requests",
     })
-    expect(isKiloError(error)).toBe(false)
+    expect(isDevilError(error)).toBe(false)
   })
 
   it("returns false for non-APIError types", () => {
     const error = new MessageV2.AbortedError({ message: "aborted" }).toObject()
-    expect(isKiloError(error)).toBe(false)
+    expect(isDevilError(error)).toBe(false)
   })
 })
 
-describe("SessionRetry.retryable with Kilo errors", () => {
+describe("SessionRetry.retryable with Devil errors", () => {
   it("returns undefined for PAID_MODEL_AUTH_REQUIRED (not retryable)", () => {
     const error = makeAPIError({
       statusCode: 401,

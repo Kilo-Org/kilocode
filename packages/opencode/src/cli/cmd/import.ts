@@ -1,5 +1,5 @@
 import type { Argv } from "yargs"
-import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
+import type { Session as SDKSession, Message, Part } from "@devilcode/sdk/v2"
 import { Session } from "../../session"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
@@ -20,13 +20,13 @@ export type ShareData =
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
 
-// kilocode_change start
-/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
+// devilcode_change start
+/** Extract share ID from a Devil share URL like https://app.devil.ai/s/abc123 */
 export function parseShareUrl(url: string): string | null {
   const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
   return match ? match[1] : null
 }
-// kilocode_change end
+// devilcode_change end
 
 /**
  * Transform ShareNext API response (flat array) into the nested structure for local file storage.
@@ -68,15 +68,15 @@ export function transformShareData(shareData: ShareData[]): {
   }
 }
 
-// kilocode_change start
+// devilcode_change start
 export function ingestBootstrapWarning(sessionId: string, error: unknown) {
   const details = error instanceof Error ? error.message : String(error)
   return `Warning: imported session ${sessionId} locally, but ingest bootstrap failed: ${details}`
 }
 
 async function ingestBootstrap(sessionId: string) {
-  const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
-  return KiloSessions.bootstrap(sessionId)
+  const { DevilSessions } = await import("../../kilo-sessions/kilo-sessions")
+  return DevilSessions.bootstrap(sessionId)
 }
 
 export async function bootstrapImportedSessionIngest(
@@ -104,7 +104,7 @@ export async function bootstrapImportedSessionIngest(
       warn(ingestBootstrapWarning(sessionId, error))
     })
 }
-// kilocode_change end
+// devilcode_change end
 
 export const ImportCommand = cmd({
   command: "import <file>",
@@ -131,15 +131,15 @@ export const ImportCommand = cmd({
       const isUrl = args.file.startsWith("http://") || args.file.startsWith("https://")
 
       if (isUrl) {
-        // kilocode_change start
+        // devilcode_change start
         const slug = parseShareUrl(args.file)
         if (!slug) {
-          process.stdout.write(`Invalid URL format. Expected: https://app.kilo.ai/s/<id>`)
+          process.stdout.write(`Invalid URL format. Expected: https://app.devil.ai/s/<id>`)
           process.stdout.write(EOL)
           return
         }
 
-        const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+        const base = process.env["DEVIL_SESSION_INGEST_URL"] ?? "https://ingest.devilsessions.ai"
         const response = await fetch(`${base}/session/${encodeURIComponent(slug)}`)
 
         if (!response.ok) {
@@ -157,7 +157,7 @@ export const ImportCommand = cmd({
         }
 
         exportData = data
-        // kilocode_change end
+        // devilcode_change end
       } else {
         exportData = await Filesystem.readJson<NonNullable<typeof exportData>>(args.file).catch(() => undefined)
         if (!exportData) {
@@ -212,9 +212,9 @@ export const ImportCommand = cmd({
         }
       }
 
-      // kilocode_change start
+      // devilcode_change start
       await bootstrapImportedSessionIngest(exportData.info.id)
-      // kilocode_change end
+      // devilcode_change end
 
       process.stdout.write(`Imported session: ${exportData.info.id}`)
       process.stdout.write(EOL)

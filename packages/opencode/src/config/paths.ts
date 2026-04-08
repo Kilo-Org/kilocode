@@ -22,10 +22,10 @@ export namespace ConfigPaths {
   export async function directories(directory: string, worktree: string) {
     return [
       Global.Path.config,
-      ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
+      ...(!Flag.DEVIL_DISABLE_PROJECT_CONFIG
         ? await Array.fromAsync(
             Filesystem.up({
-              targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+              targets: [".devilcode", ".kilo", ".opencode"], // devilcode_change
               start: directory,
               stop: worktree,
             }),
@@ -33,12 +33,12 @@ export namespace ConfigPaths {
         : []),
       ...(await Array.fromAsync(
         Filesystem.up({
-          targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+          targets: [".devilcode", ".kilo", ".opencode"], // devilcode_change
           start: Global.Path.home,
           stop: Global.Path.home,
         }),
       )),
-      ...(Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []),
+      ...(Flag.DEVIL_CONFIG_DIR ? [Flag.DEVIL_CONFIG_DIR] : []),
     ]
   }
 

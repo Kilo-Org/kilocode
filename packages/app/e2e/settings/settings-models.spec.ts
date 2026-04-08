@@ -2,9 +2,9 @@ import { test, expect } from "../fixtures"
 import { promptSelector } from "../selectors"
 import { closeDialog, openSettings } from "../actions"
 
-// kilocode_change start
+// devilcode_change start
 test.skip("hiding a model removes it from the model picker", async ({ page, gotoSession }) => {
-  // kilocode_change end
+  // devilcode_change end
   await gotoSession()
 
   await page.locator(promptSelector).click()
@@ -62,9 +62,9 @@ test.skip("hiding a model removes it from the model picker", async ({ page, goto
   await expect(pickerAgain).toHaveCount(0)
 })
 
-// kilocode_change start
+// devilcode_change start
 test.skip("showing a hidden model restores it to the model picker", async ({ page, gotoSession }) => {
-  // kilocode_change end
+  // devilcode_change end
   await gotoSession()
 
   await page.locator(promptSelector).click()

@@ -8,17 +8,17 @@ import {
 } from "../../src/cli/cmd/import"
 
 // parseShareUrl tests
-test("parses valid Kilo share URLs", () => {
-  expect(parseShareUrl("https://app.kilo.ai/s/7a755b04-b0fe-4e66-8b30-0ab52a181bd4")).toBe(
+test("parses valid Devil share URLs", () => {
+  expect(parseShareUrl("https://app.devil.ai/s/7a755b04-b0fe-4e66-8b30-0ab52a181bd4")).toBe(
     "7a755b04-b0fe-4e66-8b30-0ab52a181bd4",
   )
-  expect(parseShareUrl("https://app.kilo.ai/s/Jsj3hNIW")).toBe("Jsj3hNIW")
-  expect(parseShareUrl("https://app.kilo.ai/s/test_id-123")).toBe("test_id-123")
+  expect(parseShareUrl("https://app.devil.ai/s/Jsj3hNIW")).toBe("Jsj3hNIW")
+  expect(parseShareUrl("https://app.devil.ai/s/test_id-123")).toBe("test_id-123")
 })
 
 test("rejects invalid URLs", () => {
-  expect(parseShareUrl("https://app.kilo.ai/s/")).toBeNull()
-  expect(parseShareUrl("https://app.kilo.ai/s/id/extra")).toBeNull()
+  expect(parseShareUrl("https://app.devil.ai/s/")).toBeNull()
+  expect(parseShareUrl("https://app.devil.ai/s/id/extra")).toBeNull()
   expect(parseShareUrl("https://opncd.ai/share/Jsj3hNIW")).toBeNull()
   expect(parseShareUrl("https://other.example.com/s/abc")).toBeNull()
   expect(parseShareUrl("not-a-url")).toBeNull()

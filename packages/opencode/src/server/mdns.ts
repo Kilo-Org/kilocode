@@ -12,8 +12,8 @@ export namespace MDNS {
     if (bonjour) unpublish()
 
     try {
-      const host = domain ?? "kilo.local" // kilocode_change
-      const name = `kilo-${port}` // kilocode_change
+      const host = domain ?? "devil.local" // devilcode_change
+      const name = `devil-${port}` // devilcode_change
       bonjour = new Bonjour()
       const service = bonjour.publish({
         name,

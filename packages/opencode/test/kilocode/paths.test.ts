@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test"
-import { KilocodePaths } from "../../src/kilocode/paths"
+import { DevilcodePaths } from "../../src/devilcode/paths"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
 import fs from "fs/promises"
@@ -15,7 +15,7 @@ async function withHome<T>(home: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-describe("KilocodePaths", () => {
+describe("DevilcodePaths", () => {
   describe("skillDirectories", () => {
     test("discovers skills from .kilo/skills/", async () => {
       await using tmp = await tmpdir({
@@ -33,7 +33,7 @@ description: A test skill
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
@@ -46,7 +46,7 @@ description: A test skill
     test("returns empty array when no .kilo/skills/ exists", async () => {
       await using tmp = await tmpdir()
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
@@ -87,15 +87,15 @@ description: Nested skill
 
       // Run from nested directory, should find both
       const nestedPath = path.join(tmp.path, "packages", "nested")
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: nestedPath,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
       })
 
       expect(result).toHaveLength(2)
-      expect(result.some((d) => d.includes("packages/nested"))).toBe(true)
-      expect(result.some((d) => !d.includes("packages/nested"))).toBe(true)
+      expect(result.some((d) => d.includes(path.join("packages", "nested")))).toBe(true)
+      expect(result.some((d) => !d.includes(path.join("packages", "nested")))).toBe(true)
     })
 
     test("handles .kilo directory without skills subdirectory", async () => {
@@ -107,7 +107,7 @@ description: Nested skill
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
@@ -138,7 +138,7 @@ description: Symlinked skill
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
@@ -148,10 +148,10 @@ description: Symlinked skill
       expect(result[0]).toEndWith(".kilo")
     })
 
-    test("discovers skills from legacy .kilocode/skills/", async () => {
+    test("discovers skills from legacy .devilcode/skills/", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const skillDir = path.join(dir, ".kilocode", "skills", "legacy-skill")
+          const skillDir = path.join(dir, ".devilcode", "skills", "legacy-skill")
           await fs.mkdir(skillDir, { recursive: true })
           await Bun.write(
             path.join(skillDir, "SKILL.md"),
@@ -164,14 +164,14 @@ description: A legacy skill
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
       })
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toEndWith(".kilocode")
+      expect(result[0]).toEndWith(".devilcode")
     })
 
     test("returns legacy skill dirs before .kilo so .kilo skills win", async () => {
@@ -182,21 +182,21 @@ description: A legacy skill
           await fs.mkdir(kiloSkillDir, { recursive: true })
           await Bun.write(path.join(kiloSkillDir, "SKILL.md"), "# New skill")
 
-          // .kilocode skill
-          const legacySkillDir = path.join(dir, ".kilocode", "skills", "old-skill")
+          // .devilcode skill
+          const legacySkillDir = path.join(dir, ".devilcode", "skills", "old-skill")
           await fs.mkdir(legacySkillDir, { recursive: true })
           await Bun.write(path.join(legacySkillDir, "SKILL.md"), "# Old skill")
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,
       })
 
       expect(result).toHaveLength(2)
-      expect(result[0]).toEndWith(".kilocode")
+      expect(result[0]).toEndWith(".devilcode")
       expect(result[1]).toEndWith(".kilo")
     })
 
@@ -211,7 +211,7 @@ description: A legacy skill
       })
 
       const result = await withHome(tmp.path, () =>
-        KilocodePaths.skillDirectories({
+        DevilcodePaths.skillDirectories({
           projectDir: path.join(tmp.path, "repo"),
           worktreeRoot: path.join(tmp.path, "repo"),
         }),
@@ -251,7 +251,7 @@ description: Second skill
         },
       })
 
-      const result = await KilocodePaths.skillDirectories({
+      const result = await DevilcodePaths.skillDirectories({
         projectDir: tmp.path,
         worktreeRoot: tmp.path,
         skipGlobalPaths: true,

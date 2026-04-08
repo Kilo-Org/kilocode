@@ -1,6 +1,6 @@
 import React, { useState, useEffect, Children, isValidElement, ReactNode, ReactElement } from "react"
 
-const TAB_SYNC_EVENT = "kilo-tab-select"
+const TAB_SYNC_EVENT = "devil-tab-select"
 
 interface TabProps {
   label: string

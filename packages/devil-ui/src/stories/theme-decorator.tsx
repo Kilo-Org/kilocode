@@ -15,7 +15,7 @@ function getOrCreateStyle(id: string): HTMLStyleElement {
   return el
 }
 
-export function applyKiloTheme(themeId: string, colorScheme: "light" | "dark") {
+export function applyDevilTheme(themeId: string, colorScheme: "light" | "dark") {
   const theme = DEFAULT_THEMES[themeId]
   if (!theme) return
 
@@ -70,7 +70,7 @@ export interface ThemeDecoratorProps {
 
 export function ThemeDecorator(props: ThemeDecoratorProps): JSX.Element {
   createEffect(() => {
-    applyKiloTheme(props.theme, props.colorScheme)
+    applyDevilTheme(props.theme, props.colorScheme)
   })
   return <props.Story />
 }

@@ -1,11 +1,11 @@
 ---
 title: "SDKs & Frameworks"
-description: "Integrate with the Kilo AI Gateway using the Vercel AI SDK, OpenAI SDK, Python, cURL, or any OpenAI-compatible client."
+description: "Integrate with the devil.ai Gateway using the Vercel AI SDK, OpenAI SDK, Python, cURL, or any OpenAI-compatible client."
 ---
 
 # SDKs & Frameworks
 
-The Kilo AI Gateway is OpenAI-compatible, meaning any SDK or framework that works with the OpenAI API can work with the Kilo Gateway by changing the base URL.
+The devil.ai Gateway is OpenAI-compatible, meaning any SDK or framework that works with the OpenAI API can work with the devil Gateway by changing the base URL.
 
 ## Vercel AI SDK (Recommended)
 
@@ -23,13 +23,13 @@ npm install ai @ai-sdk/openai
 import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
-const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
-  apiKey: process.env.KILO_API_KEY,
+const devil = createOpenAI({
+  baseURL: "https://api.devil.ai/api/gateway",
+  apiKey: process.env.Devil_API_KEY,
 })
 
 const result = streamText({
-  model: kilo.chat("anthropic/claude-sonnet-4.5"),
+  model: devil.chat("anthropic/claude-sonnet-4.5"),
   prompt: "Write a haiku about programming.",
 })
 
@@ -45,13 +45,13 @@ import { streamText, tool } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { z } from "zod"
 
-const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
-  apiKey: process.env.KILO_API_KEY,
+const devil = createOpenAI({
+  baseURL: "https://api.devil.ai/api/gateway",
+  apiKey: process.env.Devil_API_KEY,
 })
 
 const result = streamText({
-  model: kilo.chat("anthropic/claude-sonnet-4.5"),
+  model: devil.chat("anthropic/claude-sonnet-4.5"),
   prompt: "What is the weather in San Francisco?",
   tools: {
     getWeather: tool({
@@ -77,16 +77,16 @@ for await (const textPart of result.textStream) {
 import { streamText } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 
-const kilo = createOpenAI({
-  baseURL: "https://api.kilo.ai/api/gateway",
-  apiKey: process.env.KILO_API_KEY,
+const devil = createOpenAI({
+  baseURL: "https://api.devil.ai/api/gateway",
+  apiKey: process.env.Devil_API_KEY,
 })
 
 export async function POST(request: Request) {
   const { messages } = await request.json()
 
   const result = streamText({
-    model: kilo.chat("anthropic/claude-sonnet-4.5"),
+    model: devil.chat("anthropic/claude-sonnet-4.5"),
     messages,
   })
 
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
 
 ## OpenAI SDK
 
-The official OpenAI SDKs work with the Kilo Gateway by setting the base URL.
+The official OpenAI SDKs work with the devil Gateway by setting the base URL.
 
 ### TypeScript / JavaScript
 
@@ -108,8 +108,8 @@ npm install openai
 import OpenAI from "openai"
 
 const client = new OpenAI({
-  apiKey: process.env.KILO_API_KEY,
-  baseURL: "https://api.kilo.ai/api/gateway",
+  apiKey: process.env.Devil_API_KEY,
+  baseURL: "https://api.devil.ai/api/gateway",
 })
 
 // Non-streaming
@@ -147,8 +147,8 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    api_key=os.getenv("Devil_API_KEY"),
+    base_url="https://api.devil.ai/api/gateway",
 )
 
 # Non-streaming
@@ -182,8 +182,8 @@ for chunk in stream:
 ### Non-streaming request
 
 ```bash
-curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
-  -H "Authorization: Bearer $KILO_API_KEY" \
+curl -X POST "https://api.devil.ai/api/gateway/chat/completions" \
+  -H "Authorization: Bearer $Devil_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "anthropic/claude-sonnet-4.5",
@@ -196,8 +196,8 @@ curl -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
 ### Streaming request
 
 ```bash
-curl -N -X POST "https://api.kilo.ai/api/gateway/chat/completions" \
-  -H "Authorization: Bearer $KILO_API_KEY" \
+curl -N -X POST "https://api.devil.ai/api/gateway/chat/completions" \
+  -H "Authorization: Bearer $Devil_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "model": "anthropic/claude-sonnet-4.5",
@@ -239,10 +239,10 @@ func main() {
     jsonBody, _ := json.Marshal(body)
 
     req, _ := http.NewRequest("POST",
-        "https://api.kilo.ai/api/gateway/chat/completions",
+        "https://api.devil.ai/api/gateway/chat/completions",
         bytes.NewBuffer(jsonBody))
 
-    req.Header.Set("Authorization", "Bearer "+os.Getenv("KILO_API_KEY"))
+    req.Header.Set("Authorization", "Bearer "+os.Getenv("Devil_API_KEY"))
     req.Header.Set("Content-Type", "application/json")
 
     resp, err := http.DefaultClient.Do(req)
@@ -262,12 +262,12 @@ func main() {
 require 'net/http'
 require 'json'
 
-uri = URI('https://api.kilo.ai/api/gateway/chat/completions')
+uri = URI('https://api.devil.ai/api/gateway/chat/completions')
 http = Net::HTTP.new(uri.host, uri.port)
 http.use_ssl = true
 
 request = Net::HTTP::Post.new(uri)
-request['Authorization'] = "Bearer #{ENV['KILO_API_KEY']}"
+request['Authorization'] = "Bearer #{ENV['Devil_API_KEY']}"
 request['Content-Type'] = 'application/json'
 request.body = {
   model: 'anthropic/claude-sonnet-4.5',
@@ -283,11 +283,11 @@ puts result['choices'][0]['message']['content']
 
 ## Framework integrations
 
-The Kilo AI Gateway works with any framework that supports OpenAI-compatible APIs:
+The devil.ai Gateway works with any framework that supports OpenAI-compatible APIs:
 
 | Framework                                                             | Integration                               |
 | --------------------------------------------------------------------- | ----------------------------------------- |
-| [Vercel AI SDK](https://ai-sdk.dev)                                   | Use `createOpenAI` with Kilo base URL     |
+| [Vercel AI SDK](https://ai-sdk.dev)                                   | Use `createOpenAI` with devil base URL     |
 | [LangChain](https://langchain.com)                                    | Use `ChatOpenAI` with custom base URL     |
 | [LlamaIndex](https://www.llamaindex.ai)                               | Use OpenAI-compatible configuration       |
 | [Haystack](https://haystack.deepset.ai)                               | Use OpenAI generator with custom URL      |
@@ -300,8 +300,8 @@ from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
     model="anthropic/claude-sonnet-4.5",
-    api_key=os.getenv("KILO_API_KEY"),
-    base_url="https://api.kilo.ai/api/gateway",
+    api_key=os.getenv("Devil_API_KEY"),
+    base_url="https://api.devil.ai/api/gateway",
 )
 
 response = llm.invoke("Explain photosynthesis in simple terms.")
@@ -315,9 +315,9 @@ import { ChatOpenAI } from "@langchain/openai"
 
 const model = new ChatOpenAI({
   modelName: "anthropic/claude-sonnet-4.5",
-  openAIApiKey: process.env.KILO_API_KEY,
+  openAIApiKey: process.env.Devil_API_KEY,
   configuration: {
-    baseURL: "https://api.kilo.ai/api/gateway",
+    baseURL: "https://api.devil.ai/api/gateway",
   },
 })
 

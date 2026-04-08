@@ -6,7 +6,7 @@ import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
 import { iife } from "@/util/iife"
 import { Flag } from "@/flag/flag"
-import { kiloProviderOptions } from "@/kilocode/provider-options"
+import { kiloProviderOptions } from "@/devilcode/provider-options"
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -19,7 +19,7 @@ function mimeToModality(mime: string): Modality | undefined {
 }
 
 export namespace ProviderTransform {
-  export const OUTPUT_TOKEN_MAX = Flag.KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000
+  export const OUTPUT_TOKEN_MAX = Flag.DEVIL_EXPERIMENTAL_OUTPUT_TOKEN_MAX || 32_000
 
   // Maps npm package to the key the AI SDK expects for providerOptions
   function sdkKey(npm: string): string | undefined {
@@ -40,7 +40,7 @@ export namespace ProviderTransform {
       case "@ai-sdk/gateway":
         return "gateway"
       case "@openrouter/ai-sdk-provider":
-      case "@kilocode/kilo-gateway": // kilocode_change
+      case "@devilcode/kilo-gateway": // devilcode_change
         return "openrouter"
     }
     return undefined
@@ -252,7 +252,7 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
+  // devilcode_change - function added
   function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
     for (const msg of msgs) {
       if (!Array.isArray(msg.content)) {
@@ -295,7 +295,7 @@ export namespace ProviderTransform {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
 
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
+    // devilcode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
     // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
     if (model.api.npm === "@openrouter/ai-sdk-provider") {
       fixDuplicateReasoning(msgs, model)
@@ -379,11 +379,11 @@ export namespace ProviderTransform {
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
-    // kilocode_change start
-    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+    // devilcode_change start
+    if (model.api.npm === "@devilcode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
       return model.variants
     }
-    // kilocode_change end
+    // devilcode_change end
 
     if (!model.capabilities.reasoning) return {}
 
@@ -405,8 +405,8 @@ export namespace ProviderTransform {
 
     // see: https://docs.x.ai/docs/guides/reasoning#control-how-hard-the-model-thinks
     if (id.includes("grok") && id.includes("grok-3-mini")) {
-      if (model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@kilocode/kilo-gateway") {
-        // kilocode_change - add Kilo Gateway support
+      if (model.api.npm === "@openrouter/ai-sdk-provider" || model.api.npm === "@devilcode/kilo-gateway") {
+        // devilcode_change - add Devil Gateway support
         return {
           low: { reasoning: { effort: "low" } },
           high: { reasoning: { effort: "high" } },
@@ -420,13 +420,13 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
-      case "@kilocode/kilo-gateway": // kilocode_change
+      case "@devilcode/kilo-gateway": // devilcode_change
       case "@openrouter/ai-sdk-provider":
         if (
           !model.id.includes("gpt") &&
           !model.id.includes("gemini-3") &&
           !model.id.includes("claude") &&
-          !model.id.includes("mercury") // kilocode_change
+          !model.id.includes("mercury") // devilcode_change
         )
           return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
@@ -760,8 +760,8 @@ export namespace ProviderTransform {
       result["store"] = false
     }
 
-    if (input.model.api.npm === "@openrouter/ai-sdk-provider" || input.model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change
+    if (input.model.api.npm === "@openrouter/ai-sdk-provider" || input.model.api.npm === "@devilcode/kilo-gateway") {
+      // devilcode_change
       result["usage"] = {
         include: true,
       }
@@ -884,8 +884,8 @@ export namespace ProviderTransform {
       }
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
-    if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change - add Kilo Gateway support
+    if (model.providerID === "openrouter" || model.api.npm === "@devilcode/kilo-gateway") {
+      // devilcode_change - add Devil Gateway support
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
       }
@@ -937,11 +937,11 @@ export namespace ProviderTransform {
       return result
     }
 
-    // kilocode_change start
-    if (model.api.npm === "@kilocode/kilo-gateway") {
+    // devilcode_change start
+    if (model.api.npm === "@devilcode/kilo-gateway") {
       return kiloProviderOptions(options)
     }
-    // kilocode_change end
+    // devilcode_change end
 
     const key = sdkKey(model.api.npm) ?? model.providerID
     return { [key]: options }

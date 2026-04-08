@@ -1,15 +1,15 @@
-// Regression test: OAuth accountId must flow into model fetch as kilocodeOrganizationId
+// Regression test: OAuth accountId must flow into model fetch as devilcodeOrganizationId
 // When a user logs in via OAuth and selects an enterprise organization, the model fetch
 // should use the organization-specific endpoint, not the personal endpoint.
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
 
-// Capture the options passed to fetchKiloModels
+// Capture the options passed to fetchDevilModels
 let captured: any = undefined
 
-mock.module("@kilocode/kilo-gateway", () => ({
-  fetchKiloModels: async (options: any) => {
+mock.module("@devilcode/kilo-gateway", () => ({
+  fetchDevilModels: async (options: any) => {
     captured = options
     return {
       "test-model": {
@@ -20,7 +20,7 @@ mock.module("@kilocode/kilo-gateway", () => ({
       },
     }
   },
-  KILO_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
+  DEVIL_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
 }))
 
 // Mock BunProc and default plugins to prevent actual installations during tests
@@ -48,13 +48,13 @@ import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
 
-test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", async () => {
+test("model fetch uses accountId from OAuth auth as devilcodeOrganizationId", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
         }),
       )
     },
@@ -79,21 +79,21 @@ test("model fetch uses accountId from OAuth auth as kilocodeOrganizationId", asy
       // Trigger model fetch through the cache
       await ModelCache.fetch("kilo")
 
-      // The fetchKiloModels call should have received the organization ID
+      // The fetchDevilModels call should have received the organization ID
       expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-oauth-token")
-      expect(captured.kilocodeOrganizationId).toBe("org-enterprise-123")
+      expect(captured.devilcodeToken).toBe("test-oauth-token")
+      expect(captured.devilcodeOrganizationId).toBe("org-enterprise-123")
     },
   })
 })
 
-test("model fetch without OAuth accountId does not set kilocodeOrganizationId", async () => {
+test("model fetch without OAuth accountId does not set devilcodeOrganizationId", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
         }),
       )
     },
@@ -116,8 +116,8 @@ test("model fetch without OAuth accountId does not set kilocodeOrganizationId", 
       await ModelCache.fetch("kilo")
 
       expect(captured).toBeDefined()
-      expect(captured.kilocodeToken).toBe("test-personal-token")
-      expect(captured.kilocodeOrganizationId).toBeUndefined()
+      expect(captured.devilcodeToken).toBe("test-personal-token")
+      expect(captured.devilcodeOrganizationId).toBeUndefined()
     },
   })
 })
@@ -128,7 +128,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       await Bun.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
         }),
       )
     },
@@ -151,7 +151,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       await ModelCache.fetch("kilo")
       expect(captured).toBeDefined()
 
-      // Verify cache is populated — second fetch should NOT call fetchKiloModels
+      // Verify cache is populated — second fetch should NOT call fetchDevilModels
       captured = undefined
       await ModelCache.fetch("kilo")
       expect(captured).toBeUndefined()
@@ -163,7 +163,7 @@ test("ModelCache.clear removes cached entry so next fetch hits the network", asy
       // get() should return undefined after clear
       expect(ModelCache.get("kilo")).toBeUndefined()
 
-      // Next fetch should call fetchKiloModels again
+      // Next fetch should call fetchDevilModels again
       captured = undefined
       await ModelCache.fetch("kilo")
       expect(captured).toBeDefined()

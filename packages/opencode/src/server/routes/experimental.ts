@@ -10,10 +10,10 @@ import { Session } from "../../session"
 import { zodToJsonSchema } from "zod-to-json-schema"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
-import { Snapshot } from "../../snapshot" // kilocode_change
-import { Review } from "../../kilocode/review/review" // kilocode_change
-import { WorktreeDiff } from "../../kilocode/review/worktree-diff" // kilocode_change
-import { Log } from "../../util/log" // kilocode_change
+import { Snapshot } from "../../snapshot" // devilcode_change
+import { Review } from "../../devilcode/review/review" // devilcode_change
+import { WorktreeDiff } from "../../devilcode/review/worktree-diff" // devilcode_change
+import { Log } from "../../util/log" // devilcode_change
 import { WorkspaceRoutes } from "./workspace"
 
 export const ExperimentalRoutes = lazy(() =>
@@ -191,7 +191,7 @@ export const ExperimentalRoutes = lazy(() =>
         return c.json(true)
       },
     )
-    // kilocode_change start - worktree diff endpoint for agent manager
+    // devilcode_change start - worktree diff endpoint for agent manager
     .get(
       "/worktree/diff",
       describeRoute({
@@ -210,7 +210,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      // kilocode_change start
+      // devilcode_change start
       validator(
         "query",
         z.object({
@@ -221,7 +221,7 @@ export const ExperimentalRoutes = lazy(() =>
         const log = Log.create({ service: "worktree-diff" })
         const query = c.req.valid("query")
         const base = query.base || (await Review.getBaseBranch())
-        // kilocode_change end
+        // devilcode_change end
         const dir = Instance.directory
         log.info("computing diff", { dir, base })
         const diffs = await WorktreeDiff.full({ dir, base, log })
@@ -304,7 +304,7 @@ export const ExperimentalRoutes = lazy(() =>
         return c.json((await WorktreeDiff.detail({ dir, base, file: query.file, log })) ?? null)
       },
     )
-    // kilocode_change end
+    // devilcode_change end
     .get(
       "/session",
       describeRoute({

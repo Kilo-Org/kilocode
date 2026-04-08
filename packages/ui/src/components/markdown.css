@@ -218,7 +218,7 @@
     /* background: var(--surface-base); */
     /* box-shadow: 0 0 0 0.5px var(--border-weak-base); */
 
-    /* kilocode_change start */
+    /* devilcode_change start */
     &.file-link {
       cursor: pointer;
       text-decoration-line: underline;
@@ -231,7 +231,7 @@
         text-decoration-style: solid;
       }
     }
-    /* kilocode_change end */
+    /* devilcode_change end */
   }
 
   /* Tables */

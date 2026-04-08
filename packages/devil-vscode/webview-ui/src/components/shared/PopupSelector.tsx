@@ -19,8 +19,8 @@ import {
   splitProps,
   type ValidComponent,
 } from "solid-js"
-import { Popover } from "@kilocode/kilo-ui/popover"
-import type { PopoverProps } from "@kilocode/kilo-ui/popover"
+import { Popover } from "@devilcode/kilo-ui/popover"
+import type { PopoverProps } from "@devilcode/kilo-ui/popover"
 
 export interface PopupSelectorProps<T extends ValidComponent = ValidComponent> extends Omit<
   PopoverProps<T>,

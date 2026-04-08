@@ -1,16 +1,16 @@
 ---
 title: "Benchmarking"
-description: "Design for benchmarking Kilo Code against models and other agents"
+description: "Design for benchmarking devil Code against models and other agents"
 ---
 
 # Benchmarking
 
 ## Summary
 
-This document proposes a benchmarking system for Kilo Code with two primary goals:
+This document proposes a benchmarking system for devil Code with two primary goals:
 
 1. **Compare models against one another** using the same agent -- measuring task completion, token cost, and total time
-2. **Compare agents against one another** using the same model -- e.g., Kilo Code vs Claude Code, or Kilo Code v1.0 vs v1.1
+2. **Compare agents against one another** using the same model -- e.g., devil Code vs Claude Code, or devil Code v1.0 vs v1.1
 
 The design leverages existing open source infrastructure rather than building a custom harness:
 
@@ -18,7 +18,7 @@ The design leverages existing open source infrastructure rather than building a 
 - **[ATIF](https://harborframework.com/docs/agents/trajectory-format)** (Agent Trajectory Interchange Format) for structured, per-step trace logging
 - **[Opik](https://www.comet.com/docs/opik)** for trace ingestion, step-level LLM judge evaluation, and root cause analysis
 
-The key engineering deliverable is a **Kilo Code Harbor adapter** that runs Kilo CLI autonomously in containerized environments and emits ATIF-compliant trajectories.
+The key engineering deliverable is a **devil Code Harbor adapter** that runs devil CLI autonomously in containerized environments and emits ATIF-compliant trajectories.
 
 {% callout type="info" %}
 This is separate from [production observability](/docs/contributing/architecture/agent-observability), which monitors real user sessions via PostHog. Benchmarking is an offline evaluation system for comparing quality, cost, and performance across models and agents.
@@ -26,20 +26,20 @@ This is separate from [production observability](/docs/contributing/architecture
 
 ## Problem Statement
 
-As Kilo Code evolves, we need systematic answers to questions like:
+As devil Code evolves, we need systematic answers to questions like:
 
 - Did our latest release make the agent better or worse?
 - Which model gives the best results for our users at a given price point?
-- How does Kilo Code compare to Claude Code, Codex, or other agents on the same tasks?
+- How does devil Code compare to Claude Code, Codex, or other agents on the same tasks?
 - When a benchmark score drops, what specific step or decision caused the regression?
 
 Today we have no structured way to answer these questions. Manual testing is not reproducible, and our existing PostHog telemetry does not capture the turn-by-turn detail needed for easy comparative analysis.
 
 ## Goals
 
-1. Run Kilo Code against standardized benchmark datasets in a reproducible, containerized environment
+1. Run devil Code against standardized benchmark datasets in a reproducible, containerized environment
 2. Compare model performance (same agent, different models) on task completion, token cost, and wall-clock time
-3. Compare agent performance (same model, different agents or Kilo versions) on the same metrics
+3. Compare agent performance (same model, different agents or devil versions) on the same metrics
 4. Capture detailed per-step traces for root cause analysis when results differ
 5. Make it easy to create custom task sets for targeted evaluation or marketing purposes
 
@@ -56,7 +56,7 @@ Today we have no structured way to answer these questions. Manual testing is not
 │                                                         │
 │  ┌──────────────┐  ┌─────────────┐  ┌─────────────────┐ │
 │  │Terminal-Bench│  │  SWE-bench  │  │  Custom Tasks   │ │
-│  │    2.0       │  │             │  │ (Kilo-specific) │ │
+│  │    2.0       │  │             │  │ (devil-specific) │ │
 │  └──────┬───────┘  └──────┬──────┘  └───────┬─────────┘ │
 │         └────────────────┼─────────────────┘            │
 │                          ▼                              │
@@ -66,7 +66,7 @@ Today we have no structured way to answer these questions. Manual testing is not
 │              │  ┌─────────────────┐  │                  │
 │              │  │  Agent Under    │  │                  │
 │              │  │  Test           │  │                  │
-│              │  │  (kilo --auto)  │  │                  │
+│              │  │  (devil --auto)  │  │                  │
 │              │  └────────┬────────┘  │                  │
 │              │           │           │                  │
 │              │           ▼           │                  │
@@ -107,7 +107,7 @@ Today we have no structured way to answer these questions. Manual testing is not
 - **Cloud scaling** via Daytona, Modal, and E2B for running trials in parallel
 - **Automatic ATIF trajectory generation** for all integrated agents
 
-Harbor is the standard evaluation framework used by many frontier labs. Rather than building our own harness, we write a Kilo Code adapter and plug into the existing ecosystem.
+Harbor is the standard evaluation framework used by many frontier labs. Rather than building our own harness, we write a devil Code adapter and plug into the existing ecosystem.
 
 ### ATIF (Agent Trajectory Interchange Format)
 
@@ -126,7 +126,7 @@ This granularity is what enables step-level comparison between runs -- not just 
 [Opik](https://www.comet.com/docs/opik) (by Comet) provides trace ingestion and analysis with a first-class Harbor integration. Running benchmarks through Opik is as simple as:
 
 ```bash
-opik harbor run -d terminal-bench@head -a kilo -m anthropic/claude-opus-4
+opik harbor run -d terminal-bench@head -a devil -m anthropic/claude-opus-4
 ```
 
 Opik adds value beyond what the tbench.ai dashboard provides:
@@ -164,22 +164,22 @@ Creating a custom Harbor task set is straightforward. Each task consists of:
 3. **A verification script** (tests that determine pass/fail)
 4. **Optionally, a reference solution**
 
-This makes it easy to create task sets that target specific Kilo Code capabilities -- for example, a set of refactoring tasks, or a set of multi-file debugging scenarios. Custom sets can be published to the Harbor registry or kept private.
+This makes it easy to create task sets that target specific devil Code capabilities -- for example, a set of refactoring tasks, or a set of multi-file debugging scenarios. Custom sets can be published to the Harbor registry or kept private.
 
 See the [Harbor task tutorial](https://www.tbench.ai/docs/task-tutorial) for a step-by-step guide.
 
 ## Deliverables
 
-### 1. Kilo Code Harbor Adapter
+### 1. devil Code Harbor Adapter
 
 The primary engineering deliverable. This adapter:
 
-- **Installs Kilo CLI** in a Docker container
-- **Configures autonomous execution** using `kilo run --auto`, which disables all permission prompts so the agent runs fully unattended
-- **Translates Harbor task prompts** into Kilo CLI invocations
+- **Installs devil CLI** in a Docker container
+- **Configures autonomous execution** using `devil run --auto`, which disables all permission prompts so the agent runs fully unattended
+- **Translates Harbor task prompts** into devil CLI invocations
 - **Emits ATIF-compliant trajectories** capturing every step, tool call, and metric
 
-The adapter follows the same pattern as existing Harbor agents (see the [OpenHands adapter](https://harborframework.com/docs/agents/trajectory-format#openhands-example) for reference). The key implementation detail is the `populate_context_post_run` method that converts Kilo's execution log into ATIF format.
+The adapter follows the same pattern as existing Harbor agents (see the [OpenHands adapter](https://harborframework.com/docs/agents/trajectory-format#openhands-example) for reference). The key implementation detail is the `populate_context_post_run` method that converts devil's execution log into ATIF format.
 
 **Autonomous execution is critical.** Harbor runs containerized trials in parallel and expects agents to execute from start to finish without human intervention. The adapter must ensure:
 
@@ -189,7 +189,7 @@ The adapter follows the same pattern as existing Harbor agents (see the [OpenHan
 
 ### 2. Custom Task Set Template
 
-Documentation and examples for creating Kilo-specific task sets:
+Documentation and examples for creating devil-specific task sets:
 
 - Template Dockerfile and verification script
 - Guidelines for writing good task descriptions
@@ -200,9 +200,9 @@ This enables the team to create targeted benchmarks for marketing, regression te
 
 ### 3. Opik Integration
 
-Configure the Opik-Harbor integration for Kilo Code benchmark runs:
+Configure the Opik-Harbor integration for devil Code benchmark runs:
 
-- Set up `opik harbor run` with the Kilo Code adapter
+- Set up `opik harbor run` with the devil Code adapter
 - Define standard LLM judge criteria for step-level evaluation:
   - **Tool choice correctness**: Did the agent use the right tool at each step?
   - **Reasoning quality**: Was the agent's reasoning at each step sound?
@@ -225,17 +225,17 @@ Run a small subset of benchmark tasks (10-15) on release branches to catch regre
 
 ### Comparing Models
 
-Run the same Kilo Code agent against Terminal-Bench with different models:
+Run the same devil Code agent against Terminal-Bench with different models:
 
 ```bash
 # Run with Claude Opus
-opik harbor run -d terminal-bench@2.0 -a kilo -m anthropic/claude-opus-4
+opik harbor run -d terminal-bench@2.0 -a devil -m anthropic/claude-opus-4
 
 # Run with GPT-5
-opik harbor run -d terminal-bench@2.0 -a kilo -m openai/gpt-5
+opik harbor run -d terminal-bench@2.0 -a devil -m openai/gpt-5
 
 # Run with Gemini 3 Pro
-opik harbor run -d terminal-bench@2.0 -a kilo -m google/gemini-3-pro
+opik harbor run -d terminal-bench@2.0 -a devil -m google/gemini-3-pro
 ```
 
 Compare results in tbench.ai for aggregate scores and in Opik for step-level analysis of where models diverge.
@@ -245,23 +245,23 @@ Compare results in tbench.ai for aggregate scores and in Opik for step-level ana
 Run different agents against the same dataset with the same model:
 
 ```bash
-# Run Kilo Code
-opik harbor run -d terminal-bench@2.0 -a kilo -m anthropic/claude-opus-4
+# Run devil Code
+opik harbor run -d terminal-bench@2.0 -a devil -m anthropic/claude-opus-4
 
 # Run Claude Code
 opik harbor run -d terminal-bench@2.0 -a claude-code -m anthropic/claude-opus-4
 ```
 
-### Comparing Kilo Versions
+### Comparing devil Versions
 
 Test a new release against the previous version:
 
 ```bash
 # Run current release
-opik harbor run -d terminal-bench@2.0 -a kilo@v2.0 -m anthropic/claude-opus-4
+opik harbor run -d terminal-bench@2.0 -a devil@v2.0 -m anthropic/claude-opus-4
 
 # Run candidate release
-opik harbor run -d terminal-bench@2.0 -a kilo@v2.1-rc1 -m anthropic/claude-opus-4
+opik harbor run -d terminal-bench@2.0 -a devil@v2.1-rc1 -m anthropic/claude-opus-4
 ```
 
 Use Opik's trace comparison view to identify specific steps where the new version regressed or improved.
@@ -269,8 +269,8 @@ Use Opik's trace comparison view to identify specific steps where the new versio
 ### Running a Custom Task Set
 
 ```bash
-# Run against a custom Kilo-specific dataset
-opik harbor run -d kilo-refactoring@1.0 -a kilo -m anthropic/claude-opus-4
+# Run against a custom devil-specific dataset
+opik harbor run -d devil-refactoring@1.0 -a devil -m anthropic/claude-opus-4
 ```
 
 ## LLM Judge: Two Levels

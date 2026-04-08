@@ -53,7 +53,7 @@ export async function kiloCustomLoader(provider: ProviderInfo): Promise<CustomLo
  */
 async function checkAuthentication(provider: ProviderInfo): Promise<boolean> {
   // Check 1: Provider configuration
-  if (provider.options?.apiKey || provider.options?.kilocodeToken) {
+  if (provider.options?.apiKey || provider.options?.devilcodeToken) {
     return true
   }
 

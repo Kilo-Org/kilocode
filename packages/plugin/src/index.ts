@@ -1,6 +1,6 @@
 import type {
   Event,
-  createKiloClient,
+  createDevilClient,
   Project,
   Model,
   Provider,
@@ -10,7 +10,7 @@ import type {
   Part,
   Auth,
   Config,
-} from "@kilocode/sdk"
+} from "@devilcode/sdk"
 
 import type { BunShell } from "./shell.js"
 import { type ToolDefinition } from "./tool.js"
@@ -24,7 +24,7 @@ export type ProviderContext = {
 }
 
 export type PluginInput = {
-  client: ReturnType<typeof createKiloClient>
+  client: ReturnType<typeof createDevilClient>
   project: Project
   directory: string
   worktree: string

@@ -1,8 +1,8 @@
 import * as fs from "node:fs"
 import * as path from "node:path"
 
-// TODO: Remove the legacy .kilocode -> .kilo migration helpers below after the
-// GA release cleanup tracked in https://github.com/Kilo-Org/kilocode/issues/6986.
+// TODO: Remove the legacy .devilcode -> .kilo migration helpers below after the
+// GA release cleanup tracked in https://github.com/Devil-Org/devilcode/issues/6986.
 
 /**
  * Maximum number of parallel worktree versions for multi-version mode.
@@ -13,13 +13,13 @@ export const MAX_MULTI_VERSIONS = 4
 /** Telemetry source identifier for all Agent Manager events. */
 export const PLATFORM = "agent-manager" as const
 
-/** Kilo config directory name (project-level and inside worktrees). */
-export const KILO_DIR = ".kilo"
+/** Devil config directory name (project-level and inside worktrees). */
+export const DEVIL_DIR = ".kilo"
 
 /** Legacy config directory name for backward compatibility reads. */
-export const LEGACY_DIR = ".kilocode"
+export const LEGACY_DIR = ".devilcode"
 
-/** Agent Manager files that should be migrated from .kilocode/ to .kilo/. */
+/** Agent Manager files that should be migrated from .devilcode/ to .kilo/. */
 const AGENT_MANAGER_ITEMS = [
   "agent-manager.json",
   "worktrees",
@@ -32,15 +32,15 @@ const AGENT_MANAGER_ITEMS = [
 
 /** Result of the migration so callers can react (e.g. refresh VS Code git). */
 export interface MigrationResult {
-  /** Number of git worktree refs that were rewritten from .kilocode → .kilo. */
+  /** Number of git worktree refs that were rewritten from .devilcode → .kilo. */
   refsFixed: number
 }
 
 /**
- * Migrate Agent Manager data from .kilocode/ to .kilo/.
+ * Migrate Agent Manager data from .devilcode/ to .kilo/.
  *
  * Moves individual Agent Manager files/directories (worktrees, state,
- * setup scripts) from the legacy .kilocode/ into .kilo/. Skips items
+ * setup scripts) from the legacy .devilcode/ into .kilo/. Skips items
  * that already exist in .kilo/ (the new location wins). This is safe
  * because Agent Manager exclusively owns these files.
  *
@@ -51,7 +51,7 @@ export interface MigrationResult {
  */
 export async function migrateAgentManagerData(root: string, log: (msg: string) => void): Promise<MigrationResult> {
   const legacy = path.join(root, LEGACY_DIR)
-  const target = path.join(root, KILO_DIR)
+  const target = path.join(root, DEVIL_DIR)
 
   if (await isDirectory(legacy)) {
     // Ensure .kilo/ exists
@@ -68,13 +68,13 @@ export async function migrateAgentManagerData(root: string, log: (msg: string) =
       if (!(await exists(src))) continue
 
       if (await exists(dst)) {
-        log(`Skipping ${item}: already exists in ${KILO_DIR}`)
+        log(`Skipping ${item}: already exists in ${DEVIL_DIR}`)
         continue
       }
 
       try {
         await fs.promises.rename(src, dst)
-        log(`Migrated ${item} from ${LEGACY_DIR} to ${KILO_DIR}`)
+        log(`Migrated ${item} from ${LEGACY_DIR} to ${DEVIL_DIR}`)
       } catch (err) {
         // On Windows, rename can fail with EPERM/EBUSY if files are held open.
         // Will succeed on next startup.
@@ -132,11 +132,11 @@ async function resolveGitDir(root: string): Promise<string | undefined> {
 }
 
 /**
- * After moving worktrees from .kilocode/ to .kilo/, fix git internal refs.
+ * After moving worktrees from .devilcode/ to .kilo/, fix git internal refs.
  *
  * Git stores absolute paths in .git/worktrees/{name}/gitdir. When the
  * worktree directory moves, those paths become stale. This rewrites any
- * gitdir files that reference the old .kilocode path.
+ * gitdir files that reference the old .devilcode path.
  *
  * Returns the number of refs that were successfully fixed so callers can
  * tell whether a VS Code git refresh is warranted.
@@ -158,7 +158,7 @@ async function fixGitWorktreeRefs(root: string, log: (msg: string) => void): Pro
   }
 
   const oldSegment = path.join(root, LEGACY_DIR) + path.sep
-  const newSegment = path.join(root, KILO_DIR) + path.sep
+  const newSegment = path.join(root, DEVIL_DIR) + path.sep
   let fixed = 0
 
   try {

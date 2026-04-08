@@ -5,7 +5,7 @@ description: "Automate code reviews with AI assistance"
 
 # Code Reviews
 
-Kilo's **Code Reviews** feature automatically analyzes your pull or merge requests using an AI model of your choice. It can review code the moment a PR/MR is opened or updated, surface issues, and provide structured feedback across performance, security, style, and test coverage.
+devil's **Code Reviews** feature automatically analyzes your pull or merge requests using an AI model of your choice. It can review code the moment a PR/MR is opened or updated, surface issues, and provide structured feedback across performance, security, style, and test coverage.
 
 ## What Code Reviews Enable
 
@@ -26,19 +26,19 @@ Kilo's **Code Reviews** feature automatically analyzes your pull or merge reques
 
 Before enabling Code Reviews:
 
-- **A platform integration must be configured:** Connect your GitHub or GitLab account via the [Integrations page](https://app.kilo.ai/integrations) so that the Review Agent can access your repositories. See the [Integration setup guide](/docs/automate/integrations) for detailed instructions.
-- **Kilo Code credits:** The AI model uses credits when analyzing your code.
+- **A platform integration must be configured:** Connect your GitHub or GitLab account via the [Integrations page](https://app.devil.ai/integrations) so that the Review Agent can access your repositories. See the [Integration setup guide](/docs/automate/integrations) for detailed instructions.
+- **devil Code credits:** The AI model uses credits when analyzing your code.
 
 ## Cost
 
 - **Compute and review time are free during limited beta**
   - Feedback is welcome in the Code Reviews beta Discord channel:
-    - [Kilo Discord](https://discord.gg/hZnd57qN)
-- **Kilo Code credits are still used** when the agent performs model reasoning during a review.
+    - [devil Discord](https://discord.gg/hZnd57qN)
+- **devil Code credits are still used** when the agent performs model reasoning during a review.
 
 ## Getting Started
 
-1. Go to the **Code Reviews** page in your [personal dashboard](https://app.kilo.ai/profile) or [organization dashboard](https://app.kilo.ai/organizations).
+1. Go to the **Code Reviews** page in your [personal dashboard](https://app.devil.ai/profile) or [organization dashboard](https://app.devil.ai/organizations).
 2. Toggle **Enable AI Code Review** to on.
 3. Choose an **AI Model** (e.g., Claude Sonnet 4.5).
 4. Select a **Review Style** — Strict, Balanced, or Lenient.

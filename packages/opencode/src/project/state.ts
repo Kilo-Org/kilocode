@@ -61,7 +61,7 @@ export namespace State {
 
       const label = typeof init === "function" ? init.name : String(init)
 
-      // kilocode_change start — hard timeout per disposer so a single hung callback
+      // devilcode_change start — hard timeout per disposer so a single hung callback
       // (e.g. MCP client.close()) cannot block the entire disposal indefinitely.
       // This is a backend safety bound, not a UI timeout: desktop, VS Code, and
       // other callers all wait on State.dispose() through Instance.disposeAll().
@@ -77,7 +77,7 @@ export namespace State {
       ]).catch((error) => {
         log.error("Error while disposing state:", { error, key, init: label })
       })
-      // kilocode_change end
+      // devilcode_change end
 
       tasks.push(task)
     }

@@ -13,7 +13,7 @@ export class AutocompleteCodeActionProvider implements vscode.CodeActionProvider
     _token: vscode.CancellationToken,
   ): vscode.ProviderResult<(vscode.CodeAction | vscode.Command)[]> {
     const action = new vscode.CodeAction(
-      t("kilocode:autocomplete.codeAction.title"),
+      t("devilcode:autocomplete.codeAction.title"),
       this.providedCodeActionKinds["quickfix"],
     )
     action.command = {

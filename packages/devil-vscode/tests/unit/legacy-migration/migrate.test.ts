@@ -45,7 +45,7 @@ function client() {
   const calls: Array<{ name: string; body: unknown }> = []
   return {
     calls,
-    kilocode: {
+    devilcode: {
       sessionImport: {
         project: async (body: unknown) => {
           calls.push({ name: "project", body })
@@ -76,7 +76,7 @@ describe("legacy migration migrate", () => {
   it("inserts project then session then message then part in the correct order", async () => {
     const calls: string[] = []
     const api = {
-      kilocode: {
+      devilcode: {
         sessionImport: {
           project: async () => {
             calls.push("project")
@@ -161,7 +161,7 @@ describe("legacy migration migrate", () => {
 
   it("returns ok false without throwing when one backend insert fails", async () => {
     const api = {
-      kilocode: {
+      devilcode: {
         sessionImport: {
           project: async () => ({ data: { id: "project-real" } }),
           session: async () => {
@@ -181,7 +181,7 @@ describe("legacy migration migrate", () => {
   it("skips message and part imports when backend reports the session already exists", async () => {
     const calls: string[] = []
     const api = {
-      kilocode: {
+      devilcode: {
         sessionImport: {
           project: async () => {
             calls.push("project")

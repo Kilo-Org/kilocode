@@ -4,7 +4,7 @@ import path from "path"
 import os from "os"
 import { Filesystem } from "../util/filesystem"
 
-const app = "kilo" // kilocode_change
+const app = "devil" // devilcode_change
 
 const data = path.join(xdgData!, app)
 const cache = path.join(xdgCache!, app)
@@ -13,9 +13,9 @@ const state = path.join(xdgState!, app)
 
 export namespace Global {
   export const Path = {
-    // Allow override via KILO_TEST_HOME for test isolation
+    // Allow override via DEVIL_TEST_HOME for test isolation
     get home() {
-      return process.env.KILO_TEST_HOME || os.homedir() // kilocode_change
+      return process.env.DEVIL_TEST_HOME || os.homedir() // devilcode_change
     },
     data,
     bin: path.join(data, "bin"),

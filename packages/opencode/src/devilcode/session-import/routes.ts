@@ -12,7 +12,7 @@ export const SessionImportRoutes = lazy(() =>
       describeRoute({
         summary: "Insert project for session import",
         description: "Insert or update a project row used by legacy session import.",
-        operationId: "kilocode.sessionImport.project",
+        operationId: "devilcode.sessionImport.project",
         responses: {
           200: {
             description: "Project import result",
@@ -33,7 +33,7 @@ export const SessionImportRoutes = lazy(() =>
       describeRoute({
         summary: "Insert session for session import",
         description: "Insert or update a session row used by legacy session import.",
-        operationId: "kilocode.sessionImport.session",
+        operationId: "devilcode.sessionImport.session",
         responses: {
           200: {
             description: "Session import result",
@@ -54,7 +54,7 @@ export const SessionImportRoutes = lazy(() =>
       describeRoute({
         summary: "Insert message for session import",
         description: "Insert or update a message row used by legacy session import.",
-        operationId: "kilocode.sessionImport.message",
+        operationId: "devilcode.sessionImport.message",
         responses: {
           200: {
             description: "Message import result",
@@ -75,7 +75,7 @@ export const SessionImportRoutes = lazy(() =>
       describeRoute({
         summary: "Insert part for session import",
         description: "Insert or update a part row used by legacy session import.",
-        operationId: "kilocode.sessionImport.part",
+        operationId: "devilcode.sessionImport.part",
         responses: {
           200: {
             description: "Part import result",

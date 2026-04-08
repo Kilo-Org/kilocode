@@ -6,14 +6,14 @@ import { Installation } from "@/installation"
 export async function upgrade() {
   const config = await Config.global()
   const method = await Installation.method()
-  // kilocode_change start - only auto-upgrade for npm/pnpm/bun (we only publish @kilocode/cli via npm registry)
+  // devilcode_change start - only auto-upgrade for npm/pnpm/bun (we only publish @devilcode/cli via npm registry)
   if (method !== "npm" && method !== "pnpm" && method !== "bun") return
-  // kilocode_change end
+  // devilcode_change end
   const latest = await Installation.latest(method).catch(() => {})
   if (!latest) return
   if (Installation.VERSION === latest) return
 
-  if (config.autoupdate === false || Flag.KILO_DISABLE_AUTOUPDATE) {
+  if (config.autoupdate === false || Flag.DEVIL_DISABLE_AUTOUPDATE) {
     return
   }
   if (config.autoupdate === "notify") {

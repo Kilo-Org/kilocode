@@ -8,20 +8,21 @@ import { DialogPrompt } from "../ui/dialog-prompt"
 import { Link } from "../ui/link"
 import { useTheme } from "../context/theme"
 import { TextAttributes } from "@opentui/core"
-import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
+import type { ProviderAuthAuthorization } from "@devilcode/sdk/v2"
 import { DialogModel } from "./dialog-model"
 import { useKeyboard } from "@opentui/solid"
 import { Clipboard } from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
-import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method" // kilocode_change
+import { DevilAutoMethod } from "@/devilcode/components/dialog-kilo-auto-method" // devilcode_change
 
 const PROVIDER_PRIORITY: Record<string, number> = {
-  kilo: -1, // kilocode_change - Kilo Gateway at top
-  // kilocode_change - removed opencode from popular providers
-  anthropic: 0,
-  "github-copilot": 1,
-  openai: 2,
-  google: 3,
+  kilo: -1, // devilcode_change - Devil Gateway at top
+  // devilcode_change - removed opencode from popular providers
+  "claude-code": 0,
+  anthropic: 1,
+  "github-copilot": 2,
+  openai: 3,
+  google: 4,
 }
 
 export function createDialogProviderOptions() {
@@ -36,10 +37,11 @@ export function createDialogProviderOptions() {
         title: provider.name,
         value: provider.id,
         description: {
-          kilo: "(Recommended)", // kilocode_change
-          anthropic: "(Claude Max or API key)",
-          openai: "(ChatGPT Plus/Pro or API key)",
-          // "opencode-go": "(Low cost)", // kilocode_change
+          kilo: "(Recommended)", // devilcode_change
+          "claude-code": "(Use local Claude Code)",
+          anthropic: "(API key)",
+          openai: "(ChatGPT login or API key)",
+          // "opencode-go": "(Low cost)", // devilcode_change
         }[provider.id],
         category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
         async onSelect() {
@@ -80,10 +82,10 @@ export function createDialogProviderOptions() {
               ))
             }
             if (result.data?.method === "auto") {
-              // kilocode_change start - Use custom handler for Kilo Gateway
+              // devilcode_change start - Use custom handler for Devil Gateway
               if (provider.id === "kilo") {
                 dialog.replace(() => (
-                  <KiloAutoMethod
+                  <DevilAutoMethod
                     providerID={provider.id}
                     title={method.label}
                     index={index}
@@ -103,7 +105,7 @@ export function createDialogProviderOptions() {
                   />
                 ))
               }
-              // kilocode_change end
+              // devilcode_change end
             }
           }
           if (method.type === "api") {
@@ -241,15 +243,15 @@ function ApiMethod(props: ApiMethodProps) {
         {
           kilo: (
             <box gap={1}>
-              {/* kilocode_change start */}
+              {/* devilcode_change start */}
               <text fg={theme.textMuted}>
-                Kilo Gateway gives you access to all the best coding models at the cheapest prices with a single API
+                Devil Gateway gives you access to all the best coding models at the cheapest prices with a single API
                 key.
               </text>
               <text fg={theme.text}>
-                Go to <span style={{ fg: theme.primary }}>https://kilo.ai/gateway</span> to get a key
+                Go to <span style={{ fg: theme.primary }}>https://devil.ai/gateway</span> to get a key
               </text>
-              {/* kilocode_change end */}
+              {/* devilcode_change end */}
             </box>
           ),
         }[props.providerID] ?? undefined

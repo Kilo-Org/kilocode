@@ -1,10 +1,11 @@
-export const KILO_PROVIDER_ID = "kilo"
-export const KILO_AUTO = { providerID: KILO_PROVIDER_ID, modelID: "kilo-auto/free" } as const
+export const DEVIL_PROVIDER_ID = "kilo"
+export const DEVIL_AUTO = { providerID: DEVIL_PROVIDER_ID, modelID: "kilo-auto/free" } as const
 export const CUSTOM_PROVIDER_PACKAGE = "@ai-sdk/openai-compatible"
 export const PROVIDER_ID_PATTERN = /^[a-z0-9][a-z0-9-_]*$/
 
 export const PROVIDER_PRIORITY = [
-  KILO_PROVIDER_ID,
+  DEVIL_PROVIDER_ID,
+  "claude-code",
   "anthropic",
   "github-copilot",
   "openai",
@@ -25,12 +26,12 @@ export function providerOrderIndex(providerID: string, order = PROVIDER_PRIORITY
   return index >= 0 ? index : order.length
 }
 
-export function createKiloFallbackProvider() {
+export function createDevilFallbackProvider() {
   return {
-    id: KILO_PROVIDER_ID,
-    name: "Kilo Gateway",
+    id: DEVIL_PROVIDER_ID,
+    name: "Devil Gateway",
     source: "custom" as const,
-    env: ["KILO_API_KEY"],
+    env: ["DEVIL_API_KEY"],
     models: {},
   }
 }

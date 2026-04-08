@@ -134,16 +134,16 @@ async function backupAndStripLegacy(file: string, source: string) {
     })
 }
 
-// kilocode_change start: use kilo directory everywhere
+// devilcode_change start: use kilo directory everywhere
 async function opencodeFiles(input: { directories: string[]; managed: string }) {
-  const project = Flag.KILO_DISABLE_PROJECT_CONFIG
+  const project = Flag.DEVIL_DISABLE_PROJECT_CONFIG
     ? []
     : await ConfigPaths.projectFiles("kilo", Instance.directory, Instance.worktree)
   const files = [...project, ...ConfigPaths.fileInDirectory(Global.Path.config, "kilo")]
   for (const dir of unique(input.directories)) {
     files.push(...ConfigPaths.fileInDirectory(dir, "kilo"))
   }
-  if (Flag.KILO_CONFIG) files.push(Flag.KILO_CONFIG)
+  if (Flag.DEVIL_CONFIG) files.push(Flag.DEVIL_CONFIG)
   files.push(...ConfigPaths.fileInDirectory(input.managed, "kilo"))
 
   const existing = await Promise.all(
@@ -154,4 +154,4 @@ async function opencodeFiles(input: { directories: string[]; managed: string }) 
   )
   return existing.filter((file): file is string => !!file)
 }
-// kilocode_change end
+// devilcode_change end

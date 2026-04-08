@@ -5,7 +5,7 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Providers",
     links: [
       { href: "/ai-providers", children: "Overview" },
-      { href: "/ai-providers/kilocode", children: "Kilo Code (Default)" },
+      { href: "/ai-providers/devilcode", children: "devil Code (Default)" },
     ],
   },
   {

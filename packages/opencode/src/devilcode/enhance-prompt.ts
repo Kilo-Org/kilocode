@@ -23,9 +23,16 @@ export async function enhancePrompt(text: string): Promise<string> {
   log.info("enhancing", { length: text.length })
 
   const defaultModel = await Provider.defaultModel()
-  const model =
+  let model =
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
+  if (Provider.external(model, await Provider.getProvider(model.providerID))) {
+    const next = await Provider.usable()
+    if (!next) {
+      throw new Error("A non-external provider is required to enhance prompts.")
+    }
+    model = await Provider.getModel(next.providerID, next.modelID)
+  }
 
   const language = await Provider.getLanguage(model)
 

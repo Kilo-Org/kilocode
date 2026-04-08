@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { KiloConnectionService } from "../cli-backend/connection-service"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
+import type { DevilConnectionService } from "../cli-backend/connection-service"
 import { getErrorMessage } from "../../kilo-provider-utils"
 
 let lastGeneratedMessage: string | undefined
@@ -31,7 +31,7 @@ function findRepository(repositories: GitRepository[], arg?: vscode.SourceContro
 
 export function registerCommitMessageService(
   context: vscode.ExtensionContext,
-  connectionService: KiloConnectionService,
+  connectionService: DevilConnectionService,
 ): vscode.Disposable[] {
   const command = vscode.commands.registerCommand(
     "kilo-code.new.generateCommitMessage",
@@ -53,16 +53,16 @@ export function registerCommitMessageService(
         return
       }
 
-      let client: KiloClient | undefined
+      let client: DevilClient | undefined
       try {
         client = connectionService.getClient()
       } catch (err) {
-        console.error("[Kilo New] Failed to get client:", err)
-        vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+        console.error("[Devil New] Failed to get client:", err)
+        vscode.window.showErrorMessage("Devil backend is not connected. Please wait for the connection to establish.")
         return
       }
       if (!client) {
-        vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
+        vscode.window.showErrorMessage("Devil backend is not connected. Please wait for the connection to establish.")
         return
       }
 
@@ -98,7 +98,7 @@ export function registerCommitMessageService(
               repository.inputBox.value = message
               lastGeneratedMessage = message
               lastWorkspacePath = path
-              console.log("[Kilo New] Commit message generated successfully")
+              console.log("[Devil New] Commit message generated successfully")
             } finally {
               clearTimeout(timer)
             }
@@ -106,11 +106,11 @@ export function registerCommitMessageService(
         )
         .then(undefined, (error: unknown) => {
           if (controller.signal.aborted) {
-            console.log("[Kilo New] Commit message generation was cancelled or timed out")
+            console.log("[Devil New] Commit message generation was cancelled or timed out")
             return
           }
           const msg = getErrorMessage(error)
-          console.error("[Kilo New] Failed to generate commit message:", msg)
+          console.error("[Devil New] Failed to generate commit message:", msg)
           vscode.window.showErrorMessage(`Failed to generate commit message: ${msg}`)
         })
     },

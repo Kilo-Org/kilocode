@@ -1,6 +1,6 @@
 ---
 title: "Architecture Features"
-description: "Overview of current and planned features in Kilo Code"
+description: "Overview of current and planned features in devil Code"
 ---
 
 # Architecture Features
@@ -11,7 +11,7 @@ These pages document the architecture and design of current or planned features,
 | ---------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | [Agent Observability](/docs/contributing/architecture/agent-observability)               | Observability and monitoring for agentic systems     |
 | [Auto Model Tiers](/docs/contributing/architecture/auto-model-tiers)                     | Multi-tier auto model routing (Frontier, Free, Open) |
-| [Benchmarking](/docs/contributing/architecture/benchmarking)                             | Benchmarking Kilo Code across models and agents      |
+| [Benchmarking](/docs/contributing/architecture/benchmarking)                             | Benchmarking devil Code across models and agents      |
 | [Enterprise MCP Controls](/docs/contributing/architecture/enterprise-mcp-controls)       | Admin controls for MCP server allowlists             |
 | [MCP OAuth Authorization](/docs/contributing/architecture/mcp-oauth-authorization)       | OAuth 2.1-based authorization for MCP servers        |
 | [Onboarding Improvements](/docs/contributing/architecture/onboarding-improvements)       | User onboarding and engagement features              |

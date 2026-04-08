@@ -2,9 +2,9 @@
 sidebar_label: Mistral AI
 ---
 
-# Using Mistral AI With Kilo Code
+# Using Mistral AI With devil Code
 
-Kilo Code supports accessing models through the Mistral AI API, including both standard Mistral models and the code-specialized Codestral model.
+devil Code supports accessing models through the Mistral AI API, including both standard Mistral models and the code-specialized Codestral model.
 
 **Website:** [https://mistral.ai/](https://mistral.ai/)
 
@@ -15,12 +15,12 @@ Kilo Code supports accessing models through the Mistral AI API, including both s
     - [La Plateforme API Key](https://console.mistral.ai/api-keys/) and/or
     - [Codestral API Key](https://console.mistral.ai/codestral)
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+1.  **Open devil Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the devil Code panel.
 2.  **Select Provider:** Choose "Mistral" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your Mistral API key into the "Mistral API Key" field if you're using a `mistral` model. If you intend to use `codestral-latest`, see the "Codestral" section below.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -30,12 +30,12 @@ Kilo Code supports accessing models through the Mistral AI API, including both s
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Mistral and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores this in your `devil.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Set the API key as an environment variable or configure it in your `devil.json` config file:
 
 **Environment variable:**
 
@@ -43,7 +43,7 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 export MISTRAL_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {

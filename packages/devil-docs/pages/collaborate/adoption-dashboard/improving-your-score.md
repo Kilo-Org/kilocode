@@ -15,10 +15,10 @@ This guide provides actionable strategies to improve each dimension of your AI A
 
 A lot of development work happens in the terminal—git operations, debugging, scripting. Bringing AI to those contexts increases daily touchpoints.
 
-**Action:** Install the Kilo CLI to enable AI-assisted terminal workflows:
+**Action:** Install the devil CLI to enable AI-assisted terminal workflows:
 
 ```bash
-npm install -g @kilocode/cli
+npm install -g @devilcode/cli
 ```
 
 Teams that use both IDE and CLI surfaces tend to show higher daily engagement because AI is available wherever they're working.
@@ -86,7 +86,7 @@ Better context leads to:
 
 Generated code that never runs is hard to trust. Teams that can verify AI output against live environments tend to retain more of that code long-term.
 
-**Action:** Use [Kilo Deploy](/docs/deploy-secure/deploy) to spin up live URLs for branches, allowing your team to verify changes before merging.
+**Action:** Use [devil Deploy](/docs/deploy-secure/deploy) to spin up live URLs for branches, allowing your team to verify changes before merging.
 
 ---
 
@@ -96,7 +96,7 @@ Generated code that never runs is hard to trust. Teams that can verify AI output
 
 ### Introduce Specialist Agents
 
-Most teams start with Code mode and stop there. But Kilo's other modes unlock additional value.
+Most teams start with Code mode and stop there. But devil's other modes unlock additional value.
 
 **Action:** Introduce your team to specialized modes:
 
@@ -179,7 +179,7 @@ Other ways to spread usage:
 1. Introduce chained workflows (plan → build → review)
 2. Focus on Depth—are suggestions being accepted and retained?
 3. Address any inactive seats or low-usage pockets
-4. Consider Kilo Deploy to validate AI output
+4. Consider devil Deploy to validate AI output
 
 ### If You're at 76–90 (Strong Adoption)
 

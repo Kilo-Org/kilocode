@@ -154,7 +154,7 @@ test("auto-accept toggle works before first submit", async ({ page, gotoSession 
 })
 
 test("blocked question flow unblocks after submit", async ({ page, sdk, gotoSession }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // devilcode_change
   await withDockSession(sdk, "e2e composer dock question", async (session) => {
     await withDockSeed(sdk, session.id, async () => {
       await gotoSession(session.id)
@@ -165,7 +165,7 @@ test("blocked question flow unblocks after submit", async ({ page, sdk, gotoSess
           {
             header: "Need input",
             question: "Pick one option",
-            multiple: true, // kilocode_change
+            multiple: true, // devilcode_change
             options: [
               { label: "Continue", description: "Continue now" },
               { label: "Stop", description: "Stop here" },
@@ -275,7 +275,7 @@ test("child session question request blocks parent dock and unblocks after submi
   sdk,
   gotoSession,
 }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // devilcode_change
   await withDockSession(sdk, "e2e composer dock child question parent", async (session) => {
     await gotoSession(session.id)
 
@@ -295,7 +295,7 @@ test("child session question request blocks parent dock and unblocks after submi
             {
               header: "Child input",
               question: "Pick one child option",
-              multiple: true, // kilocode_change
+              multiple: true, // devilcode_change
               options: [
                 { label: "Continue", description: "Continue child" },
                 { label: "Stop", description: "Stop child" },
@@ -403,7 +403,7 @@ test("todo dock transitions and collapse behavior", async ({ page, sdk, gotoSess
 })
 
 test("keyboard focus stays off prompt while blocked", async ({ page, sdk, gotoSession }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due interaction issues") // devilcode_change
   await withDockSession(sdk, "e2e composer dock keyboard", async (session) => {
     await withDockSeed(sdk, session.id, async () => {
       await gotoSession(session.id)

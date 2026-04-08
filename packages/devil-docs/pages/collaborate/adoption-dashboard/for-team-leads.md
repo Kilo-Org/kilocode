@@ -124,7 +124,7 @@ Use the score tiers as milestones:
 
 **For Coverage:**
 
-- New hire onboarding includes Kilo setup
+- New hire onboarding includes devil setup
 - Weekly "AI wins" sharing in stand-ups
 - Pair low-usage developers with enthusiastic adopters
 

@@ -10,7 +10,7 @@ import { Config } from "../../config/config"
 import { Global } from "../../global"
 import { Plugin } from "../../plugin"
 import { Instance } from "../../project/instance"
-import type { Hooks } from "@kilocode/plugin"
+import type { Hooks } from "@devilcode/plugin"
 import { Process } from "../../util/process"
 import { text } from "node:stream/consumers"
 import { setTimeout as sleep } from "node:timers/promises"
@@ -216,7 +216,7 @@ export const AuthListCommand = cmd({
   aliases: ["ls"],
   describe: "list providers",
   async handler() {
-    // kilocode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
+    // devilcode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
     await Instance.provide({
       directory: process.cwd(),
       async fn() {
@@ -261,7 +261,7 @@ export const AuthListCommand = cmd({
         }
       },
     })
-    // kilocode_change end
+    // devilcode_change end
   },
 })
 
@@ -271,7 +271,7 @@ export const AuthLoginCommand = cmd({
   builder: (yargs) =>
     yargs
       .positional("url", {
-        describe: "kilo auth provider", // kilocode_change
+        describe: "kilo auth provider", // devilcode_change
         type: "string",
       })
       .option("provider", {
@@ -334,18 +334,19 @@ export const AuthLoginCommand = cmd({
           return filtered
         })
 
-        // kilocode_change start
+        // devilcode_change start
         const priority: Record<string, number> = {
           kilo: 0,
-          opencode: 1,
-          anthropic: 2,
-          "github-copilot": 3,
-          openai: 4,
-          google: 5,
-          openrouter: 6,
-          vercel: 7,
+          "claude-code": 1,
+          opencode: 2,
+          anthropic: 3,
+          "github-copilot": 4,
+          openai: 5,
+          google: 6,
+          openrouter: 7,
+          vercel: 8,
         }
-        // kilocode_change end
+        // devilcode_change end
 
         const pluginProviders = resolvePluginProviders({
           hooks: await Plugin.list(),
@@ -366,10 +367,11 @@ export const AuthLoginCommand = cmd({
               label: x.name,
               value: x.id,
               hint: {
-                kilo: "recommended", // kilocode_change
+                kilo: "recommended", // devilcode_change
+                "claude-code": "Use local Claude Code",
                 opencode: "recommended",
-                anthropic: "Claude Max or API key",
-                openai: "ChatGPT Plus/Pro or API key",
+                anthropic: "API key",
+                openai: "ChatGPT login or API key",
               }[x.id],
             })),
           ),
@@ -477,7 +479,7 @@ export const AuthLogoutCommand = cmd({
   command: "logout",
   describe: "log out from a configured provider",
   async handler() {
-    // kilocode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
+    // devilcode_change start - wrap with Instance.provide for ModelsDev.get() -> Config.get() dependency
     await Instance.provide({
       directory: process.cwd(),
       async fn() {
@@ -501,6 +503,6 @@ export const AuthLogoutCommand = cmd({
         prompts.outro("Logout successful")
       },
     })
-    // kilocode_change end
+    // devilcode_change end
   },
 })

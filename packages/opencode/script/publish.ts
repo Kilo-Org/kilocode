@@ -8,9 +8,9 @@ const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
 const binaries: Record<string, string> = {}
-// kilocode_change start
+// devilcode_change start
 for (const filepath of new Bun.Glob("*/*/package.json").scanSync({ cwd: "./dist" })) {
-  // kilocode_change end
+  // devilcode_change end
   const pkg = await Bun.file(`./dist/${filepath}`).json()
   binaries[pkg.name] = pkg.version
 }
@@ -21,17 +21,15 @@ await $`mkdir -p ./dist/${pkg.name}`
 await $`cp -r ./bin ./dist/${pkg.name}/bin`
 await $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`
 await Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file("../../LICENSE").text())
-await Bun.file(`./dist/${pkg.name}/README.md`).write(await Bun.file("./README.md").text()) // kilocode_change
+await Bun.file(`./dist/${pkg.name}/README.md`).write(await Bun.file("./README.md").text()) // devilcode_change
 
 await Bun.file(`./dist/${pkg.name}/package.json`).write(
   JSON.stringify(
     {
-      name: pkg.name, // kilocode_change
+      name: pkg.name, // devilcode_change
       bin: {
-        // kilocode_change start
-        kilo: `./bin/kilo`,
-        kilocode: `./bin/kilo`,
-        // kilocode_change end
+        // devilcode_change
+        devil: `./bin/devil`,
       },
       scripts: {
         postinstall: "bun ./postinstall.mjs || node ./postinstall.mjs",
@@ -39,12 +37,12 @@ await Bun.file(`./dist/${pkg.name}/package.json`).write(
       version: version,
       license: pkg.license,
       optionalDependencies: binaries,
-      // kilocode_change start
+      // devilcode_change start
       repository: {
         type: "git",
-        url: "https://github.com/Kilo-Org/kilocode",
+        url: "https://github.com/Devil-Org/devilcode",
       },
-      // kilocode_change end
+      // devilcode_change end
     },
     null,
     2,
@@ -56,12 +54,12 @@ const tasks = Object.entries(binaries).map(async ([name]) => {
     await $`chmod -R 755 .`.cwd(`./dist/${name}`)
   }
   await $`bun pm pack`.cwd(`./dist/${name}`)
-  await $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(`./dist/${name}`) // kilocode_change
+  await $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(`./dist/${name}`) // devilcode_change
 })
 await Promise.all(tasks)
-await $`cd ./dist/${pkg.name} && bun pm pack && npm publish *.tgz --access public --tag ${Script.channel} --provenance` // kilocode_change
+await $`cd ./dist/${pkg.name} && bun pm pack && npm publish *.tgz --access public --tag ${Script.channel} --provenance` // devilcode_change
 
-const image = "ghcr.io/kilo-org/kilo" // kilocode_change
+const image = "ghcr.io/kilo-org/kilo" // devilcode_change
 const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
@@ -70,18 +68,18 @@ await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
 // registries
 if (!Script.preview) {
   // Calculate SHA values
-  // kilocode_change start
+  // devilcode_change start
   const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
   const x64Sha = await $`sha256sum ./dist/kilo-linux-x64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())
   const macX64Sha = await $`sha256sum ./dist/kilo-darwin-x64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
   const macArm64Sha = await $`sha256sum ./dist/kilo-darwin-arm64.zip | cut -d' ' -f1`.text().then((x) => x.trim())
-  // kilocode_change end
+  // devilcode_change end
 
   const [pkgver, _subver = ""] = Script.version.split(/(-.*)/, 2)
 
   // arch
   const binaryPkgbuild = [
-    "# Maintainer: kilo", // kilocode_change
+    "# Maintainer: kilo", // devilcode_change
     "",
     "pkgname='kilo-bin'",
     `pkgver=${pkgver}`,
@@ -89,21 +87,21 @@ if (!Script.preview) {
     "options=('!debug' '!strip')",
     "pkgrel=1",
     "pkgdesc='The AI coding agent built for the terminal.'",
-    "url='https://github.com/Kilo-Org/kilocode'",
+    "url='https://github.com/Devil-Org/devilcode'",
     "arch=('aarch64' 'x86_64')",
     "license=('MIT')",
     "provides=('kilo')",
     "conflicts=('kilo')",
     "depends=('ripgrep')",
     "",
-    `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-arm64.tar.gz")`,
+    `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/Devil-Org/devilcode/releases/download/v\${pkgver}\${_subver}/devil-linux-arm64.tar.gz")`,
     `sha256sums_aarch64=('${arm64Sha}')`,
 
-    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-x64.tar.gz")`,
+    `source_x86_64=("\${pkgname}_\${pkgver}_x86_64.tar.gz::https://github.com/Devil-Org/devilcode/releases/download/v\${pkgver}\${_subver}/devil-linux-x64.tar.gz")`,
     `sha256sums_x86_64=('${x64Sha}')`,
     "",
     "package() {",
-    '  install -Dm755 ./kilo "${pkgdir}/usr/bin/kilo"',
+    '  install -Dm755 ./devil "${pkgdir}/usr/bin/devil"',
     "}",
     "",
   ].join("\n")
@@ -132,45 +130,45 @@ if (!Script.preview) {
     "# frozen_string_literal: true",
     "",
     "# This file was generated by GoReleaser. DO NOT EDIT.",
-    "class Kilo < Formula", // kilocode_change
+    "class Devil < Formula", // devilcode_change
     `  desc "The AI coding agent built for the terminal."`,
-    `  homepage "https://kilo.ai"`, // kilocode_change
+    `  homepage "https://devil.ai"`, // devilcode_change
     `  version "${Script.version.split("-")[0]}"`,
     "",
     `  depends_on "ripgrep"`,
     "",
     "  on_macos do",
     "    if Hardware::CPU.intel?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-darwin-x64.zip"`,
+    `      url "https://github.com/Devil-Org/devilcode/releases/download/v${Script.version}/devil-darwin-x64.zip"`,
     `      sha256 "${macX64Sha}"`,
     "",
     "      def install",
-    '        bin.install "kilo"',
+    '        bin.install "devil"',
     "      end",
     "    end",
     "    if Hardware::CPU.arm?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-darwin-arm64.zip"`,
+    `      url "https://github.com/Devil-Org/devilcode/releases/download/v${Script.version}/devil-darwin-arm64.zip"`,
     `      sha256 "${macArm64Sha}"`,
     "",
     "      def install",
-    '        bin.install "kilo"',
+    '        bin.install "devil"',
     "      end",
     "    end",
     "  end",
     "",
     "  on_linux do",
     "    if Hardware::CPU.intel? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-x64.tar.gz"`,
+    `      url "https://github.com/Devil-Org/devilcode/releases/download/v${Script.version}/devil-linux-x64.tar.gz"`,
     `      sha256 "${x64Sha}"`,
     "      def install",
-    '        bin.install "kilo"',
+    '        bin.install "devil"',
     "      end",
     "    end",
     "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
-    `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-arm64.tar.gz"`,
+    `      url "https://github.com/Devil-Org/devilcode/releases/download/v${Script.version}/devil-linux-arm64.tar.gz"`,
     `      sha256 "${arm64Sha}"`,
     "      def install",
-    '        bin.install "kilo"',
+    '        bin.install "devil"',
     "      end",
     "    end",
     "  end",
@@ -184,11 +182,12 @@ if (!Script.preview) {
     console.error("GITHUB_TOKEN is required to update homebrew tap")
     process.exit(1)
   }
-  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git` // kilocode_change
+  const tap = `https://x-access-token:${token}@github.com/Devil-Org/homebrew-tap.git` // devilcode_change
   await $`rm -rf ./dist/homebrew-tap`
   await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula) // kilocode_change
-  await $`cd ./dist/homebrew-tap && git add kilo.rb` // kilocode_change
+  await $`cd ./dist/homebrew-tap && git rm -f kilo.rb`.nothrow() // devilcode_change
+  await Bun.file("./dist/homebrew-tap/devil.rb").write(homebrewFormula) // devilcode_change
+  await $`cd ./dist/homebrew-tap && git add devil.rb` // devilcode_change
   await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
   await $`cd ./dist/homebrew-tap && git push`
 }

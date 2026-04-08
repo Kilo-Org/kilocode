@@ -1,30 +1,30 @@
 ---
 title: "Collaborate"
-description: "Work together with Kilo Code team features"
+description: "Work together with devil Code team features"
 ---
 
 # {% $markdoc.frontmatter.title %}
 
 {% callout type="generic" %}
-Kilo Code makes it easy to work together with your team. Share sessions, manage team settings, and track AI adoption across your organization.
+devil Code makes it easy to work together with your team. Share sessions, manage team settings, and track AI adoption across your organization.
 {% /callout %}
 
 ## Sessions & Sharing
 
-Sessions are your platform-agnostic interaction with Kilo. They remember your repository, task, and conversation so you can pause and resume work without losing context.
+Sessions are your platform-agnostic interaction with devil. They remember your repository, task, and conversation so you can pause and resume work without losing context.
 
-- [**Sessions & Sharing**](/docs/collaborate/sessions-sharing) — Share and collaborate on Kilo Code sessions
+- [**Sessions & Sharing**](/docs/collaborate/sessions-sharing) — Share and collaborate on devil Code sessions
 - Create sessions from the CLI, Cloud Agent, or IDE extensions
 - Share read-only links with teammates
 - Fork shared sessions to create your own copy
 
 ## Teams
 
-Kilo Code's paid plans provide powerful team management features:
+devil Code's paid plans provide powerful team management features:
 
 - [**About Plans**](/docs/collaborate/teams/about-plans) — Compare Teams and Enterprise plans
 - **Teams ($15/user/month)** — Zero markup on AI costs, centralized billing, team analytics
-- **Enterprise ([Contact Sales](https://kilo.ai/contact-sales))** — Model controls, audit logs, SSO, dedicated support
+- **Enterprise ([Contact Sales](https://devil.ai/contact-sales))** — Model controls, audit logs, SSO, dedicated support
 
 ### Team Management
 
@@ -55,7 +55,7 @@ Understand how your team is using AI:
 
 ## Get Started with Teams
 
-1. [Install Kilo Code](/docs/getting-started/installing) in your preferred environment
+1. [Install devil Code](/docs/getting-started/installing) in your preferred environment
 2. [Connect an AI provider](/docs/ai-providers)
 3. [Choose a plan](/docs/collaborate/teams/about-plans) that fits your needs
 4. Invite your team members and start collaborating

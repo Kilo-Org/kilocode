@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * Build the Kilo VS Code extension and launch it in a development host.
+ * Build the Devil VS Code extension and launch it in a development host.
  *
  * Usage:
  *   bun script/launch.ts [options]
@@ -288,7 +288,7 @@ async function launch() {
 
   if (mode === "dev") {
     args.push(`--extensionDevelopmentPath=${root}`)
-    args.push("--disable-extension=kilocode.kilo-code")
+    args.push("--disable-extension=devilcode.kilo-code")
   }
 
   if (mode === "vsix") {

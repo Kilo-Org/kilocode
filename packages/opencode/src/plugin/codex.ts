@@ -1,4 +1,4 @@
-import type { Hooks, PluginInput } from "@kilocode/plugin"
+import type { Hooks, PluginInput } from "@devilcode/plugin"
 import { Log } from "../util/log"
 import { Installation } from "../installation"
 import { Auth, OAUTH_DUMMY_KEY } from "../auth"
@@ -146,9 +146,9 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> 
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
-    <!-- kilocode_change start -->
-    <title>Kilo - Codex Authorization Successful</title>
-    <!-- kilocode_change end -->
+    <!-- devilcode_change start -->
+    <title>Devil - Codex Authorization Successful</title>
+    <!-- devilcode_change end -->
     <style>
       body {
         font-family:
@@ -179,9 +179,9 @@ const HTML_SUCCESS = `<!doctype html>
   <body>
     <div class="container">
       <h1>Authorization Successful</h1>
-      <!-- kilocode_change start -->
-      <p>You can close this window and return to Kilo.</p>
-      <!-- kilocode_change end -->
+      <!-- devilcode_change start -->
+      <p>You can close this window and return to Devil.</p>
+      <!-- devilcode_change end -->
     </div>
     <script>
       setTimeout(() => window.close(), 2000)
@@ -192,9 +192,9 @@ const HTML_SUCCESS = `<!doctype html>
 const HTML_ERROR = (error: string) => `<!doctype html>
 <html>
   <head>
-    <!-- kilocode_change start -->
-    <title>Kilo - Codex Authorization Failed</title>
-    <!-- kilocode_change end -->
+    <!-- devilcode_change start -->
+    <title>Devil - Codex Authorization Failed</title>
+    <!-- devilcode_change end -->
     <style>
       body {
         font-family:

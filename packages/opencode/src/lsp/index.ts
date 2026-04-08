@@ -10,7 +10,7 @@ import { Config } from "../config/config"
 import { spawn } from "child_process"
 import { Instance } from "../project/instance"
 import { Flag } from "@/flag/flag"
-import { TsClient } from "../kilocode/ts-client" // kilocode_change
+import { TsClient } from "../devilcode/ts-client" // devilcode_change
 
 export namespace LSP {
   const log = Log.create({ service: "lsp" })
@@ -63,10 +63,10 @@ export namespace LSP {
   export type DocumentSymbol = z.infer<typeof DocumentSymbol>
 
   const filterExperimentalServers = (servers: Record<string, LSPServer.Info>) => {
-    if (Flag.KILO_EXPERIMENTAL_LSP_TY) {
+    if (Flag.DEVIL_EXPERIMENTAL_LSP_TY) {
       // If experimental flag is enabled, disable pyright
       if (servers["pyright"]) {
-        log.info("LSP server pyright is disabled because KILO_EXPERIMENTAL_LSP_TY is enabled")
+        log.info("LSP server pyright is disabled because DEVIL_EXPERIMENTAL_LSP_TY is enabled")
         delete servers["pyright"]
       }
     } else {
@@ -119,7 +119,7 @@ export namespace LSP {
                   ...process.env,
                   ...item.env,
                 },
-                windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
+                windowsHide: true, // devilcode_change - prevent CMD window flash on Windows
               }),
               initialization: item.initialization,
             }
@@ -236,15 +236,15 @@ export namespace LSP {
         continue
       }
 
-      // kilocode_change start - use lightweight tsgo-based client when persistent LSP is not enabled
-      if (server.id === "typescript" && !Flag.KILO_EXPERIMENTAL_LSP_TOOL) {
+      // devilcode_change start - use lightweight tsgo-based client when persistent LSP is not enabled
+      if (server.id === "typescript" && !Flag.DEVIL_EXPERIMENTAL_LSP_TOOL) {
         const client = TsClient.create({ root })
         s.clients.push(client)
         result.push(client)
         Bus.publish(Event.Updated, {})
         continue
       }
-      // kilocode_change end
+      // devilcode_change end
 
       const inflight = s.spawning.get(root + server.id)
       if (inflight) {
@@ -264,7 +264,7 @@ export namespace LSP {
       })
 
       const client = await task
-      // kilocode_change start - fallback to lightweight client when tsgo LSP spawn fails
+      // devilcode_change start - fallback to lightweight client when tsgo LSP spawn fails
       if (!client && server.id === "typescript") {
         s.broken.delete(root + server.id)
         const fallback = TsClient.create({ root })
@@ -273,7 +273,7 @@ export namespace LSP {
         Bus.publish(Event.Updated, {})
         continue
       }
-      // kilocode_change end
+      // devilcode_change end
       if (!client) continue
 
       result.push(client)

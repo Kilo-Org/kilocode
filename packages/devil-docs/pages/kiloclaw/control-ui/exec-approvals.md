@@ -1,6 +1,6 @@
 ---
 title: "Exec Approvals"
-description: "Control which commands your KiloClaw agent can run on the host machine"
+description: "Control which commands your DevilClaw agent can run on the host machine"
 ---
 
 # Exec Approvals

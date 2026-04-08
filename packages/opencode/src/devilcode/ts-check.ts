@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 import type { Diagnostic } from "vscode-languageserver-types"
 import { Log } from "../util/log"
 import { Filesystem } from "../util/filesystem"

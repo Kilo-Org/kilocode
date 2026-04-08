@@ -7,7 +7,7 @@ import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/config/config"
 import { GlobalBus } from "@/bus/global"
-import { createKiloClient, type Event } from "@kilocode/sdk/v2"
+import { createDevilClient, type Event } from "@devilcode/sdk/v2"
 import type { BunWebSocketData } from "hono/bun"
 import { Flag } from "@/flag/flag"
 import { setTimeout as sleep } from "node:timers/promises"
@@ -57,7 +57,7 @@ const startEventStream = (input: { directory: string; workspaceID?: string }) =>
     return Server.App().fetch(request)
   }) as typeof globalThis.fetch
 
-  const sdk = createKiloClient({
+  const sdk = createDevilClient({
     baseUrl: "http://kilo.internal",
     directory: input.directory,
     experimental_workspaceID: input.workspaceID,
@@ -154,8 +154,8 @@ export const rpc = {
 Rpc.listen(rpc)
 
 function getAuthorizationHeader(): string | undefined {
-  const password = Flag.KILO_SERVER_PASSWORD
+  const password = Flag.DEVIL_SERVER_PASSWORD
   if (!password) return undefined
-  const username = Flag.KILO_SERVER_USERNAME ?? "kilo" // kilocode_change
+  const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
   return `Basic ${btoa(`${username}:${password}`)}`
 }

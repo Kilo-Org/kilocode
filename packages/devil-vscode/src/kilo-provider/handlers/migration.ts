@@ -1,11 +1,11 @@
 /**
- * Legacy migration handlers — extracted from KiloProvider.
+ * Legacy migration handlers — extracted from DevilProvider.
  *
- * Manages the migration wizard for users upgrading from Kilo Code v5.x.
+ * Manages the migration wizard for users upgrading from Devil Code v5.x.
  * No vscode dependency — all vscode access is injected via MigrationContext.
  */
 
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
 import type { LegacyMigrationData, MigrationSelections } from "../../legacy-migration/legacy-types"
 import * as MigrationService from "../../legacy-migration/migration-service"
 
@@ -25,7 +25,7 @@ interface MigrationExtensionContext {
 }
 
 export interface MigrationContext {
-  readonly client: KiloClient | null
+  readonly client: DevilClient | null
   readonly extensionContext: MigrationExtensionContext | undefined
   postMessage(msg: unknown): void
   refreshSessions(): void
@@ -62,7 +62,7 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
   // Cache so migrate() doesn't re-read from SecretStorage/disk
   ctx.cachedLegacyData = data
 
-  console.log("[Kilo New] KiloProvider: 🔄 Legacy data detected, showing migration wizard")
+  console.log("[Devil New] DevilProvider: 🔄 Legacy data detected, showing migration wizard")
   ctx.postMessage({
     type: "migrationState",
     needed: true,
@@ -131,7 +131,7 @@ export async function handleStartLegacyMigration(
 
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
-    console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
+    console.error("[Devil New] DevilProvider: ❌ Migration failed", error)
     ctx.postMessage({
       type: "legacyMigrationComplete",
       results: [

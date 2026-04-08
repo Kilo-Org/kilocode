@@ -1,11 +1,11 @@
 ---
 title: "Version Pinning"
-description: "Pin your KiloClaw instance to a specific OpenClaw version and variant"
+description: "Pin your DevilClaw instance to a specific OpenClaw version and variant"
 ---
 
 # Version Pinning
 
-Version pinning lets you lock your KiloClaw instance to a specific OpenClaw version and variant. This gives you control over when your instance upgrades — it stays on the pinned version until you explicitly change it.
+Version pinning lets you lock your DevilClaw instance to a specific OpenClaw version and variant. This gives you control over when your instance upgrades — it stays on the pinned version until you explicitly change it.
 
 ## When to Use Version Pinning
 
@@ -17,7 +17,7 @@ Version pinning is useful when:
 
 ## How to Pin a Version
 
-1. Go to your [KiloClaw dashboard](https://app.kilo.ai/profile)
+1. Go to your [DevilClaw dashboard](https://app.devil.ai/profile)
 2. Open the **Settings** tab
 3. Scroll to the **Version Pinning** section
 4. Select a **version** and **variant** from the dropdowns

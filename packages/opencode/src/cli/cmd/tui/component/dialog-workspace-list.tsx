@@ -3,12 +3,12 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { createEffect, createMemo, createSignal, onMount } from "solid-js"
-import type { Session } from "@kilocode/sdk/v2"
+import type { Session } from "@devilcode/sdk/v2"
 import { useSDK } from "../context/sdk"
 import { useToast } from "../ui/toast"
 import { useKeybind } from "../context/keybind"
 import { DialogSessionList } from "./workspace/dialog-session-list"
-import { createKiloClient } from "@kilocode/sdk/v2"
+import { createDevilClient } from "@devilcode/sdk/v2"
 
 async function openWorkspace(input: {
   dialog: ReturnType<typeof useDialog>
@@ -28,7 +28,7 @@ async function openWorkspace(input: {
     )
   }
 
-  const client = createKiloClient({
+  const client = createDevilClient({
     baseUrl: input.sdk.url,
     fetch: input.sdk.fetch,
     directory: input.sync.data.path.directory || input.sdk.directory,
@@ -186,7 +186,7 @@ export function DialogWorkspaceList() {
       await open(workspaceID)
       return
     }
-    const client = createKiloClient({
+    const client = createDevilClient({
       baseUrl: sdk.url,
       fetch: sdk.fetch,
       directory: sync.data.path.directory || sdk.directory,
@@ -222,7 +222,7 @@ export function DialogWorkspaceList() {
     setCounts(Object.fromEntries(workspaces.map((workspace) => [workspace.id, undefined])))
     void Promise.all(
       workspaces.map(async (workspace) => {
-        const client = createKiloClient({
+        const client = createDevilClient({
           baseUrl: sdk.url,
           fetch: sdk.fetch,
           directory: sync.data.path.directory || sdk.directory,

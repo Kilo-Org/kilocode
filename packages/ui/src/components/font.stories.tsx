@@ -2,7 +2,7 @@
 import * as mod from "./font"
 
 const docs = `### Overview
-Loads Kilo typography assets and mono nerd fonts.
+Loads Devil typography assets and mono nerd fonts.
 
 Render once at the app root or Storybook preview.
 
@@ -41,8 +41,8 @@ export const Basic = {
   render: () => (
     <div style={{ display: "grid", gap: "8px" }}>
       <mod.Font />
-      <div style={{ "font-family": "var(--font-family-sans)" }}>Kilo Sans Sample</div>
-      <div style={{ "font-family": "var(--font-family-mono)" }}>Kilo Mono Sample</div>
+      <div style={{ "font-family": "var(--font-family-sans)" }}>Devil Sans Sample</div>
+      <div style={{ "font-family": "var(--font-family-mono)" }}>Devil Mono Sample</div>
     </div>
   ),
 }

@@ -2,7 +2,7 @@ import { test, expect } from "../fixtures"
 import { clickMenuItem, openProjectMenu, openSidebar } from "../actions"
 
 test("dialog edit project updates name and startup script", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to hover/menu interaction issues") // devilcode_change
   await page.setViewportSize({ width: 1400, height: 800 })
 
   await withProject(async ({ slug }) => {

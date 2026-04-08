@@ -211,7 +211,7 @@ describe("session.prompt agent variant", () => {
   })
 })
 
-// kilocode_change start
+// devilcode_change start
 function deferred<T>() {
   const result = {} as { promise: Promise<T>; resolve: (value: T) => void }
   result.promise = new Promise((resolve) => {
@@ -274,7 +274,7 @@ describe("session.prompt abort", () => {
           await Bun.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
+              $schema: "https://app.devil.ai/config.json",
               enabled_providers: ["openai"],
               provider: {
                 openai: {
@@ -329,4 +329,4 @@ describe("session.prompt abort", () => {
     }
   }, 15000)
 })
-// kilocode_change end
+// devilcode_change end

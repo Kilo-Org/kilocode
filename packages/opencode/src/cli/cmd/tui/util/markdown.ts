@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
  * Formats markdown tables with fixed-width columns, similar to VS Code's behavior.

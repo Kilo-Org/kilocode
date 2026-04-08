@@ -1773,7 +1773,7 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
     })
 
-    // kilocode_change start
+    // devilcode_change start
     test("mercury-2 returns OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "openrouter/inception/mercury-2",
@@ -1789,7 +1789,7 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoning: { effort: "low" } })
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
-    // kilocode_change end
+    // devilcode_change end
 
     test("grok-4 returns empty object", () => {
       const model = createMockModel({
@@ -1822,16 +1822,16 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
-  // kilocode_change start
-  describe("@kilocode/kilo-gateway", () => {
+  // devilcode_change start
+  describe("@devilcode/kilo-gateway", () => {
     test("claude models return empty variants (reasoning disabled)", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
         api: {
           id: "anthropic/claude-sonnet-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1844,8 +1844,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "anthropic/claude-opus-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1858,8 +1858,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "openai/gpt-5",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1877,8 +1877,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "google/gemini-3-pro",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1891,8 +1891,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "meta/llama-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1905,8 +1905,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "x-ai/grok-3-mini",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1921,8 +1921,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "openai/gpt-5.2-codex",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
       })
       const result = ProviderTransform.variants(model)
@@ -1932,7 +1932,7 @@ describe("ProviderTransform.variants", () => {
       expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
     })
 
-    // kilocode_change start
+    // devilcode_change start
     test("mercury-2 uses server-provided variants from kilo gateway", () => {
       const serverVariants = {
         low: { reasoningEffort: "low" },
@@ -1944,8 +1944,8 @@ describe("ProviderTransform.variants", () => {
         providerID: "kilo",
         api: {
           id: "inception/mercury-2",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
+          url: "https://gateway.devil.ai",
+          npm: "@devilcode/kilo-gateway",
         },
         variants: serverVariants,
       })
@@ -1953,9 +1953,9 @@ describe("ProviderTransform.variants", () => {
       expect(result).toEqual(serverVariants)
       expect(Object.keys(result)).toEqual(["low", "medium", "high"])
     })
-    // kilocode_change end
+    // devilcode_change end
   })
-  // kilocode_change end
+  // devilcode_change end
 
   describe("@ai-sdk/gateway", () => {
     test("anthropic sonnet 4.6 models return adaptive thinking options", () => {
@@ -2289,7 +2289,7 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
 
-    // kilocode_change start
+    // devilcode_change start
     test("mercury-2 returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
         id: "inception/mercury-2",
@@ -2305,7 +2305,7 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoningEffort: "low" })
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
-    // kilocode_change end
+    // devilcode_change end
   })
 
   describe("@ai-sdk/azure", () => {
@@ -2651,17 +2651,17 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
-  // kilocode_change start
+  // devilcode_change start
   describe("ProviderTransform.smallOptions", () => {
-    describe("@kilocode/kilo-gateway", () => {
+    describe("@devilcode/kilo-gateway", () => {
       test("claude models return reasoningEffort minimal", () => {
         const model = createMockModel({
           id: "kilo/anthropic/claude-sonnet-4",
           providerID: "kilo",
           api: {
             id: "anthropic/claude-sonnet-4",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
+            url: "https://gateway.devil.ai",
+            npm: "@devilcode/kilo-gateway",
           },
         })
         const result = ProviderTransform.smallOptions(model)
@@ -2674,8 +2674,8 @@ describe("ProviderTransform.variants", () => {
           providerID: "kilo",
           api: {
             id: "openai/gpt-4",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
+            url: "https://gateway.devil.ai",
+            npm: "@devilcode/kilo-gateway",
           },
         })
         const result = ProviderTransform.smallOptions(model)
@@ -2688,8 +2688,8 @@ describe("ProviderTransform.variants", () => {
           providerID: "kilo",
           api: {
             id: "google/gemini-2.0-flash",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
+            url: "https://gateway.devil.ai",
+            npm: "@devilcode/kilo-gateway",
           },
         })
         const result = ProviderTransform.smallOptions(model)
@@ -2736,4 +2736,4 @@ describe("ProviderTransform.variants", () => {
     })
   })
 })
-// kilocode_change end
+// devilcode_change end

@@ -7,7 +7,7 @@ import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
-import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
+import { localReviewCommand, localReviewUncommittedCommand } from "@/devilcode/review/command" // devilcode_change
 
 export namespace Command {
   export const Event = {
@@ -55,10 +55,10 @@ export namespace Command {
   export const Default = {
     INIT: "init",
     REVIEW: "review",
-    // kilocode_change start
+    // devilcode_change start
     LOCAL_REVIEW: "local-review",
     LOCAL_REVIEW_UNCOMMITTED: "local-review-uncommitted",
-    // kilocode_change end
+    // devilcode_change end
   } as const
 
   const state = Instance.state(async () => {
@@ -74,7 +74,7 @@ export namespace Command {
         },
         hints: hints(PROMPT_INITIALIZE),
       },
-      // kilocode_change start
+      // devilcode_change start
       // [Default.REVIEW]: {
       //   name: Default.REVIEW,
       //   description: "review changes [commit|branch|pr], defaults to uncommitted",
@@ -86,7 +86,7 @@ export namespace Command {
       // },
       [Default.LOCAL_REVIEW]: localReviewCommand(),
       [Default.LOCAL_REVIEW_UNCOMMITTED]: localReviewUncommittedCommand(),
-      // kilocode_change end
+      // devilcode_change end
     }
 
     for (const [name, command] of Object.entries(cfg.command ?? {})) {

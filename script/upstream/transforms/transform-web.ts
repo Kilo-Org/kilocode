@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 /**
- * Transform web/docs files with Kilo branding
+ * Transform web/docs files with Devil branding
  *
  * This script handles documentation and web content files (.mdx, etc.)
- * by transforming OpenCode references to Kilo.
+ * by transforming OpenCode references to Devil.
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
-import { oursHasKilocodeChanges } from "../utils/git"
+import { oursHasDevilcodeChanges } from "../utils/git"
 
 export interface WebTransformResult {
   file: string
@@ -34,36 +34,36 @@ const WEB_REPLACEMENTS: WebReplacement[] = [
   // GitHub references
   {
     pattern: /github\.com\/anomalyco\/opencode/g,
-    replacement: "github.com/Kilo-Org/kilocode",
+    replacement: "github.com/Devil-Org/devilcode",
     description: "GitHub URL",
   },
   {
     pattern: /anomalyco\/opencode/g,
-    replacement: "Kilo-Org/kilocode",
+    replacement: "Devil-Org/devilcode",
     description: "GitHub repo",
   },
 
   // Domains
   {
     pattern: /app\.opencode\.ai/g,
-    replacement: "app.kilo.ai",
+    replacement: "app.devil.ai",
     description: "App domain",
   },
   {
     pattern: /opencode\.ai(?!\/zen)/g,
-    replacement: "kilo.ai",
+    replacement: "devil.ai",
     description: "Main domain (excluding zen)",
   },
 
   // Product names
   {
     pattern: /OpenCode Desktop/g,
-    replacement: "Kilo Desktop",
+    replacement: "Devil Desktop",
     description: "Desktop name",
   },
   {
     pattern: /\bOpenCode\b(?!\.json|\/| Zen)/g,
-    replacement: "Kilo",
+    replacement: "Devil",
     description: "Product name",
   },
 
@@ -179,9 +179,9 @@ export async function transformWebFile(file: string, options: WebTransformOption
     return { file, action: "transformed", replacements: 0, dryRun: true }
   }
 
-  // If our version has kilocode_change markers, flag for manual resolution
-  if (await oursHasKilocodeChanges(file)) {
-    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+  // If our version has devilcode_change markers, flag for manual resolution
+  if (await oursHasDevilcodeChanges(file)) {
+    warn(`${file} has devilcode_change markers — skipping auto-transform, needs manual resolution`)
     return { file, action: "flagged", replacements: 0, dryRun: false }
   }
 

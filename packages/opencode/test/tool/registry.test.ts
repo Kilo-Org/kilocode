@@ -6,12 +6,12 @@ import { Instance } from "../../src/project/instance"
 import { ToolRegistry } from "../../src/tool/registry"
 
 describe("tool.registry", () => {
-  // kilocode_change start - plan_exit is always registered
+  // devilcode_change start - plan_exit is always registered
   test("plan_exit is always registered regardless of client", async () => {
-    const original = process.env["KILO_CLIENT"]
+    const original = process.env["DEVIL_CLIENT"]
     try {
       for (const client of ["cli", "vscode", "desktop", "app"]) {
-        process.env["KILO_CLIENT"] = client
+        process.env["DEVIL_CLIENT"] = client
         await using tmp = await tmpdir({ git: true })
         await Instance.provide({
           directory: tmp.path,
@@ -22,11 +22,11 @@ describe("tool.registry", () => {
         })
       }
     } finally {
-      if (original === undefined) delete process.env["KILO_CLIENT"]
-      else process.env["KILO_CLIENT"] = original
+      if (original === undefined) delete process.env["DEVIL_CLIENT"]
+      else process.env["DEVIL_CLIENT"] = original
     }
   })
-  // kilocode_change end
+  // devilcode_change end
 
   test("loads tools from .opencode/tool (singular)", async () => {
     await using tmp = await tmpdir({
@@ -110,7 +110,7 @@ describe("tool.registry", () => {
           JSON.stringify({
             name: "custom-tools",
             dependencies: {
-              "@kilocode/plugin": "^0.0.0",
+              "@devilcode/plugin": "^0.0.0",
               cowsay: "^1.6.0",
             },
           }),

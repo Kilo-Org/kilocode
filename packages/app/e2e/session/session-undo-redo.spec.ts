@@ -50,7 +50,7 @@ async function seedConversation(input: {
 }
 
 test("slash undo sets revert and restores prior prompt", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   test.setTimeout(120_000)
 
   const token = `undo_${Date.now()}`
@@ -83,7 +83,7 @@ test("slash undo sets revert and restores prior prompt", async ({ page, withProj
 })
 
 test("slash redo clears revert and restores latest state", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   test.setTimeout(120_000)
 
   const token = `redo_${Date.now()}`
@@ -131,7 +131,7 @@ test("slash redo clears revert and restores latest state", async ({ page, withPr
 })
 
 test("slash undo/redo traverses multi-step revert stack", async ({ page, withProject }) => {
-  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // kilocode_change
+  test.skip(process.platform === "win32", "Skipping on Windows due to workspace interaction issues") // devilcode_change
   test.setTimeout(120_000)
 
   const firstToken = `undo_redo_first_${Date.now()}`

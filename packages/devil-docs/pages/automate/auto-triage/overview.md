@@ -5,7 +5,7 @@ description: "Automate GitHub issue triage with AI assistance"
 
 # Auto-Triage
 
-Kilo's **Auto-Triage** automatically analyses every new GitHub issue the moment it is opened. Within minutes of a reporter submitting an issue, Auto-Triage reads the title and body, checks whether the issue is a duplicate of something already reported, classifies it as a **bug**, **feature request**, **question**, or **unclear**, and applies the appropriate labels — all without any manual effort from your team.
+devil's **Auto-Triage** automatically analyses every new GitHub issue the moment it is opened. Within minutes of a reporter submitting an issue, Auto-Triage reads the title and body, checks whether the issue is a duplicate of something already reported, classifies it as a **bug**, **feature request**, **question**, or **unclear**, and applies the appropriate labels — all without any manual effort from your team.
 
 ---
 
@@ -16,7 +16,7 @@ Kilo's **Auto-Triage** automatically analyses every new GitHub issue the moment 
 When an issue arrives, Auto-Triage compares it against every previously-triaged issue in your repository using vector-similarity search. If it finds a match, it:
 
 - Posts a comment on the new issue linking to the original, including its title and similarity score.
-- Labels the issue `kilo-triaged` and `kilo-duplicate`.
+- Labels the issue `devil-triaged` and `devil-duplicate`.
 - Marks the triage ticket as actioned.
 
 ### 2. Classification
@@ -36,13 +36,13 @@ Along with the classification, the model produces a confidence score (0–1), a 
 
 After classification, Auto-Triage applies labels to the issue on GitHub:
 
-- `kilo-triaged` is always applied to every issue that completes triage.
+- `devil-triaged` is always applied to every issue that completes triage.
 - The AI selects zero or more **additional labels** from your repository's existing label set — it will only ever choose labels that already exist in your repo, never invent new ones.
 - Labels you have configured as **skip labels** or **required labels** (see [Configuration](#configuration-reference) below) are excluded from the AI's choices so they remain under your control.
 
 ### 4. Ticket history
 
-Every triage run is recorded as a ticket in the Kilo dashboard. You can:
+Every triage run is recorded as a ticket in the devil dashboard. You can:
 
 - Filter tickets by status, classification, or repository.
 - View the AI's classification, confidence score, intent summary, and reasoning.
@@ -54,12 +54,12 @@ Every triage run is recorded as a ticket in the Kilo dashboard. You can:
 
 ### Prerequisites
 
-- A GitHub integration connected to your Kilo account or organisation.
+- A GitHub integration connected to your devil account or organisation.
 - The repositories you want to triage must be accessible via that integration.
 
 ### Steps
 
-1. Go to **Auto-Triage -> Config** in the Kilo dashboard.
+1. Go to **Auto-Triage -> Config** in the devil dashboard.
 2. Toggle **Enable AI Auto-Triage** on.
 3. Choose which repositories to triage:
    - **All repositories** — every repository accessible via your GitHub integration.
@@ -115,7 +115,7 @@ Auto-Triage uses two reserved labels for tracking. You should create these in yo
 
 | Label            | Meaning                                                                       |
 | ---------------- | ----------------------------------------------------------------------------- |
-| `kilo-triaged`   | Applied to every issue that completes triage successfully.                    |
-| `kilo-duplicate` | Applied alongside `kilo-triaged` when the issue is identified as a duplicate. |
+| `devil-triaged`   | Applied to every issue that completes triage successfully.                    |
+| `devil-duplicate` | Applied alongside `devil-triaged` when the issue is identified as a duplicate. |
 
-These labels are managed by Kilo and should not be added to your **skip labels** list.
+These labels are managed by devil and should not be added to your **skip labels** list.

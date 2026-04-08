@@ -1,50 +1,50 @@
 // ru runtime translations for autocomplete
 
 export const dict = {
-  "kilocode:autocomplete.statusBar.enabled": "$(kilo-logo) Autocomplete",
-  "kilocode:autocomplete.statusBar.snoozed": "приостановлено",
-  "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
-  "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
-  "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (отключено)",
-  "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
+  "devilcode:autocomplete.statusBar.enabled": "$(kilo-logo) Autocomplete",
+  "devilcode:autocomplete.statusBar.snoozed": "приостановлено",
+  "devilcode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
+  "devilcode:autocomplete.statusBar.tooltip.basic": "Devil Code Autocomplete",
+  "devilcode:autocomplete.statusBar.tooltip.disabled": "Devil Code Autocomplete (отключено)",
+  "devilcode:autocomplete.statusBar.tooltip.noUsableProvider":
     "**Модель автодополнения не настроена**\n\nЧтобы включить автодополнение, добавьте профиль с одним из поддерживаемых провайдеров: {{providers}}.\n\n[Открыть Настройки]({{command}})",
-  "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Общая стоимость сессии:",
-  "kilocode:autocomplete.statusBar.tooltip.provider": "Провайдер:",
-  "kilocode:autocomplete.statusBar.tooltip.model": "Модель:",
-  "kilocode:autocomplete.statusBar.tooltip.profile": "Профиль: ",
-  "kilocode:autocomplete.statusBar.tooltip.defaultProfile": "По умолчанию",
-  "kilocode:autocomplete.statusBar.tooltip.completionSummary":
+  "devilcode:autocomplete.statusBar.tooltip.sessionTotal": "Общая стоимость сессии:",
+  "devilcode:autocomplete.statusBar.tooltip.provider": "Провайдер:",
+  "devilcode:autocomplete.statusBar.tooltip.model": "Модель:",
+  "devilcode:autocomplete.statusBar.tooltip.profile": "Профиль: ",
+  "devilcode:autocomplete.statusBar.tooltip.defaultProfile": "По умолчанию",
+  "devilcode:autocomplete.statusBar.tooltip.completionSummary":
     "Выполнено {{count}} автодополнений между {{startTime}} и {{endTime}}, общая стоимость {{cost}}.",
-  "kilocode:autocomplete.statusBar.tooltip.providerInfo":
+  "devilcode:autocomplete.statusBar.tooltip.providerInfo":
     "Автодополнение предоставляется {{model}} через {{provider}}.",
-  "kilocode:autocomplete.statusBar.cost.zero": "$0.00",
-  "kilocode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
-  "kilocode:autocomplete.toggleMessage": "Kilo Code Autocomplete {{status}}",
-  "kilocode:autocomplete.progress.title": "Kilo Code",
-  "kilocode:autocomplete.progress.analyzing": "Анализирую твой код...",
-  "kilocode:autocomplete.progress.generating": "Генерирую предлагаемые правки...",
-  "kilocode:autocomplete.progress.processing": "Обрабатываю предлагаемые правки...",
-  "kilocode:autocomplete.progress.showing": "Показываю предлагаемые правки...",
-  "kilocode:autocomplete.input.title": "Kilo Code: Быстрая Задача",
-  "kilocode:autocomplete.input.placeholder": "напр., 'рефактори эту функцию для большей эффективности'",
-  "kilocode:autocomplete.commands.generateSuggestions": "Kilo Code: Генерировать Предлагаемые Правки",
-  "kilocode:autocomplete.commands.displaySuggestions": "Показать Предлагаемые Правки",
-  "kilocode:autocomplete.commands.cancelSuggestions": "Отменить Предлагаемые Правки",
-  "kilocode:autocomplete.commands.applyCurrentSuggestion": "Применить Текущую Предлагаемую Правку",
-  "kilocode:autocomplete.commands.applyAllSuggestions": "Применить Все Предлагаемые Правки",
-  "kilocode:autocomplete.commands.category": "Kilo Code",
-  "kilocode:autocomplete.codeAction.title": "Kilo Code: Предлагаемые Правки",
-  "kilocode:autocomplete.chatParticipant.fullName": "Kilo Code Agent",
-  "kilocode:autocomplete.chatParticipant.name": "Agent",
-  "kilocode:autocomplete.chatParticipant.description":
+  "devilcode:autocomplete.statusBar.cost.zero": "$0.00",
+  "devilcode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
+  "devilcode:autocomplete.toggleMessage": "Devil Code Autocomplete {{status}}",
+  "devilcode:autocomplete.progress.title": "Devil Code",
+  "devilcode:autocomplete.progress.analyzing": "Анализирую твой код...",
+  "devilcode:autocomplete.progress.generating": "Генерирую предлагаемые правки...",
+  "devilcode:autocomplete.progress.processing": "Обрабатываю предлагаемые правки...",
+  "devilcode:autocomplete.progress.showing": "Показываю предлагаемые правки...",
+  "devilcode:autocomplete.input.title": "Devil Code: Быстрая Задача",
+  "devilcode:autocomplete.input.placeholder": "напр., 'рефактори эту функцию для большей эффективности'",
+  "devilcode:autocomplete.commands.generateSuggestions": "Devil Code: Генерировать Предлагаемые Правки",
+  "devilcode:autocomplete.commands.displaySuggestions": "Показать Предлагаемые Правки",
+  "devilcode:autocomplete.commands.cancelSuggestions": "Отменить Предлагаемые Правки",
+  "devilcode:autocomplete.commands.applyCurrentSuggestion": "Применить Текущую Предлагаемую Правку",
+  "devilcode:autocomplete.commands.applyAllSuggestions": "Применить Все Предлагаемые Правки",
+  "devilcode:autocomplete.commands.category": "Devil Code",
+  "devilcode:autocomplete.codeAction.title": "Devil Code: Предлагаемые Правки",
+  "devilcode:autocomplete.chatParticipant.fullName": "Devil Code Agent",
+  "devilcode:autocomplete.chatParticipant.name": "Agent",
+  "devilcode:autocomplete.chatParticipant.description":
     "Я могу помочь тебе с быстрыми задачами и предлагаемыми правками.",
-  "kilocode:autocomplete.incompatibilityExtensionPopup.message":
-    "Kilo Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
-  "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Отключить Copilot",
-  "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Отключить Autocomplete",
-  "kilocode:autocomplete.creditsExhausted.message":
-    "Kilo Code Autocomplete приостановлено, так как на твоём аккаунте не осталось кредитов. Добавь кредиты, чтобы возобновить автодополнение.",
-  "kilocode:autocomplete.creditsExhausted.addCredits": "Добавить кредиты",
-  "kilocode:autocomplete.authError.message":
-    "Kilo Code Autocomplete приостановлено из-за ошибки аутентификации. Пожалуйста, войди снова.",
+  "devilcode:autocomplete.incompatibilityExtensionPopup.message":
+    "Devil Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
+  "devilcode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Отключить Copilot",
+  "devilcode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Отключить Autocomplete",
+  "devilcode:autocomplete.creditsExhausted.message":
+    "Devil Code Autocomplete приостановлено, так как на твоём аккаунте не осталось кредитов. Добавь кредиты, чтобы возобновить автодополнение.",
+  "devilcode:autocomplete.creditsExhausted.addCredits": "Добавить кредиты",
+  "devilcode:autocomplete.authError.message":
+    "Devil Code Autocomplete приостановлено из-за ошибки аутентификации. Пожалуйста, войди снова.",
 }

@@ -1,8 +1,8 @@
-import type { Hooks, PluginInput, Plugin as PluginInstance } from "@kilocode/plugin"
+import type { Hooks, PluginInput, Plugin as PluginInstance } from "@devilcode/plugin"
 import { Config } from "../config/config"
 import { Bus } from "../bus"
 import { Log } from "../util/log"
-import { createKiloClient } from "@kilocode/sdk"
+import { createDevilClient } from "@devilcode/sdk"
 import { Server } from "../server/server"
 import { BunProc } from "../bun"
 import { Instance } from "../project/instance"
@@ -12,25 +12,27 @@ import { Session } from "../session"
 import { NamedError } from "@opencode-ai/util/error"
 import { CopilotAuthPlugin } from "./copilot"
 import { gitlabAuthPlugin as GitlabAuthPlugin } from "@gitlab/opencode-gitlab-auth"
+import { ClaudeCodeAuthPlugin } from "@/devilcode/claude-code-plugin" // devilcode_change
 
-import { KiloAuthPlugin } from "@kilocode/kilo-gateway" // kilocode_change
+import { DevilAuthPlugin } from "@devilcode/kilo-gateway" // devilcode_change
 
 export namespace Plugin {
   const log = Log.create({ service: "plugin" })
 
-  const BUILTIN = ["opencode-anthropic-auth@0.0.13"]
+  const BUILTIN: string[] = [] // devilcode_change
 
   // Built-in plugins that are directly imported (not installed from npm)
-  // kilocode_change start
+  // devilcode_change start
   const INTERNAL_PLUGINS: PluginInstance[] = [
-    KiloAuthPlugin,
+    DevilAuthPlugin,
+    ...(Flag.DEVIL_DISABLE_CLAUDE_CODE ? [] : [ClaudeCodeAuthPlugin]),
     CodexAuthPlugin,
     CopilotAuthPlugin,
     GitlabAuthPlugin as unknown as PluginInstance,
-  ] // kilocode_change end
+  ] // devilcode_change end
 
   const state = Instance.state(async () => {
-    const client = createKiloClient({
+    const client = createDevilClient({
       baseUrl: "http://localhost:4096",
       directory: Instance.directory,
       // @ts-ignore - fetch type incompatibility
@@ -57,7 +59,7 @@ export namespace Plugin {
 
     let plugins = config.plugin ?? []
     if (plugins.length) await Config.waitForDependencies()
-    if (!Flag.KILO_DISABLE_DEFAULT_PLUGINS) {
+    if (!Flag.DEVIL_DISABLE_DEFAULT_PLUGINS) {
       plugins = [...BUILTIN, ...plugins]
     }
 

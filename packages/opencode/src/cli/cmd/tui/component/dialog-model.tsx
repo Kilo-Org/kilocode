@@ -10,7 +10,7 @@ import * as fuzzysort from "fuzzysort"
 
 export function useConnected() {
   const sync = useSync()
-  // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
+  // devilcode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
   return createMemo(() =>
     sync.data.provider.some(
       (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
@@ -27,15 +27,15 @@ export function DialogModel(props: { providerID?: string }) {
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
-  // kilocode_change start
-  // Memoize anything that iterates all Kilo models to avoid calculating it for
-  // each Kilo model and tanking the UI at a couple hundred models
+  // devilcode_change start
+  // Memoize anything that iterates all Devil models to avoid calculating it for
+  // each Devil model and tanking the UI at a couple hundred models
   const kiloRank = createMemo(() => {
     const provider = sync.data.provider.find((provider) => provider.id === "kilo")
     const models = provider?.models ?? {}
     return new Map(Object.entries(models).map(([id, info]) => [id, info.recommendedIndex ?? Infinity] as const))
   })
-  // kilocode_change end
+  // devilcode_change end
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
@@ -96,13 +96,13 @@ export function DialogModel(props: { providerID?: string }) {
             description: favorites.some((item) => item.providerID === provider.id && item.modelID === model)
               ? "(Favorite)"
               : undefined,
-            // kilocode_change start
+            // devilcode_change start
             category: connected()
               ? provider.id === "kilo" && info.recommendedIndex !== undefined
                 ? "Recommended"
                 : provider.name
               : undefined,
-            // kilocode_change end
+            // devilcode_change end
             disabled: provider.id === "opencode" && model.includes("-nano"),
             footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
             onSelect() {
@@ -119,9 +119,9 @@ export function DialogModel(props: { providerID?: string }) {
             return true
           }),
           sortBy(
-            // kilocode_change start - Sort within Recommended / Kilo Gateway
+            // devilcode_change start - Sort within Recommended / Devil Gateway
             (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
-            // kilocode_change end
+            // devilcode_change end
             (x) => x.footer !== "Free",
             (x) => x.title,
           ),
@@ -143,11 +143,11 @@ export function DialogModel(props: { providerID?: string }) {
     if (needle) {
       const filteredProviders = fuzzysort.go(needle, providerOptions, { keys: ["title", "category"] }).map((x) => x.obj)
       const filteredPopular = fuzzysort.go(needle, popularProviders, { keys: ["title"] }).map((x) => x.obj)
-      // kilocode_change start - Partition Kilo Gateway results first (preserves fuzzysort order)
+      // devilcode_change start - Partition Devil Gateway results first (preserves fuzzysort order)
       const kilo = filteredProviders.filter((x) => x.value.providerID === "kilo")
       const rest = filteredProviders.filter((x) => x.value.providerID !== "kilo")
       return [...kilo, ...rest, ...filteredPopular]
-      // kilocode_change end
+      // devilcode_change end
     }
 
     return [...favoriteOptions, ...recentOptions, ...providerOptions, ...popularProviders]

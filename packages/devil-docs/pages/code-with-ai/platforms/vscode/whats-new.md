@@ -1,13 +1,13 @@
 ---
-title: "What's New in Kilo Code (April 2026)"
-description: "The Kilo Code extension has been rebuilt from the ground up on the Kilo CLI — faster, more flexible, and with access to 500+ models."
+title: "What's New in devil Code (April 2026)"
+description: "The devil Code extension has been rebuilt from the ground up on the devil CLI — faster, more flexible, and with access to 500+ models."
 ---
 
-# What's New in Kilo Code
+# What's New in devil Code
 
-The Kilo Code extension has been completely rebuilt on a portable, open-source core shared across VS Code, the CLI, and Cloud Agents. This is the biggest update since launch: faster execution with parallel tool calls and subagents, the new Agent Manager for running multiple agents side by side, inline code review with line-level comments, multi-model comparisons, and access to 500+ models.
+The devil Code extension has been completely rebuilt on a portable, open-source core shared across VS Code, the CLI, and Cloud Agents. This is the biggest update since launch: faster execution with parallel tool calls and subagents, the new Agent Manager for running multiple agents side by side, inline code review with line-level comments, multi-model comparisons, and access to 500+ models.
 
-Whether you're writing features in VS Code, debugging over SSH, or reviewing code on Slack, Kilo now goes with you. Read the [full announcement on the Kilo Blog](https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live) for everything that's new.
+Whether you're writing features in VS Code, debugging over SSH, or reviewing code on Slack, devil now goes with you. Read the [full announcement on the devil Blog](https://blog.devil.ai/p/new-devil-for-vs-code-is-live) for everything that's new.
 
 ---
 
@@ -19,7 +19,7 @@ Still stumped after reading this? Come find us in discord at #vscode.
 
 ### Where did code indexing go?
 
-Code indexing is temporarily unavailable in the new extension. It is actively being worked on and is expected to return soon. Please follow [this issue](https://github.com/Kilo-Org/kilocode/issues/6144)
+Code indexing is temporarily unavailable in the new extension. It is actively being worked on and is expected to return soon. Please follow [this issue](https://github.com/Devil-Org/devilcode/issues/6144)
 
 ### How do checkpoints work in the new extension?
 

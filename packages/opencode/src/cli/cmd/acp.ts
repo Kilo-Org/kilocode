@@ -4,7 +4,7 @@ import { cmd } from "./cmd"
 import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk"
 import { ACP } from "@/acp/agent"
 import { Server } from "@/server/server"
-import { createKiloClient } from "@kilocode/sdk/v2"
+import { createDevilClient } from "@devilcode/sdk/v2"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 
 const log = Log.create({ service: "acp-command" })
@@ -20,12 +20,12 @@ export const AcpCommand = cmd({
     })
   },
   handler: async (args) => {
-    process.env.KILO_CLIENT = "acp"
+    process.env.DEVIL_CLIENT = "acp"
     await bootstrap(process.cwd(), async () => {
       const opts = await resolveNetworkOptions(args)
       const server = Server.listen(opts)
 
-      const sdk = createKiloClient({
+      const sdk = createDevilClient({
         baseUrl: `http://${server.hostname}:${server.port}`,
       })
 

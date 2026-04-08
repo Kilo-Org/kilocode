@@ -5,9 +5,9 @@ on:
     types: [opened]
 
 jobs:
-  # kilocode_change start
+  # devilcode_change start
   check-author:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
+    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
     uses: ./.github/workflows/check-org-member.yml
     with:
       username: ${{ github.event.pull_request.user.login }}
@@ -17,8 +17,8 @@ jobs:
 
   check-duplicates:
     needs: check-author
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    # kilocode_change end
+    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    # devilcode_change end
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
@@ -48,10 +48,10 @@ jobs:
         if: steps.team-check.outputs.is_team != 'true'
         run: bun install
 
-      # kilocode_change start
+      # devilcode_change start
       - name: Setup Kilo
         uses: ./.github/actions/setup-kilo
-      # kilocode_change end
+      # devilcode_change end
 
       - name: Build prompt
         if: steps.team-check.outputs.is_team != 'true'
@@ -73,10 +73,10 @@ jobs:
       - name: Check for duplicate PRs
         if: steps.team-check.outputs.is_team != 'true'
         env:
-          # kilocode_change start
+          # devilcode_change start
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
-          # kilocode_change end
+          # devilcode_change end
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -89,8 +89,8 @@ jobs:
           fi
 
   add-contributor-label:
-    if: github.repository == 'Kilo-Org/kilocode' && false # kilocode_change - disabled: not needed in kilocode repo
-    runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
+    if: github.repository == 'Kilo-Org/kilocode' && false # devilcode_change - disabled: not needed in kilocode repo
+    runs-on: blacksmith-2vcpu-ubuntu-2404 # devilcode_change
     permissions:
       pull-requests: write
       issues: write

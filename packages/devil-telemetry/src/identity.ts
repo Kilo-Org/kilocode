@@ -1,5 +1,5 @@
 import * as path from "path"
-import { fetchProfile } from "@kilocode/kilo-gateway"
+import { fetchProfile } from "@devilcode/kilo-gateway"
 
 export namespace Identity {
   let machineId: string | null = null
@@ -13,7 +13,7 @@ export namespace Identity {
 
   export async function getMachineId(): Promise<string | undefined> {
     if (machineId) return machineId
-    const override = process.env.KILO_MACHINE_ID
+    const override = process.env.DEVIL_MACHINE_ID
     if (override) {
       machineId = override
       return machineId
@@ -51,7 +51,7 @@ export namespace Identity {
     organizationId = orgId
   }
 
-  export async function updateFromKiloAuth(token: string | null, accountId?: string): Promise<void> {
+  export async function updateFromDevilAuth(token: string | null, accountId?: string): Promise<void> {
     organizationId = accountId || null
 
     if (!token) {

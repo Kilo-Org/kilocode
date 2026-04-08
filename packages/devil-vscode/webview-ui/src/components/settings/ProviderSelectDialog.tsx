@@ -1,8 +1,8 @@
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { List } from "@kilocode/kilo-ui/list"
-import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
-import { Tag } from "@kilocode/kilo-ui/tag"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
+import { Dialog } from "@devilcode/kilo-ui/dialog"
+import { List } from "@devilcode/kilo-ui/list"
+import { ProviderIcon } from "@devilcode/kilo-ui/provider-icon"
+import { Tag } from "@devilcode/kilo-ui/tag"
 import { Show, createMemo } from "solid-js"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
@@ -18,7 +18,7 @@ import {
   providerIcon,
 } from "./provider-catalog"
 import CustomProviderDialog from "./CustomProviderDialog"
-import { KILO_PROVIDER_ID } from "../../../../src/shared/provider-model"
+import { DEVIL_PROVIDER_ID } from "../../../../src/shared/provider-model"
 
 type ProviderItem = {
   id: string
@@ -38,8 +38,8 @@ const ProviderSelectDialog = () => {
     const disabled = new Set(config().disabled_providers ?? [])
     const connected = new Set(provider.connected())
     const all = Object.values(provider.providers())
-    const withKilo = all.some((item) => item.id === KILO_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
-    const available = withKilo.filter((item) => !disabled.has(item.id) && !connected.has(item.id))
+    const withDevil = all.some((item) => item.id === DEVIL_PROVIDER_ID) ? all : [kiloFallbackProvider(), ...all]
+    const available = withDevil.filter((item) => !disabled.has(item.id) && !connected.has(item.id))
 
     return [
       {
@@ -59,7 +59,7 @@ const ProviderSelectDialog = () => {
       return
     }
 
-    if (item.id === KILO_PROVIDER_ID) {
+    if (item.id === DEVIL_PROVIDER_ID) {
       dialog.close()
       server.startLogin()
       return
@@ -117,7 +117,7 @@ const ProviderSelectDialog = () => {
               <span style={{ "font-size": "14px", "line-height": "20px", color: "var(--vscode-foreground)" }}>
                 {item.name}
               </span>
-              <Show when={item.id === KILO_PROVIDER_ID}>
+              <Show when={item.id === DEVIL_PROVIDER_ID}>
                 <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>
               </Show>
               <Show when={item.id === CUSTOM_PROVIDER_ID}>

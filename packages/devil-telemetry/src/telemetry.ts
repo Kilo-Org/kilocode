@@ -27,20 +27,20 @@ export namespace Telemetry {
     Identity.setDataPath(options.dataPath)
     props.appVersion = options.version
 
-    const app = process.env.KILO_APP_NAME
+    const app = process.env.DEVIL_APP_NAME
     if (app) props.appName = app
-    const editor = process.env.KILO_EDITOR_NAME
+    const editor = process.env.DEVIL_EDITOR_NAME
     if (editor) props.editorName = editor
-    const platform = process.env.KILO_PLATFORM
+    const platform = process.env.DEVIL_PLATFORM
     if (platform) props.platform = platform
-    const version = process.env.KILO_APP_VERSION
+    const version = process.env.DEVIL_APP_VERSION
     if (version) props.appVersion = version
-    const vscodeVersion = process.env.KILO_VSCODE_VERSION
+    const vscodeVersion = process.env.DEVIL_VSCODE_VERSION
     if (vscodeVersion) props.vscodeVersion = vscodeVersion
 
     Client.init()
 
-    const level = process.env.KILO_TELEMETRY_LEVEL
+    const level = process.env.DEVIL_TELEMETRY_LEVEL
     const enabled = level ? level === "all" : options.enabled
     Client.setEnabled(enabled)
 
@@ -79,13 +79,13 @@ export namespace Telemetry {
 
   export async function updateIdentity(token: string | null, accountId?: string): Promise<void> {
     const previousId = Identity.getDistinctId()
-    await Identity.updateFromKiloAuth(token, accountId)
+    await Identity.updateFromDevilAuth(token, accountId)
 
     const email = Identity.getUserId()
     if (email && previousId && email !== previousId) {
       // Identify the user with their email and properties
       Client.identify(email, {
-        ...(accountId && { kilocodeOrganizationId: accountId }),
+        ...(accountId && { devilcodeOrganizationId: accountId }),
         appName: props.appName,
         appVersion: props.appVersion,
         platform: props.platform,

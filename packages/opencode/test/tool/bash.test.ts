@@ -12,7 +12,7 @@ const ctx = {
   sessionID: "test",
   messageID: "",
   callID: "",
-  agent: "code", // kilocode_change
+  agent: "code", // devilcode_change
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => {},
@@ -306,10 +306,10 @@ describe("tool.bash permissions", () => {
         await bash.execute({ command: "ls -la", description: "List" }, testCtx)
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
-        // kilocode_change start — hierarchy adds base wildcard + exact
+        // devilcode_change start — hierarchy adds base wildcard + exact
         expect(bashReq!.always).toContain("ls *")
         expect(bashReq!.metadata.rules).toContain("ls -la")
-        // kilocode_change end
+        // devilcode_change end
       },
     })
   })

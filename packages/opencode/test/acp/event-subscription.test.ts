@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { ACP } from "../../src/acp/agent"
 import type { AgentSideConnection } from "@agentclientprotocol/sdk"
-import type { Event, EventMessagePartUpdated, ToolStatePending, ToolStateRunning } from "@kilocode/sdk/v2"
+import type { Event, EventMessagePartUpdated, ToolStatePending, ToolStateRunning } from "@devilcode/sdk/v2"
 import { Instance } from "../../src/project/instance"
 import { tmpdir } from "../fixture/fixture"
 
@@ -224,10 +224,10 @@ function createFakeAgent() {
         return {
           data: [
             {
-              // kilocode_change start - renamed from "build" to "code"
+              // devilcode_change start - renamed from "build" to "code"
               name: "code",
               description: "code",
-              // kilocode_change end
+              // devilcode_change end
               mode: "agent",
             },
           ],

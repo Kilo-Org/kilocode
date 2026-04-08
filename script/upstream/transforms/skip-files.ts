@@ -2,12 +2,12 @@
 /**
  * Skip files transform - handles files that should be completely skipped during merge
  *
- * These are files that exist in upstream but should NOT exist in Kilo fork.
+ * These are files that exist in upstream but should NOT exist in Devil fork.
  * Examples: README.*.md (translated READMEs), STATS.md, etc.
  *
  * During merge, these files will be:
  * - Removed if they were added from upstream
- * - Kept deleted if they don't exist in Kilo
+ * - Kept deleted if they don't exist in Devil
  */
 
 import { $ } from "bun"
@@ -98,12 +98,12 @@ async function removeFile(file: string): Promise<boolean> {
 }
 
 /**
- * Skip files that shouldn't exist in Kilo fork
+ * Skip files that shouldn't exist in Devil fork
  *
  * This function handles files that:
  * 1. Match skip patterns (like README.*.md)
  * 2. Were added from upstream during merge
- * 3. Don't exist in Kilo's version (HEAD before merge)
+ * 3. Don't exist in Devil's version (HEAD before merge)
  */
 export async function skipFiles(options: SkipOptions = {}): Promise<SkipResult[]> {
   const results: SkipResult[] = []
@@ -129,16 +129,16 @@ export async function skipFiles(options: SkipOptions = {}): Promise<SkipResult[]
   for (const file of allFiles) {
     if (!shouldSkip(file, patterns)) continue
 
-    // Check if file existed in Kilo before merge (HEAD~1 or the merge base)
-    const existedInKilo = await fileExistsInRef(file, "HEAD")
+    // Check if file existed in Devil before merge (HEAD~1 or the merge base)
+    const existedInDevil = await fileExistsInRef(file, "HEAD")
 
-    if (existedInKilo) {
-      debug(`Skipping ${file} - exists in Kilo, not removing`)
+    if (existedInDevil) {
+      debug(`Skipping ${file} - exists in Devil, not removing`)
       results.push({ file, action: "skipped", dryRun: options.dryRun ?? false })
       continue
     }
 
-    // File doesn't exist in Kilo - should be removed
+    // File doesn't exist in Devil - should be removed
     if (options.dryRun) {
       info(`[DRY-RUN] Would remove: ${file}`)
       results.push({ file, action: "removed", dryRun: true })

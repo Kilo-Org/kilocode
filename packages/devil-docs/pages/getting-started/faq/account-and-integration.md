@@ -1,12 +1,12 @@
 ---
 title: "Account and Integration"
-description: "Questions about accounts and integrations in Kilo Code"
+description: "Questions about accounts and integrations in devil Code"
 tocDepth: 2
 ---
 
 # Account and Integration
 
-This section contains questions about accounts and integrations in Kilo Code.
+This section contains questions about accounts and integrations in devil Code.
 
 ## Account
 
@@ -26,19 +26,19 @@ If you have any remaining credits in your organization, you can contact Support 
 
 You may need to unlink your GitHub account.
 
-This process involves removing the **Kilo Connect** application from your GitHub account settings.
+This process involves removing the **devil Connect** application from your GitHub account settings.
 
 #### Answer
 
 To unlink your GitHub account, follow these steps:
 
 1. Go to your GitHub account and navigate to **Settings → Applications → Installed GitHub Apps** or visit [https://github.com/settings/installations](https://github.com/settings/installations)
-2. Find **Kilo Connect** in the list of installed applications
-3. Click **Configure** next to Kilo Connect
+2. Find **devil Connect** in the list of installed applications
+3. Click **Configure** next to devil Connect
 4. From the configuration page, you can either:
    - **Uninstall** the integration completely, or
    - **Edit** which repositories are connected
 
 {% callout type="tip" %}
-If you'd like to reconnect GitHub later, simply open your Kilo Code profile, go to **Integrations**, and connect GitHub again.
+If you'd like to reconnect GitHub later, simply open your devil Code profile, go to **Integrations**, and connect GitHub again.
 {% /callout %}

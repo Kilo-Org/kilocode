@@ -4,7 +4,7 @@
  */
 
 import { Component, createSignal, Show } from "solid-js"
-import { Icon } from "@kilocode/kilo-ui/icon"
+import { Icon } from "@devilcode/kilo-ui/icon"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 

@@ -48,26 +48,26 @@ import {
   useDragDropContext,
 } from "@thisbeyond/solid-dnd"
 import type { DragEvent, Transformer } from "@thisbeyond/solid-dnd"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
-import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { Code } from "@kilocode/kilo-ui/code"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { File } from "@kilocode/kilo-ui/file"
-import { Toast, showToast } from "@kilocode/kilo-ui/toast"
-import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { Popover } from "@kilocode/kilo-ui/popover"
+import { ThemeProvider } from "@devilcode/kilo-ui/theme"
+import { DialogProvider, useDialog } from "@devilcode/kilo-ui/context/dialog"
+import { Dialog } from "@devilcode/kilo-ui/dialog"
+import { DropdownMenu } from "@devilcode/kilo-ui/dropdown-menu"
+import { ContextMenu } from "@devilcode/kilo-ui/context-menu"
+import { MarkedProvider } from "@devilcode/kilo-ui/context/marked"
+import { CodeComponentProvider } from "@devilcode/kilo-ui/context/code"
+import { DiffComponentProvider } from "@devilcode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@devilcode/kilo-ui/context/file"
+import { Code } from "@devilcode/kilo-ui/code"
+import { Diff } from "@devilcode/kilo-ui/diff"
+import { File } from "@devilcode/kilo-ui/file"
+import { Toast, showToast } from "@devilcode/kilo-ui/toast"
+import { ResizeHandle } from "@devilcode/kilo-ui/resize-handle"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Button } from "@devilcode/kilo-ui/button"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
+import { Spinner } from "@devilcode/kilo-ui/spinner"
+import { Tooltip, TooltipKeybind } from "@devilcode/kilo-ui/tooltip"
+import { Popover } from "@devilcode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
@@ -1191,7 +1191,7 @@ const AgentManagerContent: Component = () => {
         setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
         if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
         if (!worktreesLoaded()) setWorktreesLoaded(true)
-        // When not a git repo, also mark sessions as loaded since the Kilo
+        // When not a git repo, also mark sessions as loaded since the Devil
         // server won't connect to send the sessionsLoaded message.
         if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
         if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
@@ -1262,7 +1262,7 @@ const AgentManagerContent: Component = () => {
 
       // Handle initial message send for multi-version sessions.
       // The extension creates the worktrees/sessions, then asks the webview
-      // to send the prompt through the normal KiloProvider sendMessage path.
+      // to send the prompt through the normal DevilProvider sendMessage path.
       // Once the message is sent, clear the loading state for that worktree.
       if ((msg as { type: string }).type === "agentManager.sendInitialMessage") {
         const ev = msg as unknown as AgentManagerSendInitialMessage

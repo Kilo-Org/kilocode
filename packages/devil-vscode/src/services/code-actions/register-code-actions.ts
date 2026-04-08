@@ -1,12 +1,12 @@
 import * as vscode from "vscode"
-import type { KiloProvider } from "../../KiloProvider"
+import type { DevilProvider } from "../../KiloProvider"
 import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
 import { getEditorContext } from "./editor-utils"
 import { createPrompt } from "./support-prompt"
 
 export function registerCodeActions(
   context: vscode.ExtensionContext,
-  provider: KiloProvider,
+  provider: DevilProvider,
   agentManager?: AgentManagerProvider,
 ): void {
   const target = () => (agentManager?.isActive() ? agentManager : provider)

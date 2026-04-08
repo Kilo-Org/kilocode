@@ -1,9 +1,9 @@
 import { Component, Show, createSignal, createMemo, createEffect, onMount } from "solid-js"
-import { Button } from "@kilocode/kilo-ui/button"
-import { Card } from "@kilocode/kilo-ui/card"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Select } from "@kilocode/kilo-ui/select"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { Button } from "@devilcode/kilo-ui/button"
+import { Card } from "@devilcode/kilo-ui/card"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Select } from "@devilcode/kilo-ui/select"
+import { Tooltip } from "@devilcode/kilo-ui/tooltip"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import DeviceAuthCard from "./DeviceAuthCard"
@@ -90,7 +90,7 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   }
 
   const handleDashboard = () => {
-    vscode.postMessage({ type: "openExternal", url: "https://app.kilo.ai/profile" })
+    vscode.postMessage({ type: "openExternal", url: "https://app.devil.ai/profile" })
   }
 
   const handleCancelLogin = () => {

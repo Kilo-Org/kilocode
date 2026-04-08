@@ -1,12 +1,12 @@
 ---
 title: "Auto-Approving Actions"
-description: "Configure automatic approval settings for Kilo Code operations"
+description: "Configure automatic approval settings for devil Code operations"
 ---
 
 # Auto-Approving Actions
 
 {% callout type="danger" %}
-**Security Warning:** Auto-approve settings bypass confirmation prompts, giving Kilo Code direct access to your system. This can result in data loss, file corruption, or worse. Command line access is particularly dangerous, as it can potentially execute harmful operations that could damage your system or compromise security. Only enable auto-approval for actions you fully trust.
+**Security Warning:** Auto-approve settings bypass confirmation prompts, giving devil Code direct access to your system. This can result in data loss, file corruption, or worse. Command line access is particularly dangerous, as it can potentially execute harmful operations that could damage your system or compromise security. Only enable auto-approval for actions you fully trust.
 {% /callout %}
 
 Auto-approve settings speed up your workflow by eliminating repetitive confirmation prompts, but they significantly increase security risks. The **VSCode (Legacy)**, **VSCode**, and **CLI** versions each handle permissions differently — choose the tab that matches your setup.
@@ -18,7 +18,7 @@ Auto-approve settings speed up your workflow by eliminating repetitive confirmat
 
 The extension uses a granular, per-tool permission system. You can configure permissions through the **Settings → Auto Approve** tab, which provides a UI with per-tool **Allow / Ask / Deny** dropdowns.
 
-The UI reads and writes to the same `kilo.jsonc` config files used by the CLI, so changes made in either place are reflected in both.
+The UI reads and writes to the same `devil.jsonc` config files used by the CLI, so changes made in either place are reflected in both.
 
 ## Permission Levels
 
@@ -27,7 +27,7 @@ Each tool permission can be set to one of three values:
 | Value     | Behavior                                                  |
 | --------- | --------------------------------------------------------- |
 | `"allow"` | The tool runs automatically without prompting             |
-| `"ask"`   | Kilo pauses and asks for approval before running the tool |
+| `"ask"`   | devil pauses and asks for approval before running the tool |
 | `"deny"`  | The tool is blocked entirely                              |
 
 When no rule matches a permission check, the default action is `ask`.
@@ -55,7 +55,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 
 ## Runtime Permission Requests
 
-When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with two options:
+When a tool is set to `"ask"`, devil pauses and displays a permission prompt with two options:
 
 | Option   | Behavior                       |
 | -------- | ------------------------------ |
@@ -77,7 +77,7 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 
 ## Overview
 
-The CLI uses a granular, per-tool permission system configured in `kilo.jsonc`. Instead of broad categories like "read" or "write," each tool has its own permission level with glob-pattern rules for fine-grained control.
+The CLI uses a granular, per-tool permission system configured in `devil.jsonc`. Instead of broad categories like "read" or "write," each tool has its own permission level with glob-pattern rules for fine-grained control.
 
 ## Permission Levels
 
@@ -86,14 +86,14 @@ Each tool permission can be set to one of three values:
 | Value     | Behavior                                                  |
 | --------- | --------------------------------------------------------- |
 | `"allow"` | The tool runs automatically without prompting             |
-| `"ask"`   | Kilo pauses and asks for approval before running the tool |
+| `"ask"`   | devil pauses and asks for approval before running the tool |
 | `"deny"`  | The tool is blocked entirely                              |
 
 When no rule matches a permission check, the default action is `ask`.
 
 ## Available Tool Permissions
 
-Permissions are configured under the `permission` key in `kilo.jsonc`. The following tool-specific permission levels are available:
+Permissions are configured under the `permission` key in `devil.jsonc`. The following tool-specific permission levels are available:
 
 | Permission                 | Controls                                               |
 | -------------------------- | ------------------------------------------------------ |
@@ -192,7 +192,7 @@ In this example, the `code` agent can run `git` commands automatically and asks 
 
 ## Runtime Permission Requests
 
-When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt. You have three options:
+When a tool is set to `"ask"`, devil pauses and displays a permission prompt. You have three options:
 
 | Option           | Behavior                                                 |
 | ---------------- | -------------------------------------------------------- |
@@ -250,10 +250,10 @@ This is a custom example showing the available configuration options — it does
 ## Quick Start Guide
 
 1. Click the Auto-Approve Toolbar above the chat input
-2. Select which actions Kilo Code can perform without asking permission
+2. Select which actions devil Code can perform without asking permission
 3. Use the master toggle (leftmost checkbox) to quickly enable/disable all permissions
 
-[![KiloCode Task Timeline](https://img.youtube.com/vi/NBccFnYDQ-k/maxresdefault.jpg)](https://youtube.com/shorts/NBccFnYDQ-k?feature=shared)
+[![devilcode Task Timeline](https://img.youtube.com/vi/NBccFnYDQ-k/maxresdefault.jpg)](https://youtube.com/shorts/NBccFnYDQ-k?feature=shared)
 
 ## Auto-Approve Toolbar
 
@@ -267,12 +267,12 @@ Click the toolbar to expand it and configure individual permissions:
 
 | Permission                     | What it does                                     | Risk level  |
 | ------------------------------ | ------------------------------------------------ | ----------- |
-| **Read files and directories** | Lets Kilo Code access files without asking       | Medium      |
-| **Edit files**                 | Lets Kilo Code modify files without asking       | **High**    |
+| **Read files and directories** | Lets devil Code access files without asking       | Medium      |
+| **Edit files**                 | Lets devil Code modify files without asking       | **High**    |
 | **Execute approved commands**  | Runs whitelisted terminal commands automatically | **High**    |
 | **Use the browser**            | Allows headless browser interaction              | Medium      |
-| **Use MCP servers**            | Lets Kilo Code use configured MCP services       | Medium-High |
-| **Switch modes**               | Changes between Kilo Code modes automatically    | Low         |
+| **Use MCP servers**            | Lets devil Code use configured MCP services       | Medium-High |
+| **Switch modes**               | Changes between devil Code modes automatically    | Low         |
 | **Create & complete subtasks** | Manages subtasks without confirmation            | Low         |
 | **Retry failed requests**      | Automatically retries failed API requests        | Low         |
 | **Answer follow-up questions** | Selects default answer for follow-up questions   | Low         |
@@ -300,7 +300,7 @@ The settings panel provides detailed control with important security context. To
 {% image src="/docs/img/auto-approving-actions/auto-approving-actions-4.png" alt="Settings panel auto-approve options" width="800" caption="Complete settings panel view" /%}
 
 {% callout type="info" %}
-Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.
+Allow devil Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.
 {% /callout %}
 
 ### Read Operations
@@ -309,27 +309,27 @@ Allow Kilo Code to automatically perform operations without requiring approval. 
 
 **Setting:** "Always approve read-only operations"
 
-**Description:** When enabled, Kilo Code will automatically view directory contents and read files without requiring you to click the Approve button.
+**Description:** When enabled, devil Code will automatically view directory contents and read files without requiring you to click the Approve button.
 
 **Risk level:** Medium
 
-While this setting only allows reading files (not modifying them), it could potentially expose sensitive data. Still recommended as a starting point for most users, but be mindful of what files Kilo Code can access.
+While this setting only allows reading files (not modifying them), it could potentially expose sensitive data. Still recommended as a starting point for most users, but be mindful of what files devil Code can access.
 
 #### Read Outside Workspace
 
 **Setting:** "Allow reading files outside the workspace"
 
-**Description:** When enabled, Kilo Code can read files outside the current workspace directory without asking for approval.
+**Description:** When enabled, devil Code can read files outside the current workspace directory without asking for approval.
 
 **Risk level:** Medium-High
 
 This setting extends read permissions beyond your project folder. Consider the security implications:
 
-- Kilo Code could access sensitive files in your home directory
+- devil Code could access sensitive files in your home directory
 - Configuration files, SSH keys, or credentials could be read
 - Only enable if you trust the AI and need it to access external files
 
-**Recommendation:** Keep disabled unless you specifically need Kilo Code to read files outside your project.
+**Recommendation:** Keep disabled unless you specifically need devil Code to read files outside your project.
 
 ### Write Operations
 
@@ -343,7 +343,7 @@ This setting extends read permissions beyond your project folder. Consider the s
 
 **Risk level:** High
 
-This setting allows Kilo Code to modify your files without confirmation. The delay timer is crucial:
+This setting allows devil Code to modify your files without confirmation. The delay timer is crucial:
 
 - Higher values (2000ms+): Recommended for complex projects where diagnostics take longer
 - Default (1000ms): Suitable for most projects
@@ -354,11 +354,11 @@ This setting allows Kilo Code to modify your files without confirmation. The del
 
 **Setting:** "Allow writing files outside the workspace"
 
-**Description:** When enabled, Kilo Code can create or modify files outside the current workspace directory without asking for approval.
+**Description:** When enabled, devil Code can create or modify files outside the current workspace directory without asking for approval.
 
 **Risk level:** Very High
 
-Use with caution and in controlled environments. It allows Kilo Code to:
+Use with caution and in controlled environments. It allows devil Code to:
 
 - Modify your shell configuration files
 - Change system configurations
@@ -370,7 +370,7 @@ Use with caution and in controlled environments. It allows Kilo Code to:
 
 **Setting:** "Allow writing to protected files"
 
-**Description:** When enabled, Kilo Code can overwrite or modify files that are normally protected by the [`.kilocodeignore`](/docs/customize/custom-rules) file.
+**Description:** When enabled, devil Code can overwrite or modify files that are normally protected by the [`.devilcodeignore`](/docs/customize/custom-rules) file.
 
 **Risk level:** Very High
 
@@ -387,11 +387,11 @@ Protected files are intentionally shielded from modification. Enable only if you
 
 **Risk level:** Very High
 
-This setting allows Kilo Code to permanently remove files without confirmation.
+This setting allows devil Code to permanently remove files without confirmation.
 
 **Safeguards:**
 
-- Kilo Code still respects `.kilocodeignore` rules
+- devil Code still respects `.devilcodeignore` rules
 - Protected files cannot be deleted
 - The delete tool shows what will be removed before execution
 
@@ -410,7 +410,7 @@ This setting allows Kilo Code to permanently remove files without confirmation.
 
 **Risk level:** Medium
 
-Allows Kilo Code to control a headless browser without confirmation. This can include:
+Allows devil Code to control a headless browser without confirmation. This can include:
 
 - Opening websites
 - Navigating pages
@@ -430,7 +430,7 @@ Consider the security implications of allowing automated browser access.
 
 This setting automatically retries API calls when they fail.
 
-The delay controls how long Kilo Code waits before trying again:
+The delay controls how long devil Code waits before trying again:
 
 - Longer delays are gentler on API rate limits
 - Shorter delays give faster recovery from transient errors
@@ -457,7 +457,7 @@ This setting works in conjunction with individual tool permissions in the Agent 
 
 **Risk level:** Low
 
-Allows Kilo Code to change between different modes (Code, Architect, etc.) without asking for permission. This primarily affects the AI's behavior rather than system access.
+Allows devil Code to change between different modes (Code, Architect, etc.) without asking for permission. This primarily affects the AI's behavior rather than system access.
 
 ### Subtasks
 
@@ -469,7 +469,7 @@ Allows Kilo Code to change between different modes (Code, Architect, etc.) witho
 
 **Risk level:** Low
 
-Enables Kilo Code to create and complete subtasks automatically. This relates to workflow organization rather than system access.
+Enables devil Code to create and complete subtasks automatically. This relates to workflow organization rather than system access.
 
 ### Command Execution
 
@@ -493,7 +493,7 @@ This setting allows terminal command execution with controls. While risky, the a
 
 **Setting:** "Command prefixes that can be auto-executed"
 
-Add command prefixes (e.g., `git`, `npm`, `ls`) that Kilo Code can run without asking. Use `*` to allow all commands (use with caution).
+Add command prefixes (e.g., `git`, `npm`, `ls`) that devil Code can run without asking. Use `*` to allow all commands (use with caution).
 
 **Interface elements:**
 
@@ -511,7 +511,7 @@ Commands in this list will never run, even if `*` is in the allowed list. Use th
 
 **Setting:** "Always default answer for follow-up questions"
 
-**Description:** Automatically selects the first AI-suggested answer for a follow-up question after a configurable timeout. This speeds up your workflow by letting Kilo Code proceed without manual intervention.
+**Description:** Automatically selects the first AI-suggested answer for a follow-up question after a configurable timeout. This speeds up your workflow by letting devil Code proceed without manual intervention.
 
 **Visual countdown:** When enabled, a countdown timer appears on the first suggestion button in the chat interface, showing the remaining time before auto-selection. The timer displays seconds remaining (e.g., "3s") and counts down in real-time.
 
@@ -528,7 +528,7 @@ Commands in this list will never run, even if `*` is in the allowed list. Use th
 
 **Use cases:**
 
-- Overnight runs where you want Kilo Code to continue working
+- Overnight runs where you want devil Code to continue working
 - Repetitive tasks where the default suggestions are usually correct
 - Testing workflows where interaction isn't critical
 
@@ -540,7 +540,7 @@ Commands in this list will never run, even if `*` is in the allowed list. Use th
 
 **Risk level:** Low
 
-This setting allows Kilo Code to automatically update task progress and todo lists during work sessions. This includes:
+This setting allows devil Code to automatically update task progress and todo lists during work sessions. This includes:
 
 - Marking tasks as completed
 - Adding new discovered tasks
@@ -554,14 +554,14 @@ This setting allows Kilo Code to automatically update task progress and todo lis
 - Complex debugging workflows
 - Feature implementation with many subtasks
 
-This is particularly useful when combined with the Subtasks permission, as it allows Kilo Code to maintain a complete picture of project progress without constant approval requests.
+This is particularly useful when combined with the Subtasks permission, as it allows devil Code to maintain a complete picture of project progress without constant approval requests.
 
 ## YOLO Mode
 
 {% callout type="danger" %}
 **YOLO Mode (Risk: Maximum)**
 
-**"You Only Live Once"** mode enables _all_ auto-approve permissions at once using the master toggle. This gives Kilo Code complete autonomy to read files, write code, execute commands, and perform any operation without asking for permission.
+**"You Only Live Once"** mode enables _all_ auto-approve permissions at once using the master toggle. This gives devil Code complete autonomy to read files, write code, execute commands, and perform any operation without asking for permission.
 
 You can optionally enable an AI Safety Gatekeeper, which reviews every intended change in YOLO mode and intelligently approves or blocks actions before they execute. We suggest using a small, fast model such as OpenAI gpt-oss-safeguard-20b. When enabled, AI Safety Gatekeeper will incur additional costs, as well as additional latency.
 
@@ -577,7 +577,7 @@ You can optionally enable an AI Safety Gatekeeper, which reviews every intended 
 - Working with important data
 - Any situation where mistakes could be costly
 
-This is the fastest way to work with Kilo Code, but also the riskiest. Use it only when you fully trust the AI and are prepared for the consequences.
+This is the fastest way to work with devil Code, but also the riskiest. Use it only when you fully trust the AI and are prepared for the consequences.
 {% /callout %}
 
 {% /tab %}

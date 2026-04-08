@@ -1,5 +1,5 @@
 /**
- * legacy-migration - Default values for native modes from the legacy Kilo Code v5.x extension.
+ * legacy-migration - Default values for native modes from the legacy Devil Code v5.x extension.
  *
  * These are the exact built-in mode definitions shipped with the legacy extension.
  * They are frozen references used to detect whether a user has actually modified a
@@ -20,14 +20,14 @@ export interface NativeModeDefaults {
 }
 
 /**
- * Built-in default values for each native mode slug from legacy Kilo Code v5.x.
+ * Built-in default values for each native mode slug from legacy Devil Code v5.x.
  * "build" is excluded because it does not exist as a legacy built-in mode.
  */
 export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   architect: {
     name: "Architect",
     roleDefinition:
-      "You are Kilo Code, an experienced technical leader who is inquisitive and an excellent planner. Your goal is to gather information and get context to create a detailed plan for accomplishing the user's task, which the user will review and approve before they switch into another mode to implement the solution.",
+      "You are Devil Code, an experienced technical leader who is inquisitive and an excellent planner. Your goal is to gather information and get context to create a detailed plan for accomplishing the user's task, which the user will review and approve before they switch into another mode to implement the solution.",
     whenToUse:
       "Use this mode when you need to plan, design, or strategize before implementation. Perfect for breaking down complex problems, creating technical specifications, designing system architecture, or brainstorming solutions before coding.",
     description: "Plan and design before implementation",
@@ -38,7 +38,7 @@ export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   code: {
     name: "Code",
     roleDefinition:
-      "You are Kilo Code, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.",
+      "You are Devil Code, a highly skilled software engineer with extensive knowledge in many programming languages, frameworks, design patterns, and best practices.",
     whenToUse:
       "Use this mode when you need to write, modify, or refactor code. Ideal for implementing features, fixing bugs, creating new files, or making code improvements across any programming language or framework.",
     description: "Write, modify, and refactor code",
@@ -47,7 +47,7 @@ export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   ask: {
     name: "Ask",
     roleDefinition:
-      "You are Kilo Code, a knowledgeable technical assistant focused on answering questions and providing information about software development, technology, and related topics.",
+      "You are Devil Code, a knowledgeable technical assistant focused on answering questions and providing information about software development, technology, and related topics.",
     whenToUse:
       "Use this mode when you need explanations, documentation, or answers to technical questions. Best for understanding concepts, analyzing existing code, getting recommendations, or learning about technologies without making changes.",
     description: "Get answers and explanations",
@@ -58,7 +58,7 @@ export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   debug: {
     name: "Debug",
     roleDefinition:
-      "You are Kilo Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
+      "You are Devil Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
     whenToUse:
       "Use this mode when you're troubleshooting issues, investigating errors, or diagnosing problems. Specialized in systematic debugging, adding logging, analyzing stack traces, and identifying root causes before applying fixes.",
     description: "Diagnose and fix software issues",
@@ -69,7 +69,7 @@ export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   orchestrator: {
     name: "Orchestrator",
     roleDefinition:
-      "You are Kilo Code, a strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized modes. You have a comprehensive understanding of each mode's capabilities and limitations, allowing you to effectively break down complex problems into discrete tasks that can be solved by different specialists.",
+      "You are Devil Code, a strategic workflow orchestrator who coordinates complex tasks by delegating them to appropriate specialized modes. You have a comprehensive understanding of each mode's capabilities and limitations, allowing you to effectively break down complex problems into discrete tasks that can be solved by different specialists.",
     whenToUse:
       "Use this mode for complex, multi-step projects that require coordination across different specialties. Ideal when you need to break down large tasks into subtasks, manage workflows, or coordinate work that spans multiple domains or expertise areas.",
     description: "Coordinate tasks across multiple modes",
@@ -80,7 +80,7 @@ export const NATIVE_MODE_DEFAULTS: Record<string, NativeModeDefaults> = {
   review: {
     name: "Review",
     roleDefinition:
-      "You are Kilo Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory - provide clear, actionable feedback on code quality and potential issues.",
+      "You are Devil Code, an expert code reviewer with deep expertise in software engineering best practices, security vulnerabilities, performance optimization, and code quality. Your role is advisory - provide clear, actionable feedback on code quality and potential issues.",
     whenToUse:
       "Use this mode when you need to review code changes. Ideal for reviewing uncommitted work before committing, comparing your branch against main/develop, or analyzing changes before merging.",
     description: "Review code changes locally",

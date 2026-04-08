@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
-import type { Event } from "@kilocode/sdk/v2/client"
+import type { Event } from "@devilcode/sdk/v2/client"
 
 const noLookup = (_: string) => undefined
 

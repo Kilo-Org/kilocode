@@ -1,4 +1,4 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 // Matches text that looks like a file path:
 // - Unix: /foo/bar.ts, ./foo.ts, ../foo.ts, foo.ts

@@ -1,6 +1,6 @@
 import z from "zod"
 import { spawn } from "child_process"
-import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
+import { StringDecoder } from "string_decoder" // devilcode_change - fix UTF-8 multi-byte split
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -16,12 +16,12 @@ import { Flag } from "@/flag/flag.ts"
 import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
-import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
+import { BashHierarchy } from "@/devilcode/bash-hierarchy" // devilcode_change
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
 
 const MAX_METADATA_LENGTH = 30_000
-const DEFAULT_TIMEOUT = Flag.KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
+const DEFAULT_TIMEOUT = Flag.DEVIL_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS || 2 * 60 * 1000
 
 export const log = Log.create({ service: "bash-tool" })
 
@@ -91,7 +91,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (!Instance.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
-      const rules = new Set<string>() // kilocode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
+      const rules = new Set<string>() // devilcode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
 
       for (const node of tree.rootNode.descendantsOfType("command")) {
         if (!node) continue
@@ -141,7 +141,7 @@ export const BashTool = Tool.define("bash", async () => {
         if (command.length && command[0] !== "cd") {
           patterns.add(commandText)
           always.add(BashArity.prefix(command).join(" ") + " *")
-          BashHierarchy.addAll(rules, command, commandText) // kilocode_change
+          BashHierarchy.addAll(rules, command, commandText) // devilcode_change
         }
       }
 
@@ -164,7 +164,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: { command: params.command, rules: Array.from(rules) }, // kilocode_change
+          metadata: { command: params.command, rules: Array.from(rules) }, // devilcode_change
         })
       }
 
@@ -182,7 +182,7 @@ export const BashTool = Tool.define("bash", async () => {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: process.platform !== "win32",
-        windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
+        windowsHide: true, // devilcode_change - prevent CMD window flash on Windows
       })
 
       let output = ""
@@ -195,7 +195,7 @@ export const BashTool = Tool.define("bash", async () => {
         },
       })
 
-      // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+      // devilcode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
       // separate decoder per stream so partial bytes from one pipe don't corrupt the other
       const stdoutDecoder = new StringDecoder("utf8")
       const stderrDecoder = new StringDecoder("utf8")
@@ -209,7 +209,7 @@ export const BashTool = Tool.define("bash", async () => {
           },
         })
       }
-      // kilocode_change end
+      // devilcode_change end
 
       proc.stdout?.on("data", append(stdoutDecoder))
       proc.stderr?.on("data", append(stderrDecoder))
@@ -243,7 +243,7 @@ export const BashTool = Tool.define("bash", async () => {
           ctx.abort.removeEventListener("abort", abortHandler)
         }
 
-        // kilocode_change - use "close" instead of "exit" so stdio streams are fully drained
+        // devilcode_change - use "close" instead of "exit" so stdio streams are fully drained
         // before we flush the StringDecoders and read `output`
         proc.once("close", () => {
           exited = true
@@ -258,7 +258,7 @@ export const BashTool = Tool.define("bash", async () => {
         })
       })
 
-      // kilocode_change - flush any trailing buffered bytes from decoders
+      // devilcode_change - flush any trailing buffered bytes from decoders
       output += stdoutDecoder.end()
       output += stderrDecoder.end()
 

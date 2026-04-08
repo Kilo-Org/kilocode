@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
-import { KiloProvider } from "./KiloProvider"
-import type { KiloConnectionService } from "./services/cli-backend"
+import { DevilProvider } from "./KiloProvider"
+import type { DevilConnectionService } from "./services/cli-backend"
 
 /**
  * Opens a read-only editor panel to view a sub-agent session.
@@ -8,16 +8,16 @@ import type { KiloConnectionService } from "./services/cli-backend"
  * Each child session ID maps to at most one panel — calling openPanel()
  * again with the same ID reveals the existing panel.
  *
- * Uses a full KiloProvider so the viewer has backend connectivity
+ * Uses a full DevilProvider so the viewer has backend connectivity
  * (messages, parts, SSE events) identical to the sidebar.
  */
 export class SubAgentViewerProvider implements vscode.Disposable {
   private panels = new Map<string, vscode.WebviewPanel>()
-  private providers = new Map<string, KiloProvider>()
+  private providers = new Map<string, DevilProvider>()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly connectionService: KiloConnectionService,
+    private readonly connectionService: DevilConnectionService,
     private readonly context: vscode.ExtensionContext,
   ) {}
 
@@ -41,7 +41,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    const provider = new KiloProvider(this.extensionUri, this.connectionService, this.context)
+    const provider = new DevilProvider(this.extensionUri, this.connectionService, this.context)
     provider.resolveWebviewPanel(panel)
 
     // Once the webview is ready, fetch the session and display it in read-only mode.
@@ -49,7 +49,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
       if (msg.type !== "webviewReady") return
       readyDisposable.dispose()
 
-      // Small delay to let KiloProvider's own webviewReady handler finish first
+      // Small delay to let DevilProvider's own webviewReady handler finish first
       await new Promise((resolve) => setTimeout(resolve, 50))
 
       try {
@@ -77,7 +77,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
         // Navigate to the sub-agent viewer
         provider.postMessage({ type: "viewSubAgentSession", sessionID })
       } catch (err) {
-        console.error("[Kilo New] SubAgentViewerProvider: Failed to load session:", err)
+        console.error("[Devil New] SubAgentViewerProvider: Failed to load session:", err)
       }
     })
 
@@ -92,7 +92,7 @@ export class SubAgentViewerProvider implements vscode.Disposable {
     this.providers.set(sessionID, provider)
 
     panel.onDidDispose(() => {
-      console.log("[Kilo New] Sub-agent viewer panel disposed:", sessionID)
+      console.log("[Devil New] Sub-agent viewer panel disposed:", sessionID)
       closeDisposable.dispose()
       provider.dispose()
       this.panels.delete(sessionID)

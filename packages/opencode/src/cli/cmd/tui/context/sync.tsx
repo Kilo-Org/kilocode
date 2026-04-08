@@ -17,7 +17,7 @@ import type {
   ProviderListResponse,
   ProviderAuthMethod,
   VcsInfo,
-} from "@kilocode/sdk/v2"
+} from "@devilcode/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useSDK } from "@tui/context/sdk"
 import { Binary } from "@opencode-ai/util/binary"
@@ -27,8 +27,8 @@ import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
-import type { Path } from "@kilocode/sdk"
-import type { Workspace } from "@kilocode/sdk/v2"
+import type { Path } from "@devilcode/sdk"
+import type { Workspace } from "@devilcode/sdk/v2"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -53,7 +53,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         [sessionID: string]: SessionStatus
       }
       session_diff: {
-        [sessionID: string]: Omit<Snapshot.FileDiff, "before" | "after">[] // kilocode_change
+        [sessionID: string]: Omit<Snapshot.FileDiff, "before" | "after">[] // devilcode_change
       }
       todo: {
         [sessionID: string]: Todo[]
@@ -107,7 +107,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
 
     const sdk = useSDK()
 
-    const fullSyncedSessions = new Set<string>() // kilocode_change
+    const fullSyncedSessions = new Set<string>() // devilcode_change
 
     async function syncWorkspaces() {
       const result = await sdk.client.experimental.workspace.list().catch(() => undefined)
@@ -115,7 +115,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       setStore("workspaceList", reconcile(result.data))
     }
 
-    // kilocode_change start
+    // devilcode_change start
     function evict(sessionID: string) {
       // Collect child session IDs so we can evict them too.
       const children = store.session.filter((s) => s.parentID === sessionID).map((s) => s.id)
@@ -141,7 +141,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       if (msg.role !== "user" || !msg.summary?.diffs) return msg
       return { ...msg, summary: { ...msg.summary, diffs: [] } } as Message
     }
-    // kilocode_change end
+    // devilcode_change end
 
     sdk.event.listen((e) => {
       const event = e.details
@@ -236,7 +236,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           )
           break
 
-        // kilocode_change start
+        // devilcode_change start
         case "session.deleted": {
           const sid = event.properties.info.id
           const match = Binary.search(store.session, sid, (s) => s.id)
@@ -251,7 +251,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           evict(sid)
           break
         }
-        // kilocode_change end
+        // devilcode_change end
         case "session.updated": {
           const result = Binary.search(store.session, event.properties.info.id, (s) => s.id)
           if (result.found) {
@@ -272,7 +272,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
 
-        // kilocode_change start
+        // devilcode_change start
         case "message.updated": {
           const info = strip(event.properties.info)
           const messages = store.message[info.sessionID]
@@ -313,7 +313,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           }
           break
         }
-        // kilocode_change end
+        // devilcode_change end
         case "message.removed": {
           const messages = store.message[event.properties.sessionID]
           const result = Binary.search(messages, event.properties.messageID, (m) => m.id)
@@ -521,7 +521,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               if (match.found) draft.session[match.index] = session.data!
               if (!match.found) draft.session.splice(match.index, 0, session.data!)
               draft.todo[sessionID] = todo.data ?? []
-              draft.message[sessionID] = messages.data!.map((x) => strip(x.info)) // kilocode_change
+              draft.message[sessionID] = messages.data!.map((x) => strip(x.info)) // devilcode_change
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
               }
@@ -530,7 +530,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           )
           fullSyncedSessions.add(sessionID)
         },
-        evict, // kilocode_change
+        evict, // devilcode_change
       },
       workspace: {
         get(workspaceID: string) {

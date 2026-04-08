@@ -1,15 +1,15 @@
 import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { Code } from "@kilocode/kilo-ui/code"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { File } from "@kilocode/kilo-ui/file"
-import { DataProvider } from "@kilocode/kilo-ui/context/data"
-import { Toast } from "@kilocode/kilo-ui/toast"
+import { ThemeProvider } from "@devilcode/kilo-ui/theme"
+import { DialogProvider } from "@devilcode/kilo-ui/context/dialog"
+import { MarkedProvider } from "@devilcode/kilo-ui/context/marked"
+import { CodeComponentProvider } from "@devilcode/kilo-ui/context/code"
+import { DiffComponentProvider } from "@devilcode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@devilcode/kilo-ui/context/file"
+import { Code } from "@devilcode/kilo-ui/code"
+import { Diff } from "@devilcode/kilo-ui/diff"
+import { File } from "@devilcode/kilo-ui/file"
+import { DataProvider } from "@devilcode/kilo-ui/context/data"
+import { Toast } from "@devilcode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
 import { VSCodeProvider, useVSCode } from "./context/vscode"
@@ -31,7 +31,7 @@ registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
-import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import type { Message as SDKMessage, Part as SDKPart } from "@devilcode/sdk/v2"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -186,27 +186,27 @@ const AppContent: Component = () => {
     const handler = (event: MessageEvent) => {
       const message = event.data
       if (message?.type === "action" && message.action) {
-        console.log("[Kilo New] App: 🎬 action:", message.action)
+        console.log("[Devil New] App: 🎬 action:", message.action)
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
-        console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        console.log("[Devil New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
-        console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
+        console.log("[Devil New] App: ☁️ openCloudSession:", message.sessionId)
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
-        console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        console.log("[Devil New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
       // legacy-migration: state-driven migration wizard
       if (message?.type === "migrationState") {
-        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        console.log("[Devil New] App: 🔄 migrationState:", message.needed)
         setMigrationNeeded(message.needed)
       }
     }

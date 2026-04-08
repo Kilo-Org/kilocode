@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from "bun:test"
-import { buildKiloHeaders, getFeatureHeader, getEditorNameHeader } from "@kilocode/kilo-gateway"
-import { HEADER_FEATURE, ENV_FEATURE, ENV_VERSION, DEFAULT_EDITOR_NAME } from "@kilocode/kilo-gateway"
+import { buildDevilHeaders, getFeatureHeader, getEditorNameHeader } from "@devilcode/kilo-gateway"
+import { HEADER_FEATURE, HEADER_EDITORNAME, ENV_FEATURE, ENV_VERSION, DEFAULT_EDITOR_NAME } from "@devilcode/kilo-gateway"
 
 describe("getFeatureHeader", () => {
   const original = process.env[ENV_FEATURE]
@@ -40,18 +40,18 @@ describe("getEditorNameHeader", () => {
     }
   })
 
-  it("returns default editor name without version when KILOCODE_VERSION is not set", () => {
+  it("returns default editor name without version when DEVILCODE_VERSION is not set", () => {
     delete process.env[ENV_VERSION]
     expect(getEditorNameHeader()).toBe(DEFAULT_EDITOR_NAME)
   })
 
-  it("appends version when KILOCODE_VERSION is set", () => {
+  it("appends version when DEVILCODE_VERSION is set", () => {
     process.env[ENV_VERSION] = "1.2.3"
     expect(getEditorNameHeader()).toBe(`${DEFAULT_EDITOR_NAME} 1.2.3`)
   })
 })
 
-describe("buildKiloHeaders", () => {
+describe("buildDevilHeaders", () => {
   const original = process.env[ENV_FEATURE]
 
   afterEach(() => {
@@ -64,25 +64,25 @@ describe("buildKiloHeaders", () => {
 
   it("includes feature header when env var is set", () => {
     process.env[ENV_FEATURE] = "vscode-extension"
-    const headers = buildKiloHeaders()
+    const headers = buildDevilHeaders()
     expect(headers[HEADER_FEATURE]).toBe("vscode-extension")
   })
 
   it("omits feature header when env var is not set", () => {
     delete process.env[ENV_FEATURE]
-    const headers = buildKiloHeaders()
+    const headers = buildDevilHeaders()
     expect(headers[HEADER_FEATURE]).toBeUndefined()
   })
 
   it("always includes editor name header", () => {
     delete process.env[ENV_FEATURE]
-    const headers = buildKiloHeaders()
-    expect(headers["X-KILOCODE-EDITORNAME"]).toBe(getEditorNameHeader())
+    const headers = buildDevilHeaders()
+    expect(headers[HEADER_EDITORNAME]).toBe(getEditorNameHeader())
   })
 
   it("passes through any feature value from env", () => {
     process.env[ENV_FEATURE] = "custom-feature"
-    const headers = buildKiloHeaders()
+    const headers = buildDevilHeaders()
     expect(headers[HEADER_FEATURE]).toBe("custom-feature")
   })
 })

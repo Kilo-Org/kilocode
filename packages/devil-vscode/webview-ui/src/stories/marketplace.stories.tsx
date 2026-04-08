@@ -198,7 +198,7 @@ const MOCK_MODES: ModeMarketplaceItem[] = [
     description:
       "High-level system design and planning. Focuses on architecture decisions, component boundaries, and technical specifications without writing implementation code.",
     content: "name: Architect\nroleDefinition: You are a software architect...\ngroups:\n  - read\n",
-    author: "Kilo",
+    author: "Devil",
     tags: ["planning", "design"],
   },
   {
@@ -208,7 +208,7 @@ const MOCK_MODES: ModeMarketplaceItem[] = [
     description:
       "Reviews code for bugs, security issues, and best practices. Provides actionable feedback with specific line references.",
     content: "name: Code Reviewer\nroleDefinition: You are a code reviewer...\ngroups:\n  - read\n",
-    author: "Kilo",
+    author: "Devil",
     tags: ["review", "quality"],
   },
   {

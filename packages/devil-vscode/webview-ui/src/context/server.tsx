@@ -44,7 +44,7 @@ export const ServerProvider: ParentComponent = (props) => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
       switch (message.type) {
         case "ready":
-          console.log("[Kilo New] Server ready:", message.serverInfo)
+          console.log("[Devil New] Server ready:", message.serverInfo)
           setServerInfo(message.serverInfo)
           if (message.extensionVersion) setExtensionVersion(message.extensionVersion)
           setConnectionState("connected")
@@ -70,7 +70,7 @@ export const ServerProvider: ParentComponent = (props) => {
           break
 
         case "connectionState":
-          console.log("[Kilo New] Connection state changed:", message.state)
+          console.log("[Devil New] Connection state changed:", message.state)
           setConnectionState(message.state)
           if (message.error) {
             setErrorMessage(message.userMessage ?? message.error)
@@ -82,18 +82,18 @@ export const ServerProvider: ParentComponent = (props) => {
           break
 
         case "error":
-          console.error("[Kilo New] Server error:", message.message)
+          console.error("[Devil New] Server error:", message.message)
           setErrorMessage(message.message)
           setErrorDetails(message.message)
           break
 
         case "profileData":
-          console.log("[Kilo New] Profile data:", message.data ? "received" : "null")
+          console.log("[Devil New] Profile data:", message.data ? "received" : "null")
           setProfileData(message.data)
           break
 
         case "deviceAuthStarted":
-          console.log("[Kilo New] Device auth started")
+          console.log("[Devil New] Device auth started")
           setDeviceAuth({
             status: "pending",
             code: message.code,
@@ -103,19 +103,19 @@ export const ServerProvider: ParentComponent = (props) => {
           break
 
         case "deviceAuthComplete":
-          console.log("[Kilo New] Device auth complete")
+          console.log("[Devil New] Device auth complete")
           setDeviceAuth({ status: "success" })
           // Reset to idle after a short delay
           setTimeout(() => setDeviceAuth(initialDeviceAuth), 1500)
           break
 
         case "deviceAuthFailed":
-          console.log("[Kilo New] Device auth failed:", message.error)
+          console.log("[Devil New] Device auth failed:", message.error)
           setDeviceAuth({ status: "error", error: message.error })
           break
 
         case "deviceAuthCancelled":
-          console.log("[Kilo New] Device auth cancelled")
+          console.log("[Devil New] Device auth cancelled")
           setDeviceAuth(initialDeviceAuth)
           break
       }
@@ -125,7 +125,7 @@ export const ServerProvider: ParentComponent = (props) => {
 
     // Let the extension know the webview has mounted and message handlers are registered.
     // Without this handshake, messages posted during a webview refresh can be lost.
-    console.log("[Kilo New] Webview ready")
+    console.log("[Devil New] Webview ready")
     vscode.postMessage({ type: "webviewReady" })
   })
 

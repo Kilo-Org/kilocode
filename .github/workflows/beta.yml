@@ -25,10 +25,10 @@ jobs:
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
-          # kilocode_change start
+          # devilcode_change start
           kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
           kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # kilocode_change end
+          # devilcode_change end
 
       - name: Sync beta branch
         env:

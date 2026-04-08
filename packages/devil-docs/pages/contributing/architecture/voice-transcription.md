@@ -7,7 +7,7 @@ description: "Voice transcription architecture"
 
 # Overview
 
-Developers can code 3-5x faster by dictating rather than typing, yet Kilo Code currently has no voice input capability. This creates friction for users who want to quickly describe complex features or iterate on ideas hands-free.
+Developers can code 3-5x faster by dictating rather than typing, yet devil Code currently has no voice input capability. This creates friction for users who want to quickly describe complex features or iterate on ideas hands-free.
 
 This spec proposes adding live voice transcription to the chat interface, replacing the send button with a microphone icon when the text box is empty. Users can speak naturally while seeing real-time transcription appear in the input field, dramatically improving coding velocity for voice-preferred workflows.
 
@@ -22,15 +22,15 @@ The MVP will use OpenAI's Realtime API with FFmpeg-based audio streaming for low
 - **Visual Recording Indicator**: Show clear UI state when recording is active (animated volume bars or similar)
 - **Typing Stops Recording**: Any keyboard input immediately stops transcription and returns to normal mode
 - **Cross-Platform FFmpeg Docs**: Provide installation instructions for Windows, macOS, and Linux
-- **OpenAI Provider Required**: Feature only available when user has configured an OpenAI API key in their provider settings. (This uses the user's own OpenAI credits, not Kilo Code credits.)
+- **OpenAI Provider Required**: Feature only available when user has configured an OpenAI API key in their provider settings. (This uses the user's own OpenAI credits, not devil Code credits.)
 
 ### Non-requirements
 
 - Custom glossary / file / workflow support (future enhancement)
 - Real-time volume visualization (future enhancement)
 - Alternative transcription providers beyond OpenAI (future)
-- Kilo Code provider integration for voice transcription (future)
-- **Usage cost tracking/display** (not in initial version, but should be added in a future version since costs are separate from Kilo Code credits)
+- devil Code provider integration for voice transcription (future)
+- **Usage cost tracking/display** (not in initial version, but should be added in a future version since costs are separate from devil Code credits)
 - Server-side/backend transcription (future)
 - FFmpeg automatic installation or bundling
 - Voice commands or shortcuts beyond start/stop
@@ -73,7 +73,7 @@ The system follows a straightforward streaming architecture where user voice inp
 ### 4. Cost Considerations
 
 - OpenAI Realtime API: **$0.60 per minute**
-- **Cost is charged to user's OpenAI account**, not Kilo Code credits
+- **Cost is charged to user's OpenAI account**, not devil Code credits
 - Display cost warning in settings or first-time use
 - Consider adding usage tracking/warnings for high-volume users
 
@@ -130,4 +130,4 @@ The system follows a straightforward streaming architecture where user voice inp
 - **Automatic FFmpeg Installation**: Bundle or auto-install FFmpeg to reduce setup friction
 - **Recording History**: Save voice recordings locally for debugging or replay
 - **Multi-language Support**: Extend beyond English with language detection
-- **Usage Cost Tracking**: Display voice transcription costs somewhere (since this would be separate from Kilo Code credits)
+- **Usage Cost Tracking**: Display voice transcription costs somewhere (since this would be separate from devil Code credits)

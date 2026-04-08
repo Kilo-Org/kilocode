@@ -1,11 +1,11 @@
 /**
- * Runtime contract tests for kilo-vscode's dependencies on @kilocode/kilo-ui.
+ * Runtime contract tests for kilo-vscode's dependencies on @devilcode/kilo-ui.
  *
  * These tests import the upstream UI modules directly and verify at runtime
  * that the exports kilo-vscode depends on still exist with the expected shape.
  *
  * Because the upstream modules use SolidJS JSX (jsxImportSource: "solid-js"),
- * they must be loaded from within packages/kilo-ui/ where bun picks up the
+ * they must be loaded from within packages/devil-ui/ where bun picks up the
  * correct tsconfig. We use Bun.spawnSync to run a small check script in that
  * context.
  *
@@ -18,13 +18,13 @@ import fs from "node:fs"
 import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
-const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const DEVIL_UI_DIR = path.join(MONOREPO_ROOT, "packages/devil-ui")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 
 function check(code: string): { ok: boolean; output: string } {
   const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
-    cwd: KILO_UI_DIR,
+    cwd: DEVIL_UI_DIR,
     stdout: "pipe",
     stderr: "pipe",
   })
@@ -111,7 +111,7 @@ describe("DataProvider contract (runtime)", () => {
   })
 
   it("DataProvider accepts onOpenFile prop and exports OpenFileFn (source)", () => {
-    // onOpenFile and OpenFileFn are `kilocode_change` additions — TypeScript types
+    // onOpenFile and OpenFileFn are `devilcode_change` additions — TypeScript types
     // erased at runtime, so we verify via source analysis
     const src = fs.readFileSync(DATA_CONTEXT_FILE, "utf-8")
     expect(src).toContain("onOpenFile")

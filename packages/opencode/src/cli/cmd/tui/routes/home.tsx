@@ -14,10 +14,10 @@ import { usePromptRef } from "../context/prompt"
 import { Installation } from "@/installation"
 import { useKV } from "../context/kv"
 import { useCommandDialog } from "../component/dialog-command"
-import { KiloNews } from "@/kilocode/components/kilo-news" // kilocode_change
-import { useConnected } from "../component/dialog-model" // kilocode_change
-import { RemoteIndicator } from "@/kilocode/remote-tui" // kilocode_change
-import { useSDK } from "../context/sdk" // kilocode_change
+import { DevilNews } from "@/devilcode/components/kilo-news" // devilcode_change
+import { useConnected } from "../component/dialog-model" // devilcode_change
+import { RemoteIndicator } from "@/devilcode/remote-tui" // devilcode_change
+import { useSDK } from "../context/sdk" // devilcode_change
 
 // TODO: what is the best way to do this?
 let once = false
@@ -29,7 +29,7 @@ export function Home() {
   const route = useRouteData("home")
   const promptRef = usePromptRef()
   const command = useCommandDialog()
-  const sdk = useSDK() // kilocode_change
+  const sdk = useSDK() // devilcode_change
   const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
   const mcpError = createMemo(() => {
     return Object.values(sync.data.mcp).some((x) => x.status === "failed")
@@ -41,14 +41,14 @@ export function Home() {
 
   const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
   const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
-  const newsHidden = createMemo(() => kv.get("news_hidden", false)) // kilocode_change
-  // kilocode_change start
+  const newsHidden = createMemo(() => kv.get("news_hidden", false)) // devilcode_change
+  // devilcode_change start
   const connected = useConnected()
   const onboarding = createMemo(() => isFirstTimeUser() && !connected())
-  // kilocode_change end
+  // devilcode_change end
   const showTips = createMemo(() => {
-    if (onboarding()) return !tipsHidden() // kilocode_change - show onboarding tip
-    // kilocode_change - don't hide tips for connected first-time users
+    if (onboarding()) return !tipsHidden() // devilcode_change - show onboarding tip
+    // devilcode_change - don't hide tips for connected first-time users
     return !tipsHidden()
   })
 
@@ -63,7 +63,7 @@ export function Home() {
         dialog.clear()
       },
     },
-    // kilocode_change start
+    // devilcode_change start
     {
       title: newsHidden() ? "Show news" : "Hide news",
       value: "news.toggle",
@@ -74,7 +74,7 @@ export function Home() {
         dialog.clear()
       },
     },
-    // kilocode_change end
+    // devilcode_change end
   ])
 
   const Hint = (
@@ -131,10 +131,10 @@ export function Home() {
             hint={Hint}
           />
         </box>
-        {/* kilocode_change - KiloNews added */}
+        {/* devilcode_change - DevilNews added */}
         <box width="100%" maxWidth={75} alignItems="center" paddingTop={2} gap={1}>
           <Show when={!newsHidden()}>
-            <KiloNews />
+            <DevilNews />
           </Show>
           <Show when={showTips()}>
             <Tips

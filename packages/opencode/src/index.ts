@@ -18,23 +18,23 @@ import { Filesystem } from "./util/filesystem"
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
-// import { GithubCommand } from "./cli/cmd/github" // kilocode_change
+// import { GithubCommand } from "./cli/cmd/github" // devilcode_change
 import { ExportCommand } from "./cli/cmd/export"
 import { ImportCommand } from "./cli/cmd/import"
 import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-// import { WebCommand } from "./cli/cmd/web" // kilocode_change (Disabled unsupported opencode web UI)
+// import { WebCommand } from "./cli/cmd/web" // devilcode_change (Disabled unsupported opencode web UI)
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
-import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
-// kilocode_change start - Import telemetry, instance disposal, and legacy migration
-import { Telemetry } from "@kilocode/kilo-telemetry"
-import { Instance } from "./project/instance" // kilocode_change
-import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
+import { RemoteCommand } from "./cli/cmd/remote" // devilcode_change
+// devilcode_change start - Import telemetry, instance disposal, and legacy migration
+import { Telemetry } from "@devilcode/kilo-telemetry"
+import { Instance } from "./project/instance" // devilcode_change
+import { migrateLegacyDevilAuth, ENV_FEATURE, ENV_VERSION } from "@devilcode/kilo-gateway"
 
-// kilocode_change - set feature for tracking. 'serve' is spawned by other services
+// devilcode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
 // (any command other than 'serve') is tagged as 'cli'. If 'serve' is spawned without
 // the env var, it gets 'unknown' so the misconfiguration is visible in data.
@@ -43,13 +43,13 @@ if (!process.env[ENV_FEATURE]) {
   process.env[ENV_FEATURE] = isServe ? "unknown" : "cli"
 }
 
-// kilocode_change - set version so kilo-gateway can include it in the editor name header
+// devilcode_change - set version so kilo-gateway can include it in the editor name header
 if (!process.env[ENV_VERSION]) {
   process.env[ENV_VERSION] = Installation.VERSION
 }
 import { Config } from "./config/config"
 import { Auth } from "./auth"
-// kilocode_change end
+// devilcode_change end
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"
 import { Global } from "./global"
@@ -75,7 +75,7 @@ process.on("SIGHUP", () => process.exit())
 
 let cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
-  .scriptName("kilo") // kilocode_change
+  .scriptName("kilo") // devilcode_change
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -102,15 +102,15 @@ let cli = yargs(hideBin(process.argv))
     })
 
     process.env.AGENT = "1"
-    process.env.KILO = "1"
-    process.env.KILO_PID = String(process.pid)
+    process.env.DEVIL = "1"
+    process.env.DEVIL_PID = String(process.pid)
 
     Log.Default.info("opencode", {
       version: Installation.VERSION,
       args: process.argv.slice(2),
     })
 
-    // kilocode_change start - Initialize telemetry
+    // devilcode_change start - Initialize telemetry
     const globalCfg = await Config.getGlobal()
     await Telemetry.init({
       dataPath: Global.Path.data,
@@ -118,8 +118,8 @@ let cli = yargs(hideBin(process.argv))
       enabled: globalCfg.experimental?.openTelemetry !== false,
     })
 
-    // Migrate legacy Kilo CLI auth if needed
-    await migrateLegacyKiloAuth(
+    // Migrate legacy Devil CLI auth if needed
+    await migrateLegacyDevilAuth(
       async () => (await Auth.get("kilo")) !== undefined,
       async (auth) => Auth.set("kilo", auth),
     )
@@ -132,9 +132,9 @@ let cli = yargs(hideBin(process.argv))
     }
 
     Telemetry.trackCliStart()
-    // kilocode_change end
+    // devilcode_change end
 
-    const marker = path.join(Global.Path.data, "kilo.db")
+    const marker = path.join(Global.Path.data, "devil.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
       process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)
@@ -185,15 +185,15 @@ let cli = yargs(hideBin(process.argv))
   .command(UpgradeCommand)
   .command(UninstallCommand)
   .command(ServeCommand)
-  // .command(WebCommand) // kilocode_change (Disabled unsupported opencode web UI)
+  // .command(WebCommand) // devilcode_change (Disabled unsupported opencode web UI)
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)
   .command(ImportCommand)
-  // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
+  // .command(GithubCommand) // devilcode_change (Disabled until backend is ready)
   .command(PrCommand)
   .command(SessionCommand)
-  .command(RemoteCommand) // kilocode_change
+  .command(RemoteCommand) // devilcode_change
   .command(DbCommand)
 
 if (Installation.isLocal()) {
@@ -255,13 +255,13 @@ try {
   }
   process.exitCode = 1
 } finally {
-  // kilocode_change start - Track CLI exit and shutdown telemetry
+  // devilcode_change start - Track CLI exit and shutdown telemetry
   const exitCode = typeof process.exitCode === "number" ? process.exitCode : undefined
   Telemetry.trackCliExit(exitCode)
   await Telemetry.shutdown()
-  // kilocode_change end
+  // devilcode_change end
 
-  await Instance.disposeAll() // kilocode_change - safety net disposal (no-op if already disposed)
+  await Instance.disposeAll() // devilcode_change - safety net disposal (no-op if already disposed)
 
   // Some subprocesses don't react properly to SIGTERM and similar signals.
   // Most notably, some docker-container-based MCP servers don't handle such signals unless

@@ -1,13 +1,13 @@
 import path from "path"
 import { Global } from "@/global"
-import { KilocodePaths } from "@/kilocode/paths"
+import { DevilcodePaths } from "@/devilcode/paths"
 
 export namespace ConfigProtection {
   /**
    * Config directory prefixes (relative paths, forward-slash normalized).
-   * Matches .kilo/, .kilocode/, .opencode/ at any depth within the project.
+   * Matches .kilo/, .devilcode/, .opencode/ at any depth within the project.
    */
-  const CONFIG_DIRS = [".kilo/", ".kilocode/", ".opencode/"]
+  const CONFIG_DIRS = [".kilo/", ".devilcode/", ".opencode/"]
 
   /**
    * Subdirectories under CONFIG_DIRS that are NOT config files (e.g. plan files).
@@ -65,8 +65,8 @@ export namespace ConfigProtection {
     // ~/.config/kilo/ (XDG config)
     if (within(resolved, path.resolve(Global.Path.config))) return true
 
-    // ~/.kilo/ and ~/.kilocode/ (legacy global dirs)
-    for (const dir of KilocodePaths.globalDirs()) {
+    // ~/.kilo/ and ~/.devilcode/ (legacy global dirs)
+    for (const dir of DevilcodePaths.globalDirs()) {
       if (within(resolved, path.resolve(dir))) return true
     }
 

@@ -9,14 +9,14 @@ import { Command } from "../command"
 import { Instance } from "./instance"
 import { Vcs } from "./vcs"
 import { Log } from "@/util/log"
-import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import { DevilSessions } from "@/kilo-sessions/kilo-sessions" // devilcode_change
 import { Snapshot } from "../snapshot"
 import { Truncate } from "../tool/truncation"
 
 export async function InstanceBootstrap() {
   Log.Default.info("bootstrapping", { directory: Instance.directory })
   await Plugin.init()
-  KiloSessions.init() // kilocode_change
+  DevilSessions.init() // devilcode_change
   Format.init()
   await LSP.init()
   FileWatcher.init()

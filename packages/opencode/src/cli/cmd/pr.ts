@@ -5,7 +5,7 @@ import { $ } from "bun"
 
 export const PrCommand = cmd({
   command: "pr <number>",
-  describe: "fetch and checkout a GitHub PR branch, then run kilo", // kilocode_change
+  describe: "fetch and checkout a GitHub PR branch, then run kilo", // devilcode_change
   builder: (yargs) =>
     yargs.positional("number", {
       type: "number",
@@ -68,12 +68,12 @@ export const PrCommand = cmd({
               const sessionMatch = prInfo.body.match(/https:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)/)
               if (sessionMatch) {
                 const sessionUrl = sessionMatch[0]
-                // kilocode_change start
+                // devilcode_change start
                 UI.println(`Found session: ${sessionUrl}`)
                 UI.println(`Importing session...`)
 
                 const importResult = await $`kilo import ${sessionUrl}`.nothrow()
-                // kilocode_change end
+                // devilcode_change end
                 if (importResult.exitCode === 0) {
                   const importOutput = importResult.text().trim()
                   // Extract session ID from the output (format: "Imported session: <session-id>")
@@ -90,24 +90,24 @@ export const PrCommand = cmd({
 
         UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
         UI.println()
-        const bin = "kilo" // kilocode_change
-        UI.println(`Starting ${bin}...`) // kilocode_change
+        const bin = "kilo" // devilcode_change
+        UI.println(`Starting ${bin}...`) // devilcode_change
         UI.println()
 
         // Launch opencode TUI with session ID if available
         const { spawn } = await import("child_process")
         const opencodeArgs = sessionId ? ["-s", sessionId] : []
         const opencodeProcess = spawn(bin, opencodeArgs, {
-          // kilocode_change
+          // devilcode_change
           stdio: "inherit",
           cwd: process.cwd(),
-          windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
+          windowsHide: true, // devilcode_change - prevent CMD window flash on Windows
         })
 
         await new Promise<void>((resolve, reject) => {
           opencodeProcess.on("exit", (code) => {
             if (code === 0) resolve()
-            else reject(new Error(`${bin} exited with code ${code}`)) // kilocode_change
+            else reject(new Error(`${bin} exited with code ${code}`)) // devilcode_change
           })
           opencodeProcess.on("error", reject)
         })

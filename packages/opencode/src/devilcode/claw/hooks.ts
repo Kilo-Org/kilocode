@@ -1,7 +1,7 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw SolidJS reactive helpers
+ * DevilClaw SolidJS reactive helpers
  *
  * Provides reactive state management for polling instance status
  * and managing the Stream Chat connection lifecycle.
@@ -15,7 +15,7 @@ import { Log } from "@/util/log"
 const log = Log.create({ service: "claw-chat" })
 
 /**
- * Poll the KiloClaw instance status every `interval` ms.
+ * Poll the DevilClaw instance status every `interval` ms.
  * Returns a reactive signal with the latest status.
  */
 export function createClawStatus(sdk: any, interval = 10_000) {

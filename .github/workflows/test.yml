@@ -39,7 +39,7 @@ jobs:
         run: bun turbo test
 
   e2e:
-    # kilocode_change - disabled: packages/app is not actively maintained
+    # devilcode_change - disabled: packages/app is not actively maintained
     if: false
     name: e2e (${{ matrix.settings.name }})
     needs: unit
@@ -76,12 +76,12 @@ jobs:
         run: bun --cwd packages/app test:e2e:local
         env:
           CI: true
-          # kilocode_change start
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
-          KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
-          KILO_DISABLE_SHARE: "true"
-          KILO_DISABLE_SESSION_INGEST: "true"
-          # kilocode_change end
+          # devilcode_change start
+          DEVIL_API_KEY: ${{ secrets.DEVIL_API_KEY }}
+          DEVIL_ORG_ID: ${{ secrets.DEVIL_ORG_ID }}
+          DEVIL_DISABLE_SHARE: "true"
+          DEVIL_DISABLE_SESSION_INGEST: "true"
+          # devilcode_change end
         timeout-minutes: 30
 
       - name: Upload Playwright artifacts

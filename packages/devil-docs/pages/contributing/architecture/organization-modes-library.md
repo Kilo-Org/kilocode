@@ -7,7 +7,7 @@ description: "Organization modes library architecture"
 
 # Overview
 
-We want to expand the value of teams & enterprise and make it more useful for collaboration and hopefully increase 'lock in' to the Kilo platform. We can build something _like_ a prompt library, but a bit more powerful. We can leverage Kilo's unique "modes" which already has "marketplace" support to enable teams & enterprises to define and manage modes on the backend webapp and have those modes show up in the modes marketplace if the user is using an organization in the extension. This feature is mostly valuable in larger organizations where they work on many different repositories. If you have very few repositories, then the value is low since you can also store custom modes within the git repo, effectively sharing it with anyone who uses the repo already.
+We want to expand the value of teams & enterprise and make it more useful for collaboration and hopefully increase 'lock in' to the devil platform. We can build something _like_ a prompt library, but a bit more powerful. We can leverage devil's unique "modes" which already has "marketplace" support to enable teams & enterprises to define and manage modes on the backend webapp and have those modes show up in the modes marketplace if the user is using an organization in the extension. This feature is mostly valuable in larger organizations where they work on many different repositories. If you have very few repositories, then the value is low since you can also store custom modes within the git repo, effectively sharing it with anyone who uses the repo already.
 
 # Requirements
 
@@ -17,7 +17,7 @@ This section outlines the detailed requirements that the solution will fulfill.
 - Fetch the organization custom modes and show them by default if you switch to an organization alongside any other modes you have manually installed & the "base" modes like "code" "architect" etc. Important consideration here is the organization also has a "code" mode it should overwrite the built in one. This allows the organization owners to modify the built in prompts.
 - Ability for team members (or owners only?) to do crud on modes on the UI of the web, including uploading/downloading yaml directly, editing the yaml, and having a form style editor as seen in the extension.
 - Web ui showing a list of modes and common info like when created, who created, and when updated.
-- Auditing of Custom Mode CRUD operations in the Kilo backend web UI.
+- Auditing of Custom Mode CRUD operations in the devil backend web UI.
 
 ### Non-requirements
 

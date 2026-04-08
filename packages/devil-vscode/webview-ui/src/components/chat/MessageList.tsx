@@ -8,10 +8,10 @@
  */
 
 import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
-import { Icon } from "@kilocode/kilo-ui/icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
+import { Icon } from "@devilcode/kilo-ui/icon"
+import { Spinner } from "@devilcode/kilo-ui/spinner"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
+import { createAutoScroll } from "@devilcode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
@@ -20,11 +20,11 @@ import { FeedbackDialog } from "./FeedbackDialog"
 import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
-import { KiloNotifications } from "./KiloNotifications"
+import { DevilNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
 
-const KiloLogo = (): JSX.Element => {
+const DevilLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
   const isLight =
     document.body.classList.contains("vscode-light") || document.body.classList.contains("vscode-high-contrast-light")
@@ -32,7 +32,7 @@ const KiloLogo = (): JSX.Element => {
 
   return (
     <div class="kilo-logo">
-      <img src={`${iconsBaseUri}/${iconFile}`} alt="Kilo Code" />
+      <img src={`${iconsBaseUri}/${iconFile}`} alt="Devil Code" />
     </div>
   )
 }
@@ -93,7 +93,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
       <Show when={isEmpty()}>
         <div class="welcome-header">
           <AccountSwitcher class="account-switcher-welcome" />
-          <KiloNotifications />
+          <DevilNotifications />
         </div>
       </Show>
       <div
@@ -112,7 +112,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
           <Show when={isEmpty()}>
             <div class="message-list-empty">
-              <KiloLogo />
+              <DevilLogo />
               <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
               <Show when={recent().length > 0 && props.onSelectSession}>
                 <div class="recent-sessions">

@@ -16,7 +16,7 @@ const sectionNavItems: SectionNav = {
   contributing: Nav.ContributingNav,
   "ai-providers": Nav.AiProvidersNav,
   gateway: Nav.GatewayNav,
-  kiloclaw: Nav.KiloClawNav,
+  DevilClaw: Nav.DevilClawNav,
 }
 
 // Main nav items with their section keys
@@ -29,7 +29,7 @@ const mainNavItems = [
   { label: "Automate", href: "/automate", sectionKey: "automate" },
   { label: "Deploy & Secure", href: "/deploy-secure", sectionKey: "deploy-secure" },
   { label: "AI Gateway", href: "/gateway", sectionKey: "gateway" },
-  { label: "KiloClaw", href: "/kiloclaw", sectionKey: "kiloclaw" },
+  { label: "DevilClaw", href: "/DevilClaw", sectionKey: "DevilClaw" },
   { label: "Contributing", href: "/contributing", sectionKey: "contributing" },
 ]
 

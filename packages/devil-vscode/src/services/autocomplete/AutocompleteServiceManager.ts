@@ -7,7 +7,7 @@ import { AutocompleteStatusBar } from "./AutocompleteStatusBar"
 import { AutocompleteCodeActionProvider } from "./AutocompleteCodeActionProvider"
 import { AutocompleteInlineCompletionProvider } from "./classic-auto-complete/AutocompleteInlineCompletionProvider"
 import { AutocompleteTelemetry } from "./classic-auto-complete/AutocompleteTelemetry"
-import type { KiloConnectionService } from "../cli-backend"
+import type { DevilConnectionService } from "../cli-backend"
 
 const CONFIG_SECTION = "kilo-code.new.autocomplete"
 
@@ -61,7 +61,7 @@ export class AutocompleteServiceManager {
   private unsubscribeState: (() => void) | null = null
   private unsubscribeEvent: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext, connectionService: KiloConnectionService) {
+  constructor(context: vscode.ExtensionContext, connectionService: DevilConnectionService) {
     if (AutocompleteServiceManager._instance) {
       throw new Error(
         "AutocompleteServiceManager is a singleton. Use AutocompleteServiceManager.getInstance() instead.",
@@ -297,7 +297,7 @@ export class AutocompleteServiceManager {
   private async updateGlobalContext() {
     await vscode.commands.executeCommand(
       "setContext",
-      "kilocode.autocomplete.enableSmartInlineTaskKeybinding",
+      "devilcode.autocomplete.enableSmartInlineTaskKeybinding",
       this.settings?.enableSmartInlineTaskKeybinding || false,
     )
   }
@@ -332,13 +332,13 @@ export class AutocompleteServiceManager {
   private handleFatalAutocompleteError(status: number | null): void {
     const msg =
       status === 402
-        ? t("kilocode:autocomplete.creditsExhausted.message")
-        : t("kilocode:autocomplete.authError.message")
+        ? t("devilcode:autocomplete.creditsExhausted.message")
+        : t("devilcode:autocomplete.authError.message")
 
     if (status === 402) {
-      vscode.window.showWarningMessage(msg, t("kilocode:autocomplete.creditsExhausted.addCredits")).then((choice) => {
-        if (choice === t("kilocode:autocomplete.creditsExhausted.addCredits")) {
-          vscode.env.openExternal(vscode.Uri.parse("https://app.kilo.ai/credits"))
+      vscode.window.showWarningMessage(msg, t("devilcode:autocomplete.creditsExhausted.addCredits")).then((choice) => {
+        if (choice === t("devilcode:autocomplete.creditsExhausted.addCredits")) {
+          vscode.env.openExternal(vscode.Uri.parse("https://app.devil.ai/credits"))
         }
       })
     } else {
@@ -371,9 +371,9 @@ export class AutocompleteServiceManager {
   }
 
   public async showIncompatibilityExtensionPopup() {
-    const message = t("kilocode:autocomplete.incompatibilityExtensionPopup.message")
-    const disableCopilot = t("kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot")
-    const disableInlineAssist = t("kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist")
+    const message = t("devilcode:autocomplete.incompatibilityExtensionPopup.message")
+    const disableCopilot = t("devilcode:autocomplete.incompatibilityExtensionPopup.disableCopilot")
+    const disableInlineAssist = t("devilcode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist")
     const response = await vscode.window.showErrorMessage(message, disableCopilot, disableInlineAssist)
 
     if (response === disableCopilot) {

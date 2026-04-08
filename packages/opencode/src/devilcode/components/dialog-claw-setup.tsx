@@ -1,9 +1,9 @@
-// kilocode_change - new file
+// devilcode_change - new file
 
 /**
- * KiloClaw Setup Dialog
+ * DevilClaw Setup Dialog
  *
- * Shown when the user has no KiloClaw instance provisioned.
+ * Shown when the user has no DevilClaw instance provisioned.
  * Provides links to set up an instance and learn more.
  */
 
@@ -17,7 +17,7 @@ export function DialogClawSetup(props: { orgId?: string | null }) {
   const { theme } = useTheme()
   const dialog = useDialog()
 
-  const url = props.orgId ? `https://app.kilo.ai/organizations/${props.orgId}/claw` : "https://app.kilo.ai/claw"
+  const url = props.orgId ? `https://app.devil.ai/organizations/${props.orgId}/claw` : "https://app.devil.ai/claw"
 
   useKeyboard((evt: any) => {
     if (evt.name === "return") {
@@ -29,7 +29,7 @@ export function DialogClawSetup(props: { orgId?: string | null }) {
     <box paddingLeft={2} paddingRight={2} gap={1}>
       <box flexDirection="row" justifyContent="space-between">
         <text attributes={TextAttributes.BOLD} fg={theme.text}>
-          KiloClaw
+          DevilClaw
         </text>
         <text fg={theme.textMuted}>esc</text>
       </box>
@@ -40,7 +40,7 @@ export function DialogClawSetup(props: { orgId?: string | null }) {
         </text>
 
         <text fg={theme.textMuted} wrapMode="word">
-          KiloClaw gives you a personal AI that reads email, manages your calendar, monitors your projects, and lives in
+          DevilClaw gives you a personal AI that reads email, manages your calendar, monitors your projects, and lives in
           Telegram, Slack — whatever you already use.
         </text>
 
@@ -49,7 +49,7 @@ export function DialogClawSetup(props: { orgId?: string | null }) {
         </text>
 
         <box flexDirection="row" marginTop={1}>
-          <Link href="https://kilo.ai/kiloclaw" fg={theme.text}>
+          <Link href="https://devil.ai/kiloclaw" fg={theme.text}>
             Learn more
           </Link>
         </box>
@@ -59,7 +59,7 @@ export function DialogClawSetup(props: { orgId?: string | null }) {
         <box paddingLeft={3} paddingRight={3} backgroundColor={theme.primary} flexDirection="row">
           <text fg={theme.text}>{"🦀 "}</text>
           <Link href={url} fg={theme.selectedListItemText}>
-            Try KiloClaw
+            Try DevilClaw
           </Link>
         </box>
       </box>

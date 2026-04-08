@@ -5,18 +5,20 @@ import z from "zod"
 import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
-import { Config } from "../config/config" // kilocode_change
-import { ModelCache } from "./model-cache" // kilocode_change
-import { Auth } from "../auth" // kilocode_change
-import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
+import { Config } from "../config/config" // devilcode_change
+import { ModelCache } from "./model-cache" // devilcode_change
+import { Auth } from "../auth" // devilcode_change
+import { AI_SDK_PROVIDERS, DEVIL_OPENROUTER_BASE, PROMPTS } from "@devilcode/kilo-gateway" // devilcode_change
 import { Filesystem } from "../util/filesystem"
+import { provider as claudeCodeProvider } from "@/devilcode/claude-code" // devilcode_change
+import { provider as agentSdkProvider, AGENT_SDK_ID } from "@/devilcode/agent-sdk" // devilcode_change
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
 
-// kilocode_change start
-const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
+// devilcode_change start
+const normalizeDevilBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
   if (!baseURL) return undefined
   const trimmed = baseURL.replace(/\/+$/, "")
   if (orgId) {
@@ -32,7 +34,7 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
 export const Prompt = z.enum(PROMPTS)
 
 export const AiSdkProvider = z.enum(AI_SDK_PROVIDERS)
-// kilocode_change end
+// devilcode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -85,12 +87,12 @@ export namespace ModelsDev {
       })
       .optional(),
 
-    // kilocode_change start
+    // devilcode_change start
     recommendedIndex: z.number().optional(),
     prompt: Prompt.optional().catch(undefined),
     isFree: z.boolean().optional(),
     ai_sdk_provider: AiSdkProvider.optional().catch(undefined),
-    // kilocode_change end
+    // devilcode_change end
 
     experimental: z.boolean().optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
@@ -113,25 +115,25 @@ export namespace ModelsDev {
   export type Provider = z.infer<typeof Provider>
 
   function url() {
-    return Flag.KILO_MODELS_URL || "https://models.dev"
+    return Flag.DEVIL_MODELS_URL || "https://models.dev"
   }
 
   export const Data = lazy(async () => {
-    const result = await Filesystem.readJson(Flag.KILO_MODELS_PATH ?? filepath).catch(() => {})
+    const result = await Filesystem.readJson(Flag.DEVIL_MODELS_PATH ?? filepath).catch(() => {})
     if (result) return result
     // @ts-ignore
     const snapshot = await import("./models-snapshot")
       .then((m) => m.snapshot as Record<string, unknown>)
       .catch(() => undefined)
     if (snapshot) return snapshot
-    if (Flag.KILO_DISABLE_MODELS_FETCH) return {}
+    if (Flag.DEVIL_DISABLE_MODELS_FETCH) return {}
     const json = await fetch(`${url()}/api.json`).then((x) => x.text())
     return JSON.parse(json)
   })
 
   export async function get() {
     const result = await Data()
-    // kilocode_change start
+    // devilcode_change start
     const providers = result as Record<string, Provider>
 
     if (providers["kilo"]) {
@@ -141,7 +143,7 @@ export namespace ModelsDev {
     // Inject kilo provider with dynamic model fetching
     // Skip injection entirely when enabled_providers is set and doesn't include "kilo",
     // or when "kilo" is in disabled_providers. This prevents unnecessary network calls
-    // to the Kilo API for teams using only their own providers (e.g. LiteLLM).
+    // to the Devil API for teams using only their own providers (e.g. LiteLLM).
     const config = await Config.get()
     const disabled = new Set(config.disabled_providers ?? [])
     const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null
@@ -149,15 +151,15 @@ export namespace ModelsDev {
 
     if (kiloAllowed && !providers["kilo"]) {
       const kiloOptions = config.provider?.kilo?.options
-      // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
+      // devilcode_change start - resolve org ID from auth (OAuth accountId) not just config
       const kiloAuth = await Auth.get("kilo")
       const kiloOrgId =
-        kiloOptions?.kilocodeOrganizationId ?? (kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined)
-      // kilocode_change end
-      const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
+        kiloOptions?.devilcodeOrganizationId ?? (kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined)
+      // devilcode_change end
+      const normalizedBaseURL = normalizeDevilBaseURL(kiloOptions?.baseURL, kiloOrgId)
       const kiloFetchOptions = {
         ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
-        ...(kiloOrgId ? { kilocodeOrganizationId: kiloOrgId } : {}),
+        ...(kiloOrgId ? { devilcodeOrganizationId: kiloOrgId } : {}),
       }
       const defaultBaseURL = kiloOrgId
         ? `https://api.kilo.ai/api/organizations/${kiloOrgId}`
@@ -167,10 +169,10 @@ export namespace ModelsDev {
       const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
       providers["kilo"] = {
         id: "kilo",
-        name: "Kilo Gateway",
-        env: ["KILO_API_KEY"],
-        api: ensureTrailingSlash(KILO_OPENROUTER_BASE),
-        npm: "@kilocode/kilo-gateway",
+        name: "Devil Gateway",
+        env: ["DEVIL_API_KEY"],
+        api: ensureTrailingSlash(DEVIL_OPENROUTER_BASE),
+        npm: "@devilcode/kilo-gateway",
         models: kiloModels,
       }
       if (Object.keys(kiloModels).length === 0) {
@@ -200,8 +202,19 @@ export namespace ModelsDev {
       }
     }
 
+    if (!Flag.DEVIL_DISABLE_CLAUDE_CODE && !providers["claude-code"]) {
+      providers["claude-code"] = claudeCodeProvider() as Provider
+    }
+
+    // devilcode_change start
+    // Agent SDK uses Claude Code subscription auth OR ANTHROPIC_API_KEY
+    if (!providers[AGENT_SDK_ID]) {
+      providers[AGENT_SDK_ID] = agentSdkProvider() as Provider
+    }
+    // devilcode_change end
+
     return providers
-    // kilocode_change end
+    // devilcode_change end
   }
 
   export async function refresh() {
@@ -222,7 +235,7 @@ export namespace ModelsDev {
   }
 }
 
-if (!Flag.KILO_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
+if (!Flag.DEVIL_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
   ModelsDev.refresh()
   setInterval(
     async () => {

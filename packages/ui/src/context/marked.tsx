@@ -3,13 +3,13 @@ import markedKatex from "marked-katex-extension"
 import markedShiki from "marked-shiki"
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
+import { parseFilePath } from "../file-path" // devilcode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
-registerCustomTheme("Kilo", () => {
+registerCustomTheme("Devil", () => {
   return Promise.resolve({
-    name: "Kilo",
+    name: "Devil",
     colors: {
       "editor.background": "var(--color-background-stronger)",
       "editor.foreground": "var(--text-base)",
@@ -431,7 +431,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
   const matches = [...html.matchAll(codeBlockRegex)]
   if (matches.length === 0) return html
 
-  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  const highlighter = await getSharedHighlighter({ themes: ["Devil"], langs: [] })
 
   let result = html
   for (const match of matches) {
@@ -453,7 +453,7 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
     const highlighted = highlighter.codeToHtml(code, {
       lang: language,
-      theme: "Kilo",
+      theme: "Devil",
       tabindex: false,
     })
     result = result.replace(fullMatch, () => highlighted)
@@ -464,9 +464,9 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
 
-// kilocode_change: parseFilePath imported from ../file-path
+// devilcode_change: parseFilePath imported from ../file-path
 
-// kilocode_change start: highlight cache for deferred highlighting
+// devilcode_change start: highlight cache for deferred highlighting
 
 /** FNV-1a hash — lightweight alternative to storing full source code in DOM attributes. */
 export function fnv1a(s: string): string {
@@ -540,7 +540,7 @@ export async function deferredHighlight(
     return
   }
 
-  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+  const highlighter = await getSharedHighlighter({ themes: ["Devil"], langs: [] })
 
   for (const block of blocks) {
     // Short-circuit if the container is unmounted or the caller cancelled this run
@@ -577,7 +577,7 @@ export async function deferredHighlight(
               resolve()
               return
             }
-            const html = highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
+            const html = highlighter.codeToHtml(code, { lang: language, theme: "Devil", tabindex: false })
             touchHighlightCache(cacheKey, html)
             // Note: data-highlighted is NOT set on `block` here because
             // replaceWithHighlighted replaces the parent <pre> entirely — the
@@ -613,12 +613,12 @@ export async function deferredHighlight(
     onComplete?.()
   }
 }
-// kilocode_change end
+// devilcode_change end
 
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
   name: "Marked",
   init: (props: { nativeParser?: NativeMarkdownParser }) => {
-    // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
+    // devilcode_change start: two-pass parser — first pass skips Shiki highlighting
     // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
     // Code blocks render as plain <pre><code data-lang="..."> immediately.
     // The Markdown component calls deferredHighlight() after DOM paint.
@@ -629,7 +629,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const titleAttr = title ? ` title="${title}"` : ""
             return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           },
-          // kilocode_change start
+          // devilcode_change start
           codespan({ text }) {
             const file = parseFilePath(text)
             const escaped = text
@@ -659,7 +659,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
             const attr = safe ? ` class="language-${safe}" data-lang="${safe}"` : ' data-lang="text"'
             return `<pre><code${attr}>${escaped}</code></pre>`
           },
-          // kilocode_change end
+          // devilcode_change end
         },
       },
       markedKatex({
@@ -668,7 +668,7 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
       }),
       markedShiki({
         async highlight(code, lang) {
-          const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
+          const highlighter = await getSharedHighlighter({ themes: ["Devil"], langs: [] })
           if (!(lang in bundledLanguages)) {
             lang = "text"
           }
@@ -677,13 +677,13 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
           }
           return highlighter.codeToHtml(code, {
             lang: lang || "text",
-            theme: "Kilo",
+            theme: "Devil",
             tabindex: false,
           })
         },
       }),
     )
-    // kilocode_change end
+    // devilcode_change end
 
     if (props.nativeParser) {
       const nativeParser = props.nativeParser

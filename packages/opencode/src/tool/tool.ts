@@ -21,6 +21,7 @@ export namespace Tool {
     callID?: string
     extra?: { [key: string]: any }
     messages: MessageV2.WithParts[]
+    teamRole?: string // devilcode_change — role assigned by team config routing
     metadata(input: { title?: string; metadata?: M }): void
     ask(input: Omit<PermissionNext.Request, "id" | "sessionID" | "tool">): Promise<void>
   }

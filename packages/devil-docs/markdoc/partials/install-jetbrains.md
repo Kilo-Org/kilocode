@@ -1,8 +1,8 @@
-Kilo Code supports all JetBrains IDEs including IntelliJ IDEA, WebStorm, PyCharm, and more.
+devil Code supports all JetBrains IDEs including IntelliJ IDEA, WebStorm, PyCharm, and more.
 
 ### Prerequisites
 
-Before installing the Kilo Code plugin, ensure you have:
+Before installing the devil Code plugin, ensure you have:
 
 1. **JetBrains Toolbox (Recommended):**
    - Download from [https://www.jetbrains.com/toolbox-app/](https://www.jetbrains.com/toolbox-app/)
@@ -16,16 +16,16 @@ Before installing the Kilo Code plugin, ensure you have:
 ### Install directly
 
 1. If you don't have a JetBrains IDE installed, download one from [jetbrains.com](https://www.jetbrains.com/)
-2. Then, you can click the button below to install Kilo Code directly from the JetBrains Marketplace:
+2. Then, you can click the button below to install devil Code directly from the JetBrains Marketplace:
 
-[![Install Kilo Code](https://raster.shields.io/badge/Install%20Kilo%20Code-F8F674?style=for-the-badge)](https://plugins.jetbrains.com/plugin/28350-kilo-code)
+[![Install devil Code](https://raster.shields.io/badge/Install%20Devil%20Code-F8F674?style=for-the-badge)](https://plugins.jetbrains.com/plugin/28350-devil-code)
 
 ### Install from JetBrains Marketplace
 
 1. Open your JetBrains IDE
 2. Go to **Settings/Preferences → Plugins**
 3. Click **Marketplace** tab
-4. Search for "Kilo Code"
+4. Search for "devil Code"
 5. Click **Install** and restart your IDE
 
 ### Supported IDEs

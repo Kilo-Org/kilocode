@@ -1,20 +1,20 @@
 ---
-title: "Kilo CLI"
-description: "Using Kilo Code from the command line"
+title: "devil CLI"
+description: "Using devil Code from the command line"
 platform: new
 ---
 
 {% callout type="warning" title="Version Notice" %}
-This documentation applies only to Kilo version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
+This documentation applies only to devil version 1.0 and later. Users running versions below 1.0 should upgrade before proceeding.
 {% /callout %}
 
-# Kilo CLI
+# devil CLI
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
-The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
+The devil Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
-**Source code & issues (Kilo CLI 1.0):** [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) · [Report an issue](https://github.com/Kilo-Org/kilocode/issues)
+**Source code & issues (devil CLI 1.0):** [Devil-Org/devilcode](https://github.com/Devil-Org/devilcode) · [Report an issue](https://github.com/Devil-Org/devilcode/issues)
 
 ## Getting Started
 
@@ -22,37 +22,37 @@ The Kilo Code CLI uses the same underlying technology that powers the IDE extens
 
 {% partial file="install-cli.md" /%}
 
-Change directory to where you want to work and run kilo:
+Change directory to where you want to work and run devil:
 
 ```bash
 # Start the TUI
-kilo
+devil
 
 # Check the version
-kilo --version
+devil --version
 
 # Get help
-kilo --help
+devil --help
 ```
 
 ### First-Time Setup with `/connect`
 
-After installation, run `kilo` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
+After installation, run `devil` and use the `/connect` command to add your first provider credentials. This is the interactive way to configure API keys for model providers.
 
 ## Update
 
-Upgrade the Kilo CLI:
+Upgrade the devil CLI:
 
-`kilo upgrade`
+`devil upgrade`
 
 Or use npm:
 
-`npm update -g @kilocode/cli`
+`npm update -g @devilcode/cli`
 
-## What you can do with Kilo Code CLI
+## What you can do with devil Code CLI
 
 - **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
-- **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
+- **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With devil, you can switch models without booting up another tool.
 - **Choose the right mode for the task in your workflow.** Select between Architect, Ask, Debug, Orchestrator, or custom agent modes.
 - **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
 - **Extend capabilities with skills.** Add domain expertise and repeatable workflows through [Agent Skills](#skills).
@@ -63,25 +63,25 @@ Or use npm:
 
 | Command                   | Description                                |
 | ------------------------- | ------------------------------------------ |
-| `kilo [project]`          | Start the TUI (Terminal User Interface)    |
-| `kilo run [message..]`    | Run with a message (non-interactive mode)  |
-| `kilo attach <url>`       | Attach to a running kilo server            |
-| `kilo serve`              | Start a headless server                    |
-| `kilo web`                | Start server and open web interface        |
-| `kilo auth`               | Manage credentials (login, logout, list)   |
-| `kilo agent`              | Manage agents (create, list)               |
-| `kilo mcp`                | Manage MCP servers (list, add, auth)       |
-| `kilo models [provider]`  | List available models                      |
-| `kilo stats`              | Show token usage and cost statistics       |
-| `kilo session`            | Manage sessions (list)                     |
-| `kilo export [sessionID]` | Export session data as JSON                |
-| `kilo import <file>`      | Import session data from JSON file or URL  |
-| `kilo upgrade [target]`   | Upgrade kilo to latest or specific version |
-| `kilo uninstall`          | Uninstall kilo and remove related files    |
-| `kilo pr <number>`        | Fetch and checkout a GitHub PR branch      |
-| `kilo github`             | Manage GitHub agent (install, run)         |
-| `kilo debug`              | Debugging and troubleshooting tools        |
-| `kilo completion`         | Generate shell completion script           |
+| `devil [project]`          | Start the TUI (Terminal User Interface)    |
+| `devil run [message..]`    | Run with a message (non-interactive mode)  |
+| `devil attach <url>`       | Attach to a running devil server            |
+| `devil serve`              | Start a headless server                    |
+| `devil web`                | Start server and open web interface        |
+| `devil auth`               | Manage credentials (login, logout, list)   |
+| `devil agent`              | Manage agents (create, list)               |
+| `devil mcp`                | Manage MCP servers (list, add, auth)       |
+| `devil models [provider]`  | List available models                      |
+| `devil stats`              | Show token usage and cost statistics       |
+| `devil session`            | Manage sessions (list)                     |
+| `devil export [sessionID]` | Export session data as JSON                |
+| `devil import <file>`      | Import session data from JSON file or URL  |
+| `devil upgrade [target]`   | Upgrade devil to latest or specific version |
+| `devil uninstall`          | Uninstall devil and remove related files    |
+| `devil pr <number>`        | Fetch and checkout a GitHub PR branch      |
+| `devil github`             | Manage GitHub agent (install, run)         |
+| `devil debug`              | Debugging and troubleshooting tools        |
+| `devil completion`         | Generate shell completion script           |
 
 ### Global Options
 
@@ -137,12 +137,12 @@ Or use npm:
 | `/editor` | -             | Open external editor |
 | `/exit`   | `/quit`, `/q` | Exit the app         |
 
-#### Kilo Gateway Commands (when connected)
+#### devil Gateway Commands (when connected)
 
 | Command    | Aliases                  | Description                       |
 | ---------- | ------------------------ | --------------------------------- |
-| `/profile` | `/me`, `/whoami`         | View your Kilo Gateway profile    |
-| `/teams`   | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
+| `/profile` | `/me`, `/whoami`         | View your devil Gateway profile    |
+| `/teams`   | `/team`, `/org`, `/orgs` | Switch between devil Gateway teams |
 
 #### Built-in Commands
 
@@ -168,8 +168,8 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: use **`kilo.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
-- `kilo auth` for credential management
+- Config files in **`~/.config/devil/`**: use **`devil.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in devil Code](/docs/automate/mcp/using-in-devil-code) for MCP config format.
+- `devil auth` for credential management
 
 ## Slash Commands
 
@@ -181,7 +181,7 @@ The CLI's interactive mode supports slash commands for common operations. The ma
 
 ## Permissions
 
-Kilo Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.
+devil Code uses the permission config to decide whether a given action should run automatically, prompt you, or be blocked.
 
 ### Actions
 
@@ -197,7 +197,7 @@ You can set permissions globally (with `*`), and override specific tools.
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "permission": {
     "*": "ask",
     "bash": "allow",
@@ -210,7 +210,7 @@ You can also set all permissions at once:
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "permission": "allow"
 }
 ```
@@ -221,7 +221,7 @@ For most permissions, you can use an object to apply different actions based on 
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "permission": {
     "bash": {
       "*": "ask",
@@ -258,11 +258,11 @@ You can use `~` or `$HOME` at the start of a pattern to reference your home dire
 
 ### External Directories
 
-Use `external_directory` to allow tool calls that touch paths outside the working directory where Kilo was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
+Use `external_directory` to allow tool calls that touch paths outside the working directory where devil was started. This applies to any tool that takes a path as input (for example `read`, `edit`, `list`, `glob`, `grep`, and many bash commands).
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "permission": {
     "external_directory": {
       "~/projects/personal/**": "allow"
@@ -275,7 +275,7 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "permission": {
     "external_directory": {
       "~/projects/personal/**": "allow"
@@ -291,13 +291,13 @@ Any directory allowed here inherits the same defaults as the current workspace. 
 
 ## Configuration
 
-The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. The CLI you install with `npm install -g @kilocode/cli` (Kilo CLI 1.0) is built from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+The devil CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. The CLI you install with `npm install -g @devilcode/cli` (devil CLI 1.0) is built from [Devil-Org/devilcode](https://github.com/Devil-Org/devilcode). For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 
-### Config File Location (Kilo CLI 1.0)
+### Config File Location (devil CLI 1.0)
 
 | Scope       | Path                                                                                              |
 | ----------- | ------------------------------------------------------------------------------------------------- |
-| **Global**  | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
+| **Global**  | `~/.config/devil/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
 | **Project** | `./opencode.json` or `./.opencode/` in project root                                               |
 
 Project-level configuration takes precedence over global settings.
@@ -306,7 +306,7 @@ Project-level configuration takes precedence over global settings.
 
 ```json
 {
-  "$schema": "https://app.kilo.ai/config.json",
+  "$schema": "https://app.devil.ai/config.json",
   "model": "anthropic/claude-sonnet-4-20250514",
   "provider": {
     "anthropic": {
@@ -352,9 +352,9 @@ For full details on all configuration options including compaction, file watcher
 
 ## Interactive Mode
 
-Interactive mode is the default mode when running Kilo Code without the `--auto` flag, designed to work interactively with a user through the console.
+Interactive mode is the default mode when running devil Code without the `--auto` flag, designed to work interactively with a user through the console.
 
-In interactive mode Kilo Code will request approval for operations which have not been auto-approved, allowing the user to review and approve operations before they are executed, and optionally add them to the auto-approval list.
+In interactive mode devil Code will request approval for operations which have not been auto-approved, allowing the user to review and approve operations before they are executed, and optionally add them to the auto-approval list.
 
 ### Interactive Command Approval
 
@@ -379,11 +379,11 @@ This allows you to progressively build your auto-approval rules without manually
 
 ## Autonomous Mode (Non-Interactive)
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Autonomous mode allows devil Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
 ```bash
 # Run in autonomous mode with a message
-kilo run --auto "Implement feature X"
+devil run --auto "Implement feature X"
 ```
 
 ### Autonomous Mode Behavior
@@ -417,9 +417,9 @@ This instructs the AI to proceed without user input.
 
 ```yaml
 # GitHub Actions example
-- name: Run Kilo Code
+- name: Run devil Code
   run: |
-    kilo run "Implement the new feature" --auto
+    devil run "Implement the new feature" --auto
 ```
 
 ## Session Continuation
@@ -428,8 +428,8 @@ Resume your last conversation from the current workspace using the `--continue` 
 
 ```bash
 # Resume the most recent session from this workspace
-kilo --continue
-kilo -c
+devil --continue
+devil -c
 ```
 
 This feature:
@@ -444,13 +444,13 @@ This feature:
 
 ```bash
 # Start a session
-kilo
+devil
 # > "Create a REST API"
 # ... work on the task ...
 # Exit with /exit
 
 # Later, resume the same session
-kilo --continue
+devil --continue
 # Conversation history is restored, ready to continue
 ```
 
@@ -464,13 +464,13 @@ kilo --continue
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
 
-- `KILO_PROVIDER`: Override the active provider ID
-- For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
-- For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
+- `Devil_PROVIDER`: Override the active provider ID
+- For `devilcode` provider: `devilcode_<FIELD_NAME>` (e.g., `devilcode_MODEL` → `devilcodeModel`)
+- For other providers: `Devil_<FIELD_NAME>` (e.g., `Devil_API_KEY` → `apiKey`)
 
 ## Using the CLI in an Organization
 
-If you belong to a Kilo organization (Team or Enterprise), you can route CLI requests through that organization. The process differs slightly between interactive and non-interactive usage.
+If you belong to a devil organization (Team or Enterprise), you can route CLI requests through that organization. The process differs slightly between interactive and non-interactive usage.
 
 ### Interactive Usage
 
@@ -478,10 +478,10 @@ In an interactive CLI session, use the `/teams` command to select an organizatio
 
 Your selection is persisted locally so it carries over to future sessions.
 
-### Non-Interactive Usage (`kilo run`)
+### Non-Interactive Usage (`devil run`)
 
-There is no `--org` or `--team` flag on `kilo run`. Instead, the organization is determined from the following sources, in order of priority (highest first):
+There is no `--org` or `--team` flag on `devil run`. Instead, the organization is determined from the following sources, in order of priority (highest first):
 
-1. **`KILO_ORG_ID` environment variable** — Best for non-interactive and CI environments. 
+1. **`Devil_ORG_ID` environment variable** — Best for non-interactive and CI environments. 
 
 2. **`Persisted selection from the last `/teams` pick`** — If you've run an interactive session and selected an organization via `/teams`, that selection is stored in the CLI auth file and reused automatically.

@@ -9,7 +9,7 @@ export const CollaborateNav: NavSection[] = [
     ],
   },
   {
-    title: "Kilo for Teams",
+    title: "devil for Teams",
     links: [
       { href: "/collaborate/teams/about-plans", children: "About Plans" },
       {

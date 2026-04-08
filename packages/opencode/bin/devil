@@ -17,7 +17,7 @@ function run(target) {
   process.exit(code)
 }
 
-const envPath = process.env.KILO_BIN_PATH
+const envPath = process.env.DEVIL_BIN_PATH
 if (envPath) {
   run(envPath)
 }
@@ -25,8 +25,8 @@ if (envPath) {
 const scriptPath = fs.realpathSync(__filename)
 const scriptDir = path.dirname(scriptPath)
 
-// kilocode_change start - fall through to findBinary() if cached binary fails
-const cached = path.join(scriptDir, ".kilo")
+// devilcode_change start - fall through to findBinary() if cached binary fails
+const cached = path.join(scriptDir, ".devil")
 if (fs.existsSync(cached)) {
   const result = childProcess.spawnSync(cached, process.argv.slice(2), {
     stdio: "inherit",
@@ -38,7 +38,7 @@ if (fs.existsSync(cached)) {
   // cached binary failed (e.g. wrong platform/arch, missing dynamic linker),
   // fall through to findBinary() which has better variant detection
 }
-// kilocode_change end
+// devilcode_change end
 
 const platformMap = {
   darwin: "darwin",
@@ -59,8 +59,8 @@ let arch = archMap[os.arch()]
 if (!arch) {
   arch = os.arch()
 }
-const base = "@kilocode/cli-" + platform + "-" + arch
-const binary = platform === "windows" ? "kilo.exe" : "kilo"
+const base = "@devilcode/cli-" + platform + "-" + arch
+const binary = platform === "windows" ? "devil.exe" : "devil"
 
 function supportsAvx2() {
   if (arch !== "x64") return false
@@ -178,7 +178,7 @@ function findBinary(startDir) {
 const resolved = findBinary(scriptDir)
 if (!resolved) {
   console.error(
-    "It seems that your package manager failed to install the right version of the Kilo CLI for your platform. You can try manually installing " +
+    "It seems that your package manager failed to install the right version of the Devil CLI for your platform. You can try manually installing " +
       names.map((n) => `\"${n}\"`).join(" or ") +
       " package",
   )

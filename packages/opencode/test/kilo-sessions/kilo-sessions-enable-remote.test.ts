@@ -58,7 +58,7 @@ mock.module("../../src/kilo-sessions/remote-ws", () => ({
   },
 }))
 
-describe("KiloSessions.enableRemote", () => {
+describe("DevilSessions.enableRemote", () => {
   beforeEach(() => {
     state.connects = 0
     state.closes = 0
@@ -66,8 +66,8 @@ describe("KiloSessions.enableRemote", () => {
     state.userStatus = 200
     state.gate = Promise.resolve()
     state.userError = false
-    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
-    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["DEVIL_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["DEVIL_SESSION_INGEST_URL"]
     globalThis.fetch = mock(async (input) => {
       await state.gate
       if (String(input).endsWith("/api/user")) {
@@ -79,8 +79,8 @@ describe("KiloSessions.enableRemote", () => {
   })
 
   afterEach(async () => {
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-    KiloSessions.disableRemote()
+    const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+    DevilSessions.disableRemote()
   })
 
   test("concurrent enableRemote shares one connection", async () => {
@@ -90,10 +90,10 @@ describe("KiloSessions.enableRemote", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-        await Promise.all([KiloSessions.enableRemote(), KiloSessions.enableRemote(), KiloSessions.enableRemote()])
+        const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+        await Promise.all([DevilSessions.enableRemote(), DevilSessions.enableRemote(), DevilSessions.enableRemote()])
         expect(state.connects).toBe(1)
-        expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
+        expect(DevilSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
       },
     })
   })
@@ -102,21 +102,21 @@ describe("KiloSessions.enableRemote", () => {
     state.userStatus = 401
     await using tmp = await tmpdir({ git: true })
     const { Instance } = await import("../../src/project/instance")
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+    const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
     const key = "kilo-sessions:token-valid:tok"
     const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
-    KiloSessions.disableRemote()
+    DevilSessions.disableRemote()
     clearInFlightCache(key)
 
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        await expect(KiloSessions.enableRemote()).rejects.toThrow(
-          "Unable to enable remote: invalid or expired Kilo credentials. Run `kilo auth login`.",
+        await expect(DevilSessions.enableRemote()).rejects.toThrow(
+          "Unable to enable remote: invalid or expired Devil credentials. Run `kilo auth login`.",
         )
         expect(state.connects).toBe(0)
-        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+        expect(DevilSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
       },
     })
   })
@@ -136,15 +136,15 @@ describe("KiloSessions.enableRemote", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-        const pending = KiloSessions.enableRemote()
-        KiloSessions.disableRemote()
+        const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+        const pending = DevilSessions.enableRemote()
+        DevilSessions.disableRemote()
         release()
         await pending
         expect(state.connects).toBe(1)
         expect(state.disposes).toBe(1)
         expect(state.closes).toBe(1)
-        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+        expect(DevilSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
       },
     })
   })
@@ -153,20 +153,20 @@ describe("KiloSessions.enableRemote", () => {
     state.userError = true
     await using tmp = await tmpdir({ git: true })
     const { Instance } = await import("../../src/project/instance")
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+    const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
     const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
-    KiloSessions.disableRemote()
+    DevilSessions.disableRemote()
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        await expect(KiloSessions.enableRemote()).rejects.toThrow(
-          "Unable to enable remote: failed to verify Kilo credentials.",
+        await expect(DevilSessions.enableRemote()).rejects.toThrow(
+          "Unable to enable remote: failed to verify Devil credentials.",
         )
         expect(state.connects).toBe(0)
-        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+        expect(DevilSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
       },
     })
   })
@@ -186,16 +186,16 @@ describe("KiloSessions.enableRemote", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-        const first = KiloSessions.enableRemote()
-        KiloSessions.disableRemote()
-        const second = KiloSessions.enableRemote()
+        const { DevilSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+        const first = DevilSessions.enableRemote()
+        DevilSessions.disableRemote()
+        const second = DevilSessions.enableRemote()
         release()
         await Promise.all([first, second])
         expect(state.connects).toBe(2)
         expect(state.disposes).toBe(1)
         expect(state.closes).toBe(1)
-        expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
+        expect(DevilSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
       },
     })
   })

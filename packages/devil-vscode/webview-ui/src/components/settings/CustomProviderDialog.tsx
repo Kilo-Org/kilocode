@@ -1,11 +1,11 @@
-import { Button } from "@kilocode/kilo-ui/button"
-import { useDialog } from "@kilocode/kilo-ui/context/dialog"
-import { Dialog } from "@kilocode/kilo-ui/dialog"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { ProviderIcon } from "@kilocode/kilo-ui/provider-icon"
-import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { TextField } from "@kilocode/kilo-ui/text-field"
-import { showToast } from "@kilocode/kilo-ui/toast"
+import { Button } from "@devilcode/kilo-ui/button"
+import { useDialog } from "@devilcode/kilo-ui/context/dialog"
+import { Dialog } from "@devilcode/kilo-ui/dialog"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
+import { ProviderIcon } from "@devilcode/kilo-ui/provider-icon"
+import { Spinner } from "@devilcode/kilo-ui/spinner"
+import { TextField } from "@devilcode/kilo-ui/text-field"
+import { showToast } from "@devilcode/kilo-ui/toast"
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useConfig } from "../../context/config"
@@ -547,12 +547,12 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
           <div style={{ "font-size": "14px", color: "var(--text-base)" }}>
             {language.t("provider.custom.description.prefix")}
             <a
-              href="https://kilo.ai/docs/providers/#custom-provider"
+              href="https://devil.ai/docs/providers/#custom-provider"
               onClick={(e) => {
                 e.preventDefault()
                 vscode.postMessage({
                   type: "openExternal",
-                  url: "https://kilo.ai/docs/providers/#custom-provider",
+                  url: "https://devil.ai/docs/providers/#custom-provider",
                 })
               }}
             >

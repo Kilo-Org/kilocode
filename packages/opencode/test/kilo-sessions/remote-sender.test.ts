@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test"
-// kilocode_change start
+// devilcode_change start
 import { afterEach, mock, spyOn } from "bun:test"
-// kilocode_change end
+// devilcode_change end
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../src/kilo-sessions/remote-ws"
 import type { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
-// kilocode_change start
+// devilcode_change start
 import { SessionPrompt } from "../../src/session/prompt"
 import { Question } from "../../src/question"
 import { PermissionNext } from "../../src/permission/next"
-// kilocode_change end
+// devilcode_change end
 
 function fakeConn() {
   const sent: any[] = []
@@ -49,11 +49,11 @@ const nolog = {
   warn: () => {},
 }
 
-// kilocode_change start
+// devilcode_change start
 afterEach(() => {
   mock.restore()
 })
-// kilocode_change end
+// devilcode_change end
 
 describe("RemoteSender", () => {
   test("subscribe adds bus subscription, event forwarded", () => {
@@ -312,7 +312,7 @@ describe("RemoteSender", () => {
     await provideStarted
   })
 
-  // kilocode_change start
+  // devilcode_change start
   test("send_message normalizes string model without prefix", async () => {
     const { conn, sent } = fakeConn()
     const prompt = spyOn(SessionPrompt, "prompt").mockResolvedValue({} as never)
@@ -345,7 +345,7 @@ describe("RemoteSender", () => {
     })
   })
 
-  test("send_message keeps kilocode-prefixed model unchanged before internal conversion", async () => {
+  test("send_message keeps devilcode-prefixed model unchanged before internal conversion", async () => {
     const { conn } = fakeConn()
     const prompt = spyOn(SessionPrompt, "prompt").mockResolvedValue({} as never)
     const sender = RemoteSender.create({
@@ -358,12 +358,12 @@ describe("RemoteSender", () => {
 
     sender.handle({
       type: "command",
-      id: "req_model_kilocode",
+      id: "req_model_devilcode",
       command: "send_message",
       data: {
         sessionID: "ses_x",
         parts: [{ type: "text", text: "hello" }],
-        model: "kilocode/gpt-5-mini",
+        model: "devilcode/gpt-5-mini",
       },
     })
 
@@ -393,7 +393,7 @@ describe("RemoteSender", () => {
       data: {
         sessionID: "ses_x",
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: "kilocode", modelID: "gpt-5-mini" },
+        model: { providerID: "devilcode", modelID: "gpt-5-mini" },
       },
     })
 
@@ -434,7 +434,7 @@ describe("RemoteSender", () => {
       model: { providerID: "kilo", modelID: "kilo/gpt-5-mini" },
     })
   })
-  // kilocode_change end
+  // devilcode_change end
 
   test("question_reply sends response after work completes", async () => {
     const { conn, sent } = fakeConn()

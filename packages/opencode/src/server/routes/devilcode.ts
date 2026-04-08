@@ -1,5 +1,5 @@
-// kilocode_change - new file
-// Kilo-specific routes that live in the CLI package (direct access to internals).
+// devilcode_change - new file
+// Devil-specific routes that live in the CLI package (direct access to internals).
 // All future kilo-specific endpoints should be added here.
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
@@ -8,17 +8,19 @@ import { Skill } from "../../skill/skill"
 import { Agent } from "../../agent/agent"
 import { lazy } from "../../util/lazy"
 import { errors } from "../error"
-import { SessionImportRoutes } from "../../kilocode/session-import/routes"
+import { SessionImportRoutes } from "../../devilcode/session-import/routes"
+import { WorkflowRoutes } from "../../devilcode/workflow/routes"
 
-export const KilocodeRoutes = lazy(() =>
+export const DevilcodeRoutes = lazy(() =>
   new Hono()
     .route("/session-import", SessionImportRoutes())
+    .route("/workflow", WorkflowRoutes())
     .post(
       "/skill/remove",
       describeRoute({
         summary: "Remove a skill",
         description: "Remove a skill by deleting its directory from disk and clearing it from cache.",
-        operationId: "kilocode.removeSkill",
+        operationId: "devilcode.removeSkill",
         responses: {
           200: {
             description: "Skill removed",
@@ -48,7 +50,7 @@ export const KilocodeRoutes = lazy(() =>
       describeRoute({
         summary: "Remove a custom agent",
         description: "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
-        operationId: "kilocode.removeAgent",
+        operationId: "devilcode.removeAgent",
         responses: {
           200: {
             description: "Agent removed",

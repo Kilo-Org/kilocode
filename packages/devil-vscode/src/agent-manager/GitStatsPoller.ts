@@ -1,6 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
+import type { DevilClient, FileDiff } from "@devilcode/sdk/v2/client"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import { normalizePath } from "./git-import"
@@ -36,7 +36,7 @@ export interface WorktreePresenceResult {
 interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
-  getClient: () => KiloClient
+  getClient: () => DevilClient
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
@@ -131,7 +131,7 @@ export class GitStatsPoller {
     await Promise.all([this.fetchWorktreeStats(client), this.fetchLocalStats(client)])
   }
 
-  private async fetchWorktreeStats(client: KiloClient | undefined): Promise<void> {
+  private async fetchWorktreeStats(client: DevilClient | undefined): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
@@ -238,7 +238,7 @@ export class GitStatsPoller {
     return { worktrees: worktreeStatuses, degraded: false }
   }
 
-  private async fetchLocalStats(client: KiloClient | undefined): Promise<void> {
+  private async fetchLocalStats(client: DevilClient | undefined): Promise<void> {
     const root = this.options.getWorkspaceRoot()
     if (!root) return
 

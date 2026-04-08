@@ -1,8 +1,8 @@
 /**
- * Parse KiloCode URL from token
+ * Parse DevilCode URL from token
  * Some tokens contain encoded base URL information
  */
-export function getKiloUrlFromToken(defaultUrl: string, token: string): string {
+export function getDevilUrlFromToken(defaultUrl: string, token: string): string {
   // If token contains URL information, extract it
   // This is a simplified version - adjust based on actual token format
   if (!token) return defaultUrl
@@ -21,9 +21,9 @@ export function getKiloUrlFromToken(defaultUrl: string, token: string): string {
 }
 
 /**
- * Validate KiloCode token format
+ * Validate DevilCode token format
  */
-export function isValidKilocodeToken(token: string): boolean {
+export function isValidDevilcodeToken(token: string): boolean {
   if (!token || typeof token !== "string") return false
 
   // Basic validation - adjust based on actual token requirements
@@ -33,6 +33,6 @@ export function isValidKilocodeToken(token: string): boolean {
 /**
  * Get API key from options or environment
  */
-export function getApiKey(options: { kilocodeToken?: string; apiKey?: string }): string | undefined {
-  return options.kilocodeToken ?? options.apiKey
+export function getApiKey(options: { devilcodeToken?: string; apiKey?: string }): string | undefined {
+  return options.devilcodeToken ?? options.apiKey
 }

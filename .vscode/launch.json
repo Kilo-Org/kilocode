@@ -9,19 +9,19 @@
       "name": "VSCode - Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"],
-      "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/devil-vscode"],
+      "outFiles": ["${workspaceFolder}/packages/devil-vscode/dist/**/*.js"],
       "preLaunchTask": "VSCode - Compile"
     },
     {
       "name": "VSCode - Run Extension (Local Backend)",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"],
-      "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
+      "args": ["--disable-extensions", "--extensionDevelopmentPath=${workspaceFolder}/packages/devil-vscode"],
+      "outFiles": ["${workspaceFolder}/packages/devil-vscode/dist/**/*.js"],
       "preLaunchTask": "VSCode - Compile",
       "env": {
-        "KILO_API_URL": "http://localhost:3000"
+        "DEVIL_API_URL": "http://localhost:3000"
       }
     }
   ]

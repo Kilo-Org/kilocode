@@ -79,7 +79,7 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
       description: "Open help documentation",
       hints: [],
       action: () => {
-        vscode.postMessage({ type: "openExternal", url: "https://kilo.ai/docs" })
+        vscode.postMessage({ type: "openExternal", url: "https://devil.ai/docs" })
       },
     },
     {

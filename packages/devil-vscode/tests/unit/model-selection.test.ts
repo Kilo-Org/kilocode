@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { resolveModelSelection } from "../../webview-ui/src/context/model-selection"
-import { KILO_AUTO, parseModelString } from "../../src/shared/provider-model"
+import { DEVIL_AUTO, parseModelString } from "../../src/shared/provider-model"
 import type { Provider } from "../../webview-ui/src/types/messages"
 
 function makeProvider(id: string, name: string, modelIds: string[]): Provider {
@@ -12,7 +12,7 @@ function makeProvider(id: string, name: string, modelIds: string[]): Provider {
 }
 
 const providers = {
-  kilo: makeProvider("kilo", "Kilo Gateway", ["kilo-auto/free"]),
+  kilo: makeProvider("kilo", "Devil Gateway", ["kilo-auto/free"]),
   anthropic: makeProvider("anthropic", "Anthropic", ["claude-sonnet-4"]),
   openai: makeProvider("openai", "OpenAI", ["gpt-4.1"]),
 }
@@ -45,7 +45,7 @@ describe("resolveModelSelection", () => {
       connected: ["anthropic", "openai"],
       override: { providerID: "openai", modelID: "gpt-4.1" },
       mode: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
   })
@@ -56,7 +56,7 @@ describe("resolveModelSelection", () => {
       connected: ["anthropic"],
       override: { providerID: "openai", modelID: "gpt-4.1" },
       mode: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
     expect(result).toEqual({ providerID: "anthropic", modelID: "claude-sonnet-4" })
   })
@@ -70,7 +70,7 @@ describe("resolveModelSelection", () => {
         { providerID: "anthropic", modelID: "claude-sonnet-4" },
         { providerID: "openai", modelID: "gpt-4.1" },
       ],
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
   })
@@ -79,18 +79,18 @@ describe("resolveModelSelection", () => {
     const result = resolveModelSelection({
       providers,
       connected: [],
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
-    expect(result).toEqual(KILO_AUTO)
+    expect(result).toEqual(DEVIL_AUTO)
   })
 
   it("keeps the explicit fallback even when kilo is missing from the loaded catalog", () => {
     const result = resolveModelSelection({
       providers: { openai: providers.openai },
       connected: [],
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
-    expect(result).toEqual(KILO_AUTO)
+    expect(result).toEqual(DEVIL_AUTO)
   })
 
   it("keeps the raw preference order before providers load", () => {
@@ -99,7 +99,7 @@ describe("resolveModelSelection", () => {
       connected: [],
       override: { providerID: "openai", modelID: "gpt-4.1" },
       mode: { providerID: "anthropic", modelID: "claude-sonnet-4" },
-      fallback: KILO_AUTO,
+      fallback: DEVIL_AUTO,
     })
     expect(result).toEqual({ providerID: "openai", modelID: "gpt-4.1" })
   })

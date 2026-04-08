@@ -13,13 +13,13 @@ import { Glob } from "bun"
 import path from "path"
 
 const ROOT = path.resolve(import.meta.dir, "..")
-const OUTPUT = path.join(ROOT, "packages/kilo-docs/source-links.md")
+const OUTPUT = path.join(ROOT, "packages/devil-docs/source-links.md")
 
 const check = process.argv.includes("--check")
 
 const DIRS = [
-  path.join(ROOT, "packages/kilo-vscode/src"),
-  path.join(ROOT, "packages/kilo-vscode/webview-ui"),
+  path.join(ROOT, "packages/devil-vscode/src"),
+  path.join(ROOT, "packages/devil-vscode/webview-ui"),
   path.join(ROOT, "packages/opencode/src"),
 ]
 
@@ -35,15 +35,15 @@ const EXCLUDE_PATTERNS = [
   // Localhost and internal
   /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)/,
   /^https?:\/\/kilo\.internal/,
-  /^https?:\/\/dev\.kilo\.ai/,
+  /^https?:\/\/dev\.devil\.ai/,
   /^https?:\/\/tauri\.localhost/,
   // Example/placeholder URLs
   /^https?:\/\/example\.com/,
   /^https?:\/\/api\.myprovider\.com/,
   /^https?:\/\/synthetic\.new/,
   // API endpoints (not user-facing)
-  /^https?:\/\/api\.kilo\.ai\/api\//,
-  /^https?:\/\/ingest\.kilosessions\.ai/,
+  /^https?:\/\/api\.devil\.ai\/api\//,
+  /^https?:\/\/ingest\.devilsessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,
   /^https?:\/\/api\.cloudflare\.com/,
@@ -88,15 +88,19 @@ function shouldExclude(url: string): boolean {
   return EXCLUDE_PATTERNS.some((re) => re.test(url))
 }
 
+function normalize(filepath: string) {
+  return filepath.replaceAll("\\", "/")
+}
+
 function shouldSkipFile(filepath: string): boolean {
-  const rel = path.relative(ROOT, filepath)
-  const parts = rel.split(path.sep)
+  const rel = normalize(path.relative(ROOT, filepath))
+  const parts = rel.split("/")
   if (parts.some((p) => SKIP_DIRS.includes(p))) return true
   if (SKIP_PATH_SEGMENTS.some((seg) => rel.includes(seg))) return true
   if (/\.test\.[jt]sx?$/.test(filepath)) return true
   if (/\.spec\.[jt]sx?$/.test(filepath)) return true
   if (/\.stories\.[jt]sx?$/.test(filepath)) return true
-  if (/\/i18n\//.test(filepath) && !filepath.endsWith("en.ts")) return true
+  if (/\/i18n\//.test(rel) && !rel.endsWith("en.ts")) return true
   const basename = path.basename(filepath)
   if (SKIP_FILES.includes(basename)) return true
   return false
@@ -120,7 +124,7 @@ async function extract(): Promise<Map<string, Set<string>>> {
             const url = clean(match[0])
             if (shouldExclude(url)) continue
             if (!links.has(url)) links.set(url, new Set())
-            links.get(url)!.add(path.relative(ROOT, entry))
+            links.get(url)!.add(normalize(path.relative(ROOT, entry)))
           }
         }
       }
@@ -159,12 +163,12 @@ if (check) {
     .text()
     .catch(() => "")
   if (committed === output) {
-    console.log("packages/kilo-docs/source-links.md is up to date.")
+    console.log("packages/devil-docs/source-links.md is up to date.")
     process.exit(0)
   }
   console.error(
     [
-      "ERROR: packages/kilo-docs/source-links.md is out of date.",
+      "ERROR: packages/devil-docs/source-links.md is out of date.",
       "",
       "Run the following command locally and commit the result:",
       "",
@@ -176,4 +180,4 @@ if (check) {
 }
 
 await Bun.write(OUTPUT, output)
-console.log(`Wrote ${sorted.length} unique URLs to packages/kilo-docs/source-links.md`)
+console.log(`Wrote ${sorted.length} unique URLs to packages/devil-docs/source-links.md`)

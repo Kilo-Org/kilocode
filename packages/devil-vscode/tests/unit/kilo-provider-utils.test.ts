@@ -29,7 +29,7 @@ import type {
   EventServerConnected,
   TextPart,
   AssistantMessage,
-} from "@kilocode/sdk/v2/client"
+} from "@devilcode/sdk/v2/client"
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {

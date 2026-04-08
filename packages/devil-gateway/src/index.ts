@@ -1,24 +1,24 @@
 // ============================================================================
 // Plugin
 // ============================================================================
-export { KiloAuthPlugin, default } from "./plugin.js"
+export { DevilAuthPlugin, default } from "./plugin.js"
 
 // ============================================================================
 // Provider
 // ============================================================================
-export { createKilo } from "./provider.js"
-export { createKiloDebug } from "./provider-debug.js"
+export { createDevil } from "./provider.js"
+export { createDevilDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
-export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
+export { buildDevilHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
 
 // ============================================================================
 // Auth
 // ============================================================================
 export { authenticateWithDeviceAuth } from "./auth/device-auth.js"
 export { authenticateWithDeviceAuthTUI } from "./auth/device-auth-tui.js"
-export { getKiloUrlFromToken, isValidKilocodeToken, getApiKey } from "./auth/token.js"
+export { getDevilUrlFromToken, isValidDevilcodeToken, getApiKey } from "./auth/token.js"
 export { poll, formatTimeRemaining } from "./auth/polling.js"
-export { migrateLegacyKiloAuth, LEGACY_CONFIG_PATH } from "./auth/legacy-migration.js"
+export { migrateLegacyDevilAuth, LEGACY_CONFIG_PATH } from "./auth/legacy-migration.js"
 
 // ============================================================================
 // API
@@ -28,29 +28,29 @@ export {
   fetchBalance,
   fetchProfileWithBalance,
   fetchDefaultModel,
-  getKiloProfile,
-  getKiloBalance,
-  getKiloDefaultModel,
+  getDevilProfile,
+  getDevilBalance,
+  getDevilDefaultModel,
   promptOrganizationSelection,
 } from "./api/profile.js"
-export { fetchKiloModels } from "./api/models.js"
+export { fetchDevilModels } from "./api/models.js"
 export {
   fetchOrganizationModes,
   clearModesCache,
   type OrganizationMode,
   type OrganizationModeConfig,
 } from "./api/modes.js"
-export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
+export { fetchDevilcodeNotifications, type DevilcodeNotification } from "./api/notifications.js"
 
 // ============================================================================
 // Server Routes (optional - requires hono and OpenCode dependencies)
 // ============================================================================
-export { createKiloRoutes } from "./server/routes.js"
+export { createDevilRoutes } from "./server/routes.js"
 
 // ============================================================================
 // Note: TUI exports moved to separate entry point
 // ============================================================================
-// For TUI components and commands, import from "@kilocode/kilo-gateway/tui"
+// For TUI components and commands, import from "@devilcode/kilo-gateway/tui"
 // This avoids circular dependencies with opencode TUI infrastructure
 
 // ============================================================================
@@ -61,14 +61,14 @@ export type {
   DeviceAuthInitiateResponse,
   DeviceAuthPollResponse,
   Organization,
-  KilocodeProfile,
-  KilocodeBalance,
+  DevilcodeProfile,
+  DevilcodeBalance,
   PollOptions,
   PollResult,
   // Provider types
-  KiloProvider,
-  KiloProviderOptions,
-  KiloMetadata,
+  DevilProvider,
+  DevilProviderOptions,
+  DevilMetadata,
   CustomLoaderResult,
   ProviderInfo,
   LanguageModelV2,
@@ -78,10 +78,10 @@ export type {
 // Constants
 // ============================================================================
 export {
-  ENV_KILO_API_URL,
-  DEFAULT_KILO_API_URL,
-  KILO_API_BASE,
-  KILO_OPENROUTER_BASE,
+  ENV_DEVIL_API_URL,
+  DEFAULT_DEVIL_API_URL,
+  DEVIL_API_BASE,
+  DEVIL_OPENROUTER_BASE,
   POLL_INTERVAL_MS,
   DEFAULT_MODEL,
   DEFAULT_FREE_MODEL,

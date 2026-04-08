@@ -21,11 +21,11 @@ export const Default: Story = {
     <Accordion collapsible defaultValue={["item-1"]}>
       <Accordion.Item value="item-1">
         <Accordion.Header>
-          <Accordion.Trigger>What is Kilo?</Accordion.Trigger>
+          <Accordion.Trigger>What is Devil?</Accordion.Trigger>
         </Accordion.Header>
         <Accordion.Content>
           <div style={{ padding: "8px 16px" }}>
-            Kilo is an AI-powered coding assistant that helps you write, debug, and understand code.
+            Devil is an AI-powered coding assistant that helps you write, debug, and understand code.
           </div>
         </Accordion.Content>
       </Accordion.Item>
@@ -35,7 +35,7 @@ export const Default: Story = {
         </Accordion.Header>
         <Accordion.Content>
           <div style={{ padding: "8px 16px" }}>
-            Kilo uses large language models to understand your codebase and provide intelligent suggestions.
+            Devil uses large language models to understand your codebase and provide intelligent suggestions.
           </div>
         </Accordion.Content>
       </Accordion.Item>
@@ -45,7 +45,7 @@ export const Default: Story = {
         </Accordion.Header>
         <Accordion.Content>
           <div style={{ padding: "8px 16px" }}>
-            Kilo supports all major programming languages including TypeScript, Python, Go, Rust, and more.
+            Devil supports all major programming languages including TypeScript, Python, Go, Rust, and more.
           </div>
         </Accordion.Content>
       </Accordion.Item>

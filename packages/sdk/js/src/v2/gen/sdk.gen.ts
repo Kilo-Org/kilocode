@@ -51,35 +51,35 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
-  KiloClawChatCredentialsResponses,
-  KiloClawStatusResponses,
-  KiloCloudSessionGetErrors,
-  KiloCloudSessionGetResponses,
-  KiloCloudSessionImportErrors,
-  KiloCloudSessionImportResponses,
-  KiloCloudSessionsErrors,
-  KiloCloudSessionsResponses,
-  KilocodeRemoveAgentErrors,
-  KilocodeRemoveAgentResponses,
-  KilocodeRemoveSkillErrors,
-  KilocodeRemoveSkillResponses,
-  KilocodeSessionImportMessageErrors,
-  KilocodeSessionImportMessageResponses,
-  KilocodeSessionImportPartErrors,
-  KilocodeSessionImportPartResponses,
-  KilocodeSessionImportProjectErrors,
-  KilocodeSessionImportProjectResponses,
-  KilocodeSessionImportSessionErrors,
-  KilocodeSessionImportSessionResponses,
-  KiloFimErrors,
-  KiloFimResponses,
-  KiloModesResponses,
-  KiloNotificationsErrors,
-  KiloNotificationsResponses,
-  KiloOrganizationSetErrors,
-  KiloOrganizationSetResponses,
-  KiloProfileErrors,
-  KiloProfileResponses,
+  DevilClawChatCredentialsResponses,
+  DevilClawStatusResponses,
+  DevilCloudSessionGetErrors,
+  DevilCloudSessionGetResponses,
+  DevilCloudSessionImportErrors,
+  DevilCloudSessionImportResponses,
+  DevilCloudSessionsErrors,
+  DevilCloudSessionsResponses,
+  DevilcodeRemoveAgentErrors,
+  DevilcodeRemoveAgentResponses,
+  DevilcodeRemoveSkillErrors,
+  DevilcodeRemoveSkillResponses,
+  DevilcodeSessionImportMessageErrors,
+  DevilcodeSessionImportMessageResponses,
+  DevilcodeSessionImportPartErrors,
+  DevilcodeSessionImportPartResponses,
+  DevilcodeSessionImportProjectErrors,
+  DevilcodeSessionImportProjectResponses,
+  DevilcodeSessionImportSessionErrors,
+  DevilcodeSessionImportSessionResponses,
+  DevilFimErrors,
+  DevilFimResponses,
+  DevilModesResponses,
+  DevilNotificationsErrors,
+  DevilNotificationsResponses,
+  DevilOrganizationSetErrors,
+  DevilOrganizationSetResponses,
+  DevilProfileErrors,
+  DevilProfileResponses,
   LspStatusResponses,
   McpAddErrors,
   McpAddResponses,
@@ -265,7 +265,7 @@ class HeyApiRegistry<T> {
   get(key?: string): T {
     const instance = this.instances.get(key ?? this.defaultKey)
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new KiloClient()" to fix this error.`)
+      throw new Error(`No SDK client found. Create one with "new DevilClient()" to fix this error.`)
     }
     return instance
   }
@@ -279,7 +279,7 @@ export class Config extends HeyApiClient {
   /**
    * Get global configuration
    *
-   * Retrieve the current global Kilo configuration settings and preferences.
+   * Retrieve the current global Devil configuration settings and preferences.
    */
   public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalConfigGetResponses, unknown, ThrowOnError>({
@@ -291,7 +291,7 @@ export class Config extends HeyApiClient {
   /**
    * Update global configuration
    *
-   * Update global Kilo configuration settings and preferences.
+   * Update global Devil configuration settings and preferences.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -317,7 +317,7 @@ export class Global extends HeyApiClient {
   /**
    * Get health
    *
-   * Get health information about the Kilo server.
+   * Get health information about the Devil server.
    */
   public health<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalHealthResponses, unknown, ThrowOnError>({
@@ -329,7 +329,7 @@ export class Global extends HeyApiClient {
   /**
    * Get global events
    *
-   * Subscribe to global events from the Kilo system using server-sent events.
+   * Subscribe to global events from the Devil system using server-sent events.
    */
   public event<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).sse.get<GlobalEventResponses, unknown, ThrowOnError>({
@@ -341,7 +341,7 @@ export class Global extends HeyApiClient {
   /**
    * Dispose instance
    *
-   * Clean up and dispose all Kilo instances, releasing all resources.
+   * Clean up and dispose all Devil instances, releasing all resources.
    */
   public dispose<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).post<GlobalDisposeResponses, unknown, ThrowOnError>({
@@ -416,7 +416,7 @@ export class Project extends HeyApiClient {
   /**
    * List all projects
    *
-   * Get a list of projects that have been opened with Kilo.
+   * Get a list of projects that have been opened with Devil.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -446,7 +446,7 @@ export class Project extends HeyApiClient {
   /**
    * Get current project
    *
-   * Retrieve the currently active project that Kilo is working with.
+   * Retrieve the currently active project that Devil is working with.
    */
   public current<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -560,7 +560,7 @@ export class Pty extends HeyApiClient {
   /**
    * List PTY sessions
    *
-   * Get a list of all active pseudo-terminal (PTY) sessions managed by Kilo.
+   * Get a list of all active pseudo-terminal (PTY) sessions managed by Devil.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -779,7 +779,7 @@ export class Config2 extends HeyApiClient {
   /**
    * Get configuration
    *
-   * Retrieve the current Kilo configuration settings and preferences.
+   * Retrieve the current Devil configuration settings and preferences.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -809,7 +809,7 @@ export class Config2 extends HeyApiClient {
   /**
    * Update configuration
    *
-   * Update Kilo configuration settings and preferences.
+   * Update Devil configuration settings and preferences.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1059,7 +1059,7 @@ export class Session extends HeyApiClient {
   /**
    * List sessions
    *
-   * Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
+   * Get a list of all Devil sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1393,7 +1393,7 @@ export class Session2 extends HeyApiClient {
   /**
    * List sessions
    *
-   * Get a list of all Kilo sessions, sorted by most recently updated.
+   * Get a list of all Devil sessions, sorted by most recently updated.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1431,7 +1431,7 @@ export class Session2 extends HeyApiClient {
   /**
    * Create session
    *
-   * Create a new Kilo session for interacting with AI assistants and managing conversations.
+   * Create a new Devil session for interacting with AI assistants and managing conversations.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1536,7 +1536,7 @@ export class Session2 extends HeyApiClient {
   /**
    * Get session
    *
-   * Retrieve detailed information about a specific Kilo session.
+   * Retrieve detailed information about a specific Devil session.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3154,11 +3154,11 @@ export class SessionImport extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      KilocodeSessionImportProjectResponses,
-      KilocodeSessionImportProjectErrors,
+      DevilcodeSessionImportProjectResponses,
+      DevilcodeSessionImportProjectErrors,
       ThrowOnError
     >({
-      url: "/kilocode/session-import/project",
+      url: "/devilcode/session-import/project",
       ...options,
       ...params,
       headers: {
@@ -3247,11 +3247,11 @@ export class SessionImport extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      KilocodeSessionImportSessionResponses,
-      KilocodeSessionImportSessionErrors,
+      DevilcodeSessionImportSessionResponses,
+      DevilcodeSessionImportSessionErrors,
       ThrowOnError
     >({
-      url: "/kilocode/session-import/session",
+      url: "/devilcode/session-import/session",
       ...options,
       ...params,
       headers: {
@@ -3339,11 +3339,11 @@ export class SessionImport extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      KilocodeSessionImportMessageResponses,
-      KilocodeSessionImportMessageErrors,
+      DevilcodeSessionImportMessageResponses,
+      DevilcodeSessionImportMessageErrors,
       ThrowOnError
     >({
-      url: "/kilocode/session-import/message",
+      url: "/devilcode/session-import/message",
       ...options,
       ...params,
       headers: {
@@ -3471,11 +3471,11 @@ export class SessionImport extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      KilocodeSessionImportPartResponses,
-      KilocodeSessionImportPartErrors,
+      DevilcodeSessionImportPartResponses,
+      DevilcodeSessionImportPartErrors,
       ThrowOnError
     >({
-      url: "/kilocode/session-import/part",
+      url: "/devilcode/session-import/part",
       ...options,
       ...params,
       headers: {
@@ -3487,7 +3487,7 @@ export class SessionImport extends HeyApiClient {
   }
 }
 
-export class Kilocode extends HeyApiClient {
+export class Devilcode extends HeyApiClient {
   /**
    * Remove a skill
    *
@@ -3513,9 +3513,9 @@ export class Kilocode extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<KilocodeRemoveSkillResponses, KilocodeRemoveSkillErrors, ThrowOnError>(
+    return (options?.client ?? this.client).post<DevilcodeRemoveSkillResponses, DevilcodeRemoveSkillErrors, ThrowOnError>(
       {
-        url: "/kilocode/skill/remove",
+        url: "/devilcode/skill/remove",
         ...options,
         ...params,
         headers: {
@@ -3552,9 +3552,9 @@ export class Kilocode extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<KilocodeRemoveAgentResponses, KilocodeRemoveAgentErrors, ThrowOnError>(
+    return (options?.client ?? this.client).post<DevilcodeRemoveAgentResponses, DevilcodeRemoveAgentErrors, ThrowOnError>(
       {
-        url: "/kilocode/agent/remove",
+        url: "/devilcode/agent/remove",
         ...options,
         ...params,
         headers: {
@@ -3574,9 +3574,9 @@ export class Kilocode extends HeyApiClient {
 
 export class Organization extends HeyApiClient {
   /**
-   * Update Kilo Gateway organization
+   * Update Devil Gateway organization
    *
-   * Switch to a different Kilo Gateway organization
+   * Switch to a different Devil Gateway organization
    */
   public set<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3598,7 +3598,7 @@ export class Organization extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<KiloOrganizationSetResponses, KiloOrganizationSetErrors, ThrowOnError>(
+    return (options?.client ?? this.client).post<DevilOrganizationSetResponses, DevilOrganizationSetErrors, ThrowOnError>(
       {
         url: "/kilo/organization",
         ...options,
@@ -3617,7 +3617,7 @@ export class Session3 extends HeyApiClient {
   /**
    * Get cloud session
    *
-   * Fetch full session data from the Kilo cloud for preview
+   * Fetch full session data from the Devil cloud for preview
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -3639,7 +3639,7 @@ export class Session3 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloCloudSessionGetResponses, KiloCloudSessionGetErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilCloudSessionGetResponses, DevilCloudSessionGetErrors, ThrowOnError>({
       url: "/kilo/cloud/session/{id}",
       ...options,
       ...params,
@@ -3672,8 +3672,8 @@ export class Session3 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      KiloCloudSessionImportResponses,
-      KiloCloudSessionImportErrors,
+      DevilCloudSessionImportResponses,
+      DevilCloudSessionImportErrors,
       ThrowOnError
     >({
       url: "/kilo/cloud/session/import",
@@ -3697,9 +3697,9 @@ export class Cloud extends HeyApiClient {
 
 export class Claw extends HeyApiClient {
   /**
-   * Get KiloClaw instance status
+   * Get DevilClaw instance status
    *
-   * Fetch the user's KiloClaw instance status via the KiloClaw worker
+   * Fetch the user's DevilClaw instance status via the DevilClaw worker
    */
   public status<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3719,7 +3719,7 @@ export class Claw extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloClawStatusResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilClawStatusResponses, unknown, ThrowOnError>({
       url: "/kilo/claw/status",
       ...options,
       ...params,
@@ -3727,9 +3727,9 @@ export class Claw extends HeyApiClient {
   }
 
   /**
-   * Get KiloClaw chat credentials
+   * Get DevilClaw chat credentials
    *
-   * Fetch Stream Chat credentials for the user's KiloClaw instance
+   * Fetch Stream Chat credentials for the user's DevilClaw instance
    */
   public chatCredentials<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3749,7 +3749,7 @@ export class Claw extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloClawChatCredentialsResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilClawChatCredentialsResponses, unknown, ThrowOnError>({
       url: "/kilo/claw/chat-credentials",
       ...options,
       ...params,
@@ -3757,11 +3757,11 @@ export class Claw extends HeyApiClient {
   }
 }
 
-export class Kilo extends HeyApiClient {
+export class Devil extends HeyApiClient {
   /**
-   * Get Kilo Gateway profile
+   * Get Devil Gateway profile
    *
-   * Fetch user profile and organizations from Kilo Gateway
+   * Fetch user profile and organizations from Devil Gateway
    */
   public profile<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3781,7 +3781,7 @@ export class Kilo extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloProfileResponses, KiloProfileErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilProfileResponses, DevilProfileErrors, ThrowOnError>({
       url: "/kilo/profile",
       ...options,
       ...params,
@@ -3811,7 +3811,7 @@ export class Kilo extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloModesResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilModesResponses, unknown, ThrowOnError>({
       url: "/kilo/modes",
       ...options,
       ...params,
@@ -3821,7 +3821,7 @@ export class Kilo extends HeyApiClient {
   /**
    * FIM completion
    *
-   * Proxy a Fill-in-the-Middle completion request to the Kilo Gateway
+   * Proxy a Fill-in-the-Middle completion request to the Devil Gateway
    */
   public fim<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3851,7 +3851,7 @@ export class Kilo extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
+    return (options?.client ?? this.client).sse.post<DevilFimResponses, DevilFimErrors, ThrowOnError>({
       url: "/kilo/fim",
       ...options,
       ...params,
@@ -3864,9 +3864,9 @@ export class Kilo extends HeyApiClient {
   }
 
   /**
-   * Get Kilo notifications
+   * Get Devil notifications
    *
-   * Fetch notifications from Kilo Gateway for CLI display
+   * Fetch notifications from Devil Gateway for CLI display
    */
   public notifications<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3886,7 +3886,7 @@ export class Kilo extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloNotificationsResponses, KiloNotificationsErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilNotificationsResponses, DevilNotificationsErrors, ThrowOnError>({
       url: "/kilo/notifications",
       ...options,
       ...params,
@@ -3896,7 +3896,7 @@ export class Kilo extends HeyApiClient {
   /**
    * Get cloud sessions
    *
-   * Fetch cloud CLI sessions from Kilo API
+   * Fetch cloud CLI sessions from Devil API
    */
   public cloudSessions<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3922,7 +3922,7 @@ export class Kilo extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<KiloCloudSessionsResponses, KiloCloudSessionsErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<DevilCloudSessionsResponses, DevilCloudSessionsErrors, ThrowOnError>({
       url: "/kilo/cloud-sessions",
       ...options,
       ...params,
@@ -4871,7 +4871,7 @@ export class Instance extends HeyApiClient {
   /**
    * Dispose instance
    *
-   * Clean up and dispose the current Kilo instance, releasing all resources.
+   * Clean up and dispose the current Devil instance, releasing all resources.
    */
   public dispose<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4903,7 +4903,7 @@ export class Path extends HeyApiClient {
   /**
    * Get paths
    *
-   * Retrieve the current working directory and related path information for the Kilo instance.
+   * Retrieve the current working directory and related path information for the Devil instance.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4967,7 +4967,7 @@ export class Command extends HeyApiClient {
   /**
    * List commands
    *
-   * Get a list of all available commands in the Kilo system.
+   * Get a list of all available commands in the Devil system.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5044,7 +5044,7 @@ export class App extends HeyApiClient {
   /**
    * List agents
    *
-   * Get a list of all available AI agents in the Kilo system.
+   * Get a list of all available AI agents in the Devil system.
    */
   public agents<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5074,7 +5074,7 @@ export class App extends HeyApiClient {
   /**
    * List skills
    *
-   * Get a list of all available skills in the Kilo system.
+   * Get a list of all available skills in the Devil system.
    */
   public skills<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -5198,12 +5198,12 @@ export class Event extends HeyApiClient {
   }
 }
 
-export class KiloClient extends HeyApiClient {
-  public static readonly __registry = new HeyApiRegistry<KiloClient>()
+export class DevilClient extends HeyApiClient {
+  public static readonly __registry = new HeyApiRegistry<DevilClient>()
 
   constructor(args?: { client?: Client; key?: string }) {
     super(args)
-    KiloClient.__registry.set(this, args?.key)
+    DevilClient.__registry.set(this, args?.key)
   }
 
   private _global?: Global
@@ -5291,14 +5291,14 @@ export class KiloClient extends HeyApiClient {
     return (this._enhancePrompt ??= new EnhancePrompt({ client: this.client }))
   }
 
-  private _kilocode?: Kilocode
-  get kilocode(): Kilocode {
-    return (this._kilocode ??= new Kilocode({ client: this.client }))
+  private _devilcode?: Devilcode
+  get devilcode(): Devilcode {
+    return (this._devilcode ??= new Devilcode({ client: this.client }))
   }
 
-  private _kilo?: Kilo
-  get kilo(): Kilo {
-    return (this._kilo ??= new Kilo({ client: this.client }))
+  private _kilo?: Devil
+  get kilo(): Devil {
+    return (this._kilo ??= new Devil({ client: this.client }))
   }
 
   private _find?: Find

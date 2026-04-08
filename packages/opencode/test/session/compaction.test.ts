@@ -372,7 +372,7 @@ describe("session.getUsage", () => {
     expect(result.cost).toBe(3 + 1.5)
   })
 
-  // kilocode_change start - Test for OpenRouter provider cost
+  // devilcode_change start - Test for OpenRouter provider cost
   test("uses openrouter provider cost when available", () => {
     const model = createModel({
       context: 100_000,
@@ -459,7 +459,7 @@ describe("session.getUsage", () => {
     expect(result.cost).toBe(3 + 1.5)
   })
 
-  test("uses upstreamInferenceCost for Kilo provider", () => {
+  test("uses upstreamInferenceCost for Devil provider", () => {
     const model = createModel({
       context: 100_000,
       output: 32_000,
@@ -490,7 +490,7 @@ describe("session.getUsage", () => {
       },
     })
 
-    // Should use upstreamInferenceCost for Kilo provider (BYOK)
+    // Should use upstreamInferenceCost for Devil provider (BYOK)
     expect(result.cost).toBe(0.2)
   })
 
@@ -562,7 +562,7 @@ describe("session.getUsage", () => {
     expect(result.cost).toBe(0.3)
   })
 
-  test("uses regular cost when upstreamInferenceCost is missing for Kilo", () => {
+  test("uses regular cost when upstreamInferenceCost is missing for Devil", () => {
     const model = createModel({
       context: 100_000,
       output: 32_000,
@@ -591,10 +591,10 @@ describe("session.getUsage", () => {
       },
     })
 
-    // When upstream cost is missing for Kilo, fall back to regular cost field
+    // When upstream cost is missing for Devil, fall back to regular cost field
     expect(result.cost).toBe(0.01)
   })
-  // kilocode_change end
+  // devilcode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(
     "computes total from components for %s models",

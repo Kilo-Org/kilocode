@@ -1,19 +1,19 @@
 /**
  * legacy-migration - Core migration service.
  *
- * Reads legacy Kilo Code v5.x data from VS Code SecretStorage and the extension's
+ * Reads legacy Devil Code v5.x data from VS Code SecretStorage and the extension's
  * global storage directory, then writes it to the new CLI backend via the SDK.
  */
 
 import * as vscode from "vscode"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
+import type { DevilClient } from "@devilcode/sdk/v2/client"
 import type {
   McpLocalConfig,
   McpRemoteConfig,
   AgentConfig,
   PermissionConfig,
   PermissionObjectConfig,
-} from "@kilocode/sdk/v2/client"
+} from "@devilcode/sdk/v2/client"
 import { PROVIDER_MAP, UNSUPPORTED_PROVIDERS, DEFAULT_MODE_SLUGS } from "./provider-mapping"
 import type { ProviderMapping } from "./provider-mapping"
 import { NATIVE_MODE_DEFAULTS } from "./native-mode-defaults"
@@ -147,7 +147,7 @@ export type ProgressCallback = (
  */
 export async function migrate(
   context: vscode.ExtensionContext,
-  client: KiloClient,
+  client: DevilClient,
   selections: MigrationSelections,
   onProgress: ProgressCallback,
   cachedSettings?: LegacySettings,
@@ -392,7 +392,7 @@ async function migrateProvider(
   context: vscode.ExtensionContext,
   profileName: string,
   settings: LegacyProviderSettings,
-  client: KiloClient,
+  client: DevilClient,
 ): Promise<MigrationResultItem> {
   const provider = settings.apiProvider
   if (!provider) {
@@ -448,7 +448,7 @@ async function migrateProvider(
     return { item: profileName, category: "provider", status: "warning", message: "No API key found in profile" }
   }
 
-  // The profile endpoint requires type:"oauth". The legacy extension stored the same Kilo
+  // The profile endpoint requires type:"oauth". The legacy extension stored the same Devil
   // API token — write it in the OAuth format the new extension expects (matching device-auth:
   // access + refresh + 1-year expiry).
   if (mapping.id === "kilo") {
@@ -466,7 +466,7 @@ async function migrateProvider(
     return { item: profileName, category: "provider", status: "success" }
   }
 
-  // For providers that support an organization ID (e.g. Kilo Gateway), migrate using OAuth
+  // For providers that support an organization ID (e.g. Devil Gateway), migrate using OAuth
   // auth so the CLI can read accountId for org-scoped API requests.
   const organizationId = mapping.organizationIdField
     ? (settings[mapping.organizationIdField] as string | undefined)
@@ -496,7 +496,7 @@ async function migrateProvider(
 async function migrateConfigFields(
   mapping: ProviderMapping,
   settings: LegacyProviderSettings,
-  client: KiloClient,
+  client: DevilClient,
 ): Promise<void> {
   if (!mapping.configFields?.length) return
   const opts: Record<string, string> = {}
@@ -511,7 +511,7 @@ async function migrateConfigFields(
   }
 }
 
-async function migrateDefaultModel(settings: LegacyProviderSettings, client: KiloClient): Promise<MigrationResultItem> {
+async function migrateDefaultModel(settings: LegacyProviderSettings, client: DevilClient): Promise<MigrationResultItem> {
   const provider = settings.apiProvider
   if (!provider) {
     return { item: "Default model", category: "defaultModel", status: "error", message: "No provider type found" }
@@ -544,7 +544,7 @@ async function migrateDefaultModel(settings: LegacyProviderSettings, client: Kil
 async function migrateAutoApproval(
   settings: LegacySettings,
   sel: MigrationAutoApprovalSelections,
-  client: KiloClient,
+  client: DevilClient,
   onProgress: ProgressCallback,
 ): Promise<MigrationResultItem[]> {
   const {

@@ -1,11 +1,11 @@
 ---
 title: "VS Code Extension"
-description: "Using Kilo Code in Visual Studio Code"
+description: "Using devil Code in Visual Studio Code"
 ---
 
 # VS Code Extension
 
-Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extension and the current **VSCode** version built on the Kilo CLI core.
+devil Code is available as two VS Code extensions: the **VSCode (Legacy)** extension and the current **VSCode** version built on the devil CLI core.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -14,19 +14,19 @@ Kilo Code is available as two VS Code extensions: the **VSCode (Legacy)** extens
 
 1. Open VS Code
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
-3. Search for "Kilo Code"
+3. Search for "devil Code"
 4. Click the dropdown arrow next to **Install** and select **Install Pre-Release Version**
 
-The extension bundles its own CLI binary and spawns `kilo serve` as a background process. All communication happens over HTTP + SSE.
+The extension bundles its own CLI binary and spawns `devil serve` as a background process. All communication happens over HTTP + SSE.
 
 ## Key Features
 
 Key features include:
 
 - **SolidJS-based UI** — Rebuilt sidebar with a modern component architecture
-- **[JSONC config files](/docs/getting-started/settings)** — Portable settings in `kilo.jsonc` instead of VS Code settings
+- **[JSONC config files](/docs/getting-started/settings)** — Portable settings in `devil.jsonc` instead of VS Code settings
 - **[Granular permissions](/docs/getting-started/settings/auto-approving-actions)** — Per-tool permission rules with glob patterns
-- **[Agents](/docs/code-with-ai/agents/using-agents)** — Customizable agents (`.kilo/agents/*.md`) replacing the modes system
+- **[Agents](/docs/code-with-ai/agents/using-agents)** — Customizable agents (`.devil/agents/*.md`) replacing the modes system
 - **[Agent Manager](/docs/automate/agent-manager)** — Enhanced with diff panel, multi-model comparison, PR import, and code review annotations
 - **[Autocomplete](/docs/code-with-ai/features/autocomplete)** — FIM-based with Codestral, status bar cost tracking
 - **[Workflows](/docs/customize/workflows)** — Repeatable prompt templates as `.md` files
@@ -38,7 +38,7 @@ Key features include:
 
 ## Shared Settings
 
-The extension shares its configuration with the CLI. Settings in `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) apply to both the CLI and the extension.
+The extension shares its configuration with the CLI. Settings in `~/.config/devil/devil.jsonc` (global) and `./devil.jsonc` (project) apply to both the CLI and the extension.
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -53,7 +53,7 @@ The extension shares its configuration with the CLI. Settings in `~/.config/kilo
 - **[Autocomplete](/docs/code-with-ai/features/autocomplete)** — Inline code completions as you type
 - **[Code Actions](/docs/code-with-ai/features/code-actions)** — Explain, fix, and improve code from the editor context menu
 - **[Agents](/docs/code-with-ai/agents/using-agents)** — Code, Ask, Architect, Debug, Orchestrator, and Review modes
-- **[Custom Modes](/docs/customize/custom-modes)** — Define custom modes with `.kilocodemodes` YAML files
+- **[Custom Modes](/docs/customize/custom-modes)** — Define custom modes with `.devilcodemodes` YAML files
 - **[MCP](/docs/automate/mcp/overview)** — Connect to MCP servers for extended capabilities
 - **[Agent Manager](/docs/automate/agent-manager)** — Multi-session orchestration with git worktree isolation
 - **[Git Commit Generation](/docs/code-with-ai/features/git-commit-generation)** — AI-powered commit messages from the Source Control panel

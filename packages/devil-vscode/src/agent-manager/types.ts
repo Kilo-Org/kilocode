@@ -7,7 +7,7 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiff } from "@kilocode/sdk/v2/client"
+import type { FileDiff } from "@devilcode/sdk/v2/client"
 import type { Worktree, ManagedSession } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"

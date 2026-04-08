@@ -1,5 +1,5 @@
 /**
- * Custom OAuth handler for Kilo Gateway
+ * Custom OAuth handler for Devil Gateway
  *
  * Handles the device authorization flow and organization selection
  * before completing authentication.
@@ -13,7 +13,7 @@ import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { Link } from "@tui/ui/link"
 import { Clipboard } from "@tui/util/clipboard"
-import { DialogKiloOrganization } from "./dialog-kilo-organization.js"
+import { DialogDevilOrganization } from "./dialog-kilo-organization.js"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -21,7 +21,7 @@ type UseTheme = any
 type ProviderAuthAuthorization = any
 type DialogModel = any
 
-interface KiloAutoMethodProps {
+interface DevilAutoMethodProps {
   index: number
   providerID: string
   title: string
@@ -31,7 +31,7 @@ interface KiloAutoMethodProps {
   DialogModel: DialogModel
 }
 
-export function KiloAutoMethod(props: KiloAutoMethodProps) {
+export function DevilAutoMethod(props: DevilAutoMethodProps) {
   const { theme } = props.useTheme()
   const sdk = props.useSDK()
   const dialog = useDialog()
@@ -83,7 +83,7 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
         await sync.bootstrap()
 
         dialog.replace(() => (
-          <DialogKiloOrganization
+          <DialogDevilOrganization
             organizations={profile.organizations!}
             userEmail={profile.email}
             providerID={props.providerID}
@@ -102,7 +102,7 @@ export function KiloAutoMethod(props: KiloAutoMethodProps) {
       if (error instanceof DOMException && error.name === "AbortError") return
 
       // Error fetching profile - fallback to personal account
-      console.warn("Failed to fetch Kilo profile, using personal account:", error)
+      console.warn("Failed to fetch Devil profile, using personal account:", error)
       setStatus("error")
 
       toast.show({

@@ -15,7 +15,7 @@ export namespace Question {
       mode: z
         .string()
         .optional()
-        .describe("Optional agent/mode to switch to when selected (e.g. code, debug, orchestrator)"), // kilocode_change
+        .describe("Optional agent/mode to switch to when selected (e.g. code, debug, orchestrator)"), // devilcode_change
     })
     .meta({
       ref: "QuestionOption",

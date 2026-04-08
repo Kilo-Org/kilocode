@@ -8,7 +8,7 @@ import {
   type StepResult,
 } from "../../src/agent-manager/continue-in-worktree"
 import type { CreateWorktreeResult } from "../../src/agent-manager/WorktreeManager"
-import type { Session } from "@kilocode/sdk/v2/client"
+import type { Session } from "@devilcode/sdk/v2/client"
 
 const noop = () => {}
 const log = noop as (...args: unknown[]) => void

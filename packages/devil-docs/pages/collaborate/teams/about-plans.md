@@ -1,25 +1,25 @@
 ---
 title: "About Plans"
-description: "Overview of Kilo Code plans and pricing"
+description: "Overview of devil Code plans and pricing"
 ---
 
 # About Plans
 
-Kilo Code accelerates development with AI-driven code generation and task automation. You can use Kilo Code as an open source extension in VS Code or JetBrains IDEs.
+devil Code accelerates development with AI-driven code generation and task automation. You can use devil Code as an open source extension in VS Code or JetBrains IDEs.
 
 Organizations adopting AI accelerated coding at scale often want a better way to monitor, manage, and collaborate on their AI-drive practices.
 
-Kilo Code's paid plans, Teams and Enterprise, are the solution for these organizations.
+devil Code's paid plans, Teams and Enterprise, are the solution for these organizations.
 
 {% callout type="note" %}
 
-Purchases of Kilo Code's paid plans are separate from model provider credits.
+Purchases of devil Code's paid plans are separate from model provider credits.
 
 No credits are included with a Teams or Enterprise plan purchase.
 
 {% /callout %}
 
-## What You Get from Kilo Teams
+## What You Get from devil Teams
 
 - **Zero markup** on AI provider costs - pay exactly what providers charge
 - **No rate limiting** or quality degradation during peak usage
@@ -30,7 +30,7 @@ No credits are included with a Teams or Enterprise plan purchase.
 
 **Cost:** $15 per user per month
 
-## What You Get from Kilo Enterprise
+## What You Get from devil Enterprise
 
 **Everything from Teams** plus...
 
@@ -40,4 +40,4 @@ No credits are included with a Teams or Enterprise plan purchase.
 - **SLA commitments** for support issues
 - **Dedicated support channels** for private, direct communication
 
-**Cost:** [Contact Sales](https://kilo.ai/contact-sales)
+**Cost:** [Contact Sales](https://devil.ai/contact-sales)

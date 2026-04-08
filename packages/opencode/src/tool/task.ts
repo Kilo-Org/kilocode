@@ -10,6 +10,8 @@ import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { PermissionNext } from "@/permission/next"
+import { resolveTaskModel, TeamConcurrencyError } from "@/devilcode/team/router" // devilcode_change
+import { getConcurrencyManager } from "@/devilcode/team/concurrency" // devilcode_change
 
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
@@ -61,7 +63,15 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
 
-      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // kilocode_change
+      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // devilcode_change
+
+      // devilcode_change start — unlock nesting for team roles that can delegate
+      const teamCanDelegate =
+        config.team?.enabled &&
+        config.team.roles[params.subagent_type] &&
+        config.team.roles[params.subagent_type].canDelegate.length > 0
+      const effectiveAllowsTask = allowsTask || !!teamCanDelegate
+      // devilcode_change end
 
       const session = await iife(async () => {
         if (params.task_id) {
@@ -83,7 +93,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
               pattern: "*",
               action: "deny",
             },
-            ...(allowsTask
+            ...(effectiveAllowsTask
               ? []
               : [
                   {
@@ -103,16 +113,25 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
       if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
 
-      const model = agent.model ?? {
+      // devilcode_change start — team model routing
+      const teamModel = resolveTaskModel({
+        subagentType: params.subagent_type,
+        teamConfig: config.team,
+        parentRole: ctx.teamRole,
+      })
+      const model = teamModel?.model ?? agent.model ?? {
         modelID: msg.info.modelID,
         providerID: msg.info.providerID,
       }
+      const resolvedRole = teamModel?.role
+      // devilcode_change end
 
       ctx.metadata({
         title: params.description,
         metadata: {
           sessionId: session.id,
           model,
+          teamRole: resolvedRole, // devilcode_change
         },
       })
 
@@ -125,22 +144,43 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       using _ = defer(() => ctx.abort.removeEventListener("abort", cancel))
       const promptParts = await SessionPrompt.resolvePromptParts(params.prompt)
 
-      const result = await SessionPrompt.prompt({
-        messageID,
-        sessionID: session.id,
-        model: {
-          modelID: model.modelID,
-          providerID: model.providerID,
-        },
-        agent: agent.name,
-        tools: {
-          todowrite: false,
-          todoread: false,
-          ...(allowsTask ? {} : { task: false }),
-          ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
-        },
-        parts: promptParts,
-      })
+      // devilcode_change start — concurrency tracking
+      const concurrency = getConcurrencyManager()
+      if (resolvedRole) {
+        const roleConfig = config.team?.roles[resolvedRole]
+        if (roleConfig && !concurrency.hasCapacity(resolvedRole, roleConfig.maxConcurrent)) {
+          throw new TeamConcurrencyError({
+            role: resolvedRole,
+            maxConcurrent: roleConfig.maxConcurrent,
+          })
+        }
+        concurrency.acquire(resolvedRole, session.id)
+      }
+
+      let result
+      try {
+        result = await SessionPrompt.prompt({
+          messageID,
+          sessionID: session.id,
+          model: {
+            modelID: model.modelID,
+            providerID: model.providerID,
+          },
+          agent: agent.name,
+          tools: {
+            todowrite: false,
+            todoread: false,
+            ...(effectiveAllowsTask ? {} : { task: false }),
+            ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
+          },
+          parts: promptParts,
+        })
+      } finally {
+        if (resolvedRole) {
+          concurrency.release(resolvedRole, session.id)
+        }
+      }
+      // devilcode_change end
 
       const text = result.parts.findLast((x) => x.type === "text")?.text ?? ""
 

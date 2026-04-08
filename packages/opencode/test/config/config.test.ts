@@ -10,7 +10,7 @@ import { Global } from "../../src/global"
 import { Filesystem } from "../../src/util/filesystem"
 
 // Get managed config directory from environment (set in preload.ts)
-const managedConfigDir = process.env.KILO_TEST_MANAGED_CONFIG_DIR!
+const managedConfigDir = process.env.DEVIL_TEST_MANAGED_CONFIG_DIR!
 
 afterEach(async () => {
   await fs.rm(managedConfigDir, { force: true, recursive: true }).catch(() => {})
@@ -68,7 +68,7 @@ test("loads JSON config file", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         model: "test/model",
         username: "testuser",
       })
@@ -130,7 +130,7 @@ test("loads JSONC config file", async () => {
         path.join(dir, "opencode.jsonc"),
         `{
         // This is a comment
-        "$schema": "https://app.kilo.ai/config.json",
+        "$schema": "https://app.devil.ai/config.json",
         "model": "test/model",
         "username": "testuser"
       }`,
@@ -153,14 +153,14 @@ test("merges multiple config files with correct precedence", async () => {
       await writeConfig(
         dir,
         {
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           model: "base",
           username: "base",
         },
         "opencode.jsonc",
       )
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         model: "override",
       })
     },
@@ -175,20 +175,20 @@ test("merges multiple config files with correct precedence", async () => {
   })
 })
 
-test("prefers .kilo directory config over legacy .kilocode", async () => {
+test("prefers .kilo directory config over legacy .devilcode", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, ".kilocode", "kilo.json"),
+        path.join(dir, ".devilcode", "kilo.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           model: "legacy/model",
         }),
       )
       await Filesystem.write(
         path.join(dir, ".kilo", "kilo.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           model: "new/model",
         }),
       )
@@ -212,7 +212,7 @@ test("handles environment variable substitution", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
         await writeConfig(dir, {
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           username: "{env:TEST_VAR}",
         })
       },
@@ -276,7 +276,7 @@ test("handles file inclusion substitution", async () => {
     init: async (dir) => {
       await Filesystem.write(path.join(dir, "included.txt"), "test-user")
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         username: "{file:included.txt}",
       })
     },
@@ -295,7 +295,7 @@ test("handles file inclusion with replacement tokens", async () => {
     init: async (dir) => {
       await Filesystem.write(path.join(dir, "included.md"), "const out = await Bun.$`echo hi`")
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         username: "{file:included.md}",
       })
     },
@@ -313,7 +313,7 @@ test("validates config schema and throws on invalid fields", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         invalid_field: "should cause error",
       })
     },
@@ -345,7 +345,7 @@ test("handles agent configuration", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         agent: {
           test_agent: {
             model: "test/model",
@@ -375,7 +375,7 @@ test("treats agent variant as model-scoped setting (not provider option)", async
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         agent: {
           test_agent: {
             model: "openai/gpt-5.2",
@@ -406,7 +406,7 @@ test("handles command configuration", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         command: {
           test_command: {
             template: "test template",
@@ -436,7 +436,7 @@ test("migrates autoshare to share field", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           autoshare: true,
         }),
       )
@@ -458,7 +458,7 @@ test("migrates mode field to agent field", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mode: {
             test_mode: {
               model: "test/model",
@@ -657,11 +657,11 @@ Nested command template`,
   })
 })
 
-test("prefers .kilo commands over legacy .kilocode commands", async () => {
+test("prefers .kilo commands over legacy .devilcode commands", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(
-        path.join(dir, ".kilocode", "command", "hello.md"),
+        path.join(dir, ".devilcode", "command", "hello.md"),
         `---
 description: Legacy command
 ---
@@ -715,7 +715,7 @@ test("gets config directories", async () => {
   })
 })
 
-test("does not try to install dependencies in read-only KILO_CONFIG_DIR", async () => {
+test("does not try to install dependencies in read-only DEVIL_CONFIG_DIR", async () => {
   if (process.platform === "win32") return
 
   await using tmp = await tmpdir<string>({
@@ -732,8 +732,8 @@ test("does not try to install dependencies in read-only KILO_CONFIG_DIR", async 
     },
   })
 
-  const prev = process.env.KILO_CONFIG_DIR
-  process.env.KILO_CONFIG_DIR = tmp.extra
+  const prev = process.env.DEVIL_CONFIG_DIR
+  process.env.DEVIL_CONFIG_DIR = tmp.extra
 
   try {
     await Instance.provide({
@@ -743,12 +743,12 @@ test("does not try to install dependencies in read-only KILO_CONFIG_DIR", async 
       },
     })
   } finally {
-    if (prev === undefined) delete process.env.KILO_CONFIG_DIR
-    else process.env.KILO_CONFIG_DIR = prev
+    if (prev === undefined) delete process.env.DEVIL_CONFIG_DIR
+    else process.env.DEVIL_CONFIG_DIR = prev
   }
 })
 
-test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
+test("installs dependencies in writable DEVIL_CONFIG_DIR", async () => {
   await using tmp = await tmpdir<string>({
     init: async (dir) => {
       const cfg = path.join(dir, "configdir")
@@ -757,8 +757,8 @@ test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
     },
   })
 
-  const prev = process.env.KILO_CONFIG_DIR
-  process.env.KILO_CONFIG_DIR = tmp.extra
+  const prev = process.env.DEVIL_CONFIG_DIR
+  process.env.DEVIL_CONFIG_DIR = tmp.extra
 
   try {
     await Instance.provide({
@@ -772,8 +772,8 @@ test("installs dependencies in writable KILO_CONFIG_DIR", async () => {
     expect(await Filesystem.exists(path.join(tmp.extra, "package.json"))).toBe(true)
     expect(await Filesystem.exists(path.join(tmp.extra, ".gitignore"))).toBe(true)
   } finally {
-    if (prev === undefined) delete process.env.KILO_CONFIG_DIR
-    else process.env.KILO_CONFIG_DIR = prev
+    if (prev === undefined) delete process.env.DEVIL_CONFIG_DIR
+    else process.env.DEVIL_CONFIG_DIR = prev
   }
 })
 
@@ -806,7 +806,7 @@ test("resolves scoped npm plugins in config", async () => {
 
       await Filesystem.write(
         path.join(dir, "opencode.json"),
-        JSON.stringify({ $schema: "https://app.kilo.ai/config.json", plugin: ["@scope/plugin"] }, null, 2),
+        JSON.stringify({ $schema: "https://app.devil.ai/config.json", plugin: ["@scope/plugin"] }, null, 2),
       )
     },
   })
@@ -841,7 +841,7 @@ test("merges plugin arrays from global and local configs", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           plugin: ["global-plugin-1", "global-plugin-2"],
         }),
       )
@@ -850,7 +850,7 @@ test("merges plugin arrays from global and local configs", async () => {
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           plugin: ["local-plugin-1"],
         }),
       )
@@ -917,7 +917,7 @@ test("merges instructions arrays from global and local configs", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           instructions: ["global-instructions.md", "shared-rules.md"],
         }),
       )
@@ -925,7 +925,7 @@ test("merges instructions arrays from global and local configs", async () => {
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           instructions: ["local-instructions.md"],
         }),
       )
@@ -956,7 +956,7 @@ test("deduplicates duplicate instructions from global and local configs", async 
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           instructions: ["duplicate.md", "global-only.md"],
         }),
       )
@@ -964,7 +964,7 @@ test("deduplicates duplicate instructions from global and local configs", async 
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           instructions: ["duplicate.md", "local-only.md"],
         }),
       )
@@ -1000,7 +1000,7 @@ test("deduplicates duplicate plugins from global and local configs", async () =>
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           plugin: ["duplicate-plugin", "global-plugin-1"],
         }),
       )
@@ -1009,7 +1009,7 @@ test("deduplicates duplicate plugins from global and local configs", async () =>
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           plugin: ["duplicate-plugin", "local-plugin-1"],
         }),
       )
@@ -1048,7 +1048,7 @@ test("migrates legacy tools config to permissions - allow", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1079,7 +1079,7 @@ test("migrates legacy tools config to permissions - deny", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1110,7 +1110,7 @@ test("migrates legacy write tool to edit permission", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1134,13 +1134,13 @@ test("migrates legacy write tool to edit permission", async () => {
 })
 
 // Managed settings tests
-// Note: preload.ts sets KILO_TEST_MANAGED_CONFIG which Global.Path.managedConfig uses
+// Note: preload.ts sets DEVIL_TEST_MANAGED_CONFIG which Global.Path.managedConfig uses
 
 test("managed settings override user settings", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         model: "user/model",
         share: "auto",
         username: "testuser",
@@ -1149,7 +1149,7 @@ test("managed settings override user settings", async () => {
   })
 
   await writeManagedSettings({
-    $schema: "https://app.kilo.ai/config.json",
+    $schema: "https://app.devil.ai/config.json",
     model: "managed/model",
     share: "disabled",
   })
@@ -1169,7 +1169,7 @@ test("managed settings override project settings", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         autoupdate: true,
         disabled_providers: [],
       })
@@ -1177,7 +1177,7 @@ test("managed settings override project settings", async () => {
   })
 
   await writeManagedSettings({
-    $schema: "https://app.kilo.ai/config.json",
+    $schema: "https://app.devil.ai/config.json",
     autoupdate: false,
     disabled_providers: ["openai"],
   })
@@ -1196,7 +1196,7 @@ test("missing managed settings file is not an error", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
-        $schema: "https://app.kilo.ai/config.json",
+        $schema: "https://app.devil.ai/config.json",
         model: "user/model",
       })
     },
@@ -1217,7 +1217,7 @@ test("migrates legacy edit tool to edit permission", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1246,7 +1246,7 @@ test("migrates legacy patch tool to edit permission", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1275,7 +1275,7 @@ test("migrates legacy multiedit tool to edit permission", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1304,7 +1304,7 @@ test("migrates mixed legacy tools config", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               tools: {
@@ -1339,7 +1339,7 @@ test("merges legacy tools with existing permission config", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           agent: {
             test: {
               permission: {
@@ -1372,7 +1372,7 @@ test("permission config preserves key order", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           permission: {
             "*": "deny",
             edit: "ask",
@@ -1420,7 +1420,7 @@ test("project config can override MCP server enabled status", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.jsonc"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             jira: {
               type: "remote",
@@ -1439,7 +1439,7 @@ test("project config can override MCP server enabled status", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             jira: {
               type: "remote",
@@ -1478,7 +1478,7 @@ test("MCP config deep merges preserving base config properties", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.jsonc"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             myserver: {
               type: "remote",
@@ -1495,7 +1495,7 @@ test("MCP config deep merges preserving base config properties", async () => {
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             myserver: {
               type: "remote",
@@ -1530,7 +1530,7 @@ test("local .opencode config can override MCP from project config", async () => 
       await Filesystem.write(
         path.join(dir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             docs: {
               type: "remote",
@@ -1546,7 +1546,7 @@ test("local .opencode config can override MCP from project config", async () => 
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
-          $schema: "https://app.kilo.ai/config.json",
+          $schema: "https://app.devil.ai/config.json",
           mcp: {
             docs: {
               type: "remote",
@@ -1614,7 +1614,7 @@ test("project config overrides remote well-known config", async () => {
         await Filesystem.write(
           path.join(dir, "opencode.json"),
           JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
+            $schema: "https://app.devil.ai/config.json",
             mcp: {
               jira: {
                 type: "remote",
@@ -1772,7 +1772,7 @@ describe("deduplicatePlugins", () => {
         await Filesystem.write(
           path.join(dir, "opencode.json"),
           JSON.stringify({
-            $schema: "https://app.kilo.ai/config.json",
+            $schema: "https://app.devil.ai/config.json",
             plugin: ["my-plugin@1.0.0"],
           }),
         )
@@ -1795,10 +1795,10 @@ describe("deduplicatePlugins", () => {
   })
 })
 
-describe("KILO_DISABLE_PROJECT_CONFIG", () => {
+describe("DEVIL_DISABLE_PROJECT_CONFIG", () => {
   test("skips project config files when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+    const originalEnv = process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
+    process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = "true"
 
     try {
       await using tmp = await tmpdir({
@@ -1807,7 +1807,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
           await Filesystem.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
+              $schema: "https://app.devil.ai/config.json",
               model: "project/model",
               username: "project-user",
             }),
@@ -1825,16 +1825,16 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
       })
     } finally {
       if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
+        delete process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
       } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
+        process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = originalEnv
       }
     }
   })
 
   test("skips project .opencode/ directories when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+    const originalEnv = process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
+    process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = "true"
 
     try {
       await using tmp = await tmpdir({
@@ -1856,16 +1856,16 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
       })
     } finally {
       if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
+        delete process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
       } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
+        process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = originalEnv
       }
     }
   })
 
   test("still loads global config when flag is set", async () => {
-    const originalEnv = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+    const originalEnv = process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
+    process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = "true"
 
     try {
       await using tmp = await tmpdir()
@@ -1880,21 +1880,21 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
       })
     } finally {
       if (originalEnv === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
+        delete process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
       } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalEnv
+        process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = originalEnv
       }
     }
   })
 
   test("skips relative instructions with warning when flag is set but no config dir", async () => {
-    const originalDisable = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    const originalConfigDir = process.env["KILO_CONFIG_DIR"]
+    const originalDisable = process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
+    const originalConfigDir = process.env["DEVIL_CONFIG_DIR"]
 
     try {
       // Ensure no config dir is set
-      delete process.env["KILO_CONFIG_DIR"]
-      process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
+      delete process.env["DEVIL_CONFIG_DIR"]
+      process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = "true"
 
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -1902,7 +1902,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
           await Filesystem.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
+              $schema: "https://app.devil.ai/config.json",
               instructions: ["./CUSTOM.md"],
             }),
           )
@@ -1925,21 +1925,21 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
       })
     } finally {
       if (originalDisable === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
+        delete process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
       } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalDisable
+        process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = originalDisable
       }
       if (originalConfigDir === undefined) {
-        delete process.env["KILO_CONFIG_DIR"]
+        delete process.env["DEVIL_CONFIG_DIR"]
       } else {
-        process.env["KILO_CONFIG_DIR"] = originalConfigDir
+        process.env["DEVIL_CONFIG_DIR"] = originalConfigDir
       }
     }
   })
 
-  test("KILO_CONFIG_DIR still works when flag is set", async () => {
-    const originalDisable = process.env["KILO_DISABLE_PROJECT_CONFIG"]
-    const originalConfigDir = process.env["KILO_CONFIG_DIR"]
+  test("DEVIL_CONFIG_DIR still works when flag is set", async () => {
+    const originalDisable = process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
+    const originalConfigDir = process.env["DEVIL_CONFIG_DIR"]
 
     try {
       await using configDirTmp = await tmpdir({
@@ -1948,7 +1948,7 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
           await Filesystem.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
+              $schema: "https://app.devil.ai/config.json",
               model: "configdir/model",
             }),
           )
@@ -1961,34 +1961,34 @@ describe("KILO_DISABLE_PROJECT_CONFIG", () => {
           await Filesystem.write(
             path.join(dir, "opencode.json"),
             JSON.stringify({
-              $schema: "https://app.kilo.ai/config.json",
+              $schema: "https://app.devil.ai/config.json",
               model: "project/model",
             }),
           )
         },
       })
 
-      process.env["KILO_DISABLE_PROJECT_CONFIG"] = "true"
-      process.env["KILO_CONFIG_DIR"] = configDirTmp.path
+      process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = "true"
+      process.env["DEVIL_CONFIG_DIR"] = configDirTmp.path
 
       await Instance.provide({
         directory: projectTmp.path,
         fn: async () => {
           const config = await Config.get()
-          // Should load from KILO_CONFIG_DIR, not project
+          // Should load from DEVIL_CONFIG_DIR, not project
           expect(config.model).toBe("configdir/model")
         },
       })
     } finally {
       if (originalDisable === undefined) {
-        delete process.env["KILO_DISABLE_PROJECT_CONFIG"]
+        delete process.env["DEVIL_DISABLE_PROJECT_CONFIG"]
       } else {
-        process.env["KILO_DISABLE_PROJECT_CONFIG"] = originalDisable
+        process.env["DEVIL_DISABLE_PROJECT_CONFIG"] = originalDisable
       }
       if (originalConfigDir === undefined) {
-        delete process.env["KILO_CONFIG_DIR"]
+        delete process.env["DEVIL_CONFIG_DIR"]
       } else {
-        process.env["KILO_CONFIG_DIR"] = originalConfigDir
+        process.env["DEVIL_CONFIG_DIR"] = originalConfigDir
       }
     }
   })

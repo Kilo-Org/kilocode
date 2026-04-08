@@ -1,10 +1,4 @@
-// Set env before any imports that transitively load flag.ts (e.g. LLM, SessionRetry).
-// This MUST happen before static imports, but ES module imports are hoisted.
-// So we set it here and use mock.module + dynamic imports for modules that
-// transitively load flag.ts to ensure the env is captured at load time.
-process.env.KILO_SESSION_RETRY_LIMIT = "2"
-
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { describe, expect, mock, spyOn, test } from "bun:test"
 
 mock.module("@/kilo-sessions/remote-sender", () => ({
   RemoteSender: {
@@ -67,13 +61,8 @@ function sentinel() {
   return new Error("unexpected extra llm call")
 }
 
-afterEach(() => {
-  delete process.env.KILO_SESSION_RETRY_LIMIT
-})
-
 describe("session processor retry limit", () => {
   test("stops after two retries with the normalized retryable error", async () => {
-    // Dynamic imports so that flag.ts sees KILO_SESSION_RETRY_LIMIT="2" set above
     const { Bus } = await import("../../src/bus")
     const { Identifier } = await import("../../src/id/id")
     const { Instance } = await import("../../src/project/instance")
@@ -82,7 +71,7 @@ describe("session processor retry limit", () => {
     const { SessionRetry } = await import("../../src/session/retry")
     const { SessionStatus } = await import("../../src/session/status")
 
-    await using tmp = await tmpdir({ git: true })
+    await using tmp = await tmpdir({ git: true, config: { snapshot: false } })
 
     await Instance.provide({
       directory: tmp.path,
@@ -134,12 +123,24 @@ describe("session processor retry limit", () => {
           if (event.properties.sessionID !== session.id) return
           errors.push(event.properties.error)
         })
-        const llm = spyOn(LLM, "stream")
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValue(sentinel())
-        const sleep = spyOn(SessionRetry, "sleep").mockResolvedValue(undefined)
+        // Track LLM calls locally to avoid cross-file spy interference.
+        // When Bun runs test files in parallel in the same process,
+        // spyOn(LLM, "stream") on a shared module object can race with
+        // other test files that spy on the same function.
+        let llmCallCount = 0
+        const llm = spyOn(LLM, "stream").mockImplementation(async () => {
+          llmCallCount++
+          if (llmCallCount <= 3) throw retryable429()
+          throw sentinel()
+        })
+        let sleepCallCount = 0
+        const sleep = spyOn(SessionRetry, "sleep").mockImplementation(async () => {
+          sleepCallCount++
+        })
+        // Set env var inside the test body so it persists for the entire
+        // async processor execution. Previously set at file-level and
+        // deleted in afterEach, which raced with parallel test files.
+        process.env.DEVIL_SESSION_RETRY_LIMIT = "2"
         const processor = SessionProcessor.create({
           assistantMessage: assistant,
           sessionID: session.id,
@@ -163,12 +164,13 @@ describe("session processor retry limit", () => {
           const expected = MessageV2.fromError(retryable429(), { providerID: "openai" })
 
           expect(result).toBe("stop")
-          expect(llm).toHaveBeenCalledTimes(3)
-          expect(sleep).toHaveBeenCalledTimes(2)
+          expect(llmCallCount).toBe(3)
+          expect(sleepCallCount).toBe(2)
           expect(retry).toStrictEqual([1, 2])
           expect(processor.message.error).toStrictEqual(expected)
           expect(errors).toStrictEqual([expected])
         } finally {
+          delete process.env.DEVIL_SESSION_RETRY_LIMIT
           unsubStatus()
           unsubError()
           llm.mockRestore()
@@ -181,28 +183,28 @@ describe("session processor retry limit", () => {
   test("only positive integers enable the limit", async () => {
     const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
 
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    delete process.env.DEVIL_SESSION_RETRY_LIMIT
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "0"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "0"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "-1"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "-1"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "abc"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "abc"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "2"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "2"
+    expect((await import("../../src/flag/flag?" + key())).Flag.DEVIL_SESSION_RETRY_LIMIT).toBe(2)
   })
 
-  test("does not change after import", async () => {
-    delete process.env.KILO_SESSION_RETRY_LIMIT
+  test("reads env var dynamically at access time", async () => {
+    delete process.env.DEVIL_SESSION_RETRY_LIMIT
     const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
     const { Flag: loaded } = await import("../../src/flag/flag?" + id)
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-    process.env.KILO_SESSION_RETRY_LIMIT = "5"
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    expect(loaded.DEVIL_SESSION_RETRY_LIMIT).toBeUndefined()
+    process.env.DEVIL_SESSION_RETRY_LIMIT = "5"
+    expect(loaded.DEVIL_SESSION_RETRY_LIMIT).toBe(5)
   })
 })

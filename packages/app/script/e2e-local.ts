@@ -55,33 +55,33 @@ const extraArgs = (() => {
 const [serverPort, webPort] = await Promise.all([freePort(), freePort()])
 
 const sandbox = await fs.mkdtemp(path.join(os.tmpdir(), "opencode-e2e-"))
-const keepSandbox = process.env.KILO_E2E_KEEP_SANDBOX === "1"
+const keepSandbox = process.env.DEVIL_E2E_KEEP_SANDBOX === "1"
 
 const serverEnv = {
   ...process.env,
-  KILO_DISABLE_SHARE: process.env.KILO_DISABLE_SHARE ?? "true", // kilocode_change
-  KILO_DISABLE_SESSION_INGEST: "true", // kilocode_change
-  KILO_DISABLE_LSP_DOWNLOAD: "true",
-  KILO_DISABLE_DEFAULT_PLUGINS: "true",
-  KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
-  KILO_TEST_HOME: path.join(sandbox, "home"),
+  DEVIL_DISABLE_SHARE: process.env.DEVIL_DISABLE_SHARE ?? "true", // devilcode_change
+  DEVIL_DISABLE_SESSION_INGEST: "true", // devilcode_change
+  DEVIL_DISABLE_LSP_DOWNLOAD: "true",
+  DEVIL_DISABLE_DEFAULT_PLUGINS: "true",
+  DEVIL_EXPERIMENTAL_DISABLE_FILEWATCHER: "true",
+  DEVIL_TEST_HOME: path.join(sandbox, "home"),
   XDG_DATA_HOME: path.join(sandbox, "share"),
   XDG_CACHE_HOME: path.join(sandbox, "cache"),
   XDG_CONFIG_HOME: path.join(sandbox, "config"),
   XDG_STATE_HOME: path.join(sandbox, "state"),
-  KILO_E2E_PROJECT_DIR: repoDir,
-  KILO_E2E_SESSION_TITLE: "E2E Session",
-  KILO_E2E_MESSAGE: "Seeded for UI e2e",
-  KILO_E2E_MODEL: "kilo/kilo-auto/frontier", // kilocode_change
-  KILO_CLIENT: "app",
+  DEVIL_E2E_PROJECT_DIR: repoDir,
+  DEVIL_E2E_SESSION_TITLE: "E2E Session",
+  DEVIL_E2E_MESSAGE: "Seeded for UI e2e",
+  DEVIL_E2E_MODEL: "kilo/kilo-auto/frontier", // devilcode_change
+  DEVIL_CLIENT: "app",
 } satisfies Record<string, string>
 
 const runnerEnv = {
   ...serverEnv,
   PLAYWRIGHT_SERVER_HOST: "127.0.0.1",
   PLAYWRIGHT_SERVER_PORT: String(serverPort),
-  VITE_KILO_SERVER_HOST: "127.0.0.1",
-  VITE_KILO_SERVER_PORT: String(serverPort),
+  VITE_DEVIL_SERVER_HOST: "127.0.0.1",
+  VITE_DEVIL_SERVER_PORT: String(serverPort),
   PLAYWRIGHT_PORT: String(webPort),
 } satisfies Record<string, string>
 
@@ -146,7 +146,7 @@ try {
     Object.assign(process.env, serverEnv)
     process.env.AGENT = "1"
     process.env.KILO = "1"
-    process.env.KILO_PID = String(process.pid)
+    process.env.DEVIL_PID = String(process.pid)
 
     const log = await import("../../opencode/src/util/log")
     const install = await import("../../opencode/src/installation")
@@ -159,7 +159,7 @@ try {
     const servermod = await import("../../opencode/src/server/server")
     inst = await import("../../opencode/src/project/instance")
     server = servermod.Server.listen({ port: serverPort, hostname: "127.0.0.1" })
-    console.log(`kilo server listening on http://127.0.0.1:${serverPort}`) // kilocode_change
+    console.log(`kilo server listening on http://127.0.0.1:${serverPort}`) // devilcode_change
 
     await waitForHealth(`http://127.0.0.1:${serverPort}/global/health`)
     runner = Bun.spawn(["bun", "test:e2e", ...extraArgs], {

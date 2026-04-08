@@ -5,28 +5,29 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { createSignal, type ParentComponent } from "solid-js"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { DataProvider } from "@kilocode/kilo-ui/context/data"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { I18nProvider } from "@kilocode/kilo-ui/context"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { Code } from "@kilocode/kilo-ui/code"
-import { File } from "@kilocode/kilo-ui/file"
+import { DialogProvider } from "@devilcode/kilo-ui/context/dialog"
+import { DataProvider } from "@devilcode/kilo-ui/context/data"
+import { DiffComponentProvider } from "@devilcode/kilo-ui/context/diff"
+import { CodeComponentProvider } from "@devilcode/kilo-ui/context/code"
+import { FileComponentProvider } from "@devilcode/kilo-ui/context/file"
+import { MarkedProvider } from "@devilcode/kilo-ui/context/marked"
+import { I18nProvider } from "@devilcode/kilo-ui/context"
+import { Diff } from "@devilcode/kilo-ui/diff"
+import { Code } from "@devilcode/kilo-ui/code"
+import { File } from "@devilcode/kilo-ui/file"
 import { VSCodeProvider } from "../context/vscode"
 import { ServerProvider } from "../context/server"
 import { ConfigProvider } from "../context/config"
 import { ProviderProvider } from "../context/provider"
 import { SessionContext } from "../context/session"
 import { LanguageContext } from "../context/language"
-import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
-import { dict as appEn } from "../i18n/en"
-import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import SessionList from "../components/history/SessionList"
+import { dict as uiEn } from "@devilcode/kilo-ui/i18n/en"
+import { dict as appEn } from "../i18n/en"
+// @ts-expect-error — tsgo doesn't resolve devil-i18n wildcard exports; esbuild resolves at build time
+import { dict as devilEn } from "@devilcode/devil-i18n/en"
 
-const dict: Record<string, string> = { ...appEn, ...uiEn, ...kiloEn }
+const dict: Record<string, string> = { ...appEn, ...uiEn, ...devilEn }
 function t(key: string) {
   return dict[key] ?? key
 }

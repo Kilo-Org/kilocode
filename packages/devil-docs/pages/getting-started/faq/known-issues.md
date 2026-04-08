@@ -1,12 +1,12 @@
 ---
 title: "Known Issues"
-description: "Known issues and limitations of Kilo Code."
+description: "Known issues and limitations of devil Code."
 tocDepth: 2
 ---
 
 # Known Issues
 
-This section contains known issues and limitations of Kilo Code.
+This section contains known issues and limitations of devil Code.
 
 ## VSCode
 
@@ -88,17 +88,17 @@ Verify that PowerShell is installed and accessible by running:
 
 ## JetBrains
 
-### Kilo Code not visible (JCEF errors)
+### devil Code not visible (JCEF errors)
 
 #### Symptoms
 
-- Kilo Code panel doesn't render or appears blank
+- devil Code panel doesn't render or appears blank
 - Errors such as `JCEF is not supported in this environment or failed to initialize`
 - `Internal JCEF not supported, trying external JCEF`
 
 #### Cause
 
-Kilo Code depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
+devil Code depends on **JCEF (JetBrains Chromium Embedded Framework)** to display its interface. If the bundled Java runtime doesn't include JCEF, or JCEF is disabled, the panel cannot render.
 
 #### Resolution
 
@@ -121,7 +121,7 @@ Kilo Code depends on **JCEF (JetBrains Chromium Embedded Framework)** to display
 
 #### Cause
 
-The IDE cannot validate the TLS certificate used by the Kilo Code endpoint or a network proxy. Common causes include untrusted root certificates, corporate proxies intercepting HTTPS traffic, or missing intermediate certificates.
+The IDE cannot validate the TLS certificate used by the devil Code endpoint or a network proxy. Common causes include untrusted root certificates, corporate proxies intercepting HTTPS traffic, or missing intermediate certificates.
 
 #### Resolution
 
@@ -141,16 +141,16 @@ JetBrains IDEs rely on the **system certificate store**, so resolving trust at t
 
 ##### Symptoms
 
-- `Kilo Code cannot access paths without an active workspace`
+- `devil Code cannot access paths without an active workspace`
 
 ##### Cause
 
-Kilo Code requires an explicit workspace configuration to access project files in JetBrains IDEs. This is especially common in Android Studio, which may not automatically set up the workspace that Kilo Code expects.
+devil Code requires an explicit workspace configuration to access project files in JetBrains IDEs. This is especially common in Android Studio, which may not automatically set up the workspace that devil Code expects.
 
 ##### Resolution
 
 1. Open **Settings / Preferences**
-2. Navigate to **Tools → Kilo Code**
+2. Navigate to **Tools → devil Code**
 3. Locate **Custom Workspaces**
 4. Click **Add Workspace**
 5. Select your project folder

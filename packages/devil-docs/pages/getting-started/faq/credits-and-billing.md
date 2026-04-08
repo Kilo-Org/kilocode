@@ -1,22 +1,22 @@
 ---
 title: "Credits and Billing"
-description: "Questions about credits, billing, and pricing in Kilo Code"
+description: "Questions about credits, billing, and pricing in devil Code"
 tocDepth: 2
 ---
 
 # Credits and Billing
 
-This section contains questions about credits, billing, and pricing in Kilo Code.
+This section contains questions about credits, billing, and pricing in devil Code.
 
 ## Credits
 
 ### Why am I seeing requests for "Codestral 2508"?
 
-Kilo Code uses Codestral 2508 (a model by Mistral AI) as the dedicated engine for our Autocomplete feature. It is optimized for speed and low latency, making it perfect for real-time code suggestions.
+devil Code uses Codestral 2508 (a model by Mistral AI) as the dedicated engine for our Autocomplete feature. It is optimized for speed and low latency, making it perfect for real-time code suggestions.
 
 #### Why is it running in the background?
 
-Because Autocomplete needs to be ready the moment you start typing, the model stays active in the background whenever the feature is enabled. This occurs even if you aren't currently using the Kilo Chat.
+Because Autocomplete needs to be ready the moment you start typing, the model stays active in the background whenever the feature is enabled. This occurs even if you aren't currently using the devil Chat.
 
 #### How much does it cost?
 
@@ -28,7 +28,7 @@ You can use Codestral 2508 for Autocomplete completely for free by configuring i
 
 If you prefer not to have background requests running, you can turn off the feature entirely:
 
-1. Open your **Kilo Settings**.
+1. Open your **devil Settings**.
 2. Navigate to the **Autocomplete** tab.
 3. Toggle the feature to **Off**.
 
@@ -36,11 +36,11 @@ If you prefer not to have background requests running, you can turn off the feat
 Disabling this will stop all ghost-text suggestions in your editor.
 {% /callout %}
 
-### Why do I have credits, but Kilo shows a low balance or warning?
+### Why do I have credits, but devil shows a low balance or warning?
 
-Kilo credits are not shared between Personal and Organization environments.
+devil credits are not shared between Personal and Organization environments.
 
-If you have credits in one environment but are currently using the other, Kilo may show a low balance or usage warning.
+If you have credits in one environment but are currently using the other, devil may show a low balance or usage warning.
 
 #### How to fix it
 
@@ -62,7 +62,7 @@ Then choose the environment you want to use.
 
 #### Why this happens
 
-Each environment maintains its own balance and usage tracking to ensure clear billing and access control. Switching environments ensures Kilo is using the correct credit pool.
+Each environment maintains its own balance and usage tracking to ensure clear billing and access control. Switching environments ensures devil is using the correct credit pool.
 
 ## Billing
 

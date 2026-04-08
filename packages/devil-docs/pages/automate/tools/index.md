@@ -1,11 +1,11 @@
 ---
 title: Tool Use Details
-description: Learn how Kilo Code's tools automate your development workflow
+description: Learn how devil Code's tools automate your development workflow
 ---
 
 # Tool Use Overview
 
-Kilo Code implements a sophisticated tool system that allows AI models to interact with your development environment in a controlled and secure manner. This document explains how tools work, when they're called, and how they're managed.
+devil Code implements a sophisticated tool system that allows AI models to interact with your development environment in a controlled and secure manner. This document explains how tools work, when they're called, and how they're managed.
 
 ## Core Concepts
 
@@ -22,7 +22,7 @@ Tools are organized into logical groups based on their functionality:
 | **Edit Group**     | File system modifications         | `edit`, `multiedit`, `write`, `apply_patch`                  | Code changes and file manipulation      |
 | **Execute Group**  | Shell command execution           | `bash`                                                       | Running scripts, building projects      |
 | **Web Group**      | Fetch and search web content      | `webfetch`, `websearch`, `codesearch`                        | Research, documentation lookup          |
-| **Browser Group**  | Web browser automation            | `kilo-playwright_*` (via built-in Playwright MCP)            | Browser testing and interaction         |
+| **Browser Group**  | Web browser automation            | `devil-playwright_*` (via built-in Playwright MCP)            | Browser testing and interaction         |
 | **MCP Group**      | External tool integration         | MCP server tools (namespaced as `{server}_{tool}`)           | Specialized functionality via MCP       |
 | **Workflow Group** | Sub-agents and task management    | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` | Context switching and task organization |
 
@@ -38,7 +38,7 @@ Certain tools are accessible regardless of the current agent:
 
 ### Read Tools
 
-These tools help Kilo Code understand your code and project:
+These tools help devil Code understand your code and project:
 
 - `read` - Reads file contents with line numbers
 - `glob` - Finds files matching a glob pattern
@@ -46,7 +46,7 @@ These tools help Kilo Code understand your code and project:
 
 ### Edit Tools
 
-These tools help Kilo Code make changes to your code:
+These tools help devil Code make changes to your code:
 
 - `edit` - Makes precise text replacements in a file
 - `multiedit` - Multiple edits in a single call
@@ -55,27 +55,27 @@ These tools help Kilo Code make changes to your code:
 
 ### Execute Tools
 
-These tools help Kilo Code run commands:
+These tools help devil Code run commands:
 
 - `bash` - Runs shell commands with configurable timeout and working directory
 
 ### Web Tools
 
-These tools help Kilo Code access web content:
+These tools help devil Code access web content:
 
 - `webfetch` - Fetches a URL and returns the content
-- `websearch` - Searches the web (available to Kilo/OpenRouter users)
-- `codesearch` - Semantic code search (available to Kilo/OpenRouter users)
+- `websearch` - Searches the web (available to devil/OpenRouter users)
+- `codesearch` - Semantic code search (available to devil/OpenRouter users)
 
 ### Browser Tools
 
-The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
+The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `devil-playwright` and exposes tools such as:
 
-- `kilo-playwright_browser_navigate` - Navigate to a URL
-- `kilo-playwright_browser_click` - Click an element
-- `kilo-playwright_browser_type` - Type text into an element
-- `kilo-playwright_browser_screenshot` - Capture a screenshot
-- `kilo-playwright_browser_snapshot` - Capture an accessibility snapshot
+- `devil-playwright_browser_navigate` - Navigate to a URL
+- `devil-playwright_browser_click` - Click an element
+- `devil-playwright_browser_type` - Type text into an element
+- `devil-playwright_browser_screenshot` - Capture a screenshot
+- `devil-playwright_browser_snapshot` - Capture an accessibility snapshot
 
 These follow the same permission model as all MCP tools (see below).
 
@@ -122,7 +122,7 @@ Certain tools are accessible regardless of the current mode:
 
 ### Read Tools
 
-These tools help Kilo Code understand your code and project:
+These tools help devil Code understand your code and project:
 
 - [read_file](/docs/automate/tools/read-file) - Examines the contents of files
 - [search_files](/docs/automate/tools/search-files) - Finds patterns across multiple files
@@ -131,7 +131,7 @@ These tools help Kilo Code understand your code and project:
 
 ### Edit Tools
 
-These tools help Kilo Code make changes to your code:
+These tools help devil Code make changes to your code:
 
 - [apply_diff](/docs/automate/tools/apply-diff) - Makes precise, surgical changes to your code
 - [delete_file](/docs/automate/tools/delete-file) - Removes files from your workspace
@@ -139,19 +139,19 @@ These tools help Kilo Code make changes to your code:
 
 ### Browser Tools
 
-These tools help Kilo Code interact with web applications:
+These tools help devil Code interact with web applications:
 
 - [browser_action](/docs/automate/tools/browser-action) - Automates browser interactions
 
 ### Command Tools
 
-These tools help Kilo Code execute commands:
+These tools help devil Code execute commands:
 
 - [execute_command](/docs/automate/tools/execute-command) - Runs system commands and programs
 
 ### MCP Tools
 
-These tools help Kilo Code connect with external services:
+These tools help devil Code connect with external services:
 
 - [use_mcp_tool](/docs/automate/tools/use-mcp-tool) - Uses specialized external tools
 - [access_mcp_resource](/docs/automate/tools/access-mcp-resource) - Accesses external data sources

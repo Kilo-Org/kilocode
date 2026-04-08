@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (terminal.name === TERMINAL_NAME) {
       // @ts-ignore
-      const port = terminal.creationOptions.env?.["_EXTENSION_KILO_PORT"]
+      const port = terminal.creationOptions.env?.["_EXTENSION_DEVIL_PORT"]
       port ? await appendPrompt(parseInt(port), fileRef) : terminal.sendText(fileRef, false)
       terminal.show()
     }
@@ -56,8 +56,8 @@ export function activate(context: vscode.ExtensionContext) {
         preserveFocus: false,
       },
       env: {
-        _EXTENSION_KILO_PORT: port.toString(),
-        KILO_CALLER: "vscode",
+        _EXTENSION_DEVIL_PORT: port.toString(),
+        DEVIL_CALLER: "vscode",
       },
     })
 

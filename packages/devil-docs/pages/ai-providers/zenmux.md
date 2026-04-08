@@ -4,7 +4,7 @@ title: ZenMux
 
 import Codicon from "@site/src/components/Codicon";
 
-# Using ZenMux With Kilo Code
+# Using ZenMux With devil Code
 
 [ZenMux](https://zenmux.ai) provides a unified API gateway to access multiple AI models from different providers through a single endpoint. It supports OpenAI, Anthropic, Google, and other major AI providers, automatically handling routing, fallbacks, and cost optimization.
 
@@ -12,14 +12,14 @@ import Codicon from "@site/src/components/Codicon";
 
 1. **Sign up for ZenMux:** Visit [zenmux.ai](https://zenmux.ai) to create an account.
 2. **Get your API key:** After signing up, navigate to your dashboard to generate an API key.
-3. **Configure in Kilo Code:** Add your API key to Kilo Code settings.
+3. **Configure in devil Code:** Add your API key to devil Code settings.
 
-## Configuration in Kilo Code
+## Configuration in devil Code
 
 {% tabs %}
 {% tab label="VSCode (Legacy)" %}
 
-1. **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1. **Open devil Code Settings:** Click the gear icon (<Codicon name="gear" />) in the devil Code panel.
 2. **Select Provider:** Choose "ZenMux" from the "API Provider" dropdown.
 3. **Enter API Key:** Paste your ZenMux API key into the "ZenMux API Key" field.
 4. **Select Model:** Choose your desired model from the "Model" dropdown.
@@ -30,12 +30,12 @@ import Codicon from "@site/src/components/Codicon";
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add ZenMux and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+The extension stores this in your `devil.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key as an environment variable or configure it in your `kilo.json` config file:
+Set the API key as an environment variable or configure it in your `devil.json` config file:
 
 **Environment variable:**
 
@@ -43,7 +43,7 @@ Set the API key as an environment variable or configure it in your `kilo.json` c
 export ZENMUX_API_KEY="your-api-key"
 ```
 
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+**Config file** (`~/.config/devil/devil.json` or `./devil.json`):
 
 ```jsonc
 {
@@ -238,4 +238,4 @@ For additional support:
 
 - Visit the [ZenMux documentation](https://zenmux.ai/docs)
 - Contact ZenMux support through their dashboard
-- Check the [Kilo Code GitHub repository](https://github.com/Kilo-Org/kilocode) for integration-specific issues
+- Check the [devil Code GitHub repository](https://github.com/Devil-Org/devilcode) for integration-specific issues

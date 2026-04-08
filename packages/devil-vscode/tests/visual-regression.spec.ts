@@ -65,7 +65,7 @@ for (const story of stories) {
     await page.setViewportSize({ width: narrow ? 200 : 420, height: 720 })
 
     await page.goto(
-      `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern`,
+      `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:devil-vscode;vscodeTheme:dark-modern`,
       { waitUntil: "load" },
     )
     await disableAnimations(page)

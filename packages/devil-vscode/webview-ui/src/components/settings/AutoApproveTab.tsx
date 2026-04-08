@@ -1,6 +1,6 @@
 import { Component, For, Show, createEffect, createMemo, createSignal } from "solid-js"
-import { Select } from "@kilocode/kilo-ui/select"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Select } from "@devilcode/kilo-ui/select"
+import { IconButton } from "@devilcode/kilo-ui/icon-button"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import type { PermissionLevel, PermissionRule } from "../../types/messages"

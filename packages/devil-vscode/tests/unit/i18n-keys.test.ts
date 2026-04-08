@@ -41,7 +41,7 @@ import { dict as appTr } from "../../webview-ui/src/i18n/tr"
 import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
 
-// Layer 2: upstream UI (@opencode-ai/ui re-exported via @kilocode/kilo-ui)
+// Layer 2: upstream UI (@opencode-ai/ui re-exported via @devilcode/kilo-ui)
 import { dict as uiEn } from "../../../ui/src/i18n/en"
 import { dict as uiZh } from "../../../ui/src/i18n/zh"
 import { dict as uiZht } from "../../../ui/src/i18n/zht"

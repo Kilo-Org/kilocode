@@ -1,9 +1,9 @@
 // de package.nls translations for autocomplete
 
 export const dict = {
-  "autocomplete.input.title": "Kilo Code Geisterschreiber",
+  "autocomplete.input.title": "Devil Code Geisterschreiber",
   "autocomplete.input.placeholder": "Beschreiben Sie, was Sie programmieren möchten...",
-  "autocomplete.commands.generateSuggestions": "Kilo Code: Vorgeschlagene Bearbeitungen Generieren",
+  "autocomplete.commands.generateSuggestions": "Devil Code: Vorgeschlagene Bearbeitungen Generieren",
   "autocomplete.commands.displaySuggestions": "Vorgeschlagene Bearbeitungen Anzeigen",
   "autocomplete.commands.cancelSuggestions": "Vorgeschlagene Bearbeitungen Abbrechen",
   "autocomplete.commands.applyCurrentSuggestion": "Aktuelle Vorgeschlagene Bearbeitung Anwenden",

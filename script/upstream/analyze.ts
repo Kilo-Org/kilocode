@@ -135,7 +135,7 @@ async function main() {
   for (const [rec, files] of byRec) {
     const label =
       rec === "keep-ours"
-        ? "Keep Kilo's"
+        ? "Keep Devil's"
         : rec === "codemod"
           ? "Auto-transform"
           : rec === "keep-theirs"
@@ -175,7 +175,7 @@ async function main() {
 
   const keepOursFiles = byRec.get("keep-ours") || []
   if (keepOursFiles.length > 0) {
-    conflictReport.recommendations.push(`${keepOursFiles.length} files will keep Kilo's version`)
+    conflictReport.recommendations.push(`${keepOursFiles.length} files will keep Devil's version`)
   }
 
   // Save report
