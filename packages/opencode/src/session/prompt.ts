@@ -368,14 +368,12 @@ export namespace SessionPrompt {
         !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
         lastUser.id < lastAssistant.id
       ) {
-        // kilocode_change start - ask follow-up when plan_exit tool was called
+        // kilocode_change start - fix #8476: ask follow-up or continue loop with pending todos
         if (shouldAskPlanFollowup({ messages: msgs, abort })) {
           const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
           if (action === "continue") continue
         }
-        // kilocode_change end
 
-        // kilocode_change start - fix #8476: continue loop with pending todos
         const pending = Todo.get(sessionID).filter(
           (t) => t.status === "pending" || t.status === "in_progress",
         )
@@ -396,14 +394,11 @@ export namespace SessionPrompt {
             time: { created: Date.now() },
             agent: lastUser.agent,
             model: lastUser.model,
-            // kilocode_change start - preserve per-turn metadata so auto-continuation
-            // inherits structured-output format, tool overrides, and editor context
             format: lastUser.format,
             system: lastUser.system,
             tools: lastUser.tools,
             variant: lastUser.variant,
             editorContext: lastUser.editorContext,
-            // kilocode_change end
           })
           await Session.updatePart({
             id: Identifier.ascending("part"),
@@ -424,13 +419,13 @@ ${pendingList}
             pendingCount: pending.length,
           })
         }
-        // kilocode_change end
 
         log.info("exiting loop", { sessionID })
         break
       }
+      // kilocode_change end
 
-      step++
+      step++ // kilocode_change
       if (step === 1)
         ensureTitle({
           session,
@@ -603,6 +598,7 @@ ${pendingList}
           } satisfies MessageV2.ToolPart)
         }
 
+        // kilocode_change start - synthetic summary turn for reasoning models
         if (task.command) {
           // Add synthetic user message to prevent certain reasoning models from erroring
           // If we create assistant messages w/ out user ones following mid loop thinking signatures
@@ -620,7 +616,7 @@ ${pendingList}
             system: lastUser.system,
             tools: lastUser.tools,
             variant: lastUser.variant,
-            editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
+            editorContext: lastUser.editorContext,
           }
           await Session.updateMessage(summaryUserMsg)
           await Session.updatePart({
@@ -632,6 +628,7 @@ ${pendingList}
             synthetic: true,
           } satisfies MessageV2.TextPart)
         }
+        // kilocode_change end
 
         continue
       }
