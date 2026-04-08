@@ -68,6 +68,7 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Select files and click **Apply to Main Branch** to merge changes
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
+- **Expand/collapse all:** Use the button in the diff panel header to expand or collapse all file sections at once
 
 ## Terminals
 

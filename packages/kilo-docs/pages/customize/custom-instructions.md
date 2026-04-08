@@ -64,6 +64,8 @@ instructions:
   - https://example.com/team-instructions.md
 ```
 
+Each instruction file in the Rules list has a **go-to-file** icon ({% codicon name="go-to-file" /%}) that opens the file directly in the VS Code editor for quick editing.
+
 {% callout type="info" title="URL-Based Instructions" %}
 URL-based instruction sources are fetched at session start with a 5-second timeout. If the URL is unreachable, the instruction source is silently skipped.
 {% /callout %}

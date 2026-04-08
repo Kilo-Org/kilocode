@@ -128,6 +128,7 @@ Reference files and other context directly in your message using `@`:
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
+- Assistant messages → Copy button to copy the full response
 
 **Status signals:**
 

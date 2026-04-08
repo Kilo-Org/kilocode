@@ -25,6 +25,7 @@ While the specifics change constantly, some principles stay consistent:
 {% tab label="VSCode" %}
 
 - Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
+- **Fuzzy search:** In the model picker, type to search by model name, provider (e.g., "openai"), or use acronym-style matching (e.g., "clso" matches "Claude Sonnet"). Multi-word queries require all fragments to match.
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
 - **Model precedence:** Session override → Per-agent config → Global config → Recent models → Kilo Auto (free).
 
