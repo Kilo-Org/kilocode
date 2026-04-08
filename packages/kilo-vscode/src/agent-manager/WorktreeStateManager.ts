@@ -218,12 +218,12 @@ export class WorktreeStateManager {
     const removed = this.worktrees.delete(id)
     if (!removed) return []
 
-    // Dissociate all sessions from this worktree (set worktreeId to null)
+    // Collect and remove all sessions belonging to this worktree
     const orphaned: ManagedSession[] = []
     for (const s of this.sessions.values()) {
       if (s.worktreeId === id) {
-        s.worktreeId = null
-        orphaned.push(s)
+        orphaned.push({ ...s })
+        this.sessions.delete(s.id)
       }
     }
 
@@ -234,7 +234,7 @@ export class WorktreeStateManager {
     const idx = this.worktreeOrder.indexOf(id)
     if (idx !== -1) this.worktreeOrder.splice(idx, 1)
 
-    this.log(`Removed worktree ${id}, orphaned ${orphaned.length} sessions`)
+    this.log(`Removed worktree ${id}, removed ${orphaned.length} sessions`)
     void this.save()
     return orphaned
   }
@@ -491,7 +491,13 @@ export class WorktreeStateManager {
           }) ?? wt.path
         this.worktrees.set(id, { id, ...wt, path: fixed })
       }
+      let pruned = 0
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
+        // Skip orphaned sessions (null worktreeId or referencing a deleted worktree)
+        if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+          pruned++
+          continue
+        }
         this.sessions.set(id, { id, ...s })
       }
       for (const [id, sec] of Object.entries(data.sections ?? {})) {
@@ -517,6 +523,10 @@ export class WorktreeStateManager {
       }
       this.defaultBase = data.defaultBaseBranch
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+      if (pruned > 0) {
+        this.log(`Pruned ${pruned} orphaned sessions`)
+        void this.save()
+      }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== "ENOENT") {
@@ -526,7 +536,7 @@ export class WorktreeStateManager {
     return migration
   }
 
-  /** Remove worktrees whose directories no longer exist on disk. */
+  /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
   async validate(root: string): Promise<void> {
     let changed = false
     for (const wt of [...this.worktrees.values()]) {
@@ -537,7 +547,17 @@ export class WorktreeStateManager {
         changed = true
       }
     }
-    if (changed) await this.save()
+    // Prune orphaned sessions (worktreeId is null or references a deleted worktree)
+    for (const s of [...this.sessions.values()]) {
+      if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+        this.sessions.delete(s.id)
+        changed = true
+      }
+    }
+    if (changed) {
+      this.log(`Pruned orphaned sessions during validation`)
+      await this.save()
+    }
   }
 
   /** Wait for any in-flight save to complete without triggering a new one. */
