@@ -10896,6 +10896,15 @@
           "state": {
             "$ref": "#/components/schemas/ToolState"
           },
+          "snapshot": {
+            "type": "string"
+          },
+          "snapshotFiles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "metadata": {
             "type": "object",
             "propertyNames": {

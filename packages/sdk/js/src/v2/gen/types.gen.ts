@@ -437,6 +437,8 @@ export type ToolPart = {
   callID: string
   tool: string
   state: ToolState
+  snapshot?: string
+  snapshotFiles?: Array<string>
   metadata?: {
     [key: string]: unknown
   }
