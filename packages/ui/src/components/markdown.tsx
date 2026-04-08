@@ -296,6 +296,7 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     const fileCode = target.closest("code.file-link")
     if (fileCode instanceof HTMLElement && fileCode.dataset.fileLink) {
       event.preventDefault()
+      event.stopPropagation() // prevent bubbling to tool-call parent handlers
       document.dispatchEvent(
         new CustomEvent("kilo:openFileAtLine", {
           detail: {
@@ -317,6 +318,8 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     // "__kilo_symbol__" prefix so handleOpenFile can distinguish it.
     const symbolCode = target.closest("code.symbol-link")
     if (symbolCode instanceof HTMLElement && symbolCode.dataset.symbolLink) {
+      event.preventDefault()
+      event.stopPropagation() // prevent bubbling to tool-call parent handlers
       document.dispatchEvent(
         new CustomEvent("kilo:openFileAtLine", {
           detail: { file: `__kilo_symbol__${symbolCode.dataset.symbolLink}` },
