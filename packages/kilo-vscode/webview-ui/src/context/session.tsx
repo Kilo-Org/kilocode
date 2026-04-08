@@ -414,6 +414,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectModel(providerID: string, modelID: string) {
     applyModel(selectedAgentName(), { providerID, modelID })
+    const sid = currentSessionID()
+    if (sid) {
+      setStore("messages", sid, (msgs = []) => msgs.filter((m) => !m.error))
+    }
   }
 
   /** The config/default model for the current mode (what settings says). */

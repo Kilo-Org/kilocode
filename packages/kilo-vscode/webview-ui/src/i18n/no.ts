@@ -945,6 +945,10 @@ export const dict = {
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
 
+  "ui.sessionTurn.cancel": "Avbryt",
+  "ui.sessionTurn.status.thinking": "Tenker...",
+  "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
+
   "dialog.model.noProviders": "Ingen leverandører",
 
   "prompt.placeholder.connecting": "Kobler til server...",

@@ -928,6 +928,10 @@ export const dict = {
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "处理中…",
 
+  "ui.sessionTurn.cancel": "取消",
+  "ui.sessionTurn.status.thinking": "思考中...",
+  "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
+
   "dialog.model.noProviders": "无供应商",
 
   "prompt.placeholder.connecting": "正在连接服务器...",

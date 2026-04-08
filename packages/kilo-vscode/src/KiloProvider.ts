@@ -41,6 +41,7 @@ import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
+import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -530,6 +531,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "abort":
+          this.cancelRetry(message.sessionID ?? "")
           await this.handleAbort(message.sessionID)
           break
         case "revertSession":
@@ -2160,6 +2162,85 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return { sid, dir }
   }
 
+  /** Abort controllers for active retry loops, keyed by session ID */
+  private retryAbortControllers = new Map<string, AbortController>()
+
+  /**
+   * Execute an SDK call with exponential backoff on HTTP errors.
+   * Retries on 429, 5xx, and other retryable status codes.
+   * When the response includes `Retry-After` / `Retry-After-MS` headers,
+   * the delay honours that value (capped at 5 min). Otherwise uses the
+   * predefined backoff schedule: 5s -> 10s -> 30s -> 60s -> 300s.
+   *
+   * After MAX_RETRIES (5) attempts, automatically throws the error.
+   * Users can cancel via the cancel button in the UI which sends an abort
+   * message — this interrupts the backoff delay and stops the retry loop.
+   *
+   * The webview receives `sessionStatus` messages with a countdown so the
+   * user can see that a retry is in progress.
+   */
+  private async withRetry(fn: () => Promise<{ error?: unknown; response: Response }>, sid: string): Promise<void> {
+    const abortController = new AbortController()
+    this.retryAbortControllers.set(sid, abortController)
+
+    try {
+      for (let attempt = 1; ; attempt++) {
+        if (abortController.signal.aborted) {
+          // User cancelled — return normally without triggering sendMessageFailed
+          return
+        }
+
+        const result = await fn()
+        if (!result.error) return
+
+        const status = result.response?.status ?? 0
+
+        // Non-retryable status codes fail immediately without retry
+        if (!retryable(status)) {
+          this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
+          throw result.error
+        }
+
+        // Stop retrying after MAX_RETRIES attempts
+        if (attempt >= MAX_RETRIES) {
+          this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
+          throw result.error
+        }
+
+        const delay = backoff(attempt, result.response?.headers)
+        console.log(`[Kilo New] KiloProvider: Retry on ${status}, attempt ${attempt}/${MAX_RETRIES}, delay ${delay}ms`)
+
+        this.postMessage({
+          type: "sessionStatus",
+          sessionID: sid,
+          status: "retry",
+          attempt,
+          message: `Error (${status}). Retrying...`,
+          next: Date.now() + delay,
+        })
+
+        // Wait for delay or until aborted
+        await new Promise((resolve) => {
+          const timer = setTimeout(resolve, delay)
+          abortController.signal.addEventListener("abort", () => {
+            clearTimeout(timer)
+          })
+        })
+      }
+    } finally {
+      this.retryAbortControllers.delete(sid)
+    }
+  }
+
+  /** Cancel an active retry loop for a session */
+  private cancelRetry(sid: string): void {
+    const controller = this.retryAbortControllers.get(sid)
+    if (controller) {
+      controller.abort()
+      this.postMessage({ type: "sessionStatus", sessionID: sid, status: "idle" })
+    }
+  }
+
   private async handleSendMessage(
     text: string,
     messageID?: string,
@@ -2202,18 +2283,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
       }
 
-      await this.client.session.promptAsync(
-        {
-          sessionID: resolved!.sid,
-          directory: resolved!.dir,
-          messageID,
-          parts,
-          model: providerID && modelID ? { providerID, modelID } : undefined,
-          agent,
-          variant,
-          editorContext,
-        },
-        { throwOnError: true },
+      const sid = resolved!.sid
+      const dir = resolved!.dir
+      await this.withRetry(
+        () =>
+          this.client!.session.promptAsync({
+            sessionID: sid,
+            directory: dir,
+            messageID,
+            parts,
+            model: providerID && modelID ? { providerID, modelID } : undefined,
+            agent,
+            variant,
+            editorContext,
+          }),
+        sid,
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
@@ -2264,19 +2348,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
 
-      await this.client.session.command(
-        {
-          sessionID: resolved!.sid,
-          directory: resolved!.dir,
-          command,
-          arguments: args,
-          messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent,
-          variant,
-          parts,
-        },
-        { throwOnError: true },
+      const sid = resolved!.sid
+      const dir = resolved!.dir
+      await this.withRetry(
+        () =>
+          this.client!.session.command({
+            sessionID: sid,
+            directory: dir,
+            command,
+            arguments: args,
+            messageID,
+            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent,
+            variant,
+            parts,
+          }),
+        sid,
       )
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)

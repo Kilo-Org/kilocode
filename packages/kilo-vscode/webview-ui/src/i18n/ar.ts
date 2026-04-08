@@ -935,6 +935,10 @@ export const dict = {
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
 
+  "ui.sessionTurn.cancel": "إلغاء",
+  "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
+  "ui.sessionTurn.status.consideringNextSteps": "...جارٍ التفكير في الخطوات التالية",
+
   "dialog.model.noProviders": "لا يوجد موفرون",
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",

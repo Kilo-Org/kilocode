@@ -940,6 +940,10 @@ export const dict = {
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
 
+  "ui.sessionTurn.cancel": "취소",
+  "ui.sessionTurn.status.thinking": "생각 중...",
+  "ui.sessionTurn.status.consideringNextSteps": "다음 단계 고려 중...",
+
   "dialog.model.noProviders": "공급자 없음",
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
