@@ -1555,6 +1555,19 @@ export namespace Provider {
     return undefined
   }
 
+  // kilocode_change start
+  export async function getSubagentModel(parentProviderID: string, parentModelID: string) {
+    const cfg = await Config.get()
+
+    if (cfg.subagent_model) {
+      const parsed = parseModel(cfg.subagent_model)
+      return { providerID: parsed.providerID, modelID: parsed.modelID }
+    }
+
+    return { providerID: parentProviderID, modelID: parentModelID }
+  }
+  // kilocode_change end
+
   const priority = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
   export function sort<T extends { id: string }>(models: T[]) {
     return sortBy(

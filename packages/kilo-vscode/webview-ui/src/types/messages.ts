@@ -412,6 +412,7 @@ export interface Config {
   permission?: PermissionConfig
   model?: string | null
   small_model?: string | null
+  subagent_model?: string | null
   default_agent?: string
   agent?: Record<string, AgentConfig>
   provider?: Record<string, ProviderConfig>

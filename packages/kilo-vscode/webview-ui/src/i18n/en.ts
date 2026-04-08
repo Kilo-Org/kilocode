@@ -1253,6 +1253,9 @@ export const dict = {
   "settings.providers.smallModel.title": "Small Model",
   "settings.providers.smallModel.description":
     "Lightweight model for title generation, commit message generation, prompt enhancement, and other quick tasks",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

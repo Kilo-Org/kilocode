@@ -1013,6 +1013,9 @@ export namespace Config {
       small_model: ModelId.nullable()
         .describe("Small model to use for tasks like title generation in the format of provider/model")
         .optional(),
+      subagent_model: ModelId.nullable()
+        .describe("Default model for subagents in the format provider/model. Falls back to parent model if not set")
+        .optional(),
       // kilocode_change end
       // kilocode_change start - renamed from "build" to "code"
       default_agent: z

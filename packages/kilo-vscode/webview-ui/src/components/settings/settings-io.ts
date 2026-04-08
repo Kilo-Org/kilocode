@@ -12,6 +12,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "permission",
   "model",
   "small_model",
+  "subagent_model",
   "default_agent",
   "agent",
   "provider",

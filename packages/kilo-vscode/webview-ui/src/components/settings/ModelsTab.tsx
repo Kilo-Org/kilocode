@@ -12,7 +12,7 @@ const ModelsTab: Component = () => {
   const language = useLanguage()
   const session = useSession()
 
-  function handleModelSelect(configKey: "model" | "small_model") {
+  function handleModelSelect(configKey: "model" | "small_model" | "subagent_model") {
     return (providerID: string, modelID: string) => {
       if (!providerID || !modelID) {
         updateConfig({ [configKey]: null })
@@ -52,7 +52,6 @@ const ModelsTab: Component = () => {
         <SettingsRow
           title={language.t("settings.providers.smallModel.title")}
           description={language.t("settings.providers.smallModel.description")}
-          last
         >
           <ModelSelectorBase
             value={parseModelString(config().small_model ?? undefined)}
@@ -61,6 +60,19 @@ const ModelsTab: Component = () => {
             allowClear
             clearLabel={language.t("settings.providers.notSet")}
             includeAutoSmall
+          />
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.providers.subagentModel.title")}
+          description={language.t("settings.providers.subagentModel.description")}
+          last
+        >
+          <ModelSelectorBase
+            value={parseModelString(config().subagent_model ?? undefined)}
+            onSelect={handleModelSelect("subagent_model")}
+            placement="bottom-start"
+            allowClear
+            clearLabel={language.t("settings.providers.notSet")}
           />
         </SettingsRow>
       </Card>
