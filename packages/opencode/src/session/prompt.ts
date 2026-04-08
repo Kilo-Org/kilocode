@@ -396,6 +396,13 @@ export namespace SessionPrompt {
             time: { created: Date.now() },
             agent: lastUser.agent,
             model: lastUser.model,
+            // kilocode_change start - preserve per-turn metadata so auto-continuation
+            // inherits structured-output format, tool overrides, and editor context
+            format: lastUser.format,
+            tools: lastUser.tools,
+            variant: lastUser.variant,
+            editorContext: lastUser.editorContext,
+            // kilocode_change end
           })
           await Session.updatePart({
             id: Identifier.ascending("part"),
