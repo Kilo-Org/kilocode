@@ -293,10 +293,13 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     if (!(target instanceof Element)) return
 
     // kilocode_change start: handle clicks on file:line code links
-    const fileCode = target.closest("code.file-link")
+    // Registered on document in CAPTURE phase so it fires before any parent
+    // capture handlers (e.g. Kilo tool-call result containers that intercept
+    // clicks and navigate to the referenced file).
+     const fileCode = target.closest("code.file-link")
     if (fileCode instanceof HTMLElement && fileCode.dataset.fileLink) {
+      event.stopImmediatePropagation()
       event.preventDefault()
-      event.stopPropagation() // prevent bubbling to tool-call parent handlers
       document.dispatchEvent(
         new CustomEvent("kilo:openFileAtLine", {
           detail: {
@@ -313,13 +316,10 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     // kilocode_change end
 
     // kilocode_change start: handle clicks on symbol (class/method) code links
-    // Route through the same kilo:openFileAtLine mechanism as file links (which
-    // is proven to work in both sidebar and Agent Manager contexts) using a
-    // "__kilo_symbol__" prefix so handleOpenFile can distinguish it.
-    const symbolCode = target.closest("code.symbol-link")
+     const symbolCode = target.closest("code.symbol-link")
     if (symbolCode instanceof HTMLElement && symbolCode.dataset.symbolLink) {
+      event.stopImmediatePropagation()
       event.preventDefault()
-      event.stopPropagation() // prevent bubbling to tool-call parent handlers
       document.dispatchEvent(
         new CustomEvent("kilo:openFileAtLine", {
           detail: { file: `__kilo_symbol__${symbolCode.dataset.symbolLink}` },
@@ -329,6 +329,7 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     }
     // kilocode_change end
 
+    // Only handle copy button clicks that belong to this markdown root
     const button = target.closest('[data-slot="markdown-copy-button"]')
     if (!(button instanceof HTMLButtonElement)) return
     const code = button.closest('[data-component="markdown-code"]')?.querySelector("code")
@@ -351,10 +352,14 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     if (button instanceof HTMLButtonElement) updateLabel(button)
   }
 
-  root.addEventListener("click", handleClick)
+  // kilocode_change: use document capture phase so our handler fires BEFORE
+  // any parent element's capture-phase handler (e.g. Kilo tool-call result
+  // containers that intercept clicks). root.contains() guards ensure we only
+  // act on clicks that belong to this markdown instance.
+  document.addEventListener("click", handleClick, true)
 
   return () => {
-    root.removeEventListener("click", handleClick)
+    document.removeEventListener("click", handleClick, true)
     for (const timeout of timeouts.values()) {
       clearTimeout(timeout)
     }

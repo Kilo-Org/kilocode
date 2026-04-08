@@ -26,6 +26,24 @@ export function parseFilePath(text: string): { path: string; line?: number; colu
   }
 }
 
+// kilocode_change: detect class/method symbol references in inline code
+// Method: identifier() or Namespace.Method()  e.g. BuildFrame(), ShapeEditorContext.BuildFrame()
+const SYMBOL_METHOD_RE = /^([a-zA-Z][a-zA-Z0-9]*(?:\.[a-zA-Z][a-zA-Z0-9]*)?)\(\)$/
+// Class/type: PascalCase, at least 7 chars, alphanumeric only  e.g. ShapeEditorContext
+const SYMBOL_CLASS_RE = /^([A-Z][a-zA-Z0-9]{6,})$/
+
+/**
+ * Parse an inline code span into a symbol reference (class name or method call).
+ * Returns the raw text (e.g. "BuildFrame()" or "ShapeEditorContext") for routing
+ * through the openFile channel with "__kilo_symbol__" prefix, or undefined.
+ */
+export function parseSymbolRef(text: string): string | undefined {
+  const trimmed = text.trim()
+  if (SYMBOL_METHOD_RE.test(trimmed)) return trimmed
+  if (SYMBOL_CLASS_RE.test(trimmed)) return trimmed
+  return undefined
+}
+
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/
 
 /**

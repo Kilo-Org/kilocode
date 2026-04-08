@@ -395,6 +395,11 @@ export class AgentManagerProvider implements Disposable {
     // Local sessions fall through to the session provider which resolves against the repo root.
     // Uses activeSessionId (set synchronously by loadMessages) rather than
     // the session provider's currentSession which can be stale during rapid tab switches.
+    // kilocode_change: __kilo_symbol__ prefix routes to openSymbol, not worktree file resolution
+    if (m.type === "openFile" && typeof m.filePath === "string" && m.filePath.startsWith("__kilo_symbol__")) {
+      openSymbol(m.filePath.slice("__kilo_symbol__".length))
+      return null
+    }
     if (m.type === "openFile") {
       const sessionId = this.activeSessionId
       const state = this.getStateManager()

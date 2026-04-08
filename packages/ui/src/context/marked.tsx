@@ -3,7 +3,7 @@ import markedKatex from "marked-katex-extension"
 import markedShiki from "marked-shiki"
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
+import { parseFilePath, parseSymbolRef } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
@@ -642,6 +642,11 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
               const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
               const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
               return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+            }
+            // kilocode_change: detect class/method symbol references
+            const sym = parseSymbolRef(text)
+            if (sym) {
+              return `<code class="symbol-link" data-symbol-link="${sym}">${escaped}</code>`
             }
             return `<code>${escaped}</code>`
           },

@@ -12,7 +12,6 @@ const symbolCache = new Map<string, { uri: vscode.Uri; index: number }>()
 export async function openSymbol(rawSymbol: string): Promise<void> {
   const symbol = rawSymbol.replace(/\(\)$/, "").split(".").pop() ?? rawSymbol
   const isMethod = rawSymbol.endsWith("()")
-  console.log(`[Kilo] openSymbol called: raw="${rawSymbol}" symbol="${symbol}" isMethod=${isMethod}`)
 
   // Phase 1: LSP
   try {
@@ -72,11 +71,20 @@ export async function openSymbol(rawSymbol: string): Promise<void> {
       )
     }
   } else {
-    const declPattern = new RegExp(
-      `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)*(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
+    // For type declarations use a STRICTER pattern that requires at least one
+    // access modifier before the keyword. This prevents matching class names
+    // that appear inside markdown code-blocks or XML doc comments where there
+    // is no preceding modifier.
+    const strictDeclPattern = new RegExp(
+      `^[ \\t]*(?![ \\t]*//)(?![ \\t]*\\*)(?:(?:public|private|protected|internal|static|abstract|sealed|partial)[ \\t]+)+(?:class|struct|interface|enum|record)[ \\t]+${esc}\\b`,
       "m",
     )
-    const docExclude = "**/{node_modules,.ReadMe,.readme,docs,documentation,wiki,.doc}/**"
+
+    // Phase A: same-name file only. No Phase B fallback — global search risks
+    // matching class names in markdown/documentation files. In Unity C# every
+    // class lives in a file with the matching name, so Phase A is sufficient.
+    // Exclude documentation dirs AND worktree copies (.kilo/worktrees/).
+    const docExclude = "**/{node_modules,.ReadMe,.readme,docs,documentation,wiki,.doc,.kilo,worktrees}/**"
     for (const ext of exts) {
       const files = await vscode.workspace.findFiles(`**/${symbol}.${ext}`, docExclude, 5)
       for (const uri of files) {
@@ -84,13 +92,13 @@ export async function openSymbol(rawSymbol: string): Promise<void> {
         try {
           const bytes = await vscode.workspace.fs.readFile(uri)
           const text = new TextDecoder().decode(bytes)
-          const match = declPattern.exec(text)
+          const match = strictDeclPattern.exec(text)
           if (match) { hit = { uri, index: match.index }; break }
         } catch { /* skip */ }
       }
       if (hit) break
     }
-    if (!hit) hit = await searchWithPattern(declPattern)
+    // No Phase B: avoid false positives from .md and design-doc files
   }
 
   if (hit) {

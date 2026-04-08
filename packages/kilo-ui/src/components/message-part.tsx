@@ -1170,6 +1170,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (!data.openFile) return
     const target = e.target
     if (!(target instanceof HTMLElement)) return
+    // kilocode_change start: handle symbol (class/method) link clicks
+    const symbolLink = target.closest(".symbol-link[data-symbol-link]")
+    if (symbolLink) {
+      const sym = symbolLink.getAttribute("data-symbol-link")
+      if (sym) {
+        data.openFile(`__kilo_symbol__${sym}`)
+        return
+      }
+    }
+    // kilocode_change end
     // Handle .file-link code spans (e.g. `src/foo.ts:42`)
     const fileLink = target.closest(".file-link[data-file-path]")
     if (fileLink) {
