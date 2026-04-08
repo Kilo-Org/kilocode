@@ -9,7 +9,6 @@ import { WorkflowStateManager } from "../workflow/state"
 import { Workflow } from "../workflow"
 import { SessionBridge } from "../workflow/session-bridge"
 import { getOrchestrator } from "./orchestrator"
-import { Instance } from "@/project/instance"
 import type { HealthAlert, DeadlockResult } from "../workflow/health"
 import type { WorkflowEvent } from "../workflow/events"
 
@@ -56,8 +55,8 @@ export type WorkflowViewState = {
 
 const WorkflowCtx = createContext<WorkflowViewState>()
 
-export function WorkflowProvider(props: ParentProps) {
-  const manager = new WorkflowStateManager(Instance.directory)
+export function WorkflowProvider(props: ParentProps & { directory: string }) {
+  const manager = new WorkflowStateManager(props.directory)
 
   const [store, setStore] = createStore<{
     state: WorkflowState | undefined
@@ -148,7 +147,7 @@ export function WorkflowProvider(props: ParentProps) {
 
       // Poll health during active execution
       if (store.executing && state.activeTasks.length > 0) {
-        const orchestrator = getOrchestrator()
+        const orchestrator = getOrchestrator(props.directory)
         const health = orchestrator.checkHealth(state.activeTasks, store.plans)
         setStore("healthAlerts", health.stuckAlerts)
         setStore("deadlock", health.deadlock)
@@ -159,7 +158,7 @@ export function WorkflowProvider(props: ParentProps) {
 
       // Load recent events for the activity tab
       try {
-        const orchestrator = getOrchestrator()
+        const orchestrator = getOrchestrator(props.directory)
         const events = await orchestrator.getEventLogger().readRecent(50)
         setStore("events", events)
       } catch {
@@ -222,7 +221,7 @@ export function WorkflowProvider(props: ParentProps) {
     async executeStage(stage: WorkflowStage) {
       setStore("executing", true)
       try {
-        const orchestrator = getOrchestrator()
+        const orchestrator = getOrchestrator(props.directory)
 
         // Run preflight checks before the plan stage
         if (stage === "plan") {
@@ -313,7 +312,7 @@ export function WorkflowProvider(props: ParentProps) {
 
     async startBuild(teamConfig: TeamConfig | undefined) {
       setStore("executing", true)
-      const orchestrator = getOrchestrator()
+      const orchestrator = getOrchestrator(props.directory)
 
       try {
         const results = await orchestrator.executeBuild(
@@ -388,7 +387,7 @@ export function WorkflowProvider(props: ParentProps) {
       },
     ) {
       setStore("executing", true)
-      const orchestrator = getOrchestrator()
+      const orchestrator = getOrchestrator(props.directory)
 
       try {
         switch (stage) {

@@ -2,6 +2,7 @@
 import { useKeyboard } from "@opentui/solid"
 import { useRoute } from "@tui/context/route"
 import { useCommandDialog } from "@tui/component/dialog-command"
+import { useSDK } from "@tui/context/sdk"
 import { Toast } from "@tui/ui/toast"
 import { WorkflowProvider } from "./context"
 import { WorkflowStatusBar } from "./status-bar"
@@ -54,8 +55,9 @@ function WorkflowViewInner() {
 }
 
 export function WorkflowView() {
+  const sdk = useSDK()
   return (
-    <WorkflowProvider>
+    <WorkflowProvider directory={sdk.directory!}>
       <WorkflowViewInner />
     </WorkflowProvider>
   )

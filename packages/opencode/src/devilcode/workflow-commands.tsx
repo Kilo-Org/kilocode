@@ -1,13 +1,14 @@
 // packages/opencode/src/devilcode/workflow-commands.tsx
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useRoute } from "@tui/context/route"
+import { useSDK } from "@tui/context/sdk"
 import { useToast } from "@tui/ui/toast"
 import { WorkflowStateManager } from "./workflow/state"
-import { Instance } from "@/project/instance"
 
 export function registerWorkflowCommands() {
   const command = useCommandDialog()
   const route = useRoute()
+  const sdk = useSDK()
   const toast = useToast()
 
   command.register(() => [
@@ -29,7 +30,8 @@ export function registerWorkflowCommands() {
       slash: { name: "team init" },
       onSelect: async () => {
         try {
-          const manager = new WorkflowStateManager(Instance.directory)
+          const directory = sdk.directory!
+          const manager = new WorkflowStateManager(directory)
           if (await manager.hasWorkflow()) {
             toast.show({
               message: "Workflow already initialized. Use /team to open.",
@@ -39,7 +41,7 @@ export function registerWorkflowCommands() {
             route.navigate({ type: "workflow" })
             return
           }
-          const projectName = Instance.directory.split(/[/\\]/).pop() ?? "project"
+          const projectName = directory.split(/[/\\]/).pop() ?? "project"
           await manager.initialize(projectName)
           toast.show({
             message: "Workflow initialized. Opening dashboard...",

@@ -1,6 +1,6 @@
 import z from "zod"
 import { NamedError } from "@opencode-ai/util/error"
-import type { TeamConfig } from "./config"
+import type { TeamConfig, EffortLevel } from "./config"
 
 export const TeamDelegationError = NamedError.create(
   "TeamDelegationError",
@@ -20,7 +20,7 @@ export const TeamConcurrencyError = NamedError.create(
 
 export interface ResolvedTaskModel {
   model: { providerID: string; modelID: string }
-  effort: string
+  effort: EffortLevel
   role: string
 }
 

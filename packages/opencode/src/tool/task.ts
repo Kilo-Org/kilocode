@@ -10,7 +10,7 @@ import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
 import { PermissionNext } from "@/permission/next"
-import { resolveTaskModel } from "@/devilcode/team/router" // devilcode_change
+import { resolveTaskModel, TeamConcurrencyError } from "@/devilcode/team/router" // devilcode_change
 import { getConcurrencyManager } from "@/devilcode/team/concurrency" // devilcode_change
 
 const parameters = z.object({
@@ -149,9 +149,10 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       if (resolvedRole) {
         const roleConfig = config.team?.roles[resolvedRole]
         if (roleConfig && !concurrency.hasCapacity(resolvedRole, roleConfig.maxConcurrent)) {
-          throw new Error(
-            `Role "${resolvedRole}" at max concurrency (${roleConfig.maxConcurrent}). Wait for active tasks to complete.`,
-          )
+          throw new TeamConcurrencyError({
+            role: resolvedRole,
+            maxConcurrent: roleConfig.maxConcurrent,
+          })
         }
         concurrency.acquire(resolvedRole, session.id)
       }

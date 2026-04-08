@@ -16,7 +16,6 @@ import { generateContracts } from "../workflow/contract-generator"
 import type { ContractSet } from "../workflow/contracts"
 import type { WorkflowStage, PlanTask, PlanChallenge, ReviewFinding, ReviewVerdict, ActiveTask, TaskResult } from "../workflow/types"
 import type { TeamConfig } from "../team/config"
-import { Instance } from "@/project/instance"
 
 export class WorkflowOrchestrator {
   private manager: WorkflowStateManager
@@ -24,10 +23,12 @@ export class WorkflowOrchestrator {
   private lessons: LessonStore
   private events: EventLogger
   private taskLastActivity: Map<string, number> = new Map()
+  readonly directory: string
 
-  constructor() {
-    this.manager = new WorkflowStateManager(Instance.directory)
-    const planningDir = path.join(Instance.directory, ".planning")
+  constructor(directory: string) {
+    this.directory = directory
+    this.manager = new WorkflowStateManager(directory)
+    const planningDir = path.join(directory, ".planning")
     this.locks = new LockManager(planningDir)
     this.lessons = new LessonStore(planningDir)
     this.events = new EventLogger(planningDir)
@@ -278,7 +279,7 @@ export class WorkflowOrchestrator {
   // --- Pre-flight ---
 
   async runPreflight(): Promise<PreflightReport> {
-    const report = await runPreflight(Instance.directory)
+    const report = await runPreflight(this.directory)
     await this.events.log({
       eventType: "preflight_check",
       message: `Preflight: ${preflightPassed(report) ? "PASSED" : "FAILED"}`,
@@ -289,8 +290,8 @@ export class WorkflowOrchestrator {
   // --- Quality Gates ---
 
   async runQualityGates(): Promise<GateResult[]> {
-    const gates = await detectGates(Instance.directory)
-    const results = await runAllGates(gates, Instance.directory)
+    const gates = await detectGates(this.directory)
+    const results = await runAllGates(gates, this.directory)
     for (const r of results) {
       await this.events.log({
         eventType: r.passed ? "quality_gate_passed" : "quality_gate_failed",
@@ -344,10 +345,13 @@ export class WorkflowOrchestrator {
   }
 }
 
-const orchestratorState = Instance.state(
-  () => new WorkflowOrchestrator(),
-)
+const orchestratorCache = new Map<string, WorkflowOrchestrator>()
 
-export function getOrchestrator(): WorkflowOrchestrator {
-  return orchestratorState()
+export function getOrchestrator(directory: string): WorkflowOrchestrator {
+  let orch = orchestratorCache.get(directory)
+  if (!orch) {
+    orch = new WorkflowOrchestrator(directory)
+    orchestratorCache.set(directory, orch)
+  }
+  return orch
 }

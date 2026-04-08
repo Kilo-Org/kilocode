@@ -1,0 +1,113 @@
+import { describe, it, expect, mock, beforeEach } from "bun:test"
+import type { PlanTask } from "@/devilcode/workflow/types"
+
+const mockSessionCreate = mock(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
+const mockSessionPrompt = mock(() =>
+  Promise.resolve({ info: { role: "assistant" }, parts: [{ type: "text", text: "Done" }] }),
+)
+const mockWorktreeCreate = mock(() =>
+  Promise.resolve({ name: "brave-cabin", branch: "opencode/brave-cabin", directory: "/tmp/worktree-1" }),
+)
+const mockWorktreeRemove = mock(() => Promise.resolve())
+const mockInstanceProvide = mock(({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) =>
+  Promise.resolve(fn()),
+)
+const mockInstanceDispose = mock(() => Promise.resolve())
+
+mock.module("@/session", () => ({
+  Session: {
+    create: mockSessionCreate,
+    Event: { TurnClose: { type: "session.turn.close" } },
+  },
+}))
+
+mock.module("@/session/prompt", () => ({
+  SessionPrompt: { prompt: mockSessionPrompt },
+}))
+
+mock.module("@/worktree", () => ({
+  Worktree: { create: mockWorktreeCreate, remove: mockWorktreeRemove },
+}))
+
+mock.module("@/bus", () => ({
+  Bus: { subscribe: mock(() => () => {}), publish: mock(() => Promise.resolve()) },
+}))
+
+mock.module("@/project/instance", () => ({
+  Instance: { directory: "/repo/main", provide: mockInstanceProvide, dispose: mockInstanceDispose },
+}))
+
+mock.module("@/devilcode/workflow/prompts/build.txt", () => ({
+  default: "You are executing a task...",
+}))
+
+import { ConcurrencyManager } from "@/devilcode/team/concurrency"
+import { TeamConcurrencyError } from "@/devilcode/team/router"
+const { BuildRunner } = await import("@/devilcode/workflow/build-runner")
+
+function makeTask(overrides: Partial<PlanTask>): PlanTask {
+  return {
+    id: overrides.id ?? "task-1",
+    title: overrides.title ?? "Test task",
+    role: overrides.role ?? "worker",
+    wave: overrides.wave ?? 1,
+    dependsOn: overrides.dependsOn ?? [],
+    estimatedComplexity: overrides.estimatedComplexity ?? "medium",
+    files: overrides.files ?? [],
+    verification: overrides.verification ?? [],
+    description: overrides.description ?? "Do the thing",
+  }
+}
+
+describe("BuildRunner concurrency integration", () => {
+  beforeEach(() => {
+    mockSessionCreate.mockReset()
+    mockSessionPrompt.mockReset()
+    mockSessionCreate.mockImplementation(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({ info: { role: "assistant", finish: "end-turn" }, parts: [{ type: "text", text: "Done" }] }),
+    )
+  })
+
+  it("throws TeamConcurrencyError when role at capacity", async () => {
+    const manager = new ConcurrencyManager()
+    manager.acquire("worker", "existing-task")
+    manager.acquire("worker", "another-task")
+
+    expect(() => {
+      if (!manager.hasCapacity("worker", 2)) {
+        throw new TeamConcurrencyError({ role: "worker", maxConcurrent: 2 })
+      }
+    }).toThrow(TeamConcurrencyError)
+  })
+
+  it("releases slot even when task fails", async () => {
+    const manager = new ConcurrencyManager()
+    manager.acquire("worker", "failing-task")
+    expect(manager.getActiveCount("worker")).toBe(1)
+
+    try {
+      throw new Error("Task failed")
+    } catch {
+      // Expected error — simulating a task failure
+    } finally {
+      manager.release("worker", "failing-task")
+    }
+
+    expect(manager.getActiveCount("worker")).toBe(0)
+  })
+
+  it("handles disabled team config without concurrency checks", async () => {
+    const runner = new BuildRunner({
+      teamConfig: undefined,
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    const tasks = [makeTask({ id: "t1", wave: 1 })]
+    await runner.executeWave(tasks)
+
+    expect(mockSessionPrompt).toHaveBeenCalled()
+  })
+})

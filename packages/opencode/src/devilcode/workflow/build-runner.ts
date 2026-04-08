@@ -3,7 +3,10 @@ import { SessionPrompt } from "@/session/prompt"
 import { Worktree } from "@/worktree"
 import { Bus } from "@/bus"
 import { Log } from "@/util/log"
-import { resolveTaskModel } from "../team/router"
+import { resolveTaskModel, TeamConcurrencyError } from "../team/router"
+import { getConcurrencyManager } from "../team/concurrency"
+import { effortToProviderOptions } from "../team/effort"
+import { detectEscalation, createEscalatedResult } from "./escalation"
 import { groupByWave } from "./executor"
 import type { PlanTask, TaskResult } from "./types"
 import type { TeamConfig } from "../team/config"
@@ -140,6 +143,18 @@ export class BuildRunner {
         parentRole: "orchestrator",
       })
 
+      // Check concurrency capacity before proceeding
+      const concurrency = getConcurrencyManager()
+      const roleConfig = resolved ? this.options.teamConfig?.roles[resolved.role] : undefined
+      if (resolved && roleConfig) {
+        if (!concurrency.hasCapacity(resolved.role, roleConfig.maxConcurrent)) {
+          throw new TeamConcurrencyError({
+            role: resolved.role,
+            maxConcurrent: roleConfig.maxConcurrent,
+          })
+        }
+      }
+
       const taskPrompt = [
         BUILD_PROMPT,
         `\n## Your Task\n`,
@@ -158,6 +173,9 @@ export class BuildRunner {
 
         this.options.onTaskStart(task.id, session.id)
 
+        // Build provider options from effort level when team role resolved
+        const providerOptions = resolved ? effortToProviderOptions(resolved.effort) : undefined
+
         const message = await SessionPrompt.prompt({
           sessionID: session.id,
           ...(resolved
@@ -167,12 +185,18 @@ export class BuildRunner {
                   providerID: resolved.model.providerID,
                   modelID: resolved.model.modelID,
                 },
+                ...(providerOptions ? { options: providerOptions } : {}),
               }
             : {}),
           parts: [{ type: "text", text: taskPrompt }],
         })
 
         return { message, session }
+      }
+
+      // Acquire concurrency slot before execution
+      if (resolved && roleConfig) {
+        concurrency.acquire(resolved.role, task.id)
       }
 
       const next = worktree
@@ -188,10 +212,25 @@ export class BuildRunner {
           })
         : await run()
 
+      // Release concurrency slot after execution
+      if (resolved && roleConfig) {
+        concurrency.release(resolved.role, task.id)
+      }
+
+      const output = extractOutput(next.message)
+
+      // Check for escalation signals in task output
+      const escalationSignal = detectEscalation(output)
+      if (escalationSignal.detected) {
+        const escalatedResult = createEscalatedResult(task.id, output, escalationSignal, task.files)
+        this.options.onTaskComplete(task.id, escalatedResult)
+        return escalatedResult
+      }
+
       const result: TaskResult = {
         taskId: task.id,
         status: "completed",
-        output: extractOutput(next.message),
+        output,
         filesModified: task.files,
       }
 
