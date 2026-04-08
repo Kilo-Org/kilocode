@@ -14,7 +14,7 @@ interface PRStatusPollerOptions {
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
-const PR_LOOKUP_TTL = 60_000 // 1 minute — PR number for a branch rarely changes
+const PR_LOOKUP_TTL = 10_000 // 10 seconds — short TTL; only the active worktree polls so this stays cheap
 
 export class PRStatusPoller {
   private timer: ReturnType<typeof setTimeout> | undefined
@@ -85,7 +85,8 @@ export class PRStatusPoller {
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
     if (!this.active) return
-    this.prCache.delete(worktreeId)
+    const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
+    if (wt) this.prCache.delete(wt.branch)
     void this.fetchOne(worktreeId)
   }
 
@@ -187,7 +188,7 @@ export class PRStatusPoller {
     if (!this.options.getWorkspaceRoot()) return
 
     try {
-      const pr = await this.cachedFetchPR(worktreeId, wt.branch, wt.path)
+      const pr = await this.cachedFetchPR(wt.branch, wt.path)
       if (!pr) {
         const hash = `${worktreeId}:none`
         if (this.lastHash.get(worktreeId) === hash) return
@@ -240,12 +241,14 @@ export class PRStatusPoller {
   private static readonly PR_JSON_FIELDS =
     "number,title,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
 
-  /** Return a cached PR lookup if still fresh, otherwise fetch and cache. */
-  private async cachedFetchPR(worktreeId: string, branch: string, cwd: string): Promise<PRResult | null> {
-    const cached = this.prCache.get(worktreeId)
+  /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
+   *  Keyed by branch name so multiple worktrees on the same branch share
+   *  the cache, and a branch switch in a worktree naturally misses. */
+  private async cachedFetchPR(branch: string, cwd: string): Promise<PRResult | null> {
+    const cached = this.prCache.get(branch)
     if (cached && Date.now() < cached.expires) return cached.result
     const result = await this.fetchPRForBranch(branch, cwd)
-    this.prCache.set(worktreeId, { result, expires: Date.now() + PR_LOOKUP_TTL })
+    this.prCache.set(branch, { result, expires: Date.now() + PR_LOOKUP_TTL })
     return result
   }
 
