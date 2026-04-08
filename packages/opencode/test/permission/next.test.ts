@@ -606,6 +606,61 @@ test("reply - always persists approval and resolves", async () => {
   })
 })
 
+// kilocode_change start
+test("allowEverything - session-scoped enable stays within one session", async () => {
+  await using tmp = await tmpdir({ git: true })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const first = PermissionNext.ask({
+        id: "permission_session_allow",
+        sessionID: "session_allowed",
+        permission: "bash",
+        patterns: ["pwd"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+
+      await PermissionNext.allowEverything({
+        enable: true,
+        requestID: "permission_session_allow",
+        sessionID: "session_allowed",
+      })
+
+      await expect(first).resolves.toBeUndefined()
+
+      const allowed = await PermissionNext.ask({
+        sessionID: "session_allowed",
+        permission: "bash",
+        patterns: ["ls"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+      expect(allowed).toBeUndefined()
+
+      const blocked = PermissionNext.ask({
+        id: "permission_session_blocked",
+        sessionID: "session_blocked",
+        permission: "bash",
+        patterns: ["ls"],
+        metadata: {},
+        always: [],
+        ruleset: [],
+      })
+
+      await PermissionNext.reply({
+        requestID: "permission_session_blocked",
+        reply: "reject",
+      })
+
+      await expect(blocked).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+    },
+  })
+})
+// kilocode_change end
+
 test("reply - reject cancels all pending for same session", async () => {
   await using tmp = await tmpdir({ git: true })
   await Instance.provide({

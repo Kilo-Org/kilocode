@@ -273,20 +273,24 @@ export namespace PlanFollowup {
       Todo.get(input.sessionID),
     ])
 
-    const sections = [`Implement the following plan:\n\n${input.plan}`]
-
-    if (handover) {
-      sections.push(`## Handover from Planning Session\n\n${handover}`)
-    }
-
-    const todoList = formatTodos(todos)
-    if (todoList) {
-      sections.push(`## Todo List\n\n${todoList}`)
-    }
-
     await Instance.provide({
       directory: session.directory,
       fn: async () => {
+        const file = Session.plan(session)
+        const sections = [
+          `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
+          `Implement the following plan:\n\n${input.plan}`,
+        ]
+
+        if (handover) {
+          sections.push(`## Handover from Planning Session\n\n${handover}`)
+        }
+
+        const todoList = formatTodos(todos)
+        if (todoList) {
+          sections.push(`## Todo List\n\n${todoList}`)
+        }
+
         const next = await Session.create({})
         await inject({
           sessionID: next.id,

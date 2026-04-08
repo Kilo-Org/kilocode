@@ -953,6 +953,10 @@ export const dict = {
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
 
+  "ui.sessionTurn.cancel": "Abbrechen",
+  "ui.sessionTurn.status.thinking": "Denke nach...",
+  "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
+
   "dialog.model.noProviders": "Keine Anbieter",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
@@ -1145,6 +1149,16 @@ export const dict = {
     "Dies ist ein integrierter Modus. Seine Basisdefinition kann nicht geändert werden, aber Sie können unten Überschreibungen konfigurieren.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
+  "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
+  "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
+  "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",
+  "settings.agentBehaviour.permissions.col.tool": "Werkzeug",
+  "settings.agentBehaviour.permissions.col.pattern": "Muster",
+  "settings.agentBehaviour.permissions.col.action": "Aktion",
+  "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
+  "settings.agentBehaviour.permissions.hint":
+    "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1289,6 +1303,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Ein kleiner, effizienter Kern über alle Devil-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
   "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
+  "migration.whatsNew.docsLink": "Neuigkeiten & häufige Fragen",
   "migration.whatsNew.continue": "Weiter",
 
   // Screen 2 — Migrate Settings
@@ -1326,6 +1341,36 @@ export const dict = {
   "migration.error.continue": "Weiter",
   "migration.error.action.copy": "Kopieren",
   "migration.error.toast.copied": "Fehler in die Zwischenablage kopiert",
+
+  "migration.sessionSummary.title": "Zusammenfassung:",
+  "migration.sessionSummary.copy": "Bericht kopieren",
+  "migration.sessionSummary.toast.copied": "Bericht kopiert",
+  "migration.sessionSummary.successful": "Erfolgreich",
+  "migration.sessionSummary.skipped": "Übersprungen",
+  "migration.sessionSummary.alreadyMigrated": "Bereits migriert",
+  "migration.sessionSummary.errored": "Fehlgeschlagen",
+  "migration.sessionSummary.none": "Keine",
+  "migration.forceReimport.title": "Erneuten Import erzwingen",
+  "migration.forceReimport.description":
+    "Ein erneuter Import von {{target}} überschreibt diese und löscht alle neuen Nachrichten, die in diesen Sitzungen bereits erstellt wurden.",
+  "migration.forceReimport.target.one": "diese Sitzung",
+  "migration.forceReimport.target.many": "diese {{count}} Sitzungen",
+  "migration.forceReimport.button": "Erneuten Import erzwingen",
+  "migration.forceReimport.all": "Alle erneut importieren",
+  "migration.forceReimport.proceed": "Fortfahren",
+  "migration.forceReimport.toast.started": "Erneuter Import gestartet",
+  "migration.running.title": "Migration läuft",
+  "migration.running.description.line1": "Sie sind dabei abzuschließen, während noch Sitzungen migriert werden.",
+  "migration.running.description.line2": "Wenn Sie jetzt gehen, bleiben einige Sitzungen möglicherweise unvollständig.",
+  "migration.running.stay": "Bleiben",
+  "migration.running.proceed": "Fortfahren",
+  "migration.sessionProgress.preparing": "Sitzung wird vorbereitet",
+  "migration.sessionProgress.storing": "Sitzung wird gespeichert",
+  "migration.sessionProgress.skipped": "Sitzung übersprungen",
+  "migration.sessionProgress.header": "Migriere {{current}} von {{total}}",
+  "migration.sessionFormat.unknownDate": "Unbekanntes Datum",
+  "migration.sessionFormat.unknown": "Unbekannt",
+  "migration.sessionFormat.unknownError": "Unbekannter Fehler",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1342,4 +1387,5 @@ export const dict = {
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
+  "notifications.action.tryModelGeneric": "Modell ausprobieren",
 } satisfies Partial<Record<Keys, string>>

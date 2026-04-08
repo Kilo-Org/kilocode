@@ -49,10 +49,10 @@ bun run script/extract-source-links.ts  # From repo root, after URL changes in d
 
 ## Architecture Overview
 
-All products are thin clients over the CLI (`packages/opencode/`). The CLI contains the AI agent runtime, tool execution, session management, and an HTTP API server (Hono). Clients spawn `kilo serve` and communicate via HTTP REST + SSE using `@kilocode/sdk`.
+All products are thin clients over the CLI (`packages/opencode/`). The CLI contains the AI agent runtime, tool execution, session management, and an HTTP API server (Hono). Clients spawn `kilo serve` and communicate via HTTP REST + SSE using `@devilcode/sdk`.
 
 ```
-                    @kilocode/cli (packages/opencode/)
+                    @devilcode/cli (packages/opencode/)
                  ┌────────────────────────────────────┐
                  │  AI agents, tools, sessions,        │
                  │  providers, config, MCP, LSP        │
@@ -118,7 +118,7 @@ Agent Manager code: extension in `src/agent-manager/`, webview in `webview-ui/ag
 
 This is a fork of upstream OpenCode. To minimize merge conflicts:
 
-1. **Kilo-specific code goes in dedicated paths**: `packages/opencode/src/kilocode/`, `packages/opencode/test/kilocode/`, all `packages/devil-*/`
+1. **Kilo-specific code goes in dedicated paths**: `packages/opencode/src/devilcode/`, `packages/opencode/test/kilocode/`, all `packages/devil-*/`
 2. **Mark changes to shared code** with `devilcode_change` comments (single-line: `// devilcode_change`, multi-line: `// devilcode_change start` / `// devilcode_change end`)
 3. **Markers NOT needed** in paths containing `kilocode`, or in `packages/devil-vscode/` and `packages/devil-ui/` (entirely Kilo additions)
 4. **Don't restructure upstream code** — keep diffs minimal

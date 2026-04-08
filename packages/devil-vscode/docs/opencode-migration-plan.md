@@ -162,7 +162,7 @@ Before publishing this extension to the VS Code Marketplace or deploying to user
 
 ### kilo-ui Shared Library
 
-- **kilo-ui shared library**: The webview now heavily uses `@kilocode/kilo-ui` for UI components. A `DataBridge` component in App.tsx adapts the session store to kilo-ui's `DataProvider` expected shape, enabling shared components like `<KiloMessage>` to work with the extension's data model.
+- **kilo-ui shared library**: The webview now heavily uses `@devilcode/kilo-ui` for UI components. A `DataBridge` component in App.tsx adapts the session store to kilo-ui's `DataProvider` expected shape, enabling shared components like `<KiloMessage>` to work with the extension's data model.
 
 ### Key Differences from Old Extension
 

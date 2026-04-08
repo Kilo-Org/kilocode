@@ -10,6 +10,7 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 ## Build and Dev
 
 - **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
+- **Dev with params**: `bun dev -- help`
 - **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
@@ -18,10 +19,11 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 - **Knip** (unused exports): `bun run knip` from `packages/devil-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
 - **Source links**: After adding or changing URLs in `packages/devil-vscode/`, `packages/devil-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/devil-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
 - **devilcode_change check**: `bun run check-kilocode-change` from `packages/devil-vscode/`. CI runs this — `devilcode_change` is a marker for upstream merge conflicts and must not appear in `packages/devil-vscode/` or `packages/devil-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
+- **opencode annotation check**: `bun run script/check-opencode-annotations.ts` from repo root. CI runs this on PRs touching `packages/opencode/` — every Kilo-specific change in shared opencode files must be annotated with `devilcode_change` markers. Exempt paths (no markers needed): `packages/opencode/src/devilcode/`, `packages/opencode/test/kilocode/`, and any path containing `kilocode` or `devilcode` in the name.
 
 ## Products
 
-All products are clients of the **CLI** (`packages/opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@kilocode/sdk`.
+All products are clients of the **CLI** (`packages/opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@devilcode/sdk`.
 
 | Product                | Package                  | Description                                                                                                                                                                          |
 | ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -38,17 +40,17 @@ Turborepo + Bun workspaces. The packages you'll work with most:
 
 | Package                     | Name                       | Purpose                                                                                    |
 | --------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
-| `packages/opencode/`        | `@kilocode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
-| `packages/sdk/js/`          | `@kilocode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
+| `packages/opencode/`        | `@devilcode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
+| `packages/sdk/js/`          | `@devilcode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
 | `packages/devil-vscode/`    | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. See its own `AGENTS.md` for details.  |
-| `packages/devil-gateway/`   | `@kilocode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
-| `packages/devil-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
-| `packages/devil-i18n/`      | `@kilocode/kilo-i18n`      | Internationalization / translations                                                        |
-| `packages/devil-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library shared by the extension webview and `packages/app/`              |
+| `packages/devil-gateway/`   | `@devilcode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
+| `packages/devil-telemetry/` | `@devilcode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
+| `packages/devil-i18n/`      | `@devilcode/kilo-i18n`      | Internationalization / translations                                                        |
+| `packages/devil-ui/`        | `@devilcode/kilo-ui`        | SolidJS component library shared by the extension webview and `packages/app/`              |
 | `packages/app/`             | `@opencode-ai/app`         | Shared SolidJS web UI for desktop app and `kilo web`                                       |
 | `packages/desktop/`         | `@opencode-ai/desktop`     | Tauri desktop app shell                                                                    |
 | `packages/util/`            | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
-| `packages/plugin/`          | `@kilocode/plugin`         | Plugin/tool interface definitions                                                          |
+| `packages/plugin/`          | `@devilcode/plugin`         | Plugin/tool interface definitions                                                          |
 
 ## Style Guide
 
@@ -173,12 +175,14 @@ Tests MUST test actual implementation, do not duplicate logic into a test.
 
 Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).
 
+**Very important**: when planning or coding, update shared files with OpenCode as last resort! Everything is shared code from OpenCode, except folders that contain `kilo` in the name or have a parent directory that contains `kilo` in the name. Example of kilo specific folders: `packages/opencode/src/devilcode/` and `packages/kilo-docs/`. Always look for ways to implement your feature or fix in a way that minimizes changes to shared code.
+
 ### Minimizing Merge Conflicts
 
 We regularly merge upstream changes from opencode. To minimize merge conflicts and keep the sync process smooth:
 
-1. **Prefer `kilocode` directories** - Place Kilo-specific code in dedicated directories whenever possible:
-   - `packages/opencode/src/kilocode/` - Kilo-specific source code
+1. **Prefer dedicated directories** - Place Kilo-specific code in dedicated directories whenever possible:
+   - `packages/opencode/src/devilcode/` - Kilo-specific source code
    - `packages/opencode/test/kilocode/` - Kilo-specific tests
    - `packages/devil-gateway/` - The Kilo Gateway package
 
@@ -216,12 +220,27 @@ const bar = 2
 // devilcode_change - new file
 ```
 
+<!-- prettier-ignore -->
+**JSX/TSX (inside JSX templates):**
+
+<!-- prettier-ignore -->
+```tsx
+{/* kilocode_change */}
+```
+
+<!-- prettier-ignore -->
+```tsx
+{/* kilocode_change start */}
+<MyComponent />
+{/* kilocode_change end */}
+```
+
 #### When markers are NOT needed
 
 Code in these paths is Kilo Code-specific and does NOT need `devilcode_change` markers:
 
-- `packages/opencode/src/kilocode/` - All files in this directory
+- `packages/opencode/src/devilcode/` - All files in this directory
 - `packages/opencode/test/kilocode/` - All test files for kilocode
-- Any other path containing `kilocode` in filename or directory name
+- Any other path containing `kilocode` or `devilcode` in filename or directory name
 
 These paths are entirely Kilo Code additions and won't conflict with upstream.

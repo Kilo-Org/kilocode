@@ -8,7 +8,7 @@
  */
 
 import type { FileDiff } from "@devilcode/sdk/v2/client"
-import type { Worktree, ManagedSession } from "./WorktreeStateManager"
+import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
@@ -27,6 +27,58 @@ export type WorktreeDiffEntry = FileDiff & {
   generatedLike?: boolean
   summarized?: boolean
   stamp?: string
+}
+
+// ---------------------------------------------------------------------------
+// PR status types
+// ---------------------------------------------------------------------------
+
+export type PRState = "open" | "draft" | "merged" | "closed"
+export type ReviewDecision = "approved" | "changes_requested" | "pending"
+export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
+export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
+
+export interface PRCheck {
+  name: string
+  status: CheckStatus
+  url?: string
+  duration?: string
+}
+
+export interface PRComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  file?: string
+  line?: number
+  url?: string
+  resolved: boolean
+  createdAt?: number
+}
+
+export interface PRStatus {
+  number: number
+  title: string
+  url: string
+  state: PRState
+  review: ReviewDecision | null
+  checks: {
+    status: AggregateCheckStatus
+    total: number
+    passed: number
+    failed: number
+    pending: number
+    items: PRCheck[]
+  }
+  comments?: {
+    total: number
+    unresolved: number
+    items: PRComment[]
+  }
+  additions: number
+  deletions: number
+  files: number
 }
 
 // ---------------------------------------------------------------------------
@@ -66,6 +118,7 @@ interface StateMessage {
   type: "agentManager.state"
   worktrees: Worktree[]
   sessions: ManagedSession[]
+  sections?: Section[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
@@ -175,6 +228,13 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+interface PRStatusOutMessage {
+  type: "agentManager.prStatus"
+  worktreeId: string
+  pr: PRStatus | null
+  error?: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
@@ -202,6 +262,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | PRStatusOutMessage
   | ActionOutMessage
 
 // ---------------------------------------------------------------------------
@@ -379,6 +440,16 @@ interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
 }
 
+interface RefreshPRIn {
+  type: "agentManager.refreshPR"
+  worktreeId: string
+}
+
+interface OpenPRIn {
+  type: "agentManager.openPR"
+  worktreeId: string
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -453,6 +524,47 @@ interface ContinueInWorktreeIn {
   sessionId: string
 }
 
+interface CreateSectionIn {
+  type: "agentManager.createSection"
+  name: string
+  color?: string
+  worktreeIds?: string[]
+}
+
+interface RenameSectionIn {
+  type: "agentManager.renameSection"
+  sectionId: string
+  name: string
+}
+
+interface DeleteSectionIn {
+  type: "agentManager.deleteSection"
+  sectionId: string
+}
+
+interface SetSectionColorIn {
+  type: "agentManager.setSectionColor"
+  sectionId: string
+  color: string | null
+}
+
+interface ToggleSectionCollapsedIn {
+  type: "agentManager.toggleSectionCollapsed"
+  sectionId: string
+}
+
+interface MoveToSectionIn {
+  type: "agentManager.moveToSection"
+  worktreeIds: string[]
+  sectionId: string | null
+}
+
+interface MoveSectionIn {
+  type: "agentManager.moveSection"
+  sectionId: string
+  dir: -1 | 1
+}
+
 /** All messages the Agent Manager expects from the webview (onMessage input). */
 export type AgentManagerInMessage =
   | CreateWorktreeIn
@@ -489,6 +601,8 @@ export type AgentManagerInMessage =
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn
+  | RefreshPRIn
+  | OpenPRIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
@@ -498,3 +612,10 @@ export type AgentManagerInMessage =
   | ClearSessionIn
   | AbortIn
   | ContinueInWorktreeIn
+  | CreateSectionIn
+  | RenameSectionIn
+  | DeleteSectionIn
+  | SetSectionColorIn
+  | ToggleSectionCollapsedIn
+  | MoveToSectionIn
+  | MoveSectionIn

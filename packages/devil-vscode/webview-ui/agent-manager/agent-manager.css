@@ -62,8 +62,7 @@
 }
 
 .am-local-item-active .am-local-branch {
-  color: var(--text-on-interactive-base);
-  opacity: 0.7;
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-local-item-active .am-stat-files {
@@ -92,8 +91,8 @@
 }
 
 .am-local-branch {
-  font-size: var(--font-size-small);
-  color: var(--text-weak);
+  font-size: 10px;
+  color: var(--text-weaker);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -181,12 +180,11 @@ button.am-section-toggle:hover .am-section-label {
 }
 
 .am-worktree-item {
-  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
-  min-height: 40px;
+  padding: 6px 10px;
+  min-height: 36px;
   box-sizing: border-box;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -195,6 +193,87 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   width: 100%;
   transition: background 200ms ease;
+}
+
+/* Left icon column — shrink-0, vertically centered with first row */
+.am-wt-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+
+/* Right content column — flex-1 with two rows */
+.am-wt-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Row 1: label + stats/hover-actions */
+.am-wt-row1 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* Grid overlay cell: stats visible by default, hover actions stacked on top */
+.am-wt-actions-cell {
+  position: relative;
+  flex-shrink: 0;
+  display: grid;
+  align-items: center;
+  margin-left: auto;
+}
+.am-wt-actions-cell > * {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Hover actions (shortcut badge + close button) — hidden by default, shown on hover */
+.am-wt-hover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+}
+.am-worktree-item:hover .am-wt-hover-actions {
+  opacity: 1;
+  visibility: visible;
+}
+/* Stats fade out on hover (replaced by hover actions in same grid cell) */
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats,
+.am-worktree-item:hover .am-wt-actions-cell > .am-worktree-stats-skeleton {
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* Row 2: always present for consistent height; PR badge right-aligned */
+.am-wt-row2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 14px;
+}
+
+.am-worktree-subtitle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  color: var(--text-weaker);
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.am-worktree-item-active .am-worktree-subtitle {
+  color: color-mix(in srgb, var(--text-on-interactive-base) 70%, transparent);
 }
 
 .am-worktree-item:hover {
@@ -238,13 +317,9 @@ button.am-section-toggle:hover .am-section-label {
   outline: none;
 }
 
-/* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) matching Superset style */
+/* Shortcut badge — hover-reveal index badge (⌘1, ⌘2, etc.) */
 
 .am-shortcut-badge {
-  position: absolute;
-  right: 30px;
-  opacity: 0;
-  transition: opacity 150ms ease;
   font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--text-weaker);
@@ -256,8 +331,7 @@ button.am-section-toggle:hover .am-section-label {
   right: 8px;
 }
 
-.am-local-item:hover .am-shortcut-badge,
-.am-worktree-item:hover .am-shortcut-badge {
+.am-local-item:hover .am-shortcut-badge {
   opacity: 1;
 }
 
@@ -278,29 +352,27 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
-.am-worktree-item:has(.am-worktree-rename-input) .am-shortcut-badge {
-  opacity: 0;
+.am-worktree-item:has(.am-worktree-rename-input) .am-wt-row2 {
+  display: none;
 }
 
 .am-worktree-close {
-  position: absolute;
-  right: 4px;
   flex-shrink: 0;
+}
+/* Compact close button inside worktree items */
+.am-worktree-close [data-component="icon-button"] {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+}
+.am-worktree-close [data-component="icon"] {
+  width: 14px;
+  height: 14px;
+}
+
+.am-worktree-item:has(.am-worktree-rename-input) .am-wt-hover-actions {
   opacity: 0;
-}
-
-.am-worktree-item:hover .am-worktree-branch {
-  mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 72px), transparent calc(100% - 36px));
-}
-
-.am-worktree-item:hover .am-worktree-close {
-  opacity: 1;
-}
-
-.am-worktree-item:has(.am-worktree-rename-input) .am-worktree-close {
-  opacity: 0;
-  pointer-events: none;
+  visibility: hidden;
 }
 
 /* Inline delete confirmation */
@@ -315,7 +387,8 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-critical-strong) 25%, transparent);
 }
 
-.am-worktree-pending-delete .am-worktree-branch {
+.am-worktree-pending-delete .am-worktree-branch,
+.am-worktree-pending-delete .am-worktree-subtitle {
   opacity: 0.5;
   transition: opacity 200ms ease;
 }
@@ -325,16 +398,22 @@ button.am-section-toggle:hover .am-section-label {
   display: none;
 }
 
-.am-worktree-pending-delete .am-shortcut-badge {
+.am-worktree-pending-delete .am-wt-row2 {
+  visibility: hidden;
+}
+
+.am-worktree-pending-delete .am-wt-hover-actions {
   opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 .am-worktree-delete-hint {
+  position: absolute;
+  right: 0;
   font-size: var(--font-size-small);
   color: var(--text-on-brand-base);
   background: var(--surface-critical-strong);
   white-space: nowrap;
-  flex-shrink: 0;
   padding: 1px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -383,16 +462,14 @@ button.am-section-toggle:hover .am-section-label {
 .am-worktree-spinner {
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
 
 /* Per-worktree git stats (diff lines + commits missing from origin) */
 
 .am-worktree-stats {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
   font-family: var(--font-mono, monospace);
   font-size: 10px;
@@ -408,9 +485,7 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-worktree-stats-skeleton {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
+  align-items: center;
   flex-shrink: 0;
 }
 
@@ -422,8 +497,15 @@ button.am-section-toggle:hover .am-section-label {
   animation: am-skeleton-pulse 1.5s ease-in-out infinite;
 }
 
-.am-worktree-stats-skeleton-row:nth-child(2) {
-  animation-delay: 0.15s;
+.am-pr-badge-skeleton {
+  width: 52px;
+  height: 14px;
+  border-radius: 6px;
+  background: var(--text-base);
+  animation: am-skeleton-pulse 1.5s ease-in-out infinite;
+  animation-delay: 0.3s;
+  opacity: 0;
+  margin-left: auto;
 }
 
 .am-stat-files {
@@ -436,6 +518,76 @@ button.am-section-toggle:hover .am-section-label {
 
 .am-stat-deletions {
   color: #f87171;
+}
+
+/* PR pill badge — second row inside am-wt-row2.
+   Uses --pr-accent custom property (set inline) to derive all colors. */
+.am-pr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 7px 2px 4px;
+  border-radius: 6px;
+  border: none;
+  background: color-mix(in srgb, var(--pr-accent) 12%, transparent);
+  color: var(--pr-accent);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition: background 150ms ease;
+  margin-left: auto;
+}
+.am-pr-badge:hover {
+  background: color-mix(in srgb, var(--pr-accent) 25%, transparent);
+}
+.am-pr-badge [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+  color: var(--pr-accent);
+}
+.am-pr-badge-number {
+  line-height: 1;
+  color: var(--text-muted);
+}
+.am-pr-badge:hover .am-pr-badge-number {
+  color: var(--pr-accent);
+}
+.am-pr-badge[data-pending] {
+  animation: am-pr-pulse 1.5s ease-in-out infinite;
+}
+@keyframes am-pr-pulse {
+  0%,
+  100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.am-worktree-item-active .am-pr-badge {
+  background: color-mix(in srgb, var(--pr-accent) 18%, transparent);
+}
+.am-worktree-item-active .am-pr-badge:hover {
+  background: color-mix(in srgb, var(--pr-accent) 30%, transparent);
+}
+
+/* Clickable link icon in hover card to open PR on GitHub */
+.am-pr-link {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 3px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 100ms ease;
+}
+.am-pr-link:hover {
+  opacity: 1;
+}
+.am-pr-link [data-component="icon"] {
+  width: 11px;
+  height: 11px;
 }
 
 .am-worktree-item-active .am-stat-files {
@@ -470,11 +622,154 @@ button.am-section-toggle:hover .am-section-label {
   color: #fca5a5;
 }
 
-.am-worktree-item:hover .am-worktree-stats,
-.am-worktree-item:hover .am-worktree-stats-skeleton,
 .am-local-item:hover .am-worktree-stats,
 .am-local-item:hover .am-worktree-stats-skeleton {
   opacity: 0;
+}
+
+/* User-defined sections — collapsible, color-coded groups */
+
+.am-section-group {
+  margin-top: 2px;
+  border-left: 2px solid var(--section-color, var(--vscode-panel-border));
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: border-color 120ms;
+}
+
+.am-section-group-drop {
+  background: color-mix(in srgb, var(--section-color) 10%, transparent);
+  border-color: var(--section-color);
+  border-style: solid;
+}
+
+.am-section-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px 5px 6px;
+  cursor: pointer;
+  user-select: none;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-weak);
+}
+
+.am-section-group-header:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.am-section-group-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.am-section-group-chevron {
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 120ms ease;
+}
+
+.am-section-group-chevron-collapsed {
+  transform: rotate(-90deg);
+}
+
+.am-section-group-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-section-group-count {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-weaker);
+  min-width: 14px;
+  text-align: center;
+}
+
+.am-section-group-body {
+  padding-left: 4px;
+}
+
+.am-section-group-rename {
+  background: var(--input-base, var(--vscode-input-background, #3c3c3c));
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--border-focus, var(--vscode-focusBorder, #007fd4));
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Color picker grid in section context menu */
+
+.am-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 8px;
+}
+
+.am-color-grid-item {
+  padding: 3px !important;
+  border-radius: 4px !important;
+  min-height: unset !important;
+}
+
+.am-color-swatch {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1.5px solid transparent;
+}
+
+.am-color-swatch-active {
+  border-color: var(--vscode-foreground);
+  box-shadow: 0 0 0 1px var(--vscode-editor-background);
+}
+
+.am-color-swatch-default {
+  background: var(--vscode-panel-border);
+  position: relative;
+}
+
+.am-color-swatch-default::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  height: 1.5px;
+  background: var(--text-weaker);
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.am-color-swatch-sm {
+  width: 10px;
+  height: 10px;
+}
+
+.am-icon-flip {
+  transform: rotate(180deg);
+}
+
+/* Context menu danger item (delete section) */
+
+.am-ctx-menu-danger {
+  color: var(--text-error, var(--vscode-errorForeground, #f44));
 }
 
 /* Grouped worktrees — visual grouping with header and left accent */

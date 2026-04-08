@@ -15,7 +15,7 @@ export const BUILTIN_SKILLS: BuiltinSkill[] = [
   {
     name: "kilo-config",
     description:
-      "Guide for configuring Devil CLI: commands, agents, MCP servers, skills, permissions, instructions, plugins, providers, all kilo.json fields, and TUI settings (themes, appearance, keybinds, ctrl+p commands). Use when the user asks about configuring, customizing, or changing settings in Devil.",
+      "Guide for configuring Devil CLI and locating config, command, agent, and skill paths (global, project, legacy), plus MCP servers, permissions, instructions, plugins, providers, kilo.json fields, and TUI settings (themes, appearance, keybinds, ctrl+p commands). Use when the user asks about configuring Devil, where it loads things from, or how to change settings.",
     content: DEVIL_CONFIG,
   },
 ]

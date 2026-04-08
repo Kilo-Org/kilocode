@@ -22,9 +22,9 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Build site
-        run: bun run --filter @kilocode/kilo-docs build
+        run: bun run --filter @devilcode/devil-docs build
         env:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Run tests
-        run: bun run --filter @kilocode/kilo-docs test
+        run: bun run --filter @devilcode/devil-docs test

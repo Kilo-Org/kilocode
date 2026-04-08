@@ -61,27 +61,9 @@ Or use npm:
 
 ### Top-Level CLI Commands
 
-| Command                   | Description                                |
-| ------------------------- | ------------------------------------------ |
-| `devil [project]`          | Start the TUI (Terminal User Interface)    |
-| `devil run [message..]`    | Run with a message (non-interactive mode)  |
-| `devil attach <url>`       | Attach to a running devil server            |
-| `devil serve`              | Start a headless server                    |
-| `devil web`                | Start server and open web interface        |
-| `devil auth`               | Manage credentials (login, logout, list)   |
-| `devil agent`              | Manage agents (create, list)               |
-| `devil mcp`                | Manage MCP servers (list, add, auth)       |
-| `devil models [provider]`  | List available models                      |
-| `devil stats`              | Show token usage and cost statistics       |
-| `devil session`            | Manage sessions (list)                     |
-| `devil export [sessionID]` | Export session data as JSON                |
-| `devil import <file>`      | Import session data from JSON file or URL  |
-| `devil upgrade [target]`   | Upgrade devil to latest or specific version |
-| `devil uninstall`          | Uninstall devil and remove related files    |
-| `devil pr <number>`        | Fetch and checkout a GitHub PR branch      |
-| `devil github`             | Manage GitHub agent (install, run)         |
-| `devil debug`              | Debugging and troubleshooting tools        |
-| `devil completion`         | Generate shell completion script           |
+{% partial file="cli-commands-table.md" /%}
+
+For detailed help on every command and subcommand, see the [CLI Command Reference](/docs/code-with-ai/platforms/cli-reference).
 
 ### Global Options
 
@@ -139,10 +121,11 @@ Or use npm:
 
 #### devil Gateway Commands (when connected)
 
-| Command    | Aliases                  | Description                       |
-| ---------- | ------------------------ | --------------------------------- |
-| `/profile` | `/me`, `/whoami`         | View your devil Gateway profile    |
-| `/teams`   | `/team`, `/org`, `/orgs` | Switch between devil Gateway teams |
+| Command    | Aliases                  | Description                               |
+| ---------- | ------------------------ | ----------------------------------------- |
+| `/profile` | `/me`, `/whoami`         | View your devil Gateway profile           |
+| `/teams`   | `/team`, `/org`, `/orgs` | Switch between devil Gateway teams        |
+| `/remote`  | -                        | Toggle remote mode for Cloud Agent access |
 
 #### Built-in Commands
 
@@ -460,6 +443,44 @@ devil --continue
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous session in the workspace
 
+## Remote Connections
+
+Remote Connections let you access your local CLI sessions from the Cloud Agents web interface. Requires [Kilo Gateway](/docs/gateway) connection.
+
+### Enabling Remote Mode
+
+**Toggle during a session:**
+
+```
+/remote
+```
+
+Requires connection to Kilo Gateway. The `/remote` command appears only when authenticated.
+
+**Enable by default:**
+
+Add to `~/.config/kilo/config.json`:
+
+```json
+{
+  "remote_control": true
+}
+```
+
+### Using Remote Mode
+
+Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
+
+### Requirements
+
+- Connection to Kilo Gateway
+- Same Kilo account on CLI and Cloud Agent
+- CLI must remain running with internet connection
+
+{% callout type="warning" title="Security Warning" %}
+Anyone with access to your Kilo account can send messages to your computer when remote mode is enabled.
+{% /callout %}
+
 ## Environment Variable Overrides
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
@@ -482,6 +503,6 @@ Your selection is persisted locally so it carries over to future sessions.
 
 There is no `--org` or `--team` flag on `devil run`. Instead, the organization is determined from the following sources, in order of priority (highest first):
 
-1. **`Devil_ORG_ID` environment variable** — Best for non-interactive and CI environments. 
+1. **`DEVIL_ORG_ID` environment variable** — Best for non-interactive and CI environments.
 
 2. **`Persisted selection from the last `/teams` pick`** — If you've run an interactive session and selected an organization via `/teams`, that selection is stored in the CLI auth file and reused automatically.

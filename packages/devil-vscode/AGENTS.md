@@ -8,12 +8,12 @@ Kilo Code is an open source AI coding agent platform. It ships as multiple produ
 
 ### Products and How They Relate
 
-All products are thin clients over the **CLI** (`packages/opencode/`, published as `@kilocode/cli`). The CLI is a fork of upstream [OpenCode](https://github.com/anomalyco/opencode) with Kilo-specific additions (gateway auth, telemetry, migration, code review, branding). It contains the full AI agent runtime, tool execution, session management, provider integrations (500+ models), and an HTTP API server.
+All products are thin clients over the **CLI** (`packages/opencode/`, published as `@devilcode/cli`). The CLI is a fork of upstream [OpenCode](https://github.com/anomalyco/opencode) with Kilo-specific additions (gateway auth, telemetry, migration, code review, branding). It contains the full AI agent runtime, tool execution, session management, provider integrations (500+ models), and an HTTP API server.
 
-Every client spawns or connects to a `kilo serve` process and communicates via HTTP REST + SSE using the auto-generated `@kilocode/sdk`.
+Every client spawns or connects to a `kilo serve` process and communicates via HTTP REST + SSE using the auto-generated `@devilcode/sdk`.
 
 ```
-                        @kilocode/cli  (packages/opencode/)
+                        @devilcode/cli  (packages/opencode/)
                      ┌────────────────────────────────┐
                      │  AI agents, tools, sessions,    │
                      │  providers, config, MCP, LSP    │
@@ -41,23 +41,23 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 | Package                     | Name                       | Role                                                                                                                         |
 | --------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `packages/devil-vscode/`    | `kilo-code`                | **This package.** VS Code extension.                                                                                         |
-| `packages/devil-gateway/`   | `@kilocode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
-| `packages/devil-ui/`        | `@kilocode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
-| `packages/devil-telemetry/` | `@kilocode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
-| `packages/devil-i18n/`      | `@kilocode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
-| `packages/devil-docs/`      | `@kilocode/kilo-docs`      | Documentation site (Next.js + Markdoc)                                                                                       |
+| `packages/devil-gateway/`   | `@devilcode/kilo-gateway`   | Auth (device flow), AI provider routing (OpenRouter), Kilo API integration (profile, balance, teams)                         |
+| `packages/devil-ui/`        | `@devilcode/kilo-ui`        | SolidJS component library (40+ components, built on `@kobalte/core`). Shared by this extension's webview and `packages/app/` |
+| `packages/devil-telemetry/` | `@devilcode/kilo-telemetry` | PostHog analytics + OpenTelemetry tracing for the CLI                                                                        |
+| `packages/devil-i18n/`      | `@devilcode/kilo-i18n`      | Translation strings (16 languages)                                                                                           |
+| `packages/devil-docs/`      | `@devilcode/devil-docs`     | Documentation site (Next.js + Markdoc)                                                                                       |
 
 ### Upstream OpenCode Packages (not Kilo-specific)
 
 | Package              | Name                   | Role                                                                                     |
 | -------------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| `packages/opencode/` | `@kilocode/cli`        | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server.            |
-| `packages/sdk/js/`   | `@kilocode/sdk`        | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
+| `packages/opencode/` | `@devilcode/cli`        | Core CLI — forked from upstream OpenCode. AI agents, tools, sessions, server.            |
+| `packages/sdk/js/`   | `@devilcode/sdk`        | Auto-generated TypeScript SDK client for the server API. Do not edit `src/gen/` by hand. |
 | `packages/app/`      | `@opencode-ai/app`     | Shared SolidJS web UI consumed by desktop app and `kilo web`                             |
 | `packages/desktop/`  | `@opencode-ai/desktop` | Tauri desktop app shell                                                                  |
 | `packages/ui/`       | `@opencode-ai/ui`      | Shared UI primitives                                                                     |
 | `packages/util/`     | `@opencode-ai/util`    | Shared utilities (error, path, retry, slug)                                              |
-| `packages/plugin/`   | `@kilocode/plugin`     | Plugin/tool interface definitions                                                        |
+| `packages/plugin/`   | `@devilcode/plugin`     | Plugin/tool interface definitions                                                        |
 
 ## Commands
 
@@ -173,12 +173,12 @@ Extension-side code lives in `src/agent-manager/`, webview code in `webview-ui/a
 
 ## Webview UI (kilo-ui)
 
-New webview features must use **`@kilocode/kilo-ui`** components instead of raw HTML elements with inline styles. This is a Solid.js component library built on `@kobalte/core`.
+New webview features must use **`@devilcode/kilo-ui`** components instead of raw HTML elements with inline styles. This is a Solid.js component library built on `@kobalte/core`.
 
-- Import via deep subpaths: `import { Button } from "@kilocode/kilo-ui/button"`
+- Import via deep subpaths: `import { Button } from "@devilcode/kilo-ui/button"`
 - Available components include `Button`, `IconButton`, `Dialog`, `Spinner`, `Card`, `Tabs`, `Tooltip`, `Toast`, `Code`, `Markdown`, and more
 - Provider hierarchy in [`App.tsx`](webview-ui/src/App.tsx:113): `ThemeProvider → I18nProvider → DialogProvider → MarkedProvider → VSCodeProvider → ServerProvider → ProviderProvider → SessionProvider`
-- Global styles imported via `import "@kilocode/kilo-ui/styles"` in [`index.tsx`](webview-ui/src/index.tsx:2)
+- Global styles imported via `import "@devilcode/kilo-ui/styles"` in [`index.tsx`](webview-ui/src/index.tsx:2)
 - [`chat.css`](webview-ui/src/styles/chat.css) is being progressively migrated — when replacing a component with kilo-ui, remove the corresponding CSS rules from it
 - New CSS for components not yet in kilo-ui goes into `chat.css` grouped by comment-delimited sections (`/* Component Name */`). Once a kilo-ui equivalent exists, remove the section.
 - **Check the desktop app first**: [`packages/app/src/`](../../packages/app/src/) is the reference implementation for how kilo-ui components are composed together. Always check how the app uses a component before implementing it in the webview — don't just look at the component API in isolation.

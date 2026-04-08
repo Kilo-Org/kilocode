@@ -31,6 +31,17 @@ The panel opens as an editor tab and stays active across focus changes.
 
 Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
 
+### PR Status Badges
+
+Worktree items in the sidebar display a **PR status badge** when the branch has an associated pull request:
+
+- **Open** — badge indicating the PR is open (its color can also reflect review and check status)
+- **Merged** — purple badge indicating the PR has been merged
+- **Closed** — red badge indicating the PR was closed without merging
+- **Draft** — gray badge indicating the PR is in draft state
+
+The badge appears on the right side of each worktree item and updates automatically via polling. If the worktree's branch doesn't have a PR yet, no badge is shown.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree

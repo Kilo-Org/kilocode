@@ -282,15 +282,15 @@ import "../../agent-manager/agent-manager.css" // Required for AM component styl
 kilo-ui components are imported via deep subpaths:
 
 ```tsx
-import { Part } from "@kilocode/kilo-ui/message-part"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
-import { Button } from "@kilocode/kilo-ui/button"
+import { Part } from "@devilcode/kilo-ui/message-part"
+import { BasicTool } from "@devilcode/kilo-ui/basic-tool"
+import { Button } from "@devilcode/kilo-ui/button"
 ```
 
 SDK types for mock data:
 
 ```tsx
-import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@devilcode/sdk/v2"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
 ```
 

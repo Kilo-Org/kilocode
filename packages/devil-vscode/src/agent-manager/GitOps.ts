@@ -7,7 +7,6 @@ import { parseWorktreeList, normalizePath } from "./git-import"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
-  refreshMs?: number
   /** Override git command execution for testing. */
   runGit?: (args: string[], cwd: string) => Promise<string>
 }
@@ -40,26 +39,68 @@ interface ExecResult {
   stderr: string
 }
 
+/**
+ * Build environment variables that prevent git and SSH from opening interactive
+ * prompts. Used for background operations (e.g. periodic fetch) so users with
+ * SSH keys that require passphrase confirmation are not bombarded with dialogs.
+ *
+ * Returns a full `process.env` overlay suitable for `simple-git.env()` or
+ * `child_process.spawn`. `GIT_SSH_COMMAND` is only overridden when the user
+ * hasn't already configured their own.
+ */
+export function nonInteractiveEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: "0",
+  }
+  if (!process.env.GIT_SSH_COMMAND) {
+    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+  }
+  return env
+}
+
 export class GitOps {
-  private lastFetch = new Map<string, number>()
-  private inflightFetch = new Map<string, Promise<void>>()
-  private readonly refreshMs: number
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
+  private readonly controller = new AbortController()
+
+  get disposed(): boolean {
+    return this.controller.signal.aborted
+  }
 
   constructor(options: GitOpsOptions) {
-    this.refreshMs = options.refreshMs ?? 120000
     this.log = options.log
     this.runGit =
       options.runGit ??
       ((args, cwd) =>
-        simpleGit(cwd)
+        simpleGit(cwd, { abort: this.controller.signal })
           .raw(args)
           .then((out) => out.trim()))
   }
 
+  dispose(): void {
+    if (!this.controller.signal.aborted) {
+      this.controller.abort()
+    }
+  }
+
   private raw(args: string[], cwd: string): Promise<string> {
-    return this.runGit(args, cwd)
+    const signal = this.controller.signal
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    return new Promise<string>((resolve, reject) => {
+      const onAbort = () => reject(new Error("GitOps disposed"))
+      signal.addEventListener("abort", onAbort, { once: true })
+      this.runGit(args, cwd).then(
+        (value) => {
+          signal.removeEventListener("abort", onAbort)
+          resolve(value)
+        },
+        (err) => {
+          signal.removeEventListener("abort", onAbort)
+          reject(err)
+        },
+      )
+    })
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -114,42 +155,15 @@ export class GitOps {
       .catch(() => false)
   }
 
-  async refreshRemote(cwd: string, remote: string): Promise<void> {
-    if (!remote) return
-
-    const commonRaw = await this.raw(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
-    const common = nodePath.isAbsolute(commonRaw) ? commonRaw : nodePath.resolve(cwd, commonRaw)
-    const key = `${common}:${remote}`
-
-    const existing = this.inflightFetch.get(key)
-    if (existing) return existing
-
-    const prev = this.lastFetch.get(key) ?? 0
-    const now = Date.now()
-    if (now - prev < this.refreshMs) return
-    this.lastFetch.set(key, now)
-
-    const job = this.raw(["fetch", "--quiet", "--no-tags", remote], cwd)
-      .catch((err) => {
-        this.log(`Failed to refresh remote refs for ${cwd}:`, err)
-      })
-      .then(() => undefined)
-      .finally(() => {
-        this.inflightFetch.delete(key)
-      })
-    this.inflightFetch.set(key, job)
-    return job
-  }
-
   /** Return the set of worktree paths for the repo, excluding bare entries. */
-  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+  async listWorktreePaths(cwd: string): Promise<Map<string, string>> {
     const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
-    const paths = new Set<string>()
+    const result = new Map<string, string>()
     for (const entry of parseWorktreeList(raw)) {
       if (entry.bare) continue
-      paths.add(normalizePath(entry.path))
+      result.set(normalizePath(entry.path), entry.branch)
     }
-    return paths
+    return result
   }
 
   /**
@@ -211,12 +225,11 @@ export class GitOps {
   /**
    * Count commits ahead and behind using `rev-list --left-right --count`.
    * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
-   * Pass `remote` explicitly to refresh the tracking ref before counting;
-   * the remote is NOT inferred from the ref to avoid misinterpreting
-   * branch names that contain slashes (e.g. "release/1.0").
+   * Counts are computed against local tracking refs only — no fetch is
+   * performed, so values may be stale until an explicit git operation
+   * (push, pull, etc.) updates the refs.
    */
-  async aheadBehind(cwd: string, base: string, remote?: string): Promise<{ ahead: number; behind: number }> {
-    if (remote) await this.refreshRemote(cwd, remote)
+  async aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
     return this.parseLeftRight(cwd, base)
   }
 
@@ -348,10 +361,14 @@ export class GitOps {
   }
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
+    if (this.controller.signal.aborted) {
+      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+    }
     return new Promise((resolve) => {
       const child = spawn("git", args, {
         cwd,
         env: options?.env,
+        signal: this.controller.signal,
         stdio: ["pipe", "pipe", "pipe"],
       })
 

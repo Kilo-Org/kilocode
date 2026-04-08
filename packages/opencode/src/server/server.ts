@@ -48,6 +48,7 @@ import { errors } from "./error"
 import { CommitMessageRoutes } from "./routes/commit-message" // devilcode_change
 import { EnhancePromptRoutes } from "./routes/enhance-prompt" // devilcode_change
 import { DevilcodeRoutes } from "./routes/devilcode" // devilcode_change
+import { PermissionKilocodeRoutes } from "../devilcode/permission/routes" // devilcode_change
 import { Filesystem } from "@/util/filesystem"
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
@@ -277,6 +278,7 @@ export namespace Server {
         .route("/experimental", ExperimentalRoutes())
         .route("/session", SessionRoutes())
         .route("/permission", PermissionRoutes())
+        .route("/permission", PermissionKilocodeRoutes()) // kilocode_change
         .route("/question", QuestionRoutes())
         .route("/provider", ProviderRoutes())
         .route("/telemetry", TelemetryRoutes()) // devilcode_change

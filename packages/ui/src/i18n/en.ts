@@ -48,6 +48,8 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.error.addCredits": "Add credits",
 
   "ui.sessionTurn.status.delegating": "Delegating work",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planning next steps",
   "ui.sessionTurn.status.gatheringContext": "Exploring",
   "ui.sessionTurn.status.gatheredContext": "Explored",

@@ -25,7 +25,7 @@ All three models are accessed via subscription (not per-token API billing):
 
 ## Architecture: Approach C — Kilocode Layer
 
-Bulk of new code lives in `packages/opencode/src/kilocode/` (fork-specific path, no `devilcode_change` markers needed). Minimal integration points in 4 shared files (~38 lines total, 10 markers). Gated behind `config.team.enabled` — zero behavioral change when disabled.
+Bulk of new code lives in `packages/opencode/src/devilcode/` (fork-specific path, no `devilcode_change` markers needed). Minimal integration points in 4 shared files (~38 lines total, 10 markers). Gated behind `config.team.enabled` — zero behavioral change when disabled.
 
 ## Section 1: Team Configuration & Role-Model Bindings
 
@@ -411,7 +411,7 @@ if (config.team?.enabled) {
 ## Section 7: New Code Structure
 
 ```
-packages/opencode/src/kilocode/
+packages/opencode/src/devilcode/
 ├── team/
 │   ├── config.ts          # TeamConfig, TeamRole Zod schemas
 │   ├── router.ts          # resolveTaskModel(), hierarchy enforcement

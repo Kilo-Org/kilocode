@@ -52,6 +52,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Guthaben aufladen",
 
   "ui.sessionTurn.status.delegating": "Arbeit delegieren",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Nächste Schritte planen",
   "ui.sessionTurn.status.gatheringContext": "Erkunden",
   "ui.sessionTurn.status.gatheredContext": "Erkundet",

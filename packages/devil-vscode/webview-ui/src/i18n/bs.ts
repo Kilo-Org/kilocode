@@ -948,6 +948,10 @@ export const dict = {
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
 
+  "ui.sessionTurn.cancel": "Otkaži",
+  "ui.sessionTurn.status.thinking": "Razmišljam...",
+  "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
+
   "dialog.model.noProviders": "Nema pružatelja",
 
   "prompt.placeholder.connecting": "Povezivanje na server...",
@@ -1130,6 +1134,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
+  "settings.agentBehaviour.permissions.count": "{{count}} pravila",
+  "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Alat",
+  "settings.agentBehaviour.permissions.col.pattern": "Uzorak",
+  "settings.agentBehaviour.permissions.col.action": "Akcija",
+  "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
@@ -1272,6 +1286,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Jedno malo, efikasno jezgro kroz sve Devil proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
   "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
+  "migration.whatsNew.docsLink": "Novosti i često postavljana pitanja",
   "migration.whatsNew.continue": "Nastavi",
 
   // Screen 2 — Migrate Settings
@@ -1308,6 +1323,36 @@ export const dict = {
   "migration.error.continue": "Nastavi",
   "migration.error.action.copy": "Kopiraj",
   "migration.error.toast.copied": "Greška kopirana u međuspremnik",
+
+  "migration.sessionSummary.title": "Sažetak:",
+  "migration.sessionSummary.copy": "Kopiraj izvještaj",
+  "migration.sessionSummary.toast.copied": "Izvještaj kopiran",
+  "migration.sessionSummary.successful": "Uspješne",
+  "migration.sessionSummary.skipped": "Preskočene",
+  "migration.sessionSummary.alreadyMigrated": "Već migrirane",
+  "migration.sessionSummary.errored": "S greškom",
+  "migration.sessionSummary.none": "Nijedna",
+  "migration.forceReimport.title": "Prisilni ponovni uvoz",
+  "migration.forceReimport.description":
+    "Ponovni uvoz {{target}} će ih prepisati i obrisati sve nove poruke koje su već napravljene u tim sesijama.",
+  "migration.forceReimport.target.one": "ovu sesiju",
+  "migration.forceReimport.target.many": "ovih {{count}} sesija",
+  "migration.forceReimport.button": "Prisilni ponovni uvoz",
+  "migration.forceReimport.all": "Ponovo uvezi sve",
+  "migration.forceReimport.proceed": "Nastavi",
+  "migration.forceReimport.toast.started": "Prisilni ponovni uvoz je pokrenut",
+  "migration.running.title": "Migracija je u toku",
+  "migration.running.description.line1": "Upravo ćete završiti dok se neke sesije još uvijek migriraju.",
+  "migration.running.description.line2": "Ako sada izađete, neke sesije mogu ostati nedovršene.",
+  "migration.running.stay": "Ostani",
+  "migration.running.proceed": "Nastavi",
+  "migration.sessionProgress.preparing": "Priprema se sesija",
+  "migration.sessionProgress.storing": "Spremanje sesije",
+  "migration.sessionProgress.skipped": "Sesija je preskočena",
+  "migration.sessionProgress.header": "Migrira se {{current}} od {{total}}",
+  "migration.sessionFormat.unknownDate": "Nepoznat datum",
+  "migration.sessionFormat.unknown": "Nepoznato",
+  "migration.sessionFormat.unknownError": "Nepoznata greška",
   // legacy-migration end
 
   "error.details.show": "Detalji",
@@ -1324,4 +1369,5 @@ export const dict = {
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
+  "notifications.action.tryModelGeneric": "Probaj model",
 }

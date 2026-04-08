@@ -20,9 +20,9 @@ Because Autocomplete needs to be ready the moment you start typing, the model st
 
 #### How much does it cost?
 
-You can use Codestral 2508 for Autocomplete completely for free by configuring it through our Mistral integration.
+You can use Codestral for Autocomplete without consuming Kilo credits by adding your own Mistral Codestral API key via BYOK (Bring Your Own Key). Mistral offers a free tier for Codestral.
 
-**Setup Guide:** [Setting up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup#setting-up-mistral-for-free-autocomplete)
+**Setup Guide:** [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup)
 
 #### How to Disable These Requests
 

@@ -61,7 +61,7 @@ Filesystem-based JSON, not a database. Data lives in `~/.local/share/kilo/storag
 
 ## TUI
 
-Built with **SolidJS + OpenTUI** (`@opentui/solid`) -- a terminal UI framework. JSX renders to the terminal using elements like `<box>`, `<text>`, `<scrollbox>`. The TUI communicates with the server via `@kilocode/sdk`.
+Built with **SolidJS + OpenTUI** (`@opentui/solid`) -- a terminal UI framework. JSX renders to the terminal using elements like `<box>`, `<text>`, `<scrollbox>`. The TUI communicates with the server via `@devilcode/sdk`.
 
 ## Server
 

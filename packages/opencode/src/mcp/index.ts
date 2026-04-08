@@ -170,6 +170,14 @@ export namespace MCP {
     return typeof entry === "object" && entry !== null && "type" in entry
   }
 
+  // kilocode_change — exported for testing
+  export function ensureDockerRm(cmd: string, args: string[]): string[] {
+    if (cmd !== "docker" || args[0] !== "run") return args
+    // Always inject --rm right after "run". Docker treats duplicate --rm as
+    // a no-op, so this is safe even when the user already specified it.
+    return ["run", "--rm", ...args.slice(1)]
+  }
+
   async function descendants(pid: number): Promise<number[]> {
     if (process.platform === "win32") return []
     const pids: number[] = []
@@ -456,11 +464,14 @@ export namespace MCP {
 
     if (mcp.type === "local") {
       const [cmd, ...args] = mcp.command
+      // kilocode_change — inject --rm for Docker containers to prevent stopped
+      // containers from accumulating when MCP servers are toggled on/off.
+      const finalArgs = ensureDockerRm(cmd, args)
       const cwd = Instance.directory
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
-        args,
+        args: finalArgs,
         cwd,
         env: {
           ...process.env,
@@ -590,7 +601,6 @@ export namespace MCP {
     const s = await state()
     s.status[name] = result.status
     if (result.mcpClient) {
-      // Close existing client if present to prevent memory leaks
       const existingClient = s.clients[name]
       if (existingClient) {
         await existingClient.close().catch((error) => {

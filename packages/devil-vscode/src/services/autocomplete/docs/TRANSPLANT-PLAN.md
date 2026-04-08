@@ -738,7 +738,7 @@ No profile resolver is needed in phase 1. The provider and model are fixed.
 
 ### 11.6 i18n
 
-**Decision: Wire into `@kilocode/kilo-i18n`.** Use the translations from `src/services/autocomplete/i18n/`. Keys may differ from what `kilo-i18n` uses, so mapping is required. Discard translations for locales not present in `kilo-i18n`.
+**Decision: Wire into `@devilcode/kilo-i18n`.** Use the translations from `src/services/autocomplete/i18n/`. Keys may differ from what `kilo-i18n` uses, so mapping is required. Discard translations for locales not present in `kilo-i18n`.
 
 ### 11.7 File Ignore / Access Control
 

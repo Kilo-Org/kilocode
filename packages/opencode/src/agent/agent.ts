@@ -188,6 +188,7 @@ export namespace Agent {
       "*": "allow",
       bash, // devilcode_change
       doom_loop: "ask",
+      recall: "ask", // kilocode_change
       external_directory: {
         "*": "ask",
         ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
@@ -225,18 +226,20 @@ export namespace Agent {
       },
       plan: {
         name: "plan",
-        description: "Plan mode. Disallows all edit tools.",
+        description: "Plan mode. Only allows editing plan files; asks before editing anything else.",
         options: {},
         permission: PermissionNext.merge(
           defaults,
           PermissionNext.fromConfig({
             question: "allow",
             plan_exit: "allow",
+            bash: readOnlyBash, // kilocode_change: read-only bash for plan mode (mirrors ask agent)
+            ...mcpRules, // kilocode_change: MCP with user approval for plan mode
             external_directory: {
               [path.join(Global.Path.data, "plans", "*")]: "allow",
             },
             edit: {
-              "*": "deny",
+              "*": "ask", // devilcode_change: ask (not deny) so user can approve edits outside plan files
               [path.join(".kilo", "plans", "*.md")]: "allow", // devilcode_change
               [path.join(".opencode", "plans", "*.md")]: "allow", // devilcode_change: .opencode fallback
               [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",

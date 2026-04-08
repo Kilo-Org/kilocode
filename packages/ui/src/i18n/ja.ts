@@ -46,6 +46,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "クレジットを追加",
 
   "ui.sessionTurn.status.delegating": "作業を委任中",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "次のステップを計画中",
   "ui.sessionTurn.status.gatheringContext": "探索中",
   "ui.sessionTurn.status.gatheredContext": "探索済み",

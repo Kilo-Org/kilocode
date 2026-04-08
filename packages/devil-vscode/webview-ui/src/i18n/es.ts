@@ -949,6 +949,10 @@ export const dict = {
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
 
+  "ui.sessionTurn.cancel": "Cancelar",
+  "ui.sessionTurn.status.thinking": "Pensando...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considerando siguientes pasos...",
+
   "dialog.model.noProviders": "Sin proveedores",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
@@ -1137,6 +1141,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
+  "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.permissions.title": "Permisos calculados",
+  "settings.agentBehaviour.permissions.count": "{{count}} reglas",
+  "settings.agentBehaviour.permissions.effective": "Efectivo (comodín):",
+  "settings.agentBehaviour.permissions.col.tool": "Herramienta",
+  "settings.agentBehaviour.permissions.col.pattern": "Patrón",
+  "settings.agentBehaviour.permissions.col.action": "Acción",
+  "settings.agentBehaviour.permissions.copy": "Copiar permisos como JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Las reglas se evalúan en orden — gana la última regla coincidente. Este es el conjunto de reglas resuelto desde el backend de la CLI.",
   "settings.agentBehaviour.removeMode.title": "Eliminar modo",
   "settings.agentBehaviour.removeMode.confirm":
     '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
@@ -1279,6 +1293,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Un núcleo pequeño y eficiente en todos los productos Devil. Una experiencia familiar sin importar cómo elijas trabajar.",
   "migration.whatsNew.blogLink": "Leer el anuncio completo",
+  "migration.whatsNew.docsLink": "Novedades y preguntas frecuentes",
   "migration.whatsNew.continue": "Continuar",
 
   // Screen 2 — Migrate Settings
@@ -1316,6 +1331,35 @@ export const dict = {
   "migration.error.continue": "Continuar",
   "migration.error.action.copy": "Copiar",
   "migration.error.toast.copied": "Error copiado al portapapeles",
+  "migration.sessionSummary.title": "Resumen:",
+  "migration.sessionSummary.copy": "Copiar informe",
+  "migration.sessionSummary.toast.copied": "Informe copiado",
+  "migration.sessionSummary.successful": "Correctas",
+  "migration.sessionSummary.skipped": "Omitidas",
+  "migration.sessionSummary.alreadyMigrated": "Ya migradas",
+  "migration.sessionSummary.errored": "Con error",
+  "migration.sessionSummary.none": "Ninguna",
+  "migration.forceReimport.title": "Forzar reimportación",
+  "migration.forceReimport.description":
+    "Reimportar {{target}} sobrescribirá las sesiones y eliminará los mensajes nuevos ya realizados en ellas.",
+  "migration.forceReimport.target.one": "esta sesión",
+  "migration.forceReimport.target.many": "estas {{count}} sesiones",
+  "migration.forceReimport.button": "Forzar reimportación",
+  "migration.forceReimport.all": "Reimportar todo",
+  "migration.forceReimport.proceed": "Proceder",
+  "migration.forceReimport.toast.started": "Reimportación forzada iniciada",
+  "migration.running.title": "Migración en curso",
+  "migration.running.description.line1": "Vas a terminar mientras todavía hay sesiones migrándose.",
+  "migration.running.description.line2": "Si sales ahora, algunas sesiones pueden quedar incompletas.",
+  "migration.running.stay": "Quedarse",
+  "migration.running.proceed": "Proceder",
+  "migration.sessionProgress.preparing": "Preparando sesión",
+  "migration.sessionProgress.storing": "Guardando sesión",
+  "migration.sessionProgress.skipped": "Sesión omitida",
+  "migration.sessionProgress.header": "Migrando {{current}} de {{total}}",
+  "migration.sessionFormat.unknownDate": "Fecha desconocida",
+  "migration.sessionFormat.unknown": "Desconocido",
+  "migration.sessionFormat.unknownError": "Error desconocido",
   // legacy-migration end
 
   "error.details.show": "Detalles",
@@ -1332,4 +1376,5 @@ export const dict = {
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
+  "notifications.action.tryModelGeneric": "Probar modelo",
 }

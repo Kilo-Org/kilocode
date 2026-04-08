@@ -56,8 +56,14 @@ export interface PanelContext {
   /** Whether the panel is currently the active tab. */
   readonly active: boolean
 
+  /** Whether the panel is visible (may be unfocused in a split editor group). */
+  readonly visible: boolean
+
   /** Session provider wired to this panel. */
   readonly sessions: SessionProvider
+
+  /** Register a callback for when panel visibility changes. */
+  onDidChangeVisibility(cb: (visible: boolean) => void): Disposable
 
   /** Register a callback for when the panel is disposed. */
   onDidDispose(cb: () => void): Disposable
@@ -106,6 +112,9 @@ export interface Host {
 
   /** Capture a telemetry event. */
   capture(event: string, properties?: Record<string, unknown>): void
+
+  /** Open a URL in the user's default browser. */
+  openExternal(url: string): void
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void

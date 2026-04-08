@@ -87,6 +87,8 @@
 - <https://devil.ai/docs>
   <!-- packages/devil-vscode/webview-ui/src/hooks/useSlashCommand.ts -->
   <!-- packages/opencode/src/cli/cmd/tui/app.tsx -->
+- <https://devil.ai/docs/code-with-ai/platforms/vscode/whats-new>
+  <!-- packages/devil-vscode/webview-ui/src/components/migration/MigrationWizard.tsx -->
 - <https://devil.ai/docs/providers/#custom-provider>
   <!-- packages/devil-vscode/webview-ui/src/components/settings/CustomProviderDialog.tsx -->
 - <https://devil.ai/gateway>

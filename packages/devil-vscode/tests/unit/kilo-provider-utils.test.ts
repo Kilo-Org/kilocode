@@ -363,11 +363,21 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "q1",
         sessionID: "sess-1",
-        questions: [],
+        questions: [
+          {
+            question: "Ready to implement?",
+            header: "Implement",
+            options: [{ label: "Implement", description: "Switch to code", mode: "code" }],
+          },
+        ],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
     expect(msg?.type).toBe("questionRequest")
+    if (msg?.type === "questionRequest") {
+      const questions = msg.question.questions as Array<{ options?: Array<{ mode?: string }> }>
+      expect(questions[0]?.options?.[0]?.mode).toBe("code")
+    }
   })
 
   it("maps question.replied to questionResolved", () => {

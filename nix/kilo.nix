@@ -51,7 +51,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 dist/@kilocode/cli-*/bin/kilo $out/bin/kilo
+    install -Dm755 dist/@devilcode/cli-*/bin/kilo $out/bin/kilo
     install -Dm644 schema.json $out/share/kilo/schema.json
 
     wrapProgram $out/bin/kilo \

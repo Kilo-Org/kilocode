@@ -26,6 +26,8 @@ export interface LocalStats {
 export interface WorktreePresence {
   worktreeId: string
   missing: boolean
+  /** Current branch from `git worktree list`, if available. */
+  branch?: string
 }
 
 export interface WorktreePresenceResult {
@@ -159,7 +161,7 @@ export class GitStatsPoller {
             const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([
               client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
-              this.git.aheadBehind(wt.path, base, wt.remote),
+              this.git.aheadBehind(wt.path, base),
             ])
             const files = diffs.length
             const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
@@ -231,7 +233,8 @@ export class GitStatsPoller {
           () => false,
         )
         const missing = !exists || !tracked.has(normalized)
-        return { worktreeId: wt.id, missing }
+        const branch = tracked.get(normalized)
+        return { worktreeId: wt.id, missing, branch }
       }),
     )
 
@@ -248,7 +251,6 @@ export class GitStatsPoller {
 
       const tracking = await this.git.resolveTrackingBranch(root, branch)
       const base = tracking ?? (await this.git.resolveDefaultBranch(root, branch))
-      const remote = await this.git.resolveRemote(root, branch).catch(() => undefined)
 
       let files: number
       let additions: number
@@ -260,7 +262,7 @@ export class GitStatsPoller {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
           const [{ data: diffs }, ab] = await Promise.all([
             client.worktree.diffSummary({ directory: root, base }, { throwOnError: true }),
-            this.git.aheadBehind(root, base, remote),
+            this.git.aheadBehind(root, base),
           ])
           files = diffs.length
           additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)

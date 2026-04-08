@@ -188,11 +188,15 @@ export function activate(context: vscode.ExtensionContext) {
       else provider.postMessage({ type: "action", action: "historyButtonClicked" })
     }),
     vscode.commands.registerCommand("kilo-code.new.cycleAgentMode", () => {
-      provider.postMessage({ type: "action", action: "cycleAgentMode" })
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "cycleAgentMode" })
+      else provider.postMessage({ type: "action", action: "cycleAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cycleAgentMode" })
     }),
     vscode.commands.registerCommand("kilo-code.new.cyclePreviousAgentMode", () => {
-      provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+      const tab = activeTabProvider()
+      if (tab) tab.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
+      else provider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
       agentManagerProvider.postMessage({ type: "action", action: "cyclePreviousAgentMode" })
     }),
     vscode.commands.registerCommand("kilo-code.new.profileButtonClicked", () => {

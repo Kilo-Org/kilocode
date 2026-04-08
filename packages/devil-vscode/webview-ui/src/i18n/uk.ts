@@ -945,6 +945,10 @@ export const dict = {
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
 
+  "ui.sessionTurn.cancel": "Скасувати",
+  "ui.sessionTurn.status.thinking": "Думаю...",
+  "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
+
   "dialog.model.noProviders": "Немає провайдерів",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
@@ -1260,6 +1264,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Малий та ефективний ядерний модуль у кожному продукті Devil. Знайомий досвід незалежно від того, як ви вважаєте за краще працювати.",
   "migration.whatsNew.blogLink": "Читати повне оголошення",
+  "migration.whatsNew.docsLink": "Що нового та часті запитання",
   "migration.whatsNew.continue": "Продовжити",
 
   // Screen 2 — Migrate Settings
@@ -1296,6 +1301,36 @@ export const dict = {
   "migration.error.continue": "Продовжити",
   "migration.error.action.copy": "Копіювати",
   "migration.error.toast.copied": "Помилку скопійовано до буфера обміну",
+
+  "migration.sessionSummary.title": "Підсумок:",
+  "migration.sessionSummary.copy": "Скопіювати звіт",
+  "migration.sessionSummary.toast.copied": "Звіт скопійовано",
+  "migration.sessionSummary.successful": "Успішно",
+  "migration.sessionSummary.skipped": "Пропущено",
+  "migration.sessionSummary.alreadyMigrated": "Уже перенесено",
+  "migration.sessionSummary.errored": "З помилкою",
+  "migration.sessionSummary.none": "Немає",
+  "migration.forceReimport.title": "Примусово імпортувати повторно",
+  "migration.forceReimport.description":
+    "Повторний імпорт {{target}} перезапише їх і видалить усі нові повідомлення, уже створені в цих сесіях.",
+  "migration.forceReimport.target.one": "цю сесію",
+  "migration.forceReimport.target.many": "ці {{count}} сесії",
+  "migration.forceReimport.button": "Примусово імпортувати повторно",
+  "migration.forceReimport.all": "Імпортувати все повторно",
+  "migration.forceReimport.proceed": "Продовжити",
+  "migration.forceReimport.toast.started": "Примусовий повторний імпорт розпочато",
+  "migration.running.title": "Триває перенесення",
+  "migration.running.description.line1": "Ви збираєтеся завершити роботу, поки деякі сесії ще переносяться.",
+  "migration.running.description.line2": "Якщо ви вийдете зараз, деякі сесії можуть залишитися незавершеними.",
+  "migration.running.stay": "Залишитися",
+  "migration.running.proceed": "Продовжити",
+  "migration.sessionProgress.preparing": "Підготовка сесії",
+  "migration.sessionProgress.storing": "Збереження сесії",
+  "migration.sessionProgress.skipped": "Сесію пропущено",
+  "migration.sessionProgress.header": "Перенесення {{current}} з {{total}}",
+  "migration.sessionFormat.unknownDate": "Невідома дата",
+  "migration.sessionFormat.unknown": "Невідомо",
+  "migration.sessionFormat.unknownError": "Невідома помилка",
   // legacy-migration end
 
   "error.details.show": "Деталі",
@@ -1313,6 +1348,7 @@ export const dict = {
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",
+  "notifications.action.tryModelGeneric": "Спробувати модель",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
   "settings.agentBehaviour.createMode": "Створити новий режим",
@@ -1336,9 +1372,20 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Редагувати режим",
   "settings.agentBehaviour.editMode.back": "Назад до списку",
   "settings.agentBehaviour.editMode.description": "Опис",
-  "settings.agentBehaviour.editMode.native": "Вбудований режим (визначення лише для читання)",
+  "settings.agentBehaviour.editMode.native":
+    "Це вбудований режим. Його базове визначення неможливо змінити, але ви можете налаштувати перевизначення нижче.",
   "settings.agentBehaviour.editMode.prompt": "Системний запит",
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
+  "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
+  "settings.agentBehaviour.permissions.count": "{{count}} правил",
+  "settings.agentBehaviour.permissions.effective": "Ефективні (шаблон):",
+  "settings.agentBehaviour.permissions.col.tool": "Інструмент",
+  "settings.agentBehaviour.permissions.col.pattern": "Шаблон",
+  "settings.agentBehaviour.permissions.col.action": "Дія",
+  "settings.agentBehaviour.permissions.copy": "Копіювати дозволи як JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
 }

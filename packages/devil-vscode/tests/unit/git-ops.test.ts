@@ -4,12 +4,12 @@ import * as os from "os"
 import * as nodePath from "path"
 import { GitOps } from "../../src/agent-manager/GitOps"
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
+  return new GitOps({ log: () => undefined, runGit: handler })
 }
 
-function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
-  return new GitOps({ log: () => undefined, refreshMs: 120000, runGit: handler })
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function runGit(cwd: string, args: string[]): string {
@@ -193,106 +193,29 @@ describe("GitOps", () => {
     })
   })
 
-  describe("refreshRemote", () => {
-    it("fetches the remote", async () => {
-      const commands: string[][] = []
-      const git = ops(async (args) => {
-        commands.push(args)
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-        return ""
-      })
-      await git.refreshRemote("/repo", "origin")
-      const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches.length).toBe(1)
-      expect(fetches[0]![3]).toBe("origin")
-    })
-
-    it("skips empty remote name", async () => {
-      const commands: string[][] = []
-      const git = ops(async (args) => {
-        commands.push(args)
-        return ""
-      })
-      await git.refreshRemote("/repo", "")
-      expect(commands.length).toBe(0)
-    })
-
-    it("throttles repeated fetches for the same remote", async () => {
-      const commands: string[][] = []
-      const git = ops(async (args) => {
-        commands.push(args)
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-        return ""
-      })
-      await git.refreshRemote("/repo", "origin")
-      await git.refreshRemote("/repo", "origin")
-      const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches.length).toBe(1)
-    })
-
-    it("deduplicates inflight fetches", async () => {
-      const commands: string[][] = []
-      const git = new GitOps({
-        log: () => undefined,
-        refreshMs: 0,
-        runGit: async (args) => {
-          commands.push(args)
-          if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-          if (args[0] === "fetch") {
-            await sleep(50)
-            return ""
-          }
-          return ""
-        },
-      })
-      await Promise.all([git.refreshRemote("/repo", "origin"), git.refreshRemote("/repo", "origin")])
-      const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches.length).toBe(1)
-    })
-  })
-
   describe("aheadBehind", () => {
     it("counts commits ahead and behind using the provided ref", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "1\t3"
         return ""
       })
       expect(await git.aheadBehind("/repo", "origin/main")).toEqual({ ahead: 3, behind: 1 })
     })
 
-    it("fetches the explicitly-provided remote before counting", async () => {
+    it("does not fetch from remote", async () => {
       const commands: string[][] = []
       const git = ops(async (args) => {
         commands.push(args)
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t4"
         return ""
       })
-      expect(await git.aheadBehind("/repo", "myfork/main", "myfork")).toEqual({ ahead: 4, behind: 0 })
-      const fetches = commands.filter((c) => c[0] === "fetch")
-      expect(fetches.length).toBe(1)
-      expect(fetches[0]![3]).toBe("myfork")
-    })
-
-    it("skips fetch when no remote is provided", async () => {
-      const commands: string[][] = []
-      const git = ops(async (args) => {
-        commands.push(args)
-        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
-        return ""
-      })
-      expect(await git.aheadBehind("/repo", "main")).toEqual({ ahead: 2, behind: 0 })
+      await git.aheadBehind("/repo", "myfork/main")
       const fetches = commands.filter((c) => c[0] === "fetch")
       expect(fetches.length).toBe(0)
     })
 
     it("returns zeros when rev-list fails", async () => {
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") throw new Error("fatal")
         return ""
       })
@@ -302,8 +225,6 @@ describe("GitOps", () => {
     it("uses the ref directly without double-prefixing", async () => {
       const refs: string[] = []
       const git = ops(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") {
           refs.push(args[3]!)
           return "0\t1"
@@ -556,6 +477,83 @@ describe("GitOps", () => {
         // small.txt: "hello".split("\n").length = 1, huge.bin: skipped (0)
         expect(stats.additions).toBe(1)
       })
+    })
+  })
+
+  describe("dispose", () => {
+    it("aborts in-flight runGit calls quickly", async () => {
+      let resolved = false
+      const git = new GitOps({
+        log: () => undefined,
+        runGit: async () => {
+          await sleep(5000)
+          resolved = true
+          return "should not reach"
+        },
+      })
+
+      const start = Date.now()
+      const pending = git.currentBranch("/repo")
+      git.dispose()
+      await pending
+      const elapsed = Date.now() - start
+      expect(elapsed).toBeLessThan(500)
+      expect(resolved).toBe(false)
+    })
+
+    it("causes subsequent runGit calls to fail immediately", async () => {
+      let called = false
+      const git = new GitOps({
+        log: () => undefined,
+        runGit: async () => {
+          called = true
+          return "ok"
+        },
+      })
+      git.dispose()
+
+      // currentBranch swallows errors — should return "" without calling runGit
+      const result = await git.currentBranch("/repo")
+      expect(result).toBe("")
+      expect(called).toBe(false)
+    })
+
+    it("reports disposed state", () => {
+      const git = ops(async () => "ok")
+      expect(git.disposed).toBe(false)
+      git.dispose()
+      expect(git.disposed).toBe(true)
+    })
+
+    it("kills in-flight exec (spawn) processes", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const pending = git.buildWorktreePatch(cwd, branch)
+        // Give spawn a moment to start, then dispose
+        await sleep(10)
+        git.dispose()
+
+        // Should either reject or return (but process should be killed)
+        try {
+          await pending
+        } catch {
+          // expected — aborted
+        }
+        expect(git.disposed).toBe(true)
+      })
+    })
+
+    it("is safe to call multiple times", () => {
+      const git = ops(async () => "ok")
+      git.dispose()
+      git.dispose()
+      expect(git.disposed).toBe(true)
     })
   })
 })

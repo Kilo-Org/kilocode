@@ -76,7 +76,7 @@ The merge automation follows this process, applying **all transformations BEFORE
    - `<author>/opencode-<version>` - Transformed upstream branch
 
 5. **Apply ALL transformations to upstream branch (PRE-MERGE)**:
-   - Transform package names (opencode-ai -> @kilocode/cli)
+   - Transform package names (opencode-ai -> @devilcode/cli)
    - Preserve Kilo's versions
    - Transform i18n files with Kilo branding
    - Transform branding-only files (UI components, configs)
@@ -106,8 +106,8 @@ Configuration is defined in `utils/config.ts`:
 {
   // Package name mappings
   packageMappings: [
-    { from: "opencode-ai", to: "@kilocode/cli" },
-    { from: "@opencode-ai/cli", to: "@kilocode/cli" },
+    { from: "opencode-ai", to: "@devilcode/cli" },
+    { from: "@opencode-ai/cli", to: "@devilcode/cli" },
     // ...
   ],
 
@@ -161,7 +161,7 @@ Configuration is defined in `utils/config.ts`:
 
 The following transforms are applied to the opencode branch before merging:
 
-1. **Package names** - `opencode-ai` -> `@kilocode/cli`, etc.
+1. **Package names** - `opencode-ai` -> `@devilcode/cli`, etc.
 2. **Versions** - Preserve Kilo's version numbers
 3. **i18n files** - OpenCode -> Kilo in user-visible strings
 4. **Branding files** - UI components, configs with branding only

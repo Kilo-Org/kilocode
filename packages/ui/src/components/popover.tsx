@@ -59,6 +59,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     return uncontrolledOpen()
   }
 
+  const focus = (node?: ParentNode | null) => {
+    const root = node ?? contentRef()
+    if (!root) return
+    const target = root.querySelector<HTMLElement>("[data-autofocus]")
+    if (!target) return
+    target.focus()
+  }
+
   const onOpenChange = (next: boolean) => {
     if (next) setDismiss(null)
     if (local.onOpenChange) local.onOpenChange(next)
@@ -135,6 +143,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     })
   })
 
+  createEffect(() => {
+    if (!opened()) return
+    const node = contentRef()
+    if (!node) return
+    const id = requestAnimationFrame(() => focus(node))
+    onCleanup(() => cancelAnimationFrame(id))
+  })
+
   const content = () => (
     <Kobalte.Content
       ref={(el: HTMLElement | undefined) => setContentRef(el)}
@@ -152,6 +168,12 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       }}
       onFocusOutside={(event: Event) => {
         event.preventDefault()
+      }}
+      onOpenAutoFocus={(event: Event) => {
+        const node = event.currentTarget as ParentNode | null
+        if (!node) return
+        event.preventDefault()
+        focus(node)
       }}
       onCloseAutoFocus={(event: Event) => {
         if (dismiss() === "outside") event.preventDefault()

@@ -3,7 +3,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import type { DevilClient } from "@devilcode/sdk/v2/client"
-import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
+import { GitStatsPoller, type WorktreePresenceResult } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
@@ -66,9 +66,6 @@ describe("GitStatsPoller", () => {
       log: () => undefined,
       intervalMs: 5,
       git: gitOps(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t1"
         return ""
       }),
@@ -106,9 +103,7 @@ describe("GitStatsPoller", () => {
       log: () => undefined,
       intervalMs: 5,
       git: gitOps(async (args) => {
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t2"
         return ""
       }),
@@ -133,7 +128,7 @@ describe("GitStatsPoller", () => {
     const wtPath = path.join(root, "wt-a")
     fs.mkdirSync(wtPath, { recursive: true })
 
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
@@ -159,7 +154,10 @@ describe("GitStatsPoller", () => {
     poller.stop()
     fs.rmSync(root, { recursive: true, force: true })
 
-    expect(presence[0]).toEqual({ worktrees: [{ worktreeId: "a", missing: false }], degraded: false })
+    expect(presence[0]).toEqual({
+      worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],
+      degraded: false,
+    })
   })
 
   it("emits degraded probe when git worktree listing fails", async () => {
@@ -167,7 +165,7 @@ describe("GitStatsPoller", () => {
     const wtPath = path.join(root, "wt-a")
     fs.mkdirSync(wtPath, { recursive: true })
 
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
@@ -204,7 +202,7 @@ describe("GitStatsPoller", () => {
 
     const calls: string[] = []
     const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const client = {
       worktree: {
@@ -231,9 +229,7 @@ describe("GitStatsPoller", () => {
         if (args[0] === "worktree") {
           return `worktree ${wtAPath}\nbranch refs/heads/branch-a\n`
         }
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
         if (args[0] === "rev-parse" && args[3] === "@{upstream}") return "origin/main"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list") return "1"
         return ""
       }),
@@ -247,8 +243,8 @@ describe("GitStatsPoller", () => {
     expect(calls.some((cwd) => cwd === wtBPath)).toBe(false)
     expect(presence[0]).toEqual({
       worktrees: [
-        { worktreeId: "a", missing: false },
-        { worktreeId: "b", missing: true },
+        { worktreeId: "a", missing: false, branch: "branch-a" },
+        { worktreeId: "b", missing: true, branch: undefined },
       ],
       degraded: false,
     })
@@ -287,8 +283,6 @@ describe("GitStatsPoller", () => {
       git: gitOps(async (args) => {
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "HEAD") return "feature"
         if (args[0] === "rev-parse" && args[1] === "--abbrev-ref" && args[2] === "@{upstream}") return "origin/feature"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t3"
         if (args[0] === "branch") return "feature"
         if (args[0] === "config") return "origin"
@@ -341,8 +335,6 @@ describe("GitStatsPoller", () => {
         // myfork/HEAD resolves to the default branch
         if (args[0] === "symbolic-ref" && args[2] === "refs/remotes/myfork/HEAD") return "myfork/develop"
         if (args[0] === "branch") return "my-feature"
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return ".git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t5"
         return ""
       }),
@@ -406,7 +398,7 @@ describe("GitStatsPoller", () => {
     })
   })
 
-  it("refreshes upstream remote once for concurrent worktrees", async () => {
+  it("does not fetch from remote for ahead/behind counts", async () => {
     const commands: string[][] = []
     const emitted: Array<
       Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
@@ -416,7 +408,6 @@ describe("GitStatsPoller", () => {
       worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
     } as unknown as DevilClient
 
-    // Worktrees store remote="upstream" so aheadBehind receives "upstream/main"
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a", "upstream"), worktree("b", "upstream")],
       getWorkspaceRoot: () => undefined,
@@ -427,8 +418,6 @@ describe("GitStatsPoller", () => {
       intervalMs: 500,
       git: gitOps(async (args) => {
         commands.push(args)
-        if (args[0] === "rev-parse" && args[1] === "--git-common-dir") return "/repo/.git"
-        if (args[0] === "fetch") return ""
         if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
         return ""
       }),
@@ -439,9 +428,6 @@ describe("GitStatsPoller", () => {
     poller.stop()
 
     const fetches = commands.filter((cmd) => cmd[0] === "fetch")
-    expect(fetches.length).toBe(1)
-    const fetch = fetches[0]
-    if (!fetch) throw new Error("expected fetch command")
-    expect(fetch[3]).toBe("upstream")
+    expect(fetches.length).toBe(0)
   })
 })

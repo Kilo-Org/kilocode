@@ -33,7 +33,7 @@ This builds the CLI binary for your current OS/arch only, copies it into the bac
 Or via Turbo from the repo root:
 
 ```
-bun turbo build --filter=@kilocode/kilo-jetbrains
+bun turbo build --filter=@devilcode/kilo-jetbrains
 ```
 
 ---

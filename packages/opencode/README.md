@@ -5,13 +5,13 @@ The AI coding agent built for the terminal. Generate code from natural language,
 ## Install
 
 ```bash
-npm install -g @kilocode/cli
+npm install -g @devilcode/cli
 ```
 
 Or run directly with npx:
 
 ```bash
-npx --package @kilocode/cli kilo
+npx --package @devilcode/cli kilo
 ```
 
 ## Getting Started
