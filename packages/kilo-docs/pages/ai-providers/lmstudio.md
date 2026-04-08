@@ -48,7 +48,7 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 
 LM Studio runs locally, so no API key is needed. Configure the base URL if LM Studio is running on a different host or port:
 
-**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.json`):
+**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
 
 ```jsonc
 {
