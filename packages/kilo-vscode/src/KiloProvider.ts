@@ -2489,8 +2489,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * kilocode_change start: bare filenames (no path separator) are resolved via
    * workspace.findFiles so that clicking a "ShapeEditorContext.cs:129" link in chat
    * works without knowing the full path.
+   * Paths prefixed with "__kilo_symbol__" are routed to openSymbol() for class/method
+   * navigation — this reuses the proven file-link postMessage channel.
    */
   private handleOpenFile(filePath: string, line?: number, column?: number): void {
+    // kilocode_change: symbol navigation piggybacks on the openFile channel
+    if (filePath.startsWith("__kilo_symbol__")) {
+      void openSymbol(filePath.slice("__kilo_symbol__".length))
+      return
+    }
     const hasSeparator = filePath.includes("/") || filePath.includes("\\")
     if (!isAbsolutePath(filePath) && !hasSeparator) {
       vscode.workspace.findFiles(`**/${filePath}`, "**/node_modules/**", 1).then((files) => {

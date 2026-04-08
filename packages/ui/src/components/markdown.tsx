@@ -312,11 +312,14 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     // kilocode_change end
 
     // kilocode_change start: handle clicks on symbol (class/method) code links
+    // Route through the same kilo:openFileAtLine mechanism as file links (which
+    // is proven to work in both sidebar and Agent Manager contexts) using a
+    // "__kilo_symbol__" prefix so handleOpenFile can distinguish it.
     const symbolCode = target.closest("code.symbol-link")
     if (symbolCode instanceof HTMLElement && symbolCode.dataset.symbolLink) {
       document.dispatchEvent(
-        new CustomEvent("kilo:openSymbol", {
-          detail: { symbol: symbolCode.dataset.symbolLink },
+        new CustomEvent("kilo:openFileAtLine", {
+          detail: { file: `__kilo_symbol__${symbolCode.dataset.symbolLink}` },
         }),
       )
       return

@@ -1085,23 +1085,13 @@ const AgentManagerContent: Component = () => {
     window.addEventListener("focus", onWindowFocus)
 
     // kilocode_change start: forward file:line and symbol link clicks from markdown to the extension
-    console.log("[Kilo] AgentManagerApp: registering kilo link handlers")
+    // Symbol links use "__kilo_symbol__" prefix — same fileLinkHandler covers both.
     const fileLinkHandler = (e: Event) => {
       const { file, line } = (e as CustomEvent<{ file: string; line?: number }>).detail
-      console.log("[Kilo] kilo:openFileAtLine", file, line)
       vscode.postMessage({ type: "openFile", filePath: file, line })
     }
-    const symbolLinkHandler = (e: Event) => {
-      const { symbol } = (e as CustomEvent<{ symbol: string }>).detail
-      console.log("[Kilo] kilo:openSymbol", symbol)
-      vscode.postMessage({ type: "openSymbol", symbol })
-    }
     document.addEventListener("kilo:openFileAtLine", fileLinkHandler)
-    document.addEventListener("kilo:openSymbol", symbolLinkHandler)
-    onCleanup(() => {
-      document.removeEventListener("kilo:openFileAtLine", fileLinkHandler)
-      document.removeEventListener("kilo:openSymbol", symbolLinkHandler)
-    })
+    onCleanup(() => document.removeEventListener("kilo:openFileAtLine", fileLinkHandler))
     // kilocode_change end
 
     // When a session is created, add it as a local tab. This handles both direct
