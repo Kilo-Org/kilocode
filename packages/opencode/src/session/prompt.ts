@@ -46,6 +46,7 @@ import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncation"
+import { Todo } from "./todo" // kilocode_change - fix #8476: continue loop with pending todos
 import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
 import { environmentDetails } from "@/kilocode/editor-context" // kilocode_change
 
@@ -331,6 +332,7 @@ export namespace SessionPrompt {
     let envUser: string | undefined
 
     let step = 0
+    let reminders = 0 // kilocode_change - fix #8476: resets per user turn, tracks reminder injections
     const session = await Session.get(sessionID)
     while (true) {
       SessionStatus.set(sessionID, { type: "busy" })
@@ -372,6 +374,50 @@ export namespace SessionPrompt {
           if (action === "continue") continue
         }
         // kilocode_change end
+
+        // kilocode_change start - fix #8476: continue loop with pending todos
+        const pending = Todo.get(sessionID).filter(
+          (t) => t.status === "pending" || t.status === "in_progress",
+        )
+        if (pending.length > 0 && reminders < 3) {
+          reminders++
+          step++ // respect agent's maxSteps limit
+          log.info("continuing loop with pending todos", {
+            sessionID,
+            pendingCount: pending.length,
+            reminders,
+          })
+          const pendingList = pending.map((t) => `- [${t.status}] ${t.content}`).join("\n")
+          const synthMsgId = Identifier.ascending("message")
+          await Session.updateMessage({
+            id: synthMsgId,
+            sessionID,
+            role: "user",
+            time: { created: Date.now() },
+            agent: lastUser.agent,
+            model: lastUser.model,
+          })
+          await Session.updatePart({
+            id: Identifier.ascending("part"),
+            sessionID,
+            messageID: synthMsgId,
+            type: "text",
+            text: `<system-reminder>
+You have ${pending.length} pending task(s) remaining. Please continue working on them:
+${pendingList}
+</system-reminder>`,
+            synthetic: true,
+          })
+          continue
+        }
+        if (pending.length > 0) {
+          log.info("reminder limit reached, exiting with pending todos", {
+            sessionID,
+            pendingCount: pending.length,
+          })
+        }
+        // kilocode_change end
+
         log.info("exiting loop", { sessionID })
         break
       }
