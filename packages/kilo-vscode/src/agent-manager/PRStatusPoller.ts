@@ -15,6 +15,8 @@ const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely chang
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
 const PR_LOOKUP_TTL = 10_000 // 10 seconds — short TTL; only the active worktree polls so this stays cheap
+const FULL_SYNC_INTERVAL = 120_000 // 2 minutes — periodic sync of ALL worktrees (badges stay fresh)
+const FULL_SYNC_CONCURRENCY = 3 // max parallel gh processes during a full sync (caps the burst)
 
 export class PRStatusPoller {
   private timer: ReturnType<typeof setTimeout> | undefined
@@ -29,6 +31,7 @@ export class PRStatusPoller {
   private activeWorktreeId: string | undefined
   private cachedRepo: { owner: string; name: string; cwd: string } | undefined
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
+  private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
 
   constructor(private readonly options: PRStatusPollerOptions) {
@@ -56,6 +59,7 @@ export class PRStatusPoller {
       this.timer = undefined
       this.prCache.clear()
       this.lastHash.clear()
+      this.lastFullSync = 0
       void this.poll()
       return
     }
@@ -80,6 +84,7 @@ export class PRStatusPoller {
     this.ghProbeTime = 0
     this.cachedRepo = undefined
     this.prCache.clear()
+    this.lastFullSync = 0
   }
 
   /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
@@ -159,19 +164,26 @@ export class PRStatusPoller {
 
     this.lastError = undefined
 
-    // Only poll the active worktree on each timer tick. Inactive worktrees
-    // refresh when selected (setActiveWorktreeId) or manually (refresh()).
-    // On first poll (lastHash empty) fetch all worktrees once to populate badges.
+    // Most ticks only poll the active worktree for fast feedback. Every
+    // FULL_SYNC_INTERVAL we poll ALL worktrees so badges stay current even
+    // for sessions that aren't selected (e.g. CI results changing).
+    // The very first poll (lastHash empty) also fetches everything.
     const worktrees = this.options.getWorktrees()
+    const now = Date.now()
     const initial = this.lastHash.size === 0
-    const targets = initial ? worktrees : worktrees.filter((wt) => wt.id === this.activeWorktreeId)
+    const full = initial || now - this.lastFullSync >= FULL_SYNC_INTERVAL
+    const targets = full ? worktrees : worktrees.filter((wt) => wt.id === this.activeWorktreeId)
+    if (full) this.lastFullSync = now
 
     if (targets.length === 0) {
       this.failures = 0
       return
     }
 
-    const results = await Promise.allSettled(targets.map((wt) => this.fetchOne(wt.id)))
+    const thunks = targets.map((wt) => () => this.fetchOne(wt.id))
+    const results = full
+      ? await settled(thunks, FULL_SYNC_CONCURRENCY)
+      : await Promise.allSettled(thunks.map((fn) => fn()))
     const ok = results.every((r) => r.status === "fulfilled")
     if (ok) {
       this.failures = 0
@@ -518,4 +530,23 @@ function formatCheckDuration(startedAt?: string, completedAt?: string): string |
   if (!startedAt || !completedAt) return undefined
   const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
+}
+
+/** Run async thunks with bounded concurrency, returning settled results. */
+async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = new Array(thunks.length)
+  let idx = 0
+  async function run(): Promise<void> {
+    while (idx < thunks.length) {
+      const i = idx++
+      const fn = thunks[i]!
+      try {
+        results[i] = { status: "fulfilled", value: await fn() }
+      } catch (reason) {
+        results[i] = { status: "rejected", reason }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, thunks.length) }, () => run()))
+  return results
 }
