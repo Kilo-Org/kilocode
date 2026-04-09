@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Åbn en mappe, der indeholder et git-repository for at bruge worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Dette repository bruger Git LFS, men git-lfs blev ikke fundet. Installer venligst Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Dette repository har ingen commits endnu. Opret et indledende commit før du bruger worktrees.",
   "agentManager.shortcuts.title": "Tastaturgenveje",
   "agentManager.shortcuts.category.sidebar": "Sidebjælke",
   "agentManager.shortcuts.category.tabs": "Faner",

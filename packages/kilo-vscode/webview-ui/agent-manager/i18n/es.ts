@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Abra una carpeta que contenga un repositorio git para usar worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Este repositorio usa Git LFS, pero no se encontró git-lfs. Por favor instale Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Este repositorio aún no tiene commits. Cree un commit inicial antes de usar worktrees.",
   "agentManager.shortcuts.title": "Atajos de teclado",
   "agentManager.shortcuts.category.sidebar": "Barra lateral",
   "agentManager.shortcuts.category.tabs": "Pestañas",

@@ -53,6 +53,7 @@ export const dict = {
   "agentManager.setup.error.git_not_found": "ไม่ได้ติดตั้ง Git หรือไม่พบใน PATH โปรดติดตั้ง Git และรีสตาร์ท VS Code",
   "agentManager.setup.error.not_git_repo": "เปิดโฟลเดอร์ที่มีที่เก็บ git เพื่อใช้ worktrees",
   "agentManager.setup.error.lfs_missing": "ที่เก็บนี้ใช้ Git LFS แต่ไม่พบ git-lfs โปรดติดตั้ง Git LFS",
+  "agentManager.setup.error.no_commits": "ที่เก็บนี้ยังไม่มีการคอมมิต สร้างการคอมมิตเริ่มต้นก่อนใช้ worktrees",
   "agentManager.shortcuts.title": "ปุ่มลัดแป้นพิมพ์",
   "agentManager.shortcuts.category.sidebar": "แถบด้านข้าง",
   "agentManager.shortcuts.category.tabs": "แท็บ",

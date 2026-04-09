@@ -56,6 +56,8 @@ export const dict = {
     "Otvorite fasciklu koja sadrži git repozitorijum da biste koristili worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Ovaj repozitorijum koristi Git LFS, ali git-lfs nije pronađen. Molimo instalirajte Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Ovaj repozitorijum još uvek nema commit-ova. Napravite početni commit pre korišćenja worktrees.",
   "agentManager.shortcuts.title": "Prečice na tastaturi",
   "agentManager.shortcuts.category.sidebar": "Bočna traka",
   "agentManager.shortcuts.category.tabs": "Kartice",

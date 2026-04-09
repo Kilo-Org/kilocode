@@ -858,6 +858,21 @@ export class WorktreeManager {
       this.log(`defaultBranch: branchLocal failed: ${e}`)
     }
 
+    // Check if this is an empty repo with no commits (unborn branch).
+    // In this state HEAD exists as a symbolic ref to a branch that has no
+    // commits, so rev-parse, branch --list, etc. all return nothing.
+    try {
+      const status = await this.git.status()
+      if (status.current) {
+        // There IS a branch name (e.g. "main") but no commits — unborn branch
+        throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
+      }
+    } catch (e) {
+      // Re-throw our own descriptive error; swallow git failures
+      if (e instanceof Error && e.message.includes("no commits yet")) throw e
+      this.log(`defaultBranch: status check failed: ${e}`)
+    }
+
     throw new Error("Could not determine default branch")
   }
 

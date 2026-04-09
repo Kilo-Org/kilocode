@@ -61,6 +61,8 @@ export const dict = {
     "Відкрийте папку, що містить git-репозиторій, щоб використовувати робочі дерева.",
   "agentManager.setup.error.lfs_missing":
     "Цей репозиторій використовує Git LFS, але git-lfs не знайдено. Будь ласка, встановіть Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "У цьому репозиторії ще немає коммітів. Створіть початковий комміт перед використанням worktrees.",
   "agentManager.shortcuts.title": "Клавіатурні скорочення",
   "agentManager.shortcuts.category.sidebar": "Бічна панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",

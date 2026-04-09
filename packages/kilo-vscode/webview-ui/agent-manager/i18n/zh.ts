@@ -53,6 +53,7 @@ export const dict = {
   "agentManager.setup.error.git_not_found": "未安装 Git 或在 PATH 中找不到 Git。请安装 Git 并重新启动 VS Code。",
   "agentManager.setup.error.not_git_repo": "打开一个包含 git 存储库的文件夹以使用 worktrees。",
   "agentManager.setup.error.lfs_missing": "此存储库使用 Git LFS，但找不到 git-lfs。请安装 Git LFS。",
+  "agentManager.setup.error.no_commits": "此存储库尚无提交。在使用 worktrees 之前，请创建一个初始提交。",
   "agentManager.shortcuts.title": "键盘快捷键",
   "agentManager.shortcuts.category.sidebar": "侧边栏",
   "agentManager.shortcuts.category.tabs": "标签页",

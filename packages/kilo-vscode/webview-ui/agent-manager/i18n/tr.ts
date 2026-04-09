@@ -60,6 +60,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Worktree'leri kullanmak için bir git deposu içeren bir klasör açın.",
   "agentManager.setup.error.lfs_missing":
     "Bu depo Git LFS kullanıyor, ancak git-lfs bulunamadı. Lütfen Git LFS'yi yükleyin.",
+  "agentManager.setup.error.no_commits":
+    "Bu depoda henüz commit bulunmuyor. Worktree'leri kullanmadan önce bir başlangıç commit'i oluşturun.",
   "agentManager.shortcuts.title": "Klavye Kısayolları",
   "agentManager.shortcuts.category.sidebar": "Kenar Çubuğu",
   "agentManager.shortcuts.category.tabs": "Sekmeler",

@@ -54,6 +54,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "افتح مجلدًا يحتوي على مستودع git لاستخدام مساحات العمل (worktrees).",
   "agentManager.setup.error.lfs_missing":
     "يستخدم هذا المستودع Git LFS، ولكن لم يتم العثور على git-lfs. يرجى تثبيت Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "هذا المستودع لا يحتوي على أي التزامات (commits) بعد. قم بإنشاء التزام أولي قبل استخدام مساحات العمل (worktrees).",
   "agentManager.shortcuts.title": "اختصارات لوحة المفاتيح",
   "agentManager.shortcuts.category.sidebar": "الشريط الجانبي",
   "agentManager.shortcuts.category.tabs": "علامات التبويب",

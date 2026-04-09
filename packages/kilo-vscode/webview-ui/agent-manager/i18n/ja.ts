@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "worktreesを使用するには、gitリポジトリを含むフォルダーを開いてください。",
   "agentManager.setup.error.lfs_missing":
     "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
+  "agentManager.setup.error.no_commits":
+    "このリポジトリにはまだコミットがありません。worktreesを使用する前に最初のコミットを作成してください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",
