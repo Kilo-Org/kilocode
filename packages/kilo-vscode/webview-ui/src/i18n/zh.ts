@@ -1211,8 +1211,7 @@ export const dict = {
   "settings.providers.smallModel.title": "小模型",
   "settings.providers.smallModel.description": "用于标题生成、提交信息生成、提示词增强和其他快速任务的轻量模型",
   "settings.providers.subagentModel.title": "子代理模型",
-  "settings.providers.subagentModel.description":
-    "子代理的默认模型。如果未设置，子代理将继承父代理的模型",
+  "settings.providers.subagentModel.description": "子代理的默认模型。如果未设置，子代理将继承父代理的模型",
   "settings.providers.subagentModel.inherit": "继承父代理",
   "settings.providers.disabled": "已禁用的提供者",
   "settings.providers.disabled.description": "从提供者列表中隐藏的提供者",
