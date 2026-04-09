@@ -214,7 +214,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     if (single()) submit()
   }
 
-  const toggleCollapse = () => setStore("collapsed", !store.collapsed)
+  const toggleCollapse = () => {
+    const collapsing = !store.collapsed
+    setStore("collapsed", collapsing)
+    // When collapsing inline, the content shrinks and can leave an empty gap
+    // below the viewport. Scroll the dock into view so the gap is eliminated.
+    if (collapsing) {
+      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior: "smooth" }))
+    }
+  }
 
   const onRoot = (e: KeyboardEvent) => {
     if (e.key === "Escape") {

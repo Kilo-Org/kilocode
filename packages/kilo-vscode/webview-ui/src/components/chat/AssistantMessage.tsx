@@ -4,7 +4,7 @@
  * Unlike the upstream AssistantParts, this renders each read/glob/grep/list tool
  * individually for maximum verbosity in the VS Code sidebar context.
  *
- * Active questions and permissions are rendered in the bottom dock.
+ * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
 import { Component, For, Show, createMemo } from "solid-js"
@@ -17,6 +17,8 @@ import type {
   ToolPart,
 } from "@kilocode/sdk/v2"
 import { useData } from "@kilocode/kilo-ui/context/data"
+import { useSession } from "../../context/session"
+import { QuestionDock } from "./QuestionDock"
 
 // Tools that the upstream message-part renderer suppresses (returns null for).
 // We render these ourselves via ToolRegistry when they complete,
@@ -31,7 +33,7 @@ function isRenderable(part: SDKPart): boolean {
       // Show todo parts only when completed (permissions are now in the dock)
       return state.status === "completed"
     }
-    if (tool === "question" && (state.status === "pending" || state.status === "running")) return false
+    // Always render question tool parts — active ones get the inline QuestionDock
     return true
   }
   if (part.type === "text") return !!(part as SDKPart & { text: string }).text?.trim()
@@ -67,6 +69,7 @@ function TodoToolCard(props: { part: ToolPart }) {
 
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
+  const session = useSession()
 
   const parts = createMemo(() => {
     const stored = data.store.part?.[props.message.id]
@@ -82,25 +85,42 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           // so we detect them here and render via ToolRegistry directly.
           const isUpstreamSuppressed =
             part.type === "tool" && UPSTREAM_SUPPRESSED_TOOLS.has((part as SDKPart & { tool: string }).tool)
+
+          // Active question tool parts render the interactive QuestionDock inline
+          const activeQuestion = createMemo(() => {
+            if (part.type !== "tool") return undefined
+            const tp = part as unknown as ToolPart
+            if (tp.tool !== "question") return undefined
+            if (tp.state?.status !== "pending" && tp.state?.status !== "running") return undefined
+            return session.questions().find((q) => q.tool?.callID === tp.callID && q.tool?.messageID === tp.messageID)
+          })
+
           return (
-            <Show when={isUpstreamSuppressed || PART_MAPPING[part.type]}>
+            <Show when={isUpstreamSuppressed || activeQuestion() || PART_MAPPING[part.type]}>
               <div data-component="tool-part-wrapper" data-part-type={part.type}>
                 <Show
-                  when={isUpstreamSuppressed}
+                  when={activeQuestion()}
                   fallback={
-                    <Part
-                      part={part}
-                      message={props.message as SDKMessage}
-                      showAssistantCopyPartID={props.showAssistantCopyPartID}
-                      animate={
-                        part.type === "tool" &&
-                        ((part as unknown as ToolPart).state?.status === "pending" ||
-                          (part as unknown as ToolPart).state?.status === "running")
+                    <Show
+                      when={isUpstreamSuppressed}
+                      fallback={
+                        <Part
+                          part={part}
+                          message={props.message as SDKMessage}
+                          showAssistantCopyPartID={props.showAssistantCopyPartID}
+                          animate={
+                            part.type === "tool" &&
+                            ((part as unknown as ToolPart).state?.status === "pending" ||
+                              (part as unknown as ToolPart).state?.status === "running")
+                          }
+                        />
                       }
-                    />
+                    >
+                      <TodoToolCard part={part as unknown as ToolPart} />
+                    </Show>
                   }
                 >
-                  <TodoToolCard part={part as unknown as ToolPart} />
+                  {(req) => <QuestionDock request={req()} />}
                 </Show>
               </div>
             </Show>
