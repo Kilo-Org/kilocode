@@ -83,7 +83,7 @@ export namespace Project {
         updated: row.time_updated,
         initialized: row.time_initialized ?? undefined,
       },
-      sandboxes: row.sandboxes,
+      sandboxes: row.sandboxes ?? [], // devilcode_change — guard against missing column during migration/mock
       commands: row.commands ?? undefined,
     }
   }

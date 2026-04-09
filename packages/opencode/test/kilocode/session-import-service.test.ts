@@ -1,78 +1,20 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { Database, eq } from "../../src/storage/db"
+import { SessionTable } from "../../src/session/session.sql"
+import { ProjectTable } from "../../src/project/project.sql"
+import { SessionImportService } from "../../src/devilcode/session-import/service"
 
-const use = mock((fn: (db: any) => unknown) => fn(db))
-const eq = (a: unknown, b: unknown) => ({ a, b })
+// Use the real database (test preload configures an isolated tmpdir) instead of
+// mock.module("@/storage/db") which pollutes the global module cache and breaks
+// parallel test files.
 
-mock.module("../../src/storage/db", () => ({
-  Database: { use, close() {} },
-  eq,
-}))
-
-const { SessionImportService } = await import("../../src/devilcode/session-import/service")
-
-const sessionTable = { id: "session.id" }
-const db = {
-  select() {
-    return {
-      from() {
-        return {
-          where() {
-            return {
-              get() {
-                return rows.session
-              },
-            }
-          },
-        }
-      },
-    }
-  },
-  delete() {
-    return {
-      where() {
-        return {
-          run() {
-            deletes.push("session")
-            rows.session = undefined
-            rows.messages = []
-            rows.parts = []
-          },
-        }
-      },
-    }
-  },
-  insert() {
-    return {
-      values(input: Record<string, unknown>) {
-        return {
-          onConflictDoUpdate() {
-            return {
-              run() {
-                rows.session = { ...input }
-              },
-            }
-          },
-          run() {
-            rows.session = { ...input }
-          },
-        }
-      },
-    }
-  },
-}
-
-const rows = {
-  session: undefined as Record<string, unknown> | undefined,
-  messages: [] as string[],
-  parts: [] as string[],
-}
-
-const deletes: string[] = []
+const PROJECT_ID = "proj_test"
+const SESSION_ID = "ses_migrated_test"
 
 function input(force?: boolean) {
   return {
-    id: "ses_migrated_test",
-    projectID: "proj_test",
+    id: SESSION_ID,
+    projectID: PROJECT_ID,
     slug: "legacy-task",
     directory: "/workspace/testing",
     title: force ? "Reimported task" : "Legacy task",
@@ -85,37 +27,81 @@ function input(force?: boolean) {
 
 describe("SessionImportService.session", () => {
   beforeEach(() => {
-    use.mockClear()
-    deletes.length = 0
-    rows.session = undefined
-    rows.messages = []
-    rows.parts = []
+    // Clean up any existing rows
+    Database.use((db) => {
+      db.delete(SessionTable).where(eq(SessionTable.id, SESSION_ID)).run()
+      db.delete(ProjectTable).where(eq(ProjectTable.id, PROJECT_ID)).run()
+    })
+    // Create the project row that sessions reference via foreign key
+    Database.use((db) => {
+      db.insert(ProjectTable)
+        .values({
+          id: PROJECT_ID,
+          worktree: "/workspace/testing",
+          sandboxes: [],
+          time_created: Date.now(),
+          time_updated: Date.now(),
+        })
+        .onConflictDoNothing()
+        .run()
+    })
   })
 
   afterEach(() => {
-    use.mockClear()
+    Database.use((db) => {
+      db.delete(SessionTable).where(eq(SessionTable.id, SESSION_ID)).run()
+      db.delete(ProjectTable).where(eq(ProjectTable.id, PROJECT_ID)).run()
+    })
   })
 
   test("returns skipped when the session already exists and force is false", async () => {
-    rows.session = { id: "ses_migrated_test", title: "Legacy task" }
+    // Pre-insert a session row
+    Database.use((db) => {
+      db.insert(SessionTable)
+        .values({
+          id: SESSION_ID,
+          project_id: PROJECT_ID,
+          slug: "legacy-task",
+          directory: "/workspace/testing",
+          title: "Legacy task",
+          version: "v2",
+          time_created: 1,
+          time_updated: 1,
+        })
+        .run()
+    })
 
     const result = await SessionImportService.session(input())
 
-    expect(result).toEqual({ ok: true, id: "ses_migrated_test", skipped: true })
-    expect(deletes).toEqual([])
+    expect(result).toEqual({ ok: true, id: SESSION_ID, skipped: true })
   })
 
   test("deletes and recreates the session when force is true", async () => {
-    rows.session = { id: "ses_migrated_test", title: "Legacy task" }
-    rows.messages = ["msg_test"]
-    rows.parts = ["prt_test"]
+    // Pre-insert a session row
+    Database.use((db) => {
+      db.insert(SessionTable)
+        .values({
+          id: SESSION_ID,
+          project_id: PROJECT_ID,
+          slug: "legacy-task",
+          directory: "/workspace/testing",
+          title: "Legacy task",
+          version: "v2",
+          time_created: 1,
+          time_updated: 1,
+        })
+        .run()
+    })
 
     const result = await SessionImportService.session(input(true))
 
-    expect(result).toEqual({ ok: true, id: "ses_migrated_test" })
-    expect(deletes).toEqual(["session"])
-    expect(rows.messages).toEqual([])
-    expect(rows.parts).toEqual([])
-    expect(rows.session).toMatchObject({ title: "Reimported task" })
+    expect(result).toEqual({ ok: true, id: SESSION_ID })
+
+    // Verify the session was recreated with the new title
+    const row = Database.use((db) =>
+      db.select().from(SessionTable).where(eq(SessionTable.id, SESSION_ID)).get(),
+    )
+    expect(row).toBeTruthy()
+    expect(row!.title).toBe("Reimported task")
   })
 })

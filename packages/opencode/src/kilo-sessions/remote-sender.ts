@@ -20,11 +20,22 @@ const PermissionData = z.object({
   message: z.string().optional(),
 })
 
-const RemotePromptInput = SessionPrompt.PromptInput.extend({
-  model: z.string().optional(),
-})
+// devilcode_change start — lazy init to avoid circular dependency race during parallel test execution
+type RemotePromptInputType = Omit<SessionPrompt.PromptInput, "model"> & { model?: string }
 
-function normalizeModel(model: z.infer<typeof RemotePromptInput.shape.model>) {
+let _remotePromptInput: z.ZodType<RemotePromptInputType> | undefined
+
+function getRemotePromptInput() {
+  if (!_remotePromptInput) {
+    _remotePromptInput = SessionPrompt.PromptInput.extend({
+      model: z.string().optional(),
+    }) as z.ZodType<RemotePromptInputType>
+  }
+  return _remotePromptInput
+}
+// devilcode_change end
+
+function normalizeModel(model: string | undefined) {
   if (!model) return undefined
   return {
     providerID: "kilo",
@@ -32,7 +43,7 @@ function normalizeModel(model: z.infer<typeof RemotePromptInput.shape.model>) {
   }
 }
 
-function normalizePrompt(input: z.infer<typeof RemotePromptInput>): SessionPrompt.PromptInput {
+function normalizePrompt(input: RemotePromptInputType): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
@@ -209,7 +220,7 @@ export namespace RemoteSender {
 
     function dispatch(msg: RemoteProtocol.Command) {
       if (msg.command === "send_message") {
-        const parsed = RemotePromptInput.safeParse(msg.data)
+        const parsed = getRemotePromptInput().safeParse(msg.data)
         if (!parsed.success) {
           options.conn.send({
             type: "response",
