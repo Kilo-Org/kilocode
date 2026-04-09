@@ -1562,7 +1562,8 @@ export namespace Provider {
     if (cfg.subagent_model) {
       try {
         const parsed = parseModel(cfg.subagent_model)
-        await getModel(parsed.providerID, parsed.modelID)
+        const model = await getModel(parsed.providerID, parsed.modelID)
+        await getLanguage(model)
         return { providerID: parsed.providerID, modelID: parsed.modelID }
       } catch (err) {
         log.warn("subagent_model is invalid or not found, falling back to parent model", {

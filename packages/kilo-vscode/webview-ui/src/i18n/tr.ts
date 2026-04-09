@@ -1228,6 +1228,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Küçük Model",
   "settings.providers.smallModel.description":
     "Başlık oluşturma, commit mesajı oluşturma, komut istemi iyileştirme ve diğer hızlı görevler için hafif model",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",

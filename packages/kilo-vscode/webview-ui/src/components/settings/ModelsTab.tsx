@@ -72,7 +72,7 @@ const ModelsTab: Component = () => {
             onSelect={handleModelSelect("subagent_model")}
             placement="bottom-start"
             allowClear
-            clearLabel={language.t("settings.providers.notSet")}
+            clearLabel={language.t("settings.providers.subagentModel.inherit")}
           />
         </SettingsRow>
       </Card>

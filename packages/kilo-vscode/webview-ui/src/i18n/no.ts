@@ -1252,6 +1252,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Liten modell",
   "settings.providers.smallModel.description":
     "Lettvektsmodell for titelgenerering, generering av commit-meldinger, prompt-forbedring og andre raske oppgaver",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "Deaktiverte leverandører",
   "settings.providers.disabled.description": "Leverandører å skjule fra listen",
   "settings.providers.enabled": "Aktiverte leverandører (hvitliste)",

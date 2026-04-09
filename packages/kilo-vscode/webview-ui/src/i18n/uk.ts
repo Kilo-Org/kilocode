@@ -1230,6 +1230,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Мала модель",
   "settings.providers.smallModel.description":
     "Легка модель для генерації заголовків, повідомлень комітів, покращення запитів та інших швидких завдань",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",

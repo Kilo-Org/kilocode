@@ -1235,6 +1235,10 @@ export const dict = {
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",
   "settings.providers.smallModel.description":
     "โมเดลน้ำหนักเบาสำหรับสร้างชื่อ สร้างข้อความคอมมิต ปรับปรุงพรอมต์ และงานด่วนอื่นๆ",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "ผู้ให้บริการที่ปิดใช้งาน",
   "settings.providers.disabled.description": "ผู้ให้บริการที่จะซ่อนจากรายการ",
   "settings.providers.enabled": "ผู้ให้บริการที่เปิดใช้งาน (รายการที่อนุญาต)",

@@ -824,6 +824,7 @@ Options:
   --version  Show version number  [boolean]
 ```
 
+<<<<<<< HEAD
 ## kilo plugin
 
 ```
@@ -839,6 +840,8 @@ Options:
   -f, --force    replace existing plugin version  [boolean] [default: false]
 ```
 
+=======
+>>>>>>> d9407cd08 (chore: address PR feedback and sync i18n keys)
 ## kilo help
 
 ```

@@ -1260,6 +1260,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Mali model",
   "settings.providers.smallModel.description":
     "Lagani model za generiranje naslova, commit poruka, poboljšanje promptova i druge brze zadatke",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "Onemogućeni pružatelji",
   "settings.providers.disabled.description": "Pružatelji za skrivanje s popisa",
   "settings.providers.enabled": "Omogućeni pružatelji (bijela lista)",

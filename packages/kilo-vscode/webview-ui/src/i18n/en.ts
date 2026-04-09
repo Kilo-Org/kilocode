@@ -1256,6 +1256,7 @@ export const dict = {
   "settings.providers.subagentModel.title": "Subagent Model",
   "settings.providers.subagentModel.description":
     "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.modeModels": "Model per Mode",
   "settings.providers.modeModels.description":
     "Override the default model for specific modes. If not set, the global default model is used.",

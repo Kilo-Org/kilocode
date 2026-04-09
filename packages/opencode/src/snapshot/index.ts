@@ -20,6 +20,212 @@ export namespace Snapshot {
   })
   export type Patch = z.infer<typeof Patch>
 
+export async function patch(hash: string): Promise<Patch> {
+    const git = await KiloSnapshot.prepare() // kilocode_change
+    using _lock = await Lock.write(git) // kilocode_change
+    await add(git)
+    const result =
+      await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff --name-only ${hash} -- .`
+        .quiet()
+        .cwd(Instance.directory)
+        .nothrow()
+
+    // If git diff fails, return empty patch
+    if (result.exitCode !== 0) {
+      log.warn("failed to get diff", { hash, exitCode: result.exitCode })
+      return { hash, files: [] }
+    }
+
+    const files = result.text()
+    return {
+      hash,
+      files: files
+        .trim()
+        .split("\n")
+        .map((x) => x.trim())
+        .filter(Boolean)
+        .map((x) => path.join(Instance.worktree, x).replaceAll("\\", "/")),
+    }
+  }
+
+  export async function restore(snapshot: string) {
+    log.info("restore", { commit: snapshot })
+    const git = await KiloSnapshot.prepare() // kilocode_change
+    using _lock = await Lock.write(git) // kilocode_change
+    const result =
+      await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} read-tree ${snapshot} && git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} checkout-index -a -f`
+        .quiet()
+        .cwd(Instance.worktree)
+        .nothrow()
+
+    if (result.exitCode !== 0) {
+      log.error("failed to restore snapshot", {
+        snapshot,
+        exitCode: result.exitCode,
+        stderr: result.stderr.toString(),
+        stdout: result.stdout.toString(),
+      })
+    }
+  }
+
+  // kilocode_change start — batched revert: group up to 100 files per git checkout (port of upstream #20564)
+  type RevertOp = { hash: string; file: string; rel: string }
+
+  /** Revert a single file: checkout from snapshot or delete if it didn't exist. */
+  async function revertSingle(git: string, worktree: string, op: RevertOp) {
+    log.info("reverting", { file: op.file, hash: op.hash })
+    const result =
+      await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${worktree} checkout ${op.hash} -- ${op.file}`
+        .quiet()
+        .cwd(worktree)
+        .nothrow()
+    if (result.exitCode === 0) return
+    const tree =
+      await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${worktree} ls-tree ${op.hash} -- ${op.rel}`
+        .quiet()
+        .cwd(worktree)
+        .nothrow()
+    if (tree.exitCode === 0 && tree.text().trim()) {
+      log.info("file existed in snapshot but checkout failed, keeping", { file: op.file, hash: op.hash })
+      return
+    }
+    log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+    await fs.unlink(op.file).catch(() => {})
+  }
+
+  /** Revert a batch of files sharing the same hash. Falls back to single-file on failure. */
+  async function revertBatch(git: string, worktree: string, batch: RevertOp[]) {
+    const hash = batch[0]!.hash
+
+    // Check which files exist in the snapshot
+    const tree =
+      await $`git -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${worktree} ls-tree --name-only ${hash} -- ${batch.map((op) => op.rel)}`
+        .quiet()
+        .cwd(worktree)
+        .nothrow()
+
+    if (tree.exitCode !== 0) {
+      log.info("batched ls-tree failed, falling back to single-file revert", { hash, files: batch.length })
+      for (const op of batch) await revertSingle(git, worktree, op)
+      return
+    }
+
+    const existing = new Set(
+      tree
+        .text()
+        .trim()
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean),
+    )
+
+    // Checkout files that exist in the snapshot
+    const toCheckout = batch.filter((op) => existing.has(op.rel))
+    if (toCheckout.length) {
+      log.info("reverting", { hash, files: toCheckout.length })
+      const result =
+        await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${worktree} checkout ${hash} -- ${toCheckout.map((op) => op.file)}`
+          .quiet()
+          .cwd(worktree)
+          .nothrow()
+      if (result.exitCode !== 0) {
+        log.info("batched checkout failed, falling back to single-file revert", { hash, files: toCheckout.length })
+        for (const op of batch) await revertSingle(git, worktree, op)
+        return
+      }
+    }
+
+    // Delete files that didn't exist in the snapshot
+    for (const op of batch) {
+      if (existing.has(op.rel)) continue
+      log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
+      await fs.unlink(op.file).catch(() => {})
+    }
+  }
+
+  /** True when one path is a parent of the other (e.g. "a/b" and "a/b/c"). */
+  function pathsClash(a: string, b: string) {
+    return a === b || a.startsWith(`${b}/`) || b.startsWith(`${a}/`)
+  }
+
+  /** Can this op be added to the current batch? */
+  function canBatch(batch: RevertOp[], op: RevertOp): boolean {
+    if (batch.length >= 100) return false
+    if (op.hash !== batch[0]!.hash) return false
+    if (batch.some((existing) => pathsClash(existing.rel, op.rel))) return false
+    return true
+  }
+
+  /**
+   * Group consecutive ops into batches that share the same hash,
+   * have no path conflicts, and contain at most 100 files each.
+   */
+  function groupIntoBatches(ops: RevertOp[]): RevertOp[][] {
+    const batches: RevertOp[][] = []
+    let batch: RevertOp[] = []
+
+    for (const op of ops) {
+      if (batch.length > 0 && !canBatch(batch, op)) {
+        batches.push(batch)
+        batch = []
+      }
+      batch.push(op)
+    }
+    if (batch.length > 0) batches.push(batch)
+
+    return batches
+  }
+
+  export async function revert(patches: Patch[]) {
+    const git = await KiloSnapshot.prepare() // kilocode_change
+    using _lock = await Lock.write(git) // kilocode_change
+    const worktree = Instance.worktree
+
+    // Deduplicate files preserving patch order
+    const ops: RevertOp[] = []
+    const seen = new Set<string>()
+    for (const item of patches) {
+      for (const file of item.files) {
+        if (seen.has(file)) continue
+        seen.add(file)
+        ops.push({ hash: item.hash, file, rel: path.relative(worktree, file).replaceAll("\\", "/") })
+      }
+    }
+
+    for (const batch of groupIntoBatches(ops)) {
+      if (batch.length === 1) {
+        await revertSingle(git, worktree, batch[0]!)
+      } else {
+        await revertBatch(git, worktree, batch)
+      }
+    }
+  }
+  // kilocode_change end
+
+  export async function diff(hash: string) {
+    const git = await KiloSnapshot.prepare() // kilocode_change
+    using _lock = await Lock.write(git) // kilocode_change
+    await add(git)
+    const result =
+      await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff ${hash} -- .`
+        .quiet()
+        .cwd(Instance.worktree)
+        .nothrow()
+
+    if (result.exitCode !== 0) {
+      log.warn("failed to get diff", {
+        hash,
+        exitCode: result.exitCode,
+        stderr: result.stderr.toString(),
+        stdout: result.stdout.toString(),
+      })
+      return ""
+    }
+
+    return result.text().trim()
+  }
+
+>>>>>>> d9407cd08 (chore: address PR feedback and sync i18n keys)
   export const FileDiff = z
     .object({
       file: z.string(),

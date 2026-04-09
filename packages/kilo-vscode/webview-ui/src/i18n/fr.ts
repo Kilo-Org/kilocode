@@ -1281,6 +1281,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Petit modèle",
   "settings.providers.smallModel.description":
     "Modèle léger pour la génération de titres, de messages de commit, l'amélioration de prompts et d'autres tâches rapides",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "Fournisseurs désactivés",
   "settings.providers.disabled.description": "Fournisseurs à masquer de la liste",
   "settings.providers.enabled": "Fournisseurs activés (liste blanche)",

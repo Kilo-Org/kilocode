@@ -1597,6 +1597,10 @@ export type Config = {
    */
   small_model?: string | null
   /**
+   * Default model for subagents in the format provider/model. Falls back to parent model if not set
+   */
+  subagent_model?: string | null
+  /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
   default_agent?: string

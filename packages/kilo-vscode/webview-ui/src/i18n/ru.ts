@@ -1259,6 +1259,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Малая модель",
   "settings.providers.smallModel.description":
     "Лёгкая модель для генерации заголовков, сообщений коммитов, улучшения промптов и других быстрых задач",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "Отключённые провайдеры",
   "settings.providers.disabled.description": "Провайдеры для скрытия из списка",
   "settings.providers.enabled": "Включённые провайдеры (белый список)",

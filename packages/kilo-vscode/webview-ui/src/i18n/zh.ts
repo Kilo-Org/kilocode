@@ -1210,6 +1210,10 @@ export const dict = {
   "settings.providers.defaultModel.description": "对话的主要模型",
   "settings.providers.smallModel.title": "小模型",
   "settings.providers.smallModel.description": "用于标题生成、提交信息生成、提示词增强和其他快速任务的轻量模型",
+  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.description":
+    "Default model for subagents. If not set, subagents inherit the parent agent's model",
+  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
   "settings.providers.disabled": "已禁用的提供者",
   "settings.providers.disabled.description": "从提供者列表中隐藏的提供者",
   "settings.providers.enabled": "已启用的提供者（白名单）",
