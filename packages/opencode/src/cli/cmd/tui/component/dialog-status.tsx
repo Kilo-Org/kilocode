@@ -21,7 +21,7 @@ export function DialogStatus() {
     const result = list.map((value) => {
       if (value.startsWith("file://")) {
         const path = fileURLToPath(value)
-        const parts = path.split("/")
+        const parts = path.split(/[/\\]/) // kilocode_change: fix Windows backslash paths
         const filename = parts.pop() || path
         if (!filename.includes(".")) return { name: filename }
         const basename = filename.split(".")[0]
