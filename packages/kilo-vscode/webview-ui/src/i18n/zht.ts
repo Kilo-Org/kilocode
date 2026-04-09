@@ -1214,10 +1214,10 @@ export const dict = {
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",
   "settings.providers.smallModel.description": "用於標題產生、提交訊息產生、提示增強和其他快速任務的輕量模型",
-  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.title": "子代理模型",
   "settings.providers.subagentModel.description":
-    "Default model for subagents. If not set, subagents inherit the parent agent's model",
-  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
+    "子代理的預設模型。如果未設定，子代理將繼承父代理的模型",
+  "settings.providers.subagentModel.inherit": "繼承父代理",
   "settings.providers.disabled": "已停用的供應商",
   "settings.providers.disabled.description": "從供應商清單中隱藏的供應商",
   "settings.providers.enabled": "已啟用的供應商（白名單）",

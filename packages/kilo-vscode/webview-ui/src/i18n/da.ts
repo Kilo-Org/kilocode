@@ -1250,10 +1250,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Lille model",
   "settings.providers.smallModel.description":
     "Letvægtsmodel til titelgenerering, generering af commit-beskeder, prompt-forbedring og andre hurtige opgaver",
-  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.title": "Subagent-model",
   "settings.providers.subagentModel.description":
-    "Default model for subagents. If not set, subagents inherit the parent agent's model",
-  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
+    "Standardmodel for subagenter. Hvis ikke indstillet, arver subagenter den overordnede agents model",
+  "settings.providers.subagentModel.inherit": "Arv fra overordnet agent",
   "settings.providers.disabled": "Deaktiverede udbydere",
   "settings.providers.disabled.description": "Udbydere at skjule fra listen",
   "settings.providers.enabled": "Aktiverede udbydere (hvidliste)",

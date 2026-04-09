@@ -1239,10 +1239,10 @@ export const dict = {
   "settings.providers.smallModel.title": "소형 모델",
   "settings.providers.smallModel.description":
     "제목 생성, 커밋 메시지 생성, 프롬프트 개선 및 기타 빠른 작업을 위한 경량 모델",
-  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.title": "하위 에이전트 모델",
   "settings.providers.subagentModel.description":
-    "Default model for subagents. If not set, subagents inherit the parent agent's model",
-  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
+    "하위 에이전트의 기본 모델입니다. 설정되지 않은 경우 하위 에이전트는 상위 에이전트의 모델을 상속받습니다.",
+  "settings.providers.subagentModel.inherit": "상위 에이전트에서 상속",
   "settings.providers.disabled": "비활성화된 공급자",
   "settings.providers.disabled.description": "공급자 목록에서 숨길 공급자",
   "settings.providers.enabled": "활성화된 공급자 (허용 목록)",

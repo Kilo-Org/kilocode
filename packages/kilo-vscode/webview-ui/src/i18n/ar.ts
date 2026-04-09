@@ -1235,10 +1235,10 @@ export const dict = {
   "settings.providers.smallModel.title": "نموذج صغير",
   "settings.providers.smallModel.description":
     "نموذج خفيف لتوليد العناوين ورسائل الـ commit وتحسين المطالبات والمهام السريعة الأخرى",
-  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
-    "Default model for subagents. If not set, subagents inherit the parent agent's model",
-  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
+    "النموذج الافتراضي للوكلاء الفرعيين. إذا لم يتم تعيينه، يرث الوكيل الفرعي نموذج الوكيل الأصلي",
+  "settings.providers.subagentModel.inherit": "وراثة من الوكيل الأصلي",
   "settings.providers.disabled": "مزودون معطلون",
   "settings.providers.disabled.description": "مزودون لإخفائهم من القائمة",
   "settings.providers.enabled": "مزودون مفعلون (قائمة بيضاء)",

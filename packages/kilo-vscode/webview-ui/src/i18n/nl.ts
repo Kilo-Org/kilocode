@@ -1235,10 +1235,10 @@ export const dict = {
   "settings.providers.smallModel.title": "Klein Model",
   "settings.providers.smallModel.description":
     "Lichtgewicht model voor het genereren van titels, commit-berichten, promptverbetering en andere snelle taken",
-  "settings.providers.subagentModel.title": "Subagent Model",
+  "settings.providers.subagentModel.title": "Subagentmodel",
   "settings.providers.subagentModel.description":
-    "Default model for subagents. If not set, subagents inherit the parent agent's model",
-  "settings.providers.subagentModel.inherit": "Inherit from parent agent",
+    "Standaardmodel voor subagenten. Indien niet ingesteld, erven subagenten het model van de hoofdagent",
+  "settings.providers.subagentModel.inherit": "Overerven van hoofdagent",
   "settings.providers.modeModels": "Model per Modus",
   "settings.providers.modeModels.description":
     "Overschrijf het standaard model voor specifieke modi. Indien niet ingesteld, wordt het globale standaard model gebruikt.",
