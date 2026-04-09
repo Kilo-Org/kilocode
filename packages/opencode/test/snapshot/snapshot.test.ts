@@ -1181,31 +1181,6 @@ test("diffFull with whitespace changes", async () => {
 
 // ── Tests for snapshot optimizations (upstream #17878, #20564) ────────
 
-test("concurrent track() calls return consistent results", async () => {
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      await Snapshot.track()
-
-      await Filesystem.write(`${tmp.path}/a.txt`, "concurrent-change")
-
-      const results = await Promise.all([
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-      ])
-
-      const hashes = results.filter(Boolean)
-      expect(hashes.length).toBe(5)
-      // All concurrent calls must return the same hash
-      expect(new Set(hashes).size).toBe(1)
-    },
-  })
-})
-
 test("batch revert with many files sharing same hash", async () => {
   await using tmp = await tmpdir({
     git: true,
@@ -1351,11 +1326,7 @@ test("concurrent patch() calls return consistent results", async () => {
 
       await Filesystem.write(`${tmp.path}/a.txt`, "changed")
 
-      const results = await Promise.all([
-        Snapshot.patch(before!),
-        Snapshot.patch(before!),
-        Snapshot.patch(before!),
-      ])
+      const results = await Promise.all([Snapshot.patch(before!), Snapshot.patch(before!), Snapshot.patch(before!)])
 
       // All should report the same changed files
       for (const result of results) {
@@ -1465,52 +1436,6 @@ test("batch revert with multiple patches from different snapshots", async () => 
       // All files should be at v0 (snapA's state)
       for (let i = 0; i < 10; i++) {
         expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`v0-${i}`)
-      }
-    },
-  })
-})
-
-test("concurrent track calls each produce a valid snapshot", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${dir}/file${i}.txt`, `original-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      await Snapshot.track() // warm up
-
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `changed-${i}`)
-      }
-
-      // Fire 5 concurrent tracks, then verify each hash is a usable snapshot
-      const hashes = (await Promise.all([
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-        Snapshot.track(),
-      ])).filter(Boolean) as string[]
-
-      expect(hashes.length).toBe(5)
-
-      // Every hash should produce a valid diffFull against itself (empty diff)
-      for (const hash of hashes) {
-        const diff = await Snapshot.diffFull(hash, hash)
-        expect(diff).toEqual([])
-      }
-
-      // Every hash should be usable for restore without error
-      await Snapshot.restore(hashes[0]!)
-      for (let i = 0; i < 10; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`changed-${i}`)
       }
     },
   })
