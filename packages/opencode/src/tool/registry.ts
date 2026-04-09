@@ -226,4 +226,4 @@ export namespace ToolRegistry {
   ): Promise<(Tool.Def & { id: string })[]> {
     return runPromise((svc) => svc.tools(model, agent))
   }
-}
+} // kilocode_change

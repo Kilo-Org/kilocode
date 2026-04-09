@@ -6,6 +6,7 @@ import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import { SessionPrompt } from "../session/prompt"
+import { Log } from "@/util/log" // kilocode_change
 import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
@@ -132,7 +133,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       const msg = await MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID })
       if (msg.info.role !== "assistant") throw new Error("Not an assistant message")
 
-      const model = agent.model ?? (await Provider.getSubagentModel(msg.info.providerID, msg.info.modelID))
+      const model = agent.model ?? (await Provider.getSubagentModel(msg.info.providerID, msg.info.modelID)) // kilocode_change
 
       ctx.metadata({
         title: params.description,
