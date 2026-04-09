@@ -4,11 +4,14 @@ import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
+import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
   /** Override git command execution for testing. */
   runGit?: (args: string[], cwd: string) => Promise<string>
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 export interface ApplyConflict {
@@ -63,6 +66,7 @@ export class GitOps {
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
   private readonly controller = new AbortController()
+  private readonly semaphore: Semaphore | undefined
 
   get disposed(): boolean {
     return this.controller.signal.aborted
@@ -70,6 +74,7 @@ export class GitOps {
 
   constructor(options: GitOpsOptions) {
     this.log = options.log
+    this.semaphore = options.semaphore
     this.runGit =
       options.runGit ??
       ((args, cwd) =>
@@ -87,20 +92,22 @@ export class GitOps {
   private raw(args: string[], cwd: string): Promise<string> {
     const signal = this.controller.signal
     if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
-    return new Promise<string>((resolve, reject) => {
-      const onAbort = () => reject(new Error("GitOps disposed"))
-      signal.addEventListener("abort", onAbort, { once: true })
-      this.runGit(args, cwd).then(
-        (value) => {
-          signal.removeEventListener("abort", onAbort)
-          resolve(value)
-        },
-        (err) => {
-          signal.removeEventListener("abort", onAbort)
-          reject(err)
-        },
-      )
-    })
+    const invoke = () =>
+      new Promise<string>((resolve, reject) => {
+        const onAbort = () => reject(new Error("GitOps disposed"))
+        signal.addEventListener("abort", onAbort, { once: true })
+        this.runGit(args, cwd).then(
+          (value) => {
+            signal.removeEventListener("abort", onAbort)
+            resolve(value)
+          },
+          (err) => {
+            signal.removeEventListener("abort", onAbort)
+            reject(err)
+          },
+        )
+      })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -364,37 +371,39 @@ export class GitOps {
     if (this.controller.signal.aborted) {
       return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
     }
-    return new Promise((resolve) => {
-      const child = spawn("git", args, {
-        cwd,
-        env: options?.env,
-        signal: this.controller.signal,
-        stdio: ["pipe", "pipe", "pipe"],
-      })
+    const invoke = () =>
+      new Promise<ExecResult>((resolve) => {
+        const child = spawn("git", args, {
+          cwd,
+          env: options?.env,
+          signal: this.controller.signal,
+          stdio: ["pipe", "pipe", "pipe"],
+        })
 
-      if (options?.stdin !== undefined) {
-        if (!child.stdin) {
-          resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
-          return
+        if (options?.stdin !== undefined) {
+          if (!child.stdin) {
+            resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+            return
+          }
+          child.stdin.end(options.stdin)
         }
-        child.stdin.end(options.stdin)
-      }
 
-      const out: Buffer[] = []
-      const err: Buffer[] = []
-      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
-      child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
+        const out: Buffer[] = []
+        const err: Buffer[] = []
+        child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+        child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
-      child.on("error", (error) => {
-        resolve({ code: 1, stdout: "", stderr: error.message })
-      })
-      child.on("close", (code) => {
-        resolve({
-          code: code ?? 1,
-          stdout: Buffer.concat(out).toString("utf8"),
-          stderr: Buffer.concat(err).toString("utf8"),
+        child.on("error", (error) => {
+          resolve({ code: 1, stdout: "", stderr: error.message })
+        })
+        child.on("close", (code) => {
+          resolve({
+            code: code ?? 1,
+            stdout: Buffer.concat(out).toString("utf8"),
+            stderr: Buffer.concat(err).toString("utf8"),
+          })
         })
       })
-    })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 }

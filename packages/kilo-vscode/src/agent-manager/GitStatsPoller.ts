@@ -3,6 +3,7 @@ import * as path from "path"
 import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
+import type { Semaphore } from "./semaphore"
 import { normalizePath } from "./git-import"
 
 export interface WorktreeStats {
@@ -45,6 +46,8 @@ interface GitStatsPollerOptions {
   onWorktreePresence?: (result: WorktreePresenceResult) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 export class GitStatsPoller {
@@ -154,32 +157,36 @@ export class GitStatsPoller {
       return
     }
 
+    const gate = this.options.semaphore
     const stats = (
       await Promise.all(
-        active.map(async (wt) => {
-          try {
-            const base = remoteRef(wt)
-            const [{ data: diffs }, ab] = await Promise.all([
-              client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
-              this.git.aheadBehind(wt.path, base),
-            ])
-            const files = diffs.length
-            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
-            return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
-          } catch (err) {
-            this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-            const prev = this.lastStats[wt.id]
-            if (!prev) return undefined
-            return {
-              worktreeId: wt.id,
-              files: prev.files,
-              additions: prev.additions,
-              deletions: prev.deletions,
-              ahead: prev.ahead,
-              behind: prev.behind,
+        active.map((wt) => {
+          const work = async () => {
+            try {
+              const base = remoteRef(wt)
+              const [{ data: diffs }, ab] = await Promise.all([
+                client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
+                this.git.aheadBehind(wt.path, base),
+              ])
+              const files = diffs.length
+              const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
+              const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
+              return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
+            } catch (err) {
+              this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+              const prev = this.lastStats[wt.id]
+              if (!prev) return undefined
+              return {
+                worktreeId: wt.id,
+                files: prev.files,
+                additions: prev.additions,
+                deletions: prev.deletions,
+                ahead: prev.ahead,
+                behind: prev.behind,
+              }
             }
           }
+          return gate ? gate.run(work) : work()
         }),
       )
     ).filter((item): item is WorktreeStats => !!item)

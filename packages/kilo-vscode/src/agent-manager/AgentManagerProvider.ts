@@ -25,6 +25,7 @@ import { continueInWorktree } from "./continue-in-worktree"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
+import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
@@ -76,11 +77,13 @@ export class AgentManagerProvider implements Disposable {
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
     )
-    this.gitOps = new GitOps({ log: (...args) => this.log(...args) })
+    const semaphore = new Semaphore(3)
+    this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
     this.statsPoller = new GitStatsPoller({
       getWorktrees: () => this.state?.getWorktrees() ?? [],
       getWorkspaceRoot: () => this.getRoot(),
       getClient: () => this.connectionService.getClient(),
+      semaphore,
       onStats: (stats) => {
         const msg = { type: "agentManager.worktreeStats" as const, stats }
         this.cachedWorktreeStats = msg
@@ -105,6 +108,7 @@ export class AgentManagerProvider implements Disposable {
       hasPersistedPR: (id: string) => !!this.state?.getWorktree(id)?.prNumber,
       openExternal: (u) => this.host.openExternal(u),
       log: (...a) => this.log(...a),
+      semaphore,
     })
   }
 

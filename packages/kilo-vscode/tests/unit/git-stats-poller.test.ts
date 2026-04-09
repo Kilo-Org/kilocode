@@ -5,6 +5,7 @@ import * as path from "path"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { GitStatsPoller, type WorktreePresenceResult } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { Semaphore } from "../../src/agent-manager/semaphore"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
 function sleep(ms: number): Promise<void> {
@@ -429,5 +430,51 @@ describe("GitStatsPoller", () => {
 
     const fetches = commands.filter((cmd) => cmd[0] === "fetch")
     expect(fetches.length).toBe(0)
+  })
+
+  it("limits concurrent worktree fetches when semaphore is provided", async () => {
+    let running = 0
+    let peak = 0
+    let ticks = 0
+    const sem = new Semaphore(2)
+
+    const client = {
+      worktree: {
+        diffSummary: async () => {
+          running++
+          peak = Math.max(peak, running)
+          await sleep(20)
+          running--
+          return { data: diff(1, 0) }
+        },
+      },
+    } as unknown as KiloClient
+
+    const wts = Array.from({ length: 5 }, (_, i) => worktree(String(i)))
+    const poller = new GitStatsPoller({
+      getWorktrees: () => wts,
+      getWorkspaceRoot: () => undefined,
+      getClient: () => client,
+      onStats: () => {
+        ticks++
+      },
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      semaphore: sem,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => ticks >= 1)
+    poller.stop()
+
+    // diffSummary + aheadBehind run inside the same semaphore slot,
+    // and aheadBehind also goes through GitOps (no semaphore on that
+    // instance), so the HTTP concurrency is bounded by the gate.
+    expect(peak).toBeLessThanOrEqual(2)
   })
 })
