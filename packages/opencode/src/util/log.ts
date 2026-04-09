@@ -1,9 +1,9 @@
 import path from "path"
 import fs from "fs/promises"
-import { createWriteStream } from "fs"
 import { Global } from "../global"
 import z from "zod"
 import { Glob } from "./glob"
+import { createStream } from "rotating-file-stream" // kilocode_change
 
 export namespace Log {
   export const Level = z.enum(["DEBUG", "INFO", "WARN", "ERROR"]).meta({ ref: "LogLevel", description: "Log level" })
@@ -66,15 +66,25 @@ export namespace Log {
       options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",
     )
     await fs.truncate(logpath).catch(() => {})
-    const stream = createWriteStream(logpath, { flags: "a" })
-    write = async (msg: any) => {
-      return new Promise((resolve, reject) => {
-        stream.write(msg, (err) => {
-          if (err) reject(err)
-          else resolve(msg.length)
-        })
-      })
+    // kilocode_change start - use rotating-file-stream to cap log files at 50 MB
+    const dir = path.dirname(logpath)
+    const stream = createStream(path.basename(logpath), {
+      size: "50M",
+      maxFiles: 10,
+      history: path.join(dir, ".log-history"),
+      path: dir,
+    })
+    stream.on("error", (err: Error) => {
+      process.stderr.write("log stream error: " + err.message + "\n")
+    })
+    stream.on("warning", (err: Error) => {
+      process.stderr.write("log stream warning: " + err.message + "\n")
+    })
+    write = (msg: any) => {
+      stream.write(msg)
+      return msg.length
     }
+    // kilocode_change end
   }
 
   async function cleanup(dir: string) {

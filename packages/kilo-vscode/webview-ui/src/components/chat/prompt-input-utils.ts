@@ -1,9 +1,10 @@
 export function fileName(path: string): string {
-  return path.replaceAll("\\", "/").split("/").pop() ?? path
+  const normalized = path.replaceAll("\\", "/").replace(/\/+$/, "")
+  return normalized.split("/").pop() ?? normalized
 }
 
 export function dirName(path: string): string {
-  const parts = path.replaceAll("\\", "/").split("/")
+  const parts = path.replaceAll("\\", "/").replace(/\/+$/, "").split("/")
   if (parts.length <= 1) return ""
   const dir = parts.slice(0, -1).join("/")
   return dir.length > 30 ? `…/${parts.slice(-3, -1).join("/")}` : dir
@@ -43,4 +44,8 @@ export function buildHighlightSegments(val: string, paths: Set<string>): { text:
   }
 
   return segments
+}
+
+export function atEnd(start: number, end: number, len: number): boolean {
+  return start === end && end === len
 }

@@ -34,7 +34,7 @@ describe("McpMigrator", () => {
       })
     })
 
-    test("returns null for disabled servers", () => {
+    test("converts disabled servers with enabled: false", () => {
       const server: McpMigrator.KilocodeMcpServer = {
         command: "npx",
         args: ["-y", "some-package"],
@@ -43,7 +43,11 @@ describe("McpMigrator", () => {
 
       const result = McpMigrator.convertServer("disabled-server", server)
 
-      expect(result).toBeNull()
+      expect(result).toEqual({
+        type: "local",
+        command: ["npx", "-y", "some-package"],
+        enabled: false,
+      })
     })
 
     test("omits environment when env is empty object", () => {
@@ -125,6 +129,18 @@ describe("McpMigrator", () => {
       expect(result?.mcpServers.filesystem.args).toEqual(["-y", "@modelcontextprotocol/server-filesystem"])
     })
 
+    test("returns null for malformed JSON file instead of throwing", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, "mcp_settings.json"), "{ not valid json !!!")
+        },
+      })
+
+      const result = await McpMigrator.readMcpSettings(path.join(tmp.path, "mcp_settings.json"))
+
+      expect(result).toBeNull()
+    })
+
     test("reads file with multiple servers", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -161,10 +177,10 @@ describe("McpMigrator", () => {
       expect(result.skipped).toHaveLength(0)
     })
 
-    test("migrates servers from project .kilocode/mcp.json", async () => {
+    test("migrates servers from project .kilo/mcp.json", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -191,10 +207,101 @@ describe("McpMigrator", () => {
       })
     })
 
-    test("skips disabled servers and records them", async () => {
+    test("reads from legacy .kilocode/mcp.json when .kilo/mcp.json is absent", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
           const settingsDir = path.join(dir, ".kilocode")
+          await Bun.write(
+            path.join(settingsDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                legacy: {
+                  command: "node",
+                  args: ["legacy-server.js"],
+                },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("legacy")
+      expect(result.mcp.legacy).toEqual({
+        type: "local",
+        command: ["node", "legacy-server.js"],
+      })
+    })
+
+    // Regression: malformed .kilocode/mcp.json must not prevent .kilo/mcp.json from loading
+    test("loads .kilo/mcp.json even when .kilocode/mcp.json is malformed", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(path.join(dir, ".kilocode", "mcp.json"), "{ corrupt json !!!")
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                valid: { command: "valid-cmd", args: ["--ok"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("valid")
+      expect(result.mcp.valid).toEqual({
+        type: "local",
+        command: ["valid-cmd", "--ok"],
+      })
+    })
+
+    test(".kilo/mcp.json overrides .kilocode/mcp.json for same server name", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                myserver: { command: "old-cmd", args: ["old"] },
+              },
+            }),
+          )
+          await Bun.write(
+            path.join(dir, ".kilo", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                myserver: { command: "new-cmd", args: ["new"] },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp.myserver).toEqual({
+        type: "local",
+        command: ["new-cmd", "new"],
+      })
+    })
+
+    test("imports disabled servers with enabled: false", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -213,17 +320,22 @@ describe("McpMigrator", () => {
       })
 
       expect(result.mcp).toHaveProperty("enabled")
-      expect(result.mcp).not.toHaveProperty("disabled")
-      expect(result.skipped).toContainEqual({
-        name: "disabled",
-        reason: "Server is disabled",
+      expect(result.mcp.enabled).toEqual({
+        type: "local",
+        command: ["enabled-cmd"],
+      })
+      expect(result.mcp).toHaveProperty("disabled")
+      expect(result.mcp.disabled).toEqual({
+        type: "local",
+        command: ["disabled-cmd"],
+        enabled: false,
       })
     })
 
     test("warns about alwaysAllow permissions that cannot be migrated", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -253,7 +365,7 @@ describe("McpMigrator", () => {
     test("migrates multiple servers correctly", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -297,7 +409,7 @@ describe("McpMigrator", () => {
     test("handles empty mcpServers object", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp.json"),
             JSON.stringify({
@@ -316,10 +428,10 @@ describe("McpMigrator", () => {
     })
 
     // Regression: project-level MCP settings use mcp.json, not mcp_settings.json
-    test("does not read project-level .kilocode/mcp_settings.json", async () => {
+    test("does not read project-level .kilo/mcp_settings.json", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
-          const settingsDir = path.join(dir, ".kilocode")
+          const settingsDir = path.join(dir, ".kilo")
           await Bun.write(
             path.join(settingsDir, "mcp_settings.json"),
             JSON.stringify({
@@ -392,7 +504,7 @@ describe("McpMigrator", () => {
         })
       })
 
-      test("returns null for disabled remote server", () => {
+      test("converts disabled remote server with enabled: false", () => {
         const server = {
           type: "streamable-http",
           url: "http://localhost:4321/mcp",
@@ -401,7 +513,11 @@ describe("McpMigrator", () => {
 
         const result = McpMigrator.convertServer("disabled-remote", server)
 
-        expect(result).toBeNull()
+        expect(result).toEqual({
+          type: "remote",
+          url: "http://localhost:4321/mcp",
+          enabled: false,
+        })
       })
 
       test("omits headers when not provided on remote server", () => {
@@ -432,7 +548,7 @@ describe("McpMigrator", () => {
       test("migrates streamable-http server from project settings", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -462,7 +578,7 @@ describe("McpMigrator", () => {
       test("migrates sse server from project settings", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -492,7 +608,7 @@ describe("McpMigrator", () => {
       test("migrates mixed stdio and remote servers", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -540,7 +656,7 @@ describe("McpMigrator", () => {
       test("migrates remote server with headers and auth", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -575,10 +691,10 @@ describe("McpMigrator", () => {
         })
       })
 
-      test("skips disabled remote servers and records them", async () => {
+      test("imports disabled remote servers with enabled: false", async () => {
         await using tmp = await tmpdir({
           init: async (dir) => {
-            const settingsDir = path.join(dir, ".kilocode")
+            const settingsDir = path.join(dir, ".kilo")
             await Bun.write(
               path.join(settingsDir, "mcp.json"),
               JSON.stringify({
@@ -604,10 +720,15 @@ describe("McpMigrator", () => {
         })
 
         expect(result.mcp).toHaveProperty("enabled")
-        expect(result.mcp).not.toHaveProperty("disabled")
-        expect(result.skipped).toContainEqual({
-          name: "disabled",
-          reason: "Server is disabled",
+        expect(result.mcp.enabled).toEqual({
+          type: "remote",
+          url: "http://localhost:4321/mcp",
+        })
+        expect(result.mcp).toHaveProperty("disabled")
+        expect(result.mcp.disabled).toEqual({
+          type: "remote",
+          url: "http://localhost:4322/mcp",
+          enabled: false,
         })
       })
     })

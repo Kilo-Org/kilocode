@@ -34,6 +34,7 @@ import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
 import { useTextareaKeybindings } from "../textarea-keybindings"
 import { DialogSkill } from "../dialog-skill"
+import { shouldSummarize as shouldPasteSummary } from "@/kilocode/paste-summary"
 
 export type PromptProps = {
   sessionID?: string
@@ -149,26 +150,24 @@ export function Prompt(props: PromptProps) {
     ),
   )
 
-  // Initialize agent/model/variant from last user message when session changes
-  let syncedSessionID: string | undefined
+  // kilocode_change start - sync local agent/model whenever newest user message changes
+  let syncedKey: string | undefined
   createEffect(() => {
     const sessionID = props.sessionID
     const msg = lastUserMessage()
+    if (!sessionID || !msg) return
 
-    if (sessionID !== syncedSessionID) {
-      if (!sessionID || !msg) return
+    const key = [sessionID, msg.id].join(":")
+    if (key === syncedKey) return
+    syncedKey = key
 
-      syncedSessionID = sessionID
-
-      // Only set agent if it's a primary agent (not a subagent)
-      const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
-      if (msg.agent && isPrimaryAgent) {
-        local.agent.set(msg.agent)
-        if (msg.model) local.model.set(msg.model)
-        if (msg.variant) local.model.variant.set(msg.variant)
-      }
-    }
+    const isPrimaryAgent = local.agent.list().some((x) => x.name === msg.agent)
+    if (!msg.agent || !isPrimaryAgent) return
+    local.agent.set(msg.agent)
+    if (msg.model) local.model.set(msg.model)
+    if (msg.variant) local.model.variant.set(msg.variant)
   })
+  // kilocode_change end
 
   command.register(() => {
     return [
@@ -576,7 +575,7 @@ export function Prompt(props: PromptProps) {
     if (store.mode === "shell") {
       sdk.client.session.shell({
         sessionID,
-        agent: local.agent.current().name,
+        agent: local.agent.current()?.name ?? "", // kilocode_change
         model: {
           providerID: selectedModel.providerID,
           modelID: selectedModel.modelID,
@@ -603,7 +602,7 @@ export function Prompt(props: PromptProps) {
         sessionID,
         command: command.slice(1),
         arguments: args,
-        agent: local.agent.current().name,
+        agent: local.agent.current()?.name ?? "", // kilocode_change
         model: `${selectedModel.providerID}/${selectedModel.modelID}`,
         messageID,
         variant,
@@ -620,7 +619,7 @@ export function Prompt(props: PromptProps) {
           sessionID,
           ...selectedModel,
           messageID,
-          agent: local.agent.current().name,
+          agent: local.agent.current()?.name ?? "", // kilocode_change
           model: selectedModel,
           variant,
           parts: [
@@ -637,6 +636,7 @@ export function Prompt(props: PromptProps) {
         })
         .catch(() => {})
     }
+    toast.dismiss() // kilocode_change - dismiss persistent config warning on first submit
     history.append({
       ...store.prompt,
       mode: currentMode,
@@ -741,7 +741,7 @@ export function Prompt(props: PromptProps) {
   const highlight = createMemo(() => {
     if (keybind.leader) return theme.border
     if (store.mode === "shell") return theme.primary
-    return local.agent.color(local.agent.current().name)
+    return local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
   })
 
   const showVariant = createMemo(() => {
@@ -761,7 +761,7 @@ export function Prompt(props: PromptProps) {
   })
 
   const spinnerDef = createMemo(() => {
-    const color = local.agent.color(local.agent.current().name)
+    const color = local.agent.color(local.agent.current()?.name ?? "") // kilocode_change
     return {
       frames: createFrames({
         color,
@@ -832,6 +832,11 @@ export function Prompt(props: PromptProps) {
                 autocomplete.onInput(value)
                 syncExtmarksWithPromptParts()
               }}
+              // kilocode_change start
+              onCursorChange={() => {
+                if (store.mode === "normal") autocomplete.onCursorChange()
+              }}
+              // kilocode_change end
               keyBindings={textareaKeybindings()}
               onKeyDown={async (e) => {
                 if (props.disabled) {
@@ -978,15 +983,14 @@ export function Prompt(props: PromptProps) {
                   } catch {}
                 }
 
-                const lineCount = (pastedContent.match(/\n/g)?.length ?? 0) + 1
-                if (
-                  (lineCount >= 3 || pastedContent.length > 150) &&
-                  !sync.data.config.experimental?.disable_paste_summary
-                ) {
+                // kilocode_change start
+                const summary = shouldPasteSummary(pastedContent)
+                if (summary.summarize && !sync.data.config.experimental?.disable_paste_summary) {
                   event.preventDefault()
-                  pasteText(pastedContent, `[Pasted ~${lineCount} lines]`)
+                  pasteText(pastedContent, `[Pasted ~${summary.lines} lines]`)
                   return
                 }
+                // kilocode_change end
 
                 // Force layout update and render for the pasted content
                 setTimeout(() => {
@@ -1015,7 +1019,11 @@ export function Prompt(props: PromptProps) {
             />
             <box flexDirection="row" flexShrink={0} paddingTop={1} gap={1}>
               <text fg={highlight()}>
-                {store.mode === "shell" ? "Shell" : Locale.titlecase(local.agent.current().name)}{" "}
+                {/* kilocode_change start */}
+                {store.mode === "shell"
+                  ? "Shell"
+                  : (local.agent.current()?.displayName ?? Locale.titlecase(local.agent.current()?.name ?? ""))}{" "}
+                {/* kilocode_change end */}
               </text>
               <Show when={store.mode === "normal"}>
                 <box flexDirection="row" gap={1}>
@@ -1036,6 +1044,7 @@ export function Prompt(props: PromptProps) {
         </box>
         <box
           height={1}
+          flexShrink={0} // kilocode_change - prevent border box from shrinking in narrow terminals (#6309)
           border={["left"]}
           borderColor={highlight()}
           customBorderChars={{

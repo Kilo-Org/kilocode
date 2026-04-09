@@ -20,6 +20,7 @@ describe("t()", () => {
   it("interpolates a single variable", () => {
     const result = t("kilocode:autocomplete.statusBar.tooltip.noUsableProvider", {
       providers: "OpenAI, Anthropic",
+      command: "command:kilo-code.new.settingsButtonClicked",
     })
     expect(result).toContain("OpenAI, Anthropic")
     expect(result).not.toContain("{{providers}}")

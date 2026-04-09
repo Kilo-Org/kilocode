@@ -1,10 +1,10 @@
-import { createOpencodeClient } from "@kilocode/sdk/v2/client"
+import { createKiloClient } from "@kilocode/sdk/v2/client"
 import type { ServerConnection } from "@/context/server"
 
 export function createSdkForServer({
   server,
   ...config
-}: Omit<NonNullable<Parameters<typeof createOpencodeClient>[0]>, "baseUrl"> & {
+}: Omit<NonNullable<Parameters<typeof createKiloClient>[0]>, "baseUrl"> & {
   server: ServerConnection.HttpBase
 }) {
   const auth = (() => {
@@ -14,7 +14,7 @@ export function createSdkForServer({
     }
   })()
 
-  return createOpencodeClient({
+  return createKiloClient({
     ...config,
     headers: { ...config.headers, ...auth },
     baseUrl: server.url,

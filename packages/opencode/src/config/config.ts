@@ -1,9 +1,9 @@
 import { Log } from "../util/log"
 import path from "path"
-import { pathToFileURL } from "url"
+import { pathToFileURL, fileURLToPath } from "url"
+import { createRequire } from "module"
 import os from "os"
 import z from "zod"
-import { Filesystem } from "../util/filesystem"
 import { ModelsDev } from "../provider/models"
 import { mergeDeep, pipe, unique } from "remeda"
 import { Global } from "../global"
@@ -12,13 +12,17 @@ import { lazy } from "../util/lazy"
 import { NamedError } from "@opencode-ai/util/error"
 import { Flag } from "../flag/flag"
 import { Auth } from "../auth"
+// kilocode_change start
 import {
   type ParseError as JsoncParseError,
   applyEdits,
+  findNodeAtLocation,
   modify,
   parse as parseJsonc,
+  parseTree,
   printParseErrorCode,
 } from "jsonc-parser"
+// kilocode_change end
 import { Instance } from "../project/instance"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
@@ -33,8 +37,11 @@ import { PackageRegistry } from "@/bun/registry"
 import { proxied } from "@/util/proxied"
 import { iife } from "@/util/iife"
 import { Control } from "@/control"
+import { ConfigPaths } from "./paths"
+import { Filesystem } from "@/util/filesystem"
 
 import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
+import { fetchOrganizationModes } from "@kilocode/kilo-gateway" // kilocode_change
 import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
 import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
 import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
@@ -45,9 +52,18 @@ export namespace Config {
 
   const log = Log.create({ service: "config" })
 
+  // kilocode_change start
+  export const Warning = z.object({
+    path: z.string(),
+    message: z.string(),
+    detail: z.string().optional(),
+  })
+  export type Warning = z.infer<typeof Warning>
+  // kilocode_change end
+
   // Managed settings directory for enterprise deployments (highest priority, admin-controlled)
   // These settings override all user and project settings
-  function getManagedConfigDir(): string {
+  function systemManagedConfigDir(): string {
     switch (process.platform) {
       case "darwin":
         return "/Library/Application Support/kilo" // kilocode_change
@@ -58,7 +74,13 @@ export namespace Config {
     }
   }
 
-  // kilocode_change start: Custom merge function that concatenates array fields instead of replacing them
+  export function managedConfigDir() {
+    return process.env.KILO_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
+  }
+
+  const managedDir = managedConfigDir()
+
+  // Custom merge function that concatenates array fields instead of replacing them
   function mergeConfigConcatArrays(target: Info, source: Info): Info {
     const merged = mergeDeep(target, source)
     if (target.plugin && source.plugin) {
@@ -69,23 +91,22 @@ export namespace Config {
     }
     return merged
   }
-  // kilocode_change end
 
-  const managedConfigDir = process.env.KILO_TEST_MANAGED_CONFIG_DIR || getManagedConfigDir()
-
-  // Custom merge function that concatenates array fields instead of replacing them
-  function merge(target: Info, source: Info): Info {
-    const merged = mergeDeep(target, source)
-    if (target.plugin && source.plugin) {
-      merged.plugin = Array.from(new Set([...target.plugin, ...source.plugin]))
+  // kilocode_change start — capture init so resetState() can invalidate the cache entry
+  const stateInit = async () => {
+    // kilocode_change end
+    // kilocode_change start
+    const warnings: Warning[] = []
+    const caught = (err: unknown, source: string) => {
+      const w = toWarning(err)
+      if (w) {
+        warnings.push(w)
+        log.warn("skipped config due to error", { source, err })
+        return
+      }
+      throw err
     }
-    if (target.instructions && source.instructions) {
-      merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
-    }
-    return merged
-  }
-
-  export const state = Instance.state(async () => {
+    // kilocode_change end
     const auth = await Auth.all()
 
     // This ensures Opencode native configs always take precedence over legacy Kilocode configs
@@ -160,7 +181,7 @@ export namespace Config {
       result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
     }
 
-    // Load Kilocode .kilocodeignore patterns (legacy fallback)
+    // Load .kilocodeignore patterns (legacy fallback)
     try {
       const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
       if (Object.keys(ignorePermission).length > 0) {
@@ -175,28 +196,59 @@ export namespace Config {
     }
     // kilocode_change end
 
+    // kilocode_change start - Load organization custom modes from Kilo Cloud API
+    // These override legacy Kilocode modes but are overridden by well-known, global, and project config
+    try {
+      const kilo = auth["kilo"]
+      if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
+        const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
+        if (modes.length > 0) {
+          const agents = ModesMigrator.convertOrganizationModes(modes)
+          result = mergeConfigConcatArrays(result, { agent: agents })
+          log.debug("loaded organization custom modes", {
+            count: modes.length,
+            modes: modes.map((m) => m.slug),
+          })
+        }
+      }
+    } catch (err) {
+      log.warn("failed to load organization custom modes", { error: err })
+    }
+    // kilocode_change end
+
     // Load remote/well-known config (overrides Kilocode legacy configs)
     // This allows organizations to provide default configs that users can override
     for (const [key, value] of Object.entries(auth)) {
       if (value.type === "wellknown") {
-        process.env[value.key] = value.token
-        log.debug("fetching remote config", { url: `${key}/.well-known/opencode` })
-        const response = await fetch(`${key}/.well-known/opencode`)
-        if (!response.ok) {
-          throw new Error(`failed to fetch remote config from ${key}: ${response.status}`)
+        const url = key.replace(/\/+$/, "")
+        // kilocode_change start
+        const source = `${url}/.well-known/opencode`
+        try {
+          process.env[value.key] = value.token
+          log.debug("fetching remote config", { url: source })
+          const response = await fetch(source)
+          if (!response.ok) {
+            throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+          }
+          const wellknown = (await response.json()) as any
+          const remoteConfig = wellknown.config ?? {}
+          // Add $schema to prevent load() from trying to write back to a non-existent file
+          if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
+          result = mergeConfigConcatArrays(
+            result,
+            await load(JSON.stringify(remoteConfig), {
+              dir: path.dirname(source),
+              source,
+            }),
+          )
+          log.debug("loaded remote config from well-known", { url })
+        } catch (err) {
+          const w = toWarning(err)
+          if (w) warnings.push(w)
+          else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
+          log.warn("skipped remote config due to error", { url, err })
+          // kilocode_change end
         }
-        const wellknown = (await response.json()) as any
-        const remoteConfig = wellknown.config ?? {}
-        // Add $schema to prevent load() from trying to write back to a non-existent file
-        if (!remoteConfig.$schema) remoteConfig.$schema = "https://kilo.ai/config.json" // kilocode_change
-        result = merge(
-          result,
-          await load(JSON.stringify(remoteConfig), {
-            dir: path.dirname(`${key}/.well-known/opencode`),
-            source: `${key}/.well-known/opencode`,
-          }),
-        )
-        log.debug("loaded remote config from well-known", { url: key })
       }
     }
 
@@ -205,55 +257,47 @@ export namespace Config {
     }
 
     // Global user config overrides remote config.
-    result = merge(result, await global())
+    // kilocode_change start
+    try {
+      result = mergeConfigConcatArrays(result, await global())
+    } catch (err) {
+      caught(err, "global config")
+    }
+    // kilocode_change end
 
     // Custom config path overrides global config.
     if (Flag.KILO_CONFIG) {
-      result = merge(result, await loadFile(Flag.KILO_CONFIG))
-      log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
+      // kilocode_change start
+      try {
+        result = mergeConfigConcatArrays(result, await loadFile(Flag.KILO_CONFIG))
+        log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
+      } catch (err) {
+        caught(err, Flag.KILO_CONFIG)
+      }
+      // kilocode_change end
     }
 
     // Project config overrides global and remote config.
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       // kilocode_change start
       for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        // kilocode_change end
-        const found = await Filesystem.findUp(file, Instance.directory, Instance.worktree)
-        for (const resolved of found.toReversed()) {
-          result = merge(result, await loadFile(resolved))
+        try {
+          result = mergeConfigConcatArrays(result, await loadFile(file))
+        } catch (err) {
+          caught(err, file)
         }
       }
+      // kilocode_change end
     }
 
     result.agent = result.agent || {}
     result.mode = result.mode || {}
     result.plugin = result.plugin || []
 
-    const directories = [
-      Global.Path.config,
-      // Only scan project .opencode/ directories when project discovery is enabled
-      ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
-        ? await Array.fromAsync(
-            Filesystem.up({
-              targets: [".kilo", ".opencode"], // kilocode_change
-              start: Instance.directory,
-              stop: Instance.worktree,
-            }),
-          )
-        : []),
-      // Always scan ~/.opencode/ (user home directory)
-      ...(await Array.fromAsync(
-        Filesystem.up({
-          targets: [".kilo", ".opencode"], // kilocode_change
-          start: Global.Path.home,
-          stop: Global.Path.home,
-        }),
-      )),
-    ]
+    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
 
     // .opencode directory config overrides (project and global) config sources.
     if (Flag.KILO_CONFIG_DIR) {
-      directories.push(Flag.KILO_CONFIG_DIR)
       log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
     }
 
@@ -261,16 +305,25 @@ export namespace Config {
 
     for (const dir of unique(directories)) {
       // kilocode_change start
-      if (dir.endsWith(".kilo") || dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR) {
+      if (
+        dir.endsWith(".kilo") ||
+        dir.endsWith(".kilocode") ||
+        dir.endsWith(".opencode") ||
+        dir === Flag.KILO_CONFIG_DIR
+      ) {
         for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-          // kilocode_change end
           log.debug(`loading config from ${path.join(dir, file)}`)
-          result = merge(result, await loadFile(path.join(dir, file)))
+          try {
+            result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
+          } catch (err) {
+            caught(err, path.join(dir, file))
+          }
           // to satisfy the type checker
           result.agent ??= {}
           result.mode ??= {}
           result.plugin ??= []
         }
+        // kilocode_change end
       }
 
       deps.push(
@@ -280,34 +333,46 @@ export namespace Config {
         }),
       )
 
-      result.command = mergeDeep(result.command ?? {}, await loadCommand(dir))
-      result.agent = mergeDeep(result.agent, await loadAgent(dir))
-      result.agent = mergeDeep(result.agent, await loadMode(dir))
-      result.plugin.push(...(await loadPlugin(dir)))
+      // kilocode_change start
+      try {
+        result.command = mergeDeep(result.command ?? {}, await loadCommand(dir, warnings))
+        result.agent = mergeDeep(result.agent, await loadAgent(dir, warnings))
+        result.agent = mergeDeep(result.agent, await loadMode(dir, warnings))
+        result.plugin.push(...(await loadPlugin(dir)))
+      } catch (err: unknown) {
+        log.error("failed to load config directory", { dir, err })
+      }
+      // kilocode_change end
     }
 
     // Inline config content overrides all non-managed config sources.
     if (process.env.KILO_CONFIG_CONTENT) {
-      result = merge(
-        result,
-        await load(process.env.KILO_CONFIG_CONTENT, {
-          dir: Instance.directory,
-          source: "KILO_CONFIG_CONTENT",
-        }),
-      )
-      log.debug("loaded custom config from KILO_CONFIG_CONTENT")
+      // kilocode_change start
+      try {
+        result = mergeConfigConcatArrays(
+          result,
+          await load(process.env.KILO_CONFIG_CONTENT, {
+            dir: Instance.directory,
+            source: "KILO_CONFIG_CONTENT",
+          }),
+        )
+        log.debug("loaded custom config from KILO_CONFIG_CONTENT")
+      } catch (err) {
+        caught(err, "KILO_CONFIG_CONTENT")
+      }
+      // kilocode_change end
     }
 
     // Load managed config files last (highest priority) - enterprise admin-controlled
     // Kept separate from directories array to avoid write operations when installing plugins
     // which would fail on system directories requiring elevated permissions
     // This way it only loads config file and not skills/plugins/commands
-    if (existsSync(managedConfigDir)) {
+    if (existsSync(managedDir)) {
       // kilocode_change start
       for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        // kilocode_change end
-        result = merge(result, await loadFile(path.join(managedConfigDir, file)))
+        result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
       }
+      // kilocode_change end
     }
 
     // Migrate deprecated mode field to agent field
@@ -345,8 +410,6 @@ export namespace Config {
       result.share = "auto"
     }
 
-    if (!result.keybinds) result.keybinds = Info.shape.keybinds.parse({})
-
     // Apply flag overrides for compaction settings
     if (Flag.KILO_DISABLE_AUTOCOMPACT) {
       result.compaction = { ...result.compaction, auto: false }
@@ -361,8 +424,12 @@ export namespace Config {
       config: result,
       directories,
       deps,
+      warnings, // kilocode_change
     }
-  })
+  }
+  // kilocode_change start — create state from named init so resetState() can invalidate it
+  export const state = Instance.state(stateInit)
+  // kilocode_change end
 
   export async function waitForDependencies() {
     const deps = await state().then((x) => x.deps)
@@ -378,10 +445,9 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@opencode-ai/plugin": targetVersion,
+      "@kilocode/plugin": targetVersion,
     }
     await Filesystem.writeJson(pkg, json)
-    await new Promise((resolve) => setTimeout(resolve, 3000))
 
     const gitignore = path.join(dir, ".gitignore")
     const hasGitIgnore = await Filesystem.exists(gitignore)
@@ -394,10 +460,12 @@ export namespace Config {
       [
         "install",
         // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
-        ...(proxied() ? ["--no-cache"] : []),
+        ...(proxied() || process.env.CI ? ["--no-cache"] : []),
       ],
       { cwd: dir },
-    ).catch(() => {})
+    ).catch((err) => {
+      log.warn("failed to install dependencies", { dir, error: err })
+    })
   }
 
   async function isWritable(dir: string) {
@@ -409,7 +477,7 @@ export namespace Config {
     }
   }
 
-  async function needsInstall(dir: string) {
+  export async function needsInstall(dir: string) {
     // Some config dirs may be read-only.
     // Installing deps there will fail; skip installation in that case.
     const writable = await isWritable(dir)
@@ -427,28 +495,30 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    const depVersion = dependencies["@kilocode/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      const isOutdated = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
       if (!isOutdated) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@kilocode/plugin",
         cachedVersion: depVersion,
       })
       return true
     }
+    // kilocode_change end
     if (depVersion === targetVersion) return false
     return true
   }
 
   function rel(item: string, patterns: string[]) {
+    const normalizedItem = item.replaceAll("\\", "/")
     for (const pattern of patterns) {
-      const index = item.indexOf(pattern)
+      const index = normalizedItem.indexOf(pattern)
       if (index === -1) continue
-      return item.slice(index + pattern.length)
+      return normalizedItem.slice(index + pattern.length)
     }
   }
 
@@ -457,7 +527,64 @@ export namespace Config {
     return ext.length ? file.slice(0, -ext.length) : file
   }
 
-  async function loadCommand(dir: string) {
+  // kilocode_change start
+  function toWarning(err: unknown): Warning | undefined {
+    if (ConfigPaths.JsonError.isInstance(err))
+      return {
+        path: err.data.path,
+        message: `Config file at ${err.data.path} is not valid JSON(C)`,
+        detail: err.data.message || undefined,
+      }
+    if (ConfigPaths.InvalidError.isInstance(err)) {
+      const text = err.data.issues ? detail(err.data.issues) : err.data.message
+      return {
+        path: err.data.path,
+        message: text
+          ? `Configuration is invalid at ${err.data.path}: ${text}`
+          : `Configuration is invalid at ${err.data.path}`,
+      }
+    }
+    return undefined
+  }
+
+  function detail(issues: z.core.$ZodIssue[]) {
+    return issues
+      .map((issue) => {
+        const loc = issue.path.map(String).join(".")
+        if (!loc) return issue.message
+        return `${loc}: ${issue.message}`
+      })
+      .join("\n")
+  }
+
+  async function invalid(
+    kind: "agent" | "command",
+    item: string,
+    issues: z.core.$ZodIssue[],
+    cause: Error,
+    warnings?: Warning[],
+  ) {
+    const text = detail(issues)
+    const message = text ? `Config file at ${item} is invalid: ${text}` : `Config file at ${item} is invalid`
+    const err = new InvalidError({ path: item, issues }, { cause })
+    if (warnings) warnings.push({ path: item, message, detail: text || undefined })
+    try {
+      const { Session } = await import("@/session")
+      Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+    } catch (e) {
+      log.warn("could not publish session error", { message, err: e })
+    }
+    if (kind === "command") {
+      log.error("failed to load command", { command: item, err, message })
+      return
+    }
+    log.error("failed to load agent", { agent: item, err, message })
+  }
+  // kilocode_change end
+
+  // kilocode_change start
+  async function loadCommand(dir: string, warnings?: Warning[]) {
+    // kilocode_change end
     const result: Record<string, Command> = {}
     for (const item of await Glob.scan("{command,commands}/**/*.md", {
       cwd: dir,
@@ -469,16 +596,25 @@ export namespace Config {
         const message = ConfigMarkdown.FrontmatterError.isInstance(err)
           ? err.data.message
           : `Failed to parse command ${item}`
-        const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        // kilocode_change start
+        if (warnings) warnings.push({ path: item, message })
+        try {
+          const { Session } = await import("@/session")
+          Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        } catch (e) {
+          log.warn("could not publish session error", { message, err: e })
+        }
         log.error("failed to load command", { command: item, err })
         return undefined
+        // kilocode_change end
       })
       if (!md) continue
 
       const patterns = [
         "/.kilo/command/",
         "/.kilo/commands/",
+        "/.kilocode/command/",
+        "/.kilocode/commands/",
         "/.opencode/command/",
         "/.opencode/commands/",
         "/command/",
@@ -497,12 +633,16 @@ export namespace Config {
         result[config.name] = parsed.data
         continue
       }
-      throw new InvalidError({ path: item, issues: parsed.error.issues }, { cause: parsed.error })
+      // kilocode_change start
+      await invalid("command", item, parsed.error.issues, parsed.error, warnings)
+      // kilocode_change end
     }
     return result
   }
 
-  async function loadAgent(dir: string) {
+  // kilocode_change start
+  async function loadAgent(dir: string, warnings?: Warning[]) {
+    // kilocode_change end
     const result: Record<string, Agent> = {}
 
     for (const item of await Glob.scan("{agent,agents}/**/*.md", {
@@ -515,10 +655,17 @@ export namespace Config {
         const message = ConfigMarkdown.FrontmatterError.isInstance(err)
           ? err.data.message
           : `Failed to parse agent ${item}`
-        const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        // kilocode_change start
+        if (warnings) warnings.push({ path: item, message })
+        try {
+          const { Session } = await import("@/session")
+          Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        } catch (e) {
+          log.warn("could not publish session error", { message, err: e })
+        }
         log.error("failed to load agent", { agent: item, err })
         return undefined
+        // kilocode_change end
       })
       if (!md) continue
 
@@ -526,6 +673,8 @@ export namespace Config {
       const patterns = [
         "/.kilo/agent/",
         "/.kilo/agents/",
+        "/.kilocode/agent/",
+        "/.kilocode/agents/",
         "/.opencode/agent/",
         "/.opencode/agents/",
         "/agent/",
@@ -545,12 +694,16 @@ export namespace Config {
         result[config.name] = parsed.data
         continue
       }
-      throw new InvalidError({ path: item, issues: parsed.error.issues }, { cause: parsed.error })
+      // kilocode_change start
+      await invalid("agent", item, parsed.error.issues, parsed.error, warnings)
+      // kilocode_change end
     }
     return result
   }
 
-  async function loadMode(dir: string) {
+  // kilocode_change start
+  async function loadMode(dir: string, warnings?: Warning[]) {
+    // kilocode_change end
     const result: Record<string, Agent> = {}
     for (const item of await Glob.scan("{mode,modes}/*.md", {
       cwd: dir,
@@ -562,10 +715,17 @@ export namespace Config {
         const message = ConfigMarkdown.FrontmatterError.isInstance(err)
           ? err.data.message
           : `Failed to parse mode ${item}`
-        const { Session } = await import("@/session")
-        Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        // kilocode_change start
+        if (warnings) warnings.push({ path: item, message })
+        try {
+          const { Session } = await import("@/session")
+          Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        } catch (e) {
+          log.warn("could not publish session error", { message, err: e })
+        }
         log.error("failed to load mode", { mode: item, err })
         return undefined
+        // kilocode_change end
       })
       if (!md) continue
 
@@ -582,6 +742,9 @@ export namespace Config {
         }
         continue
       }
+      // kilocode_change start
+      await invalid("agent", item, parsed.error.issues, parsed.error, warnings)
+      // kilocode_change end
     }
     return result
   }
@@ -715,7 +878,8 @@ export namespace Config {
   export const Mcp = z.discriminatedUnion("type", [McpLocal, McpRemote])
   export type Mcp = z.infer<typeof Mcp>
 
-  export const PermissionAction = z.enum(["ask", "allow", "deny"]).meta({
+  export const PermissionAction = z.enum(["ask", "allow", "deny"]).nullable().meta({
+    // kilocode_change - nullable allows null as a delete sentinel
     ref: "PermissionActionConfig",
   })
   export type PermissionAction = z.infer<typeof PermissionAction>
@@ -803,7 +967,7 @@ export namespace Config {
 
   export const Agent = z
     .object({
-      model: ModelId.optional(),
+      model: ModelId.nullable().optional(), // kilocode_change - nullable for delete sentinel
       variant: z
         .string()
         .optional()
@@ -1035,9 +1199,10 @@ export namespace Config {
         .describe("Delete word backward in input"),
       history_previous: z.string().optional().default("up").describe("Previous history item"),
       history_next: z.string().optional().default("down").describe("Next history item"),
-      session_child_cycle: z.string().optional().default("<leader>right").describe("Next child session"),
-      session_child_cycle_reverse: z.string().optional().default("<leader>left").describe("Previous child session"),
-      session_parent: z.string().optional().default("<leader>up").describe("Go to parent session"),
+      session_child_first: z.string().optional().default("<leader>down").describe("Go to first child session"),
+      session_child_cycle: z.string().optional().default("right").describe("Go to next child session"),
+      session_child_cycle_reverse: z.string().optional().default("left").describe("Go to previous child session"),
+      session_parent: z.string().optional().default("up").describe("Go to parent session"),
       terminal_suspend: z.string().optional().default("ctrl+z").describe("Suspend terminal"),
       terminal_title_toggle: z.string().optional().default("none").describe("Toggle terminal title"),
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
@@ -1049,26 +1214,12 @@ export namespace Config {
       ref: "KeybindsConfig",
     })
 
-  export const TUI = z.object({
-    scroll_speed: z.number().min(0.001).optional().describe("TUI scroll speed"),
-    scroll_acceleration: z
-      .object({
-        enabled: z.boolean().describe("Enable scroll acceleration"),
-      })
-      .optional()
-      .describe("Scroll acceleration settings"),
-    diff_style: z
-      .enum(["auto", "stacked"])
-      .optional()
-      .describe("Control diff rendering style: 'auto' adapts to terminal width, 'stacked' always shows single column"),
-  })
-
   export const Server = z
     .object({
       port: z.number().int().positive().optional().describe("Port to listen on"),
       hostname: z.string().optional().describe("Hostname to listen on"),
       mdns: z.boolean().optional().describe("Enable mDNS service discovery"),
-      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: opencode.local)"),
+      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: kilo.local)"), // kilocode_change
       cors: z.array(z.string()).optional().describe("Additional domains to allow for CORS"),
     })
     .strict()
@@ -1137,10 +1288,7 @@ export namespace Config {
   export const Info = z
     .object({
       $schema: z.string().optional().describe("JSON schema reference for configuration validation"),
-      theme: z.string().optional().describe("Theme name to use for the interface"),
-      keybinds: Keybinds.optional().describe("Custom keybind configurations"),
       logLevel: Log.Level.optional().describe("Log level"),
-      tui: TUI.optional().describe("TUI specific settings"),
       server: Server.optional().describe("Server configuration for opencode serve and web commands"),
       command: z
         .record(z.string(), Command)
@@ -1164,6 +1312,10 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("@deprecated Use 'share' field instead. Share newly created sessions automatically"),
+      remote_control: z // kilocode_change
+        .boolean()
+        .optional()
+        .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
         .optional()
@@ -1175,10 +1327,14 @@ export namespace Config {
         .array(z.string())
         .optional()
         .describe("When set, ONLY these providers will be enabled. All other providers will be ignored"),
-      model: ModelId.describe("Model to use in the format of provider/model, eg anthropic/claude-2").optional(),
-      small_model: ModelId.describe(
-        "Small model to use for tasks like title generation in the format of provider/model",
-      ).optional(),
+      // kilocode_change start - nullable for delete sentinel
+      model: ModelId.nullable()
+        .describe("Model to use in the format of provider/model, eg anthropic/claude-2")
+        .optional(),
+      small_model: ModelId.nullable()
+        .describe("Small model to use for tasks like title generation in the format of provider/model")
+        .optional(),
+      // kilocode_change end
       // kilocode_change start - renamed from "build" to "code"
       default_agent: z
         .string()
@@ -1311,6 +1467,7 @@ export namespace Config {
         .object({
           disable_paste_summary: z.boolean().optional(),
           batch_tool: z.boolean().optional().describe("Enable the batch tool"),
+          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
           // kilocode_change start - enable telemetry by default
           openTelemetry: z.boolean().default(true).describe("Enable telemetry. Set to false to opt-out."),
           // kilocode_change end
@@ -1335,7 +1492,54 @@ export namespace Config {
 
   export type Info = z.output<typeof Info>
 
+  // kilocode_change start — migrate bash permission for existing users before config is consumed
+  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+
+  async function migrateBashPermission() {
+    const files = GLOBAL_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
+    // also check legacy TOML config — its presence means existing user
+    const legacy = path.join(Global.Path.config, "config")
+    const existing = files.filter((file) => existsSync(file))
+    const hasLegacy = existsSync(legacy)
+    // no global config → new user, they'll get the new bash:ask default
+    if (existing.length === 0 && !hasLegacy) return
+    // check if any config file already has an explicit bash permission
+    for (const file of existing) {
+      const text = await Bun.file(file)
+        .text()
+        .catch(() => "")
+      const data = parseJsonc(text) ?? {}
+      if (data.permission?.bash) return
+    }
+    // also check legacy TOML config for bash permission
+    if (hasLegacy) {
+      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
+      if (toml?.default?.permission?.bash) return
+    }
+    // existing user without bash permission in any file → write bash:allow to the
+    // highest-precedence existing file to preserve their current behavior.
+    // if only the legacy TOML file exists, write to config.json (the TOML migration will merge into it)
+    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const text = await Bun.file(target)
+      .text()
+      .catch(() => "{}")
+    if (target.endsWith(".jsonc")) {
+      const edits = modify(text, ["permission", "bash"], "allow", {
+        formattingOptions: { insertSpaces: true, tabSize: 2 },
+      })
+      await Bun.write(target, applyEdits(text, edits))
+      log.info("migrated bash permission to allow for existing user", { path: target })
+      return
+    }
+    const data = parseJsonc(text) ?? {}
+    const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
+    await Bun.write(target, JSON.stringify(merged, null, 2))
+    log.info("migrated bash permission to allow for existing user", { path: target })
+  }
+  // kilocode_change end
+
   export const global = lazy(async () => {
+    await migrateBashPermission() // kilocode_change — run before config is read
     let result: Info = pipe(
       {},
       mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
@@ -1357,7 +1561,7 @@ export namespace Config {
         .then(async (mod) => {
           const { provider, model, ...rest } = mod.default
           if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://kilo.ai/config.json" // kilocode_change
+          result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
           result = mergeDeep(result, rest)
           await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
           await fs.unlink(legacy)
@@ -1368,91 +1572,42 @@ export namespace Config {
     return result
   })
 
+  export const { readFile } = ConfigPaths
+
   async function loadFile(filepath: string): Promise<Info> {
     log.info("loading", { path: filepath })
-    let text = await Filesystem.readText(filepath).catch((err: any) => {
-      if (err.code === "ENOENT") return
-      throw new JsonError({ path: filepath }, { cause: err })
-    })
+    const text = await readFile(filepath)
     if (!text) return {}
     return load(text, { path: filepath })
   }
 
   async function load(text: string, options: { path: string } | { dir: string; source: string }) {
     const original = text
-    const configDir = "path" in options ? path.dirname(options.path) : options.dir
     const source = "path" in options ? options.path : options.source
     const isFile = "path" in options
+    const data = await ConfigPaths.parseText(
+      text,
+      "path" in options ? options.path : { source: options.source, dir: options.dir },
+    )
 
-    text = text.replace(/\{env:([^}]+)\}/g, (_, varName) => {
-      return process.env[varName] || ""
-    })
+    const normalized = (() => {
+      if (!data || typeof data !== "object" || Array.isArray(data)) return data
+      const copy = { ...(data as Record<string, unknown>) }
+      const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
+      if (!hadLegacy) return copy
+      delete copy.theme
+      delete copy.keybinds
+      delete copy.tui
+      log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
+      return copy
+    })()
 
-    const fileMatches = text.match(/\{file:[^}]+\}/g)
-    if (fileMatches) {
-      const lines = text.split("\n")
-
-      for (const match of fileMatches) {
-        const lineIndex = lines.findIndex((line) => line.includes(match))
-        if (lineIndex !== -1 && lines[lineIndex].trim().startsWith("//")) {
-          continue
-        }
-        let filePath = match.replace(/^\{file:/, "").replace(/\}$/, "")
-        if (filePath.startsWith("~/")) {
-          filePath = path.join(os.homedir(), filePath.slice(2))
-        }
-        const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath)
-        const fileContent = (
-          await Bun.file(resolvedPath)
-            .text()
-            .catch((error) => {
-              const errMsg = `bad file reference: "${match}"`
-              if (error.code === "ENOENT") {
-                throw new InvalidError(
-                  {
-                    path: source,
-                    message: errMsg + ` ${resolvedPath} does not exist`,
-                  },
-                  { cause: error },
-                )
-              }
-              throw new InvalidError({ path: source, message: errMsg }, { cause: error })
-            })
-        ).trim()
-        text = text.replace(match, () => JSON.stringify(fileContent).slice(1, -1))
-      }
-    }
-
-    const errors: JsoncParseError[] = []
-    const data = parseJsonc(text, errors, { allowTrailingComma: true })
-    if (errors.length) {
-      const lines = text.split("\n")
-      const errorDetails = errors
-        .map((e) => {
-          const beforeOffset = text.substring(0, e.offset).split("\n")
-          const line = beforeOffset.length
-          const column = beforeOffset[beforeOffset.length - 1].length + 1
-          const problemLine = lines[line - 1]
-
-          const error = `${printParseErrorCode(e.error)} at line ${line}, column ${column}`
-          if (!problemLine) return error
-
-          return `${error}\n   Line ${line}: ${problemLine}\n${"".padStart(column + 9)}^`
-        })
-        .join("\n")
-
-      throw new JsonError({
-        path: source,
-        message: `\n--- JSONC Input ---\n${text}\n--- Errors ---\n${errorDetails}\n--- End ---`,
-      })
-    }
-
-    const parsed = Info.safeParse(data)
+    const parsed = Info.safeParse(normalized)
     if (parsed.success) {
       if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://kilo.ai/config.json" // kilocode_change
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://kilo.ai/config.json",') // kilocode_change
-        await Bun.write(options.path, updated).catch(() => {})
+        parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+        await Filesystem.write(options.path, updated).catch(() => {})
       }
       const data = parsed.data
       if (data.plugin && isFile) {
@@ -1460,7 +1615,16 @@ export namespace Config {
           const plugin = data.plugin[i]
           try {
             data.plugin[i] = import.meta.resolve!(plugin, options.path)
-          } catch (err) {}
+          } catch (e) {
+            try {
+              // import.meta.resolve sometimes fails with newly created node_modules
+              const require = createRequire(options.path)
+              const resolvedPath = require.resolve(plugin)
+              data.plugin[i] = pathToFileURL(resolvedPath).href
+            } catch {
+              // Ignore, plugin might be a generic string identifier like "mcp-server"
+            }
+          }
         }
       }
       return data
@@ -1471,13 +1635,7 @@ export namespace Config {
       issues: parsed.error.issues,
     })
   }
-  export const JsonError = NamedError.create(
-    "ConfigJsonError",
-    z.object({
-      path: z.string(),
-      message: z.string().optional(),
-    }),
-  )
+  export const { JsonError, InvalidError } = ConfigPaths
 
   export const ConfigDirectoryTypoError = NamedError.create(
     "ConfigDirectoryTypoError",
@@ -1488,18 +1646,15 @@ export namespace Config {
     }),
   )
 
-  export const InvalidError = NamedError.create(
-    "ConfigInvalidError",
-    z.object({
-      path: z.string(),
-      issues: z.custom<z.core.$ZodIssue[]>().optional(),
-      message: z.string().optional(),
-    }),
-  )
-
   export async function get() {
     return state().then((x) => x.config)
   }
+
+  // kilocode_change start
+  export async function warnings() {
+    return state().then((x) => x.warnings)
+  }
+  // kilocode_change end
 
   export async function getGlobal() {
     return global()
@@ -1508,7 +1663,7 @@ export namespace Config {
   export async function update(config: Info) {
     const filepath = path.join(Instance.directory, "config.json")
     const existing = await loadFile(filepath)
-    await Filesystem.writeJson(filepath, mergeDeep(existing, config))
+    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // kilocode_change
     await Instance.dispose()
   }
 
@@ -1528,9 +1683,55 @@ export namespace Config {
     return !!value && typeof value === "object" && !Array.isArray(value)
   }
 
+  // kilocode_change start - strip null delete sentinels after merge
+  /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
+  function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value === null) continue
+      if (isRecord(value)) {
+        result[key] = stripNulls(value)
+      } else {
+        result[key] = value
+      }
+    }
+    return result
+  }
+  // kilocode_change end
+
+  // kilocode_change start — merge config with normalization pipeline
+  /**
+   * Merge a patch into an existing config:
+   * 1. Normalize permission scalars → objects when the patch has an object
+   *    (e.g. existing `"bash": "ask"` + patch `"bash": { "npm *": "allow" }`
+   *    → promotes existing to `"bash": { "*": "ask" }` so mergeDeep works)
+   * 2. Deep-merge
+   * 3. Strip null delete sentinels
+   */
+  function mergeConfig(existing: Info, patch: Info): Info {
+    const e = { ...existing } as Record<string, unknown>
+    const p = patch as Record<string, unknown>
+    // Normalize permission scalars before merge (clone to avoid mutating the input)
+    const existingPerm = e.permission
+    const patchPerm = p.permission
+    if (isRecord(existingPerm) && isRecord(patchPerm)) {
+      const cloned = { ...existingPerm }
+      for (const [key, patchValue] of Object.entries(patchPerm)) {
+        const existingValue = cloned[key]
+        if (typeof existingValue === "string" && isRecord(patchValue)) {
+          cloned[key] = { "*": existingValue }
+        }
+      }
+      e.permission = cloned
+    }
+    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
+  }
+  // kilocode_change end
+
   function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
     if (!isRecord(patch)) {
-      const edits = modify(input, path, patch, {
+      // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
+      const edits = modify(input, path, patch === null ? undefined : patch, {
         formattingOptions: {
           insertSpaces: true,
           tabSize: 2,
@@ -1538,6 +1739,26 @@ export namespace Config {
       })
       return applyEdits(input, edits)
     }
+
+    // kilocode_change start — when the existing JSONC node at this path is a
+    // scalar (e.g. permission.bash is "ask" as a string), jsonc-parser cannot
+    // add child keys to it. Detect this case and replace the whole node with
+    // the patch object in a single modify() call instead of recursing.
+    // For permission keys, promote the scalar to { "*": scalarValue } so the
+    // wildcard default is preserved. For other keys, replace directly.
+    if (path.length > 0) {
+      const tree = parseTree(input)
+      const node = tree && findNodeAtLocation(tree, path)
+      if (node && node.type !== "object") {
+        const isPermissionKey = path[0] === "permission" && path.length === 2
+        const replacement = isPermissionKey ? { "*": node.value, ...patch } : patch
+        const edits = modify(input, path, replacement, {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+        })
+        return applyEdits(input, edits)
+      }
+    }
+    // kilocode_change end
 
     return Object.entries(patch).reduce((result, [key, value]) => {
       if (value === undefined) return result
@@ -1579,7 +1800,10 @@ export namespace Config {
     })
   }
 
-  export async function updateGlobal(config: Info) {
+  // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
+  export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
+    const dispose = options?.dispose ?? true
+    // kilocode_change end
     const filepath = globalConfigFile()
     const before = await Filesystem.readText(filepath).catch((err: any) => {
       if (err.code === "ENOENT") return "{}"
@@ -1589,7 +1813,7 @@ export namespace Config {
     const next = await (async () => {
       if (!filepath.endsWith(".jsonc")) {
         const existing = parseConfig(before, filepath)
-        const merged = mergeDeep(existing, config)
+        const merged = mergeConfig(existing, config) // kilocode_change
         await Filesystem.writeJson(filepath, merged)
         return merged
       }
@@ -1600,7 +1824,27 @@ export namespace Config {
       return merged
     })()
 
-    global.reset()
+    // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
+    await global.reset()
+
+    if (!dispose) {
+      // Reset Config.state for all instances so the next Config.get() call re-reads
+      // from disk and re-merges all layers (global + project + workspace) in the
+      // correct precedence order. This avoids the stale-cache problem without the
+      // precedence bug that would occur if we merged the global patch directly into
+      // the already-resolved config (which includes project overrides).
+      Instance.resetStateEntry(stateInit)
+
+      GlobalBus.emit("event", {
+        directory: "global",
+        payload: {
+          type: Event.ConfigUpdated.type,
+          properties: {},
+        },
+      })
+      return next
+    }
+    // kilocode_change end
 
     void Instance.disposeAll()
       .catch(() => undefined)

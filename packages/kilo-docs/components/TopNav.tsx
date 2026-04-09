@@ -31,6 +31,7 @@ const mainNavItems: NavItem[] = [
   { label: "Automate", href: "/automate" },
   { label: "Deploy & Secure", href: "/deploy-secure" },
   { label: "Kilo Gateway", href: "/gateway" },
+  { label: "KiloClaw", href: "/kiloclaw" },
   { label: "Contributing", href: "/contributing" },
 ]
 
@@ -335,9 +336,9 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
       {/* Announcement banner */}
       <div className="announcement-banner">
         <p>
-          We're <Link href="https://blog.kilo.ai/p/kilo-cli">replatforming our extensions on the new Kilo CLI</Link>.
-          Contribute to the new CLI and pre-release extensions at{" "}
-          <Link href="https://github.com/Kilo-Org/kilocode">Kilo-Org/kilocode</Link>.
+          The all-new Kilo Code extension is here, rebuilt on the{" "}
+          <Link href="/code-with-ai/platforms/vscode/whats-new">Kilo CLI</Link> for speed, flexibility, and continued access to 500+ models via the Kilo Gateway
+          →
         </p>
       </div>
 
@@ -529,12 +530,12 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
         }
 
         .announcement-banner {
-          background: #1a1a18;
-          color: #a3a3a2;
+          background: var(--bg-secondary);
+          color: var(--text-color);
           padding: 0.5rem 1rem;
           text-align: center;
           font-size: 0.875rem;
-          border-bottom: 1px solid #3f3f3f;
+          border-bottom: 1px solid var(--border-color);
         }
 
         .announcement-banner p {
@@ -542,13 +543,13 @@ export function TopNav({ onMobileMenuToggle, isMobileMenuOpen = false, showMobil
         }
 
         .announcement-banner :global(a) {
-          color: #f8f674;
+          color: var(--accent-color);
           text-decoration: underline;
           text-underline-offset: 2px;
         }
 
         .announcement-banner :global(a:hover) {
-          color: #ffff8d;
+          color: var(--accent-hover);
         }
 
         @media (max-width: 768px) {

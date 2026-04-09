@@ -1,0 +1,400 @@
+name: Visual Regression Tests
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-paths:
+    name: Check changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      matched: ${{ steps.filter.outputs.matched }}
+      is_fork: ${{ steps.fork-check.outputs.is_fork }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Kilo-Org/paths-filter@master
+        id: filter
+        with:
+          filters: |
+            matched:
+              - "packages/kilo-ui/**"
+              - "packages/ui/**"
+              - "packages/util/**"
+              - "packages/sdk/js/**"
+              - "packages/kilo-vscode/webview-ui/**"
+              - "packages/kilo-vscode/.storybook/**"
+              - "packages/kilo-vscode/tests/visual-regression*"
+              - "packages/kilo-vscode/tests/permission-dock-dropdown*"
+              - "packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/**"
+              - ".github/workflows/visual-regression.yml"
+      - name: Check if PR is from a fork
+        id: fork-check
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.full_name }}" != "${{ github.repository }}" ]; then
+            echo "is_fork=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_fork=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  visual-regression:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
+    name: Visual Regression (kilo-ui)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (internal)
+        if: needs.check-paths.outputs.is_fork != 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.BOT_PAT }}
+          ref: ${{ github.head_ref }}
+
+      - name: Checkout (fork)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Check if HEAD is a baseline update commit
+        if: needs.check-paths.outputs.is_fork != 'true'
+        id: check-baseline-commit
+        run: |
+          COMMIT_MSG=$(git log -1 --format=%s)
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+            echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD commit is a baseline update commit — will not auto-commit again."
+          else
+            echo "is_baseline_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('packages/kilo-ui/package.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+        working-directory: packages/kilo-ui
+
+      - name: Install Playwright system deps
+        run: bunx playwright install-deps chromium
+        working-directory: packages/kilo-ui
+
+      - name: Cache Storybook build
+        id: storybook-cache
+        uses: actions/cache@v4
+        with:
+          path: packages/kilo-ui/storybook-static
+          key: storybook-${{ hashFiles('packages/kilo-ui/src/**', 'packages/kilo-ui/.storybook/**', 'packages/ui/src/**', 'packages/kilo-ui/package.json') }}
+
+      - name: Build Storybook
+        if: steps.storybook-cache.outputs.cache-hit != 'true'
+        run: bun run build-storybook
+        working-directory: packages/kilo-ui
+
+      - name: Generate baselines for new/missing stories
+        run: bun run test:visual:update
+        working-directory: packages/kilo-ui
+        env:
+          CI: true
+          PLAYWRIGHT_WORKERS: "4"
+
+      - name: Remove stale baselines for deleted stories
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
+            const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
+            const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
+            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const component of fs.readdirSync(dir)) {
+              const cdir = path.join(dir, component);
+              if (!fs.statSync(cdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(cdir)) {
+                const rel = component + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) { console.log('Removing stale baseline:', rel); fs.unlinkSync(path.join(cdir, file)); }
+              }
+            }
+          "
+        working-directory: packages/kilo-ui
+
+      - name: Check for baseline changes (fork PRs)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        run: |
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No visual regression detected."
+          else
+            echo "::error::Visual regression detected. Screenshot baselines have changed."
+            echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
+            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            git diff --cached --stat
+            exit 1
+          fi
+
+      - name: Fail if baselines still changing after auto-update
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update == 'true'
+        run: |
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "Baselines are stable after auto-update."
+          else
+            echo "::error::Visual regression baselines changed again after a previous auto-update commit."
+            echo "::error::This indicates non-deterministic screenshots that would cause an infinite update loop."
+            echo "::error::Please investigate the flaky screenshots and add non-deterministic stories to the SKIP set."
+            git diff --cached --stat
+            exit 1
+          fi
+
+      - name: Commit and push new baselines (if any)
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit.outputs.is_baseline_update != 'true'
+        id: commit-baselines
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/kilo-ui/tests/visual-regression.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No new baselines — nothing to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update visual regression baselines"
+            git lfs push --all origin
+            git push --no-verify
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if baselines changed
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.commit-baselines.outputs.changed == 'true'
+        run: |
+          echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
+          exit 1
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-results
+          path: packages/kilo-ui/test-results/
+          retention-days: 7
+
+  visual-regression-vscode:
+    needs: check-paths
+    if: needs.check-paths.outputs.matched == 'true'
+    name: Visual Regression (kilo-vscode webview)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout (internal)
+        if: needs.check-paths.outputs.is_fork != 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+          token: ${{ secrets.BOT_PAT }}
+          ref: ${{ github.head_ref }}
+
+      - name: Checkout (fork)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Check if HEAD is a baseline update commit
+        if: needs.check-paths.outputs.is_fork != 'true'
+        id: check-baseline-commit-vscode
+        run: |
+          COMMIT_MSG=$(git log -1 --format=%s)
+          if [ "$COMMIT_MSG" = "chore: update visual regression baselines" ] || [ "$COMMIT_MSG" = "chore: update kilo-vscode visual regression baselines" ]; then
+            echo "is_baseline_update=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD commit is a baseline update commit — will not auto-commit again."
+          else
+            echo "is_baseline_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ hashFiles('bun.lock') }}
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Cache Playwright browsers
+        id: playwright-cache-vscode
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-vscode-${{ hashFiles('packages/kilo-vscode/package.json') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache-vscode.outputs.cache-hit != 'true'
+        run: bunx playwright install chromium
+        working-directory: packages/kilo-vscode
+
+      - name: Install Playwright system deps
+        run: bunx playwright install-deps chromium
+        working-directory: packages/kilo-vscode
+
+      - name: Cache Storybook build
+        id: storybook-cache-vscode
+        uses: actions/cache@v4
+        with:
+          path: packages/kilo-vscode/storybook-static
+          key: storybook-vscode-${{ hashFiles('packages/kilo-vscode/webview-ui/src/**', 'packages/kilo-vscode/.storybook/**', 'packages/kilo-ui/src/**', 'packages/ui/src/**', 'packages/kilo-vscode/package.json') }}
+
+      - name: Build Storybook
+        if: steps.storybook-cache-vscode.outputs.cache-hit != 'true'
+        run: bun run build-storybook
+        working-directory: packages/kilo-vscode
+
+      - name: Generate baselines for new/missing stories
+        run: bun run test:visual:update
+        working-directory: packages/kilo-vscode
+        env:
+          CI: true
+          PLAYWRIGHT_WORKERS: "4"
+
+      - name: Remove stale baselines for deleted stories
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const idx = JSON.parse(fs.readFileSync('storybook-static/index.json', 'utf8'));
+            const stories = Object.values(idx.entries || idx.stories || {}).filter(s => s.id && !s.id.endsWith('--docs'));
+            const expected = new Set(stories.map(s => { const [c,v] = s.id.split('--'); return c + '/' + v + '-chromium-linux.png'; }));
+            const dir = 'tests/visual-regression.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const component of fs.readdirSync(dir)) {
+              const cdir = path.join(dir, component);
+              if (!fs.statSync(cdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(cdir)) {
+                const rel = component + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) { console.log('Removing stale baseline:', rel); fs.unlinkSync(path.join(cdir, file)); }
+              }
+            }
+          "
+        working-directory: packages/kilo-vscode
+
+      - name: Remove stale baselines for permission-dock-dropdown tests
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path');
+            const specPath = 'tests/permission-dock-dropdown.spec.ts';
+            const expected = new Set();
+            if (fs.existsSync(specPath)) {
+              const spec = fs.readFileSync(specPath, 'utf8');
+              const re = /toHaveScreenshot\(\[([^\]]+)\]\)/g;
+              let m;
+              while ((m = re.exec(spec)) !== null) {
+                const parts = m[1].split(',').map(s => s.trim().replace(/[\"']/g, ''));
+                expected.add(parts.join('/').replace(/\.png$/, '-chromium-linux.png'));
+              }
+            }
+            const dir = 'tests/permission-dock-dropdown.spec.ts-snapshots';
+            if (!fs.existsSync(dir)) process.exit(0);
+            for (const sub of fs.readdirSync(dir)) {
+              const sdir = path.join(dir, sub);
+              if (!fs.statSync(sdir).isDirectory()) continue;
+              for (const file of fs.readdirSync(sdir)) {
+                const rel = sub + '/' + file;
+                if (file.endsWith('.png') && !expected.has(rel)) {
+                  console.log('Removing stale baseline:', rel);
+                  fs.unlinkSync(path.join(sdir, file));
+                }
+              }
+            }
+          "
+        working-directory: packages/kilo-vscode
+
+      - name: Check for baseline changes (fork PRs)
+        if: needs.check-paths.outputs.is_fork == 'true'
+        run: |
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No visual regression detected."
+          else
+            echo "::error::Visual regression detected. Screenshot baselines have changed."
+            echo "::error::Since this PR is from a fork, updated screenshots cannot be committed automatically."
+            echo "::error::Please ask a Kilo developer for help updating the screenshots."
+            git diff --cached --stat
+            exit 1
+          fi
+
+      - name: Fail if baselines still changing after auto-update
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update == 'true'
+        run: |
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "Baselines are stable after auto-update."
+          else
+            echo "::error::Visual regression baselines changed again after a previous auto-update commit."
+            echo "::error::This indicates non-deterministic screenshots that would cause an infinite update loop."
+            echo "::error::Please investigate the flaky screenshots and add non-deterministic stories to the SKIP set."
+            git diff --cached --stat
+            exit 1
+          fi
+
+      - name: Commit and push new baselines (if any)
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.check-baseline-commit-vscode.outputs.is_baseline_update != 'true'
+        id: commit-baselines-vscode
+        env:
+          GH_TOKEN: ${{ secrets.BOT_PAT }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/kilo-vscode/tests/visual-regression.spec.ts-snapshots/
+          [ -d packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots ] && git add packages/kilo-vscode/tests/permission-dock-dropdown.spec.ts-snapshots/
+          if git diff --cached --quiet; then
+            echo "No new baselines — nothing to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore: update kilo-vscode visual regression baselines"
+            git lfs push --all origin
+            git push --no-verify
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if baselines changed
+        if: needs.check-paths.outputs.is_fork != 'true' && steps.commit-baselines-vscode.outputs.changed == 'true'
+        run: |
+          echo "::error::Visual regression baselines changed. New baselines have been committed to the branch. Please pull and review."
+          exit 1
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-vscode-results
+          path: packages/kilo-vscode/test-results/
+          retention-days: 7

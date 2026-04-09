@@ -64,9 +64,9 @@ If you run out of credits and haven't configured a free alternative, autocomplet
 
 ### How to Get It Free
 
-Configure Mistral directly as your autocomplete provider. Mistral offers free access to their Codestral model, which is optimized for code completions. When you configure Mistral directly, it takes precedence over the default Kilo Code routing.
+Add your own Mistral Codestral API key via **BYOK (Bring Your Own Key)** on the Kilo Gateway. Mistral offers a free tier for Codestral, and when you configure a BYOK key, autocomplete requests are routed using your key — billed directly by Mistral at $0 on your Kilo balance.
 
-For step-by-step instructions with screenshots, see our [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup).
+For step-by-step instructions, see our [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup).
 
 ## Free CLI Background Tasks
 
@@ -99,6 +99,6 @@ Replace `your-preferred-free-model` with any free model available in the model p
 ## Related Resources
 
 - [Free and Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Complete guide to free and budget-friendly model options
-- [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup) - Step-by-step free autocomplete setup
+- [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup) - Step-by-step autocomplete setup via BYOK
 - [Autocomplete](/docs/code-with-ai/features/autocomplete) - Full autocomplete documentation
 - [CLI Documentation](/docs/code-with-ai/platforms/cli) - Complete CLI reference

@@ -3,6 +3,20 @@
     margin: 0rem;
   }
 
+  /* Headings: Same size, distinguished by color and spacing */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin-top: 0;
+  }
+
+  hr {
+    margin: 0;
+  }
+
   pre {
     scrollbar-width: thin;
     scrollbar-color: var(--border-weak-base) transparent;
@@ -29,5 +43,10 @@
         background: var(--border-strong-base);
       }
     }
+  }
+
+  [data-component="markdown-code"] {
+    background: var(--background-stronger);
+    margin-bottom: 1rem;
   }
 }

@@ -31,6 +31,7 @@ import {
 import { Log } from "../util/log"
 import { pathToFileURL } from "bun"
 import { Filesystem } from "../util/filesystem"
+import { Hash } from "../util/hash"
 import { ACPSessionManager } from "./session"
 import type { ACPConfig } from "./types"
 import { Provider } from "../provider/provider"
@@ -41,7 +42,7 @@ import { Config } from "@/config/config"
 import { Todo } from "@/session/todo"
 import { z } from "zod"
 import { LoadAPIKeyError } from "ai"
-import type { AssistantMessage, Event, OpencodeClient, SessionMessageResponse } from "@kilocode/sdk/v2"
+import type { AssistantMessage, Event, KiloClient, SessionMessageResponse, ToolPart } from "@kilocode/sdk/v2"
 import { applyPatch } from "diff"
 
 import { fetchDefaultModel } from "@kilocode/kilo-gateway" // kilocode_change
@@ -55,7 +56,7 @@ export namespace ACP {
   const log = Log.create({ service: "acp-agent" })
 
   async function getContextLimit(
-    sdk: OpencodeClient,
+    sdk: KiloClient,
     providerID: string,
     modelID: string,
     directory: string,
@@ -75,7 +76,7 @@ export namespace ACP {
 
   async function sendUsageUpdate(
     connection: AgentSideConnection,
-    sdk: OpencodeClient,
+    sdk: KiloClient,
     sessionID: string,
     directory: string,
   ): Promise<void> {
@@ -122,7 +123,7 @@ export namespace ACP {
       })
   }
 
-  export async function init({ sdk: _sdk }: { sdk: OpencodeClient }) {
+  export async function init({ sdk: _sdk }: { sdk: KiloClient }) {
     return {
       create: (connection: AgentSideConnection, fullConfig: ACPConfig) => {
         return new Agent(connection, fullConfig)
@@ -133,10 +134,12 @@ export namespace ACP {
   export class Agent implements ACPAgent {
     private connection: AgentSideConnection
     private config: ACPConfig
-    private sdk: OpencodeClient
+    private sdk: KiloClient
     private sessionManager: ACPSessionManager
     private eventAbort = new AbortController()
     private eventStarted = false
+    private bashSnapshots = new Map<string, string>()
+    private toolStarts = new Set<string>()
     private permissionQueues = new Map<string, Promise<void>>()
     private permissionOptions: PermissionOption[] = [
       { optionId: "once", kind: "allow_once", name: "Allow once" },
@@ -268,47 +271,50 @@ export namespace ACP {
           const session = this.sessionManager.tryGet(part.sessionID)
           if (!session) return
           const sessionId = session.id
-          const directory = session.cwd
-
-          const message = await this.sdk.session
-            .message(
-              {
-                sessionID: part.sessionID,
-                messageID: part.messageID,
-                directory,
-              },
-              { throwOnError: true },
-            )
-            .then((x) => x.data)
-            .catch((error) => {
-              log.error("unexpected error when fetching message", { error })
-              return undefined
-            })
-
-          if (!message || message.info.role !== "assistant") return
 
           if (part.type === "tool") {
+            await this.toolStart(sessionId, part)
+
             switch (part.state.status) {
               case "pending":
-                await this.connection
-                  .sessionUpdate({
-                    sessionId,
-                    update: {
-                      sessionUpdate: "tool_call",
-                      toolCallId: part.callID,
-                      title: part.tool,
-                      kind: toToolKind(part.tool),
-                      status: "pending",
-                      locations: [],
-                      rawInput: {},
-                    },
-                  })
-                  .catch((error) => {
-                    log.error("failed to send tool pending to ACP", { error })
-                  })
+                this.bashSnapshots.delete(part.callID)
                 return
 
               case "running":
+                const output = this.bashOutput(part)
+                const content: ToolCallContent[] = []
+                if (output) {
+                  const hash = Hash.fast(output)
+                  if (part.tool === "bash") {
+                    if (this.bashSnapshots.get(part.callID) === hash) {
+                      await this.connection
+                        .sessionUpdate({
+                          sessionId,
+                          update: {
+                            sessionUpdate: "tool_call_update",
+                            toolCallId: part.callID,
+                            status: "in_progress",
+                            kind: toToolKind(part.tool),
+                            title: part.tool,
+                            locations: toLocations(part.tool, part.state.input),
+                            rawInput: part.state.input,
+                          },
+                        })
+                        .catch((error) => {
+                          log.error("failed to send tool in_progress to ACP", { error })
+                        })
+                      return
+                    }
+                    this.bashSnapshots.set(part.callID, hash)
+                  }
+                  content.push({
+                    type: "content",
+                    content: {
+                      type: "text",
+                      text: output,
+                    },
+                  })
+                }
                 await this.connection
                   .sessionUpdate({
                     sessionId,
@@ -320,6 +326,7 @@ export namespace ACP {
                       title: part.tool,
                       locations: toLocations(part.tool, part.state.input),
                       rawInput: part.state.input,
+                      ...(content.length > 0 && { content }),
                     },
                   })
                   .catch((error) => {
@@ -328,6 +335,8 @@ export namespace ACP {
                 return
 
               case "completed": {
+                this.toolStarts.delete(part.callID)
+                this.bashSnapshots.delete(part.callID)
                 const kind = toToolKind(part.tool)
                 const content: ToolCallContent[] = [
                   {
@@ -407,6 +416,8 @@ export namespace ACP {
                 return
               }
               case "error":
+                this.toolStarts.delete(part.callID)
+                this.bashSnapshots.delete(part.callID)
                 await this.connection
                   .sessionUpdate({
                     sessionId,
@@ -428,6 +439,7 @@ export namespace ACP {
                       ],
                       rawOutput: {
                         error: part.state.error,
+                        metadata: part.state.metadata,
                       },
                     },
                   })
@@ -508,19 +520,21 @@ export namespace ACP {
     async initialize(params: InitializeRequest): Promise<InitializeResponse> {
       log.info("initialize", { protocolVersion: params.protocolVersion })
 
+      // kilocode_change start
       const authMethod: AuthMethod = {
-        description: "Run `opencode auth login` in the terminal",
-        name: "Login with opencode",
-        id: "opencode-login",
+        description: "Run `kilo auth login` in the terminal",
+        name: "Login with Kilo",
+        id: "kilo-login",
       }
+      // kilocode_change end
 
       // If client supports terminal-auth capability, use that instead.
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
         authMethod._meta = {
           "terminal-auth": {
-            command: "opencode",
+            command: "kilo",
             args: ["auth", "login"],
-            label: "OpenCode Login",
+            label: "Kilo Login", // kilocode_change
           },
         }
       }
@@ -545,7 +559,7 @@ export namespace ACP {
         },
         authMethods: [authMethod],
         agentInfo: {
-          name: "OpenCode",
+          name: "Kilo", // kilocode_change
           version: Installation.VERSION,
         },
       }
@@ -802,26 +816,23 @@ export namespace ACP {
 
       for (const part of message.parts) {
         if (part.type === "tool") {
+          await this.toolStart(sessionId, part)
           switch (part.state.status) {
             case "pending":
-              await this.connection
-                .sessionUpdate({
-                  sessionId,
-                  update: {
-                    sessionUpdate: "tool_call",
-                    toolCallId: part.callID,
-                    title: part.tool,
-                    kind: toToolKind(part.tool),
-                    status: "pending",
-                    locations: [],
-                    rawInput: {},
-                  },
-                })
-                .catch((err) => {
-                  log.error("failed to send tool pending to ACP", { error: err })
-                })
+              this.bashSnapshots.delete(part.callID)
               break
             case "running":
+              const output = this.bashOutput(part)
+              const runningContent: ToolCallContent[] = []
+              if (output) {
+                runningContent.push({
+                  type: "content",
+                  content: {
+                    type: "text",
+                    text: output,
+                  },
+                })
+              }
               await this.connection
                 .sessionUpdate({
                   sessionId,
@@ -833,6 +844,7 @@ export namespace ACP {
                     title: part.tool,
                     locations: toLocations(part.tool, part.state.input),
                     rawInput: part.state.input,
+                    ...(runningContent.length > 0 && { content: runningContent }),
                   },
                 })
                 .catch((err) => {
@@ -840,6 +852,8 @@ export namespace ACP {
                 })
               break
             case "completed":
+              this.toolStarts.delete(part.callID)
+              this.bashSnapshots.delete(part.callID)
               const kind = toToolKind(part.tool)
               const content: ToolCallContent[] = [
                 {
@@ -918,6 +932,8 @@ export namespace ACP {
                 })
               break
             case "error":
+              this.toolStarts.delete(part.callID)
+              this.bashSnapshots.delete(part.callID)
               await this.connection
                 .sessionUpdate({
                   sessionId,
@@ -939,6 +955,7 @@ export namespace ACP {
                     ],
                     rawOutput: {
                       error: part.state.error,
+                      metadata: part.state.metadata,
                     },
                   },
                 })
@@ -1063,6 +1080,35 @@ export namespace ACP {
           }
         }
       }
+    }
+
+    private bashOutput(part: ToolPart) {
+      if (part.tool !== "bash") return
+      if (!("metadata" in part.state) || !part.state.metadata || typeof part.state.metadata !== "object") return
+      const output = part.state.metadata["output"]
+      if (typeof output !== "string") return
+      return output
+    }
+
+    private async toolStart(sessionId: string, part: ToolPart) {
+      if (this.toolStarts.has(part.callID)) return
+      this.toolStarts.add(part.callID)
+      await this.connection
+        .sessionUpdate({
+          sessionId,
+          update: {
+            sessionUpdate: "tool_call",
+            toolCallId: part.callID,
+            title: part.tool,
+            kind: toToolKind(part.tool),
+            status: "pending",
+            locations: [],
+            rawInput: {},
+          },
+        })
+        .catch((error) => {
+          log.error("failed to send tool pending to ACP", { error })
+        })
     }
 
     private async loadAvailableModes(directory: string): Promise<ModeOption[]> {
@@ -1546,9 +1592,16 @@ export namespace ACP {
     if (specified) return specified
 
     // kilocode_change start
-    const freeModel = await fetchDefaultModel()
-    const parsed = Provider.parseModel(freeModel)
-    return { providerID: "kilo", modelID: parsed.modelID }
+    // Only fall back to the Kilo provider if it was present in the available
+    // providers list. When teams configure enabled_providers to use only their
+    // own models, this prevents silently routing requests to an external API.
+    // Note: LiteLLM / custom provider users won't reach here — the function
+    // returns earlier via `specified` (config.model) or the sorted providers list.
+    if (providers.some((p) => p.id === "kilo")) {
+      const freeModel = await fetchDefaultModel()
+      return { providerID: "kilo", modelID: freeModel }
+    }
+    throw new Error("no model available: no providers are configured and no default model is set")
     // kilocode_change end
   }
 

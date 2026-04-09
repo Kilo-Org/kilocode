@@ -1,4 +1,6 @@
-import React, { useState, Children, isValidElement, ReactNode, ReactElement } from "react"
+import React, { useState, useEffect, Children, isValidElement, ReactNode, ReactElement } from "react"
+
+const TAB_SYNC_EVENT = "kilo-tab-select"
 
 interface TabProps {
   label: string
@@ -9,21 +11,61 @@ interface TabsProps {
   children: ReactNode
 }
 
+function slugify(label: string) {
+  return label
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+}
+
 export function Tab({ children }: TabProps) {
   return <>{children}</>
 }
 
 export function Tabs({ children }: TabsProps) {
-  const [activeIndex, setActiveIndex] = useState(0)
-
   const tabs = Children.toArray(children).filter(
     (child): child is ReactElement<TabProps> =>
       isValidElement(child) && (child.type === Tab || (child.props as any)?.label !== undefined),
   )
 
+  const indexFromHash = () => {
+    const hash = window.location.hash.slice(1)
+    if (!hash) return 0
+    const found = tabs.findIndex((tab) => slugify(tab.props.label) === hash)
+    return found >= 0 ? found : 0
+  }
+
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  useEffect(() => {
+    setActiveIndex(indexFromHash())
+    const onHashChange = () => setActiveIndex(indexFromHash())
+    window.addEventListener("hashchange", onHashChange)
+
+    const onSync = (e: Event) => {
+      const label = (e as CustomEvent<string>).detail
+      const found = tabs.findIndex((tab) => tab.props.label === label)
+      if (found >= 0) setActiveIndex(found)
+    }
+    window.addEventListener(TAB_SYNC_EVENT, onSync)
+
+    return () => {
+      window.removeEventListener("hashchange", onHashChange)
+      window.removeEventListener(TAB_SYNC_EVENT, onSync)
+    }
+  }, [])
+
+  const selectTab = (index: number) => {
+    setActiveIndex(index)
+    const label = tabs[index].props.label
+    const slug = slugify(label)
+    history.replaceState(null, "", `#${slug}`)
+    window.dispatchEvent(new CustomEvent(TAB_SYNC_EVENT, { detail: label }))
+  }
+
   return (
     <div className="tabs-container my-6 border border-neutral-300 dark:border-neutral-700 rounded-lg overflow-hidden">
-      <div className="tabs-header flex border-b border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800/50 overflow-x-auto">
+      <div className="tabs-header flex border-b border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800/50 overflow-x-auto scrollbar-none touch-pan-x">
         {tabs.map((tab, index) => (
           <button
             key={index}
@@ -32,7 +74,7 @@ export function Tabs({ children }: TabsProps) {
                 ? "bg-white dark:bg-neutral-900 text-yellow-800 dark:text-yellow-300 border-b-2 border-yellow-800 dark:border-yellow-300 -mb-[1px]"
                 : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200 dark:hover:bg-neutral-700/50"
             }`}
-            onClick={() => setActiveIndex(index)}
+            onClick={() => selectTab(index)}
           >
             {tab.props.label}
           </button>

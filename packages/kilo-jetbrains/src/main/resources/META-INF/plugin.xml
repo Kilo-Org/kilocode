@@ -1,0 +1,17 @@
+<idea-plugin>
+    <name>Kilo Code</name>
+    <vendor url="https://kilo.ai">Kilo Code</vendor>
+
+    <description><![CDATA[
+        Open Source AI coding agent that generates code from natural language, automates tasks,
+        and runs terminal commands. Features inline autocomplete, browser automation, automated
+        refactoring, and custom modes for planning, coding, and debugging.
+        Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.
+    ]]></description>
+
+    <content>
+        <module name="kilo.jetbrains.shared" loading="required"/>
+        <module name="kilo.jetbrains.frontend"/>
+        <module name="kilo.jetbrains.backend"/>
+    </content>
+</idea-plugin>

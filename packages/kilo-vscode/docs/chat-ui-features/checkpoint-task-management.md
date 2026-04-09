@@ -1,21 +1,15 @@
 # Checkpoint & Task Management
 
-Checkpoint restore/navigation and task-level UX actions.
+**Priority:** P1
 
-## Location
+CLI-side snapshot service is fully implemented (`packages/opencode/src/snapshot/`). Extension has a settings toggle. What's missing is the management UI.
 
-- Various checkpoint components
-
-## Interactions
+## Remaining Work
 
 - Checkpoint restore dialogs
-- Checkpoint navigation menu
+- Checkpoint navigation menu / timeline
+- Diff viewing between checkpoints
 - "See New Changes" buttons to view git diffs for completed tasks
-
-## Suggested migration
-
-**Reimplement?** Partial.
-
-- If “checkpoints” are implemented as Kilo-side git snapshots, they can remain a VS Code integration owned by the extension host (still valid under the new architecture).
-- If you want to align with Kilo CLI-native session operations (undo/redo/fork/diff), implement adapter support that maps those Kilo CLI session controls into existing Kilo UI affordances (or add new controls).
-- Kilo CLI references: session-level undo/redo/fork appear as first-class concepts in the app UI (see command labels in [`packages/app/src/i18n/en.ts`](https://github.com/Kilo-Org/kilocode/blob/main/packages/app/src/i18n/en.ts:1)) and diff rendering in [`packages/ui/src/components/session-turn.tsx`](https://github.com/Kilo-Org/kilocode/blob/main/packages/ui/src/components/session-turn.tsx:1).
+- Integration with CLI session undo/redo/fork operations
+- Consider reusing kilo-ui's `MessageNav` component
+- Evaluate whether CLI session undo/redo/revert maps to Kilo's checkpoint model or if extension needs its own git-based implementation

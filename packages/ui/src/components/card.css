@@ -26,4 +26,19 @@
       color: var(--icon-critical-active);
     }
   }
+
+  &[data-variant="warning"] {
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.45);
+    color: color-mix(in oklab, var(--text-warning, #d97706) 85%, var(--text-base, #ccc));
+    padding: 12px 14px;
+
+    /* text-12-regular */
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-small);
+    font-style: normal;
+    font-weight: var(--font-weight-regular);
+    line-height: var(--line-height-large); /* 166.667% */
+    letter-spacing: var(--letter-spacing-normal);
+  }
 }

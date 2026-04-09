@@ -1,32 +1,49 @@
 import * as vscode from "vscode"
 import { ServerManager } from "./server-manager"
-import { HttpClient } from "./http-client"
-import { SSEClient } from "./sse-client"
-import type { ServerConfig, SSEEvent } from "./types"
+import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/client"
+import { SdkSSEAdapter } from "./sdk-sse-adapter"
+import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: SSEEvent) => void
+type SSEEventListener = (event: Event) => void
 type StateListener = (state: ConnectionState) => void
-type SSEEventFilter = (event: SSEEvent) => boolean
+type SSEEventFilter = (event: Event) => boolean
 type NotificationDismissListener = (notificationId: string) => void
+type LanguageChangeListener = (locale: string) => void
+type ProfileChangeListener = (data: unknown) => void
+type MigrationCompleteListener = () => void
+type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: string }>) => void
+type ClearPendingPromptsListener = () => void
+type DirectoryProvider = () => string[]
+
+// Poll /global/health at the same interval as packages/app/src/context/server.tsx.
+// This provides a second detection channel for server death independent of the SSE heartbeat.
+const HEALTH_POLL_INTERVAL_MS = 10_000
 
 /**
- * Shared connection service that owns the single ServerManager, HttpClient, and SSEClient.
+ * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
 export class KiloConnectionService {
   private readonly serverManager: ServerManager
-  private client: HttpClient | null = null
-  private sseClient: SSEClient | null = null
+  private client: KiloClient | null = null
+  private sseClient: SdkSSEAdapter | null = null
   private info: { port: number } | null = null
   private config: ServerConfig | null = null
   private state: ConnectionState = "disconnected"
   private connectPromise: Promise<void> | null = null
+  private healthPollTimer: ReturnType<typeof setInterval> | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
   private readonly notificationDismissListeners: Set<NotificationDismissListener> = new Set()
+  private readonly languageChangeListeners: Set<LanguageChangeListener> = new Set()
+  private readonly profileChangeListeners: Set<ProfileChangeListener> = new Set()
+  private readonly migrationCompleteListeners: Set<MigrationCompleteListener> = new Set()
+  private readonly favoritesChangeListeners: Set<FavoritesChangeListener> = new Set()
+  private readonly clearPendingPromptsListeners: Set<ClearPendingPromptsListener> = new Set()
+  private readonly directoryProviders: Set<DirectoryProvider> = new Set()
 
   /**
    * Shared mapping used to resolve session scope for events that don't reliably include a sessionID.
@@ -65,9 +82,9 @@ export class KiloConnectionService {
   }
 
   /**
-   * Get the shared HttpClient. Throws if not connected.
+   * Get the shared SDK client. Throws if not connected.
    */
-  getHttpClient(): HttpClient {
+  getClient(): KiloClient {
     if (!this.client) {
       throw new Error("Not connected — call connect() first")
     }
@@ -133,7 +150,7 @@ export class KiloConnectionService {
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
-  resolveEventSessionId(event: SSEEvent): string | undefined {
+  resolveEventSessionId(event: Event): string | undefined {
     return resolveEventSessionIdPure(
       event,
       (messageId) => this.messageSessionIdsByMessageId.get(messageId),
@@ -161,6 +178,164 @@ export class KiloConnectionService {
   }
 
   /**
+   * Subscribe to language change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onLanguageChanged(listener: LanguageChangeListener): () => void {
+    this.languageChangeListeners.add(listener)
+    return () => {
+      this.languageChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a language change event to all subscribed KiloProvider instances.
+   */
+  notifyLanguageChanged(locale: string): void {
+    for (const listener of this.languageChangeListeners) {
+      listener(locale)
+    }
+  }
+
+  /**
+   * Subscribe to profile change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onProfileChanged(listener: ProfileChangeListener): () => void {
+    this.profileChangeListeners.add(listener)
+    return () => {
+      this.profileChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a profile change event to all subscribed KiloProvider instances.
+   */
+  notifyProfileChanged(data: unknown): void {
+    for (const listener of this.profileChangeListeners) {
+      listener(data)
+    }
+  }
+
+  /**
+   * Subscribe to migration-complete events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onMigrationComplete(listener: MigrationCompleteListener): () => void {
+    this.migrationCompleteListeners.add(listener)
+    return () => {
+      this.migrationCompleteListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a migration-complete event to all subscribed KiloProvider instances.
+   */
+  notifyMigrationComplete(): void {
+    for (const listener of this.migrationCompleteListeners) {
+      listener()
+    }
+  }
+
+  /**
+   * Subscribe to favorites change events broadcast from any KiloProvider. Returns unsubscribe function.
+   */
+  onFavoritesChanged(listener: FavoritesChangeListener): () => void {
+    this.favoritesChangeListeners.add(listener)
+    return () => {
+      this.favoritesChangeListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Broadcast a favorites change event to all subscribed KiloProvider instances.
+   */
+  notifyFavoritesChanged(favorites: Array<{ providerID: string; modelID: string }>): void {
+    for (const listener of this.favoritesChangeListeners) {
+      listener(favorites)
+    }
+  }
+
+  /**
+   * Subscribe to clear-pending-prompts broadcast. Returns unsubscribe function.
+   * Fired after a config save drains all pending permissions/questions so each
+   * webview can clear stale prompt UI.
+   */
+  onClearPendingPrompts(listener: ClearPendingPromptsListener): () => void {
+    this.clearPendingPromptsListeners.add(listener)
+    return () => {
+      this.clearPendingPromptsListeners.delete(listener)
+    }
+  }
+
+  /**
+   * Register a callback that returns workspace directories tracked by a
+   * KiloProvider (root + worktree dirs). Used by drainPendingPrompts() to
+   * cover all active Instance directories across every provider.
+   */
+  registerDirectoryProvider(provider: DirectoryProvider): () => void {
+    this.directoryProviders.add(provider)
+    return () => {
+      this.directoryProviders.delete(provider)
+    }
+  }
+
+  /**
+   * Reject all pending permission requests and questions across every
+   * directory known to any KiloProvider **and** every project the CLI
+   * backend has ever opened. The project list covers worktree sessions
+   * whose provider was disposed (panel/sidebar closed) while the CLI
+   * backend kept running.
+   *
+   * Must be called before operations that trigger Instance.disposeAll()
+   * (e.g. config save) to prevent orphaned Promises from freezing
+   * sessions.
+   *
+   * Throws if any list/reject call fails so callers can abort the
+   * destructive operation.
+   */
+  async drainPendingPrompts(): Promise<void> {
+    if (!this.client) return
+
+    // Collect directories from all mounted providers (root + worktree dirs).
+    const dirs = new Set<string>()
+    for (const provider of this.directoryProviders) {
+      for (const dir of provider()) {
+        dirs.add(dir)
+      }
+    }
+
+    // Also include every project directory the CLI backend knows about.
+    // This covers worktree sessions whose KiloProvider was already disposed.
+    const { data: projects, error: projectsErr } = await this.client.project.list()
+    if (projectsErr) throw new Error(`Failed to list projects: ${String(projectsErr)}`)
+    if (projects) {
+      for (const p of projects) {
+        dirs.add(p.worktree)
+      }
+    }
+
+    for (const dir of dirs) {
+      const { data: perms, error: permsErr } = await this.client.permission.list({ directory: dir })
+      if (permsErr) throw new Error(`Failed to list permissions for ${dir}: ${String(permsErr)}`)
+      if (perms) {
+        for (const perm of perms) {
+          const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
+          if (error) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
+        }
+      }
+      const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })
+      if (qsErr) throw new Error(`Failed to list questions for ${dir}: ${String(qsErr)}`)
+      if (qs) {
+        for (const q of qs) {
+          const { error } = await this.client.question.reject({ requestID: q.id, directory: dir })
+          if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
+        }
+      }
+    }
+    for (const listener of this.clearPendingPromptsListeners) {
+      listener()
+    }
+  }
+
+  /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */
   onStateChange(listener: StateListener): () => void {
@@ -174,11 +349,17 @@ export class KiloConnectionService {
    * Clean up everything: kill server, close SSE, clear listeners.
    */
   dispose(): void {
+    this.stopHealthPoll()
     this.sseClient?.dispose()
     this.serverManager.dispose()
     this.eventListeners.clear()
     this.stateListeners.clear()
     this.notificationDismissListeners.clear()
+    this.profileChangeListeners.clear()
+    this.migrationCompleteListeners.clear()
+    this.favoritesChangeListeners.clear()
+    this.clearPendingPromptsListeners.clear()
+    this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
     this.client = null
     this.sseClient = null
@@ -194,8 +375,56 @@ export class KiloConnectionService {
     }
   }
 
+  /**
+   * Start polling GET /global/health every 10 seconds.
+   * Ported from packages/app/src/context/server.tsx (HEALTH_POLL_INTERVAL_MS).
+   * Provides a second detection channel for server death independent of the SSE heartbeat.
+   * If the health check fails while we believe we are connected, the SSE client is
+   * disconnected so its reconnect loop kicks in immediately.
+   */
+  private startHealthPoll(baseUrl: string, password: string): void {
+    this.stopHealthPoll()
+
+    this.healthPollTimer = setInterval(async () => {
+      if (this.state !== "connected") {
+        return
+      }
+      const healthy = await this.checkHealth(baseUrl, password)
+      if (!healthy && this.state === "connected") {
+        console.warn("[Kilo New] ConnectionService: ❤️‍🩹 Health check failed — forcing SSE reconnect")
+        this.sseClient?.reconnect()
+      }
+    }, HEALTH_POLL_INTERVAL_MS)
+
+    // Don't keep the extension host alive just for the health poll
+    this.healthPollTimer.unref?.()
+  }
+
+  private stopHealthPoll(): void {
+    if (this.healthPollTimer) {
+      clearInterval(this.healthPollTimer)
+      this.healthPollTimer = null
+    }
+  }
+
+  private async checkHealth(baseUrl: string, password: string): Promise<boolean> {
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 3000)
+      const res = await fetch(`${baseUrl}/global/health`, {
+        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
+        signal: controller.signal,
+      })
+      clearTimeout(timer)
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
   private async doConnect(workspaceDir: string): Promise<void> {
     // If we reconnect, ensure the previous SSE connection is cleaned up first.
+    this.stopHealthPoll()
     this.sseClient?.dispose()
 
     const server = await this.serverManager.getServer()
@@ -207,8 +436,17 @@ export class KiloConnectionService {
     }
 
     this.config = config
-    this.client = new HttpClient(config)
-    this.sseClient = new SSEClient(config)
+
+    // Create SDK client with Basic Auth header
+    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    this.client = createKiloClient({
+      baseUrl: config.baseUrl,
+      headers: {
+        Authorization: authHeader,
+      },
+    })
+
+    this.sseClient = new SdkSSEAdapter(this.client)
 
     // Wait until SSE actually reaches a terminal state before resolving connect().
     let resolveConnected: (() => void) | null = null
@@ -253,8 +491,11 @@ export class KiloConnectionService {
       }
     })
 
-    this.sseClient.connect(workspaceDir)
+    this.sseClient.connect()
 
     await connectedPromise
+
+    // Start the independent health poll once we are confirmed connected.
+    this.startHealthPoll(config.baseUrl, config.password)
   }
 }

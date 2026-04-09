@@ -41,6 +41,19 @@ export function applyVscodeTheme(vscodeThemeId: string): "light" | "dark" {
     .map(([k, v]) => `  ${k}: ${v};`)
     .join("\n")
   getOrCreateStyle(VSCODE_STYLE_ID).textContent = `:root {\n${vars}\n}`
+
+  // Set VS Code theme body classes (used by HC border selectors)
+  document.body.classList.remove("vscode-dark", "vscode-light", "vscode-high-contrast", "vscode-high-contrast-light")
+  if (vscodeThemeId === "hc-black") {
+    document.body.classList.add("vscode-high-contrast")
+  } else if (vscodeThemeId === "hc-light") {
+    document.body.classList.add("vscode-high-contrast", "vscode-high-contrast-light")
+  } else if (theme.colorScheme === "light") {
+    document.body.classList.add("vscode-light")
+  } else {
+    document.body.classList.add("vscode-dark")
+  }
+
   return theme.colorScheme
 }
 

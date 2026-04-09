@@ -17,6 +17,10 @@ import { type SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 
 export namespace MessageV2 {
+  export function isMedia(mime: string) {
+    return mime.startsWith("image/") || mime === "application/pdf"
+  }
+
   export const OutputLengthError = NamedError.create("MessageOutputLengthError", z.object({}))
   export const AbortedError = NamedError.create("MessageAbortedError", z.object({ message: z.string() }))
   export const StructuredOutputError = NamedError.create(
@@ -196,6 +200,7 @@ export namespace MessageV2 {
   export const CompactionPart = PartBase.extend({
     type: z.literal("compaction"),
     auto: z.boolean(),
+    overflow: z.boolean().optional(),
   }).meta({
     ref: "CompactionPart",
   })
@@ -370,7 +375,6 @@ export namespace MessageV2 {
         openTabs: z.array(z.string()).optional(),
         activeFile: z.string().optional(),
         shell: z.string().optional(),
-        timezone: z.string().optional(),
       })
       .optional(),
     // kilocode_change end
@@ -499,7 +503,67 @@ export namespace MessageV2 {
   })
   export type WithParts = z.infer<typeof WithParts>
 
-  export function toModelMessages(input: WithParts[], model: Provider.Model): ModelMessage[] {
+  // kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
+  // This handles both legacy data that was stored with full file contents and keeps the API response lean.
+  function stripPartMetadata(part: Part): Part {
+    if (part.type !== "tool") return part
+    const { state } = part
+    if (state.status !== "completed" && state.status !== "running") return part
+    const meta = state.metadata
+    if (!meta) return part
+
+    let changed = false
+    let next = meta
+
+    // Strip edit tool's filediff.before/after (full file contents)
+    if (meta.filediff && (meta.filediff.before || meta.filediff.after)) {
+      const { before, after, ...rest } = meta.filediff
+      next = { ...next, filediff: rest }
+      changed = true
+    }
+
+    // Strip apply_patch tool's files[].before/after (full file contents per file)
+    if (Array.isArray(meta.files) && meta.files.length > 0 && meta.files[0]?.before !== undefined) {
+      next = {
+        ...next,
+        files: meta.files.map((f: Record<string, unknown>) => {
+          const { before, after, ...rest } = f
+          return rest
+        }),
+      }
+      changed = true
+    }
+
+    if (!changed) return part
+    return { ...part, state: { ...state, metadata: next } } as Part
+  }
+
+  function stripMessageMetadata(info: Info): Info {
+    // Strip summary.diffs before/after from user messages (can be 20+ MB)
+    if (info.role !== "user") return info
+    const user = info as User
+    if (!user.summary?.diffs?.length) return info
+    const has = user.summary.diffs.some((d: Snapshot.FileDiff) => d.before || d.after)
+    if (!has) return info
+    return {
+      ...user,
+      summary: {
+        ...user.summary,
+        diffs: user.summary.diffs.map(({ before, after, ...rest }: Snapshot.FileDiff) => ({
+          ...rest,
+          before: "",
+          after: "",
+        })),
+      },
+    } as Info
+  }
+  // kilocode_change end
+
+  export function toModelMessages(
+    input: WithParts[],
+    model: Provider.Model,
+    options?: { stripMedia?: boolean },
+  ): ModelMessage[] {
     const result: UIMessage[] = []
     const toolNames = new Set<string>()
     // Track media from tool results that need to be injected as user messages
@@ -573,13 +637,21 @@ export namespace MessageV2 {
               text: part.text,
             })
           // text/plain and directory files are converted into text parts, ignore them
-          if (part.type === "file" && part.mime !== "text/plain" && part.mime !== "application/x-directory")
-            userMessage.parts.push({
-              type: "file",
-              url: part.url,
-              mediaType: part.mime,
-              filename: part.filename,
-            })
+          if (part.type === "file" && part.mime !== "text/plain" && part.mime !== "application/x-directory") {
+            if (options?.stripMedia && isMedia(part.mime)) {
+              userMessage.parts.push({
+                type: "text",
+                text: `[Attached ${part.mime}: ${part.filename ?? "file"}]`,
+              })
+            } else {
+              userMessage.parts.push({
+                type: "file",
+                url: part.url,
+                mediaType: part.mime,
+                filename: part.filename,
+              })
+            }
+          }
 
           if (part.type === "compaction") {
             userMessage.parts.push({
@@ -629,14 +701,12 @@ export namespace MessageV2 {
             toolNames.add(part.tool)
             if (part.state.status === "completed") {
               const outputText = part.state.time.compacted ? "[Old tool result content cleared]" : part.state.output
-              const attachments = part.state.time.compacted ? [] : (part.state.attachments ?? [])
+              const attachments = part.state.time.compacted || options?.stripMedia ? [] : (part.state.attachments ?? [])
 
               // For providers that don't support media in tool results, extract media files
               // (images, PDFs) to be sent as a separate user message
-              const isMediaAttachment = (a: { mime: string }) =>
-                a.mime.startsWith("image/") || a.mime === "application/pdf"
-              const mediaAttachments = attachments.filter(isMediaAttachment)
-              const nonMediaAttachments = attachments.filter((a) => !isMediaAttachment(a))
+              const mediaAttachments = attachments.filter((a) => isMedia(a.mime))
+              const nonMediaAttachments = attachments.filter((a) => !isMedia(a.mime))
               if (!supportsMediaInToolResults && mediaAttachments.length > 0) {
                 media.push(...mediaAttachments)
               }
@@ -752,12 +822,12 @@ export namespace MessageV2 {
             .all(),
         )
         for (const row of partRows) {
-          const part = {
+          const part = stripPartMetadata({
             ...row.data,
             id: row.id,
             sessionID: row.session_id,
             messageID: row.message_id,
-          } as MessageV2.Part
+          } as MessageV2.Part) // kilocode_change - strip bloated metadata on read
           const list = partsByMessage.get(row.message_id)
           if (list) list.push(part)
           else partsByMessage.set(row.message_id, [part])
@@ -765,7 +835,7 @@ export namespace MessageV2 {
       }
 
       for (const row of rows) {
-        const info = { ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info
+        const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
         yield {
           info,
           parts: partsByMessage.get(row.id) ?? [],
@@ -782,7 +852,13 @@ export namespace MessageV2 {
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
     return rows.map(
-      (row) => ({ ...row.data, id: row.id, sessionID: row.session_id, messageID: row.message_id }) as MessageV2.Part,
+      (row) =>
+        stripPartMetadata({
+          ...row.data,
+          id: row.id,
+          sessionID: row.session_id,
+          messageID: row.message_id,
+        } as MessageV2.Part), // kilocode_change - strip bloated metadata on read
     )
   })
 
@@ -794,7 +870,7 @@ export namespace MessageV2 {
     async (input): Promise<WithParts> => {
       const row = Database.use((db) => db.select().from(MessageTable).where(eq(MessageTable.id, input.messageID)).get())
       if (!row) throw new Error(`Message not found: ${input.messageID}`)
-      const info = { ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info
+      const info = stripMessageMetadata({ ...row.data, id: row.id, sessionID: row.session_id } as MessageV2.Info) // kilocode_change
       return {
         info,
         parts: await parts(input.messageID),
@@ -813,7 +889,8 @@ export namespace MessageV2 {
         msg.parts.some((part) => part.type === "compaction")
       )
         break
-      if (msg.info.role === "assistant" && msg.info.summary && msg.info.finish) completed.add(msg.info.parentID)
+      if (msg.info.role === "assistant" && msg.info.summary && msg.info.finish && !msg.info.error)
+        completed.add(msg.info.parentID)
     }
     result.reverse()
     return result

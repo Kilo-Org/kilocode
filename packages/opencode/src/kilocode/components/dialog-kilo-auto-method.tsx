@@ -1,4 +1,3 @@
-// kilocode_change - Kilo Gateway TUI component
 /**
  * Custom OAuth handler for Kilo Gateway
  *

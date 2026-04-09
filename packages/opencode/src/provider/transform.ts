@@ -6,6 +6,7 @@ import type { Provider } from "./provider"
 import type { ModelsDev } from "./models"
 import { iife } from "@/util/iife"
 import { Flag } from "@/flag/flag"
+import { kiloProviderOptions } from "@/kilocode/provider-options"
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -70,6 +71,23 @@ export namespace ProviderTransform {
           return { ...msg, content: filtered }
         })
         .filter((msg): msg is ModelMessage => msg !== undefined && msg.content !== "")
+    }
+
+    if (model.api.id.includes("claude")) {
+      return msgs.map((msg) => {
+        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
+              return {
+                ...part,
+                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+              }
+            }
+            return part
+          })
+        }
+        return msg
+      })
     }
 
     if (
@@ -235,25 +253,40 @@ export namespace ProviderTransform {
   }
 
   // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[]) {
+  function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
     for (const msg of msgs) {
       if (!Array.isArray(msg.content)) {
         continue
       }
-      let isFirstToolCall = true
+      const encryptedDataSet = new Set<string>()
+      const textSet = new Set<string>()
       for (const part of msg.content) {
-        if (part.type === "reasoning") {
-          // this entry is corrupt
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
-        if (part.type === "tool-call" && isFirstToolCall) {
-          isFirstToolCall = false
+        const openrouterProviderOptions = part.providerOptions?.openrouter as
+          | {
+              reasoning_details?: { data?: string; text?: string; signature?: string }[]
+            }
+          | undefined
+        if (!openrouterProviderOptions || !openrouterProviderOptions.reasoning_details) {
           continue
         }
-        if (part.type === "tool-call") {
-          // this is a duplicate entry
-          delete part.providerOptions?.openrouter?.reasoning_details
-        }
+        openrouterProviderOptions.reasoning_details = openrouterProviderOptions.reasoning_details.filter((rd) => {
+          if (rd.data) {
+            if (!encryptedDataSet.has(rd.data)) {
+              encryptedDataSet.add(rd.data)
+              return true
+            }
+            return false
+          }
+          if (rd.text) {
+            if ((model.family === "claude" || model.id.includes("claude")) && !rd.signature) return false
+            if (!textSet.has(rd.text)) {
+              textSet.add(rd.text)
+              return true
+            }
+            return false
+          }
+          return true
+        })
       }
     }
   }
@@ -264,8 +297,8 @@ export namespace ProviderTransform {
 
     // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
     // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@kilocode/kilo-gateway") {
-      fixDuplicateReasoning(msgs)
+    if (model.api.npm === "@openrouter/ai-sdk-provider") {
+      fixDuplicateReasoning(msgs, model)
     }
 
     if (
@@ -346,6 +379,12 @@ export namespace ProviderTransform {
   const OPENAI_EFFORTS = ["none", "minimal", ...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+      return model.variants
+    }
+    // kilocode_change end
+
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
@@ -356,9 +395,9 @@ export namespace ProviderTransform {
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
-      id.includes("glm") ||
+      // id.includes("glm") || // kilocode_change
       id.includes("mistral") ||
-      id.includes("kimi") ||
+      // id.includes("kimi") || // kilocode_change
       // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
       id.includes("k2p5")
     )
@@ -381,26 +420,24 @@ export namespace ProviderTransform {
     if (id.includes("grok")) return {}
 
     switch (model.api.npm) {
+      case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3") && !model.id.includes("claude")) return {}
-        return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-
-      // kilocode_change start
-      case "@kilocode/kilo-gateway":
-        if (model.id.includes("claude")) {
-          // for models that support adaptive thinking, effort is ignored
-          // for models that don't support adaptive thinking, effort is translated into a token budget
+        // kilocode_change start
+        if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
           return {
-            none: { reasoning: { enabled: false } },
-            low: { reasoning: { enabled: true, effort: "low" }, verbosity: "low" },
-            medium: { reasoning: { enabled: true, effort: "medium" }, verbosity: "medium" },
-            high: { reasoning: { enabled: true, effort: "high" }, verbosity: "high" },
-            max: { reasoning: { enabled: true, effort: "xhigh" }, verbosity: "max" },
+            instant: { reasoning: { enabled: false } },
+            thinking: { reasoning: { enabled: true } },
           }
         }
-        if (!model.id.includes("gpt") && !model.id.includes("gemini-3")) return {}
+        // kilocode_change end
+        if (
+          !model.id.includes("gpt") &&
+          !model.id.includes("gemini-3") &&
+          !model.id.includes("claude") &&
+          !model.id.includes("mercury") // kilocode_change
+        )
+          return {}
         return Object.fromEntries(OPENAI_EFFORTS.map((effort) => [effort, { reasoning: { effort } }]))
-      // kilocode_change end
 
       // TODO: YOU CANNOT SET max_tokens if this is set!!!
       case "@ai-sdk/gateway":
@@ -475,7 +512,9 @@ export namespace ProviderTransform {
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))
             return [...WIDELY_SUPPORTED_EFFORTS, "xhigh"]
-          return WIDELY_SUPPORTED_EFFORTS
+          const arr = [...WIDELY_SUPPORTED_EFFORTS]
+          if (id.includes("gpt-5") && model.release_date >= "2025-12-04") arr.push("xhigh")
+          return arr
         })
         return Object.fromEntries(
           copilotEfforts.map((effort) => [
@@ -906,6 +945,12 @@ export namespace ProviderTransform {
       return result
     }
 
+    // kilocode_change start
+    if (model.api.npm === "@kilocode/kilo-gateway") {
+      return kiloProviderOptions(options)
+    }
+    // kilocode_change end
+
     const key = sdkKey(model.api.npm) ?? model.providerID
     return { [key]: options }
   }
@@ -935,6 +980,31 @@ export namespace ProviderTransform {
 
     // Convert integer enums to string enums for Google/Gemini
     if (model.providerID === "google" || model.api.id.includes("gemini")) {
+      const isPlainObject = (node: unknown): node is Record<string, any> =>
+        typeof node === "object" && node !== null && !Array.isArray(node)
+      const hasCombiner = (node: unknown) =>
+        isPlainObject(node) && (Array.isArray(node.anyOf) || Array.isArray(node.oneOf) || Array.isArray(node.allOf))
+      const hasSchemaIntent = (node: unknown) => {
+        if (!isPlainObject(node)) return false
+        if (hasCombiner(node)) return true
+        return [
+          "type",
+          "properties",
+          "items",
+          "prefixItems",
+          "enum",
+          "const",
+          "$ref",
+          "additionalProperties",
+          "patternProperties",
+          "required",
+          "not",
+          "if",
+          "then",
+          "else",
+        ].some((key) => key in node)
+      }
+
       const sanitizeGemini = (obj: any): any => {
         if (obj === null || typeof obj !== "object") {
           return obj
@@ -965,19 +1035,18 @@ export namespace ProviderTransform {
           result.required = result.required.filter((field: any) => field in result.properties)
         }
 
-        if (result.type === "array") {
+        if (result.type === "array" && !hasCombiner(result)) {
           if (result.items == null) {
             result.items = {}
           }
-          // Ensure items has at least a type if it's an empty object
-          // This handles nested arrays like { type: "array", items: { type: "array", items: {} } }
-          if (typeof result.items === "object" && !Array.isArray(result.items) && !result.items.type) {
+          // Ensure items has a type only when it's still schema-empty.
+          if (isPlainObject(result.items) && !hasSchemaIntent(result.items)) {
             result.items.type = "string"
           }
         }
 
         // Remove properties/required from non-object types (Gemini rejects these)
-        if (result.type && result.type !== "object") {
+        if (result.type && result.type !== "object" && !hasCombiner(result)) {
           delete result.properties
           delete result.required
         }

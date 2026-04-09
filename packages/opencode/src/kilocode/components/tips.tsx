@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 import { For } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "@tui/context/theme"
 
@@ -32,9 +30,9 @@ function parse(tip: string): TipPart[] {
   return parts
 }
 
-export function Tips() {
+export function Tips(props: { tip?: string }) {
   const theme = useTheme().theme
-  const parts = parse(TIPS[Math.floor(Math.random() * TIPS.length)])
+  const parts = parse(props.tip ?? TIPS[Math.floor(Math.random() * TIPS.length)])
 
   return (
     <box flexDirection="row" maxWidth="100%">
@@ -82,6 +80,22 @@ const TIPS = [
   "Switch to {highlight}Plan{/highlight} agent to get suggestions without making actual changes",
   "Use {highlight}@agent-name{/highlight} in prompts to invoke specialized subagents",
   "Press {highlight}Ctrl+X Right/Left{/highlight} to cycle through parent and child sessions",
+  "Kilo can {highlight}configure itself{/highlight} if you ask it",
+  "Ask Kilo to {highlight}add Supabase MCP globally{/highlight}",
+  "Ask Kilo to {highlight}create a review agent for this project{/highlight}",
+  "Ask Kilo to {highlight}add a plugin for desktop alerts{/highlight}",
+  "Ask Kilo to {highlight}set Claude Sonnet as my default model{/highlight}",
+  "Ask Kilo to {highlight}make my review agent read-only{/highlight}",
+  "Ask Kilo to {highlight}require approval before git push{/highlight}",
+  "Ask Kilo to {highlight}turn off auto-formatting{/highlight}",
+  "Ask Kilo to {highlight}block access to .env files{/highlight}",
+  "Ask Kilo to {highlight}turn off the F2 shortcut{/highlight}",
+  "Ask Kilo to {highlight}match my terminal theme{/highlight}",
+  "Ask Kilo to {highlight}disable sharing for all sessions{/highlight}",
+  "Ask Kilo to {highlight}add rules from docs/ai-rules.md{/highlight}",
+  "Ask Kilo to {highlight}enable tui.scroll_acceleration{/highlight} for smooth macOS-style scrolling",
+  "Ask Kilo to {highlight}save this workflow as a /command{/highlight}",
+  "Kilo auto-handles OAuth for remote MCP servers requiring auth",
   "Kilo auto-formats files using prettier, gofmt, ruff, and more",
   "Kilo uses LSP servers for intelligent code analysis",
   "Use {highlight}kilo run{/highlight} for non-interactive scripting",
@@ -92,13 +106,10 @@ const TIPS = [
   "Use {highlight}kilo run --attach{/highlight} to connect to a running server",
   "Run {highlight}kilo upgrade{/highlight} to update to the latest version",
   "Run {highlight}kilo auth list{/highlight} to see all configured providers",
-  'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
-  "Reference ANSI colors 0-255 in custom themes",
-  "Set agent {highlight}temperature{/highlight} from 0.0 (focused) to 1.0 (creative)",
-  "Configure {highlight}steps{/highlight} to limit agentic iterations per request",
+  "Run {highlight}/unshare{/highlight} to remove a session from public access",
+  "Use {highlight}--print-logs{/highlight} flag to see detailed logs in stderr",
   "Press {highlight}Ctrl+X G{/highlight} or {highlight}/timeline{/highlight} to jump to specific messages",
-  "Press {highlight}Ctrl+X S{/highlight} or {highlight}/status{/highlight} to see system status info",
-  "Enable {highlight}tui.scroll_acceleration{/highlight} for smooth macOS-style scrolling",
+  "Press {highlight}Ctrl+X S{/highlight} or {highlight}/status{/highlight} to see config paths, MCP servers, and system info",
   "Toggle username display in chat via command palette ({highlight}Ctrl+P{/highlight})",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",

@@ -1,6 +1,7 @@
 ---
 title: "Codebase Indexing"
 description: "Index your codebase for improved AI understanding"
+platform: legacy
 ---
 
 # Codebase Indexing

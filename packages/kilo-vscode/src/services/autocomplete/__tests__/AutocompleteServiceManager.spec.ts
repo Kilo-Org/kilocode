@@ -63,12 +63,7 @@ vi.mock("vscode", () => {
 
 vi.mock("../AutocompleteModel", () => {
   class AutocompleteModel {
-    public loaded = false
     public profileName = "test-profile"
-
-    public async reload(): Promise<void> {
-      this.loaded = true
-    }
 
     public getModelName(): string {
       return "test-model"
@@ -169,7 +164,9 @@ async function createManager(): Promise<AutocompleteServiceManager> {
     postStateToWebview: vi.fn().mockResolvedValue(undefined),
   }
 
-  const manager = new AutocompleteServiceManager(context, cline as any)
+  const connection = { onStateChange: vi.fn().mockReturnValue(() => {}), ...cline }
+
+  const manager = new AutocompleteServiceManager(context, connection as any)
 
   await manager.load()
 
@@ -251,7 +248,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
     })
   })
 
-  describe("updateInlineCompletionProviderRegistration()", () => {
+  describe("ensureInlineCompletionProviderRegistration()", () => {
     it("registers the provider when enableAutoTrigger is true and not snoozed", async () => {
       const manager = await createManager()
 
@@ -262,7 +259,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).toHaveBeenCalledWith(
         { scheme: "file" },
@@ -283,7 +280,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(vscode.languages.registerInlineCompletionItemProvider).not.toHaveBeenCalled()
       expect((manager as any).inlineCompletionProviderDisposable).toBeNull()
@@ -299,7 +296,7 @@ describe("AutocompleteServiceManager (less mocked logic)", () => {
         enableSmartInlineTaskKeybinding: true,
       }
 
-      await (manager as any).updateInlineCompletionProviderRegistration()
+      await (manager as any).ensureInlineCompletionProviderRegistration()
 
       expect(existingDisposable.dispose).toHaveBeenCalledTimes(1)
       expect((manager as any).inlineCompletionProviderDisposable).toBeNull()

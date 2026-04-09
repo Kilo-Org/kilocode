@@ -3,11 +3,13 @@ import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Database, eq } from "@/storage/db"
+import { Database, eq, NotFoundError } from "@/storage/db"
 import { PermissionTable } from "@/session/session.sql"
 import { fn } from "@/util/fn"
 import { Log } from "@/util/log"
 import { Wildcard } from "@/util/wildcard"
+import { drainCovered } from "@/kilocode/permission/drain" // kilocode_change
+import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 import os from "os"
 import z from "zod"
 
@@ -54,8 +56,13 @@ export namespace PermissionNext {
         })
         continue
       }
+      // null is a delete sentinel — skip it (it only appears in patches, not in stored config)
+      if (value === null) continue
       ruleset.push(
-        ...Object.entries(value).map(([pattern, action]) => ({ permission: key, pattern: expand(pattern), action })),
+        // Filter out null entries (delete sentinels) — they don't represent real rules
+        ...Object.entries(value)
+          .filter(([, action]) => action !== null)
+          .map(([pattern, action]) => ({ permission: key, pattern: expand(pattern), action: action as Action })),
       )
     }
     return ruleset
@@ -64,6 +71,52 @@ export namespace PermissionNext {
   export function merge(...rulesets: Ruleset[]): Ruleset {
     return rulesets.flat()
   }
+
+  // kilocode_change start — inverse of fromConfig: convert rules back to config format
+  /**
+   * Permissions typed as PermissionAction in the config schema (scalar-only).
+   * These must be serialized as "allow"/"deny"/"ask", not as { "*": "allow" }.
+   */
+  const SCALAR_ONLY_PERMISSIONS = new Set([
+    "todowrite",
+    "todoread",
+    "question",
+    "webfetch",
+    "websearch",
+    "codesearch",
+    "doom_loop",
+  ])
+
+  export function toConfig(rules: Ruleset): Config.Permission {
+    const result: Config.Permission = {}
+    for (const rule of rules) {
+      const existing = result[rule.permission]
+
+      // Scalar-only permissions (e.g. websearch, todowrite, doom_loop) only
+      // accept PermissionAction ("allow"/"deny"/"ask"), not object form.
+      // Use scalar format for "*"; skip non-wildcard patterns (they can't be
+      // represented in the config schema — they only work in-memory).
+      if (SCALAR_ONLY_PERMISSIONS.has(rule.permission)) {
+        if (rule.pattern === "*") result[rule.permission] = rule.action
+        continue
+      }
+
+      if (existing === undefined || existing === null) {
+        // Use object format to avoid replacing existing granular rules
+        // when merged via updateGlobal (e.g. { read: "allow" } would wipe
+        // { read: { "*": "ask", "src/*": "allow" } })
+        result[rule.permission] = { [rule.pattern]: rule.action }
+        continue
+      }
+      if (typeof existing === "string") {
+        result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
+        continue
+      }
+      existing[rule.pattern] = rule.action
+    }
+    return result
+  }
+  // kilocode_change end
 
   export const Request = z
     .object({
@@ -117,6 +170,7 @@ export namespace PermissionNext {
       string,
       {
         info: Request
+        ruleset: Ruleset // kilocode_change
         resolve: () => void
         reject: (e: any) => void
       }
@@ -125,6 +179,7 @@ export namespace PermissionNext {
     return {
       pending,
       approved: stored,
+      session: {} as Record<string, Ruleset>, // kilocode_change
     }
   })
 
@@ -135,20 +190,31 @@ export namespace PermissionNext {
     async (input) => {
       const s = await state()
       const { ruleset, ...request } = input
+      const local = s.session[request.sessionID] ?? [] // kilocode_change
+      // kilocode_change start — force "ask" for config file edits
+      const protected_ = ConfigProtection.isRequest(request)
+      // kilocode_change end
       for (const pattern of request.patterns ?? []) {
-        const rule = evaluate(request.permission, pattern, ruleset, s.approved)
+        const rule = evaluate(request.permission, pattern, ruleset, s.approved, local) // kilocode_change
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")
           throw new DeniedError(ruleset.filter((r) => Wildcard.match(request.permission, r.permission)))
-        if (rule.action === "ask") {
+        // kilocode_change start — override "allow" to "ask" for config paths
+        if (rule.action === "ask" || (rule.action === "allow" && protected_)) {
           const id = input.id ?? Identifier.ascending("permission")
           return new Promise<void>((resolve, reject) => {
             const info: Request = {
               id,
               ...request,
+              metadata: {
+                ...request.metadata,
+                ...(protected_ ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true } : {}),
+              },
             }
+            // kilocode_change end
             s.pending[id] = {
               info,
+              ruleset, // kilocode_change
               resolve,
               reject,
             }
@@ -159,6 +225,46 @@ export namespace PermissionNext {
       }
     },
   )
+
+  // kilocode_change start
+
+  export const saveAlwaysRules = fn(
+    z.object({
+      requestID: Identifier.schema("permission"),
+      approvedAlways: z.string().array().optional(),
+      deniedAlways: z.string().array().optional(),
+    }),
+    async (input) => {
+      const s = await state()
+      const existing = s.pending[input.requestID]
+      if (!existing) throw new NotFoundError({ message: `Permission request ${input.requestID} not found` })
+
+      // kilocode_change start — skip rule persistence for config file edits
+      if (ConfigProtection.isRequest(existing.info)) return
+      // kilocode_change end
+
+      // Combine metadata.rules (bash hierarchy) and always (all tools).
+      // Set preserves insertion order and deduplicates.
+      const validRules = new Set([...(existing.info.metadata?.rules ?? []), ...existing.info.always])
+      const permission = existing.info.permission
+
+      const approvedSet = new Set(input.approvedAlways ?? [])
+      const deniedSet = new Set(input.deniedAlways ?? [])
+      const newRules: Ruleset = []
+      for (const pattern of validRules) {
+        if (approvedSet.has(pattern)) newRules.push({ permission, pattern, action: "allow" })
+        if (deniedSet.has(pattern)) newRules.push({ permission, pattern, action: "deny" })
+      }
+      s.approved.push(...newRules)
+
+      if (newRules.length > 0) {
+        await Config.updateGlobal({ permission: toConfig(newRules) }, { dispose: false })
+      }
+
+      await drainCovered(s.pending, s.approved, evaluate, Event, DeniedError, input.requestID) // kilocode_change
+    },
+  )
+  // kilocode_change end
 
   export const reply = fn(
     z.object({
@@ -176,6 +282,7 @@ export namespace PermissionNext {
         requestID: existing.info.id,
         reply: input.reply,
       })
+
       if (input.reply === "reject") {
         existing.reject(input.message ? new CorrectedError(input.message) : new RejectedError())
         // Reject all other pending permissions for this session
@@ -198,6 +305,13 @@ export namespace PermissionNext {
         return
       }
       if (input.reply === "always") {
+        // kilocode_change start — downgrade "always" to "once" for config file edits
+        if (ConfigProtection.isRequest(existing.info)) {
+          existing.resolve()
+          return
+        }
+        // kilocode_change end
+
         for (const pattern of existing.info.always) {
           s.approved.push({
             permission: existing.info.permission,
@@ -212,7 +326,7 @@ export namespace PermissionNext {
         for (const [id, pending] of Object.entries(s.pending)) {
           if (pending.info.sessionID !== sessionID) continue
           const ok = pending.info.patterns.every(
-            (pattern) => evaluate(pending.info.permission, pattern, s.approved).action === "allow",
+            (pattern) => evaluate(pending.info.permission, pattern, pending.ruleset, s.approved).action === "allow", // kilocode_change — include original ruleset
           )
           if (!ok) continue
           delete s.pending[id]
@@ -228,10 +342,72 @@ export namespace PermissionNext {
         // UI to manage it
         // db().insert(PermissionTable).values({ projectID: Instance.project.id, data: s.approved })
         //   .onConflictDoUpdate({ target: PermissionTable.projectID, set: { data: s.approved } }).run()
+        // kilocode_change start - persist always rules to global config
+        const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
+          permission: existing.info.permission,
+          pattern,
+          action: "allow" as const,
+        }))
+        if (alwaysRules.length > 0) {
+          await Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
+        }
+        // kilocode_change end
         return
       }
     },
   )
+
+  // kilocode_change start
+  export const allowEverything = fn(
+    z.object({
+      enable: z.boolean(),
+      requestID: Identifier.schema("permission").optional(),
+      sessionID: Identifier.schema("session").optional(),
+    }),
+    async (input) => {
+      const s = await state()
+
+      if (!input.enable) {
+        if (input.sessionID) {
+          delete s.session[input.sessionID]
+          return
+        }
+        const idx = s.approved.findLastIndex((r) => r.permission === "*" && r.pattern === "*" && r.action === "allow")
+        if (idx >= 0) s.approved.splice(idx, 1)
+        return
+      }
+
+      const rule = { permission: "*", pattern: "*", action: "allow" } as const
+      if (input.sessionID) s.session[input.sessionID] = [rule]
+      else s.approved.push(rule)
+
+      if (input.requestID) {
+        const existing = s.pending[input.requestID]
+        if (existing && (!input.sessionID || existing.info.sessionID === input.sessionID)) {
+          delete s.pending[input.requestID]
+          Bus.publish(Event.Replied, {
+            sessionID: existing.info.sessionID,
+            requestID: existing.info.id,
+            reply: "once",
+          })
+          existing.resolve()
+        }
+      }
+
+      for (const [id, entry] of Object.entries(s.pending)) {
+        if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
+        if (ConfigProtection.isRequest(entry.info)) continue
+        delete s.pending[id]
+        Bus.publish(Event.Replied, {
+          sessionID: entry.info.sessionID,
+          requestID: entry.info.id,
+          reply: "once",
+        })
+        entry.resolve()
+      }
+    },
+  )
+  // kilocode_change end
 
   export function evaluate(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule {
     const merged = merge(...rulesets)
@@ -283,4 +459,11 @@ export namespace PermissionNext {
     const s = await state()
     return Object.values(s.pending).map((x) => x.info)
   }
+
+  // kilocode_change start
+  export async function pending(id: string): Promise<Request | undefined> {
+    const s = await state()
+    return s.pending[id]?.info
+  }
+  // kilocode_change end
 }

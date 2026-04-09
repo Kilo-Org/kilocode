@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (désactivé)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Pas de crédits sur ton compte**\n\nTon compte Kilo Code n'a pas de crédits. Pour utiliser l'autocomplétion, ajoute des crédits à ton compte.\n\n[Ouvrir les Paramètres](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Aucun modèle d'autocomplétion configuré**\n\nPour activer l'autocomplétion, ajoute un profil avec l'un de ces fournisseurs pris en charge : {{providers}}.\n\n[Ouvrir les Paramètres](command:kilo-code.settingsButtonClicked)",
+    "**Aucun modèle d'autocomplétion configuré**\n\nPour activer l'autocomplétion, ajoute un profil avec l'un de ces fournisseurs pris en charge : {{providers}}.\n\n[Ouvrir les Paramètres]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Coût total de la session :",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Fournisseur:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Modèle :",
@@ -43,4 +41,9 @@ export const dict = {
     "Le Kilo Code Autocomplete est bloqué par un conflit avec GitHub Copilot. Pour résoudre cela, tu dois désactiver les suggestions en ligne de Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Désactiver Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Désactiver Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete a été mis en pause car ton compte n'a plus de crédits. Ajoute des crédits pour reprendre l'autocomplétion.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Ajouter des crédits",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete a été mis en pause en raison d'une erreur d'authentification. Veuillez te reconnecter.",
 }

@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (deshabilitado)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**No hay créditos en tu cuenta**\n\nTu cuenta de Kilo Code no tiene créditos. Para usar el autocompletado, por favor añade créditos a tu cuenta.\n\n[Abrir Configuración](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**No hay modelo de autocompletado configurado**\n\nPara habilitar el autocompletado, añade un perfil con uno de estos proveedores compatibles: {{providers}}.\n\n[Abrir Configuración](command:kilo-code.settingsButtonClicked)",
+    "**No hay modelo de autocompletado configurado**\n\nPara habilitar el autocompletado, añade un perfil con uno de estos proveedores compatibles: {{providers}}.\n\n[Abrir Configuración]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Costo total de la sesión:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Proveedor:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Modelo:",
@@ -43,4 +41,9 @@ export const dict = {
     "El Kilo Code Autocomplete está siendo bloqueado por un conflicto con GitHub Copilot. Para solucionarlo, debes desactivar las sugerencias en línea de Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Desactivar Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Desactivar Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete se ha pausado porque tu cuenta no tiene créditos restantes. Añade créditos para reanudar el autocompletado.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Añadir créditos",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete se ha pausado debido a un error de autenticación. Por favor, inicia sesión de nuevo.",
 }

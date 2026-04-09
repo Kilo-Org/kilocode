@@ -1,4 +1,3 @@
-// kilocode_change - new file
 // Kilo-specific translations and overrides
 // Keys here will override any matching keys from upstream translations
 export const dict = {
@@ -15,6 +14,61 @@ export const dict = {
   "dialog.provider.group.recommended": "Recommended",
   "dialog.provider.kilo.note": "Access 500+ AI models",
 
-  // Add any upstream overrides below this line
-  // Example: "some.upstream.key": "Kilo-specific override value",
+  // Reasoning block label
+  "ui.permission.run": "Run",
+  "ui.reasoning.label": "Reasoning",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "MCP Servers",
+  "marketplace.tab.modes": "Modes",
+  "marketplace.category.all": "All",
+  "marketplace.placeholder": "To be implemented",
+  "marketplace.card.installed": "Installed",
+  "marketplace.card.install": "Install",
+  "marketplace.card.remove": "Remove",
+  "marketplace.card.removeScope": "Remove ({{scope}})",
+  "marketplace.card.showMore": "Show more",
+  "marketplace.card.showLess": "Show less",
+  "marketplace.install.title": "Install {{name}}",
+  "marketplace.install.scope": "Scope",
+  "marketplace.install.scope.project": "Project",
+  "marketplace.install.scope.global": "Global",
+  "marketplace.install.prerequisites": "Prerequisites",
+  "marketplace.install.installing": "Installing...",
+  "marketplace.install.cancel": "Cancel",
+  "marketplace.install.success": "Successfully installed!",
+  "marketplace.install.failed": "Installation failed",
+  "marketplace.install.done": "Done",
+  "marketplace.install.close": "Close",
+  "marketplace.remove.title": "Remove {{name}}?",
+  "marketplace.remove.confirm":
+    "Are you sure you want to remove this {{type}}? This will remove it from your {{scope}} configuration.",
+  "marketplace.remove.cancel": "Cancel",
+  "marketplace.remove.confirm.button": "Remove",
+  "marketplace.tab.mcp": "MCP",
+  "marketplace.search": "Search...",
+  "marketplace.filter.all": "All Items",
+  "marketplace.filter.notInstalled": "Not Installed",
+  "marketplace.empty": "No items found",
+  "marketplace.badge.mcpServer": "MCP Server",
+  "marketplace.badge.mode": "Mode",
+  "marketplace.card.by": "by {{author}}",
+  "marketplace.install.method": "Installation Method",
+  "marketplace.install.parameters": "Parameters",
+  "marketplace.install.optional": "(optional)",
+  "marketplace.install.required": "{{name}} is required",
+  "marketplace.scope.project": "project",
+  "marketplace.scope.global": "global",
+  "marketplace.remove.type.mcp": "MCP server",
+  "marketplace.remove.type.skill": "skill",
+  "marketplace.remove.type.mode": "mode",
+  "marketplace.remove.failed": "Failed to remove {{name}}",
+  "marketplace.install": "Install",
+  "marketplace.filter.installed": "Installed",
+  "marketplace.error.dismiss": "Dismiss",
+  "marketplace.warning.busyOne": "One session is running and will be interrupted",
+  "marketplace.warning.busyMany": "Several sessions are running and will be interrupted",
+  "marketplace.warning.installAnyway": "Install anyway",
+  "marketplace.warning.cancel": "Cancel",
 }

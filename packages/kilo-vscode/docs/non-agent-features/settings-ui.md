@@ -1,25 +1,16 @@
 # Settings UI
 
 **Priority:** P1
-**Status:** 🔨 Partial
 
-## Description
+12 of 14 tabs are functional. Import/export settings is available in the About tab.
 
-Replicate the settings that are available in OpenCode (CLI) and allow users to customize them through the VS Code extension UI.
+## Remaining Work
 
-## Requirements
+- **Terminal tab**: Shows "Not implemented" message
+- **Prompts tab**: Shows "Not implemented" message
+- **Workflows subtab** (inside AgentBehaviour): Renders a `<Placeholder>` with no functionality
 
-- Settings UI that mirrors OpenCode's configuration options
-- Organized into logical tabs/sections
-- Settings persist and sync with CLI configuration
-- Changes take effect immediately or with clear save/apply semantics
-- Include all major setting categories: providers, models, behaviour, display, etc.
+## Related Docs
 
-## Current State
-
-14 tabs are functional: Providers (model selection + allow/block lists), AgentBehaviour (MCP read-only, rules, skills), AutoApprove (per-tool allow/ask/deny dropdowns), Browser, Autocomplete, Display, Notifications, Context, Terminal, Prompts, Experimental, Language, AboutKiloCode.
-
-## Gaps
-
-- Workflows subtab inside AgentBehaviour is a `<Placeholder>` (not implemented)
-- No import/export settings functionality
+- **Agent Behaviour tab** (all sub-tabs) → [Agent Behaviour Tab Parity](../agent-behaviour/)
+- **Workflows subtab** → [Rules & Workflows Sub-Tabs Parity](../agent-behaviour/rules-workflows-subtab-parity.md)

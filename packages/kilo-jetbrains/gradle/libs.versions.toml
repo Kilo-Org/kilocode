@@ -1,0 +1,12 @@
+[versions]
+intellij-platform = "2025.3"
+intellij-gradle-plugin = "2.10.5"
+kotlin-jvm-plugin = "2.1.20"
+kotlin-serialization-plugin = "2.1.20"
+kotlin-serialization = "1.7.3"
+
+[plugins]
+intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-gradle-plugin" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-jvm-plugin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin-serialization-plugin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin-jvm-plugin" }

@@ -1,5 +1,6 @@
 import type { NamedError } from "@opencode-ai/util/error"
 import { MessageV2 } from "./message-v2"
+import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
 import { iife } from "@/util/iife"
 
 export namespace SessionRetry {
@@ -62,9 +63,15 @@ export namespace SessionRetry {
     // context overflow errors should not be retried
     if (MessageV2.ContextOverflowError.isInstance(error)) return undefined
     if (MessageV2.APIError.isInstance(error)) {
+      // kilocode_change start - Current Kilo errors require user action (login/signup), don't retry
+      if (isKiloError(error)) return undefined
+      // kilocode_change end
       if (!error.data.isRetryable) return undefined
-      if (error.data.responseBody?.includes("FreeUsageLimitError"))
-        return `Free usage exceeded, add credits https://opencode.ai/zen`
+      // kilocode_change start - FreeUsageLimitError is not retryable: retrying the same
+      // capped model is futile and the backoff loop cannot be broken by switching
+      // models in the chat selector (the retry loop holds a stale model ref).
+      if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
+      // kilocode_change end
       return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
     }
 

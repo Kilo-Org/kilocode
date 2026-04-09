@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (wyłączone)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**Brak środków na koncie**\n\nTwoje konto Kilo Code nie ma środków. Aby korzystać z autouzupełniania, dodaj środki do swojego konta.\n\n[Otwórz Ustawienia](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**Nie skonfigurowano modelu autouzupełniania**\n\nAby włączyć autouzupełnianie, dodaj profil z jednym z tych obsługiwanych dostawców: {{providers}}.\n\n[Otwórz Ustawienia](command:kilo-code.settingsButtonClicked)",
+    "**Nie skonfigurowano modelu autouzupełniania**\n\nAby włączyć autouzupełnianie, dodaj profil z jednym z tych obsługiwanych dostawców: {{providers}}.\n\n[Otwórz Ustawienia]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "Całkowity koszt sesji:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "Dostawca:",
   "kilocode:autocomplete.statusBar.tooltip.model": "Model:",
@@ -43,4 +41,9 @@ export const dict = {
     "Kilo Code Autocomplete jest blokowane przez konflikt z GitHub Copilot. Aby to naprawić, musisz wyłączyć sugestie inline Copilot.",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Wyłącz Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Wyłącz Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete zostało wstrzymane, ponieważ na twoim koncie nie ma pozostałych kredytów. Dodaj kredyty, aby wznowić autouzupełnianie.",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "Dodaj kredyty",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete zostało wstrzymane z powodu błędu uwierzytelniania. Zaloguj się ponownie.",
 }

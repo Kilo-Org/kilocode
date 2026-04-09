@@ -2,7 +2,10 @@ import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
+import { Flag } from "@/flag/flag"
+import { Global } from "@/global"
 import { Identifier } from "@/id/id"
+import { Instance } from "@/project/instance"
 import { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { Session } from "@/session"
@@ -10,6 +13,7 @@ import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
 import { Todo } from "@/session/todo"
 import { Log } from "@/util/log"
+import path from "path"
 
 function toText(item: MessageV2.WithParts): string {
   return item.parts
@@ -111,10 +115,82 @@ export namespace PlanFollowup {
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
+  function resolveVariant(value: string | undefined, model: Provider.Model | undefined) {
+    if (!value) return undefined
+    if (!model?.variants?.[value]) return undefined
+    return value
+  }
+
+  async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
+    const state =
+      Flag.KILO_CLIENT === "cli"
+        ? await Bun.file(path.join(Global.Path.state, "model.json"))
+            .text()
+            .then(
+              (raw) =>
+                JSON.parse(raw) as {
+                  model?: Record<string, MessageV2.User["model"]>
+                  variant?: Record<string, string | undefined>
+                },
+            )
+            .catch(() => undefined)
+        : undefined
+    const saved = state?.model?.code
+    if (saved) {
+      const full = await Provider.getModel(saved.providerID, saved.modelID).catch(() => undefined)
+      if (full) {
+        const key = `${saved.providerID}/${saved.modelID}`
+        return {
+          model: saved,
+          variant: resolveVariant(state?.variant?.[key], full),
+        }
+      }
+    }
+
+    const agent = await Agent.get("code")
+    if (agent?.model) {
+      const full = await Provider.getModel(agent.model.providerID, agent.model.modelID).catch(() => undefined)
+      if (full) {
+        return {
+          model: agent.model,
+          variant: resolveVariant(agent.variant, full),
+        }
+      }
+    }
+    return input
+  }
+
+  async function resolvePlan(input: {
+    assistant?: MessageV2.WithParts
+    messages: MessageV2.WithParts[]
+    sessionID: string
+  }) {
+    // Fast path: check the last assistant message's text first (avoids array scanning)
+    if (input.assistant) {
+      const text = toText(input.assistant)
+      if (text) return text
+    }
+
+    // Fallback: scan all assistant messages after the last user message (handles
+    // cases where plan text is on an earlier assistant and the last one is empty)
+    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
+    const assistantMessages = input.messages.slice(lastUserIdx + 1).filter((m) => m.info.role === "assistant")
+
+    const text = assistantMessages.map(toText).filter(Boolean).join("\n\n").trim()
+    if (text) return text
+
+    // Fall back to plan file on disk
+    const session = await Session.get(input.sessionID)
+    const file = Bun.file(Session.plan(session))
+    const plan = await file.text().catch(() => "")
+    return plan.trim()
+  }
+
   async function inject(input: {
     sessionID: string
     agent: string
     model: MessageV2.User["model"]
+    variant?: MessageV2.User["variant"]
     text: string
     synthetic?: boolean
   }) {
@@ -127,6 +203,7 @@ export namespace PlanFollowup {
       },
       agent: input.agent,
       model: input.model,
+      variant: input.variant,
     }
     await Session.updateMessage(msg)
     await Session.updatePart({
@@ -183,41 +260,62 @@ export namespace PlanFollowup {
     plan: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
+    variant?: MessageV2.User["variant"]
     abort?: AbortSignal
   }) {
+    const code = await resolveCodeModel({
+      model: input.model,
+      variant: input.variant,
+    })
+    const session = await Session.get(input.sessionID)
     const [handover, todos] = await Promise.all([
       generateHandover({ messages: input.messages, model: input.model, abort: input.abort }),
       Todo.get(input.sessionID),
     ])
 
-    const sections = [`Implement the following plan:\n\n${input.plan}`]
+    await Instance.provide({
+      directory: session.directory,
+      fn: async () => {
+        const file = Session.plan(session)
+        const sections = [
+          `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
+          `Implement the following plan:\n\n${input.plan}`,
+        ]
 
-    if (handover) {
-      sections.push(`## Handover from Planning Session\n\n${handover}`)
-    }
+        if (handover) {
+          sections.push(`## Handover from Planning Session\n\n${handover}`)
+        }
 
-    const todoList = formatTodos(todos)
-    if (todoList) {
-      sections.push(`## Todo List\n\n${todoList}`)
-    }
+        const todoList = formatTodos(todos)
+        if (todoList) {
+          sections.push(`## Todo List\n\n${todoList}`)
+        }
 
-    const next = await Session.create({})
-    await inject({
-      sessionID: next.id,
-      agent: "code",
-      model: input.model,
-      text: sections.join("\n\n"),
-      synthetic: false,
+        const next = await Session.create({})
+        await inject({
+          sessionID: next.id,
+          agent: "code",
+          model: code.model,
+          variant: code.variant,
+          text: sections.join("\n\n"),
+          synthetic: false,
+        })
+        if (todos.length) {
+          await Todo.update({ sessionID: next.id, todos })
+        }
+        await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
+        void import("@/session/prompt")
+          .then((item) =>
+            Instance.provide({
+              directory: next.directory,
+              fn: () => item.SessionPrompt.loop({ sessionID: next.id }),
+            }),
+          )
+          .catch((error) => {
+            log.error("failed to start follow-up session", { sessionID: next.id, error })
+          })
+      },
     })
-    if (todos.length) {
-      await Todo.update({ sessionID: next.id, todos })
-    }
-    await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
-    void import("@/session/prompt")
-      .then((item) => item.SessionPrompt.loop({ sessionID: next.id }))
-      .catch((error) => {
-        log.error("failed to start follow-up session", { sessionID: next.id, error })
-      })
   }
 
   export async function ask(input: {
@@ -231,7 +329,7 @@ export namespace PlanFollowup {
     const assistant = latest.find((msg) => msg.info.role === "assistant")
     if (!assistant) return "break"
 
-    const plan = toText(assistant)
+    const plan = await resolvePlan({ assistant, messages: input.messages, sessionID: input.sessionID })
     if (!plan) return "break"
 
     const user = latest.find((msg) => msg.info.role === "user")?.info
@@ -256,6 +354,7 @@ export namespace PlanFollowup {
         plan,
         messages: input.messages,
         model: user.model,
+        variant: user.variant,
         abort: input.abort,
       })
       return "break"
@@ -263,10 +362,15 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_CONTINUE) {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
+      const code = await resolveCodeModel({
+        model: user.model,
+        variant: user.variant,
+      })
       await inject({
         sessionID: input.sessionID,
         agent: "code",
-        model: user.model,
+        model: code.model,
+        variant: code.variant,
         text: "Implement the plan above.",
       })
       return "continue"
@@ -277,6 +381,7 @@ export namespace PlanFollowup {
       sessionID: input.sessionID,
       agent: "plan",
       model: user.model,
+      variant: user.variant,
       text: answer,
     })
     return "continue"

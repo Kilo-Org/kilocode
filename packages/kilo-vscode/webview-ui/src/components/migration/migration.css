@@ -1,0 +1,818 @@
+/* legacy-migration - Scoped styles for the migration wizard. */
+
+.migration-wizard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  -webkit-font-smoothing: antialiased;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.migration-wizard__container {
+  max-width: 520px;
+  width: 100%;
+}
+
+/* Screen transitions */
+.migration-wizard__screen--hidden {
+  display: none;
+}
+
+.migration-wizard__screen--active {
+  display: block;
+  animation: mw-screen-enter 0.28s ease-out;
+}
+
+@keyframes mw-screen-enter {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Header */
+.migration-wizard__header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.migration-wizard__logo {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+}
+
+.migration-wizard__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.migration-wizard__header h1 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  margin-bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.migration-wizard__header p {
+  font-size: 13px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.6;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+/* Feature cards — What's New */
+.migration-wizard__features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.migration-wizard__feature {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.migration-wizard__feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--vscode-button-background) 15%, transparent);
+  color: var(--vscode-button-background);
+}
+
+.migration-wizard__feature-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.migration-wizard__feature-text {
+  flex: 1;
+}
+
+.migration-wizard__feature-text .title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.migration-wizard__feature-text .detail {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.45;
+}
+
+/* Blog link */
+.migration-wizard__blog-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 16px;
+}
+
+.migration-wizard__blog-link a {
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.65;
+  text-decoration: none;
+  transition: opacity 0.15s;
+}
+
+.migration-wizard__blog-link a:hover {
+  opacity: 1;
+}
+
+.migration-wizard__blog-link a span {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Migration card */
+.migration-wizard__card {
+  background: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.migration-wizard__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 16px 20px 8px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.6;
+}
+
+.migration-wizard__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 11px 20px;
+  border-top: 1px solid var(--vscode-panel-border);
+}
+
+.migration-wizard__item:first-child,
+.migration-wizard__section-label + .migration-wizard__item {
+  border-top: none;
+}
+
+/* Custom checkbox */
+.migration-wizard__checkbox {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.migration-wizard__checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  margin: 0;
+}
+
+.migration-wizard__checkmark {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 2px solid color-mix(in srgb, var(--vscode-foreground) 15%, transparent);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.migration-wizard__checkbox input:checked + .migration-wizard__checkmark {
+  background: var(--vscode-button-background);
+  border-color: var(--vscode-button-background);
+}
+
+.migration-wizard__checkmark svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.migration-wizard__checkbox input:checked + .migration-wizard__checkmark svg {
+  opacity: 1;
+}
+
+/* Status indicators (during/after migration) */
+.migration-wizard__status-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.migration-wizard__status-icon--success {
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--vscode-testing-iconPassed, #34c759);
+}
+
+.migration-wizard__status-icon--warning {
+  background: rgba(255, 159, 10, 0.12);
+  color: var(--vscode-testing-iconQueued, #ff9f0a);
+}
+
+.migration-wizard__status-icon--error {
+  background: rgba(241, 76, 76, 0.12);
+  color: var(--vscode-testing-iconFailed, #f14c4c);
+}
+
+.migration-wizard__status-icon--pending {
+  border: 2px solid color-mix(in srgb, var(--vscode-foreground) 10%, transparent);
+  background: transparent;
+}
+
+.migration-wizard__status-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Spinner for migrating state */
+.migration-wizard__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--vscode-button-background) 30%, transparent);
+  border-top-color: var(--vscode-button-background);
+  border-radius: 50%;
+  animation: migration-spin 0.6s linear infinite;
+}
+
+@keyframes migration-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Item text */
+.migration-wizard__item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.migration-wizard__item-text .label {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.migration-wizard__item-text .desc {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  line-height: 1.4;
+  margin-top: 1px;
+}
+
+.migration-wizard__error-text {
+  font-size: 11px;
+  color: var(--vscode-errorForeground);
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.migration-wizard__error-box {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 28%, transparent);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--vscode-errorForeground) 8%, transparent), transparent),
+    color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-errorForeground) 8%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.migration-wizard__error-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.migration-wizard__error-box-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--vscode-foreground);
+  letter-spacing: 0.01em;
+}
+
+.migration-wizard__error-box .migration-wizard__error-text {
+  margin-top: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--vscode-errorForeground) 92%, white 8%);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.migration-session-card {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 94%, var(--vscode-button-background) 6%);
+}
+
+.migration-session-summary__title {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+}
+
+.migration-session-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.migration-session-summary__section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.migration-session-summary__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-height: calc(1.7em * 4 + 18px);
+  overflow: auto;
+  padding-right: 2px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 96%, white 4%);
+  padding: 0;
+}
+
+.migration-session-summary__item {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 1.7em;
+  padding: 2px 10px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.migration-session-summary__list > :nth-child(odd) {
+  background: color-mix(in srgb, var(--vscode-editor-background) 88%, white 12%);
+}
+
+.migration-session-summary__list > * + * {
+  border-top: 1px solid color-mix(in srgb, var(--vscode-panel-border) 80%, transparent 20%);
+}
+
+.migration-session-summary__detail {
+  margin-left: 14px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--vscode-descriptionForeground) 88%, white 12%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 2px 10px 4px 10px;
+  background: transparent;
+}
+
+.migration-session-summary__list--success {
+  border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #34c759) 45%, var(--vscode-panel-border) 55%);
+}
+
+.migration-session-summary__list--skipped {
+  border-color: color-mix(in srgb, var(--vscode-testing-iconQueued, #d7ba7d) 55%, var(--vscode-panel-border) 45%);
+}
+
+.migration-session-summary__pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 1.7em;
+  padding: 2px 10px;
+  cursor: pointer;
+  position: relative;
+}
+
+.migration-session-summary__pick input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  pointer-events: none;
+  right: 8px;
+}
+
+.migration-session-summary__pick-mark {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--vscode-foreground) 34%, transparent);
+  background: color-mix(in srgb, var(--vscode-editor-background) 88%, white 12%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+
+.migration-session-summary__pick-mark svg {
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.migration-session-summary__pick input:checked + .migration-session-summary__pick-mark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 46%, transparent);
+}
+
+.migration-session-summary__pick input:checked + .migration-session-summary__pick-mark svg {
+  opacity: 1;
+}
+
+.migration-session-summary__pick .migration-session-summary__item {
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.migration-session-summary__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.migration-session-summary__all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  position: relative;
+  cursor: pointer;
+}
+
+.migration-session-summary__all input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  pointer-events: none;
+  right: 0;
+}
+
+.migration-session-summary__all input:checked + .migration-session-summary__pick-mark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 46%, transparent);
+}
+
+.migration-session-summary__all input:checked + .migration-session-summary__pick-mark svg {
+  opacity: 1;
+}
+
+.migration-session-summary__pick-mark--all {
+  margin-left: auto;
+}
+
+.migration-session-summary__list--errored {
+  border-color: color-mix(in srgb, var(--vscode-errorForeground) 55%, var(--vscode-panel-border) 45%);
+}
+
+.migration-session-summary__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.migration-session-summary__label,
+.migration-session-summary__value {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--vscode-foreground);
+}
+
+.migration-session-summary__value {
+  color: var(--vscode-descriptionForeground);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.migration-session-progress__header {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+  white-space: nowrap;
+}
+
+.migration-session-progress__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-session-progress__meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.migration-session-progress__directory {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.migration-session-progress__title {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.migration-session-progress__date {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.migration-session-progress__steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.migration-session-progress__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.migration-session-progress__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--vscode-foreground) 16%, transparent);
+}
+
+.migration-session-progress__dot--active {
+  background: var(--vscode-button-background);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vscode-button-background) 18%, transparent);
+}
+
+.migration-session-progress__dot--success {
+  background: var(--vscode-testing-iconPassed, #34c759);
+}
+
+.migration-session-progress__step-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--vscode-foreground);
+}
+
+.migration-session-progress__step-text span:first-child {
+  white-space: nowrap;
+}
+
+.migration-session-progress__count {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__copy-btn {
+  appearance: none;
+  border: 1px solid var(--vscode-panel-border);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  border-radius: 8px;
+  padding: 5px 10px;
+  min-height: 28px;
+  font-family: var(--vscode-font-family);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.migration-wizard__copy-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.migration-wizard__copy-btn:active {
+  background: var(--vscode-toolbar-hoverBackground, var(--vscode-list-hoverBackground));
+}
+
+.migration-wizard__copy-btn:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+/* Disabled items */
+.migration-wizard__item--disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.migration-wizard__item--disabled .migration-wizard__checkmark {
+  border-color: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
+}
+
+/* Clickable item (cleanup row) — text area triggers checkbox */
+.migration-wizard__item--clickable .migration-wizard__item-text {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Divider */
+.migration-wizard__divider {
+  height: 1px;
+  background: var(--vscode-panel-border);
+}
+
+/* Summary badge */
+.migration-wizard__summary {
+  text-align: center;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  padding: 12px 20px 4px;
+}
+
+.migration-wizard__summary--success {
+  color: var(--vscode-testing-iconPassed, #34c759);
+}
+
+/* Footer */
+.migration-wizard__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 20px 0;
+  margin-top: 20px;
+}
+
+.migration-wizard__footer--space-between {
+  justify-content: space-between;
+}
+
+.migration-wizard__btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+/* Buttons */
+.migration-wizard__btn {
+  font-family: var(--vscode-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.migration-wizard__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.migration-wizard__btn--ghost {
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+}
+
+.migration-wizard__btn--ghost:hover {
+  color: var(--vscode-foreground);
+  background: color-mix(in srgb, var(--vscode-foreground) 5%, transparent);
+}
+
+.migration-wizard__btn--primary {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.migration-wizard__btn--primary:not(:disabled):hover {
+  background: var(--vscode-button-hoverBackground);
+  box-shadow:
+    0 2px 8px color-mix(in srgb, var(--vscode-button-background) 30%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Nothing to migrate */
+.migration-wizard__empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+  font-size: 12px;
+}
+
+/* ============================================
+   High Contrast Theme Support
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  .migration-wizard__feature {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__card {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__item {
+    border-top-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__btn {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  .migration-wizard__checkmark {
+    border-color: var(--vscode-contrastBorder, var(--vscode-foreground));
+  }
+
+  .migration-wizard__divider {
+    background: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  .migration-wizard__error-box,
+  .migration-wizard__copy-btn {
+    border-color: var(--vscode-contrastBorder, var(--vscode-errorForeground));
+  }
+}

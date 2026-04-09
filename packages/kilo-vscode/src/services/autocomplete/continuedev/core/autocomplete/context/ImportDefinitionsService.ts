@@ -33,6 +33,12 @@ export class ImportDefinitionsService {
       return null
     }
 
+    // Skip non-file URIs (e.g. output:tasks, vscode:, untitled:) — these are
+    // VS Code virtual documents that have no parseable source.
+    if (/^[a-zA-Z][\w+.-]*:/.test(filepath) && !filepath.startsWith("file:") && !filepath.startsWith("/")) {
+      return null
+    }
+
     const parser = await getParserForFile(filepath)
     if (!parser) {
       return {

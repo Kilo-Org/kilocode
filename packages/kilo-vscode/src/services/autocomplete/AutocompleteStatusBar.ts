@@ -4,6 +4,7 @@ import type { AutocompleteStatusBarStateProps } from "./types"
 import { humanFormatSessionCost, formatTime } from "./statusbar-utils"
 
 const SUPPORTED_PROVIDER_DISPLAY_NAME = "Kilo Gateway"
+const SETTINGS_COMMAND = `command:kilo-code.new.settingsButtonClicked?${encodeURIComponent(JSON.stringify(["autocomplete"]))}`
 
 export class AutocompleteStatusBar {
   statusBar: vscode.StatusBarItem
@@ -85,24 +86,19 @@ export class AutocompleteStatusBar {
   }
 
   public render() {
-    if (this.props.hasKilocodeProfileWithNoBalance) {
-      return this.renderNoCreditsError()
-    }
     if (this.props.hasNoUsableProvider) {
       return this.renderNoUsableProviderError()
     }
     return this.renderDefault()
   }
 
-  private renderNoCreditsError() {
-    this.statusBar.text = t("kilocode:autocomplete.statusBar.warning")
-    this.statusBar.tooltip = this.createMarkdownTooltip(t("kilocode:autocomplete.statusBar.tooltip.noCredits"))
-  }
-
   private renderNoUsableProviderError() {
     this.statusBar.text = t("kilocode:autocomplete.statusBar.warning")
     this.statusBar.tooltip = this.createMarkdownTooltip(
-      t("kilocode:autocomplete.statusBar.tooltip.noUsableProvider", { providers: SUPPORTED_PROVIDER_DISPLAY_NAME }),
+      t("kilocode:autocomplete.statusBar.tooltip.noUsableProvider", {
+        providers: SUPPORTED_PROVIDER_DISPLAY_NAME,
+        command: SETTINGS_COMMAND,
+      }),
     )
   }
 }

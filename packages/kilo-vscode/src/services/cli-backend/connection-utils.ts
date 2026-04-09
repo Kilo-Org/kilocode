@@ -1,4 +1,4 @@
-import type { SSEEvent } from "./types"
+import type { Event } from "@kilocode/sdk/v2/client"
 
 /**
  * Pure session ID resolution for SSE events.
@@ -7,7 +7,7 @@ import type { SSEEvent } from "./types"
  * record the messageID -> sessionID mapping.
  */
 export function resolveEventSessionId(
-  event: SSEEvent,
+  event: Event,
   lookupMessageSessionId: (messageId: string) => string | undefined,
   onMessageUpdated?: (messageId: string, sessionId: string) => void,
 ): string | undefined {
@@ -17,6 +17,7 @@ export function resolveEventSessionId(
       return event.properties.info.id
     case "session.status":
     case "session.idle":
+    case "session.error":
     case "todo.updated":
       return event.properties.sessionID
     case "message.updated":

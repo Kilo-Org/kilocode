@@ -22,11 +22,13 @@ This skill is loaded from the global home directory.
   )
 }
 
-test("discovers skills from .opencode/skill/ directory", async () => {
+// kilocode_change start
+test("discovers skills from .kilo/skill/ directory", async () => {
+  // kilocode_change end
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "test-skill")
+      const skillDir = path.join(dir, ".kilo", "skill", "test-skill") // kilocode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -50,7 +52,7 @@ Instructions here.
       const testSkill = skills.find((s) => s.name === "test-skill")
       expect(testSkill).toBeDefined()
       expect(testSkill!.description).toBe("A test skill for verification.")
-      expect(testSkill!.location).toContain("skill/test-skill/SKILL.md")
+      expect(testSkill!.location).toContain(path.join("skill", "test-skill", "SKILL.md"))
     },
   })
 })
@@ -59,7 +61,7 @@ test("returns skill directories from Skill.dirs", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "dir-skill")
+      const skillDir = path.join(dir, ".kilo", "skill", "dir-skill") // kilocode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `---
@@ -81,7 +83,7 @@ description: Skill for dirs test.
       directory: tmp.path,
       fn: async () => {
         const dirs = await Skill.dirs()
-        const skillDir = path.join(tmp.path, ".opencode", "skill", "dir-skill")
+        const skillDir = path.join(tmp.path, ".kilo", "skill", "dir-skill") // kilocode_change: .kilo is primary
         expect(dirs).toContain(skillDir)
         expect(dirs.length).toBe(1)
       },
@@ -91,12 +93,14 @@ description: Skill for dirs test.
   }
 })
 
-test("discovers multiple skills from .opencode/skill/ directory", async () => {
+// kilocode_change start
+test("discovers multiple skills from .kilo/skill/ directory", async () => {
+  // kilocode_change end
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir1 = path.join(dir, ".opencode", "skill", "skill-one")
-      const skillDir2 = path.join(dir, ".opencode", "skill", "skill-two")
+      const skillDir1 = path.join(dir, ".kilo", "skill", "skill-one") // kilocode_change: .kilo is primary
+      const skillDir2 = path.join(dir, ".kilo", "skill", "skill-two") // kilocode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir1, "SKILL.md"),
         `---
@@ -135,7 +139,7 @@ test("skips skills with missing frontmatter", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const skillDir = path.join(dir, ".opencode", "skill", "no-frontmatter")
+      const skillDir = path.join(dir, ".kilo", "skill", "no-frontmatter") // kilocode_change: .kilo is primary
       await Bun.write(
         path.join(skillDir, "SKILL.md"),
         `# No Frontmatter
@@ -180,7 +184,7 @@ description: A skill in the .claude/skills directory.
       expect(skills.length).toBe(1)
       const claudeSkill = skills.find((s) => s.name === "claude-skill")
       expect(claudeSkill).toBeDefined()
-      expect(claudeSkill!.location).toContain(".claude/skills/claude-skill/SKILL.md")
+      expect(claudeSkill!.location).toContain(path.join(".claude", "skills", "claude-skill", "SKILL.md"))
     },
   })
 })
@@ -200,7 +204,7 @@ test("discovers global skills from ~/.claude/skills/ directory", async () => {
         expect(skills.length).toBe(1)
         expect(skills[0].name).toBe("global-test-skill")
         expect(skills[0].description).toBe("A global skill from ~/.claude/skills for testing.")
-        expect(skills[0].location).toContain(".claude/skills/global-test-skill/SKILL.md")
+        expect(skills[0].location).toContain(path.join(".claude", "skills", "global-test-skill", "SKILL.md"))
       },
     })
   } finally {
@@ -245,7 +249,7 @@ description: A skill in the .agents/skills directory.
       expect(skills.length).toBe(1)
       const agentSkill = skills.find((s) => s.name === "agent-skill")
       expect(agentSkill).toBeDefined()
-      expect(agentSkill!.location).toContain(".agents/skills/agent-skill/SKILL.md")
+      expect(agentSkill!.location).toContain(path.join(".agents", "skills", "agent-skill", "SKILL.md"))
     },
   })
 })
@@ -279,7 +283,7 @@ This skill is loaded from the global home directory.
         expect(skills.length).toBe(1)
         expect(skills[0].name).toBe("global-agent-skill")
         expect(skills[0].description).toBe("A global skill from ~/.agents/skills for testing.")
-        expect(skills[0].location).toContain(".agents/skills/global-agent-skill/SKILL.md")
+        expect(skills[0].location).toContain(path.join(".agents", "skills", "global-agent-skill", "SKILL.md"))
       },
     })
   } finally {
@@ -331,8 +335,8 @@ test("properly resolves directories that skills live in", async () => {
   await using tmp = await tmpdir({
     git: true,
     init: async (dir) => {
-      const opencodeSkillDir = path.join(dir, ".opencode", "skill", "agent-skill")
-      const opencodeSkillsDir = path.join(dir, ".opencode", "skills", "agent-skill")
+      const opencodeSkillDir = path.join(dir, ".opencode", "skill", "agent-skill") // kilocode_change .opencode backward compat
+      const opencodeSkillsDir = path.join(dir, ".opencode", "skills", "agent-skill") // kilocode_change .opencode backward compat
       const claudeDir = path.join(dir, ".claude", "skills", "claude-skill")
       const agentDir = path.join(dir, ".agents", "skills", "agent-skill")
       await Bun.write(

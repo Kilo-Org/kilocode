@@ -35,7 +35,7 @@ export const DefaultOpen: Story = {
 }
 
 export const NoChildren: Story = {
-  render: () => <BasicTool icon="mcp" trigger={{ title: "Tool call", subtitle: "No output" }} hideDetails />,
+  render: () => <BasicTool hideDetails icon="mcp" trigger={{ title: "Tool call", subtitle: "No output" }} />,
 }
 
 export const Locked: Story = {
@@ -59,7 +59,7 @@ export const AllVariants: Story = {
       <BasicTool icon="console" trigger={{ title: "Run command", args: ["bun", "test"] }} defaultOpen>
         <pre style={{ padding: "8px", margin: 0, "font-size": "12px" }}>All tests passed!</pre>
       </BasicTool>
-      <BasicTool icon="mcp" trigger={{ title: "MCP tool call" }} hideDetails />
+      <BasicTool icon="mcp" trigger={{ title: "MCP tool call" }} />
       <GenericTool tool="generic_tool" />
     </div>
   ),

@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete（已禁用）",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**账户余额不足**\n\n你的 Kilo Code 账户没有余额。要使用自动补全功能，请为账户充值。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置](command:kilo-code.settingsButtonClicked)",
+    "**未配置自动补全模型**\n\n要启用自动补全，请添加一个使用以下支持的提供商的配置文件：{{providers}}。\n\n[打开设置]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "会话总费用:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "提供商:",
   "kilocode:autocomplete.statusBar.tooltip.model": "模型:",
@@ -42,4 +40,8 @@ export const dict = {
     "Kilo Code Autocomplete 被与 GitHub Copilot 的冲突阻止。要解决此问题，你必须禁用 Copilot 的内联建议。",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "禁用 Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "禁用 Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete 已暂停，因为你的账户没有剩余额度。请添加额度以恢复自动补全。",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "添加额度",
+  "kilocode:autocomplete.authError.message": "Kilo Code Autocomplete 因身份验证错误已暂停。请重新登录。",
 }

@@ -1,8 +1,8 @@
 import { Config } from "../config/config"
 import { ModesMigrator } from "./modes-migrator"
-import { RulesMigrator } from "./rules-migrator" // kilocode_change
+import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
-import { IgnoreMigrator } from "./ignore-migrator" // kilocode_change
+import { IgnoreMigrator } from "./ignore-migrator"
 
 export namespace KilocodeConfigInjector {
   export interface InjectionResult {
@@ -46,7 +46,6 @@ export namespace KilocodeConfigInjector {
       config.command = workflowsMigration.commands
     }
 
-    // kilocode_change start - Rules migration
     if (options.includeRules !== false) {
       const rulesMigration = await RulesMigrator.migrate({
         projectDir: options.projectDir,
@@ -60,9 +59,7 @@ export namespace KilocodeConfigInjector {
         config.instructions = rulesMigration.instructions
       }
     }
-    // kilocode_change end
 
-    // kilocode_change start - Ignore migration
     if (options.includeIgnore !== false) {
       const ignoreMigration = await IgnoreMigrator.migrate({
         projectDir: options.projectDir,
@@ -75,7 +72,6 @@ export namespace KilocodeConfigInjector {
         config.permission = mergePermissions(config.permission, ignoreMigration.permission)
       }
     }
-    // kilocode_change end
 
     return {
       configJson: JSON.stringify(config),

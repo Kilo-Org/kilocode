@@ -36,6 +36,13 @@
   box-sizing: border-box;
 }
 
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
 html,
 body {
   overflow-x: hidden;
@@ -173,6 +180,15 @@ a:hover {
 
 .terminal-prompt {
   color: #dcdcaa;
+}
+
+/* Blockquotes */
+.article-content blockquote {
+  border-left: 3px solid var(--border-color);
+  margin: 1em 0;
+  padding: 0.25em 1em;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 /* Lists - Override Tailwind's reset to restore default list styling */

@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**ไม่มีเครดิตในบัญชีของคุณ**\n\nบัญชี Kilo Code ของคุณไม่มีเครดิต หากต้องการใช้การเติมข้อความอัตโนมัติ กรุณาเพิ่มเครดิตในบัญชีของคุณ\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**ไม่ได้กำหนดค่าโมเดลการเติมข้อความอัตโนมัติ**\n\nหากต้องการเปิดใช้งานการเติมข้อความอัตโนมัติ ให้เพิ่มโปรไฟล์กับผู้ให้บริการที่รองรับเหล่านี้: {{providers}}\n\n[เปิดการตั้งค่า](command:kilo-code.settingsButtonClicked)",
+    "**ไม่ได้กำหนดค่าโมเดลการเติมข้อความอัตโนมัติ**\n\nหากต้องการเปิดใช้งานการเติมข้อความอัตโนมัติ ให้เพิ่มโปรไฟล์กับผู้ให้บริการที่รองรับเหล่านี้: {{providers}}\n\n[เปิดการตั้งค่า]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "ผู้ให้บริการ:",
   "kilocode:autocomplete.statusBar.tooltip.model": "โมเดล:",
@@ -43,4 +41,9 @@ export const dict = {
     "Kilo Code Autocomplete ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot เพื่อแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำแบบอินไลน์ของ Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "ปิดใช้งาน Copilot",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "ปิดใช้งาน Autocomplete",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "Kilo Code Autocomplete ถูกหยุดชั่วคราวเนื่องจากบัญชีของคุณไม่มีเครดิตเหลือ เพิ่มเครดิตเพื่อใช้งานการเติมข้อความอัตโนมัติต่อ",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "เพิ่มเครดิต",
+  "kilocode:autocomplete.authError.message":
+    "Kilo Code Autocomplete ถูกหยุดชั่วคราวเนื่องจากข้อผิดพลาดในการยืนยันตัวตน กรุณาเข้าสู่ระบบอีกครั้ง",
 }

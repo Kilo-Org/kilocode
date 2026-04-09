@@ -162,7 +162,7 @@ export const McpAuthCommand = cmd({
 
         if (oauthServers.length === 0) {
           prompts.log.warn("No OAuth-capable MCP servers configured")
-          prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in opencode.json:")
+          prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in kilo.json:") // kilocode_change
           prompts.log.info(`
   "mcp": {
     "my-server": {
@@ -381,11 +381,24 @@ export const McpLogoutCommand = cmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // Check for existing config files (prefer .jsonc over .json, check .opencode/ subdirectory too)
-  const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
+  // kilocode_change start - prefer kilo.json/.kilo over opencode.json/.opencode
+  // Check for existing config files (prefer .jsonc over .json, check .kilo/ and .opencode/ subdirectory too)
+  const candidates = [
+    path.join(baseDir, "kilo.json"),
+    path.join(baseDir, "kilo.jsonc"),
+    path.join(baseDir, "opencode.json"),
+    path.join(baseDir, "opencode.jsonc"),
+  ]
 
   if (!global) {
-    candidates.push(path.join(baseDir, ".opencode", "opencode.json"), path.join(baseDir, ".opencode", "opencode.jsonc"))
+    candidates.push(
+      path.join(baseDir, ".kilo", "kilo.json"),
+      path.join(baseDir, ".kilo", "kilo.jsonc"),
+      path.join(baseDir, ".kilo", "opencode.json"),
+      path.join(baseDir, ".kilo", "opencode.jsonc"),
+      path.join(baseDir, ".opencode", "opencode.json"),
+      path.join(baseDir, ".opencode", "opencode.jsonc"),
+    )
   }
 
   for (const candidate of candidates) {
@@ -394,8 +407,9 @@ async function resolveConfigPath(baseDir: string, global = false) {
     }
   }
 
-  // Default to opencode.json if none exist
-  return candidates[0]
+  // Default to kilo.json if none exist
+  return path.join(baseDir, "kilo.json")
+  // kilocode_change end
 }
 
 async function addMcpToConfig(name: string, mcpConfig: Config.Mcp, configPath: string) {
@@ -481,7 +495,7 @@ export const McpAddCommand = cmd({
         if (type === "local") {
           const command = await prompts.text({
             message: "Enter command to run",
-            placeholder: "e.g., opencode x @modelcontextprotocol/server-filesystem",
+            placeholder: "e.g., kilo x @modelcontextprotocol/server-filesystem", // kilocode_change
             validate: (x) => (x && x.length > 0 ? undefined : "Required"),
           })
           if (prompts.isCancel(command)) throw new UI.CancelledError()
@@ -662,7 +676,7 @@ export const McpDebugCommand = cmd({
               params: {
                 protocolVersion: "2024-11-05",
                 capabilities: {},
-                clientInfo: { name: "opencode-debug", version: Installation.VERSION },
+                clientInfo: { name: "kilo-debug", version: Installation.VERSION }, // kilocode_change
               },
               id: 1,
             }),
@@ -703,7 +717,7 @@ export const McpDebugCommand = cmd({
 
             try {
               const client = new Client({
-                name: "opencode-debug",
+                name: "kilo-debug", // kilocode_change
                 version: Installation.VERSION,
               })
               await client.connect(transport)

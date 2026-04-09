@@ -13,7 +13,9 @@ import { Installation } from "./installation"
 import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
+import { WorkspaceServeCommand } from "./cli/cmd/workspace-serve"
 import { Filesystem } from "./util/filesystem"
+import { ConfigCommand as ConfigCLICommand } from "./cli/cmd/config" // kilocode_change
 import { DebugCommand } from "./cli/cmd/debug"
 import { StatsCommand } from "./cli/cmd/stats"
 import { McpCommand } from "./cli/cmd/mcp"
@@ -24,13 +26,14 @@ import { AttachCommand } from "./cli/cmd/tui/attach"
 import { TuiThreadCommand } from "./cli/cmd/tui/thread"
 import { AcpCommand } from "./cli/cmd/acp"
 import { EOL } from "os"
-import { WebCommand } from "./cli/cmd/web"
+// import { WebCommand } from "./cli/cmd/web" // kilocode_change (Disabled unsupported opencode web UI)
 import { PrCommand } from "./cli/cmd/pr"
 import { SessionCommand } from "./cli/cmd/session"
+import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
 // kilocode_change start - Import telemetry, instance disposal, and legacy migration
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Instance } from "./project/instance" // kilocode_change
-import { migrateLegacyKiloAuth, ENV_FEATURE } from "@kilocode/kilo-gateway"
+import { migrateLegacyKiloAuth, ENV_FEATURE, ENV_VERSION } from "@kilocode/kilo-gateway"
 
 // kilocode_change - set feature for tracking. 'serve' is spawned by other services
 // (extension, cloud) which set their own KILOCODE_FEATURE env var. Direct CLI use
@@ -40,12 +43,18 @@ if (!process.env[ENV_FEATURE]) {
   const isServe = process.argv.includes("serve")
   process.env[ENV_FEATURE] = isServe ? "unknown" : "cli"
 }
+
+// kilocode_change - set version so kilo-gateway can include it in the editor name header
+if (!process.env[ENV_VERSION]) {
+  process.env[ENV_VERSION] = Installation.VERSION
+}
 import { Config } from "./config/config"
 import { Auth } from "./auth"
 // kilocode_change end
 import { DbCommand } from "./cli/cmd/db"
 import path from "path"
 import { Global } from "./global"
+import { createHelpCommand } from "./kilocode/help-command" // kilocode_change
 import { JsonMigration } from "./storage/json-migration"
 import { Database } from "./storage/db"
 
@@ -61,7 +70,12 @@ process.on("uncaughtException", (e) => {
   })
 })
 
-const cli = yargs(hideBin(process.argv))
+// Ensure the process exits on terminal hangup (eg. closing the terminal tab).
+// Without this, long-running commands like `serve` block on a never-resolving
+// promise and survive as orphaned processes.
+process.on("SIGHUP", () => process.exit())
+
+let cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
   .scriptName("kilo") // kilocode_change
   .wrap(100)
@@ -90,7 +104,8 @@ const cli = yargs(hideBin(process.argv))
     })
 
     process.env.AGENT = "1"
-    process.env.OPENCODE = "1"
+    process.env.KILO = "1"
+    process.env.KILO_PID = String(process.pid)
 
     Log.Default.info("opencode", {
       version: Installation.VERSION,
@@ -172,7 +187,7 @@ const cli = yargs(hideBin(process.argv))
   .command(UpgradeCommand)
   .command(UninstallCommand)
   .command(ServeCommand)
-  .command(WebCommand)
+  // .command(WebCommand) // kilocode_change (Disabled unsupported opencode web UI)
   .command(ModelsCommand)
   .command(StatsCommand)
   .command(ExportCommand)
@@ -180,7 +195,19 @@ const cli = yargs(hideBin(process.argv))
   // .command(GithubCommand) // kilocode_change (Disabled until backend is ready)
   .command(PrCommand)
   .command(SessionCommand)
+  .command(RemoteCommand) // kilocode_change
   .command(DbCommand)
+  .command(ConfigCLICommand) // kilocode_change
+
+// kilocode_change start - registered after initial chain to avoid self-referential type error
+cli = cli.command(createHelpCommand(() => cli))
+// kilocode_change end
+
+if (Installation.isLocal()) {
+  cli = cli.command(WorkspaceServeCommand)
+}
+
+cli = cli
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||

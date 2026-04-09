@@ -1,5 +1,6 @@
 import z from "zod"
 import { spawn } from "child_process"
+import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
 import { Tool } from "./tool"
 import path from "path"
 import DESCRIPTION from "./bash.txt"
@@ -15,6 +16,7 @@ import { Flag } from "@/flag/flag.ts"
 import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
+import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
 import { Truncate } from "./truncation"
 import { Plugin } from "@/plugin"
 
@@ -89,6 +91,7 @@ export const BashTool = Tool.define("bash", async () => {
       if (!Instance.containsPath(cwd)) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
+      const rules = new Set<string>() // kilocode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
 
       for (const node of tree.rootNode.descendantsOfType("command")) {
         if (!node) continue
@@ -124,11 +127,8 @@ export const BashTool = Tool.define("bash", async () => {
               .then((x) => x.trim())
             log.info("resolved path", { arg, resolved })
             if (resolved) {
-              // Git Bash on Windows returns Unix-style paths like /c/Users/...
               const normalized =
-                process.platform === "win32" && resolved.match(/^\/[a-z]\//)
-                  ? resolved.replace(/^\/([a-z])\//, (_, drive) => `${drive.toUpperCase()}:\\`).replace(/\//g, "\\")
-                  : resolved
+                process.platform === "win32" ? Filesystem.windowsPath(resolved).replace(/\//g, "\\") : resolved
               if (!Instance.containsPath(normalized)) {
                 const dir = (await Filesystem.isDir(normalized)) ? normalized : path.dirname(normalized)
                 directories.add(dir)
@@ -141,11 +141,16 @@ export const BashTool = Tool.define("bash", async () => {
         if (command.length && command[0] !== "cd") {
           patterns.add(commandText)
           always.add(BashArity.prefix(command).join(" ") + " *")
+          BashHierarchy.addAll(rules, command, commandText) // kilocode_change
         }
       }
 
       if (directories.size > 0) {
-        const globs = Array.from(directories).map((dir) => path.join(dir, "*"))
+        const globs = Array.from(directories).map((dir) => {
+          // Preserve POSIX-looking paths with /s, even on Windows
+          if (dir.startsWith("/")) return `${dir.replace(/[\\/]+$/, "")}/*`
+          return path.join(dir, "*")
+        })
         await ctx.ask({
           permission: "external_directory",
           patterns: globs,
@@ -159,7 +164,7 @@ export const BashTool = Tool.define("bash", async () => {
           permission: "bash",
           patterns: Array.from(patterns),
           always: Array.from(always),
-          metadata: {},
+          metadata: { command: params.command, rules: Array.from(rules) }, // kilocode_change
         })
       }
 
@@ -177,6 +182,7 @@ export const BashTool = Tool.define("bash", async () => {
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: process.platform !== "win32",
+        windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
       })
 
       let output = ""
@@ -189,8 +195,12 @@ export const BashTool = Tool.define("bash", async () => {
         },
       })
 
-      const append = (chunk: Buffer) => {
-        output += chunk.toString()
+      // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+      // separate decoder per stream so partial bytes from one pipe don't corrupt the other
+      const stdoutDecoder = new StringDecoder("utf8")
+      const stderrDecoder = new StringDecoder("utf8")
+      const append = (decoder: StringDecoder) => (chunk: Buffer) => {
+        output += decoder.write(chunk)
         ctx.metadata({
           metadata: {
             // truncate the metadata to avoid GIANT blobs of data (has nothing to do w/ what agent can access)
@@ -199,9 +209,10 @@ export const BashTool = Tool.define("bash", async () => {
           },
         })
       }
+      // kilocode_change end
 
-      proc.stdout?.on("data", append)
-      proc.stderr?.on("data", append)
+      proc.stdout?.on("data", append(stdoutDecoder))
+      proc.stderr?.on("data", append(stderrDecoder))
 
       let timedOut = false
       let aborted = false
@@ -232,7 +243,9 @@ export const BashTool = Tool.define("bash", async () => {
           ctx.abort.removeEventListener("abort", abortHandler)
         }
 
-        proc.once("exit", () => {
+        // kilocode_change - use "close" instead of "exit" so stdio streams are fully drained
+        // before we flush the StringDecoders and read `output`
+        proc.once("close", () => {
           exited = true
           cleanup()
           resolve()
@@ -244,6 +257,10 @@ export const BashTool = Tool.define("bash", async () => {
           reject(error)
         })
       })
+
+      // kilocode_change - flush any trailing buffered bytes from decoders
+      output += stdoutDecoder.end()
+      output += stderrDecoder.end()
 
       const resultMetadata: string[] = []
 

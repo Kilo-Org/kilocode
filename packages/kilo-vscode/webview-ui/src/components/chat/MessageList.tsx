@@ -1,59 +1,30 @@
 /**
  * MessageList component
- * Scrollable list of messages with auto-scroll behavior.
+ * Scrollable turn-based message list.
+ * Each user message is rendered as a VscodeSessionTurn — a custom component that
+ * renders all assistant parts as a flat, verbose list with no context grouping,
+ * and fully expands sub-agent (task tool) parts inline.
  * Shows recent sessions in the empty state for quick resumption.
  */
 
-import { Component, For, Show, createSignal, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { Component, For, Show, createEffect, createMemo, onCleanup, JSX } from "solid-js"
+import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
-import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
-import { Message } from "./Message"
-import { CloudImportDialog } from "./CloudImportDialog"
-
-/** Inline working/retry indicator shown below messages while the agent is active. */
-const WorkingIndicator: Component = () => {
-  const session = useSession()
-  const language = useLanguage()
-  const [elapsed, setElapsed] = createSignal(0)
-
-  // Tick every second while busy
-  createEffect(() => {
-    const start = session.busySince()
-    if (!start) {
-      setElapsed(0)
-      return
-    }
-    setElapsed(Math.floor((Date.now() - start) / 1000))
-    const timer = setInterval(() => {
-      setElapsed(Math.floor((Date.now() - start) / 1000))
-    }, 1000)
-    onCleanup(() => clearInterval(timer))
-  })
-
-  const info = () => session.statusInfo()
-  const text = () => {
-    const i = info()
-    if (i.type === "retry") return language.t("session.status.retrying", { attempt: i.attempt, message: i.message })
-    return session.statusText() ?? language.t("session.status.working")
-  }
-
-  return (
-    <Show when={info().type !== "idle"}>
-      <div class="working-indicator" role="status">
-        <Spinner />
-        <span class="working-text">{text()}</span>
-        <Show when={elapsed() > 0}>
-          <span class="working-elapsed">{elapsed()}s</span>
-        </Show>
-      </div>
-    </Show>
-  )
-}
+import { FeedbackDialog } from "./FeedbackDialog"
+import { VscodeSessionTurn } from "./VscodeSessionTurn"
+import { RevertBanner } from "./RevertBanner"
+import { AccountSwitcher } from "../shared/AccountSwitcher"
+import { KiloNotifications } from "./KiloNotifications"
+import { WorkingIndicator } from "../shared/WorkingIndicator"
+import { QuestionDock } from "./QuestionDock"
+import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
+import type { QuestionRequest } from "../../types/messages"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -70,6 +41,9 @@ const KiloLogo = (): JSX.Element => {
 
 interface MessageListProps {
   onSelectSession?: (id: string) => void
+  onShowHistory?: () => void
+  /** Non-tool question requests to render inline at the bottom of the message list */
+  questions?: () => QuestionRequest[]
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -78,69 +52,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const language = useLanguage()
   const dialog = useDialog()
 
-  let containerRef: HTMLDivElement | undefined
-  const [isAtBottom, setIsAtBottom] = createSignal(true)
-  const [showScrollButton, setShowScrollButton] = createSignal(false)
-
-  // Check if scrolled to bottom
-  const checkScrollPosition = () => {
-    if (!containerRef) return
-
-    const threshold = 50 // pixels from bottom
-    const atBottom = containerRef.scrollHeight - containerRef.scrollTop - containerRef.clientHeight < threshold
-    setIsAtBottom(atBottom)
-    setShowScrollButton(!atBottom)
-  }
-
-  // Scroll to bottom
-  const scrollToBottom = () => {
-    if (!containerRef) return
-    containerRef.scrollTo({
-      top: containerRef.scrollHeight,
-      behavior: "smooth",
-    })
-  }
-
-  // Auto-scroll when new messages arrive (if already at bottom)
-  createEffect(() => {
-    const msgs = session.messages()
-    if (msgs.length > 0 && isAtBottom()) {
-      requestAnimationFrame(() => {
-        if (containerRef) {
-          containerRef.scrollTop = containerRef.scrollHeight
-        }
-      })
-    }
+  const autoScroll = createAutoScroll({
+    working: () => session.status() !== "idle",
   })
 
-  // Auto-scroll when parts of the last message update (Phase 2)
-  createEffect(() => {
-    const msgs = session.messages()
-    const last = msgs[msgs.length - 1]
-    if (!last) return
-    const parts = session.getParts(last.id)
-    if (parts.length > 0 && isAtBottom()) {
-      requestAnimationFrame(() => {
-        if (containerRef) {
-          containerRef.scrollTop = containerRef.scrollHeight
-        }
-      })
-    }
-  })
+  // Resume auto-scroll when a bottom-dock permission/question is dismissed
+  const onResumeAutoScroll = () => autoScroll.resume()
+  window.addEventListener("resumeAutoScroll", onResumeAutoScroll)
+  onCleanup(() => window.removeEventListener("resumeAutoScroll", onResumeAutoScroll))
 
-  // Set up scroll listener
-  createEffect(() => {
-    if (!containerRef) return
-
-    containerRef.addEventListener("scroll", checkScrollPosition)
-    onCleanup(() => {
-      containerRef?.removeEventListener("scroll", checkScrollPosition)
-    })
-  })
-
-  // Load sessions once connected so the recent list is available immediately.
-  // Uses createEffect instead of onMount so it retries when connection state changes.
-  // The flag prevents redundant loads (e.g. after deleting all sessions).
   let loaded = false
   createEffect(() => {
     if (!loaded && server.isConnected() && session.sessions().length === 0) {
@@ -149,72 +69,114 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
   })
 
-  const messages = () => session.messages()
-  const isEmpty = () => messages().length === 0 && !session.loading()
+  const allUserMessages = () => session.userMessages()
+  const boundary = () => session.revert()?.messageID
+  const userMessages = createMemo(() => {
+    const b = boundary()
+    if (!b) return allUserMessages()
+    return allUserMessages().filter((m) => m.id < b)
+  })
+  const isEmpty = () => userMessages().length === 0 && !session.loading() && !boundary()
 
-  // 3 most recently active sessions
   const recent = createMemo(() =>
     [...session.sessions()]
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 3),
   )
 
+  const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
+
+  const activeUserIndex = createMemo(() => {
+    const active = activeUserID()
+    if (!active) return -1
+    return userMessages().findIndex((msg) => msg.id === active)
+  })
+
   return (
     <div class="message-list-container">
-      <div ref={containerRef} class="message-list" role="log" aria-live="polite">
-        <Show when={session.loading()}>
-          <div class="message-list-loading" role="status">
-            <Spinner />
-            <span>{language.t("session.messages.loading")}</span>
-          </div>
-        </Show>
-        <Show when={isEmpty()}>
-          <div class="message-list-empty">
-            <KiloLogo />
-            <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
-            <Show when={recent().length > 0 && props.onSelectSession}>
-              <div class="recent-sessions">
-                <span class="recent-sessions-label">{language.t("session.recent")}</span>
-                <For each={recent()}>
-                  {(s) => (
-                    <button class="recent-session-item" onClick={() => props.onSelectSession?.(s.id)}>
-                      <span class="recent-session-title">{s.title || language.t("session.untitled")}</span>
-                      <span class="recent-session-date">{formatRelativeDate(s.updatedAt)}</span>
+      <Show when={isEmpty()}>
+        <div class="welcome-header">
+          <AccountSwitcher class="account-switcher-welcome" />
+          <KiloNotifications />
+        </div>
+      </Show>
+      <div
+        ref={autoScroll.scrollRef}
+        onScroll={autoScroll.handleScroll}
+        class="message-list"
+        role="log"
+        aria-live="polite"
+      >
+        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : undefined}>
+          <Show when={session.loading()}>
+            <div class="message-list-loading" role="status">
+              <Spinner />
+              <span>{language.t("session.messages.loading")}</span>
+            </div>
+          </Show>
+          <Show when={isEmpty()}>
+            <div class="message-list-empty">
+              <KiloLogo />
+              <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+              <Show when={recent().length > 0 && props.onSelectSession}>
+                <div class="recent-sessions">
+                  <span class="recent-sessions-label">{language.t("session.recent")}</span>
+                  <For each={recent()}>
+                    {(s) => (
+                      <button class="recent-session-item" onClick={() => props.onSelectSession?.(s.id)}>
+                        <span class="recent-session-title">{s.title || language.t("session.untitled")}</span>
+                        <span class="recent-session-date">{formatRelativeDate(s.updatedAt)}</span>
+                      </button>
+                    )}
+                  </For>
+                  <Show when={props.onShowHistory}>
+                    <button class="show-history-btn" onClick={() => props.onShowHistory?.()}>
+                      <Icon name="history" size="small" />
+                      {language.t("session.showHistory")}
                     </button>
-                  )}
-                </For>
-              </div>
-            </Show>
-            <Button
-              variant="ghost"
-              size="small"
-              onClick={() =>
-                dialog.show(() => (
-                  <CloudImportDialog
-                    onImport={(id) => {
-                      session.selectCloudSession(id)
-                    }}
+                  </Show>
+                </div>
+              </Show>
+              <button class="feedback-button" onClick={() => dialog.show(() => <FeedbackDialog />)}>
+                <Icon name="bubble-5" size="small" />
+                {language.t("feedback.button")}
+              </button>
+            </div>
+          </Show>
+          <Show when={!session.loading()}>
+            <For each={userMessages()}>
+              {(msg, index) => {
+                const queued = createMemo(() => {
+                  const active = activeUserIndex()
+                  if (active === -1) return false
+                  return index() > active
+                })
+
+                return (
+                  <VscodeSessionTurn
+                    sessionID={session.currentSessionID() ?? ""}
+                    messageID={msg.id}
+                    queued={queued()}
                   />
-                ))
-              }
-            >
-              {language.t("session.cloud.import")}
-            </Button>
-          </div>
-        </Show>
-        <Show when={!session.loading()}>
-          <For each={messages()}>{(message) => <Message message={message} />}</For>
-          <WorkingIndicator />
-        </Show>
+                )
+              }}
+            </For>
+            <Show when={boundary()}>
+              <RevertBanner />
+            </Show>
+            <WorkingIndicator />
+            <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
+          </Show>
+        </div>
       </div>
 
-      <Show when={showScrollButton()}>
+      <Show when={autoScroll.userScrolled()}>
         <button
           class="scroll-to-bottom-button"
-          onClick={scrollToBottom}
+          onClick={() => autoScroll.resume()}
           aria-label={language.t("session.messages.scrollToBottom")}
         >
-          ↓
+          <Icon name="arrow-down-to-line" />
         </button>
       </Show>
     </div>

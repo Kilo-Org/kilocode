@@ -4,10 +4,16 @@ function truthy(key: string) {
   return value === "true" || value === "1"
 }
 
+function falsy(key: string) {
+  const value = process.env[key]?.toLowerCase()
+  return value === "false" || value === "0"
+}
+
 export namespace Flag {
   export const KILO_AUTO_SHARE = truthy("KILO_AUTO_SHARE")
   export const KILO_GIT_BASH_PATH = process.env["KILO_GIT_BASH_PATH"]
   export const KILO_CONFIG = process.env["KILO_CONFIG"]
+  export declare const KILO_TUI_CONFIG: string | undefined
   export declare const KILO_CONFIG_DIR: string | undefined
   export const KILO_CONFIG_CONTENT = process.env["KILO_CONFIG_CONTENT"]
   export const KILO_DISABLE_AUTOUPDATE = truthy("KILO_DISABLE_AUTOUPDATE")
@@ -47,9 +53,11 @@ export namespace Flag {
   export const KILO_EXPERIMENTAL_LSP_TOOL = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_LSP_TOOL")
   export const KILO_DISABLE_FILETIME_CHECK = truthy("KILO_DISABLE_FILETIME_CHECK")
   export const KILO_EXPERIMENTAL_PLAN_MODE = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_PLAN_MODE")
-  export const KILO_EXPERIMENTAL_MARKDOWN = truthy("KILO_EXPERIMENTAL_MARKDOWN")
+  export const KILO_EXPERIMENTAL_WORKSPACES_TUI = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES_TUI")
+  export const KILO_EXPERIMENTAL_MARKDOWN = !falsy("KILO_EXPERIMENTAL_MARKDOWN")
   export const KILO_MODELS_URL = process.env["KILO_MODELS_URL"]
   export const KILO_MODELS_PATH = process.env["KILO_MODELS_PATH"]
+  export const KILO_SKIP_MIGRATIONS = truthy("KILO_SKIP_MIGRATIONS")
 
   function number(key: string) {
     const value = process.env[key]
@@ -57,6 +65,8 @@ export namespace Flag {
     const parsed = Number(value)
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
   }
+
+  export const KILO_SESSION_RETRY_LIMIT = number("KILO_SESSION_RETRY_LIMIT")
 }
 
 // Dynamic getter for KILO_DISABLE_PROJECT_CONFIG
@@ -65,6 +75,17 @@ export namespace Flag {
 Object.defineProperty(Flag, "KILO_DISABLE_PROJECT_CONFIG", {
   get() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")
+  },
+  enumerable: true,
+  configurable: false,
+})
+
+// Dynamic getter for KILO_TUI_CONFIG
+// This must be evaluated at access time, not module load time,
+// because tests and external tooling may set this env var at runtime
+Object.defineProperty(Flag, "KILO_TUI_CONFIG", {
+  get() {
+    return process.env["KILO_TUI_CONFIG"]
   },
   enumerable: true,
   configurable: false,

@@ -30,6 +30,7 @@ function init() {
   const [active, setActive] = createSignal<Active | undefined>()
   const timer = { current: undefined as ReturnType<typeof setTimeout> | undefined }
   const lock = { value: false }
+  const hasPopover = () => !!document.querySelector('[data-component="popover-content"]')
 
   onCleanup(() => {
     if (timer.current === undefined) return
@@ -63,6 +64,7 @@ function init() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
+      if (hasPopover()) return
       close()
       event.preventDefault()
       event.stopPropagation()

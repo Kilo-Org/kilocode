@@ -6,10 +6,8 @@ export const dict = {
   "kilocode:autocomplete.statusBar.warning": "$(warning) Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.basic": "Kilo Code Autocomplete",
   "kilocode:autocomplete.statusBar.tooltip.disabled": "Kilo Code Autocomplete（無効）",
-  "kilocode:autocomplete.statusBar.tooltip.noCredits":
-    "**アカウントにクレジットがありません**\n\nKilo Code アカウントにクレジットがありません。オートコンプリートを使用するには、アカウントにクレジットを追加してください。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
   "kilocode:autocomplete.statusBar.tooltip.noUsableProvider":
-    "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く](command:kilo-code.settingsButtonClicked)",
+    "**オートコンプリートモデルが設定されていません**\n\nオートコンプリートを有効にするには、これらのサポートされているプロバイダーのいずれかでプロファイルを追加してください: {{providers}}。\n\n[設定を開く]({{command}})",
   "kilocode:autocomplete.statusBar.tooltip.sessionTotal": "セッション合計コスト:",
   "kilocode:autocomplete.statusBar.tooltip.provider": "プロバイダー:",
   "kilocode:autocomplete.statusBar.tooltip.model": "モデル:",
@@ -43,4 +41,9 @@ export const dict = {
     "Kilo Code AutocompleteがGitHub Copilotとの競合によってブロックされています。これを修正するには、Copilotのインライン提案を無効にする必要があります。",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilotを無効にする",
   "kilocode:autocomplete.incompatibilityExtensionPopup.disableInlineAssist": "Autocompleteを無効にする",
+  "kilocode:autocomplete.creditsExhausted.message":
+    "アカウントのクレジットが残っていないため、Kilo Code Autocompleteが一時停止されました。オートコンプリートを再開するにはクレジットを追加してください。",
+  "kilocode:autocomplete.creditsExhausted.addCredits": "クレジットを追加",
+  "kilocode:autocomplete.authError.message":
+    "認証エラーのため、Kilo Code Autocompleteが一時停止されました。再度サインインしてください。",
 }

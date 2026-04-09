@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import os from "os"
 import path from "path"
 import { BashTool } from "../../src/tool/bash"
 import { Instance } from "../../src/project/instance"
@@ -138,14 +139,14 @@ describe("tool.bash permissions", () => {
         await bash.execute(
           {
             command: "ls",
-            workdir: "/tmp",
-            description: "List /tmp",
+            workdir: os.tmpdir(),
+            description: "List temp dir",
           },
           testCtx,
         )
         const extDirReq = requests.find((r) => r.permission === "external_directory")
         expect(extDirReq).toBeDefined()
-        expect(extDirReq!.patterns).toContain("/tmp/*")
+        expect(extDirReq!.patterns).toContain(path.join(os.tmpdir(), "*"))
       },
     })
   })
@@ -203,8 +204,8 @@ describe("tool.bash permissions", () => {
 
         await bash.execute(
           {
-            command: "rm tmpfile",
-            description: "Remove tmpfile",
+            command: `rm -rf ${path.join(tmp.path, "nested")}`,
+            description: "remove nested dir",
           },
           testCtx,
         )
@@ -305,8 +306,10 @@ describe("tool.bash permissions", () => {
         await bash.execute({ command: "ls -la", description: "List" }, testCtx)
         const bashReq = requests.find((r) => r.permission === "bash")
         expect(bashReq).toBeDefined()
-        const pattern = bashReq!.always[0]
-        expect(pattern).toBe("ls *")
+        // kilocode_change start — hierarchy adds base wildcard + exact
+        expect(bashReq!.always).toContain("ls *")
+        expect(bashReq!.metadata.rules).toContain("ls -la")
+        // kilocode_change end
       },
     })
   })
@@ -366,7 +369,8 @@ describe("tool.bash truncation", () => {
           ctx,
         )
         expect((result.metadata as any).truncated).toBe(false)
-        expect(result.output).toBe("hello\n")
+        const eol = process.platform === "win32" ? "\r\n" : "\n"
+        expect(result.output).toBe(`hello${eol}`)
       },
     })
   })

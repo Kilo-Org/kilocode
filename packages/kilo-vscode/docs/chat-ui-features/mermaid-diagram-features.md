@@ -1,27 +1,21 @@
 # Mermaid Diagram Features
 
-Interactive actions around Mermaid diagram rendering, error handling, and AI-assisted fixes.
+**Priority:** P2
 
-## Location
+No mermaid rendering exists in the VS Code extension or kilo-ui.
 
-- [`webview-ui/src/components/common/MermaidBlock.tsx`](../../webview-ui/src/components/common/MermaidBlock.tsx:1)
-- [`webview-ui/src/components/common/MermaidButton.tsx`](../../webview-ui/src/components/common/MermaidButton.tsx:1)
+## Location (kilocode-legacy)
 
-## Interactions
+These components exist in the [kilocode-legacy](https://github.com/Kilo-Org/kilocode-legacy) repo, not in this extension:
 
-- **"Fix with AI" button** - Auto-fixes mermaid syntax errors using AI (`MermaidSyntaxFixer`)
+- `webview-ui/src/components/common/MermaidBlock.tsx`
+- `webview-ui/src/components/common/MermaidButton.tsx`
+
+## Remaining Work
+
+- Mermaid diagram rendering in chat messages (code blocks with `mermaid` language tag)
+- "Fix with AI" button for mermaid syntax errors — route to CLI
 - Copy button for diagram code
 - Click to open rendered diagram as PNG in editor
 - Error expansion with original code display
-- Loading states during processing ("Fixing syntax...", "Loading...")
-- Shows both fixed and original versions when syntax fix is applied
-
-## Suggested migration
-
-**Reimplement?** Mostly no for rendering; **yes/adapter work** for "Fix with AI".
-
-- Mermaid rendering/copy/open-PNG is a webview concern; keep the existing UI.
-- The **"Fix with AI"** action currently relies on Kilo-side AI plumbing. With the agent runtime moving to Kilo CLI per [`docs/opencode-core/opencode-migration-plan.md`](docs/opencode-core/opencode-migration-plan.md:1), you likely need to re-route this button to:
-  - either a dedicated Kilo CLI prompt/tool that returns corrected Mermaid source, or
-  - a small Kilo-side helper that asks Kilo CLI to fix the snippet (so the button remains functional without the legacy Kilo orchestration loop).
-- Kilo CLI UI doesn’t appear to ship an equivalent Mermaid renderer/fixer (only a Mermaid file icon is present in [`packages/ui/src/components/file-icons/types.ts`](https://github.com/Kilo-Org/kilocode/blob/main/packages/ui/src/components/file-icons/types.ts:1)).
+- Loading states during processing

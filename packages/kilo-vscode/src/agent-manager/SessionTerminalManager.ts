@@ -1,18 +1,52 @@
-import * as vscode from "vscode"
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 
+// ---------------------------------------------------------------------------
+// TerminalHost — narrow interface for the VS Code capabilities this module
+// needs.  Implemented by AgentManagerProvider using the real vscode API.
+// ---------------------------------------------------------------------------
+
+export interface TerminalHandle {
+  show(preserveFocus: boolean): void
+  dispose(): void
+  readonly exitStatus: { code?: number } | undefined
+}
+
+export interface TerminalHost {
+  createTerminal(opts: { cwd: string; name: string }): TerminalHandle
+  activeTerminal(): TerminalHandle | undefined
+  repoPath(): string | undefined
+  showWarning(msg: string): void
+  setContext(key: string, value: boolean): void
+  onTerminalClosed(cb: (handle: TerminalHandle) => void): Disposable
+  onActiveTerminalChanged(cb: (handle: TerminalHandle | undefined) => void): Disposable
+  registerCommand(id: string, handler: (...args: unknown[]) => Promise<unknown>): Disposable
+  executeCommand(id: string, ...args: unknown[]): Promise<unknown>
+}
+
+export interface Disposable {
+  dispose(): void
+}
+
 /**
- * Manages VS Code terminals for agent manager sessions.
+ * Manages terminals for agent manager sessions.
  * Each session can have an associated terminal that opens in the session's worktree directory,
- * or the main workspace folder for local sessions.
+ * or the main repo folder for local sessions.
  */
 export class SessionTerminalManager {
-  private terminals = new Map<string, { terminal: vscode.Terminal; cwd: string }>()
-  private disposables: vscode.Disposable[] = []
+  private static readonly LOCAL_KEY = "__local__"
 
-  constructor(private log: (msg: string) => void) {
+  private terminals = new Map<string, { terminal: TerminalHandle; cwd: string }>()
+  private disposables: Disposable[] = []
+  private commandHandlers = new Map<string, (...args: unknown[]) => Promise<unknown>>()
+  private commandDisposables = new Map<string, Disposable>()
+  private panelOpen = false
+
+  constructor(
+    private log: (msg: string) => void,
+    private host: TerminalHost,
+  ) {
     this.disposables.push(
-      vscode.window.onDidCloseTerminal((terminal) => {
+      host.onTerminalClosed((terminal) => {
         for (const [sessionId, entry] of this.terminals) {
           if (entry.terminal !== terminal) continue
           this.terminals.delete(sessionId)
@@ -21,28 +55,46 @@ export class SessionTerminalManager {
         }
         this.updateContextKey()
       }),
-      vscode.window.onDidChangeActiveTerminal((terminal) => {
+      host.onActiveTerminalChanged((terminal) => {
         const managed = terminal ? this.isManaged(terminal) : false
-        vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
+        if (terminal) this.panelOpen = true
+        void host.setContext("kilo-code.agentTerminalFocus", managed)
       }),
     )
+
+    this.registerPanelCommand("workbench.action.togglePanel", () => {
+      this.panelOpen = !this.panelOpen
+      this.log(`panel visibility toggled via command (open=${this.panelOpen})`)
+    })
+    this.registerPanelCommand("workbench.action.closePanel", () => {
+      this.panelOpen = false
+      this.log("panel hidden via command")
+    })
+    this.registerPanelCommand("workbench.action.focusPanel", () => {
+      this.panelOpen = true
+      this.log("panel focused via command")
+    })
+    this.registerPanelCommand("workbench.action.terminal.focus", () => {
+      this.panelOpen = true
+      this.log("terminal focused via command")
+    })
   }
 
   /**
    * Show (or create) a terminal for the given session.
-   * Resolves CWD from the worktree state, falling back to workspace root.
+   * Resolves CWD from the worktree state, falling back to repo root.
    */
   showTerminal(sessionId: string, state: WorktreeStateManager | undefined): void {
     // If terminal already exists, just focus it
     if (this.showExisting(sessionId, false)) return
 
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    const repoPath = this.host.repoPath()
     const worktreePath = state?.directoryFor(sessionId)
-    const cwd = worktreePath ?? workspacePath
+    const cwd = worktreePath ?? repoPath
 
     if (!cwd) {
       this.log(`showTerminal: no cwd resolved for session ${sessionId}`)
-      vscode.window.showWarningMessage("Open a folder that contains a git repository to use worktrees")
+      this.host.showWarning("Open a folder that contains a git repository to use worktrees")
       return
     }
 
@@ -51,6 +103,54 @@ export class SessionTerminalManager {
     const name = worktree ? `Agent: ${worktree.branch}` : "Agent: local"
 
     this.showOrCreate(sessionId, cwd, name)
+  }
+
+  /**
+   * Show (or create) a terminal for the local repo (no session required).
+   * Used when the user triggers a terminal in local mode without an active session.
+   */
+  showLocalTerminal(): void {
+    if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
+
+    const cwd = this.host.repoPath()
+    if (!cwd) {
+      this.log("showLocalTerminal: no repo folder open")
+      this.host.showWarning("Open a folder to use the local terminal")
+      return
+    }
+
+    this.showOrCreate(SessionTerminalManager.LOCAL_KEY, cwd, "Agent: local")
+  }
+
+  /**
+   * Show the existing local terminal if one was previously created (used on context switch).
+   */
+  showExistingLocal(): boolean {
+    return this.showExisting(SessionTerminalManager.LOCAL_KEY)
+  }
+
+  /**
+   * Sync terminal on session switch: only switch terminals when panel is open.
+   */
+  syncOnSessionSwitch(sessionId: string): boolean {
+    if (!this.panelOpen) {
+      this.log(`syncOnSessionSwitch: panel hidden, skipping session ${sessionId}`)
+      return false
+    }
+
+    return this.showExisting(sessionId)
+  }
+
+  /**
+   * Sync local terminal on context switch: only switch when panel is open.
+   */
+  syncLocalOnSessionSwitch(): boolean {
+    if (!this.panelOpen) {
+      this.log("syncLocalOnSessionSwitch: panel hidden, skipping")
+      return false
+    }
+
+    return this.showExistingLocal()
   }
 
   /**
@@ -69,6 +169,7 @@ export class SessionTerminalManager {
     }
 
     entry.terminal.show(preserveFocus)
+    this.panelOpen = true
     this.log(`showExisting: revealed terminal for session ${sessionId}`)
     return true
   }
@@ -82,13 +183,44 @@ export class SessionTerminalManager {
   }
 
   dispose(): void {
-    vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", false)
+    void this.host.setContext("kilo-code.agentTerminalFocus", false)
     for (const entry of this.terminals.values()) entry.terminal.dispose()
     this.terminals.clear()
+    for (const d of this.commandDisposables.values()) d.dispose()
+    this.commandDisposables.clear()
+    this.commandHandlers.clear()
     for (const d of this.disposables) d.dispose()
   }
 
-  private isManaged(terminal: vscode.Terminal): boolean {
+  private registerPanelCommand(id: string, onAfterRun: () => void): void {
+    const handler = async (...args: unknown[]) => {
+      const result = await this.runOriginalCommand(id, args)
+      onAfterRun()
+      return result
+    }
+
+    this.commandHandlers.set(id, handler)
+    this.commandDisposables.set(id, this.host.registerCommand(id, handler))
+  }
+
+  private async runOriginalCommand(id: string, args: unknown[]): Promise<unknown> {
+    const disposable = this.commandDisposables.get(id)
+    if (!disposable) return this.host.executeCommand(id, ...args)
+
+    disposable.dispose()
+    this.commandDisposables.delete(id)
+
+    try {
+      return await this.host.executeCommand(id, ...args)
+    } finally {
+      const handler = this.commandHandlers.get(id)
+      if (!handler) return
+      const replacement = this.host.registerCommand(id, handler)
+      this.commandDisposables.set(id, replacement)
+    }
+  }
+
+  private isManaged(terminal: TerminalHandle): boolean {
     for (const entry of this.terminals.values()) {
       if (entry.terminal === terminal) return true
     }
@@ -96,9 +228,10 @@ export class SessionTerminalManager {
   }
 
   private updateContextKey(): void {
-    const active = vscode.window.activeTerminal
+    const active = this.host.activeTerminal()
     const managed = active ? this.isManaged(active) : false
-    vscode.commands.executeCommand("setContext", "kilo-code.agentTerminalFocus", managed)
+    if (active) this.panelOpen = true
+    void this.host.setContext("kilo-code.agentTerminalFocus", managed)
   }
 
   private showOrCreate(sessionId: string, cwd: string, name: string): void {
@@ -119,17 +252,14 @@ export class SessionTerminalManager {
     }
 
     if (!entry) {
-      const terminal = vscode.window.createTerminal({
-        cwd,
-        name,
-        iconPath: new vscode.ThemeIcon("terminal"),
-      })
+      const terminal = this.host.createTerminal({ cwd, name })
       entry = { terminal, cwd }
       this.terminals.set(sessionId, entry)
       this.log(`showTerminal: created terminal for session ${sessionId} (cwd=${cwd})`)
     }
 
     entry.terminal.show(false)
+    this.panelOpen = true
     this.updateContextKey()
   }
 }

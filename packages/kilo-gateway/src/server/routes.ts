@@ -1,4 +1,3 @@
-// kilocode_change - Kilo Gateway server routes
 /**
  * Kilo Gateway specific routes
  * Handles profile fetching and organization management for Kilo Gateway provider
@@ -8,10 +7,11 @@
 
 import { fetchProfile, fetchBalance } from "../api/profile.js"
 import { fetchKilocodeNotifications, KilocodeNotificationSchema } from "../api/notifications.js"
-import { KILO_API_BASE, HEADER_FEATURE } from "../api/constants.js" // kilocode_change - added HEADER_FEATURE
-import { buildKiloHeaders } from "../headers.js" // kilocode_change
-import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js" // kilocode_change
-import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js" // kilocode_change
+import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
+import { KILO_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
+import { buildKiloHeaders } from "../headers.js"
+import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
+import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
 
 // Type definitions for OpenCode dependencies (injected at runtime)
 type Hono = any
@@ -20,6 +20,7 @@ type Validator = any
 type Resolver = any
 type Errors = any
 type Auth = any
+type ModelCache = { clear: (providerID: string) => void }
 type Z = any
 
 interface KiloRoutesDeps extends ImportDeps {
@@ -29,6 +30,7 @@ interface KiloRoutesDeps extends ImportDeps {
   resolver: Resolver
   errors: Errors
   Auth: Auth
+  ModelCache: ModelCache
   z: Z
 }
 
@@ -73,6 +75,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     Bus,
     SessionCreatedEvent,
     Identifier,
+    ModelCache,
   } = deps
 
   const Organization = z.object({
@@ -95,6 +98,27 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     profile: Profile,
     balance: Balance.nullable(),
     currentOrgId: z.string().nullable(),
+  })
+
+  const FimStreamChunk = z.object({
+    choices: z
+      .array(
+        z.object({
+          delta: z
+            .object({
+              content: z.string().optional(),
+            })
+            .optional(),
+        }),
+      )
+      .optional(),
+    usage: z
+      .object({
+        prompt_tokens: z.number().optional(),
+        completion_tokens: z.number().optional(),
+      })
+      .optional(),
+    cost: z.number().optional(),
   })
 
   return new Hono()
@@ -180,7 +204,83 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           ...(organizationId && { accountId: organizationId }),
         })
 
+        ModelCache.clear("kilo")
+        clearModesCache()
+
         return c.json(true)
+      },
+    )
+    .get(
+      "/modes",
+      describeRoute({
+        summary: "Get organization custom modes",
+        description: "Fetch custom modes defined for the current organization",
+        operationId: "kilo.modes",
+        responses: {
+          200: {
+            description: "Organization modes list",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    modes: z.array(
+                      z.object({
+                        id: z.string(),
+                        organization_id: z.string(),
+                        name: z.string(),
+                        slug: z.string(),
+                        created_by: z.string(),
+                        created_at: z.string(),
+                        updated_at: z.string(),
+                        config: z.object({
+                          roleDefinition: z.string().optional(),
+                          whenToUse: z.string().optional(),
+                          description: z.string().optional(),
+                          customInstructions: z.string().optional(),
+                          groups: z
+                            .array(
+                              z.union([
+                                z.string(),
+                                z.tuple([
+                                  z.string(),
+                                  z.object({ fileRegex: z.string().optional(), description: z.string().optional() }),
+                                ]),
+                              ]),
+                            )
+                            .optional(),
+                        }),
+                      }),
+                    ),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c: any) => {
+        const auth = await Auth.get("kilo")
+
+        if (!auth || auth.type !== "oauth") {
+          return c.json({ modes: [] })
+        }
+
+        const token = auth.access
+        if (!token) {
+          return c.json({ modes: [] })
+        }
+
+        const orgId = auth.accountId
+        if (!orgId) {
+          return c.json({ modes: [] })
+        }
+
+        try {
+          const modes = await fetchOrganizationModes(token, orgId)
+          return c.json({ modes })
+        } catch {
+          return c.json({ modes: [] })
+        }
       },
     )
     .post(
@@ -194,7 +294,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
             description: "Streaming FIM completion response",
             content: {
               "text/event-stream": {
-                schema: resolver(z.any()),
+                schema: resolver(FimStreamChunk),
               },
             },
           },
@@ -223,6 +323,8 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           return c.json({ error: "No valid token found" }, 401)
         }
 
+        const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+
         const { prefix, suffix, model, maxTokens, temperature } = c.req.valid("json")
         const fimModel = model ?? "mistralai/codestral-2501"
         const fimMaxTokens = maxTokens ?? 256
@@ -231,16 +333,16 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         const baseApiUrl = KILO_API_BASE + "/api/"
         const endpoint = new URL("fim/completions", baseApiUrl)
 
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          [HEADER_FEATURE]: "autocomplete",
+        }
+
         const response = await fetch(endpoint, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-            // kilocode_change start - include kilo headers with autocomplete feature override
-            ...buildKiloHeaders(),
-            [HEADER_FEATURE]: "autocomplete",
-            // kilocode_change end
-          },
+          headers,
           body: JSON.stringify({
             model: fimModel,
             prompt: prefix,
@@ -391,6 +493,126 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         } catch (err: any) {
           console.error("[Kilo Gateway] cloud/session/import: unhandled error", err?.message ?? err)
           return c.json({ error: "Internal error" }, 500)
+        }
+      },
+    )
+    .get(
+      "/claw/status",
+      describeRoute({
+        summary: "Get KiloClaw instance status",
+        description: "Fetch the user's KiloClaw instance status via the KiloClaw worker",
+        operationId: "kilo.claw.status",
+        responses: {
+          200: {
+            description: "Instance status",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    status: z
+                      .enum(["provisioned", "starting", "restarting", "running", "stopped", "destroying"])
+                      .nullable(),
+                    sandboxId: z.string().optional(),
+                    flyRegion: z.string().optional(),
+                    machineSize: z.object({ cpus: z.number(), memory_mb: z.number() }).optional(),
+                    openclawVersion: z.string().nullable().optional(),
+                    lastStartedAt: z.string().nullable().optional(),
+                    lastStoppedAt: z.string().nullable().optional(),
+                    channelCount: z.number().optional(),
+                    secretCount: z.number().optional(),
+                    userId: z.string().optional(),
+                  }),
+                ),
+              },
+            },
+          },
+          ...errors(401, 502),
+        },
+      }),
+      async (c: any) => {
+        try {
+          const auth = await Auth.get("kilo")
+          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          if (!token) return c.json({ error: "No valid token found" }, 401)
+
+          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
+          if (organizationId) {
+            headers[HEADER_ORGANIZATIONID] = organizationId
+          }
+
+          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/status`, { headers })
+
+          if (!response.ok) {
+            const text = await response.text()
+            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+          }
+
+          return c.json(await response.json())
+        } catch (err: any) {
+          console.error("[Kilo Gateway] claw/status: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach KiloClaw" }, 502)
+        }
+      },
+    )
+    .get(
+      "/claw/chat-credentials",
+      describeRoute({
+        summary: "Get KiloClaw chat credentials",
+        description: "Fetch Stream Chat credentials for the user's KiloClaw instance",
+        operationId: "kilo.claw.chatCredentials",
+        responses: {
+          200: {
+            description: "Stream Chat credentials or null",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z
+                    .object({
+                      apiKey: z.string(),
+                      userId: z.string(),
+                      userToken: z.string(),
+                      channelId: z.string(),
+                    })
+                    .nullable(),
+                ),
+              },
+            },
+          },
+          ...errors(401, 502),
+        },
+      }),
+      async (c: any) => {
+        try {
+          const auth = await Auth.get("kilo")
+          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          if (!token) return c.json({ error: "No valid token found" }, 401)
+
+          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          }
+          if (organizationId) {
+            headers[HEADER_ORGANIZATIONID] = organizationId
+          }
+
+          const response = await fetch(`${KILO_API_BASE}/api/kiloclaw/chat-credentials`, { headers })
+
+          if (!response.ok) {
+            const text = await response.text()
+            return c.json({ error: `KiloClaw request failed: ${response.status} ${text}` }, response.status as any)
+          }
+
+          return c.json(await response.json())
+        } catch (err: any) {
+          console.error("[Kilo Gateway] claw/chat-credentials: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach KiloClaw" }, 502)
         }
       },
     )

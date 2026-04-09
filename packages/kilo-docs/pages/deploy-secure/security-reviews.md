@@ -1,332 +1,199 @@
 ---
 title: "Security Reviews"
-description: "AI-powered security reviews for your code"
+description: "Contextualize dependency vulnerabilities with AI"
 ---
 
-# Agentic Security Reviews
+# Security Reviews
 
-## Overview
+Most teams are drowning in Dependabot alerts. The majority of reported CVEs aren't actually exploitable because the vulnerable code path is never used — but figuring that out manually doesn't scale.
 
-This spec proposes an **Agentic security reviewer based on cloud agents**, available as part of the **Teams or Enterprise plan**. The system is not just a dependency reviewer, it combines traditional security tooling (Dependabot, npm audit, etc.) with LLM-powered analysis to provide intelligent, context-aware security reviews of both code and dependencies.
+Kilo's Security Agent fixes this. It syncs your Dependabot alerts, triages them with AI, and performs deep codebase analysis to determine whether each vulnerability is actually reachable in your code. Non-exploitable findings can be auto-dismissed and synced back to GitHub.
 
-**Problem Statement:**
+Available on **Teams** and **Enterprise** plans.
 
-- Current security tools like Dependabot generate alerts without context about whether vulnerabilities are actually exploitable in our codebase
-- Manual security reviews don't scale and are inconsistent
-- Dependency vulnerability alerts create noise without actionable intelligence
-- We don't want just a dependency reviewer, we need comprehensive security code review
+---
 
-**Proposed Solution:**
-A two-stage agent system that:
+## Prerequisites
 
-1. **Agent/tools for finding and reporting security issues** - Aggregates findings from existing security tools (Dependabot, npm audit, brakeman, etc.) and performs code-level vulnerability detection
-2. **Agent for checking and validating issues** - Uses LLM-powered analysis to validate, prioritize, and contextualize security issues (optionally testing in sandbox)
-
-This approach takes input from tools like Dependabot or `npm audit` but goes beyond dependency review to include:
-
-- Security code review using sink-to-source taint analysis
-- Dependency review that scores risk levels based on how dependencies are actually used
-- Validation of whether reported issues are actually exploitable in context
-
-**Key Value Proposition:**
-For issues like we see today from Dependabot, we can automatically test the issue in a sandbox and verify that the issue is actually exploitable. As a first step, checking if the issue is even relevant for our codebase.
-
-Transform noisy security alerts into actionable, prioritized findings by automatically determining:
-
-- Whether a reported vulnerability is relevant to our codebase
-- Whether the vulnerability is actually exploitable given our usage patterns
-- What the actual risk level is in context
-
-## Relationship to Existing Code Review Agent
-
-We already have a **Code Review Agent** that performs PR-based code reviews with security as one of its focus areas. The Security Review Agent is **complementary**, not duplicative:
-
-**What the Code Review Agent does well:**
-
-- Spot obvious security anti-patterns in PR diffs (e.g., `innerHTML` usage, hardcoded secrets)
-- General code quality feedback that includes basic security awareness
-- Works on the PR diff context
-
-**What the Security Review Agent adds (that the Code Review Agent cannot do):**
-
-- **Dependency vulnerability contextualization** - When Dependabot says "lodash has a prototype pollution vulnerability", determine if our codebase actually uses the vulnerable function. This requires analyzing the entire codebase, not just a PR diff.
-- **Integration with security tooling** - Aggregate and contextualize findings from Dependabot, npm audit, and other scanners
-- **Historical tracking** - Maintain a database of security issues, their status, and remediation history for compliance
-- **Sandbox validation** - Actually test if a vulnerability is exploitable, not just flag potential issues
-
-**Why this matters:** Teams are drowning in Dependabot alerts. Most CVEs reported in dependencies are not actually exploitable because the vulnerable code path isn't used. The Security Review Agent's primary value is turning noisy alerts into actionable intelligence by answering: "Is this vulnerability actually a problem for us?"
-
-The code-level taint analysis (SQL injection, XSS, etc.) has more overlap with the Code Review Agent and is lower priority. Phase 1 focuses on dependency contextualization where the value is clearest.
-
-## Requirements
-
-### Core Requirements
-
-- **Cloud agents** - Runs as cloud agents, not locally in the extension
-- **Teams/Enterprise plan feature** - Gated to paid tiers
-- **Integration with existing tools** - Consume output from:
-  - Dependabot alerts (via GitHub API)
-  - `npm audit` / `yarn audit`
-  - Language-specific scanners (brakeman for Ruby, etc.)
-  - SBOM (Software Bill of Materials) data
-- **PR-triggered analysis** - Run security analysis on pull requests
-- **Manual full-repo scans** - Support on-demand scanning of entire repositories
-- **Structured output** - Provide severity, CWE classification, reproduction steps, and suggested fixes
-- **Historical tracking** - Maintain database records of:
-  - Security issues found
-  - Security issues fixed
-  - Security issues ignored (with justification)
-
-### Security Analysis Capabilities
-
-- **Dependency vulnerability analysis** - Contextualize dependency alerts against actual usage
-- **Code-level vulnerability detection** - Sink-to-source taint analysis for:
-  - SQL Injection
-  - Cross-Site Scripting (XSS)
-  - Command Injection
-  - Authentication/Authorization bypasses
-- **Validation agent** - For each finding, determine:
-  - Is the issue relevant to this codebase?
-  - Is the issue exploitable? (argue for and against)
-  - Has the issue been fixed?
-
-### Non-requirements
-
-- No Local/offline execution: this is a cloud service
-- No Real-time IDE integration: focus on PR and scheduled scans
-- No Support for all languages in MVP: start with TypeScript/JavaScript
-
-## System Design
-
-### Architecture Overview
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Input Sources                               │
-├─────────────────┬─────────────────┬─────────────────┬───────────────┤
-│   Dependabot    │   npm audit     │  SBOM Scanner   │  PR Changes   │
-└────────┬────────┴────────┬────────┴────────┬────────┴───────┬───────┘
-         │                 │                 │                │
-         ▼                 ▼                 ▼                ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    Finding Aggregation Layer                        │
-│              (Normalize and deduplicate findings)                   │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-         ┌────────────────────┼─────────────────────┐
-         ▼                    ▼                     ▼
-┌─────────────────┐  ┌───────────────────┐  ┌─────────────────┐
-│  Dependency     │  │  Code Analysis    │  │  Validation     │
-│  Analysis Agent │  │  Agents           │  │  Agent          │
-│                 │  │  (Taint Analysis) │  │                 │
-└────────┬────────┘  └────────┬──────────┘  └────────┬────────┘
-         │                    │                      │
-         ▼                    ▼                      ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    LLM Evaluation Layer                             │
-│         "Is this exploitable in this specific codebase?"            │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                 Optional: Sandbox Validation                        │
-│            (Test exploitability with generated PoC)                 │
-└─────────────────────────────┬───────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│              Structured Output + PR Integration                     │
-│     (Severity, CWE, reproduction steps, suggested fix)              │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-### Component Details
-
-#### 1. Finding Aggregation Layer
-
-Normalizes input from various security tools into a common format:
-
-```typescript
-type SecurityFinding = {
-  source: "dependabot" | "npm-audit" | "sbom" | "code-analysis"
-  type: "dependency" | "code"
-  severity: "critical" | "high" | "medium" | "low"
-  cwe?: string
-  package?: string
-  version?: string
-  location?: {
-    file: string
-    line: number
-  }
-  description: string
-  rawData: unknown
-}
-```
-
-#### 2. Dependency Analysis Agent
-
-For dependency vulnerabilities (from Dependabot, npm audit, etc.):
-
-- Analyzes how the vulnerable package is actually used in the codebase
-- Determines if the vulnerable code path is reachable
-- Assesses whether the vulnerability conditions apply to our usage
-
-#### 3. Code Analysis Agents (Sink-to-Source Taint Analysis)
-
-Specialized agents for each vulnerability class. Each agent follows the same pattern but targets different sinks:
-
-- **SQL Injection Agent** - Finds raw SQL concatenation, `.raw()`, `.execute()` with interpolation, ORM bypass patterns
-- **Command Injection Agent** - Finds `exec()`, `spawn()` with interpolation, `shell: true` options
-- **XSS Agent** - Finds `innerHTML`, `dangerouslySetInnerHTML`, `document.write()`, unescaped template rendering
-
-**Step 1: Sink Discovery**
-
-- Use AST parsing (ts-morph, tree-sitter) to find dangerous operations
-- Pattern matching for known vulnerability sinks
-
-**Step 2: Call Chain Extraction**
-
-- Build call graph using ts-morph or LSP-based analysis
-- Walk backwards from sinks to find entry points (sources)
-- Extract minimal code paths ("slices") from source to sink
-
-**Step 3: LLM Evaluation**
-
-- Feed only the relevant slice to the LLM (50-200 lines typically)
-- Ask specific questions about exploitability:
-
-```
-Here is a code path from HTTP request handler to SQL query:
-
-[extracted call chain]
-
-Can an attacker control the input at the source in a way that
-would allow SQL injection at the sink? Consider:
-- Input validation present?
-- Sanitization applied?
-- Parameterization used?
-
-If exploitable, provide a proof-of-concept input.
-```
-
-#### 4. Validation Agent
-
-Reviews findings and provides structured assessment:
-
-- Relevance check: Is this finding applicable to our codebase?
-- Exploitability analysis: Arguments for and against exploitability
-- Fix verification: Has this been addressed?
-
-#### 5. Sandbox Validation (Optional)
-
-For high-confidence findings:
-
-- Generate test cases based on LLM analysis
-- Execute in isolated sandbox environment (using existing cloud-agent infrastructure)
-- Confirm exploitability to reduce false positives
-
-### Data Model
-
-```typescript
-type SecurityIssue = {
-  id: string
-  repositoryId: string
-  status: "open" | "fixed" | "ignored" | "false-positive"
-  finding: SecurityFinding
-  analysis: {
-    isRelevant: boolean
-    relevanceReasoning: string
-    isExploitable: boolean | "unknown"
-    exploitabilityReasoning: string
-    suggestedFix?: string
-    proofOfConcept?: string
-  }
-  validation?: {
-    sandboxTested: boolean
-    exploitConfirmed: boolean
-    testOutput?: string
-  }
-  metadata: {
-    createdAt: Date
-    updatedAt: Date
-    prNumber?: number
-    ignoredReason?: string
-    fixedInCommit?: string
-    dependabotAlertId?: number // Link to GitHub Dependabot alert
-  }
-}
-```
-
-### Trigger Modes
-
-1. **PR Analysis** - Triggered on pull request creation/update
-   - Analyze changed files for new vulnerabilities
-   - Check if PR introduces new dependency vulnerabilities
-   - Comment findings directly on PR
-
-2. **Scheduled Full Scan** - Periodic repository-wide analysis
-   - Complete dependency audit
-   - Full codebase taint analysis
-   - Update historical tracking
-
-3. **Manual Trigger** - On-demand scanning
-   - User-initiated full or partial scans
-   - Re-analysis of specific findings
-
-4. **Dependabot Alert Trigger** - When new Dependabot alerts appear
-   - Automatically analyze new vulnerability alerts
-   - Provide contextualized risk assessment
-
-5. **Security Issue Trigger** - GitHub issues or email reports classified as security issues
-   - Triggered when issues are labeled with P0-P3 severity
-   - Automatically analyze reported security concerns
-   - Validate whether the reported issue is exploitable
-   - Provide contextualized assessment and suggested remediation
-
-## Scope/Implementation
-
-### Phase 1: Dependency Vulnerability Contextualization
-
-Focus on the core value proposition: making dependency alerts actionable.
-
-- Dependabot webhook integration (subscribe to `dependabot_alert` events)
-- `npm audit` integration (alternative input source)
-- Dependency Analysis Agent: analyze if vulnerable code paths are actually used
-- LLM evaluation: "Is this vulnerability exploitable in this codebase?"
-- Security findings dashboard in app (view issues, status, reasoning)
-- PR comment integration for findings
-
-### Phase 2: Automatic Fixes & Additional Input Sources
-
-- Automatic fix generation and PR creation for validated issues
-- Additional dependency scanners (e.g., Snyk, OSV, GitHub Advisory Database API)
-- SQL Injection Agent with AST-based sink discovery
-- Call graph extraction for TypeScript
-
-### Phase 3: Expanded Code Analysis & Validation
-
-- XSS and Command Injection agents
-- Sandbox validation for high-confidence findings
-- Authentication bypass detection
-- SBOM generation and analysis
-- Multi-language support (Ruby/brakeman, Python/bandit, Go)
-- Historical tracking and trends
-
-## Compliance Considerations
-
-- All security findings must be stored securely with appropriate access controls
-- Audit logging for all security scan activities
-- Data retention policies for security findings
-- Sandbox environments must be fully isolated
-
-## Technical Risks
-
-- **Call graph complexity** - Building accurate call graphs for JavaScript/TypeScript is difficult due to dynamic typing, callbacks, and async patterns. This is the hardest technical challenge in Phase 1.
-- **False positive rate** - Even with LLM evaluation, security tools tend toward high false positive rates. We need strong feedback loops and the ability to mark false positives.
-- **Sandbox security** - Running untrusted exploit code in sandboxes is risky. This is why sandbox validation is Phase 2+ and requires careful isolation.
-
-## Features for the Future
-
-- **Security score trending** - Track security posture over time
-- **Custom rule definitions** - Allow teams to define custom vulnerability patterns
-- **Integration with SIEM** - Export findings to security information systems
+You need three things before enabling Security Reviews:
+
+1. The [KiloConnect GitHub App](/docs/automate/integrations#connecting-github) installed with `vulnerability_alerts` permission
+2. [Dependabot alerts](https://docs.github.com/en/code-security/dependabot/dependabot-alerts) enabled on your target repositories
+3. Kilo Code credits for AI model usage
+
+---
+
+## Get started
+
+1. Go to the **Security Agent** page — either from your [personal dashboard](https://app.kilo.ai/security-agent) or your organization's dashboard
+2. Connect GitHub if you haven't already via the [Integrations page](/docs/automate/integrations)
+3. Choose which repositories the agent should monitor (all or specific ones)
+4. Toggle the agent on — this kicks off an initial sync of your Dependabot alerts
+
+The agent syncs alerts every 6 hours automatically after that. You can trigger a manual sync at any time from the Findings page.
+
+---
+
+## Understand the pipeline
+
+The Security Agent processes each vulnerability alert through four stages.
+
+**Sync** pulls Dependabot alerts from your connected repositories on a 6-hour cycle.
+
+**Triage** runs a quick LLM assessment of the alert metadata — the advisory, severity, package, and version range. Each finding gets classified as **Safe to Dismiss**, **Needs Analysis**, or **Needs Review**.
+
+**Deep analysis** kicks in for findings that warrant it. The Cloud Agent performs a full codebase search for actual usage of the vulnerable package, checks whether the vulnerable code paths are reachable, and suggests fixes when possible.
+
+**Auto-dismiss** (when enabled) automatically closes non-exploitable findings and syncs that dismissal back to GitHub with a `[Kilo Code auto-dismiss]` prefix.
+
+---
+
+## Choose an analysis mode
+
+You control how much analysis the agent performs via three modes:
+
+| Mode        | What happens                                                          |
+| ----------- | --------------------------------------------------------------------- |
+| **Auto**    | Triage first, then deep analysis only when triage recommends it       |
+| **Shallow** | Triage only — no deep analysis                                        |
+| **Deep**    | Full codebase analysis for every finding, regardless of triage result |
+
+**Auto** is the default. It gives you the best balance between thoroughness and credit usage — deep analysis only runs where triage says it's needed.
+
+---
+
+## Use the dashboard
+
+The dashboard is the Security Agent's landing page. It gives you a high-level view of your security posture, and every widget links through to the Findings page with the relevant filters applied. Use the repository filter at the top to scope everything to specific repos.
+
+**SLA compliance** is the hero metric — your overall compliance percentage with a per-severity breakdown, linking directly to any overdue findings.
+
+**Severity breakdown** shows open finding counts across Critical, High, Medium, and Low in a 2×2 grid. Click any severity to see those findings.
+
+**Finding status** is a donut chart of Open, Fixed, and Dismissed findings. Click a segment to filter the Findings page.
+
+**Analysis coverage** shows a progress bar of analyzed vs. total findings, with an outcome breakdown (Exploitable, Not Exploitable, Safe to Dismiss, etc.).
+
+**Mean time to resolution** compares your average resolution time per severity against your configured SLA targets.
+
+**Overdue findings** lists the top 10 findings past their SLA deadline — severity, title, repo, package, and how many days overdue.
+
+**Repository health** is a per-repo summary with severity counts, overdue count, and SLA compliance percentage.
+
+---
+
+## Browse findings
+
+The Findings page is where you work through your vulnerability backlog. At the top, a summary bar shows open/closed counts, your current analysis capacity, when the last sync ran, and a **Sync** button for manual refreshes.
+
+Filter findings by repository, severity, outcome, or sort order to focus on what matters most. Each row shows a severity badge, the finding title and package name, its current outcome label, and an action button — **Analyze**, **Retry**, **Review**, or **View Details** depending on state.
+
+Findings past their SLA deadline are highlighted in red so they're easy to spot. The page paginates at 20 results and auto-refreshes every 5 seconds when analyses are running.
+
+---
+
+## Inspect a finding
+
+Click any finding to open its detail dialog. There are three tabs.
+
+The **Details** tab shows the vulnerability metadata — package name and ecosystem, CVE and GHSA IDs, the vulnerable and patched version ranges, manifest path, and a full description. You'll also find a **View on GitHub** link to the original Dependabot alert, plus detection and last sync dates.
+
+The **Triage** tab shows the agent's initial assessment: a suggested action badge (Safe to Dismiss, Needs Analysis, or Needs Review), a confidence level, and the reasoning behind the decision. If triage hasn't run yet, you can start it here. If it failed, you can retry.
+
+The **Analysis** tab shows the deep analysis results when available — whether the vulnerability is exploitable or not, a summary, up to 5 usage locations found in your codebase, a suggested fix, and full analysis details. There's also a link to continue the investigation in Cloud Agent if you want to dig deeper.
+
+---
+
+## Understand statuses and outcomes
+
+Every finding has a **primary status** and an **outcome label**. The status tracks the overall lifecycle, while the outcome reflects what the AI determined.
+
+**Primary status:**
+
+| Status    | Meaning                                             |
+| --------- | --------------------------------------------------- |
+| Open      | Active vulnerability that needs attention           |
+| Fixed     | Resolved — detected from the Dependabot alert state |
+| Dismissed | Closed by a user or by auto-dismiss                 |
+
+**Outcome labels:**
+
+| Outcome         | Meaning                                    |
+| --------------- | ------------------------------------------ |
+| Not Analyzed    | No analysis has run yet                    |
+| Analyzing       | Analysis is currently in progress          |
+| Analysis Failed | Something went wrong during analysis       |
+| Exploitable     | Deep analysis confirmed it's exploitable   |
+| Not Exploitable | Deep analysis confirmed it's not reachable |
+| Safe to Dismiss | Triage recommends dismissing this finding  |
+| Needs Review    | Triage recommends manual review            |
+| Triage Complete | Triage is done, no deep analysis needed    |
+
+---
+
+## Dismiss findings
+
+There are two ways findings get dismissed.
+
+**Manually**, you select a finding and choose **Dismiss**. You'll pick a reason — Fix started, No bandwidth, Tolerable risk, Inaccurate, or Not used — and optionally add a comment. The dismissal syncs back to GitHub and closes the corresponding Dependabot alert.
+
+**Automatically**, when auto-dismiss is enabled, the agent closes findings on its own. After deep analysis, any finding determined to be not exploitable is dismissed immediately. After triage, findings with a "dismiss" recommendation are dismissed if they meet your configured confidence threshold. All auto-dismissed alerts are written back to GitHub with a `[Kilo Code auto-dismiss]` prefix.
+
+---
+
+## Configure the agent
+
+All settings are on the Security Agent configuration page.
+
+**Repository selection** lets you monitor all repositories accessible to the KiloConnect App or pick specific ones from a list.
+
+**AI models** can be configured separately for triage and deep analysis. The default is Claude Opus 4.6.
+
+**Analysis mode** controls the pipeline — Auto (triage then selective deep analysis), Shallow (triage only), or Deep (full analysis on everything). See [Choose an analysis mode](#choose-an-analysis-mode) for details.
+
+**Auto-analysis** toggles whether new findings are analyzed automatically. When on, you set a minimum severity threshold (Critical only, High+, Medium+, or All) and whether to include findings that existed before you enabled the feature.
+
+**Auto-dismiss** toggles automatic dismissal of non-exploitable findings. You configure a confidence threshold: High only, Medium+, or Any. The "Any" option dismisses at any confidence level — use it with caution.
+
+**SLA deadlines** set how many days your team has to remediate findings at each severity level:
+
+| Severity | Default |
+| -------- | ------- |
+| Critical | 15 days |
+| High     | 30 days |
+| Medium   | 45 days |
+| Low      | 90 days |
+
+You can adjust these per your organization's policies and reset to defaults at any time.
+
+---
+
+## Clear orphaned findings
+
+If repositories are removed from your GitHub integration or become inaccessible, their findings become orphaned. When this happens, a card appears on the settings page to permanently delete them.
+
+{% callout type="warning" %}
+Clearing orphaned findings is permanent and cannot be undone. Only do this when you're sure the repositories won't be reconnected.
+{% /callout %}
+
+---
+
+## Compare with Code Reviews
+
+Kilo offers two complementary security features that work best together.
+
+[**Code Reviews**](/docs/automate/code-reviews/overview) analyzes PR diffs for code quality issues, including security patterns like `innerHTML` usage and hardcoded secrets. It catches problems in new code as it's written.
+
+**Security Reviews** takes a different angle — it contextualizes dependency vulnerability alerts across your entire codebase to determine whether Dependabot-reported CVEs are actually exploitable based on how your code uses the affected packages.
+
+Together, Code Reviews covers your new code surface and Security Reviews covers your dependency vulnerability surface.
+
+---
+
+## Limitations
+
+Security Reviews currently works with **GitHub only** — GitLab support is not yet available.
+
+The only data source right now is **Dependabot alerts**. Additional sources like npm audit and SBOM analysis are planned.
+
+There is a **per-account limit** on concurrent analyses. If you have a large backlog, findings will be queued and processed in order.

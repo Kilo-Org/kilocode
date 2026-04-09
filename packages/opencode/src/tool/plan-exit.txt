@@ -1,6 +1,6 @@
-Use this tool when you have completed the planning phase and are ready to exit plan agent.
+Signal that planning is complete and the plan is ready for implementation.
 
-This tool will ask the user if they want to switch to build agent to start implementing the plan.
+Call this tool once you have finalized the plan file and are confident it is ready. This ends your planning turn and hands control back to the user.
 
 Call this tool:
 - After you have written a complete plan to the plan file

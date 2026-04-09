@@ -2,7 +2,7 @@ import * as crypto from "crypto"
 import * as vscode from "vscode"
 import { buildCspString } from "./webview-html-utils"
 
-export function getNonce(): string {
+function getNonce(): string {
   return crypto.randomBytes(16).toString("hex")
 }
 

@@ -123,12 +123,15 @@ function shouldSkipFile(path: string, skipPatterns: string[]): boolean {
 }
 
 /**
- * Get recommendation for a conflicted file
+ * Get recommendation for a conflicted file.
+ * Pass currentContent (our version of the file) to detect kilocode_change markers
+ * in files that would otherwise be auto-transformed.
  */
 export function getRecommendation(
   path: string,
   keepOurs: string[],
   skipFiles: string[] = [],
+  currentContent?: string,
 ): { recommendation: ConflictFile["recommendation"]; reason: string } {
   // Check if file should be skipped entirely (doesn't exist in Kilo, shouldn't be added)
   if (shouldSkipFile(path, skipFiles)) {
@@ -158,6 +161,13 @@ export function getRecommendation(
 
   // Check for specific auto-transform strategies
   if (shouldTakeTheirsTransform(path)) {
+    // If our version has kilocode_change markers, flag for manual review
+    if (currentContent?.includes("kilocode_change")) {
+      return {
+        recommendation: "manual",
+        reason: "File has kilocode_change markers — auto-transform skipped, needs manual review",
+      }
+    }
     return {
       recommendation: "take-theirs-transform",
       reason: "Branding-only file: take upstream and apply Kilo branding transforms",
@@ -166,26 +176,57 @@ export function getRecommendation(
 
   switch (type) {
     case "i18n":
+      // i18n files that have kilocode_change markers need manual review
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "i18n file has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "i18n-transform",
         reason: "i18n file: take upstream translations and apply Kilo branding",
       }
     case "tauri":
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "Tauri config has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "tauri-transform",
         reason: "Tauri config: take upstream and apply Kilo branding transforms",
       }
     case "script":
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "Script file has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "script-transform",
         reason: "Script file: take upstream and transform GitHub references",
       }
     case "extension":
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "Extension file has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "extension-transform",
         reason: "Extension file: take upstream and apply Kilo branding",
       }
     case "web":
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "Web/docs file has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "web-transform",
         reason: "Web/docs file: take upstream and apply Kilo branding",
@@ -196,6 +237,12 @@ export function getRecommendation(
         reason: "Markdown files are typically Kilo-specific documentation",
       }
     case "package":
+      if (currentContent?.includes("kilocode_change")) {
+        return {
+          recommendation: "manual",
+          reason: "package.json has kilocode_change markers — auto-transform skipped, needs manual review",
+        }
+      }
       return {
         recommendation: "package-transform",
         reason: "Package.json: take upstream, transform names, inject Kilo deps, preserve version",
@@ -245,7 +292,11 @@ export async function analyzeConflicts(
 
   for (const path of files) {
     const type = classifyFile(path)
-    const { recommendation, reason } = getRecommendation(path, keepOurs, skipFiles)
+    // Read current file content (our version) to detect kilocode_change markers
+    const content = await Bun.file(path)
+      .text()
+      .catch(() => "")
+    const { recommendation, reason } = getRecommendation(path, keepOurs, skipFiles, content)
 
     conflicts.push({
       path,

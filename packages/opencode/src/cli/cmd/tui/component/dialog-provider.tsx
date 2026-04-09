@@ -39,6 +39,7 @@ export function createDialogProviderOptions() {
           kilo: "(Recommended)", // kilocode_change
           anthropic: "(Claude Max or API key)",
           openai: "(ChatGPT Plus/Pro or API key)",
+          // "opencode-go": "(Low cost)", // kilocode_change
         }[provider.id],
         category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
         async onSelect() {
@@ -237,18 +238,21 @@ function ApiMethod(props: ApiMethodProps) {
       title={props.title}
       placeholder="API key"
       description={
-        props.providerID === "opencode" ? (
-          <box gap={1}>
-            {/* kilocode_change start */}
-            <text fg={theme.textMuted}>
-              Kilo Gateway gives you access to all the best coding models at the cheapest prices with a single API key.
-            </text>
-            <text fg={theme.text}>
-              Go to <span style={{ fg: theme.primary }}>https://kilo.ai/gateway</span> to get a key
-            </text>
-            {/* kilocode_change end */}
-          </box>
-        ) : undefined
+        {
+          kilo: (
+            <box gap={1}>
+              {/* kilocode_change start */}
+              <text fg={theme.textMuted}>
+                Kilo Gateway gives you access to all the best coding models at the cheapest prices with a single API
+                key.
+              </text>
+              <text fg={theme.text}>
+                Go to <span style={{ fg: theme.primary }}>https://kilo.ai/gateway</span> to get a key
+              </text>
+              {/* kilocode_change end */}
+            </box>
+          ),
+        }[props.providerID] ?? undefined
       }
       onConfirm={async (value) => {
         if (!value) return

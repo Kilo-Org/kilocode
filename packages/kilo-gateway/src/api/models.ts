@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
-import { DEFAULT_HEADERS } from "../headers.js"
-import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS } from "./constants.js"
+import { getDefaultHeaders } from "../headers.js"
+import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
  * OpenRouter model schema
@@ -30,6 +30,15 @@ const openRouterModelSchema = z.object({
   top_provider: z.object({ max_completion_tokens: z.number().nullish() }).optional(),
   supported_parameters: z.array(z.string()).optional(),
   preferredIndex: z.number().optional(),
+  isFree: z.boolean().optional(),
+  opencode: z
+    .object({
+      family: z.string().optional(),
+      prompt: z.enum(PROMPTS).optional().catch(undefined),
+      variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
+      ai_sdk_provider: z.enum(AI_SDK_PROVIDERS).optional().catch(undefined),
+    })
+    .optional(),
 })
 
 const openRouterModelsResponseSchema = z.object({
@@ -39,12 +48,15 @@ const openRouterModelsResponseSchema = z.object({
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 /**
- * Parse API price string to number (e.g. "0.00001" -> 0.00001)
+ * Parse API price string to number, converting from per-token to per-million-tokens.
+ * The API returns prices in $/token, but downstream cost calculation (getUsage)
+ * divides by 1,000,000 expecting $/M tokens.
  */
 function parseApiPrice(price: string | null | undefined): number | undefined {
   if (!price) return undefined
   const parsed = parseFloat(price)
-  return isNaN(parsed) ? undefined : parsed
+  if (isNaN(parsed)) return undefined
+  return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 
 /**
@@ -76,7 +88,7 @@ export async function fetchKiloModels(options?: {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
       headers: {
-        ...DEFAULT_HEADERS,
+        ...getDefaultHeaders(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
@@ -143,12 +155,17 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
   return {
     id: model.id,
     name: model.name,
-    family: model.id === "kilo/auto" ? "kilo/auto" : extractFamily(model.id), // kilocode_change
+    family: model.opencode?.family ?? extractFamily(model.id),
     release_date: new Date().toISOString().split("T")[0], // Default to today
     attachment: supportsImages,
     reasoning: supportsReasoning,
     temperature: supportsTemperature,
+    recommendedIndex: model.preferredIndex,
+    variants: model.opencode?.variants,
+    prompt: model.opencode?.prompt,
+    ai_sdk_provider: model.opencode?.ai_sdk_provider,
     tool_call: supportsTools,
+    isFree: model.isFree,
     ...(inputPrice !== undefined &&
       outputPrice !== undefined && {
         cost: {
@@ -167,10 +184,6 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
         input: mapModalities(inputModalities),
         output: mapModalities(outputModalities),
       },
-    }),
-    ...(model.preferredIndex !== undefined && {
-      recommended: true,
-      recommendedIndex: model.preferredIndex,
     }),
     options: {
       ...(model.description && { description: model.description }),

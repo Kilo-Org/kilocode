@@ -15,6 +15,7 @@ export const SessionTable = sqliteTable(
     project_id: text()
       .notNull()
       .references(() => ProjectTable.id, { onDelete: "cascade" }),
+    workspace_id: text(),
     parent_id: text(),
     slug: text().notNull(),
     directory: text().notNull(),
@@ -24,14 +25,22 @@ export const SessionTable = sqliteTable(
     summary_additions: integer(),
     summary_deletions: integer(),
     summary_files: integer(),
-    summary_diffs: text({ mode: "json" }).$type<Snapshot.FileDiff[]>(),
+    // kilocode_change start - lightweight diff type (no file contents)
+    summary_diffs: text({ mode: "json" }).$type<
+      { file: string; additions: number; deletions: number; status?: "added" | "deleted" | "modified" }[]
+    >(),
+    // kilocode_change end
     revert: text({ mode: "json" }).$type<{ messageID: string; partID?: string; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<PermissionNext.Ruleset>(),
     ...Timestamps,
     time_compacting: integer(),
     time_archived: integer(),
   },
-  (table) => [index("session_project_idx").on(table.project_id), index("session_parent_idx").on(table.parent_id)],
+  (table) => [
+    index("session_project_idx").on(table.project_id),
+    index("session_workspace_idx").on(table.workspace_id),
+    index("session_parent_idx").on(table.parent_id),
+  ],
 )
 
 export const MessageTable = sqliteTable(

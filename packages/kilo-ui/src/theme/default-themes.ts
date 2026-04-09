@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import type { DesktopTheme } from "@opencode-ai/ui/theme/types"
 import { DEFAULT_THEMES as UPSTREAM_THEMES } from "@opencode-ai/ui/theme/default-themes"
 import kiloJson from "./themes/kilo.json"
@@ -6,7 +5,7 @@ import kiloVscodeJson from "./themes/kilo-vscode.json"
 
 // Re-export all upstream theme constants
 export {
-  oc1Theme,
+  oc2Theme,
   tokyonightTheme,
   draculaTheme,
   monokaiTheme,

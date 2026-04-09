@@ -8,7 +8,7 @@ import { lazy } from "@/util/lazy"
 import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { Auth } from "../auth" // kilocode_change
-import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway" // kilocode_change
+import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
 import { Filesystem } from "../util/filesystem"
 
 // Try to import bundled snapshot (generated at build time)
@@ -27,7 +27,12 @@ const normalizeKiloBaseURL = (baseURL: string | undefined, orgId: string | undef
   if (trimmed.includes("/openrouter")) return trimmed
   if (trimmed.endsWith("/api")) return `${trimmed}/openrouter`
   return `${trimmed}/api/openrouter`
-} // kilocode_change end
+}
+
+export const Prompt = z.enum(PROMPTS)
+
+export const AiSdkProvider = z.enum(AI_SDK_PROVIDERS)
+// kilocode_change end
 
 export namespace ModelsDev {
   const log = Log.create({ service: "models.dev" })
@@ -79,8 +84,14 @@ export namespace ModelsDev {
         output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
       })
       .optional(),
-    recommended: z.boolean().optional(), // kilocode_change
-    recommendedIndex: z.number().optional(), // kilocode_change
+
+    // kilocode_change start
+    recommendedIndex: z.number().optional(),
+    prompt: Prompt.optional().catch(undefined),
+    isFree: z.boolean().optional(),
+    ai_sdk_provider: AiSdkProvider.optional().catch(undefined),
+    // kilocode_change end
+
     experimental: z.boolean().optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
     options: z.record(z.string(), z.any()),
@@ -128,14 +139,20 @@ export namespace ModelsDev {
     }
 
     // Inject kilo provider with dynamic model fetching
-    if (!providers["kilo"]) {
-      const config = await Config.get()
+    // Skip injection entirely when enabled_providers is set and doesn't include "kilo",
+    // or when "kilo" is in disabled_providers. This prevents unnecessary network calls
+    // to the Kilo API for teams using only their own providers (e.g. LiteLLM).
+    const config = await Config.get()
+    const disabled = new Set(config.disabled_providers ?? [])
+    const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null
+    const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+
+    if (kiloAllowed && !providers["kilo"]) {
       const kiloOptions = config.provider?.kilo?.options
-      // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
+      // resolve org ID from auth (OAuth accountId) not just config
       const kiloAuth = await Auth.get("kilo")
       const kiloOrgId =
         kiloOptions?.kilocodeOrganizationId ?? (kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined)
-      // kilocode_change end
       const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
       const kiloFetchOptions = {
         ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
@@ -146,7 +163,19 @@ export namespace ModelsDev {
         : "https://api.kilo.ai/api/openrouter"
       const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
       const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`)
-      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+      const apertisConfig = config.provider?.apertis?.options
+      const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
+      const apertisFetchOptions = {
+        ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+      }
+
+      const [kiloModels, apertisModels] = await Promise.all([
+        ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({})),
+        !providers["apertis"]
+          ? ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+          : Promise.resolve(null),
+      ])
+
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
@@ -157,6 +186,38 @@ export namespace ModelsDev {
       }
       if (Object.keys(kiloModels).length === 0) {
         ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
+      }
+
+      if (!providers["apertis"] && apertisModels !== null) {
+        providers["apertis"] = {
+          id: "apertis",
+          name: "Apertis",
+          env: ["APERTIS_API_KEY"],
+          api: apertisBaseURL,
+          npm: "@ai-sdk/openai-compatible",
+          models: apertisModels,
+        }
+        if (Object.keys(apertisModels).length === 0) {
+          ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+        }
+      }
+    } else if (!providers["apertis"]) {
+      const apertisConfig = config.provider?.apertis?.options
+      const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
+      const apertisFetchOptions = {
+        ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+      }
+      const apertisModels = await ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+      providers["apertis"] = {
+        id: "apertis",
+        name: "Apertis",
+        env: ["APERTIS_API_KEY"],
+        api: apertisBaseURL,
+        npm: "@ai-sdk/openai-compatible",
+        models: apertisModels,
+      }
+      if (Object.keys(apertisModels).length === 0) {
+        ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
       }
     }
 

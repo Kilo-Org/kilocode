@@ -7,9 +7,10 @@ import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/config/config"
 import { GlobalBus } from "@/bus/global"
-import { createOpencodeClient, type Event } from "@kilocode/sdk/v2"
+import { createKiloClient, type Event } from "@kilocode/sdk/v2"
 import type { BunWebSocketData } from "hono/bun"
 import { Flag } from "@/flag/flag"
+import { setTimeout as sleep } from "node:timers/promises"
 
 await Log.init({
   print: process.argv.includes("--print-logs"),
@@ -43,7 +44,7 @@ const eventStream = {
   abort: undefined as AbortController | undefined,
 }
 
-const startEventStream = (directory: string) => {
+const startEventStream = (input: { directory: string; workspaceID?: string }) => {
   if (eventStream.abort) eventStream.abort.abort()
   const abort = new AbortController()
   eventStream.abort = abort
@@ -56,9 +57,10 @@ const startEventStream = (directory: string) => {
     return Server.App().fetch(request)
   }) as typeof globalThis.fetch
 
-  const sdk = createOpencodeClient({
-    baseUrl: "http://opencode.internal",
-    directory,
+  const sdk = createKiloClient({
+    baseUrl: "http://kilo.internal",
+    directory: input.directory,
+    experimental_workspaceID: input.workspaceID,
     fetch: fetchFn,
     signal,
   })
@@ -75,7 +77,7 @@ const startEventStream = (directory: string) => {
       ).catch(() => undefined)
 
       if (!events) {
-        await Bun.sleep(250)
+        await sleep(250)
         continue
       }
 
@@ -84,7 +86,7 @@ const startEventStream = (directory: string) => {
       }
 
       if (!signal.aborted) {
-        await Bun.sleep(250)
+        await sleep(250)
       }
     }
   })().catch((error) => {
@@ -94,7 +96,7 @@ const startEventStream = (directory: string) => {
   })
 }
 
-startEventStream(process.cwd())
+startEventStream({ directory: process.cwd() })
 
 export const rpc = {
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
@@ -134,16 +136,18 @@ export const rpc = {
     Config.global.reset()
     await Instance.disposeAll()
   },
+  async setWorkspace(input: { workspaceID?: string }) {
+    startEventStream({ directory: process.cwd(), workspaceID: input.workspaceID })
+  },
   async shutdown() {
     Log.Default.info("worker shutting down")
     if (eventStream.abort) eventStream.abort.abort()
-    await Promise.race([
-      Instance.disposeAll(),
-      new Promise((resolve) => {
-        setTimeout(resolve, 5000)
-      }),
-    ])
+    await Instance.disposeAll()
     if (server) server.stop(true)
+    // Clear the Rpc message channel so the worker's event loop can drain and
+    // exit naturally. Without this, the active onmessage handle keeps the
+    // worker alive even after all async work is done.
+    onmessage = null
   },
 }
 

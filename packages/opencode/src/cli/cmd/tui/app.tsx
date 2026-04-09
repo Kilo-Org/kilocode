@@ -20,6 +20,7 @@ import { DialogHelp } from "./ui/dialog-help"
 import { CommandProvider, useCommandDialog } from "@tui/component/dialog-command"
 import { DialogAgent } from "@tui/component/dialog-agent"
 import { DialogSessionList } from "@tui/component/dialog-session-list"
+import { DialogWorkspaceList } from "@tui/component/dialog-workspace-list"
 import { KeybindProvider } from "@tui/context/keybind"
 import { ThemeProvider, useTheme } from "@tui/context/theme"
 import { Home } from "@tui/routes/home"
@@ -28,6 +29,7 @@ import { PromptHistoryProvider } from "./component/prompt/history"
 import { FrecencyProvider } from "./component/prompt/frecency"
 import { PromptStashProvider } from "./component/prompt/stash"
 import { DialogAlert } from "./ui/dialog-alert"
+import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors" // kilocode_change
 import { ToastProvider, useToast } from "./ui/toast"
 import { ExitProvider, useExit } from "./context/exit"
 import { Session as SessionApi } from "@/session"
@@ -41,7 +43,20 @@ import open from "open"
 import { writeHeapSnapshot } from "v8"
 import { PromptRefProvider, usePromptRef } from "./context/prompt"
 import { registerKiloCommands } from "@/kilocode/kilo-commands" // kilocode_change
+import { KiloClawView } from "@/kilocode/claw/view" // kilocode_change
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui" // kilocode_change
+import { TuiConfigProvider } from "./context/tui-config"
+import { TuiConfig } from "@/config/tui"
+
+// kilocode_change start
+function isAllowEverything(permission: unknown): boolean {
+  if (typeof permission !== "object" || permission === null) return false
+  const wildcard = (permission as Record<string, unknown>)["*"]
+  if (typeof wildcard === "string") return wildcard === "allow"
+  if (typeof wildcard === "object" && wildcard !== null) return (wildcard as Record<string, unknown>)["*"] === "allow"
+  return false
+}
+// kilocode_change end
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -108,11 +123,11 @@ import type { EventSource } from "./context/sdk"
 export function tui(input: {
   url: string
   args: Args
+  config: TuiConfig.Info
   directory?: string
   fetch?: typeof fetch
   headers?: RequestInit["headers"]
   events?: EventSource
-  onExit?: () => Promise<void>
 }) {
   // promise to prevent immediate exit
   return new Promise<void>(async (resolve) => {
@@ -127,7 +142,6 @@ export function tui(input: {
 
     const onExit = async () => {
       unguard?.()
-      await input.onExit?.()
       resolve()
     }
 
@@ -142,35 +156,37 @@ export function tui(input: {
                 <KVProvider>
                   <ToastProvider>
                     <RouteProvider>
-                      <SDKProvider
-                        url={input.url}
-                        directory={input.directory}
-                        fetch={input.fetch}
-                        headers={input.headers}
-                        events={input.events}
-                      >
-                        <SyncProvider>
-                          <ThemeProvider mode={mode}>
-                            <LocalProvider>
-                              <KeybindProvider>
-                                <PromptStashProvider>
-                                  <DialogProvider>
-                                    <CommandProvider>
-                                      <FrecencyProvider>
-                                        <PromptHistoryProvider>
-                                          <PromptRefProvider>
-                                            <App />
-                                          </PromptRefProvider>
-                                        </PromptHistoryProvider>
-                                      </FrecencyProvider>
-                                    </CommandProvider>
-                                  </DialogProvider>
-                                </PromptStashProvider>
-                              </KeybindProvider>
-                            </LocalProvider>
-                          </ThemeProvider>
-                        </SyncProvider>
-                      </SDKProvider>
+                      <TuiConfigProvider config={input.config}>
+                        <SDKProvider
+                          url={input.url}
+                          directory={input.directory}
+                          fetch={input.fetch}
+                          headers={input.headers}
+                          events={input.events}
+                        >
+                          <SyncProvider>
+                            <ThemeProvider mode={mode}>
+                              <LocalProvider>
+                                <KeybindProvider>
+                                  <PromptStashProvider>
+                                    <DialogProvider>
+                                      <CommandProvider>
+                                        <FrecencyProvider>
+                                          <PromptHistoryProvider>
+                                            <PromptRefProvider>
+                                              <App />
+                                            </PromptRefProvider>
+                                          </PromptHistoryProvider>
+                                        </FrecencyProvider>
+                                      </CommandProvider>
+                                    </DialogProvider>
+                                  </PromptStashProvider>
+                                </KeybindProvider>
+                              </LocalProvider>
+                            </ThemeProvider>
+                          </SyncProvider>
+                        </SDKProvider>
+                      </TuiConfigProvider>
                     </RouteProvider>
                   </ToastProvider>
                 </KVProvider>
@@ -256,9 +272,23 @@ function App() {
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
 
+  // kilocode_change start — notify server which session the user is viewing (for live session indicators)
   createEffect(() => {
-    console.log(JSON.stringify(route.data))
+    const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
+    sdk.client.session.viewed({ sessionID }).catch(() => {})
   })
+  // kilocode_change end
+
+  // kilocode_change start — evict per-session data from store when navigating away
+  createEffect(
+    on(
+      () => (route.data.type === "session" ? route.data.sessionID : undefined),
+      (current, prev) => {
+        if (prev && prev !== current) sync.session.evict(prev)
+      },
+    ),
+  )
+  // kilocode_change end
 
   // Update terminal window title based on current route and session
   createEffect(() => {
@@ -282,6 +312,12 @@ function App() {
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
       renderer.setTerminalTitle(`${titleDefault} | ${title}`) // kilocode_change
     }
+
+    // kilocode_change start
+    if (route.data.type === "kiloclaw") {
+      renderer.setTerminalTitle(`${titleDefault} | KiloClaw`)
+    }
+    // kilocode_change end
   })
 
   const args = useArgs()
@@ -374,6 +410,22 @@ function App() {
         dialog.replace(() => <DialogSessionList />)
       },
     },
+    ...(Flag.KILO_EXPERIMENTAL_WORKSPACES_TUI
+      ? [
+          {
+            title: "Manage workspaces",
+            value: "workspace.list",
+            category: "Workspace",
+            suggested: true,
+            slash: {
+              name: "workspaces",
+            },
+            onSelect: () => {
+              dialog.replace(() => <DialogWorkspaceList />)
+            },
+          },
+        ]
+      : []),
     {
       title: "New session",
       suggested: route.data.type === "session",
@@ -640,6 +692,15 @@ function App() {
       },
     },
     {
+      title: kv.get("bell_enabled", true) ? "Disable notifications" : "Enable notifications",
+      value: "app.toggle.notifications",
+      category: "System",
+      onSelect: (dialog) => {
+        kv.set("bell_enabled", !kv.get("bell_enabled", true))
+        dialog.clear()
+      },
+    },
+    {
       title: kv.get("animations_enabled", true) ? "Disable animations" : "Enable animations",
       value: "app.toggle.animations",
       category: "System",
@@ -658,6 +719,27 @@ function App() {
         dialog.clear()
       },
     },
+    // kilocode_change start
+    {
+      get title() {
+        return isAllowEverything(sync.data.config.permission) ? "Disable auto-approve mode" : "Enable auto-approve mode"
+      },
+      value: "permission.allow_everything",
+      category: "System",
+      onSelect: async (dialog) => {
+        const enabled = isAllowEverything(sync.data.config.permission)
+        const result = await sdk.client.permission.allowEverything({ enable: !enabled })
+        if (result.error) {
+          toast.show({
+            variant: "error",
+            message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
+          })
+          return
+        }
+        dialog.clear()
+      },
+    },
+    // kilocode_change end
   ])
 
   // kilocode_change start - Initialize TUI dependencies for kilo-gateway
@@ -712,6 +794,12 @@ function App() {
   sdk.event.on(SessionApi.Event.Error.type, (evt) => {
     const error = evt.properties.error
     if (error && typeof error === "object" && error.name === "MessageAbortedError") return
+    // kilocode_change start - Show warning toast for Kilo errors instead of generic error toast
+    if (error && typeof error === "object" && isKiloError(error)) {
+      showKiloErrorToast(error, toast)
+      return
+    }
+    // kilocode_change end
     const message = (() => {
       if (!error) return "An error occurred"
 
@@ -762,6 +850,11 @@ function App() {
         <Match when={route.data.type === "session"}>
           <Session />
         </Match>
+        {/* kilocode_change start */}
+        <Match when={route.data.type === "kiloclaw"}>
+          <KiloClawView />
+        </Match>
+        {/* kilocode_change end */}
       </Switch>
     </box>
   )

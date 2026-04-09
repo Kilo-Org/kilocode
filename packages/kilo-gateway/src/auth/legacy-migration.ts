@@ -1,4 +1,3 @@
-// kilocode_change - new file
 /**
  * Legacy Kilo CLI migration module
  *

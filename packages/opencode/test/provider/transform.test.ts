@@ -510,6 +510,106 @@ describe("ProviderTransform.schema - gemini nested array items", () => {
   })
 })
 
+describe("ProviderTransform.schema - gemini combiner nodes", () => {
+  const geminiModel = {
+    providerID: "google",
+    api: {
+      id: "gemini-3-pro",
+    },
+  } as any
+
+  const walk = (node: any, cb: (node: any, path: (string | number)[]) => void, path: (string | number)[] = []) => {
+    if (node === null || typeof node !== "object") {
+      return
+    }
+    if (Array.isArray(node)) {
+      node.forEach((item, i) => walk(item, cb, [...path, i]))
+      return
+    }
+    cb(node, path)
+    Object.entries(node).forEach(([key, value]) => walk(value, cb, [...path, key]))
+  }
+
+  test("keeps edits.items.anyOf without adding type", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        edits: {
+          type: "array",
+          items: {
+            anyOf: [
+              {
+                type: "object",
+                properties: {
+                  old_string: { type: "string" },
+                  new_string: { type: "string" },
+                },
+                required: ["old_string", "new_string"],
+              },
+              {
+                type: "object",
+                properties: {
+                  old_string: { type: "string" },
+                  new_string: { type: "string" },
+                  replace_all: { type: "boolean" },
+                },
+                required: ["old_string", "new_string"],
+              },
+            ],
+          },
+        },
+      },
+      required: ["edits"],
+    } as any
+
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    expect(Array.isArray(result.properties.edits.items.anyOf)).toBe(true)
+    expect(result.properties.edits.items.type).toBeUndefined()
+  })
+
+  test("does not add sibling keys to combiner nodes during sanitize", () => {
+    const schema = {
+      type: "object",
+      properties: {
+        edits: {
+          type: "array",
+          items: {
+            anyOf: [{ type: "string" }, { type: "number" }],
+          },
+        },
+        value: {
+          oneOf: [{ type: "string" }, { type: "boolean" }],
+        },
+        meta: {
+          allOf: [
+            {
+              type: "object",
+              properties: { a: { type: "string" } },
+            },
+            {
+              type: "object",
+              properties: { b: { type: "string" } },
+            },
+          ],
+        },
+      },
+    } as any
+    const input = JSON.parse(JSON.stringify(schema))
+    const result = ProviderTransform.schema(geminiModel, schema) as any
+
+    walk(result, (node, path) => {
+      const hasCombiner = Array.isArray(node.anyOf) || Array.isArray(node.oneOf) || Array.isArray(node.allOf)
+      if (!hasCombiner) {
+        return
+      }
+      const before = path.reduce((acc: any, key) => acc?.[key], input)
+      const added = Object.keys(node).filter((key) => !(key in before))
+      expect(added).toEqual([])
+    })
+  })
+})
+
 describe("ProviderTransform.schema - gemini non-object properties removal", () => {
   const geminiModel = {
     providerID: "google",
@@ -1673,6 +1773,24 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
     })
 
+    // kilocode_change start
+    test("mercury-2 returns OPENAI_EFFORTS with reasoning", () => {
+      const model = createMockModel({
+        id: "openrouter/inception/mercury-2",
+        providerID: "openrouter",
+        api: {
+          id: "inception/mercury-2",
+          url: "https://openrouter.ai",
+          npm: "@openrouter/ai-sdk-provider",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
+      expect(result.high).toEqual({ reasoning: { effort: "high" } })
+    })
+    // kilocode_change end
+
     test("grok-4 returns empty object", () => {
       const model = createMockModel({
         id: "openrouter/grok-4",
@@ -1813,6 +1931,29 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
       expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
     })
+
+    // kilocode_change start
+    test("mercury-2 uses server-provided variants from kilo gateway", () => {
+      const serverVariants = {
+        low: { reasoningEffort: "low" },
+        medium: { reasoningEffort: "medium" },
+        high: { reasoningEffort: "high" },
+      }
+      const model = createMockModel({
+        id: "kilo/inception/mercury-2",
+        providerID: "kilo",
+        api: {
+          id: "inception/mercury-2",
+          url: "https://gateway.kilo.ai",
+          npm: "@kilocode/kilo-gateway",
+        },
+        variants: serverVariants,
+      })
+      const result = ProviderTransform.variants(model)
+      expect(result).toEqual(serverVariants)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+    })
+    // kilocode_change end
   })
   // kilocode_change end
 
@@ -2014,6 +2155,35 @@ describe("ProviderTransform.variants", () => {
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
     })
+
+    test("gpt-5.3-codex includes xhigh", () => {
+      const model = createMockModel({
+        id: "gpt-5.3-codex",
+        providerID: "github-copilot",
+        api: {
+          id: "gpt-5.3-codex",
+          url: "https://api.githubcopilot.com",
+          npm: "@ai-sdk/github-copilot",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+    })
+
+    test("gpt-5.4 includes xhigh", () => {
+      const model = createMockModel({
+        id: "gpt-5.4",
+        release_date: "2026-03-05",
+        providerID: "github-copilot",
+        api: {
+          id: "gpt-5.4",
+          url: "https://api.githubcopilot.com",
+          npm: "@ai-sdk/github-copilot",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+    })
   })
 
   describe("@ai-sdk/cerebras", () => {
@@ -2118,6 +2288,24 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoningEffort: "low" })
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
+
+    // kilocode_change start
+    test("mercury-2 returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
+      const model = createMockModel({
+        id: "inception/mercury-2",
+        providerID: "inception",
+        api: {
+          id: "mercury-2",
+          url: "https://api.inceptionlabs.ai",
+          npm: "@ai-sdk/openai-compatible",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+      expect(result.low).toEqual({ reasoningEffort: "low" })
+      expect(result.high).toEqual({ reasoningEffort: "high" })
+    })
+    // kilocode_change end
   })
 
   describe("@ai-sdk/azure", () => {

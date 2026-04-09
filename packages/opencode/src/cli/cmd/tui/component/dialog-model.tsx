@@ -10,8 +10,11 @@ import * as fuzzysort from "fuzzysort"
 
 export function useConnected() {
   const sync = useSync()
+  // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
   return createMemo(() =>
-    sync.data.provider.some((x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0)),
+    sync.data.provider.some(
+      (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
+    ),
   )
 }
 
@@ -24,6 +27,15 @@ export function DialogModel(props: { providerID?: string }) {
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
+  // kilocode_change start
+  // Memoize anything that iterates all Kilo models to avoid calculating it for
+  // each Kilo model and tanking the UI at a couple hundred models
+  const kiloRank = createMemo(() => {
+    const provider = sync.data.provider.find((provider) => provider.id === "kilo")
+    const models = provider?.models ?? {}
+    return new Map(Object.entries(models).map(([id, info]) => [id, info.recommendedIndex ?? Infinity] as const))
+  })
+  // kilocode_change end
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
@@ -86,7 +98,7 @@ export function DialogModel(props: { providerID?: string }) {
               : undefined,
             // kilocode_change start
             category: connected()
-              ? provider.id === "kilo" && info.recommended
+              ? provider.id === "kilo" && info.recommendedIndex !== undefined
                 ? "Recommended"
                 : provider.name
               : undefined,
@@ -107,14 +119,8 @@ export function DialogModel(props: { providerID?: string }) {
             return true
           }),
           sortBy(
-            // kilocode_change start - Sort recommended models first for Kilo Gateway
-            (x) => {
-              if (x.value.providerID !== "kilo") return 0
-              const provider = sync.data.provider.find((p) => p.id === "kilo")
-              const model = provider?.models[x.value.modelID]
-              if (model?.recommendedIndex !== undefined) return model.recommendedIndex
-              return Object.keys(provider?.models ?? {}).length
-            },
+            // kilocode_change start - Sort within Recommended / Kilo Gateway
+            (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
             // kilocode_change end
             (x) => x.footer !== "Free",
             (x) => x.title,

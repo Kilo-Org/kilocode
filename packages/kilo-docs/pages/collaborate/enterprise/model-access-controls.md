@@ -5,44 +5,73 @@ description: "Control which AI models your team can access"
 
 # Model Access Controls
 
-**Model Access** lets organization admins control which AI models and providers are available to team members.
-Admins can **enable or disable** specific models, filter by attributes, and enforce organizational data policies.
+{% callout type="info" %}
+This is an **Enterprise-only** feature. Organizations on other plans have unrestricted access to all models and providers.
+{% /callout %}
+
+**Model Access Controls** let organization owners block specific AI models or providers for all team members. The system uses a **blocklist** approach: everything is allowed by default, and admins explicitly block what should not be accessible.
+
+This means newly added models and providers are automatically available to your team without any manual action required.
+
+## How It Works
+
+| Scenario               | Behavior                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| No blocks configured   | All models and providers are available (default)                                      |
+| Provider blocked       | All current and future models from that provider are unavailable                      |
+| Specific model blocked | Only that model is unavailable; other models from the same provider remain accessible |
 
 ## Managing Model Access
 
-1. Navigate to the **Model Access** tab of the Enterprise Dashboard.
-2. Toggle the checkbox beside any model or provider to enable or disable access.
-3. Click "Save Changes" to apply
+Navigate to your organization's **Providers & Models** page to configure access controls.
 
-{% image width="800" alt="Model-Access-Select" src="https://github.com/user-attachments/assets/af71353d-facc-4d4b-a0cd-c7f2cea73e97" /%}
+The page has two tabs:
 
-## Filtering Models
+### Models Tab
 
-You can filter available models by:
+Lists all available models across all providers. For each model you can:
 
-| Filter                        | Description                                                                 |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| **Data Policy**               | Choose models that meet specific data retention or compliance requirements. |
-| **Provider Location**         | Restrict models hosted in certain geographic regions.                       |
-| **Series**                    | Filter by model family (e.g. GPT-4, Claude 3, Gemini 1.5).                  |
-| **Provider**                  | Limit access to specific providers like OpenAI, Anthropic, or Google.       |
-| **Input / Output Modalities** | Filter by capabilities (text, code, image, audio, etc.).                    |
-| **Pricing**                   | Compare cost per token or usage tier.                                       |
+- Toggle access on or off
+- Search by model name, ID, or provider
+- Filter to show only currently allowed models
 
-Select multiple filters for increased granularity.
+### Providers Tab
 
----
+Lists all providers. For each provider you can:
+
+- Toggle the entire provider on or off (blocks all current and future models from that provider)
+- Filter by data policy (trains on data, retains prompts)
+- Filter by provider location / datacenter region
+
+When you toggle a provider off, all models it offers become unavailable to team members. Re-enabling the provider restores access to all its models.
+
+### Saving Changes
+
+A status bar appears at the bottom of the page whenever you have unsaved changes. Click **Save** to apply your changes, or **Cancel** to discard them. Changes take effect immediately for all team members once saved.
+
+## Filtering Options
+
+Use filters to find the models or providers you want to block:
+
+| Filter              | Tab                | Description                                           |
+| ------------------- | ------------------ | ----------------------------------------------------- |
+| **Search**          | Models & Providers | Filter by name, ID, or provider slug                  |
+| **Enabled only**    | Models & Providers | Show only currently allowed items                     |
+| **Trains on data**  | Providers          | Filter by whether the provider trains on user prompts |
+| **Retains prompts** | Providers          | Filter by whether the provider retains user prompts   |
+| **Location**        | Providers          | Filter by provider headquarters or datacenter country |
 
 ## Example Use Cases
 
-- **Security-first teams**: Disable models that store prompts or operate outside your data region.
-- **Cost control**: Limit access to higher-priced models.
-- **Specialization**: Enable models that are optimized for specific tasks.
+- **Data compliance**: Block providers that train on prompts or operate outside your required data region.
+- **Cost control**: Block high-cost models to prevent accidental expensive usage.
+- **Security policy**: Restrict access to a known set of approved providers.
 
 ---
 
 ## Notes
 
-- Only **Admins** and **Owners** can modify model access.
-- Updates propagate to all team members within seconds.
+- Only **Owners** can modify model access controls.
 - Individual users cannot override organization-level restrictions.
+- Blocking a provider blocks all its models, including models added by that provider in the future.
+- Unblocking a provider immediately restores access to all its models.

@@ -8,8 +8,9 @@ const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
 
 const binaries: Record<string, string> = {}
+// kilocode_change start
 for (const filepath of new Bun.Glob("*/*/package.json").scanSync({ cwd: "./dist" })) {
-  // kilocode_change
+  // kilocode_change end
   const pkg = await Bun.file(`./dist/${filepath}`).json()
   binaries[pkg.name] = pkg.version
 }
@@ -20,6 +21,7 @@ await $`mkdir -p ./dist/${pkg.name}`
 await $`cp -r ./bin ./dist/${pkg.name}/bin`
 await $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`
 await Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file("../../LICENSE").text())
+await Bun.file(`./dist/${pkg.name}/README.md`).write(await Bun.file("./README.md").text()) // kilocode_change
 
 await Bun.file(`./dist/${pkg.name}/package.json`).write(
   JSON.stringify(
@@ -90,8 +92,8 @@ if (!Script.preview) {
     "url='https://github.com/Kilo-Org/kilocode'",
     "arch=('aarch64' 'x86_64')",
     "license=('MIT')",
-    "provides=('kilo')", // kilocode_change
-    "conflicts=('kilo')", // kilocode_change
+    "provides=('kilo')",
+    "conflicts=('kilo')",
     "depends=('ripgrep')",
     "",
     `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-arm64.tar.gz")`,
@@ -182,11 +184,11 @@ if (!Script.preview) {
     console.error("GITHUB_TOKEN is required to update homebrew tap")
     process.exit(1)
   }
-  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git`
+  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git` // kilocode_change
   await $`rm -rf ./dist/homebrew-tap`
   await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula)
-  await $`cd ./dist/homebrew-tap && git add kilo.rb`
+  await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula) // kilocode_change
+  await $`cd ./dist/homebrew-tap && git add kilo.rb` // kilocode_change
   await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
   await $`cd ./dist/homebrew-tap && git push`
 }

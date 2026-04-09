@@ -1,4 +1,3 @@
-// kilocode_change - Kilo Gateway TUI component
 /**
  * Kilo Gateway Team Selection Dialog
  *

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "bun:test"
 import { parseServerPort } from "../../src/services/cli-backend/server-utils"
+import { toErrorMessage } from "../../src/services/cli-backend/server-manager"
 
 describe("parseServerPort", () => {
   it("parses port from standard CLI startup message", () => {
@@ -42,5 +43,63 @@ describe("parseServerPort", () => {
   it("matches only first occurrence when multiple ports present", () => {
     const output = "listening on http://127.0.0.1:3000 and http://127.0.0.1:4000"
     expect(parseServerPort(output)).toBe(3000)
+  })
+})
+
+describe("toErrorMessage", () => {
+  it("uses last non-empty stderr line as userMessage when no Error: line", () => {
+    const result = toErrorMessage("startup failed", ["line one", "line two", ""])
+    expect(result.userMessage).toBe("line two")
+  })
+
+  it("extracts message after Error: when present", () => {
+    const result = toErrorMessage("startup failed", ["some noise", "Error: something went wrong"])
+    expect(result.userMessage).toBe("something went wrong")
+  })
+
+  it("strips ANSI codes before matching Error:", () => {
+    const ansiError = "\x1b[91m\x1b[1mError: \x1b[0mConfig file at /path/kilo.json is not valid JSON(C):"
+    const result = toErrorMessage("startup failed", [ansiError])
+    expect(result.userMessage).toBe("Config file at /path/kilo.json is not valid JSON(C):")
+  })
+
+  it("finds Error: line anywhere, not just the last line", () => {
+    const result = toErrorMessage("startup failed", ["Error: the real problem", "subsequent noise", "more noise"])
+    expect(result.userMessage).toBe("the real problem")
+  })
+
+  it("falls back to last non-empty line when no Error: match", () => {
+    const result = toErrorMessage("startup failed", ["", "just some output", ""])
+    expect(result.userMessage).toBe("just some output")
+  })
+
+  it("falls back to error arg when stderr is empty", () => {
+    const result = toErrorMessage("startup failed", [])
+    expect(result.userMessage).toBe("startup failed")
+  })
+
+  it("strips ANSI from fallback last non-empty line", () => {
+    const result = toErrorMessage("startup failed", ["\x1b[31msome colored output\x1b[0m"])
+    expect(result.userMessage).toBe("some colored output")
+  })
+
+  it("includes error arg in userDetails", () => {
+    const result = toErrorMessage("startup failed", ["some output"])
+    expect(result.userDetails).toContain("startup failed")
+  })
+
+  it("includes CLI path in userDetails when provided", () => {
+    const result = toErrorMessage("startup failed", [], "/usr/local/bin/kilo")
+    expect(result.userDetails).toContain("CLI path: /usr/local/bin/kilo")
+  })
+
+  it("does not include CLI path in userDetails when not provided", () => {
+    const result = toErrorMessage("startup failed", [])
+    expect(result.userDetails).not.toContain("CLI path:")
+  })
+
+  it("returns original error string as error field", () => {
+    const result = toErrorMessage("startup failed", ["some output"])
+    expect(result.error).toBe("startup failed")
   })
 })

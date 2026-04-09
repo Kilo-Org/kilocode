@@ -1,4 +1,3 @@
-// kilocode_change - new file
 export type {
   DesktopTheme,
   ThemeSeedColors,
@@ -37,7 +36,7 @@ export {
   DEFAULT_THEMES,
   kiloTheme,
   kiloVscodeTheme,
-  oc1Theme,
+  oc2Theme,
   tokyonightTheme,
   draculaTheme,
   monokaiTheme,
@@ -49,4 +48,7 @@ export {
   shadesOfPurpleTheme,
   nightowlTheme,
   vesperTheme,
+  carbonfoxTheme,
+  gruvboxTheme,
+  auraTheme,
 } from "./default-themes"

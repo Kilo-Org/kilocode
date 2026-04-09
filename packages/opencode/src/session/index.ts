@@ -10,8 +10,10 @@ import { Flag } from "../flag/flag"
 import { Identifier } from "../id/id"
 import { Installation } from "../installation"
 
-import { Database, NotFoundError, eq, and, or, gte, isNull, desc, like } from "../storage/db"
+import { Database, NotFoundError, eq, and, or, gte, isNull, desc, like, inArray, lt } from "../storage/db"
+import type { SQL } from "../storage/db"
 import { SessionTable, MessageTable, PartTable } from "./session.sql"
+import { ProjectTable } from "../project/project.sql"
 import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
 import { MessageV2 } from "./message-v2"
@@ -20,6 +22,8 @@ import { SessionPrompt } from "./prompt"
 import { fn } from "@/util/fn"
 import { Command } from "../command"
 import { Snapshot } from "@/snapshot"
+import { WorkspaceContext } from "../control-plane/workspace-context"
+import { Filesystem } from "../util/filesystem" // kilocode_change: normalize directory for Windows drive-letter casing
 
 import type { Provider } from "@/provider/provider"
 import { PermissionNext } from "@/permission/next"
@@ -61,6 +65,7 @@ export namespace Session {
       id: row.id,
       slug: row.slug,
       projectID: row.project_id,
+      workspaceID: row.workspace_id ?? undefined,
       directory: row.directory,
       parentID: row.parent_id ?? undefined,
       title: row.title,
@@ -82,6 +87,7 @@ export namespace Session {
     return {
       id: info.id,
       project_id: info.projectID,
+      workspace_id: info.workspaceID,
       parent_id: info.parentID,
       slug: info.slug,
       directory: info.directory,
@@ -111,11 +117,31 @@ export namespace Session {
     return `${title} (fork #1)`
   }
 
+  // kilocode_change start
+  function family(id: string) {
+    const row = Database.use((db) =>
+      db.select({ worktree: ProjectTable.worktree }).from(ProjectTable).where(eq(ProjectTable.id, id)).get(),
+    )
+    const root = row?.worktree ? Filesystem.resolve(row.worktree) : undefined
+    if (!root || root === "/") return [id]
+    const ids = Database.use((db) =>
+      db
+        .select({ id: ProjectTable.id })
+        .from(ProjectTable)
+        .where(eq(ProjectTable.worktree, root))
+        .all()
+        .map((item) => item.id),
+    )
+    return ids.length ? ids : [id]
+  }
+  // kilocode_change end
+
   export const Info = z
     .object({
       id: Identifier.schema("session"),
       slug: z.string(),
       projectID: z.string(),
+      workspaceID: z.string().optional(),
       directory: z.string(),
       parentID: Identifier.schema("session").optional(),
       summary: z
@@ -123,7 +149,18 @@ export namespace Session {
           additions: z.number(),
           deletions: z.number(),
           files: z.number(),
-          diffs: Snapshot.FileDiff.array().optional(),
+          // kilocode_change start - lightweight diff summary (no file contents)
+          diffs: z
+            .array(
+              z.object({
+                file: z.string(),
+                additions: z.number(),
+                deletions: z.number(),
+                status: z.enum(["added", "deleted", "modified"]).optional(),
+              }),
+            )
+            .optional(),
+          // kilocode_change end
         })
         .optional(),
       share: z
@@ -153,6 +190,25 @@ export namespace Session {
       ref: "Session",
     })
   export type Info = z.output<typeof Info>
+
+  export const ProjectInfo = z
+    .object({
+      id: z.string(),
+      name: z.string().optional(),
+      worktree: z.string(),
+    })
+    .meta({
+      ref: "ProjectSummary",
+    })
+  export type ProjectInfo = z.output<typeof ProjectInfo>
+
+  export const GlobalInfo = Info.extend({
+    project: ProjectInfo.nullable(),
+    worktreeName: z.string().optional(), // kilocode_change - basename of the specific worktree directory
+  }).meta({
+    ref: "GlobalSession",
+  })
+  export type GlobalInfo = z.output<typeof GlobalInfo>
 
   export const Event = {
     Created: BusEvent.define(
@@ -310,6 +366,7 @@ export namespace Session {
       version: Installation.VERSION,
       projectID: Instance.project.id,
       directory: input.directory,
+      workspaceID: WorkspaceContext.workspaceID,
       parentID: input.parentID,
       title: input.title ?? createDefaultTitle(!!input.parentID),
       permission: input.permission,
@@ -340,7 +397,7 @@ export namespace Session {
 
   export function plan(input: { slug: string; time: { created: number } }) {
     const base = Instance.project.vcs
-      ? path.join(Instance.worktree, ".opencode", "plans")
+      ? path.join(Instance.worktree, ".kilo", "plans") // kilocode_change
       : path.join(Global.Path.data, "plans")
     return path.join(base, [input.time.created, input.slug].join("-") + ".md")
   }
@@ -457,6 +514,7 @@ export namespace Session {
             summary_additions: input.summary?.additions,
             summary_deletions: input.summary?.deletions,
             summary_files: input.summary?.files,
+            summary_diffs: input.summary?.diffs ?? null, // kilocode_change
             time_updated: Date.now(),
           })
           .where(eq(SessionTable.id, input.sessionID))
@@ -540,6 +598,7 @@ export namespace Session {
 
   export function* list(input?: {
     directory?: string
+    workspaceID?: string
     roots?: boolean
     start?: number
     search?: string
@@ -548,8 +607,13 @@ export namespace Session {
     const project = Instance.project
     const conditions = [eq(SessionTable.project_id, project.id)]
 
+    if (WorkspaceContext.workspaceID) {
+      conditions.push(eq(SessionTable.workspace_id, WorkspaceContext.workspaceID))
+    }
     if (input?.directory) {
-      conditions.push(eq(SessionTable.directory, input.directory))
+      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
+      conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
+      // kilocode_change end
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
@@ -577,6 +641,105 @@ export namespace Session {
     }
   }
 
+  // kilocode_change start
+  export function* listGlobal(input?: {
+    projectID?: string
+    directory?: string
+    directories?: string[]
+    roots?: boolean
+    start?: number
+    cursor?: number
+    search?: string
+    limit?: number
+    archived?: boolean
+  }) {
+    const conditions: SQL[] = [] // kilocode_change
+
+    // kilocode_change start
+    if (input?.projectID) {
+      const ids = family(input.projectID)
+      if (ids.length === 1 && ids[0] === input.projectID) {
+        conditions.push(eq(SessionTable.project_id, input.projectID))
+      } else {
+        conditions.push(inArray(SessionTable.project_id, ids))
+      }
+    }
+    // kilocode_change end
+
+    if (input?.directory) {
+      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
+      conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
+      // kilocode_change end
+    }
+    if (input?.roots) {
+      conditions.push(isNull(SessionTable.parent_id))
+    }
+    if (input?.start) {
+      conditions.push(gte(SessionTable.time_updated, input.start))
+    }
+    if (input?.cursor) {
+      conditions.push(lt(SessionTable.time_updated, input.cursor))
+    }
+    if (input?.search) {
+      conditions.push(like(SessionTable.title, `%${input.search}%`))
+    }
+    if (!input?.archived) {
+      conditions.push(isNull(SessionTable.time_archived))
+    }
+
+    const limit = input?.limit ?? 100 // kilocode_change
+    // kilocode_change start
+    const dirs = [...new Set((input?.directories ?? []).map((dir) => Filesystem.resolve(dir)))]
+
+    const rows = Database.use((db) => {
+      const query =
+        conditions.length > 0
+          ? db
+              .select()
+              .from(SessionTable)
+              .where(and(...conditions))
+          : db.select().from(SessionTable)
+      const sorted = query.orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
+      return dirs.length ? sorted.all() : sorted.limit(limit).all()
+    })
+
+    const list =
+      dirs.length > 0
+        ? rows.filter((row) => {
+            const dir = Filesystem.resolve(row.directory)
+            return dirs.some((root) => Filesystem.contains(root, dir))
+          })
+        : rows
+
+    const ids = [...new Set(list.slice(0, limit).map((row) => row.project_id))]
+    const projects = new Map<string, ProjectInfo>()
+
+    if (ids.length > 0) {
+      const items = Database.use((db) =>
+        db
+          .select({ id: ProjectTable.id, name: ProjectTable.name, worktree: ProjectTable.worktree })
+          .from(ProjectTable)
+          .where(inArray(ProjectTable.id, ids))
+          .all(),
+      )
+      for (const item of items) {
+        projects.set(item.id, {
+          id: item.id,
+          name: item.name ?? undefined,
+          worktree: item.worktree,
+        })
+      }
+    }
+    // kilocode_change end
+
+    // kilocode_change start
+    for (const row of list.slice(0, limit)) {
+      const project = projects.get(row.project_id) ?? null
+      yield { ...fromRow(row), project }
+    }
+    // kilocode_change end
+  }
+
   export const children = fn(Identifier.schema("session"), async (parentID) => {
     const project = Instance.project
     const rows = Database.use((db) =>
@@ -599,6 +762,9 @@ export namespace Session {
       const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
       await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
       platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
+      // kilocode_change start - cancel running processor before deleting to avoid FK constraint errors
+      SessionPrompt.cancel(sessionID)
+      // kilocode_change end
       // CASCADE delete handles messages and parts automatically
       Database.use((db) => {
         db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
@@ -616,22 +782,32 @@ export namespace Session {
   export const updateMessage = fn(MessageV2.Info, async (msg) => {
     const time_created = msg.time.created
     const { id, sessionID, ...data } = msg
-    Database.use((db) => {
-      db.insert(MessageTable)
-        .values({
-          id,
-          session_id: sessionID,
-          time_created,
-          data,
-        })
-        .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.Updated, {
-          info: msg,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(MessageTable)
+          .values({
+            id,
+            session_id: sessionID,
+            time_created,
+            data,
+          })
+          .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.Updated, {
+            info: msg,
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping message update for deleted session", { id: msg.id, sessionID: msg.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return msg
   })
 
@@ -643,7 +819,9 @@ export namespace Session {
     async (input) => {
       // CASCADE delete handles parts automatically
       Database.use((db) => {
-        db.delete(MessageTable).where(eq(MessageTable.id, input.messageID)).run()
+        db.delete(MessageTable)
+          .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
+          .run()
         Database.effect(() =>
           Bus.publish(MessageV2.Event.Removed, {
             sessionID: input.sessionID,
@@ -663,7 +841,9 @@ export namespace Session {
     }),
     async (input) => {
       Database.use((db) => {
-        db.delete(PartTable).where(eq(PartTable.id, input.partID)).run()
+        db.delete(PartTable)
+          .where(and(eq(PartTable.id, input.partID), eq(PartTable.session_id, input.sessionID)))
+          .run()
         Database.effect(() =>
           Bus.publish(MessageV2.Event.PartRemoved, {
             sessionID: input.sessionID,
@@ -681,23 +861,33 @@ export namespace Session {
   export const updatePart = fn(UpdatePartInput, async (part) => {
     const { id, messageID, sessionID, ...data } = part
     const time = Date.now()
-    Database.use((db) => {
-      db.insert(PartTable)
-        .values({
-          id,
-          message_id: messageID,
-          session_id: sessionID,
-          time_created: time,
-          data,
-        })
-        .onConflictDoUpdate({ target: PartTable.id, set: { data } })
-        .run()
-      Database.effect(() =>
-        Bus.publish(MessageV2.Event.PartUpdated, {
-          part,
-        }),
-      )
-    })
+    // kilocode_change start - ignore FK errors when session was deleted while processor was still running
+    try {
+      Database.use((db) => {
+        db.insert(PartTable)
+          .values({
+            id,
+            message_id: messageID,
+            session_id: sessionID,
+            time_created: time,
+            data,
+          })
+          .onConflictDoUpdate({ target: PartTable.id, set: { data } })
+          .run()
+        Database.effect(() =>
+          Bus.publish(MessageV2.Event.PartUpdated, {
+            part: structuredClone(part),
+          }),
+        )
+      })
+    } catch (e: any) {
+      if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
+        log.warn("skipping part update for deleted session", { id: part.id, sessionID: part.sessionID })
+      } else {
+        throw e
+      }
+    }
+    // kilocode_change end
     return part
   })
 

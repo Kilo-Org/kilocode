@@ -1,8 +1,8 @@
-/* kilocode_change - new file */
 /* Kilo Checkbox overrides – sized to match @vscode/webview-ui-toolkit */
 
 [data-component="checkbox"] {
   margin: 4px 0;
+  cursor: pointer;
 
   [data-slot="checkbox-checkbox-control"] {
     width: 18px;

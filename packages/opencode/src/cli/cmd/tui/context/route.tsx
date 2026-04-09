@@ -1,4 +1,4 @@
-import { createStore } from "solid-js/store"
+import { createStore, unwrap } from "solid-js/store"
 import { createSimpleContext } from "./helper"
 import type { PromptInfo } from "../component/prompt/history"
 
@@ -13,7 +13,13 @@ export type SessionRoute = {
   initialPrompt?: PromptInfo
 }
 
-export type Route = HomeRoute | SessionRoute
+// kilocode_change start
+export type KiloClawRoute = {
+  type: "kiloclaw"
+}
+// kilocode_change end
+
+export type Route = HomeRoute | SessionRoute | KiloClawRoute // kilocode_change
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
@@ -26,14 +32,27 @@ export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
           },
     )
 
+    // kilocode_change start
+    let previous: Route | undefined
+    // kilocode_change end
+
     return {
       get data() {
         return store
       },
       navigate(route: Route) {
         console.log("navigate", route)
+        previous = structuredClone(unwrap(store)) // kilocode_change
         setStore(route)
       },
+      // kilocode_change start
+      back() {
+        const target = previous ?? ({ type: "home" } as const)
+        previous = undefined
+        console.log("navigate", target)
+        setStore(target)
+      },
+      // kilocode_change end
     }
   },
 })

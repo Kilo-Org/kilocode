@@ -1,5 +1,3 @@
-// kilocode_change - new file
-
 import { Installation } from "@/installation"
 
 export const DEFAULT_HEADERS = {

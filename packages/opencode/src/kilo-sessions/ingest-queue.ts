@@ -60,6 +60,7 @@ export namespace IngestQueue {
     getClient: () => Promise<Client | undefined>
     onAuthError?: () => void
     log: {
+      info?: (message: string, data: Record<string, unknown>) => void
       error: (message: string, data: Record<string, unknown>) => void
     }
     now?: () => number
@@ -198,6 +199,16 @@ export namespace IngestQueue {
         const client = await options.getClient()
         if (!client) return
 
+        if (options.log.info) {
+          const types = items.map((d) => d.type).join(",")
+          options.log.info("ingest flush", {
+            sessionId,
+            url: `${client.url}${share.ingestPath}?v=1`,
+            items: items.length,
+            types,
+          })
+        }
+
         const response = await client
           .fetch(`${client.url}${share.ingestPath}?v=1`, {
             method: "POST",
@@ -218,12 +229,13 @@ export namespace IngestQueue {
 
           const delay = backoff(count)
           retry.set(sessionId, { count, until: now() + delay })
-          options.log.error("share sync failed", { sessionId, error: "network", retryInMs: delay })
+          options.log.error("share sync failed", { sessionId, error: "network", attempt: count, retryInMs: delay })
           enqueue(sessionId, items, "fill", now() + delay)
           return
         }
 
         if (response.ok) {
+          options.log.info?.("ingest flush ok", { sessionId, items: items.length })
           retry.delete(sessionId)
           return
         }
@@ -265,6 +277,7 @@ export namespace IngestQueue {
           sessionId,
           status: response.status,
           statusText: response.statusText,
+          attempt: count,
           retryInMs: delay,
         })
         enqueue(sessionId, items, "fill", now() + delay)
@@ -281,6 +294,11 @@ export namespace IngestQueue {
       //   than the current backoff window (if retries are active).
       const client = await options.getClient()
       if (!client) return
+
+      if (options.log.info) {
+        const types = data.map((d) => d.type).join(",")
+        options.log.info("ingest sync", { sessionId, types })
+      }
 
       const until = retry.get(sessionId)?.until ?? 0
       const base = queue.get(sessionId)?.due ?? now() + 1000

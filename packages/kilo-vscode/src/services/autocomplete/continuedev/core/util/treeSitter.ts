@@ -126,6 +126,9 @@ export async function getParserForFile(filepath: string) {
   try {
     // Dynamically import Parser to avoid issues with WASM loading
     const { Parser } = require("web-tree-sitter")
+    if (!Parser) {
+      return undefined
+    }
 
     await Parser.init()
     const parser = new Parser()

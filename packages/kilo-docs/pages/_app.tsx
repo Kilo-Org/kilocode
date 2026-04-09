@@ -3,7 +3,7 @@ import Head from "next/head"
 import { useRouter } from "next/router"
 import posthog from "posthog-js"
 
-import { CopyPageButton, SideNav, TableOfContents, TopNav } from "../components"
+import { CopyPageButton, PageFooter, PageVersionSwitcher, SideNav, TableOfContents, TopNav } from "../components"
 
 import "prismjs"
 import "prismjs/components/prism-bash.min"
@@ -129,6 +129,8 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
 
   const toc = pageProps.markdoc?.content ? collectHeadings(pageProps.markdoc.content) : []
 
+  const platform = markdoc?.frontmatter?.platform
+
   return (
     <>
       <Head>
@@ -137,13 +139,14 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
         <meta name="referrer" content="strict-origin" />
         <meta name="title" content={title} />
         <meta name="description" content={description} />
-        <link rel="shortcut icon" href="https://kilo.ai/favicon.ico" />
-        <link rel="icon" href="https://kilo.ai/favicon.ico" sizes="48x48" type="image/x-icon" />
-        <link rel="icon" href="https://kilo.ai/favicon.svg" type="image/svg+xml" />
-        <link rel="apple-touch-icon" href="https://kilo.ai/apple-touch-icon.png" sizes="180x180" type="image/png" />
-        <link rel="manifest" href="https://kilo.ai/site.webmanifest" />
-        <link rel="icon" href="https://kilo.ai/android-chrome-192x192.png" type="image/png" sizes="192x192" />
-        <link rel="icon" href="https://kilo.ai/android-chrome-512x512.png" type="image/png" sizes="512x512" />
+        <link rel="icon" href="/docs/favicon/favicon.ico" sizes="48x48" type="image/x-icon" />
+        <link rel="shortcut icon" href="/docs/favicon/favicon.ico" />
+        <link rel="icon" href="/docs/favicon/favicon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href="/docs/favicon/apple-touch-icon.png" sizes="180x180" type="image/png" />
+        <link rel="icon" href="/docs/favicon/android-chrome-192x192.png" sizes="192x192" type="image/png" />
+        <link rel="icon" href="/docs/favicon/android-chrome-512x512.png" sizes="512x512" type="image/png" />
+        <link rel="manifest" href="/docs/site.webmanifest" />
+        <meta name="apple-mobile-web-app-title" content="Kilo Code" />
         <meta name="theme-color" content="#617A91" />
         {/* Preconnect to Algolia for better performance */}
         <link rel="preconnect" href="https://PMZUYBQDAK-dsn.algolia.net" crossOrigin="anonymous" />
@@ -177,8 +180,10 @@ export default function MyApp({ Component, pageProps }: AppProps<MyAppProps>) {
           <SideNav isMobileOpen={isMobileMenuOpen} onMobileClose={handleMobileMenuClose} />
           <main className="main-content">
             <div className="content-wrapper">
-              <div className="article-content flex column mt-5">
+              <div className="article-content mt-5">
+                {markdoc && <PageVersionSwitcher platform={platform} />}
                 <Component {...pageProps} />
+                {markdoc && <PageFooter />}
               </div>
               <div className="right-sidebar" key={router.asPath}>
                 {markdoc && <CopyPageButton />}

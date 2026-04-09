@@ -62,6 +62,29 @@ export const ConfigRoutes = lazy(() =>
         return c.json(config)
       },
     )
+    // kilocode_change start
+    .get(
+      "/warnings",
+      describeRoute({
+        summary: "Get config warnings",
+        description: "Get warnings generated during config loading (e.g., invalid JSON, schema errors).",
+        operationId: "config.warnings",
+        responses: {
+          200: {
+            description: "Config warnings",
+            content: {
+              "application/json": {
+                schema: resolver(Config.Warning.array()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        return c.json(await Config.warnings())
+      },
+    )
+    // kilocode_change end
     .get(
       "/providers",
       describeRoute({
@@ -89,10 +112,16 @@ export const ConfigRoutes = lazy(() =>
         const providers = await Provider.list()
 
         // kilocode_change start - Fetch default model from Kilo API
-        const kiloAuth = await Auth.get("kilo")
-        const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
-        const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
-        const kiloApiDefault = await fetchDefaultModel(token, organizationId)
+        // Only call the Kilo API when the kilo provider is actually available.
+        // This prevents unnecessary network calls for teams using only their
+        // own providers (e.g. LiteLLM) via enabled_providers config.
+        let kiloApiDefault: string | undefined
+        if (providers["kilo"]) {
+          const kiloAuth = await Auth.get("kilo")
+          const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
+          const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
+          kiloApiDefault = await fetchDefaultModel(token, organizationId)
+        }
         // kilocode_change end
 
         // kilocode_change start - Use API default for Kilo provider if valid
