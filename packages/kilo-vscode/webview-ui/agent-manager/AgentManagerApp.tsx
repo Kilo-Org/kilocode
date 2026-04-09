@@ -2420,7 +2420,9 @@ const AgentManagerContent: Component = () => {
                                       </SectionHeader>
                                     )
                                   }
-                                  return renderWt(item.wt, idx)
+                                  const ug = ungrouped()
+                                  const wtIdx = () => ug.indexOf(item.wt)
+                                  return renderWt(item.wt, wtIdx, false, ug)
                                 }}
                               </For>
                             )
