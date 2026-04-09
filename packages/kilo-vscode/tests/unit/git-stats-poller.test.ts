@@ -432,7 +432,7 @@ describe("GitStatsPoller", () => {
     expect(fetches.length).toBe(0)
   })
 
-  it("limits concurrent worktree fetches when semaphore is provided", async () => {
+  it("limits concurrent diffSummary calls when semaphore is provided", async () => {
     let running = 0
     let peak = 0
     let ticks = 0
@@ -450,6 +450,9 @@ describe("GitStatsPoller", () => {
       },
     } as unknown as KiloClient
 
+    // Wire the SAME semaphore into GitOps to prove there's no deadlock —
+    // aheadBehind acquires the semaphore independently, not nested inside
+    // the diffSummary gate.
     const wts = Array.from({ length: 5 }, (_, i) => worktree(String(i)))
     const poller = new GitStatsPoller({
       getWorktrees: () => wts,
@@ -462,9 +465,13 @@ describe("GitStatsPoller", () => {
       log: () => undefined,
       intervalMs: 5,
       semaphore: sem,
-      git: gitOps(async (args) => {
-        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
-        return ""
+      git: new GitOps({
+        log: () => undefined,
+        semaphore: sem,
+        runGit: async (args) => {
+          if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+          return ""
+        },
       }),
     })
 
@@ -472,9 +479,7 @@ describe("GitStatsPoller", () => {
     await waitFor(() => ticks >= 1)
     poller.stop()
 
-    // diffSummary + aheadBehind run inside the same semaphore slot,
-    // and aheadBehind also goes through GitOps (no semaphore on that
-    // instance), so the HTTP concurrency is bounded by the gate.
+    // Only diffSummary calls are tracked — they should be bounded.
     expect(peak).toBeLessThanOrEqual(2)
   })
 })

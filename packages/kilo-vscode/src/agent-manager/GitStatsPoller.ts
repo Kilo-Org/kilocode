@@ -157,36 +157,37 @@ export class GitStatsPoller {
       return
     }
 
+    // Gate the HTTP diffSummary call through the semaphore but NOT the
+    // aheadBehind call — that goes through GitOps.raw() which already
+    // acquires the same semaphore. Wrapping both would deadlock.
     const gate = this.options.semaphore
+    const diff = (dir: string, base: string) => {
+      const invoke = () => client.worktree.diffSummary({ directory: dir, base }, { throwOnError: true })
+      return gate ? gate.run(invoke) : invoke()
+    }
     const stats = (
       await Promise.all(
-        active.map((wt) => {
-          const work = async () => {
-            try {
-              const base = remoteRef(wt)
-              const [{ data: diffs }, ab] = await Promise.all([
-                client.worktree.diffSummary({ directory: wt.path, base }, { throwOnError: true }),
-                this.git.aheadBehind(wt.path, base),
-              ])
-              const files = diffs.length
-              const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
-              const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
-              return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
-            } catch (err) {
-              this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-              const prev = this.lastStats[wt.id]
-              if (!prev) return undefined
-              return {
-                worktreeId: wt.id,
-                files: prev.files,
-                additions: prev.additions,
-                deletions: prev.deletions,
-                ahead: prev.ahead,
-                behind: prev.behind,
-              }
+        active.map(async (wt) => {
+          try {
+            const base = remoteRef(wt)
+            const [{ data: diffs }, ab] = await Promise.all([diff(wt.path, base), this.git.aheadBehind(wt.path, base)])
+            const files = diffs.length
+            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
+            return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
+          } catch (err) {
+            this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
+            const prev = this.lastStats[wt.id]
+            if (!prev) return undefined
+            return {
+              worktreeId: wt.id,
+              files: prev.files,
+              additions: prev.additions,
+              deletions: prev.deletions,
+              ahead: prev.ahead,
+              behind: prev.behind,
             }
           }
-          return gate ? gate.run(work) : work()
         }),
       )
     ).filter((item): item is WorktreeStats => !!item)
@@ -267,8 +268,10 @@ export class GitStatsPoller {
       try {
         if (base && client) {
           this.options.log(`Local stats: using HTTP client with base=${base}`)
+          const gate = this.options.semaphore
+          const invoke = () => client.worktree.diffSummary({ directory: root, base }, { throwOnError: true })
           const [{ data: diffs }, ab] = await Promise.all([
-            client.worktree.diffSummary({ directory: root, base }, { throwOnError: true }),
+            gate ? gate.run(invoke) : invoke(),
             this.git.aheadBehind(root, base),
           ])
           files = diffs.length
