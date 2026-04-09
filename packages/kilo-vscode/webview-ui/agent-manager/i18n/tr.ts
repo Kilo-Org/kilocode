@@ -115,6 +115,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "diff'i aç/kapat",
   "agentManager.diff.openFile": "Dosyayı aç",
+  "agentManager.diff.revertFile": "Dosyayı geri al",
+  "agentManager.diff.revertSuccess": "Dosya geri alındı",
+  "agentManager.diff.revertError": "Geri alma başarısız",
   "agentManager.open.button": "Aç",
   "agentManager.open.tooltip": "Bu worktree'yi VS Code'da aç",
   "agentManager.apply.button": "Yerele uygula",

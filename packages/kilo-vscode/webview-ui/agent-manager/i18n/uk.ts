@@ -116,6 +116,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Показати або приховати diff",
   "agentManager.diff.openFile": "Відкрити файл",
+  "agentManager.diff.revertFile": "Скасувати зміни файлу",
+  "agentManager.diff.revertSuccess": "Файл відновлено",
+  "agentManager.diff.revertError": "Не вдалося відновити",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.button": "Застосувати локально",

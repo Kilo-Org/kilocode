@@ -1648,7 +1648,6 @@ export class AgentManagerProvider implements Disposable {
   /** Revert a single file in a worktree back to the merge-base state. */
   private async onRevertWorktreeFile(sessionId: string, file: string): Promise<void> {
     if (!file) return
-
     if (this.stateReady) {
       await this.stateReady.catch((err) => this.log("stateReady rejected, continuing revert resolve:", err))
     }
