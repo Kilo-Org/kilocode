@@ -1,0 +1,10 @@
+{
+  "id": "openclaw-security-advisor",
+  "name": "OpenClaw Security Advisor",
+  "description": "Run a security checkup of your OpenClaw instance and get an expert analysis report from KiloClaw.",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

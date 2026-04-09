@@ -1,0 +1,31 @@
+{
+  "name": "@kilocode/openclaw-security-advisor",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Security analysis plugin for OpenClaw instances, powered by KiloClaw",
+  "main": "index.ts",
+  "openclaw": {
+    "extensions": ["./index.ts"],
+    "compat": {
+      "pluginApi": ">=2026.3.24-beta.2"
+    }
+  },
+  "files": [
+    "index.ts",
+    "src",
+    "openclaw.plugin.json"
+  ],
+  "peerDependencies": {
+    "openclaw": ">=2026.3.24"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.3.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Kilo-Org/kilocode",
+    "directory": "packages/openclaw-security-advisor"
+  }
+}
