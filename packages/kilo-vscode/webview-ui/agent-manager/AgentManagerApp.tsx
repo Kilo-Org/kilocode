@@ -93,7 +93,15 @@ import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import SectionHeader from "./SectionHeader"
 import { randomColor } from "./section-colors"
-import { buildTopLevelItems, isGrouped, isGroupStart, isGroupEnd, type TopLevelItem } from "./section-helpers"
+import {
+  buildTopLevelItems,
+  buildSidebarOrder,
+  buildShortcutMap,
+  isGrouped,
+  isGroupStart,
+  isGroupEnd,
+  type TopLevelItem,
+} from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
@@ -872,6 +880,14 @@ const AgentManagerContent: Component = () => {
   const topLevelItems = createMemo((): TopLevelItem[] =>
     buildTopLevelItems(sections(), ungrouped(), sortedWorktrees(), sidebarWorktreeOrder()),
   )
+
+  /** Flat visual order of all visible sidebar items — used for navigation and shortcut assignment. */
+  const sidebarOrder = createMemo(() =>
+    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, unassignedSessions()),
+  )
+  /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
+  const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+
   const moveToSection = (ids: string[], sec: string | null) =>
     vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
   const moveSection = (sectionId: string, dir: -1 | 1) =>
@@ -886,54 +902,36 @@ const AgentManagerContent: Component = () => {
     })
   }
 
-  const scrollIntoView = (el: HTMLElement) => {
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" })
-  }
+  const scrollIntoView = (el: HTMLElement) => el.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
-  // Navigate sidebar items with arrow keys
-  const navigate = (direction: "up" | "down") => {
-    const flat: { type: typeof LOCAL | "wt" | "session"; id: string }[] = [
-      { type: LOCAL, id: LOCAL },
-      ...sortedWorktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
-      ...unassignedSessions().map((s) => ({ type: "session" as const, id: s.id })),
-    ]
-    if (flat.length === 0) return
-
-    const current = selection() ?? session.currentSessionID()
-    const idx = current ? flat.findIndex((f) => f.id === current) : -1
-    const next = direction === "up" ? idx - 1 : idx + 1
-    if (next < 0 || next >= flat.length) return
-
-    const item = flat[next]!
-    if (item.type === LOCAL) {
-      selectLocal()
-    } else if (item.type === "wt") {
-      selectWorktree(item.id)
-    } else {
+  const focusSidebarItem = (item: { type: string; id: string }) => {
+    if (item.type === "local") selectLocal()
+    else if (item.type === "wt") selectWorktree(item.id)
+    else {
       saveTabMemory()
       setSelection(null)
       setReviewActive(false)
       session.selectSession(item.id)
     }
-
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Jump to sidebar item by 1-based index (⌘1 = LOCAL, ⌘2 = first worktree, etc.)
+  // Navigate sidebar items with arrow keys (uses visual order from sidebarOrder)
+  const navigate = (direction: "up" | "down") => {
+    const flat = sidebarOrder()
+    if (flat.length === 0) return
+    const current = selection() ?? session.currentSessionID()
+    const idx = current ? flat.findIndex((f) => f.id === current) : -1
+    const next = direction === "up" ? idx - 1 : idx + 1
+    if (next < 0 || next >= flat.length) return
+    focusSidebarItem(flat[next]!)
+  }
+
+  // Jump to sidebar item by 0-based index into sidebarOrder (⌘1 = index 0 = LOCAL, ⌘2 = index 1, etc.)
   const jumpToItem = (index: number) => {
-    if (index === 0) {
-      selectLocal()
-      const el = document.querySelector(`[data-sidebar-id="local"]`)
-      if (el instanceof HTMLElement) scrollIntoView(el)
-      return
-    }
-    const wts = sortedWorktrees()
-    const wt = wts[index - 1]
-    if (!wt) return
-    selectWorktree(wt.id)
-    const el = document.querySelector(`[data-sidebar-id="${wt.id}"]`)
-    if (el instanceof HTMLElement) scrollIntoView(el)
+    const item = sidebarOrder()[index]
+    if (item) focusSidebarItem(item)
   }
 
   // Navigate tabs with Cmd+Alt+Left/Right
@@ -1754,7 +1752,9 @@ const AgentManagerContent: Component = () => {
       if (selection() === wt.id) {
         const next = nextSelectionAfterDelete(
           wt.id,
-          worktrees().map((w) => w.id),
+          sidebarOrder()
+            .filter((f) => f.type === "wt")
+            .map((f) => f.id),
         )
         if (next === LOCAL) selectLocal()
         else selectWorktree(next)
@@ -1777,7 +1777,9 @@ const AgentManagerContent: Component = () => {
       if (selection() === wt.id) {
         const next = nextSelectionAfterDelete(
           wt.id,
-          worktrees().map((w) => w.id),
+          sidebarOrder()
+            .filter((f) => f.type === "wt")
+            .map((f) => f.id),
         )
         if (next === LOCAL) selectLocal()
         if (next !== LOCAL) selectWorktree(next)
@@ -2299,12 +2301,7 @@ const AgentManagerContent: Component = () => {
                       <ConstrainDragXAxis />
                       <SortableProvider ids={wtIds()}>
                         {(() => {
-                          const renderWt = (
-                            wt: WorktreeState,
-                            idx: () => number,
-                            inSection?: boolean,
-                            list?: WorktreeState[],
-                          ) => {
+                          const renderWt = (wt: WorktreeState, idx: () => number, list?: WorktreeState[]) => {
                             const wtSessions = createMemo(() =>
                               managedSessions().filter((ms) => ms.worktreeId === wt.id),
                             )
@@ -2312,11 +2309,7 @@ const AgentManagerContent: Component = () => {
                               adjacentHint(
                                 wt.id,
                                 selection() ?? session.currentSessionID() ?? "",
-                                [
-                                  LOCAL as string,
-                                  ...sortedWorktrees().map((w) => w.id),
-                                  ...unassignedSessions().map((s) => s.id),
-                                ],
+                                sidebarOrder().map((f) => f.id),
                                 kb().previousSession ?? "",
                                 kb().nextSession ?? "",
                               )
@@ -2338,7 +2331,7 @@ const AgentManagerContent: Component = () => {
                                   busy={busyWorktrees().has(wt.id)}
                                   working={isAgentBusy(wt.id)}
                                   stale={isStaleWorktree(wt.id)}
-                                  shortcut={inSection ? undefined : idx() + 2}
+                                  shortcut={shortcutMap().get(wt.id)}
                                   stats={worktreeStats()[wt.id]}
                                   navHint={navHint()}
                                   sessions={wtSessions().length}
@@ -2412,9 +2405,7 @@ const AgentManagerContent: Component = () => {
                                       >
                                         <Show when={!sec.collapsed}>
                                           <div class="am-section-group-body">
-                                            <For each={members()}>
-                                              {(wt, wtIdx) => renderWt(wt, wtIdx, true, members())}
-                                            </For>
+                                            <For each={members()}>{(wt, wtIdx) => renderWt(wt, wtIdx, members())}</For>
                                           </div>
                                         </Show>
                                       </SectionHeader>
