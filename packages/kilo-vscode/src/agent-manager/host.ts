@@ -38,6 +38,8 @@ export interface SessionProvider {
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void
+  /** Recover any pending permission/question prompts for tracked sessions. */
+  recoverPendingPrompts(): void
   dispose(): void
 }
 

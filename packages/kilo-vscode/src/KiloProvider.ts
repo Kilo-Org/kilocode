@@ -444,6 +444,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.handleLoadSessions()
   }
 
+  /**
+   * Recover any pending permission/question prompts for tracked sessions.
+   * Called by AgentManagerProvider after worktree sessions are re-registered
+   * so that prompts missed during panel recreation or SSE reconnection are
+   * recovered before the agent stalls.
+   */
+  public recoverPendingPrompts(): void {
+    void fetchAndSendPendingPermissions(this.permissionCtx)
+    void fetchAndSendPendingQuestions(this.questionCtx)
+  }
+
   public openCloudSession(sessionId: string): void {
     this.postMessage({ type: "openCloudSession", sessionId })
   }

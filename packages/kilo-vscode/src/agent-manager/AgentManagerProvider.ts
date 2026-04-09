@@ -215,6 +215,12 @@ export class AgentManagerProvider implements Disposable {
     if (state.getSessions().length > 0) {
       this.panel?.sessions.refreshSessions()
     }
+
+    // Recover any pending permission/question prompts that were missed during
+    // panel recreation or SSE reconnection. Must run after all worktree sessions
+    // are registered with their directory overrides so the recovery queries the
+    // correct CLI backend Instances.
+    this.panel?.sessions.recoverPendingPrompts()
   }
 
   // ---------------------------------------------------------------------------
@@ -1428,6 +1434,10 @@ export class AgentManagerProvider implements Disposable {
     if (!this.panel) return
     this.panel.sessions.setSessionDirectory(sessionId, directory)
     this.panel.sessions.trackSession(sessionId)
+    // Recover any permission/question prompts that arrived before the session
+    // was tracked. The CLI backend may have emitted permission.asked between
+    // session.create() returning and this registration completing.
+    this.panel.sessions.recoverPendingPrompts()
   }
 
   private onWorktreePresence(result: WorktreePresenceResult): void {
