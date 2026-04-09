@@ -3,6 +3,7 @@ import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { DiffViewerProvider } from "./DiffViewerProvider"
+import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
@@ -105,6 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
         )
+        tabProvider.setDiffVirtualProvider(diffVirtualProvider)
         tabProvider.resolveWebviewPanel(panel)
         tabPanels.set(panel, tabProvider)
         panel.onDidDispose(
@@ -127,6 +129,12 @@ export function activate(context: vscode.ExtensionContext) {
     void provider.appendReviewComments(comments, autoSend)
   })
   context.subscriptions.push(diffViewerProvider)
+
+  // Create diff virtual provider (lightweight single-file diff for permission approval)
+  const diffVirtualProvider = new DiffVirtualProvider(context.extensionUri)
+  provider.setDiffVirtualProvider(diffVirtualProvider)
+  agentManagerHost.setDiffVirtualProvider(diffVirtualProvider)
+  context.subscriptions.push(diffVirtualProvider)
 
   // Create settings/profile editor provider (opens in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
@@ -221,7 +229,7 @@ export function activate(context: vscode.ExtensionContext) {
       provider.postMessage({ type: "triggerTask", text: `Generate a terminal command: ${input}` })
     }),
     vscode.commands.registerCommand("kilo-code.new.openInTab", () => {
-      return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels)
+      return openKiloInNewTab(context, connectionService, agentManagerProvider, tabPanels, diffVirtualProvider)
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
       diffViewerProvider.openPanel()
@@ -353,6 +361,7 @@ async function openKiloInNewTab(
   connectionService: KiloConnectionService,
   agentManagerProvider: AgentManagerProvider,
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
+  diffVirtualProvider: DiffVirtualProvider,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -378,6 +387,7 @@ async function openKiloInNewTab(
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
+  tabProvider.setDiffVirtualProvider(diffVirtualProvider)
   tabProvider.resolveWebviewPanel(panel)
   tabPanels.set(panel, tabProvider)
 

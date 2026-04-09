@@ -62,6 +62,29 @@ export const ConfigRoutes = lazy(() =>
         return c.json(config)
       },
     )
+    // kilocode_change start
+    .get(
+      "/warnings",
+      describeRoute({
+        summary: "Get config warnings",
+        description: "Get warnings generated during config loading (e.g., invalid JSON, schema errors).",
+        operationId: "config.warnings",
+        responses: {
+          200: {
+            description: "Config warnings",
+            content: {
+              "application/json": {
+                schema: resolver(Config.Warning.array()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        return c.json(await Config.warnings())
+      },
+    )
+    // kilocode_change end
     .get(
       "/providers",
       describeRoute({

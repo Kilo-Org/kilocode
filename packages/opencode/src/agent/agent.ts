@@ -187,6 +187,7 @@ export namespace Agent {
       "*": "allow",
       bash, // kilocode_change
       doom_loop: "ask",
+      recall: "ask", // kilocode_change
       external_directory: {
         "*": "ask",
         ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),

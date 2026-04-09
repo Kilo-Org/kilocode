@@ -142,6 +142,24 @@ export function Diff<T>(props: DiffProps<T>) {
     host.removeAttribute("data-color-scheme")
   }
 
+  // Patch a bug in @pierre/diffs where `grid-template-columns: 100% auto` is set
+  // for `line-info-basic` separators under `@media (pointer: fine)`, causing the
+  // expand button to consume 100% of the gutter width and overlap the separator
+  // content text. We inject into `@layer unsafe` which overrides `@layer base`.
+  let separatorPatchSheet: CSSStyleSheet | null = null
+  const patchSeparatorLayout = () => {
+    const root = getRoot()
+    if (!root) return
+    if (!separatorPatchSheet) {
+      separatorPatchSheet = new CSSStyleSheet()
+      separatorPatchSheet.replaceSync(
+        `@layer unsafe { @media (pointer: fine) { [data-separator='line-info-basic'][data-expand-index] [data-separator-wrapper] { grid-template-columns: 34px auto; } } }`,
+      )
+    }
+    if (!root.adoptedStyleSheets.includes(separatorPatchSheet))
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, separatorPatchSheet]
+  }
+
   const lineIndex = (split: boolean, element: HTMLElement) => {
     const raw = element.dataset.lineIndex
     if (!raw) return
@@ -576,6 +594,7 @@ export function Diff<T>(props: DiffProps<T>) {
     })
 
     applyScheme()
+    patchSeparatorLayout()
 
     setRendered((value) => value + 1)
     notifyRendered()

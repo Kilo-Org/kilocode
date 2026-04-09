@@ -179,6 +179,7 @@ export namespace PermissionNext {
     return {
       pending,
       approved: stored,
+      session: {} as Record<string, Ruleset>, // kilocode_change
     }
   })
 
@@ -189,11 +190,12 @@ export namespace PermissionNext {
     async (input) => {
       const s = await state()
       const { ruleset, ...request } = input
+      const local = s.session[request.sessionID] ?? [] // kilocode_change
       // kilocode_change start — force "ask" for config file edits
       const protected_ = ConfigProtection.isRequest(request)
       // kilocode_change end
       for (const pattern of request.patterns ?? []) {
-        const rule = evaluate(request.permission, pattern, ruleset, s.approved)
+        const rule = evaluate(request.permission, pattern, ruleset, s.approved, local) // kilocode_change
         log.info("evaluated", { permission: request.permission, pattern, action: rule })
         if (rule.action === "deny")
           throw new DeniedError(ruleset.filter((r) => Wildcard.match(request.permission, r.permission)))
@@ -355,6 +357,58 @@ export namespace PermissionNext {
     },
   )
 
+  // kilocode_change start
+  export const allowEverything = fn(
+    z.object({
+      enable: z.boolean(),
+      requestID: Identifier.schema("permission").optional(),
+      sessionID: Identifier.schema("session").optional(),
+    }),
+    async (input) => {
+      const s = await state()
+
+      if (!input.enable) {
+        if (input.sessionID) {
+          delete s.session[input.sessionID]
+          return
+        }
+        const idx = s.approved.findLastIndex((r) => r.permission === "*" && r.pattern === "*" && r.action === "allow")
+        if (idx >= 0) s.approved.splice(idx, 1)
+        return
+      }
+
+      const rule = { permission: "*", pattern: "*", action: "allow" } as const
+      if (input.sessionID) s.session[input.sessionID] = [rule]
+      else s.approved.push(rule)
+
+      if (input.requestID) {
+        const existing = s.pending[input.requestID]
+        if (existing && (!input.sessionID || existing.info.sessionID === input.sessionID)) {
+          delete s.pending[input.requestID]
+          Bus.publish(Event.Replied, {
+            sessionID: existing.info.sessionID,
+            requestID: existing.info.id,
+            reply: "once",
+          })
+          existing.resolve()
+        }
+      }
+
+      for (const [id, entry] of Object.entries(s.pending)) {
+        if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
+        if (ConfigProtection.isRequest(entry.info)) continue
+        delete s.pending[id]
+        Bus.publish(Event.Replied, {
+          sessionID: entry.info.sessionID,
+          requestID: entry.info.id,
+          reply: "once",
+        })
+        entry.resolve()
+      }
+    },
+  )
+  // kilocode_change end
+
   export function evaluate(permission: string, pattern: string, ...rulesets: Ruleset[]): Rule {
     const merged = merge(...rulesets)
     log.info("evaluate", { permission, pattern, ruleset: merged })
@@ -405,4 +459,11 @@ export namespace PermissionNext {
     const s = await state()
     return Object.values(s.pending).map((x) => x.info)
   }
+
+  // kilocode_change start
+  export async function pending(id: string): Promise<Request | undefined> {
+    const s = await state()
+    return s.pending[id]?.info
+  }
+  // kilocode_change end
 }

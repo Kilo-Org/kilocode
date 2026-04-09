@@ -636,6 +636,7 @@ export function Prompt(props: PromptProps) {
         })
         .catch(() => {})
     }
+    toast.dismiss() // kilocode_change - dismiss persistent config warning on first submit
     history.append({
       ...store.prompt,
       mode: currentMode,
@@ -1043,6 +1044,7 @@ export function Prompt(props: PromptProps) {
         </box>
         <box
           height={1}
+          flexShrink={0} // kilocode_change - prevent border box from shrinking in narrow terminals (#6309)
           border={["left"]}
           borderColor={highlight()}
           customBorderChars={{

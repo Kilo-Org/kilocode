@@ -4,6 +4,7 @@
     "src/extension.ts",
     "webview-ui/agent-manager/index.tsx",
     "webview-ui/diff-viewer/index.tsx",
+    "webview-ui/diff-virtual/index.tsx",
     "webview-ui/src/index.tsx",
     "src/**/__tests__/**/*.{ts,spec.ts}",
     "src/**/*.test.ts",

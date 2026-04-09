@@ -953,6 +953,10 @@ export const dict = {
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
 
+  "ui.sessionTurn.cancel": "Abbrechen",
+  "ui.sessionTurn.status.thinking": "Denke nach...",
+  "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
+
   "dialog.model.noProviders": "Keine Anbieter",
 
   "prompt.placeholder.connecting": "Verbindung zum Server wird hergestellt...",
@@ -1145,6 +1149,16 @@ export const dict = {
     "Dies ist ein integrierter Modus. Seine Basisdefinition kann nicht geändert werden, aber Sie können unten Überschreibungen konfigurieren.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
+  "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
+  "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
+  "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",
+  "settings.agentBehaviour.permissions.col.tool": "Werkzeug",
+  "settings.agentBehaviour.permissions.col.pattern": "Muster",
+  "settings.agentBehaviour.permissions.col.action": "Aktion",
+  "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
+  "settings.agentBehaviour.permissions.hint":
+    "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1373,4 +1387,5 @@ export const dict = {
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
+  "notifications.action.tryModelGeneric": "Modell ausprobieren",
 } satisfies Partial<Record<Keys, string>>

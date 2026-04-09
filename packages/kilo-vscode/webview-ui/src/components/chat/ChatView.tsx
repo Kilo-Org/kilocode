@@ -12,7 +12,6 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
-import { QuestionDock } from "./QuestionDock"
 import { PermissionDock } from "./PermissionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { useSession } from "../../context/session"
@@ -57,17 +56,15 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const familyPermissions = createMemo(() => session.scopedPermissions(id()))
   const familyQuestions = createMemo(() => session.scopedQuestions(id()))
 
-  // Prefer non-tool questions in the dock: current-session non-tool first,
-  // then any non-tool, then fall back to any remaining scoped question.
-  const questionRequest = () =>
-    familyQuestions().find((q) => q.sessionID === id() && !q.tool) ??
-    familyQuestions().find((q) => !q.tool) ??
-    familyQuestions()[0]
+  // Non-tool questions (standalone, not from the question tool) render inline in
+  // the message list since they don't have an associated tool part in the conversation.
+  // Tool-linked questions render inline at their tool part position via AssistantMessage.
+  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
   const blocked = () => familyPermissions().length > 0 || familyQuestions().length > 0
-  const dock = () => !props.readonly || !!questionRequest() || !!permissionRequest()
+  const dock = () => !props.readonly || !!permissionRequest()
 
-  // When a bottom-dock permission/question disappears while the session is busy,
+  // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
   // resume auto-scroll.
   createEffect(
@@ -129,7 +126,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
       <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
-          <MessageList onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+          <MessageList
+            onSelectSession={props.onSelectSession}
+            onShowHistory={props.onShowHistory}
+            questions={standaloneQuestions}
+          />
         </div>
       </div>
 
@@ -137,9 +138,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <div class="chat-input">
           <Show when={server.connectionState() === "error" && server.errorMessage()}>
             <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
-          </Show>
-          <Show when={questionRequest()} keyed>
-            {(req) => <QuestionDock request={req} />}
           </Show>
           <Show when={permissionRequest()} keyed>
             {(perm) => (

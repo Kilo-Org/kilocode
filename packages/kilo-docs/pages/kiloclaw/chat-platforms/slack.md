@@ -47,10 +47,7 @@ You need two tokens from Slack:
 
 ## Step 4: Pair Slack with KiloClaw
 
-1. In Slack, DM the app and type your slash command (e.g., `/claw`) followed by anything — this triggers the pairing flow
-
-> 📝 **Note**
-> The slash command is whatever you defined in the manifest. Any text after the command will work to trigger pairing.
+1. In Slack, DM the app and send any message — this triggers the pairing flow
 
 2. The app will return a pairing code
 3. Return to [app.kilocode.ai/claw](https://app.kilocode.ai/claw) and confirm the pairing code and approve

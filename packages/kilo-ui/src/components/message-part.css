@@ -19,6 +19,18 @@
       height: 20px;
     }
   }
+
+  [data-slot="assistant-copy-wrapper"] {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 2px;
+
+    [data-component="icon-button"] {
+      width: 20px;
+      height: 20px;
+    }
+  }
 }
 
 /* Prevent long title/path from hiding the collapsible expand arrow */

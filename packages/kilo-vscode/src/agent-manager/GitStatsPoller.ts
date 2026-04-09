@@ -26,6 +26,8 @@ export interface LocalStats {
 export interface WorktreePresence {
   worktreeId: string
   missing: boolean
+  /** Current branch from `git worktree list`, if available. */
+  branch?: string
 }
 
 export interface WorktreePresenceResult {
@@ -231,7 +233,8 @@ export class GitStatsPoller {
           () => false,
         )
         const missing = !exists || !tracked.has(normalized)
-        return { worktreeId: wt.id, missing }
+        const branch = tracked.get(normalized)
+        return { worktreeId: wt.id, missing, branch }
       }),
     )
 

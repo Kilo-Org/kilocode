@@ -29,6 +29,7 @@ import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
 import type { Path } from "@kilocode/sdk"
 import type { Workspace } from "@kilocode/sdk/v2"
+import { useToast } from "../ui/toast" // kilocode_change
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -106,6 +107,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     const sdk = useSDK()
+    const toast = useToast() // kilocode_change
 
     const fullSyncedSessions = new Set<string>() // kilocode_change
 
@@ -390,6 +392,15 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           setStore("vcs", { branch: event.properties.branch })
           break
         }
+
+        // kilocode_change start
+        case "global.config.updated": {
+          sdk.client.config.get().then((x) => {
+            if (x.data) setStore("config", reconcile(x.data))
+          })
+          break
+        }
+        // kilocode_change end
       }
     })
 
@@ -464,6 +475,23 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.vcs.get().then((x) => setStore("vcs", reconcile(x.data))),
             sdk.client.path.get().then((x) => setStore("path", reconcile(x.data!))),
             syncWorkspaces(),
+            // kilocode_change start - show config warnings as persistent toast
+            sdk.client.config
+              .warnings()
+              .then((x) => {
+                const list = x.data ?? []
+                if (list.length === 0) return
+                const first = list[0]
+                const suffix = list.length > 1 ? ` (and ${list.length - 1} more)` : ""
+                toast.show({
+                  title: "Config Warning",
+                  message: first.message + suffix,
+                  variant: "warning",
+                  duration: 0,
+                })
+              })
+              .catch(() => {}),
+            // kilocode_change end
           ]).then(() => {
             setStore("status", "complete")
           })

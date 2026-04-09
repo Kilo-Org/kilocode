@@ -949,6 +949,10 @@ export const dict = {
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
 
+  "ui.sessionTurn.cancel": "Cancelar",
+  "ui.sessionTurn.status.thinking": "Pensando...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considerando siguientes pasos...",
+
   "dialog.model.noProviders": "Sin proveedores",
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
@@ -1137,6 +1141,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
+  "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.permissions.title": "Permisos calculados",
+  "settings.agentBehaviour.permissions.count": "{{count}} reglas",
+  "settings.agentBehaviour.permissions.effective": "Efectivo (comodín):",
+  "settings.agentBehaviour.permissions.col.tool": "Herramienta",
+  "settings.agentBehaviour.permissions.col.pattern": "Patrón",
+  "settings.agentBehaviour.permissions.col.action": "Acción",
+  "settings.agentBehaviour.permissions.copy": "Copiar permisos como JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Las reglas se evalúan en orden — gana la última regla coincidente. Este es el conjunto de reglas resuelto desde el backend de la CLI.",
   "settings.agentBehaviour.removeMode.title": "Eliminar modo",
   "settings.agentBehaviour.removeMode.confirm":
     '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
@@ -1362,4 +1376,5 @@ export const dict = {
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
+  "notifications.action.tryModelGeneric": "Probar modelo",
 }

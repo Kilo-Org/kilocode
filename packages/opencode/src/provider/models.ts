@@ -149,11 +149,10 @@ export namespace ModelsDev {
 
     if (kiloAllowed && !providers["kilo"]) {
       const kiloOptions = config.provider?.kilo?.options
-      // kilocode_change start - resolve org ID from auth (OAuth accountId) not just config
+      // resolve org ID from auth (OAuth accountId) not just config
       const kiloAuth = await Auth.get("kilo")
       const kiloOrgId =
         kiloOptions?.kilocodeOrganizationId ?? (kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined)
-      // kilocode_change end
       const normalizedBaseURL = normalizeKiloBaseURL(kiloOptions?.baseURL, kiloOrgId)
       const kiloFetchOptions = {
         ...(normalizedBaseURL ? { baseURL: normalizedBaseURL } : {}),
@@ -164,7 +163,19 @@ export namespace ModelsDev {
         : "https://api.kilo.ai/api/openrouter"
       const providerBaseURL = normalizedBaseURL ?? defaultBaseURL
       const ensureTrailingSlash = (value: string): string => (value.endsWith("/") ? value : `${value}/`)
-      const kiloModels = await ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({}))
+      const apertisConfig = config.provider?.apertis?.options
+      const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
+      const apertisFetchOptions = {
+        ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+      }
+
+      const [kiloModels, apertisModels] = await Promise.all([
+        ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({})),
+        !providers["apertis"]
+          ? ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+          : Promise.resolve(null),
+      ])
+
       providers["kilo"] = {
         id: "kilo",
         name: "Kilo Gateway",
@@ -176,12 +187,22 @@ export namespace ModelsDev {
       if (Object.keys(kiloModels).length === 0) {
         ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
-    }
 
-    // Inject Apertis provider with dynamic model fetching
-    if (!providers["apertis"]) {
-      const apertisConfigObj = await Config.get()
-      const apertisConfig = apertisConfigObj.provider?.apertis?.options
+      if (!providers["apertis"] && apertisModels !== null) {
+        providers["apertis"] = {
+          id: "apertis",
+          name: "Apertis",
+          env: ["APERTIS_API_KEY"],
+          api: apertisBaseURL,
+          npm: "@ai-sdk/openai-compatible",
+          models: apertisModels,
+        }
+        if (Object.keys(apertisModels).length === 0) {
+          ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+        }
+      }
+    } else if (!providers["apertis"]) {
+      const apertisConfig = config.provider?.apertis?.options
       const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
       const apertisFetchOptions = {
         ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),

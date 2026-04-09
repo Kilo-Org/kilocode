@@ -948,6 +948,10 @@ export const dict = {
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
   "session.status.working": "Работаю…",
 
+  "ui.sessionTurn.cancel": "Отмена",
+  "ui.sessionTurn.status.thinking": "Думаю...",
+  "ui.sessionTurn.status.consideringNextSteps": "Продумываю следующие шаги...",
+
   "dialog.model.noProviders": "Нет провайдеров",
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
@@ -1132,6 +1136,16 @@ export const dict = {
     "Это встроенный режим. Его базовое определение нельзя изменить, но вы можете настроить переопределения ниже.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
+  "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
+  "settings.agentBehaviour.permissions.count": "{{count}} правил",
+  "settings.agentBehaviour.permissions.effective": "Действующие (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Инструмент",
+  "settings.agentBehaviour.permissions.col.pattern": "Шаблон",
+  "settings.agentBehaviour.permissions.col.action": "Действие",
+  "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
   "settings.agentBehaviour.removeMode.title": "Удалить режим",
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
@@ -1353,4 +1367,5 @@ export const dict = {
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
+  "notifications.action.tryModelGeneric": "Попробовать модель",
 }

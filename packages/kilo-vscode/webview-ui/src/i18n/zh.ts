@@ -928,6 +928,10 @@ export const dict = {
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "处理中…",
 
+  "ui.sessionTurn.cancel": "取消",
+  "ui.sessionTurn.status.thinking": "思考中...",
+  "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步...",
+
   "dialog.model.noProviders": "无供应商",
 
   "prompt.placeholder.connecting": "正在连接服务器...",
@@ -1101,6 +1105,15 @@ export const dict = {
   "settings.agentBehaviour.editMode.back": "返回列表",
   "settings.agentBehaviour.editMode.native": "这是一个内置模式。它的基础定义无法更改，但您可以在下方配置覆盖项。",
   "settings.agentBehaviour.editMode.promptOverride": "此内置模式的自定义提示覆盖",
+  "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.permissions.title": "计算出的权限",
+  "settings.agentBehaviour.permissions.count": "{{count}} 条规则",
+  "settings.agentBehaviour.permissions.effective": "生效 (通配符):",
+  "settings.agentBehaviour.permissions.col.tool": "工具",
+  "settings.agentBehaviour.permissions.col.pattern": "模式",
+  "settings.agentBehaviour.permissions.col.action": "操作",
+  "settings.agentBehaviour.permissions.copy": "复制权限为 JSON",
+  "settings.agentBehaviour.permissions.hint": "规则按顺序评估 — 最后匹配的规则生效。这是从 CLI 后端解析出的规则集。",
   "settings.agentBehaviour.removeMode.title": "移除模式",
   "settings.agentBehaviour.removeMode.confirm": '移除模式 "{{name}}" 吗？这将通过更新配置来禁用该模式。',
   "settings.agentBehaviour.removeMode.button": "移除",
@@ -1304,4 +1317,5 @@ export const dict = {
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",
   "notifications.action.tryModel": "尝试 {{model}}",
+  "notifications.action.tryModelGeneric": "尝试模型",
 } satisfies Partial<Record<Keys, string>>

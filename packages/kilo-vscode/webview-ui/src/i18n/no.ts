@@ -945,6 +945,10 @@ export const dict = {
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
 
+  "ui.sessionTurn.cancel": "Avbryt",
+  "ui.sessionTurn.status.thinking": "Tenker...",
+  "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
+
   "dialog.model.noProviders": "Ingen leverandører",
 
   "prompt.placeholder.connecting": "Kobler til server...",
@@ -1126,6 +1130,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
+  "settings.agentBehaviour.permissions.count": "{{count}} regler",
+  "settings.agentBehaviour.permissions.effective": "Gjeldende (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Verktøy",
+  "settings.agentBehaviour.permissions.col.pattern": "Mønster",
+  "settings.agentBehaviour.permissions.col.action": "Handling",
+  "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
   "settings.agentBehaviour.removeMode.title": "Fjern modus",
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
@@ -1344,4 +1358,5 @@ export const dict = {
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
+  "notifications.action.tryModelGeneric": "Prøv modell",
 } satisfies Partial<Record<Keys, string>>

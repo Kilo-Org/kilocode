@@ -134,6 +134,7 @@ interface SessionContextValue {
 
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
+  allAgents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
   removeMcp: (name: string) => void
 
@@ -255,6 +256,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Agents (modes) loaded from the CLI backend
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
+  const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
 
   // Skills loaded from the CLI backend
@@ -414,6 +416,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectModel(providerID: string, modelID: string) {
     applyModel(selectedAgentName(), { providerID, modelID })
+    const sid = currentSessionID()
+    if (sid) {
+      setStore("messages", sid, (msgs = []) => msgs.filter((m) => !m.error))
+    }
   }
 
   /** The config/default model for the current mode (what settings says). */
@@ -464,6 +470,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     setAgents(message.agents)
+    setAllAgents(message.allAgents ?? message.agents)
     setDefaultAgent(message.defaultAgent)
 
     const names = new Set(message.agents.map((a) => a.name))
@@ -496,23 +503,9 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   })
 
-  // Request agents in case the initial push was missed.
-  // Retry a few times because the extension's httpClient may
-  // not be ready yet when the first request arrives.
-  let agentRetries = 0
-  const agentMaxRetries = 5
-  const agentRetryMs = 500
-
+  // Request agents immediately; if the extension's httpClient is not yet ready,
+  // extensionDataReady will fire once initialization completes and we retry once.
   vscode.postMessage({ type: "requestAgents" })
-
-  const agentRetryTimer = setInterval(() => {
-    agentRetries++
-    if (agents().length > 0 || agentRetries >= agentMaxRetries) {
-      clearInterval(agentRetryTimer)
-      return
-    }
-    vscode.postMessage({ type: "requestAgents" })
-  }, agentRetryMs)
 
   // Skills loaded from the CLI backend
   const unsubSkills = vscode.onMessage((message: ExtensionMessage) => {
@@ -530,6 +523,24 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // Handle permission events immediately (not in onMount) so we never miss
+  // the first permission request that may arrive before the DOM mounts.
+  // This matches the pattern already used for agentsLoaded and skillsLoaded.
+  const unsubPermissions = vscode.onMessage((message: ExtensionMessage) => {
+    switch (message.type) {
+      case "permissionRequest":
+        handlePermissionRequest(message.permission)
+        break
+      case "permissionResolved":
+        handlePermissionResolved(message.permissionID)
+        break
+      case "permissionError":
+        handlePermissionError(message.permissionID)
+        break
+    }
+  })
+  onCleanup(unsubPermissions)
+
   // MCP status loaded from CLI backend
   const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "mcpStatusLoaded") {
@@ -538,24 +549,28 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   })
 
-  // Request MCP status on init with retry (same pattern as agents)
-  let mcpRetries = 0
+  // Request MCP status immediately; retry once on extensionDataReady if still missing.
   vscode.postMessage({ type: "requestMcpStatus" })
-  const mcpRetryTimer = setInterval(() => {
-    mcpRetries++
-    if (Object.keys(mcpStatus()).length > 0 || mcpRetries >= 5) {
-      clearInterval(mcpRetryTimer)
-      return
-    }
-    vscode.postMessage({ type: "requestMcpStatus" })
-  }, 500)
+
+  const fallback = setTimeout(() => {
+    if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
+    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
+  }, 3000)
+
+  const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "extensionDataReady") return
+    unsubReady()
+    clearTimeout(fallback)
+    if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
+    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
+  })
 
   onCleanup(() => {
     unsubAgents()
     unsubSkills()
     unsubMcpStatus()
-    clearInterval(agentRetryTimer)
-    clearInterval(mcpRetryTimer)
+    unsubReady()
+    clearTimeout(fallback)
   })
 
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
@@ -646,18 +661,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sessionStatus":
           handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
-          break
-
-        case "permissionRequest":
-          handlePermissionRequest(message.permission)
-          break
-
-        case "permissionResolved":
-          handlePermissionResolved(message.permissionID)
-          break
-
-        case "permissionError":
-          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":
@@ -1804,6 +1807,7 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     agents,
+    allAgents,
     skills,
     refreshSkills,
     removeSkill,
