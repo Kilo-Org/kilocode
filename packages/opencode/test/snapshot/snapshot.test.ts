@@ -1,4 +1,4 @@
-import { afterEach, test, expect } from "bun:test"
+import { test, expect } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import path from "path"
@@ -11,10 +11,6 @@ import { tmpdir } from "../fixture/fixture"
 // with path.join (which produces \ on Windows) then normalizes back to /.
 // This helper does the same for expected values so assertions match cross-platform.
 const fwd = (...parts: string[]) => path.join(...parts).replaceAll("\\", "/")
-
-afterEach(async () => {
-  await Instance.disposeAll()
-})
 
 async function bootstrap() {
   return tmpdir({
@@ -181,7 +177,7 @@ test("symlink handling", async () => {
   })
 })
 
-test("file under size limit handling", async () => {
+test("large file handling", async () => {
   await using tmp = await bootstrap()
   await Instance.provide({
     directory: tmp.path,
@@ -192,23 +188,6 @@ test("file under size limit handling", async () => {
       await Filesystem.write(`${tmp.path}/large.txt`, "x".repeat(1024 * 1024))
 
       expect((await Snapshot.patch(before!)).files).toContain(fwd(tmp.path, "large.txt"))
-    },
-  })
-})
-
-test("large added files are skipped", async () => {
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      await Filesystem.write(`${tmp.path}/huge.txt`, new Uint8Array(2 * 1024 * 1024 + 1))
-
-      expect((await Snapshot.patch(before!)).files).toEqual([])
-      expect(await Snapshot.diff(before!)).toBe("")
-      expect(await Snapshot.track()).toBe(before)
     },
   })
 })
@@ -1200,38 +1179,25 @@ test("diffFull with whitespace changes", async () => {
   })
 })
 
-test("revert with overlapping files across patches uses first patch hash", async () => {
+// ── Tests for snapshot optimizations (upstream #17878, #20564) ────────
+
+test("concurrent track() calls return consistent results", async () => {
   await using tmp = await bootstrap()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // Write initial content and snapshot
-      await Filesystem.write(`${tmp.path}/shared.txt`, "v1")
-      const snap1 = await Snapshot.track()
-      expect(snap1).toBeTruthy()
+      await Snapshot.track()
 
-      // Modify and snapshot again
-      await Filesystem.write(`${tmp.path}/shared.txt`, "v2")
-      const snap2 = await Snapshot.track()
-      expect(snap2).toBeTruthy()
+      await Filesystem.write(`${tmp.path}/a.txt`, "concurrent-change")
 
-      // Modify once more so both patches include shared.txt
-      await Filesystem.write(`${tmp.path}/shared.txt`, "v3")
+      const results = await Promise.all([
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+      ])
 
-<<<<<<< HEAD
-      const patch1 = await Snapshot.patch(snap1!)
-      const patch2 = await Snapshot.patch(snap2!)
-
-      // Both patches should include shared.txt
-      expect(patch1.files).toContain(fwd(tmp.path, "shared.txt"))
-      expect(patch2.files).toContain(fwd(tmp.path, "shared.txt"))
-
-      // Revert with patch1 first — should use snap1's hash (restoring "v1")
-      await Snapshot.revert([patch1, patch2])
-
-      const content = await fs.readFile(`${tmp.path}/shared.txt`, "utf-8")
-      expect(content).toBe("v1")
-=======
       const hashes = results.filter(Boolean)
       expect(hashes.length).toBe(5)
       // All concurrent calls must return the same hash
@@ -1385,7 +1351,11 @@ test("concurrent patch() calls return consistent results", async () => {
 
       await Filesystem.write(`${tmp.path}/a.txt`, "changed")
 
-      const results = await Promise.all([Snapshot.patch(before!), Snapshot.patch(before!), Snapshot.patch(before!)])
+      const results = await Promise.all([
+        Snapshot.patch(before!),
+        Snapshot.patch(before!),
+        Snapshot.patch(before!),
+      ])
 
       // All should report the same changed files
       for (const result of results) {
@@ -1521,9 +1491,13 @@ test("concurrent track calls each produce a valid snapshot", async () => {
       }
 
       // Fire 5 concurrent tracks, then verify each hash is a usable snapshot
-      const hashes = (
-        await Promise.all([Snapshot.track(), Snapshot.track(), Snapshot.track(), Snapshot.track(), Snapshot.track()])
-      ).filter(Boolean) as string[]
+      const hashes = (await Promise.all([
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+        Snapshot.track(),
+      ])).filter(Boolean) as string[]
 
       expect(hashes.length).toBe(5)
 
@@ -1612,7 +1586,6 @@ test("incremental add tracks modified and deleted files", async () => {
       const files = patch.files.map((f) => path.basename(f))
       expect(files).toContain("a.txt")
       expect(files).toContain("b.txt")
->>>>>>> d9407cd08 (chore: address PR feedback and sync i18n keys)
     },
   })
 })

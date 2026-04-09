@@ -23,20 +23,12 @@ export namespace SessionImportService {
   }
 
   export async function session(input: SessionImportType.Session): Promise<SessionImportType.Result> {
-    const row = Database.use((db) =>
-      db
-        .select()
-        .from(SessionTable)
-        .where(eq(target(SessionTable.id), input.id))
-        .get(),
-    )
+    const row = Database.use((db) => db.select().from(SessionTable).where(eq(target(SessionTable.id), input.id)).get())
     if (row && !input.force) return { ok: true, id: input.id, skipped: true }
 
     Database.use((db) => {
       if (row && input.force) {
-        db.delete(SessionTable)
-          .where(eq(target(SessionTable.id), input.id))
-          .run()
+        db.delete(SessionTable).where(eq(target(SessionTable.id), input.id)).run()
       }
       // We still keep onConflictDoUpdate here so forced reimports can recreate the session row
       // and non-forced calls remain idempotent if they reach the DB after the existence guard.

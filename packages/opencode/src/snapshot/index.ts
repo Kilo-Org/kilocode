@@ -110,14 +110,7 @@ export async function patch(hash: string): Promise<Patch> {
       return
     }
 
-    const existing = new Set(
-      tree
-        .text()
-        .trim()
-        .split("\n")
-        .map((l) => l.trim())
-        .filter(Boolean),
-    )
+    const existing = new Set(tree.text().trim().split("\n").map((l) => l.trim()).filter(Boolean))
 
     // Checkout files that exist in the snapshot
     const toCheckout = batch.filter((op) => existing.has(op.rel))

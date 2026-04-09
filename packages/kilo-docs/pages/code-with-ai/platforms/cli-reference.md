@@ -165,25 +165,26 @@ Positionals:
   message  message to send  [string] [default: []]
 
 Options:
-      --help      Show help  [boolean]
-      --version   Show version number  [boolean]
-      --command   the command to run, use message for args  [string]
-  -c, --continue  continue the last session  [boolean]
-  -s, --session   session id to continue  [string]
-      --fork      fork the session before continuing (requires --continue or --session)  [boolean]
-      --share     share the session  [boolean]
-  -m, --model     model to use in the format of provider/model  [string]
-      --agent     agent to use  [string]
-      --format    format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
-      --auto      auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
-  -f, --file      file(s) to attach to message  [array]
-      --title     title for the session (uses truncated prompt if no value provided)  [string]
-      --attach    attach to a running opencode server (e.g., http://localhost:4096)  [string]
-  -p, --password  basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
-      --dir       directory to run in, path on remote server if attaching  [string]
-      --port      port for the local server (defaults to random port if no value provided)  [number]
-      --variant   model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
-      --thinking  show thinking blocks  [boolean] [default: false]
+      --help        Show help  [boolean]
+      --version     Show version number  [boolean]
+      --command     the command to run, use message for args  [string]
+  -c, --continue    continue the last session  [boolean]
+  -s, --session     session id to continue  [string]
+      --fork        fork the session before continuing (requires --continue or --session)  [boolean]
+      --cloud-fork  fetch session from cloud and continue locally (requires --session)  [boolean]
+      --share       share the session  [boolean]
+  -m, --model       model to use in the format of provider/model  [string]
+      --agent       agent to use  [string]
+      --format      format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
+  -f, --file        file(s) to attach to message  [array]
+      --title       title for the session (uses truncated prompt if no value provided)  [string]
+      --attach      attach to a running opencode server (e.g., http://localhost:4096)  [string]
+  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+      --dir         directory to run in, path on remote server if attaching  [string]
+      --port        port for the local server (defaults to random port if no value provided)  [number]
+      --variant     model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
+      --thinking    show thinking blocks  [boolean] [default: false]
+      --auto        auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -514,22 +515,12 @@ Options:
 ## kilo auth
 
 ```
-manage AI providers and credentials
+manage credentials
 
 Commands:
-  kilo auth list         list providers  [aliases: ls]
   kilo auth login [url]  log in to a provider
   kilo auth logout       log out from a configured provider
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo auth list
-
-```
-list providers
+  kilo auth list         list providers  [aliases: ls]
 
 Options:
   --help     Show help  [boolean]
@@ -561,6 +552,16 @@ Options:
   --version  Show version number  [boolean]
 ```
 
+### kilo auth list
+
+```
+list providers
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
 ## kilo agent
 
 ```
@@ -586,7 +587,7 @@ Options:
       --path         directory path to generate the agent file  [string]
       --description  what the agent should do  [string]
       --mode         agent mode  [string] [choices: "all", "primary", "subagent"]
-      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, list, glob, grep, webfetch, task, todowrite"  [string]
+      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, list, glob, grep, webfetch, task, todowrite, todoread"  [string]
   -m, --model        model to use in the format of provider/model  [string]
 ```
 
@@ -735,8 +736,6 @@ Options:
       --version    Show version number  [boolean]
   -n, --max-count  limit to N most recent sessions  [number]
       --format     output format  [string] [choices: "table", "json"] [default: "table"]
-  -a, --all        list sessions from all projects  [boolean] [default: false]
-  -s, --search     filter sessions by title  [string]
 ```
 
 ### kilo session delete
@@ -801,47 +800,6 @@ Options:
   --version  Show version number  [boolean]
 ```
 
-## kilo config
-
-```
-configuration tools
-
-Commands:
-  kilo config check  check configuration for warnings and errors
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo config check
-
-```
-check configuration for warnings and errors
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-<<<<<<< HEAD
-## kilo plugin
-
-```
-install plugin and update config
-
-Positionals:
-  module  npm module name  [string]
-
-Options:
-      --help     Show help  [boolean]
-      --version  Show version number  [boolean]
-  -g, --global   install in global config  [boolean] [default: false]
-  -f, --force    replace existing plugin version  [boolean] [default: false]
-```
-
-=======
->>>>>>> d9407cd08 (chore: address PR feedback and sync i18n keys)
 ## kilo help
 
 ```
@@ -855,14 +813,4 @@ Options:
   --version  Show version number  [boolean]
   --all      show help for all commands  [boolean] [default: false]
   --format   output format  [string] [choices: "md", "text"] [default: "md"]
-```
-
-## kilo completion
-
-```
-generate shell completion script
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
 ```
