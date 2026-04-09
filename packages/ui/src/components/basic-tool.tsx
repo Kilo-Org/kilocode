@@ -111,6 +111,7 @@ export function BasicTool(props: BasicToolProps) {
 
   const handleOpenChange = (value: boolean) => {
     if (pending()) return
+    if (props.hideDetails) return // kilocode_change
     if (props.locked && !value) return
     setOpen(value)
   }
