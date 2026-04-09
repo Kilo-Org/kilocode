@@ -54,6 +54,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "افتح مجلدًا يحتوي على مستودع git لاستخدام مساحات العمل (worktrees).",
   "agentManager.setup.error.lfs_missing":
     "يستخدم هذا المستودع Git LFS، ولكن لم يتم العثور على git-lfs. يرجى تثبيت Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "هذا المستودع لا يحتوي على أي التزامات (commits) بعد. قم بإنشاء التزام أولي قبل استخدام مساحات العمل (worktrees).",
   "agentManager.shortcuts.title": "اختصارات لوحة المفاتيح",
   "agentManager.shortcuts.category.sidebar": "الشريط الجانبي",
   "agentManager.shortcuts.category.tabs": "علامات التبويب",
@@ -107,6 +109,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "تبديل الفرق",
   "agentManager.diff.openFile": "فتح الملف",
+  "agentManager.diff.revertFile": "استعادة الملف",
+  "agentManager.diff.revertSuccess": "تم استعادة الملف",
+  "agentManager.diff.revertError": "فشل الاستعادة",
   "agentManager.open.button": "فتح",
   "agentManager.open.tooltip": "فتح Worktree هذا في VS Code",
   "agentManager.apply.button": "تطبيق محليًا",

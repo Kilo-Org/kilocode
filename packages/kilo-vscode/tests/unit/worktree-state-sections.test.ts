@@ -122,6 +122,17 @@ describe("WorktreeStateManager sections", () => {
     })
   })
 
+  describe("setWorktreeOrder", () => {
+    it("preserves sections missing from incoming order", () => {
+      const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      const a = mgr.addSection("A", null)
+      const b = mgr.addSection("B", null)
+      // Simulate webview sending an order that omits section B
+      mgr.setWorktreeOrder([wt.id, a.id])
+      expect(mgr.getWorktreeOrder()).toContain(b.id)
+    })
+  })
+
   describe("moveToSection", () => {
     it("sets sectionId and removes from worktreeOrder", () => {
       const wt = mgr.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
@@ -218,6 +229,16 @@ describe("WorktreeStateManager sections", () => {
       mgr.moveSection(b.id, -1)
       expect(mgr.getWorktree(wt1.id)?.sectionId).toBe(a.id)
       expect(mgr.getWorktree(wt2.id)?.sectionId).toBe(a.id)
+    })
+
+    it("moves a section that is missing from worktreeOrder", () => {
+      const a = mgr.addSection("A", null)
+      const b = mgr.addSection("B", null)
+      // Simulate a drag-and-drop that lost section B from the order
+      mgr.setWorktreeOrder([a.id])
+      expect(mgr.getWorktreeOrder()).toEqual([a.id, b.id])
+      mgr.moveSection(b.id, -1)
+      expect(mgr.getWorktreeOrder()).toEqual([b.id, a.id])
     })
 
     it("persists reordered sections across save/load", async () => {

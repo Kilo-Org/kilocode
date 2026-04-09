@@ -10,7 +10,6 @@ import { Config } from "../config/config"
 import { Instance } from "../project/instance"
 import { Scheduler } from "../scheduler"
 import * as KiloSnapshot from "../kilocode/snapshot" // kilocode_change
-import { Lock } from "../util/lock" // kilocode_change
 
 export namespace Snapshot {
   const log = Log.create({ service: "snapshot" })
@@ -38,7 +37,7 @@ export namespace Snapshot {
       .then(() => true)
       .catch(() => false)
     if (!exists) return
-    using _lock = await Lock.write(git) // kilocode_change
+
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} gc --prune=${prune}`
         .quiet()
@@ -60,7 +59,7 @@ export namespace Snapshot {
     const cfg = await Config.get()
     if (cfg.snapshot === false) return
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     await add(git)
     const hash = await $`git --git-dir ${git} --work-tree ${Instance.worktree} write-tree`
       .quiet()
@@ -79,7 +78,7 @@ export namespace Snapshot {
 
   export async function patch(hash: string): Promise<Patch> {
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff --name-only ${hash} -- .`
@@ -108,7 +107,7 @@ export namespace Snapshot {
   export async function restore(snapshot: string) {
     log.info("restore", { commit: snapshot })
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     const result =
       await $`git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} read-tree ${snapshot} && git -c core.longpaths=true -c core.symlinks=true --git-dir ${git} --work-tree ${Instance.worktree} checkout-index -a -f`
         .quiet()
@@ -167,7 +166,14 @@ export namespace Snapshot {
       return
     }
 
-    const existing = new Set(tree.text().trim().split("\n").map((l) => l.trim()).filter(Boolean))
+    const existing = new Set(
+      tree
+        .text()
+        .trim()
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean),
+    )
 
     // Checkout files that exist in the snapshot
     const toCheckout = batch.filter((op) => existing.has(op.rel))
@@ -228,7 +234,7 @@ export namespace Snapshot {
 
   export async function revert(patches: Patch[]) {
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     const worktree = Instance.worktree
 
     // Deduplicate files preserving patch order
@@ -254,7 +260,7 @@ export namespace Snapshot {
 
   export async function diff(hash: string) {
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     await add(git)
     const result =
       await $`git -c core.autocrlf=false -c core.longpaths=true -c core.symlinks=true -c core.quotepath=false --git-dir ${git} --work-tree ${Instance.worktree} diff --no-ext-diff ${hash} -- .`
@@ -313,7 +319,7 @@ export namespace Snapshot {
 
   async function diffFullUncached(from: string, to: string): Promise<FileDiff[]> {
     const git = await KiloSnapshot.prepare() // kilocode_change
-    using _lock = await Lock.write(git) // kilocode_change
+
     const result: FileDiff[] = []
     const status = new Map<string, "added" | "deleted" | "modified">()
 

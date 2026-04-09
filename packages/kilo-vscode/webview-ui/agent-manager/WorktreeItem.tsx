@@ -297,7 +297,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                             data-pending={pr().state === "open" && pr().checks.status === "pending" ? "" : undefined}
                             onClick={handleOpenPR}
                           >
-                            <Icon name="branch" size="small" />
+                            <Icon name={pr().review === "approved" ? "check-small" : "branch"} size="small" />
                             <span class="am-pr-badge-number">#{pr().number}</span>
                           </span>
                         )

@@ -32,6 +32,7 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
@@ -178,6 +179,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.addSessionToWorktree",
       "agentManager.forkSession",
       "agentManager.closeSession",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
       "agentManager.configureSetupScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
@@ -533,8 +536,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 2000,
-    note: "primary extraction target: break into smaller orchestrators",
+    maxLines: 2050,
+    note: "permission recovery wiring is interleaved with panel/session lifecycle; extract more orchestrators next",
   },
 }
 

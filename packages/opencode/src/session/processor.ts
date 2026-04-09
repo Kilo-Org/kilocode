@@ -17,6 +17,7 @@ import { PermissionNext } from "@/permission/next"
 import { Question } from "@/question"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Flag } from "@/flag/flag" // kilocode_change
+import { SessionNetwork } from "./network" // kilocode_change
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -412,22 +413,87 @@ export namespace SessionProcessor {
               })
             } else {
               const retry = SessionRetry.retryable(error)
-              if (
-                retry !== undefined &&
-                (Flag.KILO_SESSION_RETRY_LIMIT === undefined || attempt < Flag.KILO_SESSION_RETRY_LIMIT)
-              ) {
-                // kilocode_change
-                attempt++
-                const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
-                SessionStatus.set(input.sessionID, {
-                  type: "retry",
-                  attempt,
-                  message: retry,
-                  next: Date.now() + delay,
+              // kilocode_change start - network disconnect detection and offline recovery
+              if (retry !== undefined) {
+                const offline = SessionNetwork.disconnected(e)
+                log.warn("retryable error", {
+                  sessionID: input.sessionID,
+                  name: e instanceof Error ? e.name : undefined,
+                  message: e instanceof Error ? e.message : String(e),
+                  code: SessionNetwork.code(e),
+                  offline,
+                  retry,
                 })
-                await SessionRetry.sleep(delay, input.abort).catch(() => {})
-                continue
+                if (offline) {
+                  const msg = SessionNetwork.message(e)
+                  const { id: requestID, promise: wait } = await SessionNetwork.ask({
+                    sessionID: input.sessionID,
+                    message: msg,
+                    abort: input.abort,
+                  })
+                  log.warn("session offline", {
+                    sessionID: input.sessionID,
+                    requestID,
+                    message: msg,
+                  })
+                  SessionStatus.set(input.sessionID, {
+                    type: "offline",
+                    requestID,
+                    message: msg,
+                  })
+                  let aborted = false
+                  await wait.catch((err) => {
+                    if (err instanceof SessionNetwork.RejectedError) {
+                      blocked = true
+                      return
+                    }
+                    if (err instanceof DOMException && err.name === "AbortError") {
+                      aborted = true
+                      return
+                    }
+                    throw err
+                  })
+                  if (aborted) {
+                    input.assistantMessage.error = MessageV2.fromError(new DOMException("Aborted", "AbortError"), {
+                      providerID: input.model.providerID,
+                    })
+                    SessionStatus.set(input.sessionID, { type: "idle" })
+                    break
+                  }
+                  if (blocked) {
+                    input.assistantMessage.error = error
+                    Bus.publish(Session.Event.Error, {
+                      sessionID: input.assistantMessage.sessionID,
+                      error,
+                    })
+                    SessionStatus.set(input.sessionID, { type: "idle" })
+                    break
+                  }
+                  attempt = 0
+                  SessionStatus.set(input.sessionID, { type: "retry", attempt: 1, message: retry, next: Date.now() })
+                  continue
+                }
+                if (Flag.KILO_SESSION_RETRY_LIMIT === undefined || attempt < Flag.KILO_SESSION_RETRY_LIMIT) {
+                  // kilocode_change
+                  attempt++
+                  const delay = SessionRetry.delay(attempt, error.name === "APIError" ? error : undefined)
+                  log.warn("retry scheduled", {
+                    sessionID: input.sessionID,
+                    attempt,
+                    delay,
+                    message: retry,
+                  })
+                  SessionStatus.set(input.sessionID, {
+                    type: "retry",
+                    attempt,
+                    message: retry,
+                    next: Date.now() + delay,
+                  })
+                  await SessionRetry.sleep(delay, input.abort).catch(() => {})
+                  continue
+                }
               }
+              // kilocode_change end
               input.assistantMessage.error = error
               Bus.publish(Session.Event.Error, {
                 sessionID: input.assistantMessage.sessionID,

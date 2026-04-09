@@ -132,4 +132,4 @@ Auto Model is actively being improved. We'd love to hear how it's working for yo
 
 - [Model Selection Guide](/docs/code-with-ai/agents/model-selection) - General guidance on choosing models
 - [Using Agents](/docs/code-with-ai/agents/using-agents) - Learn about different Kilo Code agents
-- [Free & Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Cost-effective alternatives
+- [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) - Cost-effective alternatives

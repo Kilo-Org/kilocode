@@ -78,6 +78,7 @@ import { Filesystem } from "@/util/filesystem"
 import { Global } from "@/global"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
+import { NetworkPrompt } from "./network" // kilocode_change
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import { formatTranscript } from "../../util/transcript"
 import { UI } from "@/cli/ui.ts"
@@ -141,6 +142,12 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
+  // kilocode_change start
+  const network = createMemo(() => {
+    if (session()?.parentID) return []
+    return children().flatMap((x) => sync.data.network[x.id] ?? [])
+  })
+  // kilocode_change end
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -175,6 +182,15 @@ export function Session() {
   createEffect(
     on(
       () => [route.sessionID, questions().length] as const,
+      ([id, len], prev) => {
+        if (!prev || prev[0] !== id) return
+        if (len > prev[1] && bellEnabled()) bell()
+      },
+    ),
+  )
+  createEffect(
+    on(
+      () => [route.sessionID, network().length] as const,
       ([id, len], prev) => {
         if (!prev || prev[0] !== id) return
         if (len > prev[1] && bellEnabled()) bell()
@@ -1203,8 +1219,19 @@ export function Session() {
               <Show when={permissions().length === 0 && questions().length > 0}>
                 <QuestionPrompt request={questions()[0]} />
               </Show>
+              {/* kilocode_change start */}
+              <Show when={permissions().length === 0 && questions().length === 0 && network().length > 0}>
+                <NetworkPrompt request={network()[0]} />
+              </Show>
+              {/* kilocode_change end */}
+              {/* kilocode_change start */}
               <Prompt
-                visible={!session()?.parentID && permissions().length === 0 && questions().length === 0}
+                visible={
+                  !session()?.parentID &&
+                  permissions().length === 0 &&
+                  questions().length === 0 &&
+                  network().length === 0
+                } // kilocode_change end
                 ref={(r) => {
                   prompt = r
                   promptRef.set(r)
@@ -1213,7 +1240,7 @@ export function Session() {
                     r.set(route.initialPrompt)
                   }
                 }}
-                disabled={permissions().length > 0 || questions().length > 0}
+                disabled={permissions().length > 0 || questions().length > 0 || network().length > 0} // kilocode_change
                 onSubmit={() => {
                   toBottom()
                 }}

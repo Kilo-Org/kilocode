@@ -4358,11 +4358,11 @@
             }
           }
         ],
-        "summary": "Set viewed session",
-        "description": "Notify the server which session the user is currently viewing, or clear it.",
+        "summary": "Set viewed sessions",
+        "description": "Notify the server which sessions the user is currently viewing, or clear all.",
         "responses": {
           "200": {
-            "description": "Viewed session updated",
+            "description": "Viewed sessions updated",
             "content": {
               "application/json": {
                 "schema": {
@@ -4378,8 +4378,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "sessionID": {
-                    "type": "string"
+                  "focused": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "open": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -5600,7 +5609,7 @@
                     }
                   },
                   "previousMessage": {
-                    "description": "Previously generated message — triggers regeneration with a different result",
+                    "description": "Previously generated message \u2014 triggers regeneration with a different result",
                     "type": "string"
                   }
                 },
@@ -9668,6 +9677,188 @@
           }
         ]
       }
+    },
+    "/network": {
+      "get": {
+        "operationId": "network.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List pending network waits",
+        "description": "Get all pending network reconnect requests across all sessions.",
+        "responses": {
+          "200": {
+            "description": "List of pending network reconnect requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionNetworkWait"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/network/{requestID}/reply": {
+      "post": {
+        "operationId": "network.reply",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Resume after network wait",
+        "description": "Resume a pending session after reconnecting network-dependent services.",
+        "responses": {
+          "200": {
+            "description": "Network wait resumed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.reply({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/network/{requestID}/reject": {
+      "post": {
+        "operationId": "network.reject",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Reject network resume request",
+        "description": "Stop a pending session instead of resuming after network reconnect.",
+        "responses": {
+          "200": {
+            "description": "Network wait rejected successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.network.reject({\n  ...\n})"
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -11378,6 +11569,22 @@
               }
             },
             "required": ["type"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "offline"
+              },
+              "requestID": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "requestID", "message"]
           }
         ]
       },
@@ -12373,6 +12580,34 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.kilo-sessions.remote-status-changed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "kilo-sessions.remote-status-changed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "connected": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "enabled",
+              "connected"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "properties"
+        ]
+      },
       "Event": {
         "anyOf": [
           {
@@ -12440,6 +12675,18 @@
           },
           {
             "$ref": "#/components/schemas/Event.question.rejected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.asked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.replied"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.rejected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.restored"
           },
           {
             "$ref": "#/components/schemas/Event.session.compacted"
@@ -12518,6 +12765,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.worktree.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
           }
         ]
       },
@@ -14880,6 +15130,114 @@
           }
         },
         "required": ["name", "extensions", "enabled"]
+      },
+      "SessionNetworkWait": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^que.*"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "message": {
+            "type": "string"
+          },
+          "restored": {
+            "type": "boolean"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              }
+            },
+            "required": ["created"]
+          }
+        },
+        "required": ["id", "sessionID", "message", "restored", "time"]
+      },
+      "Event.session.network.asked": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.network.asked"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/SessionNetworkWait"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.network.replied": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.network.replied"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "requestID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID", "requestID"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.network.rejected": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.network.rejected"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "requestID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID", "requestID"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.network.restored": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.network.restored"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "requestID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID", "requestID"]
+          }
+        },
+        "required": ["type", "properties"]
       }
     }
   }

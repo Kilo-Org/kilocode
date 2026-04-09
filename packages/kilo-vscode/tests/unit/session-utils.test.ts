@@ -6,6 +6,7 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  childID,
 } from "../../webview-ui/src/context/session-utils"
 import type { Part } from "../../webview-ui/src/types/messages"
 
@@ -150,6 +151,31 @@ function toolPart(tool: string, sessionId?: string, input?: { subagent_type?: st
   }
 }
 
+describe("childID", () => {
+  it("reads session ID from top-level metadata", () => {
+    expect(childID({ type: "tool", tool: "task", metadata: { sessionId: "child1" } })).toBe("child1")
+  })
+
+  it("reads session ID from state metadata", () => {
+    expect(childID({ type: "tool", tool: "task", state: { metadata: { sessionId: "child2" } } })).toBe("child2")
+  })
+
+  it("prefers top-level metadata over state metadata", () => {
+    expect(
+      childID({
+        type: "tool",
+        tool: "task",
+        metadata: { sessionId: "top" },
+        state: { metadata: { sessionId: "nested" } },
+      }),
+    ).toBe("top")
+  })
+
+  it("ignores non-task tool parts", () => {
+    expect(childID({ type: "tool", tool: "read", state: { metadata: { sessionId: "child3" } } })).toBeUndefined()
+  })
+})
+
 describe("buildFamilyCosts", () => {
   it("returns empty map for empty family", () => {
     expect(buildFamilyCosts(new Set(), {}).size).toBe(0)
@@ -194,6 +220,23 @@ describe("buildFamilyLabels", () => {
     }
     const labels = buildFamilyLabels(family, messages as any, parts as any)
     expect(labels.get("child1")).toBe("explore")
+  })
+
+  it("extracts labels when session ID is top-level metadata", () => {
+    const family = new Set(["s1", "child1"])
+    const messages = { s1: [msg("m1", "assistant")] }
+    const parts = {
+      m1: [
+        {
+          type: "tool" as const,
+          tool: "task",
+          metadata: { sessionId: "child1" },
+          state: { input: { subagent_type: "general" } },
+        },
+      ],
+    }
+    const labels = buildFamilyLabels(family, messages as any, parts as any)
+    expect(labels.get("child1")).toBe("general")
   })
 
   it("falls back to description when subagent_type is absent", () => {

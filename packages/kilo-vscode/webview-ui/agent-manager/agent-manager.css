@@ -3252,6 +3252,23 @@ body.am-wt-dragging-active * {
   font-weight: 500;
 }
 
+/* Virtual diff panel: file path in toolbar stats area */
+
+.am-review-toolbar-dir {
+  color: var(--text-weak);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.am-review-toolbar-fname {
+  color: var(--text-base);
+  white-space: nowrap;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
 /* Review body: file tree + diff viewer */
 
 .am-review-body {

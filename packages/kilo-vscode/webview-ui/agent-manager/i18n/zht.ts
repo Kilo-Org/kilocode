@@ -53,6 +53,7 @@ export const dict = {
   "agentManager.setup.error.git_not_found": "未安裝 Git 或在 PATH 中找不到 Git。請安裝 Git 並重新啟動 VS Code。",
   "agentManager.setup.error.not_git_repo": "開啟一個包含 git 儲存庫的資料夾以使用 worktrees。",
   "agentManager.setup.error.lfs_missing": "此儲存庫使用 Git LFS，但找不到 git-lfs。請安裝 Git LFS。",
+  "agentManager.setup.error.no_commits": "此儲存庫尚無提交。在使用 worktrees 之前，請建立一個初始提交。",
   "agentManager.shortcuts.title": "鍵盤快捷鍵",
   "agentManager.shortcuts.category.sidebar": "側邊欄",
   "agentManager.shortcuts.category.tabs": "分頁",
@@ -105,6 +106,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "切換差異",
   "agentManager.diff.openFile": "開啟檔案",
+  "agentManager.diff.revertFile": "還原檔案",
+  "agentManager.diff.revertSuccess": "檔案已還原",
+  "agentManager.diff.revertError": "還原失敗",
   "agentManager.open.button": "開啟",
   "agentManager.open.tooltip": "在 VS Code 中開啟此 Worktree",
   "agentManager.apply.button": "套用到本地",

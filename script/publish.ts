@@ -72,7 +72,10 @@ if (Script.release) {
   // await import(`../packages/desktop-electron/scripts/finalize-latest-yml.ts`)
   // kilocode_change end
 
-  await $`gh release edit v${Script.version} --draft=false --repo ${process.env.GH_REPO}`
+  // kilocode_change start - mark prerelease GitHub releases accordingly
+  const flags = Script.preview ? ["--draft=false", "--prerelease"] : ["--draft=false"]
+  await $`gh release edit v${Script.version} ${flags} --repo ${process.env.GH_REPO}`
+  // kilocode_change end
 }
 
 console.log("\n=== cli ===\n")

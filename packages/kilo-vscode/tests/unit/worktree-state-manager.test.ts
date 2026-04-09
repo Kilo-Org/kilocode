@@ -96,6 +96,15 @@ describe("WorktreeStateManager", () => {
       expect(manager.getSession("s1")?.worktreeId).toBe(wt2.id)
     })
 
+    it("moves session back to local (null worktreeId)", () => {
+      const wt = manager.addWorktree({ branch: "a", path: "/tmp/a", parentBranch: "main" })
+      manager.addSession("s1", wt.id)
+      expect(manager.getSession("s1")?.worktreeId).toBe(wt.id)
+
+      manager.moveSession("s1", null)
+      expect(manager.getSession("s1")?.worktreeId).toBeNull()
+    })
+
     it("moveSession is a no-op for nonexistent session", () => {
       manager.moveSession("nonexistent", "wt-1")
       expect(manager.getSessions()).toHaveLength(0)

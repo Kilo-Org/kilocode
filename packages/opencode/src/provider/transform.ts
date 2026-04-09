@@ -51,9 +51,14 @@ export namespace ProviderTransform {
     model: Provider.Model,
     options: Record<string, unknown>,
   ): ModelMessage[] {
-    // Anthropic rejects messages with empty content - filter out empty string messages
-    // and remove empty text/reasoning parts from array content
-    if (model.api.npm === "@ai-sdk/anthropic") {
+    // kilocode_change start - also filter for Bedrock Claude models
+    // Anthropic and Bedrock Claude reject messages with empty content - filter out
+    // empty string messages and remove empty text/reasoning parts from array content
+    if (
+      model.api.npm === "@ai-sdk/anthropic" ||
+      (model.api.npm === "@ai-sdk/amazon-bedrock" && (model.api.id.includes("claude") || model.id.includes("claude")))
+    ) {
+      // kilocode_change end
       msgs = msgs
         .map((msg) => {
           if (typeof msg.content === "string") {

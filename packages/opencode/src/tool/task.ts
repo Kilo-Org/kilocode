@@ -60,8 +60,10 @@ export const TaskTool = Tool.define("task", async (ctx) => {
 
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
-
-      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // kilocode_change
+      // kilocode_change start — reject primary agents; only subagent/all modes allowed
+      if (agent.mode === "primary")
+        throw new Error(`Agent "${params.subagent_type}" is a primary agent and cannot be used as a subagent`)
+      // kilocode_change end
 
       // kilocode_change start — inherit edit and bash restrictions from the calling agent so
       // sub-agents cannot perform actions the parent agent is not allowed to perform.
@@ -103,15 +105,9 @@ export const TaskTool = Tool.define("task", async (ctx) => {
               pattern: "*",
               action: "deny",
             },
-            ...(allowsTask
-              ? []
-              : [
-                  {
-                    permission: "task" as const,
-                    pattern: "*" as const,
-                    action: "deny" as const,
-                  },
-                ]),
+            // kilocode_change start — unconditionally deny task for all subagent sessions
+            { permission: "task", pattern: "*", action: "deny" },
+            // kilocode_change end
             ...(config.experimental?.primary_tools?.map((t) => ({
               pattern: "*",
               action: "allow" as const,
@@ -157,7 +153,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         tools: {
           todowrite: false,
           todoread: false,
-          ...(allowsTask ? {} : { task: false }),
+          task: false, // kilocode_change
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
         },
         parts: promptParts,

@@ -17,6 +17,7 @@ import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
+import { childID } from "../../context/session-utils"
 import type { ToolPart, Message as SDKMessage } from "@kilocode/sdk/v2"
 
 /** Collect all tool parts from all assistant messages in a given session. */
@@ -41,7 +42,13 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
 
-  const childSessionId = () => props.metadata.sessionId as string | undefined
+  const childSessionId = () =>
+    childID({
+      type: "tool",
+      tool: props.tool,
+      metadata: props.partMetadata as { sessionId?: string } | undefined,
+      state: { metadata: props.metadata as { sessionId?: string } },
+    })
 
   const running = createMemo(() => props.status === "pending" || props.status === "running")
 

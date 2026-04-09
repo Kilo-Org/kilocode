@@ -39,6 +39,7 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  childID,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
@@ -523,6 +524,24 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // Handle permission events immediately (not in onMount) so we never miss
+  // the first permission request that may arrive before the DOM mounts.
+  // This matches the pattern already used for agentsLoaded and skillsLoaded.
+  const unsubPermissions = vscode.onMessage((message: ExtensionMessage) => {
+    switch (message.type) {
+      case "permissionRequest":
+        handlePermissionRequest(message.permission)
+        break
+      case "permissionResolved":
+        handlePermissionResolved(message.permissionID)
+        break
+      case "permissionError":
+        handlePermissionError(message.permissionID)
+        break
+    }
+  })
+  onCleanup(unsubPermissions)
+
   // MCP status loaded from CLI backend
   const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "mcpStatusLoaded") {
@@ -643,18 +662,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sessionStatus":
           handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
-          break
-
-        case "permissionRequest":
-          handlePermissionRequest(message.permission)
-          break
-
-        case "permissionResolved":
-          handlePermissionResolved(message.permissionID)
-          break
-
-        case "permissionError":
-          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":
@@ -851,11 +858,12 @@ export const SessionProvider: ParentComponent = (props) => {
       return [...msgs, message]
     })
 
-    if (message.role === "user") {
-      const agent = message.agent?.trim()
-      if (agent && agentNames().has(agent)) {
-        setStore("agentSelections", message.sessionID, agent)
-      }
+    // Sync mode picker from any message role (user or assistant).
+    // agentNames() already excludes subagent/hidden agents, so subtask
+    // assistant messages (e.g. "task" agent) are silently ignored.
+    const agent = message.agent?.trim()
+    if (agent && agentNames().has(agent)) {
+      setStore("agentSelections", message.sessionID, agent)
     }
 
     if (message.parts && message.parts.length > 0) {
@@ -1037,7 +1045,15 @@ export const SessionProvider: ParentComponent = (props) => {
         if (!parts) continue
         for (const p of parts) {
           if (p.type !== "tool") continue
-          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
+          // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
+          const child = childID(
+            p as {
+              type: string
+              tool?: string
+              metadata?: { sessionId?: string }
+              state?: { metadata?: { sessionId?: string } }
+            },
+          )
           if (child && !family.has(child)) {
             family.add(child)
             queue.push(child)

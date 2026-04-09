@@ -6,6 +6,8 @@ import type { WorktreeState, SectionState } from "../src/types/messages"
 
 export type TopLevelItem = { kind: "section"; section: SectionState } | { kind: "worktree"; wt: WorktreeState }
 
+export type SidebarItem = { type: "local" | "wt" | "session"; id: string }
+
 /** Check if this worktree is part of a multi-version group. */
 export const isGrouped = (wt: WorktreeState) => !!wt.groupId
 
@@ -59,4 +61,49 @@ export function buildTopLevelItems(
     if (!placed.has(wt.id)) result.push({ kind: "worktree", wt })
   }
   return result
+}
+
+/**
+ * Build the flat visual order of all sidebar items matching what the user sees.
+ * LOCAL is always first, then worktrees in visual order (respecting section layout and
+ * skipping collapsed sections), then unassigned sessions.
+ */
+export function buildSidebarOrder(
+  items: TopLevelItem[],
+  sorted: WorktreeState[],
+  sections: SectionState[],
+  members: (id: string) => WorktreeState[],
+  sessions: { id: string }[],
+): SidebarItem[] {
+  const result: SidebarItem[] = [{ type: "local", id: "local" }]
+  if (sections.length > 0) {
+    for (const item of items) {
+      if (item.kind === "section") {
+        if (!item.section.collapsed) {
+          for (const wt of members(item.section.id)) {
+            result.push({ type: "wt", id: wt.id })
+          }
+        }
+      } else {
+        result.push({ type: "wt", id: item.wt.id })
+      }
+    }
+  } else {
+    for (const wt of sorted) {
+      result.push({ type: "wt", id: wt.id })
+    }
+  }
+  for (const s of sessions) {
+    result.push({ type: "session", id: s.id })
+  }
+  return result
+}
+
+/** Build a map from sidebar item id → 1-based shortcut number (1 for LOCAL, 2+ for worktrees). */
+export function buildShortcutMap(order: SidebarItem[]): Map<string, number> {
+  const map = new Map<string, number>()
+  for (let i = 0; i < order.length && i < 9; i++) {
+    map.set(order[i]!.id, i + 1)
+  }
+  return map
 }

@@ -112,12 +112,28 @@ function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> 
   return next
 }
 
-/** write: strip input.content (entire file). Keep filePath + diagnostics. */
+/** write: strip input.content, raw diff text, and filediff.before/after. Keep filepath + exists + diagnostics. */
 function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const input = state.input
   if (isObj(input) && typeof input.content === "string") {
     next.input = { ...input, content: undefined }
+  }
+  const meta = state.metadata
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.filepath) slim.filepath = meta.filepath
+    if (meta.exists !== undefined) slim.exists = meta.exists
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    const fd = meta.filediff
+    if (isObj(fd)) {
+      slim.filediff = {
+        ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+        additions: typeof fd.additions === "number" ? fd.additions : 0,
+        deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
+      }
+    }
+    next.metadata = slim
   }
   return next
 }
