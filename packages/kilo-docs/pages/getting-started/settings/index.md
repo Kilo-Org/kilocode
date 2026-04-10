@@ -5,7 +5,7 @@ description: "Configure Kilo Code settings and preferences"
 
 # Settings
 
-The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
+The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. Both the CLI and the extension can also be configured through interactions with the agent. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
 
 ## Configuring with the Agent
 
