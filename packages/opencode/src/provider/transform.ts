@@ -159,9 +159,8 @@ export namespace ProviderTransform {
             .find((v: any) => v)
           // kilocode_change end
 
-          // Include reasoning_content | reasoning_details directly on the message for all assistant messages
+          // kilocode_change start - include reasoning and/or encrypted_content on message
           if (reasoningText || encrypted) {
-            // kilocode_change
             return {
               ...msg,
               content: filteredContent,
@@ -170,11 +169,12 @@ export namespace ProviderTransform {
                 openaiCompatible: {
                   ...(msg.providerOptions as any)?.openaiCompatible,
                   ...(reasoningText ? { [field]: reasoningText } : {}),
-                  ...(encrypted ? { encrypted_content: encrypted } : {}), // kilocode_change
+                  ...(encrypted ? { encrypted_content: encrypted } : {}),
                 },
               },
             }
           }
+          // kilocode_change end
 
           return {
             ...msg,
