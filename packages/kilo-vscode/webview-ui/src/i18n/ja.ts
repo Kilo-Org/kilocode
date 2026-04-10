@@ -939,6 +939,7 @@ export const dict = {
   "session.status.retry": "再試行中…",
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
+  "session.status.offline": "ネットワークが切断されました — 再接続中…",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",

@@ -349,11 +349,24 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
     }
     case "session.status": {
       const info = event.properties.status
+      // "offline" is not yet in the SDK SessionStatus type (pending SDK regeneration),
+      // so we use string comparison to forward the message field for offline status.
+      const status = info.type as string
+      const extra =
+        status === "retry"
+          ? {
+              attempt: (info as any).attempt as number,
+              message: (info as any).message as string,
+              next: (info as any).next as number,
+            }
+          : status === "offline"
+            ? { message: (info as any).message as string }
+            : {}
       return {
-        type: "sessionStatus",
+        type: "sessionStatus" as const,
         sessionID: event.properties.sessionID,
-        status: info.type,
-        ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
+        status,
+        ...extra,
       }
     }
     case "permission.asked":

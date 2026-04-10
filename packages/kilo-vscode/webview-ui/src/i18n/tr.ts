@@ -943,6 +943,7 @@ export const dict = {
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
+  "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",

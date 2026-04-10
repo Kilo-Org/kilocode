@@ -934,6 +934,7 @@ export const dict = {
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
+  "session.status.offline": "انقطع الاتصال بالشبكة — جارٍ إعادة الاتصال...",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",

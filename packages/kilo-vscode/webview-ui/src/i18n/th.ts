@@ -935,6 +935,7 @@ export const dict = {
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
+  "session.status.offline": "เครือข่ายถูกตัดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่...",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",

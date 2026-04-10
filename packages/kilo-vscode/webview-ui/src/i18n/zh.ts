@@ -927,6 +927,7 @@ export const dict = {
   "session.status.retry": "正在重试…",
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "处理中…",
+  "session.status.offline": "网络已断开 — 正在重连...",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",

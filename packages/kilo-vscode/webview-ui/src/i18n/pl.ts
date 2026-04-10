@@ -944,6 +944,7 @@ export const dict = {
   "session.status.retry": "Ponawianie…",
   "session.status.retrying": "Ponawiam próbę ({{ attempt }})… {{ message }}",
   "session.status.working": "Pracuję…",
+  "session.status.offline": "Odłączono od sieci — ponowne łączenie...",
 
   "ui.sessionTurn.cancel": "Anuluj",
   "ui.sessionTurn.status.thinking": "Myślę...",

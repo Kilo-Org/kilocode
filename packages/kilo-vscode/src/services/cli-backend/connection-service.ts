@@ -22,6 +22,28 @@ type DirectoryProvider = () => string[]
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
 /**
+ * Reject all pending network-offline waits for a given directory.
+ * The network namespace is not yet in the SDK KiloClient type (pending SDK regeneration),
+ * so we access it via a type assertion.
+ */
+async function drainNetworkWaits(client: KiloClient, dir: string) {
+  const net = (client as any).network as
+    | {
+        list: (p: { directory: string }) => Promise<{ data?: { id: string }[]; error?: unknown }>
+        reject: (p: { requestID: string; directory: string }) => Promise<{ error?: unknown }>
+      }
+    | undefined
+  if (!net) return
+  const { data: waits, error: err } = await net.list({ directory: dir })
+  if (err) throw new Error(`Failed to list network waits for ${dir}: ${String(err)}`)
+  if (!waits) return
+  for (const w of waits) {
+    const { error } = await net.reject({ requestID: w.id, directory: dir })
+    if (error) throw new Error(`Failed to reject network wait ${w.id}: ${String(error)}`)
+  }
+}
+
+/**
  * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
@@ -358,6 +380,7 @@ export class KiloConnectionService {
           if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
+      await drainNetworkWaits(this.client, dir)
     }
     for (const listener of this.clearPendingPromptsListeners) {
       listener()
