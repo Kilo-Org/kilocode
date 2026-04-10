@@ -13,8 +13,10 @@ import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
  * as providerMetadata so it can be round-tripped in subsequent requests.
  */
 function encryptedContentExtractor(): MetadataExtractor {
+  console.log("[chris] encryptedContentExtractor")
   return {
     async extractMetadata({ parsedBody }) {
+      console.log("[chris] extractMetadata")
       const body = parsedBody as {
         choices?: Array<{ message?: { encrypted_content?: string } }>
       }
@@ -23,9 +25,11 @@ function encryptedContentExtractor(): MetadataExtractor {
       return { openaiCompatible: { encrypted_content: encrypted } }
     },
     createStreamExtractor() {
+      console.log("[chris] createStreamExtractor")
       let encrypted = ""
       return {
         processChunk(chunk: unknown) {
+          console.log("[chris] processChunk")
           const c = chunk as {
             choices?: Array<{ delta?: { encrypted_content?: string } }>
           }
@@ -33,6 +37,7 @@ function encryptedContentExtractor(): MetadataExtractor {
           if (value) encrypted += value
         },
         buildMetadata() {
+          console.log("[chris] buildMetadata")
           if (!encrypted) return undefined
           return { openaiCompatible: { encrypted_content: encrypted } }
         },
