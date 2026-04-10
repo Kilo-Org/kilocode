@@ -9,11 +9,13 @@ on:
       - "packages/kilo-vscode/**"
       - "packages/ui/**"
       - "packages/kilo-ui/**"
+      - ".github/workflows/test-vscode.yml"
   pull_request:
     paths:
       - "packages/kilo-vscode/**"
       - "packages/ui/**"
       - "packages/kilo-ui/**"
+      - ".github/workflows/test-vscode.yml"
   workflow_dispatch:
 
 jobs:
