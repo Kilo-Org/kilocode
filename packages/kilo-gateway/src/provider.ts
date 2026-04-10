@@ -1,7 +1,7 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { createOpenAICompatible, MetadataExtractor } from "@ai-sdk/openai-compatible"
+import { MetadataExtractor, OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
@@ -117,7 +117,17 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openrouter = createOpenRouter(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
   const openai = createOpenAI(sdkOptions)
-  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
+
+  // createOpenAICompatible is bugged in AI SDK v5,
+  // it ignores metadataExtractor
+  const openaiCompatible = (modelId: string) =>
+    new OpenAICompatibleChatLanguageModel(modelId, {
+      provider: "openaiCompatible.chat",
+      headers: () => ({ Authorization: `Bearer ${apiKey}`, ...customHeaders }),
+      url: ({ path }) => `${openRouterUrl}${path}`,
+      fetch: wrappedFetch as typeof fetch,
+      metadataExtractor: encryptedContentExtractor(),
+    })
 
   return {
     languageModel(modelId) {
@@ -136,9 +146,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       return openai(modelId)
     },
     openaiCompatible(modelId) {
-      return openaiCompatible.languageModel(modelId, {
-        metadataExtractor: encryptedContentExtractor(),
-      })
+      return openaiCompatible(modelId)
     },
   }
 }
