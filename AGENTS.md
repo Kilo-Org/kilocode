@@ -171,6 +171,10 @@ Tests MUST test actual implementation, do not duplicate logic into a test.
 
 [Conventional Commits](https://www.conventionalcommits.org/) with scopes matching packages: `vscode`, `cli`, `agent-manager`, `sdk`, `ui`, `i18n`, `kilo-docs`, `gateway`, `telemetry`, `desktop`. Omit scope when spanning multiple packages.
 
+## Pull Requests
+
+PR descriptions should be 2-3 lines covering **what** changed and **why**. Focus on intent and context a reviewer can't get from the diff — skip file-by-file inventories, test result summaries, and anything obvious from the code itself.
+
 ## Fork Merge Process
 
 Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).

@@ -34,8 +34,9 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
 ]
-const TSX_FILE = TSX_FILES[0]
+const TSX_FILE = TSX_FILES[0]!
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 
 function readAllCss(): string {
@@ -168,10 +169,18 @@ describe("Agent Manager Provider — onMessage routing", () => {
     return method!.getText()
   }
 
+  function provider(): string {
+    return fs.readFileSync(PROVIDER_FILE, "utf-8")
+  }
+
+  function diff(): string {
+    return fs.readFileSync(DIFF_CONTROLLER_FILE, "utf-8")
+  }
+
   // -- onMessage dispatches all expected message types -----------------------
 
-  it("onMessage handles all documented agentManager.* message types", () => {
-    const text = body("onMessage")
+  it("provider routing handles all documented agentManager.* message types", () => {
+    const text = provider()
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -191,20 +200,28 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.setDefaultBaseBranch",
     ]
     for (const msg of expected) {
-      expect(text, `onMessage should handle "${msg}"`).toContain(msg)
+      expect(text, `provider routing should handle "${msg}"`).toContain(msg)
     }
   })
 
-  it("onMessage handles loadMessages for terminal switching", () => {
-    const text = body("onMessage")
+  it("session routing handles loadMessages for terminal switching", () => {
+    const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
   })
 
-  it("onMessage handles clearSession for SSE re-registration", () => {
-    const text = body("onMessage")
+  it("session routing handles clearSession for SSE re-registration", () => {
+    const text = body("onSessionMessage")
     expect(text).toContain("clearSession")
     expect(text).toContain("trackSession")
+  })
+
+  it("onMessage delegates to cohesive routing groups", () => {
+    const text = body("onMessage")
+    expect(text).toContain("onWorktreeMessage")
+    expect(text).toContain("onSessionMessage")
+    expect(text).toContain("onDiffMessage")
+    expect(text).not.toContain("agentManager.requestState")
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------
@@ -297,7 +314,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * loading skeletons forever.
    */
   it("requestState handler calls pushEmptyState when this.state is falsy", () => {
-    // onMessage delegates to onRequestState; verify the actual handler
+    // onStateMessage delegates to onRequestState; verify the actual handler
     const text = body("onRequestState")
     expect(text, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
     expect(text, "must guard on this.state being falsy").toMatch(/!this\.state/)
@@ -306,6 +323,17 @@ describe("Agent Manager Provider — onMessage routing", () => {
   it("requestState handler calls pushState when this.state is truthy", () => {
     const text = body("onRequestState")
     expect(text, "must call pushState for the normal path").toContain("this.pushState()")
+  })
+
+  it("worktree diff behavior lives in the cohesive diff controller", () => {
+    const text = diff()
+    const providerText = body("onDiffMessage")
+    expect(text).toContain("class WorktreeDiffController")
+    expect(text).toContain("buildWorktreePatch")
+    expect(text).toContain("revertFile")
+    expect(text).toContain("diffSummary")
+    expect(text).toContain("shouldStopDiffPolling")
+    expect(providerText).toContain("this.diffs")
   })
 })
 
@@ -530,8 +558,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 2050,
-    note: "permission recovery wiring is interleaved with panel/session lifecycle; extract more orchestrators next",
+    maxLines: 2000,
+    note: "worktree diff orchestration lives in WorktreeDiffController; lower this after the next cohesive extraction",
   },
 }
 
