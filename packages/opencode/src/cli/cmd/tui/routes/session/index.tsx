@@ -1136,7 +1136,8 @@ export function Session() {
                   toBottom()
                 }}
                 onScroll={(direction) => {
-                  scroll.scrollBy(direction === "up" ? -3 : 3)
+                  const speed = scrollAcceleration().tick()
+                  scroll.scrollBy(direction === "up" ? -speed : speed)
                 }}
                 sessionID={route.sessionID}
               />
