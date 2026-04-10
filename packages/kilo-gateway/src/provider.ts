@@ -1,7 +1,7 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
-import { MetadataExtractor, OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible"
+import { type MetadataExtractor, OpenAICompatibleChatLanguageModel } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
 import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
@@ -13,33 +13,28 @@ import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
  * as providerMetadata so it can be round-tripped in subsequent requests.
  */
 function encryptedContentExtractor(): MetadataExtractor {
-  console.log("[chris] encryptedContentExtractor")
   return {
     async extractMetadata({ parsedBody }) {
-      console.log("[chris] extractMetadata")
       const body = parsedBody as {
         choices?: Array<{ message?: { encrypted_content?: string } }>
       }
       const encrypted = body?.choices?.[0]?.message?.encrypted_content
       if (!encrypted) return undefined
-      return { openaiCompatible: { encrypted_content: encrypted } }
+      return { openaiCompatible: { encryptedContent: encrypted } }
     },
     createStreamExtractor() {
-      console.log("[chris] createStreamExtractor")
       let encrypted = ""
       return {
         processChunk(chunk: unknown) {
-          console.log("[chris] processChunk")
           const c = chunk as {
             choices?: Array<{ delta?: { encrypted_content?: string } }>
           }
-          const value = c?.choices?.[0]?.delta?.encrypted_content
-          if (value) encrypted += value
+          const val = c?.choices?.[0]?.delta?.encrypted_content
+          if (val) encrypted += val
         },
         buildMetadata() {
-          console.log("[chris] buildMetadata")
           if (!encrypted) return undefined
-          return { openaiCompatible: { encrypted_content: encrypted } }
+          return { openaiCompatible: { encryptedContent: encrypted } }
         },
       }
     },

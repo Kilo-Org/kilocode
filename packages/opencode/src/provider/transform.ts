@@ -151,8 +151,17 @@ export namespace ProviderTransform {
           // Filter out reasoning parts from content
           const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
 
+          // kilocode_change start - hoist encrypted_content from text part metadata
+          // to message-level providerOptions so @ai-sdk/openai-compatible sends it back
+          const encrypted = msg.content
+            .filter((part: any) => part.type === "text")
+            .map((part: any) => (part.providerOptions as any)?.openaiCompatible?.encryptedContent)
+            .find((v: any) => v)
+          // kilocode_change end
+
           // Include reasoning_content | reasoning_details directly on the message for all assistant messages
-          if (reasoningText) {
+          if (reasoningText || encrypted) {
+            // kilocode_change
             return {
               ...msg,
               content: filteredContent,
@@ -160,7 +169,8 @@ export namespace ProviderTransform {
                 ...msg.providerOptions,
                 openaiCompatible: {
                   ...(msg.providerOptions as any)?.openaiCompatible,
-                  [field]: reasoningText,
+                  ...(reasoningText ? { [field]: reasoningText } : {}),
+                  ...(encrypted ? { encrypted_content: encrypted } : {}), // kilocode_change
                 },
               },
             }

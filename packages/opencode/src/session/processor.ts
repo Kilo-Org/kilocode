@@ -54,6 +54,7 @@ export namespace SessionProcessor {
           try {
             let currentText: MessageV2.TextPart | undefined
             let reasoningMap: Record<string, MessageV2.ReasoningPart> = {}
+            let lastText: MessageV2.TextPart | undefined // kilocode_change
             const stream = await LLM.stream(streamInput)
 
             for await (const value of stream.fullStream) {
@@ -296,6 +297,25 @@ export namespace SessionProcessor {
                     })
                   }
                   // kilocode_change end
+
+                  // kilocode_change start - propagate encrypted_content from finish-step
+                  // providerMetadata to the last text part so it survives the round-trip.
+                  // The @ai-sdk/openai-compatible v5 MetadataExtractor only surfaces
+                  // custom fields on the finish event, not on per-part stream events.
+                  const encrypted = (value.providerMetadata as any)?.openaiCompatible?.encryptedContent
+                  if (encrypted && lastText) {
+                    lastText.metadata = {
+                      ...lastText.metadata,
+                      openaiCompatible: {
+                        ...(lastText.metadata as any)?.openaiCompatible,
+                        encryptedContent: encrypted,
+                      },
+                    }
+                    await Session.updatePart(lastText)
+                    lastText = undefined
+                  }
+                  // kilocode_change end
+
                   input.assistantMessage.finish = value.finishReason
                   input.assistantMessage.cost += usage.cost
                   input.assistantMessage.tokens = usage.tokens
@@ -384,6 +404,7 @@ export namespace SessionProcessor {
                     }
                     if (value.providerMetadata) currentText.metadata = value.providerMetadata
                     await Session.updatePart(currentText)
+                    lastText = currentText // kilocode_change
                   }
                   currentText = undefined
                   break
