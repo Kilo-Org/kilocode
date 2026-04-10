@@ -508,6 +508,89 @@ button.am-section-toggle:hover .am-section-label {
   margin-left: auto;
 }
 
+.am-run-badge {
+  --am-run-accent: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--am-run-accent) 12%, transparent);
+  color: var(--am-run-accent);
+  font-size: 10px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.am-run-badge [data-component="icon"] {
+  width: 11px;
+  height: 11px;
+  color: currentColor;
+}
+
+.am-run-badge-label {
+  color: currentColor;
+}
+
+.am-run-badge[data-run-state="running"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+  animation: am-run-pulse 1.5s ease-in-out infinite;
+}
+
+.am-run-badge[data-run-state="stopping"] {
+  --am-run-accent: #fbbf24;
+}
+
+.am-run-badge[data-run-state="success"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-run-badge[data-run-state="error"] {
+  --am-run-accent: #f87171;
+}
+
+@keyframes am-run-pulse {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Toolbar Run button group */
+.am-run-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.am-run-group-chevron {
+  padding: 0 2px !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.am-run-group-chevron [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+}
+
+/* Unconfigured — muted until hover */
+.am-run-unconfigured {
+  opacity: 0.5;
+}
+.am-run-unconfigured:hover {
+  opacity: 0.85;
+}
+
+/* Green accent when running — uses VS Code's standard green token */
+.am-run-active,
+.am-run-active [data-component="icon"] {
+  color: var(--vscode-testing-iconPassed, #34d399) !important;
+}
+
 .am-stat-files {
   color: var(--text-muted);
 }
