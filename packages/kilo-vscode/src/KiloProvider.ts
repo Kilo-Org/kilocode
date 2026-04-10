@@ -3288,11 +3288,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
+    clearNetworkWaits(this.trackedSessionIds)
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.sessionStatusMap.clear()
-    clearNetworkWaits()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     this.marketplace?.dispose()

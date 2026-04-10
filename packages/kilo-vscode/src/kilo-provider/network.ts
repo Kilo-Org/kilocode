@@ -40,7 +40,9 @@ export function handleNetworkEvent(type: string, props: Props, client: KiloClien
   }
 }
 
-/** Clear all tracked network waits (call on dispose). */
-export function clearNetworkWaits() {
-  waits.clear()
+/** Clear tracked network waits for the given sessions (call on dispose). */
+export function clearNetworkWaits(sessions: Set<string>) {
+  for (const [rid, sid] of waits) {
+    if (sessions.has(sid)) waits.delete(rid)
+  }
 }
