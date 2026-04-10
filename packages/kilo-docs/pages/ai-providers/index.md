@@ -63,7 +63,7 @@ In the **VSCode (Legacy)** version, API keys use VS Code's Secret Storage. In th
 
 ## Disabling Built-in Providers
 
-You can prevent specific providers from loading using `disabled_providers` in your `kilo.json`. This is useful to hide providers from the model picker that you don't intend to use.
+You can prevent specific providers from loading using `disabled_providers` in your `kilo.json`. This is useful to hide models from built-in or detected providers that you don't intend to use.
 
 ```json
 {

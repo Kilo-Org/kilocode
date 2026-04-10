@@ -142,7 +142,9 @@ Disable an inherited server: `{ "server-name": { "enabled": false } }`.
 
 ### Disabling Built-in Providers
 
-Use `disabled_providers` to prevent specific providers from loading. This is useful when you want to exclude providers that are auto-detected via environment variables or that you don't want available in the model picker.
+Use `disabled_providers` to prevent specific providers from loading. This is useful when you want to exclude providers that are built-in, or auto-detected via environment variables, from appearing in the model picker.
+
+For example, this configuration will hide all models from the built-in Kilo Gateway as well as any from the OpenAI provider which may be enabled automatically through environment variables.
 
 ```jsonc
 {
@@ -153,23 +155,11 @@ Use `disabled_providers` to prevent specific providers from loading. This is use
 
 The provider ID is the lowercase name used in the `provider/model` format (e.g., `kilo`, `openai`, `anthropic`, `google`, `groq`).
 
-**Common provider IDs:**
-
-| Provider       | ID             |
-| -------------- | -------------- |
-| Kilo           | `kilo`         |
-| OpenAI         | `openai`       |
-| Anthropic      | `anthropic`    |
-| Google         | `google`       |
-| Groq           | `groq`         |
-| LM Studio      | `lmstudio`     |
-| Ollama (cloud) | `ollama-cloud` |
-
 **Interaction with `enabled_providers`:**
 
 - `disabled_providers` removes specific providers from the auto-loaded set
 - `enabled_providers` is more restrictive — when set, ONLY the listed providers will be enabled, ignoring all others
-- If both are set, `enabled_providers` takes precedence
+- If both are set, providers must appear in `enabled_providers` and not appear in `disabled_providers`
 
 To disable all auto-detected providers except one:
 
