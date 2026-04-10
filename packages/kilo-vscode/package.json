@@ -320,6 +320,11 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.createHeapSnapshot",
+        "title": "Create Heap Snapshot",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -466,6 +471,11 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "key": "ctrl+shift+g",
         "mac": "cmd+shift+g"
+      },
+      {
+        "command": "kilo-code.new.createHeapSnapshot",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h"
       },
       {
         "command": "kilo-code.new.agentManagerOpen",

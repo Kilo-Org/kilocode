@@ -1,4 +1,7 @@
 import * as vscode from "vscode"
+import * as v8 from "v8"
+import * as fs from "fs"
+import path from "path"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
@@ -311,6 +314,16 @@ export function activate(context: vscode.ExtensionContext) {
         agentManagerProvider.postMessage({ type: "action", action: `jumpTo${i + 1}` })
       }),
     ),
+    vscode.commands.registerCommand("kilo-code.new.createHeapSnapshot", async () => {
+      const dir = path.join(context.extensionPath, "heap-snapshots")
+      fs.mkdirSync(dir, { recursive: true })
+      const filename = `heap-${Date.now()}.heapsnapshot`
+      const filePath = path.join(dir, filename)
+      const snapshotPath = v8.writeHeapSnapshot(filePath)
+      const content = fs.readFileSync(snapshotPath, "utf-8")
+      await vscode.env.clipboard.writeText(content)
+      vscode.window.showInformationMessage("Heap snapshot copied to clipboard. Paste in GitHub issue.")
+    }),
   )
 
   // Register URI handler for session imports (vscode://kilocode.kilo-code/kilocode/s/{sessionId})
