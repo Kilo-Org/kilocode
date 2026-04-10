@@ -3,6 +3,7 @@ import {
   buildTopLevelItems,
   buildSidebarOrder,
   buildShortcutMap,
+  completeSidebarOrder,
   isGrouped,
   isGroupStart,
   isGroupEnd,
@@ -63,6 +64,32 @@ describe("buildTopLevelItems", () => {
     const w1 = wt("w1")
     const result = buildTopLevelItems([s1], [w1], [w1], ["s1", "w1", "s1", "w1"])
     expect(result).toHaveLength(2)
+  })
+
+  it("ignores section member ids while placing top-level sections", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    const result = buildTopLevelItems([s1], [w2], [w1, w2], ["w1", "s1", "w2"])
+    expect(result).toEqual([
+      { kind: "section", section: s1 },
+      { kind: "worktree", wt: w2 },
+    ])
+  })
+})
+
+describe("completeSidebarOrder", () => {
+  it("keeps section ids while adding missing worktree ids", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    expect(completeSidebarOrder([s1], [w1, w2], ["w2", "s1"])).toEqual(["w2", "s1", "w1"])
+  })
+
+  it("drops stale ids and skips duplicates", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1")
+    expect(completeSidebarOrder([s1], [w1], ["old", "w1", "w1", "s1"])).toEqual(["w1", "s1"])
   })
 })
 

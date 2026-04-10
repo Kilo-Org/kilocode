@@ -81,7 +81,7 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
-import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, LOCAL } from "./navigate"
+import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
 import { DiffPanel } from "./DiffPanel"
@@ -98,6 +98,7 @@ import {
   buildTopLevelItems,
   buildSidebarOrder,
   buildShortcutMap,
+  completeSidebarOrder,
   isGrouped,
   isGroupStart,
   isGroupEnd,
@@ -106,7 +107,6 @@ import {
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
-import { trackOpenSessions } from "./open-sessions"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
 
@@ -672,17 +672,11 @@ const AgentManagerContent: Component = () => {
     const all = session.sessions()
     if (all.length === 0) return // sessions not loaded yet
     const ids = all.map((s) => s.id)
-    const prev = localSessionIDs()
-    const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
-    if (valid.length !== prev.length) {
-      const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      }
+    const valid = localSessionIDs().filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
+    if (valid.length !== localSessionIDs().length) {
       setLocalSessionIDs(valid)
     }
   })
-  trackOpenSessions(localSessionIDs, isPending, managedSessions, vscode.postMessage)
 
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
@@ -1125,7 +1119,6 @@ const AgentManagerContent: Component = () => {
         setLocalSessionIDs((prev) => [...prev, created.session.id])
         setSelection(LOCAL)
       }
-      vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
       session.selectSession(created.session.id)
     })
 
@@ -1200,7 +1193,6 @@ const AgentManagerContent: Component = () => {
             if (idx >= 0) return [...prev.slice(0, idx + 1), ev.sessionId, ...prev.slice(idx + 1)]
             return [...prev, ev.sessionId]
           })
-          vscode.postMessage({ type: "agentManager.persistSession", sessionId: ev.sessionId })
         }
         session.selectSession(ev.sessionId)
       }
@@ -1239,15 +1231,15 @@ const AgentManagerContent: Component = () => {
           const ms = state.sessions.find((s) => s.id === current)
           if (ms?.worktreeId) setSelection(ms.worktreeId)
         }
-        // Restore local session IDs from persisted state (sessions with no worktreeId)
-        const restored = restoreLocalSessions(
-          state.sessions,
-          localSessionIDs(),
-          state.tabOrder?.[LOCAL],
-          isPending,
-          applyTabOrder,
-        )
-        if (restored) setLocalSessionIDs(restored)
+        // Recover local tab order from persisted state
+        const localOrder = state.tabOrder?.[LOCAL]
+        if (localOrder && localSessionIDs().length > 0) {
+          const reordered = applyTabOrder(
+            localSessionIDs().map((id) => ({ id })),
+            localOrder,
+          ).map((item) => item.id)
+          setLocalSessionIDs(reordered)
+        }
         // Recover sessions collapsed state from extension-persisted state
         if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
         // Clear busy state for worktrees that have been removed
@@ -1898,9 +1890,6 @@ const AgentManagerContent: Component = () => {
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
-      if (!pending) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
-      }
     } else {
       vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
@@ -2288,10 +2277,7 @@ const AgentManagerContent: Component = () => {
                     if (typeof from !== "string" || typeof to !== "string") return
                     if (secIds().has(to)) return
                     setSidebarWorktreeOrder((prev) => {
-                      const cur = applyTabOrder(
-                        sortedWorktrees().map((w) => ({ id: w.id })),
-                        prev,
-                      ).map((i) => i.id)
+                      const cur = completeSidebarOrder(sections(), sortedWorktrees(), prev)
                       return reorderTabs(cur, from, to) ?? prev
                     })
                   }
@@ -2301,6 +2287,7 @@ const AgentManagerContent: Component = () => {
                     setDraggingWorktree(undefined)
                     document.body.classList.remove("am-wt-dragging-active")
                     if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
+                      vscode.postMessage({ type: "agentManager.setWorktreeOrder", order: sidebarWorktreeOrder() })
                       moveToSection([from], to)
                       return
                     }

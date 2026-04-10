@@ -355,6 +355,7 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setWorktreeOrder") {
       this.state?.setWorktreeOrder(m.order)
+      this.pushState()
       return null
     }
     if (m.type === "agentManager.setSessionsCollapsed") {

@@ -44,7 +44,7 @@ export interface Section {
   name: string
   /** Color label (e.g. "Red", "Blue") mapped to VS Code theme CSS vars at render time, or null for default. */
   color: string | null
-  /** Position among top-level sidebar children (interleaved with ungrouped worktrees). */
+  /** Position among top-level sidebar children (sections and ungrouped worktrees). */
   order: number
   collapsed: boolean
 }
@@ -179,6 +179,7 @@ export class WorktreeStateManager {
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
     this.worktrees.set(id, wt)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
       `Added worktree ${id}: ${params.branch}${params.label ? ` (label=${params.label})` : ""}${params.groupId ? ` (group=${params.groupId})` : ""}`,
     )
@@ -230,9 +231,7 @@ export class WorktreeStateManager {
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
 
-    // Remove from worktree order
-    const idx = this.worktreeOrder.indexOf(id)
-    if (idx !== -1) this.worktreeOrder.splice(idx, 1)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
 
     this.log(`Removed worktree ${id}, removed ${orphaned.length} sessions`)
     void this.save()
@@ -298,18 +297,47 @@ export class WorktreeStateManager {
   }
 
   setWorktreeOrder(order: string[]): void {
-    const top = new Set<string>()
-    for (const sec of this.sections.values()) top.add(sec.id)
-    for (const wt of this.worktrees.values()) {
-      if (!wt.sectionId) top.add(wt.id)
-    }
-    this.worktreeOrder = order.filter((id) => top.has(id))
-    // Append any sections/ungrouped worktrees missing from the incoming order
-    const present = new Set(this.worktreeOrder)
-    for (const id of top) {
-      if (!present.has(id)) this.worktreeOrder.push(id)
-    }
+    this.setNormalizedWorktreeOrder(order)
     void this.save()
+  }
+
+  private setNormalizedWorktreeOrder(order: string[]): boolean {
+    const valid = new Set<string>()
+    for (const sec of this.sections.values()) valid.add(sec.id)
+    for (const wt of this.worktrees.values()) valid.add(wt.id)
+
+    const result: string[] = []
+    const seen = new Set<string>()
+    const add = (id: string) => {
+      if (!valid.has(id) || seen.has(id)) return
+      result.push(id)
+      seen.add(id)
+    }
+
+    for (const id of order) add(id)
+    for (const sec of [...this.sections.values()].sort((a, b) => a.order - b.order)) add(sec.id)
+    for (const wt of this.worktrees.values()) add(wt.id)
+
+    const changed =
+      result.length !== this.worktreeOrder.length || result.some((id, idx) => id !== this.worktreeOrder[idx])
+    this.worktreeOrder = result
+    return this.syncSectionOrder() || changed
+  }
+
+  private syncSectionOrder(): boolean {
+    const top = this.worktreeOrder.filter((id) => {
+      if (this.sections.has(id)) return true
+      const wt = this.worktrees.get(id)
+      return !!wt && !wt.sectionId
+    })
+    const index = new Map(top.map((id, idx) => [id, idx] as const))
+    const changes = [...this.sections.values()].map((sec) => {
+      const order = index.get(sec.id)
+      if (order === undefined || sec.order === order) return false
+      sec.order = order
+      return true
+    })
+    return changes.some(Boolean)
   }
 
   // ---------------------------------------------------------------------------
@@ -317,7 +345,7 @@ export class WorktreeStateManager {
   // ---------------------------------------------------------------------------
 
   getSections(): Section[] {
-    return [...this.sections.values()]
+    return [...this.sections.values()].sort((a, b) => a.order - b.order)
   }
 
   getSection(id: string): Section | undefined {
@@ -325,22 +353,23 @@ export class WorktreeStateManager {
   }
 
   addSection(name: string, color: string | null, worktreeIds?: string[]): Section {
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     const id = generateId("sec")
-    const order = this.worktreeOrder.length
+    const order = this.worktreeOrder.filter((item) => {
+      if (this.sections.has(item)) return true
+      const wt = this.worktrees.get(item)
+      return !!wt && !wt.sectionId
+    }).length
     const sec: Section = { id, name, color, order, collapsed: false }
     this.sections.set(id, sec)
     this.worktreeOrder.push(id)
     if (worktreeIds) {
       for (const wtId of worktreeIds) {
         const wt = this.worktrees.get(wtId)
-        if (wt) {
-          wt.sectionId = id
-          // Remove from top-level worktreeOrder since it's now inside a section
-          const idx = this.worktreeOrder.indexOf(wtId)
-          if (idx !== -1) this.worktreeOrder.splice(idx, 1)
-        }
+        if (wt) wt.sectionId = id
       }
     }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(`Added section ${id}: "${name}"`)
     void this.save()
     return sec
@@ -372,24 +401,15 @@ export class WorktreeStateManager {
     if (!this.sections.delete(id)) return
     // Ungroup all worktrees in this section — do NOT delete them
     for (const wt of this.worktrees.values()) {
-      if (wt.sectionId === id) {
-        wt.sectionId = undefined
-        if (!this.worktreeOrder.includes(wt.id)) this.worktreeOrder.push(wt.id)
-      }
+      if (wt.sectionId === id) wt.sectionId = undefined
     }
-    // Remove from sidebar order
-    const idx = this.worktreeOrder.indexOf(id)
-    if (idx !== -1) this.worktreeOrder.splice(idx, 1)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
     this.log(`Deleted section ${id}, ungrouped its worktrees`)
     void this.save()
   }
 
   moveSection(id: string, dir: -1 | 1): void {
-    // Ensure the section is in worktreeOrder (it may be missing if drag-and-drop
-    // overwrote the order before this section was tracked)
-    if (this.sections.has(id) && !this.worktreeOrder.includes(id)) {
-      this.worktreeOrder.push(id)
-    }
+    const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
     const top = this.worktreeOrder.filter((item) => {
       if (this.sections.has(item)) return true
       const wt = this.worktrees.get(item)
@@ -397,15 +417,21 @@ export class WorktreeStateManager {
     })
     const idx = top.indexOf(id)
     const next = idx + dir
-    if (idx === -1 || next < 0 || next >= top.length) return
+    if (idx === -1 || next < 0 || next >= top.length) {
+      if (repaired) void this.save()
+      return
+    }
     const target = top[next]!
     const result = [...this.worktreeOrder]
     const fi = result.indexOf(id)
-    if (fi === -1 || result.indexOf(target) === -1) return
+    if (fi === -1 || result.indexOf(target) === -1) {
+      if (repaired) void this.save()
+      return
+    }
     result.splice(fi, 1)
     const insertAt = result.indexOf(target) + (dir === 1 ? 1 : 0)
     result.splice(insertAt, 0, id)
-    this.worktreeOrder = result
+    this.setNormalizedWorktreeOrder(result)
     void this.save()
   }
 
@@ -423,13 +449,8 @@ export class WorktreeStateManager {
       const wt = this.worktrees.get(wtId)
       if (!wt) continue
       wt.sectionId = sectionId ?? undefined
-      if (sectionId) {
-        const idx = this.worktreeOrder.indexOf(wtId)
-        if (idx !== -1) this.worktreeOrder.splice(idx, 1)
-      } else {
-        if (!this.worktreeOrder.includes(wtId)) this.worktreeOrder.push(wtId)
-      }
     }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     void this.save()
   }
 
@@ -519,22 +540,15 @@ export class WorktreeStateManager {
       if (data.worktreeOrder) {
         this.worktreeOrder = data.worktreeOrder
       }
-      // Normalize: ensure all section IDs and ungrouped worktree IDs are in worktreeOrder
-      const present = new Set(this.worktreeOrder)
-      for (const id of this.sections.keys()) {
-        if (!present.has(id)) this.worktreeOrder.push(id)
-      }
-      for (const wt of this.worktrees.values()) {
-        if (!wt.sectionId && !present.has(wt.id)) this.worktreeOrder.push(wt.id)
-      }
+      const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
       }
       this.defaultBase = data.defaultBaseBranch
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
-      if (pruned > 0) {
-        this.log(`Pruned ${pruned} orphaned sessions`)
+      if (pruned > 0 || repaired) {
+        if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
         void this.save()
       }
     } catch (error) {
