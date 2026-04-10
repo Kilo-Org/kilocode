@@ -721,7 +721,7 @@ export const ModelSelector: Component = () => {
         session.selectModel(providerID, modelID)
       }}
       onPick={() => {
-        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
       }}
     />
   )
