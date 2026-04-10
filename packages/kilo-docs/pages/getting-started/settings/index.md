@@ -15,7 +15,7 @@ The fastest way to change your Kilo configuration is to ask the agent to do it f
 
 - "Switch my default model to Claude Sonnet"
 - "Disable the OpenAI and Groq providers"
-- "Set up an MCP server for my local Postgres database"
+- "Set up an MCP server for Figma"
 - "Auto-approve all read and glob operations"
 - "Create a custom agent for code review"
 
