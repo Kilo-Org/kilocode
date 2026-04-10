@@ -2338,20 +2338,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Abort controllers for active retry loops, keyed by session ID */
   private retryAbortControllers = new Map<string, AbortController>()
 
-  /**
-   * Execute an SDK call with exponential backoff on HTTP errors.
-   * Retries on 429, 5xx, and other retryable status codes.
-   * When the response includes `Retry-After` / `Retry-After-MS` headers,
-   * the delay honours that value (capped at 5 min). Otherwise uses the
-   * predefined backoff schedule: 5s -> 10s -> 30s -> 60s -> 300s.
-   *
-   * After MAX_RETRIES (5) attempts, automatically throws the error.
-   * Users can cancel via the cancel button in the UI which sends an abort
-   * message — this interrupts the backoff delay and stops the retry loop.
-   *
-   * The webview receives `sessionStatus` messages with a countdown so the
-   * user can see that a retry is in progress.
-   */
+  /** Execute an SDK call with visible exponential backoff for retryable HTTP errors. */
   private async withRetry(
     fn: () => Promise<{ error?: unknown; response?: Response }>,
     sid: string,
