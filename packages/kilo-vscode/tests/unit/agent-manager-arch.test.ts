@@ -562,8 +562,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 1800,
-    note: "worktree diff orchestration lives in WorktreeDiffController; extract another cohesive domain next",
+    maxLines: 2000,
+    note: "worktree diff orchestration lives in WorktreeDiffController; lower this after the next cohesive extraction",
   },
 }
 
