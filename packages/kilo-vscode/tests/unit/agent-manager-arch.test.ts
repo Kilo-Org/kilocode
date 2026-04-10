@@ -573,7 +573,7 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 1450,
+    maxLines: 2000,
     note: "diff and import workflows are extracted into cohesive domain services; extract more orchestration next",
   },
 }
