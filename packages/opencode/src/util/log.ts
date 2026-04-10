@@ -16,10 +16,10 @@ export namespace Log {
     ERROR: 3,
   }
 
-  let level: Level = "INFO"
+  let currentLevel: Level = "INFO"
 
   function shouldLog(input: Level): boolean {
-    return levelPriority[input] >= levelPriority[level]
+    return levelPriority[input] >= levelPriority[currentLevel]
   }
 
   export type Logger = {
@@ -49,23 +49,28 @@ export namespace Log {
   }
 
   let logpath = ""
-  export function file() {
-    return logpath
-  }
-  let write = (msg: any) => {
+  let writeFn = (msg: string) => {
     process.stderr.write(msg)
     return msg.length
   }
 
+  // devilcode_change start - expose logpath for error reporting
+  export function file(): string {
+    return logpath
+  }
+  // devilcode_change end
+
   export async function init(options: Options) {
-    if (options.level) level = options.level
+    if (options.level) currentLevel = options.level
     cleanup(Global.Path.log)
     if (options.print) return
     logpath = path.join(
       Global.Path.log,
       options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",
     )
-    await fs.truncate(logpath).catch(() => {})
+    await fs.truncate(logpath).catch((err) => {
+      console.error("failed to truncate log file", { err, logpath })
+    })
     // devilcode_change start - use rotating-file-stream to cap log files at 50 MB
     const dir = path.dirname(logpath)
     const stream = createStream(path.basename(logpath), {
@@ -80,7 +85,7 @@ export namespace Log {
     stream.on("warning", (err: Error) => {
       process.stderr.write("log stream warning: " + err.message + "\n")
     })
-    write = (msg: any) => {
+    writeFn = (msg: any) => {
       stream.write(msg)
       return msg.length
     }
@@ -96,7 +101,9 @@ export namespace Log {
     if (files.length <= 5) return
 
     const filesToDelete = files.slice(0, -10)
-    await Promise.all(filesToDelete.map((file) => fs.unlink(file).catch(() => {})))
+    await Promise.all(filesToDelete.map((file) => fs.unlink(file).catch((err) => {
+      console.error("failed to delete old log file", { err, file })
+    })))
   }
 
   function formatError(error: Error, depth = 0): string {
@@ -139,22 +146,22 @@ export namespace Log {
     const result: Logger = {
       debug(message?: any, extra?: Record<string, any>) {
         if (shouldLog("DEBUG")) {
-          write("DEBUG " + build(message, extra))
+          writeFn("DEBUG " + build(message, extra))
         }
       },
       info(message?: any, extra?: Record<string, any>) {
         if (shouldLog("INFO")) {
-          write("INFO  " + build(message, extra))
+          writeFn("INFO  " + build(message, extra))
         }
       },
       error(message?: any, extra?: Record<string, any>) {
         if (shouldLog("ERROR")) {
-          write("ERROR " + build(message, extra))
+          writeFn("ERROR " + build(message, extra))
         }
       },
       warn(message?: any, extra?: Record<string, any>) {
         if (shouldLog("WARN")) {
-          write("WARN  " + build(message, extra))
+          writeFn("WARN  " + build(message, extra))
         }
       },
       tag(key: string, value: string) {

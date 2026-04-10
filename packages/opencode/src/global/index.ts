@@ -49,6 +49,8 @@ if (version !== CACHE_VERSION) {
         }),
       ),
     )
-  } catch (e) {}
+  } catch (err) {
+    console.error("cache migration failed", { err, cachePath: Global.Path.cache })
+  }
   await Filesystem.write(path.join(Global.Path.cache, "version"), CACHE_VERSION)
 }
