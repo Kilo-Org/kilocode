@@ -90,7 +90,9 @@ export namespace Provider {
     })
   }
 
-  const BUNDLED_PROVIDERS: Record<string, (options: any) => SDK> = {
+  // devilcode_change - use Record<string, any> because some providers (e.g. OpenaiCompatibleProvider)
+  // don't implement the full SDK Provider interface (missing textEmbeddingModel, imageModel)
+  const BUNDLED_PROVIDERS: Record<string, (options: any) => any> = {
     "@ai-sdk/amazon-bedrock": createAmazonBedrock,
     "@ai-sdk/anthropic": createAnthropic,
     "@ai-sdk/azure": createAzure,
@@ -112,15 +114,18 @@ export namespace Provider {
     "@ai-sdk/perplexity": createPerplexity,
     "@ai-sdk/vercel": createVercel,
     "@gitlab/gitlab-ai-provider": createGitLab,
-    // @ts-ignore (TODO: kill this code so we dont have to maintain it)
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
   }
 
-  type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>) => Promise<any>
+  type CustomModelLoader = (
+    sdk: unknown,
+    modelID: string,
+    options?: Record<string, unknown>,
+  ) => Promise<LanguageModelV2> // devilcode_change - LanguageModel not exported; use LanguageModelV2
   type CustomLoader = (provider: Info) => Promise<{
     autoload: boolean
     getModel?: CustomModelLoader
-    options?: Record<string, any>
+    options?: Record<string, unknown>
   }>
 
   const CUSTOM_LOADERS: Record<string, CustomLoader> = {
@@ -256,7 +261,7 @@ export namespace Provider {
 
       return {
         autoload: true,
-        options: providerOptions,
+        options: providerOptions as Record<string, unknown>, // devilcode_change - AmazonBedrockProviderSettings lacks index signature
         async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
           // Skip region prefixing if model already has a cross-region inference profile prefix
           // Models from models.dev may already include prefixes like us., eu., global., etc.
@@ -484,7 +489,7 @@ export namespace Provider {
             ...(providerConfig?.options?.featureFlags || {}),
           },
         },
-        async getModel(sdk: ReturnType<typeof createGitLab>, modelID: string) {
+        async getModel(sdk: any, modelID: string) { // devilcode_change - sdk typed as any to match CustomModelLoader
           return sdk.agenticChat(modelID, {
             aiGatewayHeaders,
             featureFlags: {
@@ -618,7 +623,7 @@ export namespace Provider {
       return {
         autoload: Object.keys(input.models).length > 0,
         options,
-        async getModel(sdk: DevilProvider, modelID: string) {
+        async getModel(sdk: any, modelID: string) { // devilcode_change - sdk typed as any to match CustomModelLoader
           const aiSdkProvider = input.models[modelID]?.ai_sdk_provider
           if (aiSdkProvider === "anthropic") {
             return sdk.anthropic(modelID)
@@ -901,14 +906,14 @@ export namespace Provider {
     function mergeProvider(providerID: string, provider: Partial<Info>) {
       const existing = providers[providerID]
       if (existing) {
-        // @ts-expect-error
-        providers[providerID] = mergeDeep(existing, provider)
+        // mergeDeep returns unknown - cast to Info since we know the types are compatible
+        providers[providerID] = mergeDeep(existing, provider) as Info
         return
       }
       const match = database[providerID]
       if (!match) return
-      // @ts-expect-error
-      providers[providerID] = mergeDeep(match, provider)
+      // mergeDeep returns unknown - cast to Info since we know the types are compatible
+      providers[providerID] = mergeDeep(match, provider) as Info
     }
 
     // extend database from config
@@ -1230,8 +1235,8 @@ export namespace Provider {
 
         return fetchFn(input, {
           ...opts,
-          // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
-          timeout: false,
+          // timeout: false needed for Bun: https://github.com/oven-sh/bun/issues/16682
+          timeout: false as never,
         })
       }
 
@@ -1315,9 +1320,11 @@ export namespace Provider {
     const sdk = await getSDK(model)
 
     try {
-      const language = s.modelLoaders[model.providerID]
+      // devilcode_change - cast sdk.languageModel() result; LanguageModel = string | LanguageModelV2 in ai@5.x
+      // but at runtime it always returns a LanguageModelV2 object
+      const language: LanguageModelV2 = s.modelLoaders[model.providerID]
         ? await s.modelLoaders[model.providerID](sdk, model.api.id, provider.options)
-        : sdk.languageModel(model.api.id)
+        : (sdk.languageModel(model.api.id) as LanguageModelV2)
       s.models.set(key, language)
       return language
     } catch (e) {

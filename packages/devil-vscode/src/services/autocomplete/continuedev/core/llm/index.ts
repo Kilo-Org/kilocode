@@ -233,12 +233,28 @@ export abstract class BaseLLM implements ILLM {
   }
 
   protected async *_streamFim(
-    _prefix: string,
-    _suffix: string,
-    _signal: AbortSignal,
-    _options: CompletionOptions,
+    prefix: string,
+    suffix: string,
+    signal: AbortSignal,
+    options: CompletionOptions,
   ): AsyncGenerator<string, PromptLog> {
-    throw new Error("Not implemented")
+    // Subclasses must implement this or set useOpenAIAdapterFor to use the OpenAI adapter
+    if (this.openaiAdapter && this.shouldUseOpenAIAdapter("streamFim")) {
+      const stream = this.openaiAdapter.fimStream(toFimBody(prefix, suffix, options), signal)
+      for await (const chunk of stream) {
+        const result = fromChatCompletionChunk(chunk)
+        if (result) {
+          yield renderChatMessage(result)
+        }
+      }
+      return {
+        modelTitle: this.title ?? options.model,
+        modelProvider: this.underlyingProviderName,
+        prompt: `Prefix: ${prefix}\nSuffix: ${suffix}`,
+        completion: "",
+      }
+    }
+    throw new Error(`${this.providerName} provider must implement _streamFim or set useOpenAIAdapterFor: ["streamFim"]`)
   }
 
   protected useOpenAIAdapterFor: (LlmApiRequestType | "*")[] = []
@@ -629,11 +645,34 @@ export abstract class BaseLLM implements ILLM {
   }
 
   protected async *_streamComplete(
-    _prompt: string,
-    _signal: AbortSignal,
-    _options: CompletionOptions,
+    prompt: string,
+    signal: AbortSignal,
+    options: CompletionOptions,
   ): AsyncGenerator<string> {
-    throw new Error("Not implemented")
+    // Subclasses must implement this or set useOpenAIAdapterFor to use the OpenAI adapter
+    if (this.openaiAdapter && this.shouldUseOpenAIAdapter("streamComplete")) {
+      if (options.stream === false) {
+        // Stream false
+        const response = await this.openaiAdapter.completionNonStream(
+          { ...toCompleteBody(prompt, options), stream: false },
+          signal,
+        )
+        yield response.choices[0]?.text ?? ""
+      } else {
+        // Stream true
+        for await (const chunk of this.openaiAdapter.completionStream(
+          { ...toCompleteBody(prompt, options), stream: true },
+          signal,
+        )) {
+          const content = chunk.choices[0]?.text ?? ""
+          yield content
+        }
+      }
+      return
+    }
+    throw new Error(
+      `${this.providerName} provider must implement _streamComplete or set useOpenAIAdapterFor: ["streamComplete"]`,
+    )
   }
 
   protected async *_streamChat(
