@@ -19,6 +19,7 @@ export interface CloudSessionContext {
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
+  waitForMessageConfirmation?(messageID?: string): Promise<boolean>
 }
 
 /** Fetch cloud sessions list and send to webview. */
@@ -209,6 +210,12 @@ export async function handleImportAndSend(
       )
     }
   } catch (err) {
+    if (await ctx.waitForMessageConfirmation?.(messageID)) {
+      console.warn("[Kilo New] Cloud import send ended after server accepted it; ignoring transport error", {
+        error: getErrorMessage(err),
+      })
+      return
+    }
     console.error("[Kilo New] Failed to send message after cloud import:", err)
     ctx.postMessage({
       type: "sendMessageFailed",

@@ -58,6 +58,53 @@ export function getErrorMessage(error: unknown): string {
   return String(error)
 }
 
+export class MessageConfirmation {
+  private readonly ids = new Set<string>()
+  private readonly waits = new Map<string, Set<() => void>>()
+
+  confirm(id: string): void {
+    this.ids.add(id)
+    const waits = this.waits.get(id)
+    if (!waits) return
+    for (const done of [...waits]) {
+      done()
+    }
+  }
+
+  has(id?: string): boolean {
+    if (!id) return false
+    return this.ids.has(id)
+  }
+
+  wait(id?: string, timeout = 1_500): Promise<boolean> {
+    if (!id) return Promise.resolve(false)
+    if (this.ids.has(id)) return Promise.resolve(true)
+
+    return new Promise((resolve) => {
+      const waits = this.waits.get(id) ?? new Set<() => void>()
+      this.waits.set(id, waits)
+
+      const timer = setTimeout(() => {
+        cleanup()
+        resolve(this.ids.has(id))
+      }, timeout)
+
+      const cleanup = () => {
+        clearTimeout(timer)
+        waits.delete(done)
+        if (waits.size === 0) this.waits.delete(id)
+      }
+
+      const done = () => {
+        cleanup()
+        resolve(true)
+      }
+
+      waits.add(done)
+    })
+  }
+}
+
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,

@@ -7,6 +7,7 @@ import {
   mapSSEEventToWebviewMessage,
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
+  MessageConfirmation,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -92,6 +93,31 @@ function makeAssistantMessage(overrides: Partial<AssistantMessage> = {}): Assist
     ...overrides,
   }
 }
+
+describe("MessageConfirmation", () => {
+  it("reports already confirmed messages", async () => {
+    const state = new MessageConfirmation()
+    state.confirm("msg-1")
+
+    expect(state.has("msg-1")).toBe(true)
+    expect(await state.wait("msg-1", 1)).toBe(true)
+  })
+
+  it("resolves waiters when a message is confirmed", async () => {
+    const state = new MessageConfirmation()
+    const wait = state.wait("msg-1", 50)
+
+    state.confirm("msg-1")
+
+    expect(await wait).toBe(true)
+  })
+
+  it("returns false when confirmation does not arrive", async () => {
+    const state = new MessageConfirmation()
+
+    expect(await state.wait("msg-1", 1)).toBe(false)
+  })
+})
 
 describe("sessionToWebview", () => {
   it("converts epoch timestamps to ISO strings", () => {
