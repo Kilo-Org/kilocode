@@ -155,15 +155,15 @@ The provider ID is the lowercase name used in the `provider/model` format (e.g.,
 
 **Common provider IDs:**
 
-| Provider  | ID          | Notes                   |
-| --------- | ----------- | ----------------------- |
-| Kilo      | `kilo`      | Default Kilo AI Gateway |
-| OpenAI    | `openai`    |                         |
-| Anthropic | `anthropic` |                         |
-| Google    | `google`    |                         |
-| Groq      | `groq`      |                         |
-| Ollama    | `ollama`    | Local models            |
-| LM Studio | `lmstudio`  | Local models            |
+| Provider       | ID             |
+| -------------- | -------------- |
+| Kilo           | `kilo`         |
+| OpenAI         | `openai`       |
+| Anthropic      | `anthropic`    |
+| Google         | `google`       |
+| Groq           | `groq`         |
+| LM Studio      | `lmstudio`     |
+| Ollama (cloud) | `ollama-cloud` |
 
 **Interaction with `enabled_providers`:**
 
