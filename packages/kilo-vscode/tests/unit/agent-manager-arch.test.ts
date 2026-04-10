@@ -297,21 +297,15 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * loading skeletons forever.
    */
   it("requestState handler calls pushEmptyState when this.state is falsy", () => {
-    const text = body("onMessage")
-    // Extract the requestState branch
-    const start = text.indexOf('"agentManager.requestState"')
-    expect(start, "requestState branch must exist").toBeGreaterThan(-1)
-    // Grab a reasonable window after the match
-    const snippet = text.slice(start, start + 600)
-    expect(snippet, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
-    expect(snippet, "must guard on this.state being falsy").toMatch(/!this\.state/)
+    // onMessage delegates to onRequestState; verify the actual handler
+    const text = body("onRequestState")
+    expect(text, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
+    expect(text, "must guard on this.state being falsy").toMatch(/!this\.state/)
   })
 
   it("requestState handler calls pushState when this.state is truthy", () => {
-    const text = body("onMessage")
-    const start = text.indexOf('"agentManager.requestState"')
-    const snippet = text.slice(start, start + 600)
-    expect(snippet, "must call pushState for the normal path").toContain("this.pushState()")
+    const text = body("onRequestState")
+    expect(text, "must call pushState for the normal path").toContain("this.pushState()")
   })
 })
 

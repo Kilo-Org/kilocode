@@ -169,6 +169,7 @@ interface SendInitialMessage {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -365,6 +366,7 @@ interface CreateMultiVersionIn {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
   baseBranch?: string
   branchName?: string

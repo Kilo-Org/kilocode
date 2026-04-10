@@ -1311,6 +1311,7 @@ const AgentManagerContent: Component = () => {
             providerID: ev.providerID,
             modelID: ev.modelID,
             agent: ev.agent,
+            variant: ev.variant,
             files: ev.files,
           })
         }

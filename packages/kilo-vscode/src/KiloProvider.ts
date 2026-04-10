@@ -1,7 +1,5 @@
-/* eslint-disable max-lines -- TODO: refactor to reduce file size and remove this disable */
 import * as path from "path"
 import * as vscode from "vscode"
-import { z } from "zod"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
 import type {
@@ -42,6 +40,8 @@ import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
+import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
+import { parseMessageFiles } from "./kilo-provider/message-files"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { childID } from "./kilo-provider/task-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
@@ -527,7 +527,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
     this.webviewMessageDisposable?.dispose()
-    // eslint-disable-next-line complexity -- TODO: refactor to reduce complexity and remove this disable
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       // Run interceptor if attached (e.g., AgentManagerProvider worktree logic)
       if (this.onBeforeMessage) {
@@ -551,17 +550,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.readyResolvers.splice(0).forEach((r) => r())
           break
         case "sendMessage": {
-          const files = z
-            .array(
-              z.object({
-                mime: z.string(),
-                url: z.string().refine((u) => u.startsWith("file://") || u.startsWith("data:")),
-                filename: z.string().optional(),
-              }),
-            )
-            .optional()
-            .catch(undefined)
-            .parse(message.files)
+          const files = parseMessageFiles(message.files)
           await this.handleSendMessage(
             message.text,
             typeof message.messageID === "string" ? message.messageID : undefined,
@@ -576,17 +565,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "sendCommand": {
-          const files = z
-            .array(
-              z.object({
-                mime: z.string(),
-                url: z.string().refine((u) => u.startsWith("file://") || u.startsWith("data:")),
-                filename: z.string().optional(),
-              }),
-            )
-            .optional()
-            .catch(undefined)
-            .parse(message.files)
+          const files = parseMessageFiles(message.files)
           await this.handleSendCommand(
             message.command,
             message.arguments,
@@ -667,9 +646,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await handleRefreshProfile(this.authCtx)
           break
         case "openExternal":
-          if (message.url) {
-            vscode.env.openExternal(vscode.Uri.parse(message.url))
-          }
+          this.openExternal(message.url)
           break
         case "openSettingsPanel":
           vscode.commands.executeCommand("kilo-code.new.settingsButtonClicked", message.tab)
@@ -684,30 +661,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
         case "openDiffVirtual":
-          if (this.diffVirtualProvider && message.diff) {
-            this.diffVirtualProvider.open(message.diff)
-          }
+          this.openDiffVirtual(message.diff)
           break
         case "continueInWorktree":
-          if (message.sessionId && this.continueInWorktreeHandler) {
-            this.continueInWorktreeHandler(message.sessionId, (status: string, detail?: string, error?: string) => {
-              this.postMessage({ type: "continueInWorktreeProgress", status, detail, error })
-            }).catch((err: unknown) => {
-              console.error("[Kilo New] continueInWorktree failed:", err)
-              this.postMessage({
-                type: "continueInWorktreeProgress",
-                status: "error",
-                error: err instanceof Error ? err.message : String(err),
-              })
-            })
-          } else if (message.sessionId) {
-            console.error("[Kilo New] continueInWorktree: no handler registered")
-            this.postMessage({
-              type: "continueInWorktreeProgress",
-              status: "error",
-              error: "Continue in Worktree is not available",
-            })
-          }
+          handleContinueInWorktree({
+            sessionId: message.sessionId,
+            handler: this.continueInWorktreeHandler ?? undefined,
+            post: (msg) => this.postMessage(msg),
+          })
           break
         case "retryConnection":
           console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")
@@ -909,16 +870,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           void handleRequestCloudSessionData(this.cloudSessionCtx, message.sessionId)
           break
         case "importAndSend": {
-          const files = z
-            .array(
-              z.object({
-                mime: z.string(),
-                url: z.string().refine((u) => u.startsWith("file://") || u.startsWith("data:")),
-              }),
-            )
-            .optional()
-            .catch(undefined)
-            .parse(message.files)
+          const files = parseMessageFiles(message.files)
           void handleImportAndSend(
             this.cloudSessionCtx,
             message.cloudSessionId,
@@ -1067,6 +1019,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
     })
+  }
+
+  private openExternal(url: unknown): void {
+    if (typeof url !== "string") return
+    void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  private openDiffVirtual(diff: unknown): void {
+    if (!this.diffVirtualProvider || !diff) return
+    this.diffVirtualProvider.open(diff as import("./DiffVirtualProvider").DiffVirtualFile)
   }
 
   /**
