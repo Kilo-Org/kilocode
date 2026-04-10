@@ -95,8 +95,9 @@ function makeAssistantMessage(overrides: Partial<AssistantMessage> = {}): Assist
 }
 
 describe("MessageConfirmation", () => {
-  it("reports already confirmed messages", async () => {
+  it("reports tracked confirmed messages", async () => {
     const state = new MessageConfirmation()
+    state.track("msg-1")
     state.confirm("msg-1")
 
     expect(state.has("msg-1")).toBe(true)
@@ -105,6 +106,7 @@ describe("MessageConfirmation", () => {
 
   it("resolves waiters when a message is confirmed", async () => {
     const state = new MessageConfirmation()
+    state.track("msg-1")
     const wait = state.wait("msg-1", 50)
 
     state.confirm("msg-1")
@@ -114,8 +116,19 @@ describe("MessageConfirmation", () => {
 
   it("returns false when confirmation does not arrive", async () => {
     const state = new MessageConfirmation()
+    state.track("msg-1")
 
     expect(await state.wait("msg-1", 1)).toBe(false)
+  })
+
+  it("forgets confirmations after release", () => {
+    const state = new MessageConfirmation()
+    const release = state.track("msg-1")
+    state.confirm("msg-1")
+
+    release()
+
+    expect(state.has("msg-1")).toBe(false)
   })
 })
 

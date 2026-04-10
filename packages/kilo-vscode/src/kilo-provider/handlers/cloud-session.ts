@@ -19,6 +19,7 @@ export interface CloudSessionContext {
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
+  trackMessageConfirmation?(messageID?: string): () => void
   waitForMessageConfirmation?(messageID?: string): Promise<boolean>
 }
 
@@ -164,6 +165,7 @@ export async function handleImportAndSend(
   })
 
   // Step 2: Send the user's message/command on the new local session
+  const release = ctx.trackMessageConfirmation?.(messageID) ?? (() => {})
   try {
     if (messageID) {
       ctx.connectionService.recordMessageSessionId(messageID, session.id)
@@ -226,5 +228,7 @@ export async function handleImportAndSend(
       messageID,
       files,
     })
+  } finally {
+    release()
   }
 }

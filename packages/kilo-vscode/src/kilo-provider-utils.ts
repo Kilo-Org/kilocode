@@ -59,40 +59,46 @@ export function getErrorMessage(error: unknown): string {
 }
 
 export class MessageConfirmation {
-  private readonly ids = new Set<string>()
-  private readonly waits = new Map<string, Set<() => void>>()
+  private readonly ids = new Map<string, { confirmed: boolean; waits: Set<() => void> }>()
+
+  track(id?: string): () => void {
+    if (!id) return () => {}
+    const entry = this.ids.get(id) ?? { confirmed: false, waits: new Set<() => void>() }
+    this.ids.set(id, entry)
+    return () => {
+      this.ids.delete(id)
+    }
+  }
 
   confirm(id: string): void {
-    this.ids.add(id)
-    const waits = this.waits.get(id)
-    if (!waits) return
-    for (const done of [...waits]) {
+    const entry = this.ids.get(id)
+    if (!entry) return
+    entry.confirmed = true
+    for (const done of [...entry.waits]) {
       done()
     }
   }
 
   has(id?: string): boolean {
     if (!id) return false
-    return this.ids.has(id)
+    return this.ids.get(id)?.confirmed ?? false
   }
 
   wait(id?: string, timeout = 1_500): Promise<boolean> {
     if (!id) return Promise.resolve(false)
-    if (this.ids.has(id)) return Promise.resolve(true)
+    const entry = this.ids.get(id)
+    if (!entry) return Promise.resolve(false)
+    if (entry.confirmed) return Promise.resolve(true)
 
     return new Promise((resolve) => {
-      const waits = this.waits.get(id) ?? new Set<() => void>()
-      this.waits.set(id, waits)
-
       const timer = setTimeout(() => {
         cleanup()
-        resolve(this.ids.has(id))
+        resolve(entry.confirmed)
       }, timeout)
 
       const cleanup = () => {
         clearTimeout(timer)
-        waits.delete(done)
-        if (waits.size === 0) this.waits.delete(id)
+        entry.waits.delete(done)
       }
 
       const done = () => {
@@ -100,7 +106,7 @@ export class MessageConfirmation {
         resolve(true)
       }
 
-      waits.add(done)
+      entry.waits.add(done)
     })
   }
 }

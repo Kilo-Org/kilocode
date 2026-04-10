@@ -2447,6 +2447,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
+    const release = this.confirmations.track(messageID)
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
@@ -2501,6 +2502,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
+    } finally {
+      release()
     }
   }
 
@@ -2530,6 +2533,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
+    const release = this.confirmations.track(messageID)
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
@@ -2577,6 +2581,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
+    } finally {
+      release()
     }
   }
 
@@ -2709,6 +2715,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
       gatherEditorContext: () => this.gatherEditorContext(),
+      trackMessageConfirmation: (id) => this.confirmations.track(id),
       waitForMessageConfirmation: (id) => this.confirmations.wait(id),
     }
   }
