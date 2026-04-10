@@ -31,6 +31,7 @@ import {
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
   resolveWorkspaceDirectory,
+  mergeFileSearchResults,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
@@ -801,17 +802,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             const dir = this.getWorkspaceDirectory(this.currentSession?.id)
             const openPaths = dir ? await this.getOpenTabPaths(dir) : new Set<string>()
             void sdkClient.find
-              .files({ query: message.query, directory: dir }, { throwOnError: true })
+              .files({ query: message.query, directory: dir, type: "file", limit: 50 }, { throwOnError: true })
               .then(({ data: paths }) => {
-                // Prioritize open files: open tabs first, then the rest
-                const open = paths.filter((p) => openPaths.has(p))
-                const rest = paths.filter((p) => !openPaths.has(p))
-                this.postMessage({
-                  type: "fileSearchResult",
-                  paths: [...open, ...rest],
-                  dir,
-                  requestId: message.requestId,
-                })
+                const uri = vscode.window.activeTextEditor?.document.uri
+                const active =
+                  uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath).replaceAll("\\", "/") : undefined
+                const result = mergeFileSearchResults({ query: message.query, backend: paths, open: openPaths, active })
+                this.postMessage({ type: "fileSearchResult", paths: result, dir, requestId: message.requestId })
               })
               .catch((error: unknown) => {
                 console.error("[Kilo New] File search failed:", error)
