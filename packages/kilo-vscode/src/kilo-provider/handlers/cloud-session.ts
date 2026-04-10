@@ -19,8 +19,11 @@ export interface CloudSessionContext {
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
-  trackMessageConfirmation?(messageID?: string): () => void
-  waitForMessageConfirmation?(messageID?: string): Promise<boolean>
+  runWithMessageConfirmation?<T>(
+    messageID: string | undefined,
+    label: string,
+    run: () => Promise<T>,
+  ): Promise<T | undefined>
 }
 
 /** Fetch cloud sessions list and send to webview. */
@@ -125,6 +128,7 @@ export async function handleImportAndSend(
     return
   }
 
+  const client = ctx.client
   const dir = ctx.getWorkspaceDirectory()
 
   // Step 1: Import the cloud session with fresh IDs
@@ -165,29 +169,32 @@ export async function handleImportAndSend(
   })
 
   // Step 2: Send the user's message/command on the new local session
-  const release = ctx.trackMessageConfirmation?.(messageID) ?? (() => {})
+  const run = ctx.runWithMessageConfirmation ?? ((_id, _label, fn) => fn())
   try {
-    if (messageID) {
-      ctx.connectionService.recordMessageSessionId(messageID, session.id)
-    }
+    await run(messageID, "Cloud import send", async () => {
+      if (messageID) {
+        ctx.connectionService.recordMessageSessionId(messageID, session.id)
+      }
 
-    if (command) {
-      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
-      await ctx.client.session.command(
-        {
-          sessionID: session.id,
-          directory: dir,
-          command,
-          arguments: commandArgs ?? "",
-          messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent,
-          variant,
-          parts,
-        },
-        { throwOnError: true },
-      )
-    } else {
+      if (command) {
+        const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+        await client.session.command(
+          {
+            sessionID: session.id,
+            directory: dir,
+            command,
+            arguments: commandArgs ?? "",
+            messageID,
+            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent,
+            variant,
+            parts,
+          },
+          { throwOnError: true },
+        )
+        return
+      }
+
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
@@ -197,7 +204,7 @@ export async function handleImportAndSend(
       parts.push({ type: "text", text })
 
       const editorContext = await ctx.gatherEditorContext()
-      await ctx.client.session.promptAsync(
+      await client.session.promptAsync(
         {
           sessionID: session.id,
           directory: dir,
@@ -210,14 +217,8 @@ export async function handleImportAndSend(
         },
         { throwOnError: true },
       )
-    }
+    })
   } catch (err) {
-    if (await ctx.waitForMessageConfirmation?.(messageID)) {
-      console.warn("[Kilo New] Cloud import send ended after server accepted it; ignoring transport error", {
-        error: getErrorMessage(err),
-      })
-      return
-    }
     console.error("[Kilo New] Failed to send message after cloud import:", err)
     ctx.postMessage({
       type: "sendMessageFailed",
@@ -228,7 +229,5 @@ export async function handleImportAndSend(
       messageID,
       files,
     })
-  } finally {
-    release()
   }
 }

@@ -111,6 +111,28 @@ export class MessageConfirmation {
   }
 }
 
+export async function runWithMessageConfirmation<T>(
+  state: MessageConfirmation,
+  id: string | undefined,
+  label: string,
+  run: () => Promise<T>,
+): Promise<T | undefined> {
+  const release = state.track(id)
+  try {
+    return await run()
+  } catch (error) {
+    if (await state.wait(id)) {
+      console.warn(`[Kilo New] ${label} ended after server accepted it; ignoring transport error`, {
+        error: getErrorMessage(error),
+      })
+      return undefined
+    }
+    throw error
+  } finally {
+    release()
+  }
+}
+
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,

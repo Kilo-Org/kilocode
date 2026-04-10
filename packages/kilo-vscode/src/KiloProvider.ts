@@ -28,6 +28,7 @@ import {
   getErrorMessage,
   isEventFromForeignProject,
   MessageConfirmation,
+  runWithMessageConfirmation,
   loadSessions as loadSessionsUtil,
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
@@ -2447,7 +2448,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
-    const release = this.confirmations.track(messageID)
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
@@ -2467,31 +2467,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
-      await this.withRetry(
-        () =>
-          this.client!.session.promptAsync({
-            sessionID: sid,
-            directory: dir,
-            messageID,
-            parts,
-            model: providerID && modelID ? { providerID, modelID } : undefined,
-            agent,
-            variant,
-            editorContext,
-          }),
-        sid,
-        messageID,
+      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Message request", () =>
+        this.withRetry(
+          () =>
+            this.client!.session.promptAsync({
+              sessionID: sid,
+              directory: dir,
+              messageID,
+              parts,
+              model: providerID && modelID ? { providerID, modelID } : undefined,
+              agent,
+              variant,
+              editorContext,
+            }),
+          sid,
+          messageID,
+        ),
       )
     } catch (error) {
-      if (await this.confirmations.wait(messageID)) {
-        console.warn(
-          "[Kilo New] KiloProvider: Message request ended after server accepted it; ignoring transport error",
-          {
-            error: getErrorMessage(error),
-          },
-        )
-        return
-      }
       console.error("[Kilo New] KiloProvider: Failed to send message:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -2502,8 +2495,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
-    } finally {
-      release()
     }
   }
 
@@ -2533,7 +2524,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     let resolved: { sid: string; dir: string } | undefined
-    const release = this.confirmations.track(messageID)
     try {
       resolved = await this.resolveSession(sessionID, draftID)
 
@@ -2545,32 +2535,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       const sid = resolved!.sid
       const dir = resolved!.dir
-      await this.withRetry(
-        () =>
-          this.client!.session.command({
-            sessionID: sid,
-            directory: dir,
-            command,
-            arguments: args,
-            messageID,
-            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-            agent,
-            variant,
-            parts,
-          }),
-        sid,
-        messageID,
+      await runWithMessageConfirmation(this.confirmations, messageID, "KiloProvider: Command request", () =>
+        this.withRetry(
+          () =>
+            this.client!.session.command({
+              sessionID: sid,
+              directory: dir,
+              command,
+              arguments: args,
+              messageID,
+              model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+              agent,
+              variant,
+              parts,
+            }),
+          sid,
+          messageID,
+        ),
       )
     } catch (error) {
-      if (await this.confirmations.wait(messageID)) {
-        console.warn(
-          "[Kilo New] KiloProvider: Command request ended after server accepted it; ignoring transport error",
-          {
-            error: getErrorMessage(error),
-          },
-        )
-        return
-      }
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)
       this.postMessage({
         type: "sendMessageFailed",
@@ -2581,8 +2564,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         messageID,
         files,
       })
-    } finally {
-      release()
     }
   }
 
@@ -2715,8 +2696,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
       gatherEditorContext: () => this.gatherEditorContext(),
-      trackMessageConfirmation: (id) => this.confirmations.track(id),
-      waitForMessageConfirmation: (id) => this.confirmations.wait(id),
+      runWithMessageConfirmation: (id, label, run) => runWithMessageConfirmation(this.confirmations, id, label, run),
     }
   }
 
