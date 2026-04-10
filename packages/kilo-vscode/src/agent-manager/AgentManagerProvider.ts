@@ -12,7 +12,7 @@ import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
 import { PRStatusBridge } from "./pr-status-bridge"
 import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
-import { normalizePath, classifyWorktreeError } from "./git-import"
+import { classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { copyEnvFiles } from "./env-copy"
@@ -22,6 +22,7 @@ import { executeVscodeTask } from "./task-runner"
 import { forkSession } from "./fork-session"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
+import { WorktreeImporter } from "./worktree-importer"
 
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
@@ -46,9 +47,9 @@ export class AgentManagerProvider implements Disposable {
   private worktrees: WorktreeManager | undefined
   private state: WorktreeStateManager | undefined
   private setupScript: SetupScriptService | undefined
+  private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private stateReady: Promise<void> | undefined
-  private importing = false
   private statsPoller: GitStatsPoller
   private prBridge!: PRStatusBridge
   private gitOps: GitOps
@@ -70,6 +71,17 @@ export class AgentManagerProvider implements Disposable {
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
     )
+    this.importer = new WorktreeImporter({
+      manager: () => this.getWorktreeManager(),
+      state: () => this.getStateManager(),
+      post: (msg) => this.postToWebview(msg),
+      push: () => this.pushState(),
+      setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
+      session: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+      register: (sid, dir) => this.registerWorktreeSession(sid, dir),
+      ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
+      log: (...args) => this.log(...args),
+    })
     const semaphore = new Semaphore(3)
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
     this.diffs = new WorktreeDiffController({
@@ -285,10 +297,12 @@ export class AgentManagerProvider implements Disposable {
       const persist = m.type === "agentManager.persistSession"
       void this.stateReady?.then(() => {
         const state = this.getStateManager()
-        if (state)
-          persist
-            ? !state.getSession(m.sessionId) && state.addSession(m.sessionId, null)
-            : state.removeSession(m.sessionId)
+        if (!state) return
+        if (persist) {
+          if (!state.getSession(m.sessionId)) state.addSession(m.sessionId, null)
+          return
+        }
+        state.removeSession(m.sessionId)
       })
       return null
     }
@@ -384,11 +398,6 @@ export class AgentManagerProvider implements Disposable {
       this.onRequestState()
       return null
     }
-
-    if (m.type === "agentManager.requestBranches") {
-      void this.onRequestBranches()
-      return null
-    }
     if (m.type === "agentManager.setTabOrder") {
       this.state?.setTabOrder(m.key, m.order)
       return null
@@ -414,24 +423,28 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onImportMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
+    if (m.type === "agentManager.requestBranches") {
+      void this.importer.branches()
+      return null
+    }
     if (m.type === "agentManager.requestExternalWorktrees") {
-      void this.onRequestExternalWorktrees()
+      void this.importer.external()
       return null
     }
     if (m.type === "agentManager.importFromBranch") {
-      void this.onImportFromBranch(m.branch)
+      void this.importer.branch(m.branch)
       return null
     }
     if (m.type === "agentManager.importFromPR") {
-      void this.onImportFromPR(m.url)
+      void this.importer.pr(m.url)
       return null
     }
     if (m.type === "agentManager.importExternalWorktree") {
-      void this.onImportExternalWorktree(m.path, m.branch)
+      void this.importer.path(m.path, m.branch)
       return null
     }
     if (m.type === "agentManager.importAllExternalWorktrees") {
-      void this.onImportAllExternalWorktrees()
+      void this.importer.all()
       return null
     }
   }
@@ -1062,344 +1075,6 @@ export class AgentManagerProvider implements Disposable {
 
     this.log(`Multi-version creation complete: ${created.length}/${versions} versions`)
     return null
-  }
-
-  // ---------------------------------------------------------------------------
-  // Import
-  // ---------------------------------------------------------------------------
-
-  private async onRequestBranches(): Promise<void> {
-    const manager = this.getWorktreeManager()
-    if (!manager) {
-      this.postToWebview({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
-      return
-    }
-    try {
-      const result = await manager.listBranches()
-      const checkedOut = await manager.checkedOutBranches()
-
-      // Include isCheckedOut flag on each branch — let the webview decide how to filter
-      const branches = result.branches.map((b) => ({
-        ...b,
-        isCheckedOut: checkedOut.has(b.name),
-      }))
-
-      // Validate configured default branch still exists
-      const state = this.getStateManager()
-      const configured = state?.getDefaultBaseBranch()
-      if (configured && !branches.some((b) => b.name === configured)) {
-        this.clearStaleDefaultBaseBranch(state!, configured)
-      }
-
-      this.postToWebview({
-        type: "agentManager.branches",
-        branches,
-        defaultBranch: result.defaultBranch,
-      })
-    } catch (error) {
-      this.log(`Failed to list branches: ${error}`)
-      this.postToWebview({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
-    }
-  }
-
-  private async onRequestExternalWorktrees(): Promise<void> {
-    const manager = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!manager || !state) {
-      this.postToWebview({ type: "agentManager.externalWorktrees", worktrees: [] })
-      return
-    }
-    try {
-      const managedPaths = new Set(state.getWorktrees().map((wt) => wt.path))
-      const worktrees = await manager.listExternalWorktrees(managedPaths)
-      this.postToWebview({ type: "agentManager.externalWorktrees", worktrees })
-    } catch (error) {
-      this.log(`Failed to list external worktrees: ${error}`)
-      this.postToWebview({ type: "agentManager.externalWorktrees", worktrees: [] })
-    }
-  }
-
-  private async onImportFromBranch(branch: string): Promise<void> {
-    const manager = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!manager || !state) {
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: "Not a git repository" })
-      return
-    }
-    if (this.importing) {
-      this.postToWebview({
-        type: "agentManager.importResult",
-        success: false,
-        message: "Another import is already in progress",
-      })
-      return
-    }
-    this.importing = true
-
-    try {
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "creating",
-        message: "Creating worktree from branch...",
-      })
-      const result = await manager.createWorktree({ existingBranch: branch })
-      const worktree = state.addWorktree({
-        branch: result.branch,
-        path: result.path,
-        parentBranch: result.parentBranch,
-        remote: result.remote,
-      })
-      this.pushState()
-
-      try {
-        this.postToWebview({
-          type: "agentManager.worktreeSetup",
-          status: "creating",
-          message: "Running setup script...",
-          branch: result.branch,
-          worktreeId: worktree.id,
-        })
-        await this.runSetupScriptForWorktree(result.path, result.branch, worktree.id)
-
-        const session = await this.createSessionInWorktree(result.path, result.branch, worktree.id)
-        if (!session) throw new Error("Failed to create session")
-
-        state.addSession(session.id, worktree.id)
-        this.registerWorktreeSession(session.id, result.path)
-        this.notifyWorktreeReady(session.id, result, worktree.id)
-        this.postToWebview({ type: "agentManager.importResult", success: true, message: `Opened branch ${branch}` })
-        this.log(`Imported branch ${branch} as worktree ${worktree.id}`)
-      } catch (inner) {
-        state.removeWorktree(worktree.id)
-        await manager.removeWorktree(result.path)
-        this.pushState()
-        throw inner
-      }
-    } catch (error) {
-      const raw = error instanceof Error ? error.message : String(error)
-      const msg =
-        raw.includes("already used by worktree") || raw.includes("already checked out")
-          ? `Branch "${branch}" is already checked out in another worktree`
-          : raw
-      const code = classifyWorktreeError(msg)
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
-    } finally {
-      this.importing = false
-    }
-  }
-
-  private async onImportFromPR(url: string): Promise<void> {
-    const manager = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!manager || !state) {
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: "Not a git repository" })
-      return
-    }
-
-    if (this.importing) {
-      this.postToWebview({
-        type: "agentManager.importResult",
-        success: false,
-        message: "Another import is already in progress",
-      })
-      return
-    }
-    this.importing = true
-
-    try {
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Resolving PR..." })
-      const result = await manager.createFromPR(url)
-      const worktree = state.addWorktree({
-        branch: result.branch,
-        path: result.path,
-        parentBranch: result.parentBranch,
-        remote: result.remote,
-      })
-      this.pushState()
-
-      try {
-        this.postToWebview({
-          type: "agentManager.worktreeSetup",
-          status: "creating",
-          message: "Setting up worktree...",
-          branch: result.branch,
-          worktreeId: worktree.id,
-        })
-        await this.runSetupScriptForWorktree(result.path, result.branch, worktree.id)
-
-        const session = await this.createSessionInWorktree(result.path, result.branch, worktree.id)
-        if (!session) throw new Error("Failed to create session")
-
-        state.addSession(session.id, worktree.id)
-        this.registerWorktreeSession(session.id, result.path)
-        this.notifyWorktreeReady(session.id, result, worktree.id)
-        this.postToWebview({
-          type: "agentManager.importResult",
-          success: true,
-          message: `Opened PR branch ${result.branch}`,
-        })
-        this.log(`Imported PR ${url} as worktree ${worktree.id}`)
-      } catch (inner) {
-        state.removeWorktree(worktree.id)
-        await manager.removeWorktree(result.path)
-        this.pushState()
-        throw inner
-      }
-    } catch (error) {
-      const raw = error instanceof Error ? error.message : String(error)
-      const msg =
-        raw.includes("already used by worktree") || raw.includes("already checked out")
-          ? "This PR's branch is already checked out in another worktree"
-          : raw
-      const code = classifyWorktreeError(msg)
-      this.postToWebview({ type: "agentManager.worktreeSetup", status: "error", message: msg, errorCode: code })
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg, errorCode: code })
-    } finally {
-      this.importing = false
-    }
-  }
-
-  private async onImportExternalWorktree(wtPath: string, branch: string): Promise<void> {
-    const state = this.getStateManager()
-    const manager = this.getWorktreeManager()
-    if (!state || !manager) {
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: "State not initialized" })
-      return
-    }
-
-    if (this.importing) {
-      this.postToWebview({
-        type: "agentManager.importResult",
-        success: false,
-        message: "Another import is already in progress",
-      })
-      return
-    }
-    this.importing = true
-
-    let worktree: ReturnType<typeof state.addWorktree> | undefined
-    try {
-      const externals = await manager.listExternalWorktrees(new Set(state.getWorktrees().map((wt) => wt.path)))
-      if (!externals.some((e) => normalizePath(e.path) === normalizePath(wtPath))) {
-        this.postToWebview({
-          type: "agentManager.importResult",
-          success: false,
-          message: "Path is not a valid worktree for this repository",
-        })
-        return
-      }
-
-      const base = await manager.resolveBaseBranch()
-      worktree = state.addWorktree({ branch, path: wtPath, parentBranch: base.branch, remote: base.remote })
-      this.pushState()
-
-      const session = await this.createSessionInWorktree(wtPath, branch, worktree.id)
-      if (!session) {
-        state.removeWorktree(worktree.id)
-        this.pushState()
-        this.postToWebview({ type: "agentManager.importResult", success: false, message: "Failed to create session" })
-        return
-      }
-
-      state.addSession(session.id, worktree.id)
-      this.registerWorktreeSession(session.id, wtPath)
-      this.pushState()
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "ready",
-        message: "Worktree imported",
-        sessionId: session.id,
-        branch,
-        worktreeId: worktree.id,
-      })
-      this.postToWebview({
-        type: "agentManager.sessionMeta",
-        sessionId: session.id,
-        mode: "worktree",
-        branch,
-        path: wtPath,
-        parentBranch: base.branch,
-      })
-      this.postToWebview({ type: "agentManager.importResult", success: true, message: `Imported ${branch}` })
-      this.log(`Imported external worktree ${wtPath} (${branch})`)
-    } catch (error) {
-      if (worktree) {
-        state.removeWorktree(worktree.id)
-        this.pushState()
-      }
-      const msg = error instanceof Error ? error.message : String(error)
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
-    } finally {
-      this.importing = false
-    }
-  }
-
-  private async onImportAllExternalWorktrees(): Promise<void> {
-    if (this.importing) {
-      this.postToWebview({
-        type: "agentManager.importResult",
-        success: false,
-        message: "Another import is already in progress",
-      })
-      return
-    }
-    const manager = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!manager || !state) {
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: "Not a git repository" })
-      return
-    }
-    this.importing = true
-
-    try {
-      const managedPaths = new Set(state.getWorktrees().map((wt) => wt.path))
-      const externals = await manager.listExternalWorktrees(managedPaths)
-      if (externals.length === 0) {
-        this.postToWebview({
-          type: "agentManager.importResult",
-          success: true,
-          message: "No external worktrees to import",
-        })
-        return
-      }
-
-      let imported = 0
-      const base = await manager.resolveBaseBranch()
-      for (const ext of externals) {
-        try {
-          const worktree = state.addWorktree({
-            branch: ext.branch,
-            path: ext.path,
-            parentBranch: base.branch,
-            remote: base.remote,
-          })
-          const session = await this.createSessionInWorktree(ext.path, ext.branch, worktree.id)
-          if (session) {
-            state.addSession(session.id, worktree.id)
-            this.registerWorktreeSession(session.id, ext.path)
-            imported++
-          } else {
-            state.removeWorktree(worktree.id)
-          }
-        } catch (error) {
-          this.log(`Failed to import external worktree ${ext.path}: ${error}`)
-        }
-      }
-
-      this.pushState()
-      this.postToWebview({
-        type: "agentManager.importResult",
-        success: true,
-        message: `Imported ${imported} worktree${imported !== 1 ? "s" : ""}`,
-      })
-      this.log(`Imported ${imported}/${externals.length} external worktrees`)
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      this.postToWebview({ type: "agentManager.importResult", success: false, message: msg })
-    } finally {
-      this.importing = false
-    }
   }
 
   // ---------------------------------------------------------------------------
