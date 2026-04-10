@@ -140,6 +140,45 @@ Disable an inherited server: `{ "server-name": { "enabled": false } }`.
 }
 ```
 
+### Disabling Built-in Providers
+
+Use `disabled_providers` to prevent specific providers from loading. This is useful when you want to exclude providers that are auto-detected via environment variables or that you don't want available in the model picker.
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "disabled_providers": ["kilo", "openai"],
+}
+```
+
+The provider ID is the lowercase name used in the `provider/model` format (e.g., `kilo`, `openai`, `anthropic`, `google`, `groq`).
+
+**Common provider IDs:**
+
+| Provider  | ID          | Notes                   |
+| --------- | ----------- | ----------------------- |
+| Kilo      | `kilo`      | Default Kilo AI Gateway |
+| OpenAI    | `openai`    |                         |
+| Anthropic | `anthropic` |                         |
+| Google    | `google`    |                         |
+| Groq      | `groq`      |                         |
+| Ollama    | `ollama`    | Local models            |
+| LM Studio | `lmstudio`  | Local models            |
+
+**Interaction with `enabled_providers`:**
+
+- `disabled_providers` removes specific providers from the auto-loaded set
+- `enabled_providers` is more restrictive — when set, ONLY the listed providers will be enabled, ignoring all others
+- If both are set, `enabled_providers` takes precedence
+
+To disable all auto-detected providers except one:
+
+```jsonc
+{
+  "enabled_providers": ["anthropic"],
+}
+```
+
 ## Skills
 
 Additional skill directories and remote URLs:
