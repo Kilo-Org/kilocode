@@ -65,6 +65,43 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 - **From an external worktree:** Import a worktree that already exists on disk
 - **Continue in Worktree:** From the sidebar chat, promote the current session to a new Agent Manager worktree
 
+## Sections
+
+Sections let you group worktrees into collapsible, color-coded folders in the sidebar. Use them to organize your workflow however you like — by status ("Review Pending", "In Progress"), by project area ("Frontend", "Backend"), priority, or any other scheme that fits.
+
+### Creating a Section
+
+- **Right-click** any worktree and select **New Section** from the context menu
+- A new section is created with a random color and enters rename mode immediately — type a name and press `Enter`
+
+### Assigning Worktrees to Sections
+
+**Via context menu:** Right-click a worktree, hover **Move to Section**, and pick a section from the list. Select **Ungrouped** to remove it from its current section.
+
+**Via drag and drop:** Drag a worktree and drop it onto a section header to move it there.
+
+Multi-version worktrees (created via Multi-Version Mode) are moved together — assigning one version to a section moves all versions in the group.
+
+### Renaming
+
+Right-click the section header and select **Rename Section**. An inline text field appears — type the new name and press `Enter` to confirm or `Escape` to cancel.
+
+### Colors
+
+Right-click the section header and select **Set Color** to open the color picker. Eight colors are available (Red, Orange, Yellow, Green, Cyan, Blue, Purple, Magenta) plus a **Default** option that uses the standard panel border color. The selected color appears as a left border stripe on the section.
+
+### Reordering
+
+Right-click the section header and use **Move Up** / **Move Down** to reposition it in the sidebar. Sections and ungrouped worktrees share the same ordering space.
+
+### Collapsing
+
+Click the section header to toggle it open or closed. Collapsed sections hide their worktrees and show only the section name and a member count badge. Collapse state is persisted across reloads.
+
+### Deleting a Section
+
+Right-click the section header and select **Delete Section**. The section is removed but its worktrees are preserved — they become ungrouped.
+
 ## Sending Messages, Approvals, and Control
 
 - **Continue the conversation:** Send a follow-up message to the running agent
