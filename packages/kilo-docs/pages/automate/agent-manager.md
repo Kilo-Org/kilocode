@@ -61,7 +61,7 @@ The badge color reflects the most important signal, evaluated in priority order:
 | Checks failing    | Red              | Any CI check has failed                     |
 | Changes requested | Yellow           | A reviewer requested changes                |
 | Checks pending    | Yellow (pulsing) | CI checks are still running                 |
-| Open (default)    | Green            | PR is open, checks pass, no blocking review |
+| Open (default) | Green | PR is open, no failing or pending checks, no blocking review |
 
 When checks are pending on an open PR, the badge pulses to indicate activity.
 
