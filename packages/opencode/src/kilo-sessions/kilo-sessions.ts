@@ -1,4 +1,5 @@
 import { Bus } from "@/bus"
+import { BusEvent } from "@/bus/bus-event"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session"
 import { MessageV2 } from "@/session/message-v2"
@@ -20,6 +21,16 @@ import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 
 export namespace KiloSessions {
+  export const Event = {
+    RemoteStatusChanged: BusEvent.define(
+      "kilo-sessions.remote-status-changed",
+      z.object({
+        enabled: z.boolean(),
+        connected: z.boolean(),
+      }),
+    ),
+  }
+
   const log = Log.create({ service: "kilo-sessions" })
 
   const Uuid = z.uuid()
@@ -136,7 +147,8 @@ export namespace KiloSessions {
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender; heartbeat: () => Promise<void> } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  let viewedSessionId: string | undefined
+  const focused = new Set<string>()
+  const opened = new Set<string>()
 
   export async function init() {
     if (ingestDisabled) return
@@ -210,7 +222,11 @@ export namespace KiloSessions {
     const cfg = await Config.getGlobal()
     if (remoteEnabled || cfg.remote_control)
       enableRemote().catch((err) => log.warn("remote not enabled", { error: String(err) }))
-    Bus.subscribe(Bus.InstanceDisposed, () => disableRemote())
+    // Use wildcard subscription so the dispose handler actually fires —
+    // Bus.state dispose only notifies "*" subscribers, not event-type ones.
+    Bus.subscribeAll((evt) => {
+      if (evt.type === Bus.InstanceDisposed.type) disableRemote()
+    })
   }
 
   export async function enableRemote() {
@@ -244,7 +260,8 @@ export namespace KiloSessions {
         ])
         const statuses = SessionStatus.list()
         const ids = new Set(Object.keys(statuses))
-        if (viewedSessionId) ids.add(viewedSessionId)
+        for (const id of focused) ids.add(id)
+        for (const id of opened) ids.add(id)
         const results = await Promise.all(
           [...ids].map(async (id) => {
             const session = await Session.get(id).catch(() => undefined)
@@ -259,7 +276,12 @@ export namespace KiloSessions {
             }
           }),
         )
-        return results.filter((r): r is NonNullable<typeof r> => !!r)
+        const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
+        return {
+          sessions,
+          focused: focused.size > 0 ? [...focused] : undefined,
+          open: opened.size > 0 ? [...opened] : undefined,
+        }
       }
 
       const conn = RemoteWS.connect({
@@ -268,6 +290,12 @@ export namespace KiloSessions {
         withContext: (fn) => Instance.provide({ directory, fn }),
         getSessions,
         log,
+        onOpen: () => {
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: true })
+        },
+        onDisconnect: () => {
+          void Bus.publish(Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
+        },
         onMessage: (msg) => {
           // Must run inside Instance.provide so Bus.subscribeAll can access
           // the instance-scoped subscription map via Instance.state().
@@ -283,7 +311,7 @@ export namespace KiloSessions {
       })
 
       const heartbeat = async () => {
-        conn.send({ type: "heartbeat", sessions: await getSessions() })
+        conn.send({ type: "heartbeat", ...(await getSessions()) })
       }
 
       if (seq !== remoteSeq) {
@@ -293,8 +321,9 @@ export namespace KiloSessions {
       }
 
       remote = { conn, sender, heartbeat }
-      log.info("remote connection enabled")
+      log.info("remote connection enabled", { connected: conn.connected })
       Telemetry.trackRemoteConnectionOpened()
+      void Bus.publish(Event.RemoteStatusChanged, { enabled: true, connected: conn.connected })
     })().finally(() => {
       if (remoteSeq === seq) enabling = undefined
     })
@@ -310,6 +339,7 @@ export namespace KiloSessions {
     remote.conn.close()
     remote = undefined
     log.info("remote connection disabled")
+    void Bus.publish(Event.RemoteStatusChanged, { enabled: false, connected: false })
   }
 
   export function remoteStatus() {
@@ -318,8 +348,15 @@ export namespace KiloSessions {
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSession(sessionID: string | undefined) {
-    viewedSessionId = sessionID
+  export function setViewedSessions(input: { focused: string[]; open?: string[] }) {
+    focused.clear()
+    opened.clear()
+    for (const id of input.focused) {
+      focused.add(id)
+    }
+    for (const id of input.open ?? []) {
+      opened.add(id)
+    }
     if (remote) void remote.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
   }
 

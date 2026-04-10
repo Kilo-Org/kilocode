@@ -49,6 +49,11 @@ import { Installation } from "../installation"
 
 import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
 
+// kilocode_change start
+/** Default timeout (ms) for provider HTTP requests. */
+export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
+// kilocode_change end
+
 export namespace Provider {
   const log = Log.create({ service: "provider" })
 
@@ -1140,15 +1145,21 @@ export namespace Provider {
         const fetchFn = customFetch ?? fetch
         const opts = init ?? {}
 
-        if (options["timeout"] !== undefined && options["timeout"] !== null) {
-          const signals: AbortSignal[] = []
+        // kilocode_change start - apply connection-phase timeout only
+        // Use an AbortController so we can cancel the timer once headers arrive,
+        // preventing healthy streaming responses from being aborted mid-stream.
+        const ms = options["timeout"] ?? REQUEST_TIMEOUT_MS
+        const controller = ms !== false ? new AbortController() : undefined
+        if (controller) {
+          const signals: AbortSignal[] = [controller.signal]
           if (opts.signal) signals.push(opts.signal)
-          if (options["timeout"] !== false) signals.push(AbortSignal.timeout(options["timeout"]))
-
-          const combined = signals.length > 1 ? AbortSignal.any(signals) : signals[0]
-
-          opts.signal = combined
+          opts.signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0]
         }
+        const timer =
+          controller && typeof ms === "number"
+            ? setTimeout(() => controller.abort(new DOMException("The operation timed out.", "TimeoutError")), ms)
+            : undefined
+        // kilocode_change end
 
         // Strip openai itemId metadata following what codex does
         // Codex uses #[serde(skip_serializing)] on id fields for all item types:
@@ -1168,11 +1179,20 @@ export namespace Provider {
           }
         }
 
-        return fetchFn(input, {
-          ...opts,
-          // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
-          timeout: false,
-        })
+        // kilocode_change start - clear timeout once headers arrive
+        try {
+          const response = await fetchFn(input, {
+            ...opts,
+            // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
+            timeout: false,
+          })
+          if (timer !== undefined) clearTimeout(timer)
+          return response
+        } catch (err) {
+          if (timer !== undefined) clearTimeout(timer)
+          throw err
+        }
+        // kilocode_change end
       }
 
       const bundledFn = BUNDLED_PROVIDERS[model.api.npm]

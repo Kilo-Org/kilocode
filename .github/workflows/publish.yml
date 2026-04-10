@@ -23,7 +23,7 @@ on:
         required: false
         type: string
       pre_release:
-        description: "Publish as pre-release (VS Code marketplace)"
+        description: "Publish as pre-release (VS Code marketplace + npm rc channel)"
         required: false
         type: boolean
         default: false
@@ -58,6 +58,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     outputs:
@@ -83,6 +84,7 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 

@@ -1,18 +1,3 @@
-/** Converts any OS path to cleaned up URI path segment format with no leading/trailing slashes
-   e.g. \path\to\folder\ -> path/to/folder
-        \this\is\afile.ts -> this/is/afile.ts
-        is/already/clean -> is/already/clean
-  **/
-function pathToUriPathSegment(path: string) {
-  let clean = path.replace(/[\\]/g, "/") // backslashes -> forward slashes
-  clean = clean.replace(/^\//, "") // remove start slash
-  clean = clean.replace(/\/$/, "") // remove end slash
-  return clean
-    .split("/")
-    .map((part) => encodeURIComponent(part))
-    .join("/")
-}
-
 function getCleanUriPath(uri: string) {
   // Handle both URIs and plain paths
   let path: string
@@ -104,15 +89,6 @@ export function getUriFileExtension(uri: string) {
 export function getLastNUriRelativePathParts(dirUriCandidates: string[], uri: string, n: number): string {
   const { relativePathOrBasename } = findUriInDirs(uri, dirUriCandidates)
   return getLastNPathParts(relativePathOrBasename, n)
-}
-
-export function joinPathsToUri(uri: string, ...pathSegments: string[]) {
-  let baseUri = uri
-  if (baseUri.at(-1) !== "/") {
-    baseUri += "/"
-  }
-  const segments = pathSegments.map((segment) => pathToUriPathSegment(segment))
-  return new URL(segments.join("/"), baseUri).toString()
 }
 
 export function getShortestUniqueRelativeUriPaths(

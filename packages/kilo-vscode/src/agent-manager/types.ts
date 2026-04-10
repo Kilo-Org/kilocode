@@ -228,6 +228,14 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+interface RevertWorktreeFileResultMessage {
+  type: "agentManager.revertWorktreeFileResult"
+  sessionId: string
+  file: string
+  status: "success" | "error"
+  message: string
+}
+
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
   worktreeId: string
@@ -262,6 +270,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | RevertWorktreeFileResultMessage
   | PRStatusOutMessage
   | ActionOutMessage
 
@@ -302,6 +311,18 @@ interface AddSessionToWorktreeIn {
 
 interface CloseSessionIn {
   type: "agentManager.closeSession"
+  sessionId: string
+}
+
+/** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
+interface PersistSessionIn {
+  type: "agentManager.persistSession"
+  sessionId: string
+}
+
+/** Remove a non-worktree session from agent-manager.json. */
+interface ForgetSessionIn {
+  type: "agentManager.forgetSession"
   sessionId: string
 }
 
@@ -440,6 +461,12 @@ interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
 }
 
+interface RevertWorktreeFileIn {
+  type: "agentManager.revertWorktreeFile"
+  sessionId: string
+  file: string
+}
+
 interface RefreshPRIn {
   type: "agentManager.refreshPR"
   worktreeId: string
@@ -448,6 +475,11 @@ interface RefreshPRIn {
 interface OpenPRIn {
   type: "agentManager.openPR"
   worktreeId: string
+}
+
+interface OpenSessionsIn {
+  type: "agentManager.openSessions"
+  sessionIDs: string[]
 }
 
 interface OpenFileIn {
@@ -574,6 +606,8 @@ export type AgentManagerInMessage =
   | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
+  | PersistSessionIn
+  | ForgetSessionIn
   | ForkSessionIn
   | ConfigureSetupScriptIn
   | ShowTerminalIn
@@ -601,8 +635,10 @@ export type AgentManagerInMessage =
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn
+  | RevertWorktreeFileIn
   | RefreshPRIn
   | OpenPRIn
+  | OpenSessionsIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn

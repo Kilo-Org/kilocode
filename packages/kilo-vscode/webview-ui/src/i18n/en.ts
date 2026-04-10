@@ -1067,6 +1067,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
+  "settings.experimental.remote.title": "Remote Control",
+  "settings.experimental.remote.description":
+    "Enable remote control of sessions via Kilo Cloud. This will also affect CLIs on this machine.",
+  "settings.experimental.remote.current": "Current state:",
+  "settings.experimental.remote.startup": "Auto-enable on startup:",
+  "settings.experimental.remote.active": "Active",
+  "settings.experimental.remote.inactive": "Inactive",
+  "settings.experimental.remote.hint": "Use /remote in chat to toggle",
   "settings.experimental.toolToggles": "Tool Toggles",
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",

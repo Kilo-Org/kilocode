@@ -26,13 +26,22 @@ describe("resolveSessionAgent", () => {
     expect(result).toBe("code")
   })
 
-  it("ignores assistant messages", () => {
+  it("returns the latest assistant agent when it is last", () => {
     const result = resolveSessionAgent(
-      [makeMessage({ role: "assistant", agent: "code" }), makeMessage({ agent: "plan" })],
+      [makeMessage({ agent: "plan" }), makeMessage({ role: "assistant", agent: "code" })],
       new Set(["plan", "code"]),
     )
 
-    expect(result).toBe("plan")
+    expect(result).toBe("code")
+  })
+
+  it("ignores unknown agent names on assistant messages", () => {
+    const result = resolveSessionAgent(
+      [makeMessage({ agent: "code" }), makeMessage({ role: "assistant", agent: "task" })],
+      new Set(["code"]),
+    )
+
+    expect(result).toBe("code")
   })
 
   it("ignores unknown agent names", () => {
@@ -49,9 +58,18 @@ describe("resolveSessionAgent", () => {
     expect(result).toBeUndefined()
   })
 
-  it("returns undefined when no valid user agent exists", () => {
+  it("returns agent from assistant when no user has agent", () => {
     const result = resolveSessionAgent(
-      [makeMessage({ role: "assistant", agent: "code" }), makeMessage({ agent: undefined })],
+      [makeMessage({ agent: undefined }), makeMessage({ role: "assistant", agent: "code" })],
+      new Set(["code"]),
+    )
+
+    expect(result).toBe("code")
+  })
+
+  it("returns undefined when no message has a valid agent", () => {
+    const result = resolveSessionAgent(
+      [makeMessage({ agent: undefined }), makeMessage({ role: "assistant", agent: undefined })],
       new Set(["code"]),
     )
 

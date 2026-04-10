@@ -117,6 +117,27 @@ Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfe
 
 Disable an inherited server: `{ "server-name": { "enabled": false } }`.
 
+### MCP Tool Permissions
+
+MCP tools use the same permission system as built-in tools. Each MCP tool's permission key is `{server}_{tool}` (e.g. `github_create_pull_request`). Glob patterns are supported.
+
+```jsonc
+{
+  "permission": {
+    // Require approval for all tools on this server by default
+    "github_*": "ask",
+
+    // Auto-approve a specific safe tool
+    "github_get_file_contents": "allow",
+
+    // Block a dangerous tool entirely
+    "github_delete_file": "deny",
+  },
+}
+```
+
+Rules are evaluated top-to-bottom — the **last** matching rule wins. Put broad patterns first, then specific overrides after.
+
 ## Providers
 
 ```jsonc

@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "worktreesを使用するには、gitリポジトリを含むフォルダーを開いてください。",
   "agentManager.setup.error.lfs_missing":
     "このリポジトリはGit LFSを使用していますが、git-lfsが見つかりませんでした。Git LFSをインストールしてください。",
+  "agentManager.setup.error.no_commits":
+    "このリポジトリにはまだコミットがありません。worktreesを使用する前に最初のコミットを作成してください。",
   "agentManager.shortcuts.title": "キーボードショートカット",
   "agentManager.shortcuts.category.sidebar": "サイドバー",
   "agentManager.shortcuts.category.tabs": "タブ",
@@ -108,6 +110,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "差分を切り替え",
   "agentManager.diff.openFile": "ファイルを開く",
+  "agentManager.diff.revertFile": "ファイルを元に戻す",
+  "agentManager.diff.revertSuccess": "ファイルを元に戻しました",
+  "agentManager.diff.revertError": "元に戻せませんでした",
   "agentManager.open.button": "開く",
   "agentManager.open.tooltip": "このWorktreeをVS Codeで開く",
   "agentManager.apply.button": "ローカルに適用",

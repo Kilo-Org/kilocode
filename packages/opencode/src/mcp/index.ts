@@ -63,6 +63,41 @@ export namespace MCP {
     }),
   )
 
+  // kilocode_change start
+  export async function reconnectRemote() {
+    const cfg = await Config.get()
+    const list = Object.entries(cfg.mcp ?? {})
+    const s = await state()
+    await Promise.allSettled(
+      list.map(async ([key, mcp]) => {
+        if (!isMcpConfigured(mcp)) return
+        if (mcp.type !== "remote") return
+        const result = await create(key, mcp).catch((err) => {
+          log.error("remote reconnect failed", { name: key, err })
+          s.status[key] = { status: "failed", error: err instanceof Error ? err.message : String(err) }
+          const stale = s.clients[key]
+          if (stale) {
+            stale.close().catch((e) => log.error("failed to close stale client", { name: key, e }))
+            delete s.clients[key]
+          }
+          return undefined
+        })
+        if (!result) return
+        s.status[key] = result.status
+        if (result.mcpClient) {
+          const existing = s.clients[key]
+          if (existing) {
+            await existing.close().catch((error) => {
+              log.error("Failed to close existing MCP client", { name: key, error })
+            })
+          }
+          s.clients[key] = result.mcpClient
+        }
+      }),
+    )
+  }
+  // kilocode_change end
+
   export const Failed = NamedError.create(
     "MCPFailed",
     z.object({

@@ -80,13 +80,13 @@ Routes to the most capable paid models optimizing for cost, performance, and cap
 
 ### `kilo-auto/balanced`
 
-Follows the same mode-based routing as Frontier but uses more cost-effective models.
+Follows the same mode-based routing as Frontier but uses a more cost-effective model.
 
 | Mode                                                           | Resolved Model         |
 | -------------------------------------------------------------- | ---------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `moonshotai/kimi-k2.5` |
-| `build`, `explore`, `code`                                     | `minimax/minimax-m2.7` |
-| Default (no mode specified)                                    | `minimax/minimax-m2.7` |
+| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `openai/gpt-5.3-codex` |
+| `build`, `explore`, `code`                                     | `openai/gpt-5.3-codex` |
+| Default (no mode specified)                                    | `openai/gpt-5.3-codex` |
 
 ### `kilo-auto/free`
 

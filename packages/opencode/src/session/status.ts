@@ -18,6 +18,13 @@ export namespace SessionStatus {
       z.object({
         type: z.literal("busy"),
       }),
+      // kilocode_change start
+      z.object({
+        type: z.literal("offline"),
+        requestID: z.string(),
+        message: z.string(),
+      }),
+      // kilocode_change end
     ])
     .meta({
       ref: "SessionStatus",

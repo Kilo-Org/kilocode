@@ -60,6 +60,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Open a folder that contains a git repository to use worktrees.",
   "agentManager.setup.error.lfs_missing":
     "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "This repository has no commits yet. Create an initial commit before using worktrees.",
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -114,6 +116,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",
+  "agentManager.diff.revertFile": "Revert file",
+  "agentManager.diff.revertSuccess": "File reverted",
+  "agentManager.diff.revertError": "Revert failed",
   "agentManager.open.button": "Open",
   "agentManager.open.tooltip": "Open this worktree in VS Code",
   "agentManager.apply.button": "Apply to local",

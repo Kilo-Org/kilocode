@@ -10,7 +10,7 @@ import { FileWatcher } from "../file/watcher"
 import { FileTime } from "../file/time"
 import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
-import { trimDiff } from "./edit"
+import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 
@@ -32,6 +32,7 @@ export const WriteTool = Tool.define("write", {
     if (exists) await FileTime.assert(ctx.sessionID, filepath)
 
     const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
+    const filediff = buildFileDiff(filepath, contentOld, params.content) // kilocode_change
     await ctx.ask({
       permission: "edit",
       patterns: [path.relative(Instance.worktree, filepath)],
@@ -39,6 +40,7 @@ export const WriteTool = Tool.define("write", {
       metadata: {
         filepath,
         diff,
+        filediff, // kilocode_change
       },
     })
 
@@ -78,6 +80,8 @@ export const WriteTool = Tool.define("write", {
         diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
         filepath,
         exists: exists,
+        diff, // kilocode_change
+        filediff, // kilocode_change
       },
       output,
     }

@@ -14,6 +14,7 @@ import { MessageV2 } from "@/session/message-v2"
 import { Todo } from "@/session/todo"
 import { Log } from "@/util/log"
 import path from "path"
+import z from "zod"
 
 function toText(item: MessageV2.WithParts): string {
   return item.parts
@@ -121,18 +122,20 @@ export namespace PlanFollowup {
     return value
   }
 
+  const ModelState = z
+    .object({
+      model: z.record(z.string(), z.object({ providerID: z.string(), modelID: z.string() })).optional(),
+      variant: z.record(z.string(), z.string().optional()).optional(),
+    })
+    .passthrough()
+
   async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
     const state =
       Flag.KILO_CLIENT === "cli"
         ? await Bun.file(path.join(Global.Path.state, "model.json"))
             .text()
-            .then(
-              (raw) =>
-                JSON.parse(raw) as {
-                  model?: Record<string, MessageV2.User["model"]>
-                  variant?: Record<string, string | undefined>
-                },
-            )
+            .then((raw) => ModelState.safeParse(JSON.parse(raw)))
+            .then((r) => (r.success ? r.data : undefined))
             .catch(() => undefined)
         : undefined
     const saved = state?.model?.code

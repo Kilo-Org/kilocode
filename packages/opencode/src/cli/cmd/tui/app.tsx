@@ -275,7 +275,7 @@ function App() {
   // kilocode_change start — notify server which session the user is viewing (for live session indicators)
   createEffect(() => {
     const sessionID = route.data.type === "session" ? route.data.sessionID : undefined
-    sdk.client.session.viewed({ sessionID }).catch(() => {})
+    sdk.client.session.viewed({ focused: sessionID ? [sessionID] : [] }).catch(() => {})
   })
   // kilocode_change end
 

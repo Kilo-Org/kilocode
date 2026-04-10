@@ -121,10 +121,11 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 
 #### Kilo Gateway Commands (when connected)
 
-| Command    | Aliases                  | Description                       |
-| ---------- | ------------------------ | --------------------------------- |
-| `/profile` | `/me`, `/whoami`         | View your Kilo Gateway profile    |
-| `/teams`   | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams |
+| Command    | Aliases                  | Description                               |
+| ---------- | ------------------------ | ----------------------------------------- |
+| `/profile` | `/me`, `/whoami`         | View your Kilo Gateway profile            |
+| `/teams`   | `/team`, `/org`, `/orgs` | Switch between Kilo Gateway teams         |
+| `/remote`  | -                        | Toggle remote mode for Cloud Agent access |
 
 #### Built-in Commands
 
@@ -442,6 +443,44 @@ kilo --continue
 - Cannot be used with a prompt argument
 - Only works when there's at least one previous session in the workspace
 
+## Remote Connections
+
+Remote Connections let you access your local CLI sessions from the Cloud Agents web interface. Requires [Kilo Gateway](/docs/gateway) connection.
+
+### Enabling Remote Mode
+
+**Toggle during a session:**
+
+```
+/remote
+```
+
+Requires connection to Kilo Gateway. The `/remote` command appears only when authenticated.
+
+**Enable by default:**
+
+Add to `~/.config/kilo/config.json`:
+
+```json
+{
+  "remote_control": true
+}
+```
+
+### Using Remote Mode
+
+Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
+
+### Requirements
+
+- Connection to Kilo Gateway
+- Same Kilo account on CLI and Cloud Agent
+- CLI must remain running with internet connection
+
+{% callout type="warning" title="Security Warning" %}
+Anyone with access to your Kilo account can send messages to your computer when remote mode is enabled.
+{% /callout %}
+
 ## Environment Variable Overrides
 
 The CLI supports overriding config values with environment variables. The supported environment variables are:
@@ -464,6 +503,6 @@ Your selection is persisted locally so it carries over to future sessions.
 
 There is no `--org` or `--team` flag on `kilo run`. Instead, the organization is determined from the following sources, in order of priority (highest first):
 
-1. **`KILO_ORG_ID` environment variable** — Best for non-interactive and CI environments. 
+1. **`KILO_ORG_ID` environment variable** — Best for non-interactive and CI environments.
 
 2. **`Persisted selection from the last `/teams` pick`** — If you've run an interactive session and selected an organization via `/teams`, that selection is stored in the CLI auth file and reused automatically.

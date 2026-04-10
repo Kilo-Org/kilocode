@@ -15,6 +15,7 @@ import { ProviderError } from "@/provider/error"
 import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
+import { SessionNetwork } from "./network" // kilocode_change
 
 export namespace MessageV2 {
   export function isMedia(mime: string) {
@@ -915,10 +916,10 @@ export namespace MessageV2 {
           },
           { cause: e },
         ).toObject()
-      case (e as SystemError)?.code === "ECONNRESET":
+      case SessionNetwork.disconnected(e): // kilocode_change start
         return new MessageV2.APIError(
           {
-            message: "Connection reset by server",
+            message: SessionNetwork.message(e), // kilocode_change end
             isRetryable: true,
             metadata: {
               code: (e as SystemError).code ?? "",

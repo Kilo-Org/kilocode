@@ -9,6 +9,18 @@ type ToolState = {
   metadata?: { sessionId?: string }
 }
 
+type TaskPart = {
+  type: string
+  tool?: string
+  metadata?: { sessionId?: string }
+  state?: ToolState
+}
+
+export function childID(part: TaskPart): string | undefined {
+  if (part.type !== "tool" || part.tool !== "task") return undefined
+  return part.metadata?.sessionId ?? part.state?.metadata?.sessionId
+}
+
 /**
  * Derive a human-readable status string from the last streaming part.
  * Returns undefined for part types that don't map to a status.
@@ -97,7 +109,7 @@ const LABEL_CAP = 24
 export function buildFamilyLabels(
   family: Set<string>,
   messages: Record<string, CostMessage[]>,
-  parts: Record<string, Array<{ type: string; tool?: string; state?: ToolState }>>,
+  parts: Record<string, TaskPart[]>,
 ): Map<string, string> {
   const labels = new Map<string, string>()
   for (const sid of family) {
@@ -108,7 +120,7 @@ export function buildFamilyLabels(
       if (!list) continue
       for (const p of list) {
         if (p.type !== "tool") continue
-        const child = p.state?.metadata?.sessionId
+        const child = childID(p)
         if (!child || !family.has(child)) continue
         const raw = p.state?.input?.subagent_type || p.state?.input?.description || p.tool || "task"
         const desc = raw.length > LABEL_CAP ? raw.slice(0, LABEL_CAP - 2) + "…" : raw
