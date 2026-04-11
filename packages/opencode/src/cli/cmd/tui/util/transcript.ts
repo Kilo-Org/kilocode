@@ -1,4 +1,4 @@
-import type { AssistantMessage, Part, UserMessage } from "@opencode-ai/sdk/v2"
+import type { AssistantMessage, Part, UserMessage } from "@kilocode/sdk/v2"
 import { Locale } from "@/util/locale"
 
 export type TranscriptOptions = {

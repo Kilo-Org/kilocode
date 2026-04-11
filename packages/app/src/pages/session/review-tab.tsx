@@ -1,5 +1,5 @@
 import { createEffect, onCleanup, type JSX } from "solid-js"
-import type { FileDiff } from "@opencode-ai/sdk/v2"
+import type { FileDiff } from "@kilocode/sdk/v2"
 import { SessionReview } from "@opencode-ai/ui/session-review"
 import type {
   SessionReviewCommentActions,
