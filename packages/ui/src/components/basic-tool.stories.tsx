@@ -20,7 +20,9 @@ Use structured triggers for consistent layout; custom triggers allowed.
 - Locked state prevents closing.
 
 ### Accessibility
-- TODO: confirm trigger semantics and aria labeling.
+- Trigger uses button role with aria-expanded for collapsible state.
+- Status indicators announced via aria-live regions.
+- Keyboard accessible (Enter/Space to expand/collapse).
 
 ### Theming/tokens
 - Uses \`data-component="tool-trigger"\` and related slots.

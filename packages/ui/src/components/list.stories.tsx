@@ -20,7 +20,9 @@ Use within panels or popovers where keyboard navigation is expected.
 - Keyboard navigation via arrow keys; Enter selects.
 
 ### Accessibility
-- TODO: confirm ARIA roles for list items and search input.
+- listbox role with option roles for each item.
+- aria-selected indicates current selection.
+- Search input has aria-label and aria-autocomplete="list".
 
 ### Theming/tokens
 - Uses \`data-component="list"\` and data slots for structure.

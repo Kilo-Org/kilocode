@@ -2,7 +2,7 @@ import type { DevilClient, GlobalEvent, Event } from "@devilcode/sdk/v2/client"
 
 export type SSEEventHandler = (event: Event) => void
 export type SSEErrorHandler = (error: Error) => void
-export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
+export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected" | "error") => void
 
 /**
  * SSE adapter that consumes the SDK's `client.global.event()` AsyncGenerator
@@ -35,10 +35,10 @@ export class SdkSSEAdapter {
   private attemptController: AbortController | null = null
   private heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
-  // 15s matches packages/app/src/context/global-sdk.tsx — server sends heartbeats
-  // every 10s, so this gives a 5s grace window before forcing a reconnect.
-  // Reduced from 90s: with 90s a dead connection could linger for ~1.5 minutes.
-  private static readonly HEARTBEAT_TIMEOUT_MS = 15_000
+  // 30s timeout — server sends heartbeats every 10s, so this gives a 20s grace
+  // window before forcing a reconnect, accounting for network delays and
+  // preventing false-positive reconnections under normal load.
+  private static readonly HEARTBEAT_TIMEOUT_MS = 30_000
   private static readonly RECONNECT_DELAY_MS = 250
 
   constructor(private readonly client: DevilClient) {}
@@ -60,8 +60,11 @@ export class SdkSSEAdapter {
     console.log('[Devil New] SSE: 🔄 Setting state to "connecting"')
     this.notifyState("connecting")
     void this.consumeLoop(this.abortController.signal).catch((err) => {
-      console.error("[Devil New] SSE: Unhandled error in consumeLoop:", err)
-      this.notifyError(err instanceof Error ? err : new Error(String(err)))
+      const error = err instanceof Error ? err : new Error(String(err))
+      console.error("[Devil New] SSE: ❌ Unhandled error in consumeLoop:", error)
+      this.notifyError(error)
+      this.notifyState("error")
+      this.scheduleReconnect()
     })
   }
 
@@ -74,6 +77,24 @@ export class SdkSSEAdapter {
     this.abortController = null
     this.attemptController = null
     this.clearHeartbeat()
+    this.clearReconnectTimer()
+  }
+
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+  }
+
+  private scheduleReconnect(): void {
+    this.clearReconnectTimer()
+    this.reconnectTimer = setTimeout(() => {
+      console.log("[Devil New] SSE: 🔄 Scheduled reconnection starting...")
+      this.reconnect()
+    }, SdkSSEAdapter.RECONNECT_DELAY_MS)
   }
 
   /**
@@ -248,7 +269,7 @@ export class SdkSSEAdapter {
     }
   }
 
-  private notifyState(state: "connecting" | "connected" | "disconnected"): void {
+  private notifyState(state: "connecting" | "connected" | "disconnected" | "error"): void {
     for (const handler of this.stateHandlers) {
       try {
         handler(state)

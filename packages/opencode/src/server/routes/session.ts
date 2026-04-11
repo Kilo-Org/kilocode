@@ -936,9 +936,10 @@ export const SessionRoutes = lazy(() =>
     .post(
       "/:sessionID/permissions/:permissionID",
       describeRoute({
-        summary: "Respond to permission",
+        summary: "Respond to permission [DEPRECATED]",
         deprecated: true,
-        description: "Approve or deny a permission request from the AI assistant.",
+        description:
+          "DEPRECATED: Use /permission/:permissionID instead. This endpoint will be removed on 2025-06-01. Approve or deny a permission request from the AI assistant.",
         operationId: "permission.respond",
         responses: {
           200: {
@@ -961,11 +962,20 @@ export const SessionRoutes = lazy(() =>
       ),
       validator("json", z.object({ response: PermissionNext.Reply })),
       async (c) => {
+        // Add deprecation headers
+        c.header("Deprecation", "true")
+        c.header("Sunset", "Sun, 01 Jun 2025 00:00:00 GMT")
+        c.header("Link", '</permission/:permissionID>; rel="successor-version"')
+
         const params = c.req.valid("param")
         PermissionNext.reply({
           requestID: params.permissionID,
           reply: c.req.valid("json").response,
         })
+
+        // Log deprecation warning
+        log.warn("Deprecated endpoint used", { path: c.req.path, operationId: "permission.respond" })
+
         return c.json(true)
       },
     )

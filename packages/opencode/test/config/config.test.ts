@@ -1,4 +1,4 @@
-import { test, expect, describe, mock, afterEach } from "bun:test"
+import { test, expect, describe, mock, afterEach, beforeAll } from "bun:test"
 import { Config } from "../../src/config/config"
 import { Instance } from "../../src/project/instance"
 import { Auth } from "../../src/auth"
@@ -12,8 +12,26 @@ import { Filesystem } from "../../src/util/filesystem"
 // Get managed config directory from environment (set in preload.ts)
 const managedConfigDir = process.env.DEVIL_TEST_MANAGED_CONFIG_DIR!
 
+// Clear any stale state from previous test files before running config tests
+beforeAll(async () => {
+  await Instance.disposeAll().catch(() => {})
+  Config.global?.reset?.()
+  // Clean up any global config files that might have been left by other tests
+  for (const file of ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc", "config.json"]) {
+    await fs.rm(path.join(Global.Path.config, file), { force: true }).catch(() => {})
+  }
+})
+
 afterEach(async () => {
   await fs.rm(managedConfigDir, { force: true, recursive: true }).catch(() => {})
+  // Clean up global config files written during tests to prevent test pollution
+  for (const file of ["opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc", "config.json"]) {
+    await fs.rm(path.join(Global.Path.config, file), { force: true }).catch(() => {})
+  }
+  // Reset cached global config so subsequent tests don't see stale data
+  Config.global?.reset?.()
+  // Dispose all instances to clear cached per-directory config state
+  await Instance.disposeAll().catch(() => {})
 })
 
 async function writeManagedSettings(settings: object, filename = "opencode.json") {
@@ -309,25 +327,28 @@ test("handles file inclusion with replacement tokens", async () => {
   })
 })
 
-test("validates config schema and throws on invalid fields", async () => {
+test("reports warnings for invalid config fields instead of throwing", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
         $schema: "https://app.devil.ai/config.json",
-        invalid_field: "should cause error",
+        invalid_field: "should cause warning",
       })
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // Strict schema should throw an error for invalid fields
-      await expect(Config.get()).rejects.toThrow()
+      // Config loading is lenient - invalid fields generate warnings instead of throwing
+      const config = await Config.get()
+      expect(config).toBeDefined()
+      const warnings = await Config.warnings()
+      expect(warnings.some((w) => w.message.includes("invalid"))).toBe(true)
     },
   })
 })
 
-test("throws error for invalid JSON", async () => {
+test("reports warnings for invalid JSON instead of throwing", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(path.join(dir, "opencode.json"), "{ invalid json }")
@@ -336,7 +357,11 @@ test("throws error for invalid JSON", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      await expect(Config.get()).rejects.toThrow()
+      // Config loading is lenient - invalid JSON generates warnings instead of throwing
+      const config = await Config.get()
+      expect(config).toBeDefined()
+      const warnings = await Config.warnings()
+      expect(warnings.some((w) => w.message.includes("not valid JSON"))).toBe(true)
     },
   })
 })
@@ -832,14 +857,13 @@ test("resolves scoped npm plugins in config", async () => {
 test("merges plugin arrays from global and local configs", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      // Create a nested project structure with local .opencode config
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
+      // Create local .opencode config
+      const opencodeDir = path.join(dir, ".opencode")
       await fs.mkdir(opencodeDir, { recursive: true })
 
-      // Global config with plugins
+      // Global config with plugins - write to actual global config path
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(Global.Path.config, "opencode.json"),
         JSON.stringify({
           $schema: "https://app.devil.ai/config.json",
           plugin: ["global-plugin-1", "global-plugin-2"],
@@ -858,7 +882,7 @@ test("merges plugin arrays from global and local configs", async () => {
   })
 
   await Instance.provide({
-    directory: path.join(tmp.path, "project"),
+    directory: tmp.path,
     fn: async () => {
       const config = await Config.get()
       const plugins = config.plugin ?? []
@@ -910,18 +934,19 @@ Helper subagent prompt`,
 test("merges instructions arrays from global and local configs", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
+      const opencodeDir = path.join(dir, ".opencode")
       await fs.mkdir(opencodeDir, { recursive: true })
 
+      // Global config - write to actual global config path
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(Global.Path.config, "opencode.json"),
         JSON.stringify({
           $schema: "https://app.devil.ai/config.json",
           instructions: ["global-instructions.md", "shared-rules.md"],
         }),
       )
 
+      // Local .opencode config
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
@@ -933,7 +958,7 @@ test("merges instructions arrays from global and local configs", async () => {
   })
 
   await Instance.provide({
-    directory: path.join(tmp.path, "project"),
+    directory: tmp.path,
     fn: async () => {
       const config = await Config.get()
       const instructions = config.instructions ?? []
@@ -949,18 +974,19 @@ test("merges instructions arrays from global and local configs", async () => {
 test("deduplicates duplicate instructions from global and local configs", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
+      const opencodeDir = path.join(dir, ".opencode")
       await fs.mkdir(opencodeDir, { recursive: true })
 
+      // Global config - write to actual global config path
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(Global.Path.config, "opencode.json"),
         JSON.stringify({
           $schema: "https://app.devil.ai/config.json",
           instructions: ["duplicate.md", "global-only.md"],
         }),
       )
 
+      // Local .opencode config
       await Filesystem.write(
         path.join(opencodeDir, "opencode.json"),
         JSON.stringify({
@@ -972,7 +998,7 @@ test("deduplicates duplicate instructions from global and local configs", async 
   })
 
   await Instance.provide({
-    directory: path.join(tmp.path, "project"),
+    directory: tmp.path,
     fn: async () => {
       const config = await Config.get()
       const instructions = config.instructions ?? []
@@ -991,14 +1017,13 @@ test("deduplicates duplicate instructions from global and local configs", async 
 test("deduplicates duplicate plugins from global and local configs", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      // Create a nested project structure with local .opencode config
-      const projectDir = path.join(dir, "project")
-      const opencodeDir = path.join(projectDir, ".opencode")
+      // Create local .opencode config
+      const opencodeDir = path.join(dir, ".opencode")
       await fs.mkdir(opencodeDir, { recursive: true })
 
-      // Global config with plugins
+      // Global config with plugins - write to actual global config path
       await Filesystem.write(
-        path.join(dir, "opencode.json"),
+        path.join(Global.Path.config, "opencode.json"),
         JSON.stringify({
           $schema: "https://app.devil.ai/config.json",
           plugin: ["duplicate-plugin", "global-plugin-1"],
@@ -1017,7 +1042,7 @@ test("deduplicates duplicate plugins from global and local configs", async () =>
   })
 
   await Instance.provide({
-    directory: path.join(tmp.path, "project"),
+    directory: tmp.path,
     fn: async () => {
       const config = await Config.get()
       const plugins = config.plugin ?? []
@@ -1994,13 +2019,13 @@ describe("DEVIL_DISABLE_PROJECT_CONFIG", () => {
   })
 })
 
-describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
-  test("substitutes {env:} tokens in OPENCODE_CONFIG_CONTENT", async () => {
-    const originalEnv = process.env["OPENCODE_CONFIG_CONTENT"]
+describe("DEVIL_CONFIG_CONTENT token substitution", () => {
+  test("substitutes {env:} tokens in DEVIL_CONFIG_CONTENT", async () => {
+    const originalEnv = process.env["DEVIL_CONFIG_CONTENT"]
     const originalTestVar = process.env["TEST_CONFIG_VAR"]
     process.env["TEST_CONFIG_VAR"] = "test_api_key_12345"
-    process.env["OPENCODE_CONFIG_CONTENT"] = JSON.stringify({
-      $schema: "https://opencode.ai/config.json",
+    process.env["DEVIL_CONFIG_CONTENT"] = JSON.stringify({
+      $schema: "https://app.devil.ai/config.json",
       username: "{env:TEST_CONFIG_VAR}",
     })
 
@@ -2015,9 +2040,9 @@ describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
       })
     } finally {
       if (originalEnv !== undefined) {
-        process.env["OPENCODE_CONFIG_CONTENT"] = originalEnv
+        process.env["DEVIL_CONFIG_CONTENT"] = originalEnv
       } else {
-        delete process.env["OPENCODE_CONFIG_CONTENT"]
+        delete process.env["DEVIL_CONFIG_CONTENT"]
       }
       if (originalTestVar !== undefined) {
         process.env["TEST_CONFIG_VAR"] = originalTestVar
@@ -2027,15 +2052,15 @@ describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
     }
   })
 
-  test("substitutes {file:} tokens in OPENCODE_CONFIG_CONTENT", async () => {
-    const originalEnv = process.env["OPENCODE_CONFIG_CONTENT"]
+  test("substitutes {file:} tokens in DEVIL_CONFIG_CONTENT", async () => {
+    const originalEnv = process.env["DEVIL_CONFIG_CONTENT"]
 
     try {
       await using tmp = await tmpdir({
         init: async (dir) => {
           await Filesystem.write(path.join(dir, "api_key.txt"), "secret_key_from_file")
-          process.env["OPENCODE_CONFIG_CONTENT"] = JSON.stringify({
-            $schema: "https://opencode.ai/config.json",
+          process.env["DEVIL_CONFIG_CONTENT"] = JSON.stringify({
+            $schema: "https://app.devil.ai/config.json",
             username: "{file:./api_key.txt}",
           })
         },
@@ -2049,9 +2074,9 @@ describe("OPENCODE_CONFIG_CONTENT token substitution", () => {
       })
     } finally {
       if (originalEnv !== undefined) {
-        process.env["OPENCODE_CONFIG_CONTENT"] = originalEnv
+        process.env["DEVIL_CONFIG_CONTENT"] = originalEnv
       } else {
-        delete process.env["OPENCODE_CONFIG_CONTENT"]
+        delete process.env["DEVIL_CONFIG_CONTENT"]
       }
     }
   })

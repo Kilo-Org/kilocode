@@ -1,71 +1,153 @@
-import { describe, test, expect, beforeEach } from "bun:test"
-import { LockManager, type FileLock } from "@/devilcode/workflow/locks"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
-import os from "os"
+import { LockManager, FileLock } from "@/devilcode/workflow/locks"
+import { tmpdir } from "../../fixture/fixture"
 
-describe("LockManager", () => {
+describe("workflow locks", () => {
   let tmpDir: string
-  let manager: LockManager
+  let lockManager: LockManager
 
   beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "locks-test-"))
-    const planningDir = path.join(tmpDir, ".planning")
-    await fs.mkdir(planningDir, { recursive: true })
-    manager = new LockManager(planningDir)
+    const tmp = await tmpdir()
+    tmpDir = tmp.path
+    lockManager = new LockManager(tmpDir)
   })
 
-  test("acquire and release lock", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts"])
-    const locks = await manager.listLocks()
-    expect(locks).toHaveLength(1)
-    expect(locks[0].taskId).toBe("T-001")
-    expect(locks[0].files).toEqual(["src/foo.ts"])
-
-    await manager.release("T-001")
-    const after = await manager.listLocks()
-    expect(after).toHaveLength(0)
+  afterEach(async () => {
+    try {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    } catch {}
   })
 
-  test("detects conflicts", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts", "src/bar.ts"])
-    const conflicts = await manager.checkConflicts(["src/foo.ts", "src/baz.ts"])
-    expect(conflicts).toHaveLength(1)
-    expect(conflicts[0].taskId).toBe("T-001")
+  describe("LockManager", () => {
+    it("acquires lock for task", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file.ts"])
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toHaveLength(1)
+      expect(locks[0].taskId).toBe("task-1")
+      expect(locks[0].role).toBe("worker")
+      expect(locks[0].files).toEqual(["src/file.ts"])
+      expect(locks[0].lockedAt).toBeDefined()
+    })
+
+    it("re-acquires lock replacing existing", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file1.ts"])
+      await lockManager.acquire("task-1", "senior", ["src/file2.ts"])
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toHaveLength(1)
+      expect(locks[0].role).toBe("senior")
+      expect(locks[0].files).toEqual(["src/file2.ts"])
+    })
+
+    it("releases lock for task", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file.ts"])
+      await lockManager.release("task-1")
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toHaveLength(0)
+    })
+
+    it("releases all locks", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file1.ts"])
+      await lockManager.acquire("task-2", "senior", ["src/file2.ts"])
+      await lockManager.acquire("task-3", "architect", ["src/file3.ts"])
+
+      await lockManager.releaseAll()
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toHaveLength(0)
+    })
+
+    it("checks for conflicts with locked files", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file1.ts", "src/file2.ts"])
+
+      const conflicts = await lockManager.checkConflicts(["src/file2.ts", "src/file3.ts"])
+      expect(conflicts).toHaveLength(1)
+      expect(conflicts[0].taskId).toBe("task-1")
+    })
+
+    it("returns empty conflicts when no overlap", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file1.ts"])
+
+      const conflicts = await lockManager.checkConflicts(["src/file2.ts", "src/file3.ts"])
+      expect(conflicts).toHaveLength(0)
+    })
+
+    it("finds orphaned locks for terminal statuses", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file1.ts"])
+      await lockManager.acquire("task-2", "senior", ["src/file2.ts"])
+      await lockManager.acquire("task-3", "worker", ["src/file3.ts"])
+
+      const terminalStatuses = new Set(["completed", "failed"])
+      const getTaskStatus = (taskId: string) => {
+        if (taskId === "task-1") return "completed"
+        if (taskId === "task-2") return "running"
+        if (taskId === "task-3") return "failed"
+        return undefined
+      }
+
+      const orphaned = await lockManager.findOrphanedLocks(terminalStatuses, getTaskStatus)
+      expect(orphaned).toHaveLength(2)
+      expect(orphaned.map((l) => l.taskId).sort()).toEqual(["task-1", "task-3"])
+    })
+
+    it("persists locks to file", async () => {
+      await lockManager.acquire("task-1", "worker", ["src/file.ts"])
+
+      const lockPath = path.join(tmpDir, "locks.json")
+      const content = await fs.readFile(lockPath, "utf-8")
+      const parsed = JSON.parse(content)
+
+      expect(parsed.locks).toHaveLength(1)
+      expect(parsed.locks[0].taskId).toBe("task-1")
+    })
+
+    it("handles concurrent lock operations", async () => {
+      const promises = []
+      for (let i = 0; i < 10; i++) {
+        promises.push(lockManager.acquire(`task-${i}`, "worker", [`src/file${i}.ts`]))
+      }
+      await Promise.all(promises)
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toHaveLength(10)
+    })
+
+    it("handles read errors gracefully", async () => {
+      // Create a new manager with corrupted file
+      const lockPath = path.join(tmpDir, "locks.json")
+      await fs.writeFile(lockPath, "invalid json")
+
+      const locks = await lockManager.listLocks()
+      expect(locks).toEqual([])
+    })
   })
 
-  test("no conflict on different files", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts"])
-    const conflicts = await manager.checkConflicts(["src/bar.ts"])
-    expect(conflicts).toHaveLength(0)
-  })
+  describe("FileLock schema", () => {
+    it("validates correct FileLock structure", () => {
+      const validLock: FileLock = {
+        taskId: "task-1",
+        role: "worker",
+        files: ["src/file.ts"],
+        lockedAt: new Date().toISOString(),
+      }
 
-  test("multiple locks coexist", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts"])
-    await manager.acquire("T-002", "senior", ["src/bar.ts"])
-    const locks = await manager.listLocks()
-    expect(locks).toHaveLength(2)
-  })
+      const result = FileLock.safeParse(validLock)
+      expect(result.success).toBe(true)
+    })
 
-  test("findOrphanedLocks returns locks for completed tasks", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts"])
-    const orphans = await manager.findOrphanedLocks(new Set(["completed", "failed"]), (id) =>
-      id === "T-001" ? "completed" : "pending",
-    )
-    expect(orphans).toHaveLength(1)
-  })
+    it("rejects invalid FileLock structure", () => {
+      const invalidLock = {
+        taskId: "task-1",
+        role: "worker",
+        // missing files and lockedAt
+      }
 
-  test("findOrphanedLocks ignores active tasks", async () => {
-    await manager.acquire("T-001", "worker", ["src/foo.ts"])
-    const orphans = await manager.findOrphanedLocks(new Set(["completed", "failed"]), (id) => "in_progress")
-    expect(orphans).toHaveLength(0)
-  })
-
-  test("releaseAll clears everything", async () => {
-    await manager.acquire("T-001", "worker", ["a.ts"])
-    await manager.acquire("T-002", "senior", ["b.ts"])
-    await manager.releaseAll()
-    const locks = await manager.listLocks()
-    expect(locks).toHaveLength(0)
+      const result = FileLock.safeParse(invalidLock)
+      expect(result.success).toBe(false)
+    })
   })
 })

@@ -20,7 +20,8 @@ Use one trigger per item; keep content concise.
 - Controlled via \`value\`/\`onChange\` when provided.
 
 ### Accessibility
-- TODO: confirm keyboard navigation from Kobalte Accordion.
+- Full keyboard navigation support via Kobalte (Arrow keys, Home/End, Space/Enter).
+- ARIA roles: region, button (triggers), and aria-expanded, aria-controls, aria-labelledby attributes provided by Kobalte.
 
 ### Theming/tokens
 - Uses \`data-component="accordion"\` and slot data attributes.

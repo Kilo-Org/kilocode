@@ -14,7 +14,7 @@ export async function assertExternalDirectory(ctx: Tool.Context, target?: string
 
   if (options?.bypass) return
 
-  if (Instance.containsPath(target)) return
+  if (await Instance.containsPath(target)) return
 
   const kind = options?.kind ?? "file"
   const parentDir = kind === "directory" ? target : path.dirname(target)

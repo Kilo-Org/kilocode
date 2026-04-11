@@ -79,6 +79,38 @@ export const ReviewVerdict = z.object({
 })
 export type ReviewVerdict = z.infer<typeof ReviewVerdict>
 
+export const ShipGate = z.object({
+  gateName: z.string(),
+  passed: z.boolean(),
+  exitCode: z.number(),
+  stdout: z.string().default(""),
+  stderr: z.string().default(""),
+  durationMs: z.number(),
+})
+export type ShipGate = z.infer<typeof ShipGate>
+
+export const ShipReport = z.object({
+  phase: z.string(),
+  status: z.enum(["ready", "blocked"]),
+  gates: z.array(ShipGate).default([]),
+  warnings: z.array(z.string()).default([]),
+  summary: z.string(),
+  createdAt: z.string(),
+})
+export type ShipReport = z.infer<typeof ShipReport>
+
+export const RetroReport = z.object({
+  phase: z.string(),
+  completed: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  blocked: z.number().int().min(0),
+  lessons: z.array(z.string()).default([]),
+  followUps: z.array(z.string()).default([]),
+  summary: z.string(),
+  createdAt: z.string(),
+})
+export type RetroReport = z.infer<typeof RetroReport>
+
 export const ActiveTask = z.object({
   id: z.string(),
   role: z.string(),

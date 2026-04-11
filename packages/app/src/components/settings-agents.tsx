@@ -2,14 +2,13 @@ import { Component } from "solid-js"
 import { useLanguage } from "@/context/language"
 
 export const SettingsAgents: Component = () => {
-  // TODO: Replace this placeholder with full agents settings controls.
   const language = useLanguage()
-
   return (
     <div class="flex flex-col h-full overflow-y-auto">
       <div class="flex flex-col gap-6 p-6 max-w-[600px]">
         <h2 class="text-16-medium text-text-strong">{language.t("settings.agents.title")}</h2>
         <p class="text-14-regular text-text-weak">{language.t("settings.agents.description")}</p>
+        <p class="text-12-regular text-text-weak">Agent configuration will be available in a future update.</p>
       </div>
     </div>
   )

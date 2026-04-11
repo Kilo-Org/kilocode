@@ -50,8 +50,13 @@ import { PlanFollowup } from "@/devilcode/plan-followup" // devilcode_change
 import { environmentDetails } from "@/devilcode/editor-context" // devilcode_change
 import { Workflow } from "@/devilcode/workflow" // devilcode_change
 
-// @ts-ignore
-globalThis.AI_SDK_LOG_WARNINGS = false
+// Disable ai-sdk warnings - this global is needed to prevent ai-sdk from logging warnings to stdout
+// https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
+try {
+  ;(globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false
+} catch {
+  // Ignore if global assignment fails
+}
 
 const STRUCTURED_OUTPUT_DESCRIPTION = `Use this tool to return your final response in the requested structured format.
 
@@ -105,6 +110,86 @@ export namespace SessionPrompt {
     if (match) throw new Session.BusyError(sessionID)
   }
 
+  // Part input schemas for prompt validation - ensures strict validation
+  const TextPartInput = MessageV2.TextPart.omit({
+    messageID: true,
+    sessionID: true,
+  })
+    .partial({
+      id: true,
+    })
+    .strict()
+    // devilcode_change start - Text part size limit: 100KB max
+    .refine(
+      (data) => {
+        if (!data.text) return true
+        const MAX_TEXT_SIZE = 100 * 1024 // 100KB
+        return data.text.length <= MAX_TEXT_SIZE
+      },
+      { message: "Text part exceeds maximum size of 100KB" },
+    )
+    // devilcode_change end
+    .meta({
+      ref: "TextPartInput",
+    })
+
+  const FilePartInput = MessageV2.FilePart.omit({
+    messageID: true,
+    sessionID: true,
+  })
+    .partial({
+      id: true,
+    })
+    .strict()
+    // devilcode_change start - File URL validation: only allow file:// and localhost
+    .refine(
+      (data) => {
+        if (!data.url) return true
+        // Allow file:// URLs
+        if (data.url.startsWith("file://")) return true
+        // Allow localhost URLs
+        try {
+          const url = new URL(data.url)
+          const hostname = url.hostname.toLowerCase()
+          if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return true
+          // Reject any other remote URLs
+          return false
+        } catch {
+          // Not a valid URL, reject
+          return false
+        }
+      },
+      { message: "File URLs must be file:// or localhost only" },
+    )
+    // devilcode_change end
+    .meta({
+      ref: "FilePartInput",
+    })
+
+  const AgentPartInput = MessageV2.AgentPart.omit({
+    messageID: true,
+    sessionID: true,
+  })
+    .partial({
+      id: true,
+    })
+    .strict()
+    .meta({
+      ref: "AgentPartInput",
+    })
+
+  const SubtaskPartInput = MessageV2.SubtaskPart.omit({
+    messageID: true,
+    sessionID: true,
+  })
+    .partial({
+      id: true,
+    })
+    .strict()
+    .meta({
+      ref: "SubtaskPartInput",
+    })
+
   export const PromptInput = z.object({
     sessionID: Identifier.schema("session"),
     messageID: Identifier.schema("message").optional(),
@@ -135,51 +220,23 @@ export namespace SessionPrompt {
       })
       .optional(),
     // devilcode_change end
-    parts: z.array(
-      z.discriminatedUnion("type", [
-        MessageV2.TextPart.omit({
-          messageID: true,
-          sessionID: true,
-        })
-          .partial({
-            id: true,
-          })
-          .meta({
-            ref: "TextPartInput",
-          }),
-        MessageV2.FilePart.omit({
-          messageID: true,
-          sessionID: true,
-        })
-          .partial({
-            id: true,
-          })
-          .meta({
-            ref: "FilePartInput",
-          }),
-        MessageV2.AgentPart.omit({
-          messageID: true,
-          sessionID: true,
-        })
-          .partial({
-            id: true,
-          })
-          .meta({
-            ref: "AgentPartInput",
-          }),
-        MessageV2.SubtaskPart.omit({
-          messageID: true,
-          sessionID: true,
-        })
-          .partial({
-            id: true,
-          })
-          .meta({
-            ref: "SubtaskPartInput",
-          }),
-      ]),
-    ),
-  })
+    parts: z
+      .array(z.discriminatedUnion("type", [TextPartInput, FilePartInput, AgentPartInput, SubtaskPartInput]))
+      // devilcode_change start - Deep parts array validation with limits
+      .max(100, "Maximum 100 parts per message")
+      .refine(
+        (parts) => {
+          const totalTextSize = parts.reduce((acc, part) => {
+            if (part.type === "text" && part.text) return acc + part.text.length
+            return acc
+          }, 0)
+          // Total text size across all parts should not exceed 500KB
+          return totalTextSize <= 500 * 1024
+        },
+        { message: "Total text content across all parts exceeds 500KB limit" },
+      ),
+    // devilcode_change end
+  }).strict()
   export type PromptInput = z.infer<typeof PromptInput>
 
   export const prompt = fn(PromptInput, async (input) => {

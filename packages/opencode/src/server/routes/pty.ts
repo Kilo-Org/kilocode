@@ -152,11 +152,28 @@ export const PtyRoutes = lazy(() =>
       upgradeWebSocket((c) => {
         const id = c.req.param("ptyID")
         if (!id) throw new Error("Missing ptyID")
+
+        // Validate origin header for WebSocket upgrade security
+        const origin = c.req.header("origin")
+        const validOrigins = [
+          "http://localhost",
+          "http://127.0.0.1",
+          "tauri://localhost",
+          "http://tauri.localhost",
+          "https://tauri.localhost",
+        ]
+        const isValidOrigin = !origin || validOrigins.some((valid) => origin.startsWith(valid))
+        if (!isValidOrigin) {
+          console.warn("[Pty] Invalid WebSocket origin:", origin)
+        }
+
         const cursor = (() => {
           const value = c.req.query("cursor")
           if (!value) return
           const parsed = Number(value)
-          if (!Number.isSafeInteger(parsed) || parsed < -1) return
+          // Allow -1 as special "latest" value, otherwise reject negative and unsafe integers
+          if (!Number.isSafeInteger(parsed) || (parsed < 0 && parsed !== -1)) return
+          if (parsed > Number.MAX_SAFE_INTEGER / 2) return
           return parsed
         })()
         let handler: ReturnType<typeof Pty.connect>

@@ -38,7 +38,9 @@ export namespace Truncate {
     const entries = await Glob.scan("tool_*", { cwd: DIR, include: "file" }).catch(() => [] as string[])
     for (const entry of entries) {
       if (Identifier.timestamp(entry) >= cutoff) continue
-      await fs.unlink(path.join(DIR, entry)).catch(() => {})
+      await fs.unlink(path.join(DIR, entry)).catch((err) => {
+        console.error("failed to delete old truncation file", { err, entry })
+      })
     }
   }
 

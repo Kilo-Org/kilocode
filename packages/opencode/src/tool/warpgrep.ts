@@ -6,11 +6,6 @@ import { Bus } from "../bus"
 import { TuiEvent } from "../cli/cmd/tui/event"
 import DESCRIPTION from "./warpgrep.txt"
 
-// FREE_PERIOD_TODO: Remove DEVIL_WARPGREP_PROXY_URL constant and the proxy
-// fallback below. After the free period ends, require MORPH_API_KEY and
-// return an error when it is missing.
-const DEVIL_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
-
 export const CodebaseSearchTool = Tool.define("codebase_search", {
   description: DESCRIPTION,
   parameters: z.object({
@@ -30,13 +25,20 @@ export const CodebaseSearchTool = Tool.define("codebase_search", {
 
     const apiKey = process.env["MORPH_API_KEY"]
 
-    // FREE_PERIOD_TODO: Remove proxy fallback — require apiKey, error if missing:
-    //   if (!apiKey) return { title: ..., output: "Set MORPH_API_KEY to use codebase search.", metadata: {} }
+    // devilcode_change start - Require MORPH_API_KEY, remove proxy fallback
+    if (!apiKey) {
+      return {
+        title: `Codebase Search: ${params.query}`,
+        output: "Codebase search requires MORPH_API_KEY. Get your key at https://www.morphllm.com/",
+        metadata: { count: 0 },
+      }
+    }
+
     const client = new WarpGrepClient({
-      morphApiKey: apiKey ?? "kilo-free",
-      ...(apiKey ? {} : { morphApiUrl: DEVIL_WARPGREP_PROXY_URL }),
+      morphApiKey: apiKey,
       timeout: 60_000,
     })
+    // devilcode_change end
 
     const result = await client.execute({
       searchTerm: params.query,
@@ -44,17 +46,15 @@ export const CodebaseSearchTool = Tool.define("codebase_search", {
     })
 
     if (!result.success || !result.contexts?.length) {
-      // FREE_PERIOD_TODO: When the proxy stops serving free requests, errors
-      // from the proxy (401/402/429) will surface here. The message below
-      // tells the user exactly what to do.
+      // devilcode_change start - Simplified error handling without proxy fallback
       const isAuthOrRateLimit =
-        result.error && /401|402|429|rate.limit|free.period|unauthorized/i.test(result.error)
+        result.error && /401|402|429|rate.limit|unauthorized/i.test(result.error)
       const apiKeyMsg =
-        "Codebase search unavailable: free period ended. Set MORPH_API_KEY to continue. Get your key at https://www.morphllm.com/"
+        "Codebase search unavailable. Check your MORPH_API_KEY or try again later. Get your key at https://www.morphllm.com/"
       if (isAuthOrRateLimit) {
         Bus.publish(TuiEvent.ToastShow, {
           title: "Codebase Search Unavailable",
-          message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
+          message: "Check your MORPH_API_KEY or try again later. Get your key at morphllm.com",
           variant: "error",
           duration: 10000,
         }).catch(() => {})
@@ -64,6 +64,7 @@ export const CodebaseSearchTool = Tool.define("codebase_search", {
         output: isAuthOrRateLimit ? apiKeyMsg : (result.error ?? "No relevant code found."),
         metadata: { count: 0 },
       }
+      // devilcode_change end
     }
 
     const MAX_OUTPUT_CHARS = 45_000

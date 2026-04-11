@@ -1,4 +1,5 @@
 import { Log } from "@/util/log"
+import path from "path"
 import { Context } from "../util/context"
 import { Project } from "./project"
 import { State } from "./state"
@@ -92,13 +93,27 @@ export const Instance = {
    * Check if a path is within the project boundary.
    * Returns true if path is inside Instance.directory OR Instance.worktree.
    * Paths within the worktree but outside the working directory should not trigger external_directory permission.
+   *
+   * NOTE: This method is async because it uses realpath to canonicalize symlinks.
+   * Always await this method to ensure proper containment checks.
    */
-  containsPath(filepath: string) {
-    if (Filesystem.contains(Instance.directory, filepath)) return true
+  async containsPath(filepath: string): Promise<boolean> {
+    // Canonicalize the path to resolve symlinks and normalize
+    const canonicalPath = await Filesystem.canonicalize(filepath)
+
+    // On Windows, cross-drive paths could bypass containment checks
+    // Ensure both paths are on the same drive for Windows
+    if (process.platform === "win32") {
+      const pathDrive = path.parse(canonicalPath).root.toLowerCase()
+      const dirDrive = path.parse(Instance.directory).root.toLowerCase()
+      if (pathDrive !== dirDrive) return false
+    }
+
+    if (Filesystem.contains(Instance.directory, canonicalPath)) return true
     // Non-git projects set worktree to "/" which would match ANY absolute path.
     // Skip worktree check in this case to preserve external_directory permissions.
     if (Instance.worktree === "/") return false
-    return Filesystem.contains(Instance.worktree, filepath)
+    return Filesystem.contains(Instance.worktree, canonicalPath)
   },
   state<S>(init: () => S, dispose?: (state: Awaited<S>) => Promise<void>): () => S {
     return State.create(() => Instance.directory, init, dispose)

@@ -88,7 +88,7 @@ export const BashTool = Tool.define("bash", async () => {
         throw new Error("Failed to parse command")
       }
       const directories = new Set<string>()
-      if (!Instance.containsPath(cwd)) directories.add(cwd)
+      if (!(await Instance.containsPath(cwd))) directories.add(cwd)
       const patterns = new Set<string>()
       const always = new Set<string>()
       const rules = new Set<string>() // devilcode_change — hierarchy rules for permissions "npm", "npm install", "npm install lodash"
@@ -129,7 +129,7 @@ export const BashTool = Tool.define("bash", async () => {
             if (resolved) {
               const normalized =
                 process.platform === "win32" ? Filesystem.windowsPath(resolved).replace(/\//g, "\\") : resolved
-              if (!Instance.containsPath(normalized)) {
+              if (!(await Instance.containsPath(normalized))) {
                 const dir = (await Filesystem.isDir(normalized)) ? normalized : path.dirname(normalized)
                 directories.add(dir)
               }

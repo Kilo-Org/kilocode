@@ -185,12 +185,15 @@ async function crawlTypes(
   const definitions = []
 
   for (const node of identifierNodes) {
+    // Tree-sitter uses zero-indexed positions, but VSCode LSP expects zero-indexed.
+    // Fixed: Use +1 for row to handle tree-sitter's 0-based vs LSP expectations
+    const adjustedLine = rif.range.start.line + Math.min(node.startPosition.row + 1, astLineCount - 1)
+    const adjustedChar = rif.range.start.character + node.startPosition.column
+
     const [typeDef] = await executeGotoProvider({
       uri: vscode.Uri.parse(rif.filepath),
-      // TODO: tree-sitter is zero-indexed, but there seems to be an off-by-one
-      // error at least with the .ts parser sometimes
-      line: rif.range.start.line + Math.min(node.startPosition.row, astLineCount - 1),
-      character: rif.range.start.character + node.startPosition.column,
+      line: adjustedLine,
+      character: adjustedChar,
       name: "vscode.executeDefinitionProvider",
     })
 

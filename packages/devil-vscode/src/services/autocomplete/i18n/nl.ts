@@ -37,7 +37,8 @@ export const dict = {
   "devilcode:autocomplete.codeAction.title": "Devil Code: Voorgestelde bewerkingen",
   "devilcode:autocomplete.chatParticipant.fullName": "Devil Code Agent",
   "devilcode:autocomplete.chatParticipant.name": "Agent",
-  "devilcode:autocomplete.chatParticipant.description": "Ik kan je helpen met snelle taken en voorgestelde bewerkingen.",
+  "devilcode:autocomplete.chatParticipant.description":
+    "Ik kan je helpen met snelle taken en voorgestelde bewerkingen.",
   "devilcode:autocomplete.incompatibilityExtensionPopup.message":
     "De Devil Code Autocomplete wordt geblokkeerd door een conflict met GitHub Copilot. Om dit op te lossen, moet je de inline suggesties van Copilot uitschakelen.",
   "devilcode:autocomplete.incompatibilityExtensionPopup.disableCopilot": "Copilot uitschakelen",

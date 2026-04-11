@@ -54,7 +54,10 @@ export namespace McpAuth {
   }
 
   export async function all(): Promise<Record<string, Entry>> {
-    return Filesystem.readJson<Record<string, Entry>>(filepath).catch(() => ({}))
+    return Filesystem.readJson<Record<string, Entry>>(filepath).catch((err) => {
+      console.error("failed to read MCP auth file", { err, filepath })
+      return {}
+    })
   }
 
   export async function set(mcpName: string, entry: Entry, serverUrl?: string): Promise<void> {

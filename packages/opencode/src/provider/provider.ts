@@ -1,7 +1,8 @@
 import z from "zod"
 import os from "os"
 import fuzzysort from "fuzzysort"
-import { Config } from "../config/config"
+// devilcode_change - Config import moved to dynamic import to break circular dependency with config.ts
+// Config is imported dynamically inside async functions that use it
 import { mapValues, mergeDeep, omit, pickBy, sortBy } from "remeda"
 import { NoSuchModelError, type Provider as SDK } from "ai"
 import { Log } from "../util/log"
@@ -202,6 +203,8 @@ export namespace Provider {
       }
     },
     "amazon-bedrock": async () => {
+      // devilcode_change - dynamic import to break circular dependency
+      const { Config } = await import("../config/config")
       const config = await Config.get()
       const providerConfig = config.provider?.["amazon-bedrock"]
 
@@ -468,6 +471,8 @@ export namespace Provider {
         return Env.get("GITLAB_TOKEN")
       })()
 
+      // devilcode_change - dynamic import to break circular dependency
+      const { Config } = await import("../config/config")
       const config = await Config.get()
       const providerConfig = config.provider?.["gitlab"]
 
@@ -599,6 +604,8 @@ export namespace Provider {
       const hasKey = await (async () => {
         if (input.env.some((item) => env[item])) return true
         if (await Auth.get(input.id)) return true
+        // devilcode_change - dynamic import to break circular dependency
+        const { Config } = await import("../config/config")
         const config = await Config.get()
         if (config.provider?.["kilo"]?.options?.apiKey) return true
         return false
@@ -865,6 +872,8 @@ export namespace Provider {
 
   const state = Instance.state(async () => {
     using _ = log.time("state")
+    // devilcode_change - dynamic import to break circular dependency
+    const { Config } = await import("../config/config")
     const config = await Config.get()
     const modelsDev = await ModelsDev.get()
     const database = mapValues(modelsDev, fromModelsDevProvider)
@@ -1356,6 +1365,8 @@ export namespace Provider {
   }
 
   export async function getSmallModel(providerID: string) {
+    // devilcode_change - dynamic import to break circular dependency
+    const { Config } = await import("../config/config")
     const cfg = await Config.get()
 
     if (cfg.small_model) {
@@ -1452,6 +1463,8 @@ export namespace Provider {
   }
 
   export async function defaultModel() {
+    // devilcode_change - dynamic import to break circular dependency
+    const { Config } = await import("../config/config")
     const cfg = await Config.get()
     if (cfg.model) return parseModel(cfg.model)
 

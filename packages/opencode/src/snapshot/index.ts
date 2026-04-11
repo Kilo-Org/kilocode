@@ -147,7 +147,9 @@ export namespace Snapshot {
       return
     }
     log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
-    await fs.unlink(op.file).catch(() => {})
+    await fs.unlink(op.file).catch((err) => {
+      log.error("failed to delete file during revert", { err, file: op.file })
+    })
   }
 
   /** Revert a batch of files sharing the same hash. Falls back to single-file on failure. */
@@ -189,7 +191,9 @@ export namespace Snapshot {
     for (const op of batch) {
       if (existing.has(op.rel)) continue
       log.info("file did not exist in snapshot, deleting", { file: op.file, hash: op.hash })
-      await fs.unlink(op.file).catch(() => {})
+      await fs.unlink(op.file).catch((err) => {
+        log.error("failed to delete file during batch revert", { err, file: op.file })
+      })
     }
   }
 

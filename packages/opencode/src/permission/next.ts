@@ -338,11 +338,7 @@ export namespace PermissionNext {
           pending.resolve()
         }
 
-        // TODO: we don't save the permission ruleset to disk yet until there's
-        // UI to manage it
-        // db().insert(PermissionTable).values({ projectID: Instance.project.id, data: s.approved })
-        //   .onConflictDoUpdate({ target: PermissionTable.projectID, set: { data: s.approved } }).run()
-        // devilcode_change start - persist always rules to global config
+        // devilcode_change start - persist always rules to global config and project DB
         const alwaysRules: Ruleset = existing.info.always.map((pattern) => ({
           permission: existing.info.permission,
           pattern,
@@ -351,6 +347,18 @@ export namespace PermissionNext {
         if (alwaysRules.length > 0) {
           await Config.updateGlobal({ permission: toConfig(alwaysRules) }, { dispose: false })
         }
+
+        // Persist full approved ruleset to project database
+        await Database.use((db) =>
+          db
+            .insert(PermissionTable)
+            .values({ project_id: Instance.project.id, data: s.approved })
+            .onConflictDoUpdate({
+              target: PermissionTable.project_id,
+              set: { data: s.approved },
+            })
+            .run(),
+        )
         // devilcode_change end
         return
       }

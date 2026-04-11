@@ -1,4 +1,7 @@
 import type { NamedError } from "@opencode-ai/util/error"
+import { Log } from "@/util/log"
+
+const log = Log.create({ service: "devilcode" })
 
 export const DEVIL_ERROR_CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
@@ -79,6 +82,8 @@ export function parseDevilErrorCode(error: ReturnType<NamedError["toObject"]>): 
     if (typeof code === "string" && DEVIL_ERROR_CODE_VALUES.includes(code)) {
       return code as DevilErrorCode
     }
-  } catch {}
+  } catch (err) {
+    log.error("failed to parse devilcode error code", { err, responseBody })
+  }
   return undefined
 }

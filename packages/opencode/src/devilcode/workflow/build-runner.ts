@@ -19,6 +19,8 @@ import { Instance } from "@/project/instance"
 const log = Log.create({ service: "workflow.build-runner" })
 
 export type BuildCallbacks = {
+  onWaveStart?: (wave: number, total: number) => void
+  onPause?: (wave: number) => void
   onTaskStart: (taskId: string, sessionId: string) => void
   onTaskComplete: (taskId: string, result: TaskResult) => void
   onOutput: (taskId: string, sessionId: string, line: string) => void
@@ -55,9 +57,19 @@ export function buildPermissions(taskFiles: string[]): Array<{ permission: strin
 
 export class BuildRunner {
   private options: BuildRunnerOptions
+  private pauseRequested = false
+  private paused = false
 
   constructor(options: BuildRunnerOptions) {
     this.options = options
+  }
+
+  requestPause(): void {
+    this.pauseRequested = true
+  }
+
+  isPaused(): boolean {
+    return this.paused
   }
 
   groupWaves(tasks: PlanTask[]): Map<number, PlanTask[]> {
@@ -75,10 +87,13 @@ export class BuildRunner {
   }
 
   async executeAll(tasks: PlanTask[]): Promise<TaskResult[]> {
-    const waves = this.groupWaves(tasks)
+    this.paused = false
+    const waves = [...this.groupWaves(tasks).entries()]
     const allResults: TaskResult[] = []
+    const total = waves.length
 
-    for (const [waveNum, waveTasks] of waves) {
+    for (const [idx, [waveNum, waveTasks]] of waves.entries()) {
+      this.options.onWaveStart?.(waveNum, total)
       log.info("starting wave", { wave: waveNum, tasks: waveTasks.length })
       const waveResults = await this.executeWave(waveTasks)
       allResults.push(...waveResults)
@@ -92,14 +107,23 @@ export class BuildRunner {
         for (const [laterWave, laterTasks] of waves) {
           if (laterWave <= waveNum) continue
           for (const task of laterTasks) {
-            allResults.push({
+            const result = {
               taskId: task.id,
               status: "blocked",
               output: `Blocked: wave ${waveNum} had failures`,
               filesModified: [],
-            })
+            } satisfies TaskResult
+            allResults.push(result)
+            this.options.onTaskComplete(task.id, result)
           }
         }
+        break
+      }
+
+      if (this.pauseRequested && idx < waves.length - 1) {
+        this.paused = true
+        log.info("build paused after wave", { wave: waveNum })
+        this.options.onPause?.(waveNum)
         break
       }
     }
@@ -199,22 +223,25 @@ export class BuildRunner {
         concurrency.acquire(resolved.role, task.id)
       }
 
-      const next = worktree
-        ? await Instance.provide({
-            directory: worktree.directory,
-            fn: async () => {
-              try {
-                return await run()
-              } finally {
-                await Instance.dispose()
-              }
-            },
-          })
-        : await run()
-
-      // Release concurrency slot after execution
-      if (resolved && roleConfig) {
-        concurrency.release(resolved.role, task.id)
+      let next: { message: any; session: any }
+      try {
+        next = worktree
+          ? await Instance.provide({
+              directory: worktree.directory,
+              fn: async () => {
+                try {
+                  return await run()
+                } finally {
+                  await Instance.dispose()
+                }
+              },
+            })
+          : await run()
+      } finally {
+        // Release concurrency slot after execution (always, even on error)
+        if (resolved && roleConfig) {
+          concurrency.release(resolved.role, task.id)
+        }
       }
 
       const output = extractOutput(next.message)

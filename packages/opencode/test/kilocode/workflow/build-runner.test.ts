@@ -278,4 +278,34 @@ describe("BuildRunner", () => {
       },
     })
   })
+
+  it("stops after the current wave when pause is requested", async () => {
+    const paused: number[] = []
+    const runner = new BuildRunner({
+      teamConfig: undefined,
+      onWaveStart: () => {},
+      onPause: (wave) => paused.push(wave),
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [],
+      }),
+    )
+
+    runner.requestPause()
+    const results = await runner.executeAll([
+      makeTask({ id: "t1", wave: 1 }),
+      makeTask({ id: "t2", wave: 2 }),
+    ])
+
+    expect(results.map((result) => result.taskId)).toEqual(["t1"])
+    expect(paused).toEqual([1])
+    expect(runner.isPaused()).toBe(true)
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(1)
+  })
 })

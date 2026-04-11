@@ -288,8 +288,13 @@ export namespace LLM {
           {
             async transformParams(args) {
               if (args.type === "stream") {
-                // @ts-expect-error
-                args.params.prompt = ProviderTransform.message(args.params.prompt, input.model, options)
+                // Type coercion needed due to ai-sdk internal types
+                // ProviderTransform.message handles the prompt transformation
+                ;(args.params as { prompt: unknown }).prompt = ProviderTransform.message(
+                  args.params.prompt,
+                  input.model,
+                  options,
+                )
               }
               return args.params
             },

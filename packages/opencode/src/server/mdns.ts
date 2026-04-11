@@ -37,11 +37,17 @@ export namespace MDNS {
       if (bonjour) {
         try {
           bonjour.destroy()
-        } catch {}
+        } catch (err) {
+          logError("mDNS cleanup failed", err)
+        }
       }
       bonjour = undefined
       currentPort = undefined
     }
+  }
+  
+  function logError(operation: string, err: unknown) {
+    log.error(operation, { error: err })
   }
 
   export function unpublish() {

@@ -5,23 +5,40 @@
 export class Mutex {
   private queue: Array<() => void> = []
   private locked = false
+  private maxQueueSize = 100
 
-  async run<T>(fn: () => Promise<T>): Promise<T> {
-    await this.acquire()
+  async run<T>(fn: () => Promise<T>, timeoutMs = 30000): Promise<T> {
+    const release = await this.acquire(timeoutMs)
     try {
       return await fn()
     } finally {
-      this.release()
+      release()
     }
   }
 
-  private acquire(): Promise<void> {
+  private acquire(timeoutMs: number): Promise<() => void> {
+    if (this.queue.length >= this.maxQueueSize) {
+      throw new Error("Mutex queue overflow")
+    }
+
     if (!this.locked) {
       this.locked = true
-      return Promise.resolve()
+      return Promise.resolve(() => this.release())
     }
-    return new Promise<void>((resolve) => {
-      this.queue.push(resolve)
+
+    return new Promise<() => void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        const idx = this.queue.indexOf(release)
+        if (idx >= 0) this.queue.splice(idx, 1)
+        reject(new Error("Mutex acquisition timeout"))
+      }, timeoutMs)
+
+      const release = () => {
+        clearTimeout(timeout)
+        this.release()
+      }
+
+      this.queue.push(release)
     })
   }
 

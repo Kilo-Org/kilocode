@@ -15,6 +15,14 @@ on:
       - "packages/devil-ui/**"
   workflow_dispatch:
 
+env:
+  BUN_TEST_TIMEOUT: 120000
+  FORCE_COLOR: 1
+
+env:
+  BUN_TEST_TIMEOUT: 120000
+  FORCE_COLOR: 1
+
 jobs:
   unit:
     name: unit tests
@@ -33,7 +41,7 @@ jobs:
 
       - name: Run unit tests
         working-directory: packages/devil-vscode
-        run: bun run test:unit
+        run: bun run test:unit -- --user-data-dir=/tmp/vscode-test-data --extensions-dir=/tmp/vscode-test-ext -- --user-data-dir=/tmp/vscode-test-data --extensions-dir=/tmp/vscode-test-ext -- --user-data-dir=/tmp/vscode-test-data --extensions-dir=/tmp/vscode-test-ext -- --user-data-dir=/tmp/vscode-test-data --extensions-dir=/tmp/vscode-test-ext
 
       - name: Check formatting (prettier)
         working-directory: packages/devil-vscode

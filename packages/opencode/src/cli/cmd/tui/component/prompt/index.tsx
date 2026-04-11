@@ -3,6 +3,7 @@ import { createEffect, createMemo, type JSX, onMount, createSignal, onCleanup, o
 import "opentui-spinner/solid"
 import path from "path"
 import { Filesystem } from "@/util/filesystem"
+import { Log } from "@/util/log"
 import { useLocal } from "@tui/context/local"
 import { useTheme } from "@tui/context/theme"
 import { EmptyBorder } from "@tui/component/border"
@@ -78,6 +79,7 @@ export function Prompt(props: PromptProps) {
   const renderer = useRenderer()
   const { theme, syntax } = useTheme()
   const kv = useKV()
+  const log = Log.create({ service: "prompt" })
 
   function promptModelWarning() {
     toast.show({
@@ -980,7 +982,9 @@ export function Prompt(props: PromptProps) {
                         return
                       }
                     }
-                  } catch {}
+                  } catch (err) {
+                    log.error("failed to process pasted file path", { err, filepath })
+                  }
                 }
 
                 // devilcode_change start

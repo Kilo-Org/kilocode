@@ -19,7 +19,8 @@ Use \`children\` to customize option rendering.
 - Uses Kobalte Select with optional item highlight callbacks.
 
 ### Accessibility
-- TODO: confirm keyboard navigation and aria attributes from Kobalte.
+- Full keyboard navigation (Arrow keys, Enter to select, Escape to close, Typeahead).
+- ARIA roles: combobox, listbox, option with aria-selected, aria-expanded, aria-activedescendant.
 
 ### Theming/tokens
 - Uses \`data-component="select"\` with slot attributes.

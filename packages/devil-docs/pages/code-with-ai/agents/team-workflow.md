@@ -79,17 +79,17 @@ A review agent examines the implementation and produces findings classified by s
 - **Warning**: Should fix but can ship with a follow-up issue
 - **Suggestion**: Style or minor improvements at the author's discretion
 
-If blockers exist and the review cycle count is under the maximum (3), the workflow returns to the build stage with the fix instructions. Otherwise, it escalates.
+If blockers exist and the review cycle count is under the maximum (3), the workflow returns to the build stage with the fix instructions. Otherwise, it escalates. Review only runs once every build task is completed; it no longer owns the quality-gate step.
 
 ### Stage 6: Ship
 
-Quality gates run automatically:
+The ship stage is the final readiness gate. It runs project quality gates automatically:
 
 - TypeCheck (if `tsconfig.json` or a `typecheck` script exists)
 - Test suite (if a `test` script exists)
 - Lint (if a `lint` script exists)
 
-If all gates pass, the code is ready to commit.
+If all gates pass, the workflow persists a ship report and marks the phase complete in `.planning/ROADMAP.md`. If gates fail, the ship report is still written, but the workflow stays in review until the build is fixed and rerun.
 
 ### Stage 7: Retro
 
@@ -99,7 +99,7 @@ The retrospective captures lessons learned:
 - What commands did not work?
 - What fixes were applied?
 
-These lessons are stored in `.planning/lessons/` and injected into future agent prompts to avoid repeating mistakes.
+The phase closeout is stored in `*-RETRO.md`, while individual lessons are stored in `.planning/lessons/` and injected into future agent prompts to avoid repeating mistakes.
 
 ## Setting Up Team Configuration
 
@@ -195,8 +195,11 @@ The workflow engine stores all state in a `.planning/` directory at your project
       CONTEXT.md     -- Phase requirements and relevant code
       01-01-PLAN.md  -- Task plan (YAML frontmatter + description)
       01-02-PLAN.md
+      01-CHALLENGE.md -- Challenge verdict and concerns
       01-01-SUMMARY.md -- Completion summary
       01-REVIEW.md   -- Review verdict with findings
+      01-SHIP.md     -- Final quality-gate report and ship readiness
+      01-RETRO.md    -- Retrospective summary and follow-ups
   milestones/
     ...
   lessons/
@@ -209,7 +212,7 @@ Add `.planning/` to your `.gitignore` unless you want to version-control your wo
 
 ## Pre-flight Checks
 
-Before starting a build, the workflow runs pre-flight checks:
+Before starting a planning run, the workflow runs pre-flight checks:
 
 - **Git installed**: Verifies `git` is available
 - **Git repository**: Confirms the working directory is inside a git repo
@@ -221,7 +224,7 @@ If any error-severity check fails, the workflow will not proceed to the build st
 
 ## Quality Gates
 
-After the build stage, the workflow automatically detects and runs quality gates:
+During the ship stage, the workflow automatically detects and runs quality gates:
 
 | Gate | Detected When | Command |
 |------|---------------|---------|

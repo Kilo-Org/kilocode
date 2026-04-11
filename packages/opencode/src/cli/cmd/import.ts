@@ -23,8 +23,9 @@ export type ShareData =
 // devilcode_change start
 /** Extract share ID from a Devil share URL like https://app.devil.ai/s/abc123 */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
-  return match ? match[1] : null
+  // Accept both kilo.ai and devil.ai URLs
+  const match = url.match(/^https?:\/\/app\.(kilo|devil)\.ai\/s\/([a-zA-Z0-9_-]+)$/)
+  return match ? match[2] : null
 }
 // devilcode_change end
 

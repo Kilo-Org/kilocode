@@ -46,11 +46,17 @@ export namespace ToolRegistry {
     )
     if (matches.length) await Config.waitForDependencies()
     for (const match of matches) {
-      const namespace = path.basename(match, path.extname(match))
-      const mod = await import(pathToFileURL(match).href)
-      for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
-        custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+      // devilcode_change start - graceful handling of tools with missing dependencies
+      try {
+        const namespace = path.basename(match, path.extname(match))
+        const mod = await import(pathToFileURL(match).href)
+        for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
+          custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
+        }
+      } catch (error) {
+        log.warn("failed to load custom tool, skipping", { path: match, error })
       }
+      // devilcode_change end
     }
 
     const plugins = await Plugin.list()

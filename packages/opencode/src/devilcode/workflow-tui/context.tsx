@@ -2,7 +2,16 @@
 import { createContext, useContext, type ParentProps } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { onMount, onCleanup } from "solid-js"
-import type { WorkflowState, PlanTask, PlanChallenge, ReviewVerdict, WorkflowStage, TaskResult } from "../workflow/types"
+import type {
+  WorkflowState,
+  PlanTask,
+  PlanChallenge,
+  ReviewVerdict,
+  WorkflowStage,
+  TaskResult,
+  ShipReport,
+  RetroReport,
+} from "../workflow/types"
 import type { TabInfo, SessionInfo } from "./types"
 import type { TeamConfig } from "../team/config"
 import { WorkflowStateManager } from "../workflow/state"
@@ -17,12 +26,16 @@ export type WorkflowViewState = {
   plans: PlanTask[]
   challenge: PlanChallenge | undefined
   review: ReviewVerdict | undefined
+  ship: ShipReport | undefined
+  retro: RetroReport | undefined
+  summaries: Record<string, string>
 
   selectedTask: string | undefined
   activeTab: string
   tabs: TabInfo[]
 
   executing: boolean
+  pauseRequested: boolean
   activeSessions: Record<string, SessionInfo>
   rootSessionId: string | undefined
 
@@ -40,7 +53,7 @@ export type WorkflowViewState = {
   startBuild(teamConfig: TeamConfig | undefined): Promise<TaskResult[]>
   dispatchStage(
     stage: WorkflowStage,
-    modelInfo: { providerID: string; modelID: string },
+    modelInfo?: { providerID: string; modelID: string },
     options?: {
       phaseContext?: string
       teamConfig?: TeamConfig
@@ -49,7 +62,7 @@ export type WorkflowViewState = {
   ): Promise<void>
   updateSessionOutput(sessionId: string, line: string): void
   setSessionStatus(sessionId: string, status: SessionInfo["status"]): void
-  pause(): void
+  pause(): boolean
   setExecuting(value: boolean): void
 }
 
@@ -63,10 +76,14 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     plans: PlanTask[]
     challenge: PlanChallenge | undefined
     review: ReviewVerdict | undefined
+    ship: ShipReport | undefined
+    retro: RetroReport | undefined
+    summaries: Record<string, string>
     selectedTask: string | undefined
     activeTab: string
     tabs: TabInfo[]
     executing: boolean
+    pauseRequested: boolean
     activeSessions: Record<string, SessionInfo>
     rootSessionId: string | undefined
     healthAlerts: HealthAlert[]
@@ -77,6 +94,9 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     plans: [],
     challenge: undefined,
     review: undefined,
+    ship: undefined,
+    retro: undefined,
+    summaries: {},
     selectedTask: undefined,
     activeTab: "plan",
     tabs: [
@@ -84,6 +104,7 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
       { id: "activity", label: "Activity", kind: "activity" as const, closeable: false },
     ],
     executing: false,
+    pauseRequested: false,
     activeSessions: {},
     rootSessionId: undefined,
     healthAlerts: [],
@@ -123,26 +144,50 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
       setStore("state", state)
 
       if (state.currentPhase) {
-        try {
-          const plans = await manager.readAllPlans(state.currentPhase)
-          setStore("plans", plans)
-        } catch {
-          setStore("plans", [])
+        const plans = await manager.readAllPlans(state.currentPhase).catch(() => [])
+        setStore("plans", plans)
+        setStore("selectedTask", (current) =>
+          current && plans.find((plan) => plan.id === current)
+            ? current
+            : plans[0]?.id,
+        )
+
+        const challenge = await manager.readChallenge(state.currentPhase).catch(() => undefined)
+        setStore("challenge", challenge)
+        if (challenge && !store.tabs.find((tab) => tab.id === "challenge")) {
+          setStore("tabs", (tabs) => [
+            ...tabs,
+            { id: "challenge", label: "Challenge", kind: "challenge" as const, closeable: false },
+          ])
         }
 
-        try {
-          const review = await manager.readReview(state.currentPhase)
-          setStore("review", review)
-          // Add review tab if not present
-          if (!store.tabs.find((t) => t.id === "review")) {
-            setStore("tabs", (tabs) => [
-              ...tabs,
-              { id: "review", label: "Review", kind: "review" as const, closeable: false },
-            ])
-          }
-        } catch {
-          // No review yet
+        const review = await manager.readReview(state.currentPhase).catch(() => undefined)
+        setStore("review", review)
+        if (review && !store.tabs.find((tab) => tab.id === "review")) {
+          setStore("tabs", (tabs) => [
+            ...tabs,
+            { id: "review", label: "Review", kind: "review" as const, closeable: false },
+          ])
         }
+
+        setStore("ship", await manager.readShip(state.currentPhase).catch(() => undefined))
+        setStore("retro", await manager.readRetro(state.currentPhase).catch(() => undefined))
+
+        const summaries = await Promise.all(
+          plans.map(async (plan) => {
+            const summary = await manager.readSummary(state.currentPhase!, plan.id).catch(() => "")
+            return [plan.id, summary] as const
+          }),
+        )
+        setStore("summaries", Object.fromEntries(summaries.filter((entry) => entry[1])))
+      } else {
+        setStore("plans", [])
+        setStore("challenge", undefined)
+        setStore("review", undefined)
+        setStore("ship", undefined)
+        setStore("retro", undefined)
+        setStore("summaries", {})
+        setStore("selectedTask", undefined)
       }
 
       // Poll health during active execution
@@ -188,6 +233,15 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     get review() {
       return store.review
     },
+    get ship() {
+      return store.ship
+    },
+    get retro() {
+      return store.retro
+    },
+    get summaries() {
+      return store.summaries
+    },
     get selectedTask() {
       return store.selectedTask
     },
@@ -199,6 +253,9 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     },
     get executing() {
       return store.executing
+    },
+    get pauseRequested() {
+      return store.pauseRequested
     },
     get activeSessions() {
       return store.activeSessions
@@ -274,8 +331,9 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
 
     addAgentTab(info: TabInfo) {
       setStore("tabs", (tabs) => {
-        if (tabs.find((t) => t.id === info.id)) return tabs
-        return [...tabs, info]
+        const idx = tabs.findIndex((tab) => tab.id === info.id)
+        if (idx < 0) return [...tabs, info]
+        return tabs.map((tab, pos) => (pos === idx ? info : tab))
       })
       setStore("activeTab", info.id)
     },
@@ -303,21 +361,62 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     },
 
     pause() {
-      setStore("executing", false)
+      const paused = getOrchestrator(props.directory).pauseBuild()
+      if (paused) {
+        setStore("pauseRequested", true)
+      }
+      return paused
     },
 
     setExecuting(value: boolean) {
       setStore("executing", value)
+      if (!value) {
+        setStore("pauseRequested", false)
+      }
     },
 
     async startBuild(teamConfig: TeamConfig | undefined) {
       setStore("executing", true)
+      setStore("pauseRequested", false)
+      setStore(
+        produce((s) => {
+          if (!s.state) return
+          const prior = new Map(s.state.activeTasks.map((task) => [task.id, task.status]))
+          s.state.totalWaves = new Set(store.plans.map((plan) => plan.wave)).size
+          s.state.activeTasks = store.plans.map((plan) => ({
+            id: plan.id,
+            role: plan.role,
+            status: prior.get(plan.id) === "completed" ? "completed" : "pending",
+          }))
+        }),
+      )
       const orchestrator = getOrchestrator(props.directory)
 
       try {
         const results = await orchestrator.executeBuild(
           {
+            onWaveStart: (wave, total) => {
+              setStore(
+                produce((s) => {
+                  if (!s.state) return
+                  s.state.activeWave = wave
+                  s.state.totalWaves = total
+                }),
+              )
+            },
+            onPause: () => {
+              setStore("pauseRequested", false)
+            },
             onTaskStart: (taskId, sessionId) => {
+              setStore(
+                produce((s) => {
+                  if (!s.state) return
+                  const task = s.state.activeTasks.find((entry) => entry.id === taskId)
+                  if (task) {
+                    task.status = "in_progress"
+                  }
+                }),
+              )
               setStore(
                 produce((s) => {
                   s.activeSessions[sessionId] = {
@@ -341,6 +440,15 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
               bridge.watch(sessionId, taskId)
             },
             onTaskComplete: (taskId, result) => {
+              setStore(
+                produce((s) => {
+                  if (!s.state) return
+                  const task = s.state.activeTasks.find((entry) => entry.id === taskId)
+                  if (task) {
+                    task.status = result.status
+                  }
+                }),
+              )
               const entry = Object.values(store.activeSessions).find(
                 (s) => s.taskId === taskId,
               )
@@ -349,7 +457,11 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
                   produce((s) => {
                     const session = s.activeSessions[entry.sessionId]
                     if (session) {
-                      session.status = result.status === "completed" ? "completed" : "failed"
+                      session.status = result.status === "completed"
+                        ? "completed"
+                        : result.status === "escalated"
+                          ? "escalated"
+                          : "failed"
                     }
                   }),
                 )
@@ -379,7 +491,7 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
 
     async dispatchStage(
       stage: WorkflowStage,
-      modelInfo: { providerID: string; modelID: string },
+      modelInfo?: { providerID: string; modelID: string },
       options?: {
         phaseContext?: string
         teamConfig?: TeamConfig
@@ -388,32 +500,60 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     ) {
       setStore("executing", true)
       const orchestrator = getOrchestrator(props.directory)
+      const info = () => {
+        if (!modelInfo) {
+          throw new Error(`The ${stage} stage requires a selected model.`)
+        }
+        return modelInfo
+      }
 
       try {
         switch (stage) {
           case "plan": {
+            const report = await orchestrator.runPreflight()
+            const { preflightPassed: passed, reportSummary: summary } = await import("../workflow/preflight")
+            if (!passed(report)) {
+              const msg = summary(report)
+              throw new Error(`Preflight failed: ${msg}. Fix the errors above before planning.`)
+            }
+            if (store.state?.currentStage !== "plan") {
+              await Workflow.advanceStage(manager, "plan")
+            }
             const roles = options?.teamConfig
               ? Object.keys(options.teamConfig.roles)
               : ["senior", "worker"]
             await orchestrator.executePlan({
-              ...modelInfo,
+              ...info(),
               phaseContext: options?.phaseContext ?? "",
               availableRoles: roles,
             })
             break
           }
           case "challenge": {
-            await orchestrator.executeChallenge({
-              ...modelInfo,
+            const result = await orchestrator.executeChallenge({
+              ...info(),
               phaseContext: options?.phaseContext ?? "",
             })
+            if (store.state?.currentStage !== "challenge") {
+              await Workflow.advanceStage(manager, "challenge")
+            }
+            if (result) {
+              setStore("activeTab", "challenge")
+            }
             break
           }
           case "contract": {
+            if (store.state?.currentStage !== "contract") {
+              await Workflow.advanceStage(manager, "contract")
+            }
             await orchestrator.executeContracts()
             break
           }
           case "build": {
+            if (store.state?.currentStage !== "build") {
+              await Workflow.advanceStage(manager, "build")
+              await refresh()
+            }
             await value.startBuild(options?.teamConfig)
             break
           }
@@ -423,10 +563,32 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
               throw new Error("Review requires a diff. Run `git diff` against the base branch and pass the result.")
             }
             await orchestrator.executeReview({
-              ...modelInfo,
+              ...info(),
               diff,
               cycle: store.review ? store.review.cycle + 1 : 1,
             })
+            if (store.state?.currentStage !== "review") {
+              await Workflow.advanceStage(manager, "review")
+            }
+            setStore("activeTab", "review")
+            break
+          }
+          case "ship": {
+            const ship = await orchestrator.executeShip()
+            if (ship.status !== "ready") {
+              await refresh()
+              throw new Error(ship.summary)
+            }
+            if (store.state?.currentStage !== "ship") {
+              await Workflow.advanceStage(manager, "ship")
+            }
+            break
+          }
+          case "retro": {
+            await orchestrator.executeRetro()
+            if (store.state?.currentStage !== "retro") {
+              await Workflow.advanceStage(manager, "retro")
+            }
             break
           }
         }

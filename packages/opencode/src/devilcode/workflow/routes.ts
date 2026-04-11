@@ -12,7 +12,14 @@ import { LessonStore } from "./learning"
 import { WorkflowState, PlanTask, ReviewVerdict } from "./types"
 import { FileLock } from "./locks"
 import { Lesson } from "./learning"
+import { Log } from "../../util/log"
 import z from "zod"
+
+const log = Log.create({ service: "workflow.routes" })
+
+function isENOENT(e: unknown): e is { code: "ENOENT" } {
+  return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
+}
 
 // Response schema for the /status endpoint when workflow is not initialized.
 const UninitializedStatus = z.object({ initialized: z.literal(false) })
@@ -45,8 +52,12 @@ export const WorkflowRoutes = lazy(() =>
         try {
           const state = await manager.readState()
           return c.json(state)
-        } catch {
-          return c.json({ initialized: false as const })
+        } catch (e) {
+          if (isENOENT(e)) {
+            return c.json({ initialized: false as const })
+          }
+          log.error("workflow status read failed", { error: e })
+          return c.json({ error: "Internal error" }, 500)
         }
       },
     )

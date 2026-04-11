@@ -17,7 +17,9 @@ Use \`ItemLabel\` and \`ItemDescription\` for rich items.
 - Opens on context menu gesture over the trigger element.
 
 ### Accessibility
-- TODO: confirm keyboard and focus behavior from Kobalte.
+- Full keyboard navigation (Arrow keys, Enter/Space to select, Escape to close).
+- ARIA roles: menu, menuitem, menucheckbox, menuradioitem, aria-haspopup for submenus.
+- Focus management via roving tabindex.
 
 ### Theming/tokens
 - Uses \`data-component="context-menu"\` and slot attributes for styling.

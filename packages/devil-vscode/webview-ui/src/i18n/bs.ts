@@ -997,7 +997,8 @@ export const dict = {
   "settings.aboutDevilCode.importSettings": "Uvezi",
   "settings.aboutDevilCode.importSettings.invalidJson": "Nevažeći JSON fajl. Odaberite važeći fajl s postavkama.",
   "settings.aboutDevilCode.importSettings.invalidConfig": "Fajl ne sadrži važeće Devil postavke.",
-  "settings.aboutDevilCode.importSettings.tooLarge": "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
+  "settings.aboutDevilCode.importSettings.tooLarge":
+    "Fajl je prevelik. Fajlovi s postavkama moraju biti manji od 1 MB.",
   "settings.aboutDevilCode.importSettings.newerVersion":
     "Ovaj fajl je izvezen iz novije verzije Devil-a. Neke postavke mogu biti zanemarene.",
   "settings.aboutDevilCode.importSettings.success":

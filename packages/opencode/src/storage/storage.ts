@@ -158,7 +158,9 @@ export namespace Storage {
     const dir = await state().then((x) => x.dir)
     const target = path.join(dir, ...key) + ".json"
     return withErrorHandling(async () => {
-      await fs.unlink(target).catch(() => {})
+      await fs.unlink(target).catch((err) => {
+        console.error("failed to delete storage file", { err, target })
+      })
     })
   }
 

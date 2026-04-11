@@ -330,8 +330,8 @@ export const ExperimentalRoutes = lazy(() =>
         "query",
         z.object({
           // kilocode_change start
-          projectID: z.string().optional().meta({ description: "Filter sessions by project ID" }),
-          directory: z.string().optional().meta({ description: "Filter sessions by project directory" }),
+          projectID: z.string().uuid().optional().meta({ description: "Filter sessions by project ID" }),
+          directory: z.string().max(500).optional().meta({ description: "Filter sessions by project directory" }),
           worktrees: z.coerce
             .boolean()
             .optional()
@@ -340,14 +340,18 @@ export const ExperimentalRoutes = lazy(() =>
           roots: z.coerce.boolean().optional().meta({ description: "Only return root sessions (no parentID)" }),
           start: z.coerce
             .number()
+            .int()
+            .min(0)
             .optional()
             .meta({ description: "Filter sessions updated on or after this timestamp (milliseconds since epoch)" }),
           cursor: z.coerce
             .number()
+            .int()
+            .min(0)
             .optional()
             .meta({ description: "Return sessions updated before this timestamp (milliseconds since epoch)" }),
-          search: z.string().optional().meta({ description: "Filter sessions by title (case-insensitive)" }),
-          limit: z.coerce.number().optional().meta({ description: "Maximum number of sessions to return" }),
+          search: z.string().max(200).optional().meta({ description: "Filter sessions by title (case-insensitive)" }),
+          limit: z.coerce.number().int().min(1).max(1000).optional().meta({ description: "Maximum number of sessions to return" }),
           archived: z.coerce.boolean().optional().meta({ description: "Include archived sessions (default false)" }),
         }),
       ),

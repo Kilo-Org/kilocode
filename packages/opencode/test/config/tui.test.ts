@@ -1,13 +1,20 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, beforeAll, expect, test } from "bun:test"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { TuiConfig } from "../../src/config/tui"
+import { Config } from "../../src/config/config"
 import { Global } from "../../src/global"
 import { Filesystem } from "../../src/util/filesystem"
 
 const managedConfigDir = process.env.DEVIL_TEST_MANAGED_CONFIG_DIR!
+
+// Clear stale state from other test files
+beforeAll(async () => {
+  await Instance.disposeAll().catch(() => {})
+  Config.global?.reset?.()
+})
 
 afterEach(async () => {
   delete process.env.DEVIL_CONFIG
@@ -15,6 +22,8 @@ afterEach(async () => {
   await fs.rm(path.join(Global.Path.config, "tui.json"), { force: true }).catch(() => {})
   await fs.rm(path.join(Global.Path.config, "tui.jsonc"), { force: true }).catch(() => {})
   await fs.rm(managedConfigDir, { force: true, recursive: true }).catch(() => {})
+  Config.global?.reset?.()
+  await Instance.disposeAll().catch(() => {})
 })
 
 test("loads tui config with the same precedence order as server config paths", async () => {

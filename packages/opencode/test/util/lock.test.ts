@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { Lock } from "../../src/util/lock"
 
 function tick() {
-  return new Promise<void>((r) => queueMicrotask(r))
+  return new Promise<void>((r) => setTimeout(r, 5))
 }
 
-async function flush(n = 5) {
+async function flush(n = 10) {
   for (let i = 0; i < n; i++) await tick()
 }
 

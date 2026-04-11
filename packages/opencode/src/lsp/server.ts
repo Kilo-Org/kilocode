@@ -1033,8 +1033,12 @@ export namespace LSPServer {
         await $`chmod +x ${bin}`.quiet().nothrow()
       }
 
-      await fs.unlink(path.join(Global.Path.bin, "clangd")).catch(() => {})
-      await fs.symlink(bin, path.join(Global.Path.bin, "clangd")).catch(() => {})
+      await fs.unlink(path.join(Global.Path.bin, "clangd")).catch((err) => {
+        log.error("failed to unlink old clangd binary", { err })
+      })
+      await fs.symlink(bin, path.join(Global.Path.bin, "clangd")).catch((err) => {
+        log.error("failed to symlink clangd binary", { err, bin })
+      })
 
       log.info(`installed clangd`, { bin })
 

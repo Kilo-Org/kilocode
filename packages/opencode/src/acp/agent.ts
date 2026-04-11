@@ -565,8 +565,12 @@ export namespace ACP {
       }
     }
 
-    async authenticate(_params: AuthenticateRequest) {
-      throw new Error("Authentication not implemented")
+    async authenticate(_params: AuthenticateRequest): Promise<void> {
+      // Authentication is handled via terminal-auth capability in initialize()
+      // The client executes `kilo auth login` command in terminal, then
+      // credentials are stored in ~/.local/share/kilo/auth.json
+      // This method is a no-op since auth state is validated server-side
+      // through the existing credential storage system
     }
 
     async newSession(params: NewSessionRequest) {

@@ -6,14 +6,16 @@ import { Log } from "../util/log"
 import { FileIgnore } from "./ignore"
 import { Config } from "../config/config"
 import path from "path"
-// @ts-ignore
-import { createWrapper } from "@parcel/watcher/wrapper"
 import { lazy } from "@/util/lazy"
 import { withTimeout } from "@/util/timeout"
 import type ParcelWatcher from "@parcel/watcher"
 import { $ } from "bun"
 import { Flag } from "@/flag/flag"
 import { readdir } from "fs/promises"
+
+// @parcel/watcher types not available - using dynamic import
+// @ts-ignore - no types available for wrapper module
+const { createWrapper } = await import("@parcel/watcher/wrapper")
 
 const SUBSCRIBE_TIMEOUT_MS = 10_000
 
@@ -104,7 +106,9 @@ export namespace FileWatcher {
           })
           const sub = await withTimeout(pending, SUBSCRIBE_TIMEOUT_MS).catch((err) => {
             log.error("failed to subscribe to vcsDir", { error: err })
-            pending.then((s) => s.unsubscribe()).catch(() => {})
+            pending.then((s) => s.unsubscribe()).catch((unsubErr) => {
+              log.error("failed to unsubscribe from vcsDir watcher", { err: unsubErr })
+            })
             return undefined
           })
           if (sub) subs.push(sub)

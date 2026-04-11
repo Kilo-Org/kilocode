@@ -407,19 +407,25 @@ export class DevilConnectionService {
     }
   }
 
-  private async checkHealth(baseUrl: string, password: string): Promise<boolean> {
-    try {
+  private async checkHealth(baseUrl: string, password: string, retries = 2): Promise<boolean> {
+    const username = process.env.DEVIL_SERVER_USERNAME || "kilo"
+    for (let i = 0; i <= retries; i++) {
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), 3000)
-      const res = await fetch(`${baseUrl}/global/health`, {
-        headers: { Authorization: `Basic ${Buffer.from(`kilo:${password}`).toString("base64")}` },
-        signal: controller.signal,
-      })
-      clearTimeout(timer)
-      return res.ok
-    } catch {
-      return false
+      try {
+        const res = await fetch(`${baseUrl}/global/health`, {
+          headers: { Authorization: `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}` },
+          signal: controller.signal,
+        })
+        return res.ok
+      } catch {
+        if (i === retries) return false
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, i)))
+      } finally {
+        clearTimeout(timer)
+      }
     }
+    return false
   }
 
   private async doConnect(workspaceDir: string): Promise<void> {
@@ -438,7 +444,8 @@ export class DevilConnectionService {
     this.config = config
 
     // Create SDK client with Basic Auth header
-    const authHeader = `Basic ${Buffer.from(`kilo:${server.password}`).toString("base64")}`
+    const username = process.env.DEVIL_SERVER_USERNAME || "kilo"
+    const authHeader = `Basic ${Buffer.from(`${username}:${server.password}`).toString("base64")}`
     this.client = createDevilClient({
       baseUrl: config.baseUrl,
       headers: {
