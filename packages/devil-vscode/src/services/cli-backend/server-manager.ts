@@ -174,6 +174,28 @@ export class ServerManager {
     } catch {
       // Process already gone — ignore
     }
+
+    // Ensure cleanup with timeout - force kill if process doesn't exit
+    if (signal === "SIGTERM") {
+      const timeout = setTimeout(() => {
+        if (proc.exitCode === null) {
+          console.warn("[Devil New] ServerManager: ⚠️ force killing zombie process after SIGTERM timeout", {
+            pid: proc.pid,
+          })
+          try {
+            if (process.platform !== "win32" && proc.pid !== undefined) {
+              process.kill(-proc.pid, "SIGKILL")
+            } else {
+              proc.kill("SIGKILL")
+            }
+          } catch {
+            // Process already gone — ignore
+          }
+        }
+      }, 5000)
+      // unref so this timer doesn't prevent the extension host from exiting
+      timeout.unref?.()
+    }
   }
 
   dispose(): void {

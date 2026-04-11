@@ -121,11 +121,8 @@ export namespace Plugin {
     if (!name) return output
     for (const hook of await state().then((x) => x.hooks)) {
       const fn = hook[name]
-      if (!fn) continue
-      // @ts-expect-error if you feel adventurous, please fix the typing, make sure to bump the try-counter if you
-      // give up.
-      // try-counter: 2
-      await fn(input, output)
+      if (typeof fn !== "function") continue
+      await (fn as (input: Input, output: Output) => Promise<void>)(input, output) // devilcode_change - satisfy generic constraint
     }
     return output
   }
@@ -138,8 +135,8 @@ export namespace Plugin {
     const hooks = await state().then((x) => x.hooks)
     const config = await Config.get()
     for (const hook of hooks) {
-      // @ts-expect-error this is because we haven't moved plugin to sdk v2
-      await hook.config?.(config)
+      // Plugin SDK v2 migration pending - using type assertion for legacy hook signature
+      await (hook as { config?: (cfg: typeof config) => Promise<void> }).config?.(config)
     }
     Bus.subscribeAll(async (input) => {
       const hooks = await state().then((x) => x.hooks)

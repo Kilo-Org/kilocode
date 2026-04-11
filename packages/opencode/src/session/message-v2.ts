@@ -15,6 +15,9 @@ import { ProviderError } from "@/provider/error"
 import { iife } from "@/util/iife"
 import { type SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
+import { Log } from "@/util/log"
+
+const log = Log.create({ service: "message-v2" })
 
 export namespace MessageV2 {
   export function isMedia(mime: string) {
@@ -786,12 +789,11 @@ export namespace MessageV2 {
 
     const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
+    // ToolSet type requires strict structure, but convertToModelMessages only needs tools[name]?.toModelOutput
+    // Using type assertion to satisfy the interface while passing minimal required data
     return convertToModelMessages(
       result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
-      {
-        //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
-        tools,
-      },
+      { tools: tools as any }, // devilcode_change - Parameters<>[1] is optional, so ["tools"] fails; cast to any
     )
   }
 
@@ -981,7 +983,9 @@ export namespace MessageV2 {
               },
             ).toObject()
           }
-        } catch {}
+        } catch (parseErr) {
+          log.error("failed to parse API error response", { parseErr, originalError: e })
+        }
         return new NamedError.Unknown({ message: JSON.stringify(e) }, { cause: e }).toObject()
     }
   }

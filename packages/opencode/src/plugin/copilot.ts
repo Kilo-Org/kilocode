@@ -2,8 +2,10 @@ import type { Hooks, PluginInput } from "@devilcode/plugin"
 import { Installation } from "@/installation"
 import { iife } from "@/util/iife"
 import { setTimeout as sleep } from "node:timers/promises"
+import { Log } from "@/util/log"
 
 const CLIENT_ID = "Ov23li8tweQw6odWQebz"
+const log = Log.create({ service: "copilot" })
 // Add a small safety buffer when polling to avoid hitting the server
 // slightly too early due to clock skew / timer drift.
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000 // 3 seconds
@@ -115,8 +117,11 @@ export async function CopilotAuthPlugin(input: PluginInput): Promise<Hooks> {
                     isAgent: !(last?.role === "user" && hasNonToolCalls),
                   }
                 }
-              } catch {}
-              return { isVision: false, isAgent: false }
+              } catch (err) {
+                log.error("failed to parse copilot message content", { err })
+                return { isVision: false, isAgent: false }
+              }
+              return { isVision: false, isAgent: false } // devilcode_change - default when no body format matched
             })
 
             const headers: Record<string, string> = {

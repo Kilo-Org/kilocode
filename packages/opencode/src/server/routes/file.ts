@@ -6,6 +6,7 @@ import { Ripgrep } from "../../file/ripgrep"
 import { LSP } from "../../lsp"
 import { Instance } from "../../project/instance"
 import { lazy } from "../../util/lazy"
+import { errors } from "../error" // devilcode_change - missing import
 
 export const FileRoutes = lazy(() =>
   new Hono()
@@ -147,7 +148,7 @@ export const FileRoutes = lazy(() =>
       "/file/content",
       describeRoute({
         summary: "Read file",
-        description: "Read the content of a specified file.",
+        description: "Read the content of a specified file. Returns JSON for text files, appropriate Content-Type for binary files.",
         operationId: "file.read",
         responses: {
           200: {
@@ -156,8 +157,12 @@ export const FileRoutes = lazy(() =>
               "application/json": {
                 schema: resolver(File.Content),
               },
+              "application/octet-stream": {
+                schema: { type: "string", format: "binary" },
+              },
             },
           },
+          ...errors(400, 404),
         },
       }),
       validator(
@@ -169,6 +174,13 @@ export const FileRoutes = lazy(() =>
       async (c) => {
         const path = c.req.valid("query").path
         const content = await File.read(path)
+
+        // Check if content indicates a binary file or file was read as buffer
+        if (content.content === "binary") {
+          return c.body(Buffer.from([]), 200, { "Content-Type": "application/octet-stream" })
+        }
+
+        // Return JSON response for text content
         return c.json(content)
       },
     )
