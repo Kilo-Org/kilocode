@@ -15,8 +15,8 @@
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
-    "test": "echo 'do not run tests from root' && exit 1"
+    "test": "echo 'do not run tests from root' && exit 1",
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
   },
   "workspaces": {
     "packages": [

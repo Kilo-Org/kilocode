@@ -126,6 +126,7 @@ export function tui(input: {
   url: string
   args: Args
   config: TuiConfig.Info
+  onSnapshot?: () => Promise<string[]>
   directory?: string
   fetch?: typeof fetch
   headers?: RequestInit["headers"]
@@ -176,7 +177,7 @@ export function tui(input: {
                                         <FrecencyProvider>
                                           <PromptHistoryProvider>
                                             <PromptRefProvider>
-                                              <App />
+                                              <App onSnapshot={input.onSnapshot} />
                                             </PromptRefProvider>
                                           </PromptHistoryProvider>
                                         </FrecencyProvider>
@@ -217,7 +218,7 @@ export function tui(input: {
   })
 }
 
-function App() {
+function App(props: { onSnapshot?: () => Promise<string[]> }) {
   const route = useRoute()
   const dimensions = useTerminalDimensions()
   const renderer = useRenderer()
@@ -665,11 +666,11 @@ function App() {
       title: "Write heap snapshot",
       category: "System",
       value: "app.heap_snapshot",
-      onSelect: (dialog) => {
-        const path = writeHeapSnapshot()
+      onSelect: async (dialog) => {
+        const files = await props.onSnapshot?.()
         toast.show({
           variant: "info",
-          message: `Heap snapshot written to ${path}`,
+          message: `Heap snapshot written to ${files?.join(", ")}`,
           duration: 5000,
         })
         dialog.clear()
