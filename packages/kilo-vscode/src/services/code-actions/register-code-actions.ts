@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import type { KiloProvider } from "../../KiloProvider"
 import type { AgentManagerProvider } from "../../agent-manager/AgentManagerProvider"
-import { getEditorContext } from "./editor-utils"
+import { getEditorContext, initSelectionTracker } from "./editor-utils"
 import { createPrompt } from "./support-prompt"
 
 export function registerCodeActions(
@@ -9,6 +9,7 @@ export function registerCodeActions(
   provider: KiloProvider,
   agentManager?: AgentManagerProvider,
 ): void {
+  initSelectionTracker(context)
   const target = () => (agentManager?.isActive() ? agentManager : provider)
 
   context.subscriptions.push(
@@ -52,7 +53,7 @@ export function registerCodeActions(
       provider.postMessage({ type: "triggerTask", text: prompt })
     }),
 
-    vscode.commands.registerCommand("kilo-code.new.addToContext", () => {
+    vscode.commands.registerCommand("kilo-code.new.addToContext", async () => {
       const ctx = getEditorContext()
       if (!ctx) return
       const prompt = createPrompt("ADD_TO_CONTEXT", {
@@ -61,7 +62,11 @@ export function registerCodeActions(
         endLine: String(ctx.endLine),
         selectedText: ctx.selectedText,
       })
-      target().postMessage({ type: "appendChatBoxMessage", text: prompt })
+      if (agentManager?.isActive()) {
+        agentManager.postMessage({ type: "appendChatBoxMessage", text: prompt })
+      } else {
+        await provider.appendChatBoxMessage(prompt)
+      }
     }),
 
     vscode.commands.registerCommand("kilo-code.new.focusChatInput", () => {

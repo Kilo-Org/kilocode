@@ -151,6 +151,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private configWarningsShown = false
   /** Cached notificationsLoaded payload */
   private cachedNotificationsMessage: unknown = null
+  private pendingChatBoxMessages: string[] = []
+  private webviewViewRef: vscode.WebviewView | undefined
   private pendingReviewComments: { comments: unknown[]; autoSend: boolean }[] = []
   private readyResolvers: (() => void)[] = []
   private promptRecoveryQueued = false
@@ -261,10 +263,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Convenience getter that returns the shared SDK KiloClient or null if not yet connected.
-   * Preserves the existing null-check pattern used throughout handler methods.
-   */
+  /** Returns the shared SDK KiloClient, or null if not yet connected. */
   private get client(): KiloClient | null {
     try {
       return this.connectionService.getClient()
@@ -273,11 +272,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  // Edit tool parts carry full file contents in metadata.filediff.before/after.
-  // A session with many edits can produce multi-MB payloads serialized through
-  // postMessage on every session switch. Stripping those strings down to just
-  // file path + addition/deletion counts eliminates the dominant cost.
-  // Logic extracted to kilo-provider/slim-metadata.ts
+  // Edit tool parts carry full file contents; sessions with many edits produce multi-MB
+  // postMessage payloads. Logic for stripping them is in kilo-provider/slim-metadata.ts.
 
   private slimPart<T>(part: T): T {
     if (!this.slimEditMetadata) return part
@@ -289,11 +285,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return slimParts(parts)
   }
 
-  /**
-   * Synchronize current extension-side state to the webview.
-   * This is primarily used after a webview refresh where early postMessage calls
-   * may have been dropped before the webview registered its message listeners.
-   */
+  /** Synchronize current extension-side state to the webview (e.g. after a webview refresh). */
   private async syncWebviewState(reason: string): Promise<void> {
     const serverInfo = this.connectionService.getServerInfo()
     console.log("[Kilo New] KiloProvider: 🔄 syncWebviewState()", {
@@ -377,6 +369,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // Store the webview references
     this.isWebviewReady = false
     this.webview = webviewView.webview
+    this.webviewViewRef = webviewView
 
     // Set up webview options
     webviewView.webview.options = {
@@ -394,6 +387,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.statsPoller?.setEnabled(webviewView.visible)
       this.focusSession(webviewView.visible ? this.currentSession?.id : undefined)
     })
+    webviewView.onDidDispose(() => { this.webview = null; this.isWebviewReady = false; this.webviewViewRef = undefined })
     this.initializeConnection()
   }
 
@@ -404,6 +398,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
     this.webview = panel.webview
+    this.webviewViewRef = undefined
 
     panel.webview.options = {
       enableScripts: true,
@@ -417,6 +412,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable = panel.onDidChangeViewState(() =>
       this.focusSession(panel.active ? this.currentSession?.id : undefined),
     )
+    panel.onDidDispose(() => { this.webview = null; this.isWebviewReady = false })
     this.initializeConnection()
   }
 
@@ -510,10 +506,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Attach to a webview that already has its own HTML set.
    * Sets up message handling and connection without overriding HTML content.
-   *
-   * @param options.onBeforeMessage - Optional interceptor called before the standard handler.
-   *   Return null to consume the message (stop propagation), or return the message
-   *   (possibly transformed) to continue with standard handling.
+   * @param options.onBeforeMessage - Optional interceptor; return null to consume the message.
    */
   public attachToWebview(
     webview: vscode.Webview,
@@ -550,6 +543,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
           await this.syncWebviewState("webviewReady")
+          this.flushPendingChatBoxMessages()
           this.flushPendingReviewComments()
           this.recoverPendingPrompts()
           this.readyResolvers.splice(0).forEach((r) => r())
@@ -1820,9 +1814,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Remove an MCP server from legacy config files (.kilo/mcp.json, .kilocode/mcp.json,
-   * and the VS Code global storage mcp_settings.json). These files are read by the
-   * CLI-side McpMigrator and merged into config at the lowest precedence level.
-   * Returns true if the entry was found and removed from at least one file.
+   * and VS Code global storage mcp_settings.json). Returns true if removed from any file.
    */
   private async removeLegacyMcp(name: string): Promise<boolean> {
     const workspace = this.getProjectDirectory(this.currentSession?.id)
@@ -1922,12 +1914,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return result
   }
 
-  /**
-   * Remove a marketplace item from both project and global scopes.
-   * mp.remove returns success even when the entry doesn't exist (no-op),
-   * so we must attempt both scopes to cover dual-scope installations.
-   * Returns true if at least one scope removal succeeded.
-   */
+  /** Remove from both project and global scopes; returns true if at least one succeeded. */
   private async removeMarketplaceItemFromAllScopes(item: MarketplaceItem): Promise<boolean> {
     const workspace = this.getProjectDirectory(this.currentSession?.id)
     const mp = this.getMarketplace()
@@ -1944,16 +1931,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /**
    * Invalidate CLI caches and refresh the webview after a marketplace install/remove.
-   *
-   * For global scope: uses global.config.update with the freshly-written config file
-   * contents rather than global.dispose. This goes through Config.updateGlobal() which
-   * calls Config.global.reset() to invalidate the lazy-cached global config, ensuring
-   * the newly installed/removed MCP entry is visible on the next config.get call.
-   * (global.dispose alone is not sufficient on older CLI versions that lack the
-   * Config.global.reset() call in the dispose handler.)
-   *
-   * For project scope: instance.dispose is sufficient because the per-instance
-   * Config.state is cleared and re-reads all files (including global) on next access.
+   * Global scope uses global.config.update (triggers Config.global.reset()) because
+   * global.dispose alone is insufficient on older CLI versions.
+   * Project scope uses instance.dispose which clears and re-reads all config files.
    */
   private async invalidateAfterMarketplaceChange(scope: "project" | "global"): Promise<void> {
     if (!this.client) return
@@ -2994,6 +2974,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void this.webview.postMessage(message).then(undefined, (error) => {
       console.error("[Kilo New] KiloProvider: ❌ postMessage failed", error)
     })
+  }
+
+  public async appendChatBoxMessage(text: string): Promise<void> {
+    this.pendingChatBoxMessages.push(text)
+    if (!this.webview || !this.isWebviewReady || (this.webviewViewRef && !this.webviewViewRef.visible)) {
+      await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
+    }
+
+    this.flushPendingChatBoxMessages()
+  }
+
+  private flushPendingChatBoxMessages(): void {
+    if (!this.webview || !this.isWebviewReady || this.pendingChatBoxMessages.length === 0) return
+    const pending = this.pendingChatBoxMessages
+    this.pendingChatBoxMessages = []
+    for (const text of pending) {
+      this.postMessage({ type: "appendChatBoxMessage", text })
+    }
   }
 
   public async appendReviewComments(comments: unknown[], autoSend = false): Promise<void> {
