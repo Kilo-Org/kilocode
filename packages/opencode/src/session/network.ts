@@ -231,9 +231,15 @@ export namespace SessionNetwork {
         return
       }
       delete s.pending[input.requestID]
-      void MCP.reconnectRemote().catch((err) => {
-        log.error("remote reconnect failed", { err })
-      })
+      // kilocode_change start — reconnect failed remote MCP servers after network recovery
+      void MCP.status()
+        .then((statuses) => {
+          for (const [name, s] of Object.entries(statuses)) {
+            if (s.status === "failed") MCP.connect(name).catch(() => {})
+          }
+        })
+        .catch(() => {})
+      // kilocode_change end
       Bus.publish(Event.Replied, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,

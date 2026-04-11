@@ -161,14 +161,17 @@ export namespace KiloSessions {
     })
 
     Bus.subscribe(Session.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.id, [
+      const sessionID = evt.properties.sessionID // kilocode_change
+      const session = await Session.get(sessionID).catch(() => null) // kilocode_change
+      if (!session) return
+      await ingest.sync(sessionID, [
         {
           type: "kilo_meta",
-          data: await meta(evt.properties.info.id),
+          data: await meta(sessionID),
         },
         {
           type: "session",
-          data: evt.properties.info,
+          data: session,
         },
       ])
     })
