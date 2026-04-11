@@ -9,12 +9,14 @@ import { Config } from "../config/config"
 import { Flag } from "../flag/flag"
 import { Installation } from "../installation"
 
-import { Database, NotFoundError, eq, and, or, gte, isNull, desc, like, inArray, lt } from "../storage/db"
+import { Database, NotFoundError, eq, and, gte, isNull, desc, like, inArray, lt } from "../storage/db"
+import { SyncEvent } from "../sync"
 import type { SQL } from "../storage/db"
-import { SessionTable, MessageTable, PartTable } from "./session.sql"
+import { SessionTable } from "./session.sql"
 import { ProjectTable } from "../project/project.sql"
 import { Storage } from "@/storage/storage"
 import { Log } from "../util/log"
+import { updateSchema } from "../util/update-schema"
 import { MessageV2 } from "./message-v2"
 import { Instance } from "../project/instance"
 import { SessionPrompt } from "./prompt"
@@ -218,24 +220,40 @@ export namespace Session {
   export type GlobalInfo = z.output<typeof GlobalInfo>
 
   export const Event = {
-    Created: BusEvent.define(
-      "session.created",
-      z.object({
+    Created: SyncEvent.define({
+      type: "session.created",
+      version: 1,
+      aggregate: "sessionID",
+      schema: z.object({
+        sessionID: SessionID.zod,
         info: Info,
       }),
-    ),
-    Updated: BusEvent.define(
-      "session.updated",
-      z.object({
+    }),
+    Updated: SyncEvent.define({
+      type: "session.updated",
+      version: 1,
+      aggregate: "sessionID",
+      schema: z.object({
+        sessionID: SessionID.zod,
+        info: updateSchema(Info).extend({
+          share: updateSchema(Info.shape.share.unwrap()).optional(),
+          time: updateSchema(Info.shape.time).optional(),
+        }),
+      }),
+      busSchema: z.object({
+        sessionID: SessionID.zod,
         info: Info,
       }),
-    ),
-    Deleted: BusEvent.define(
-      "session.deleted",
-      z.object({
+    }),
+    Deleted: SyncEvent.define({
+      type: "session.deleted",
+      version: 1,
+      aggregate: "sessionID",
+      schema: z.object({
+        sessionID: SessionID.zod,
         info: Info,
       }),
-    ),
+    }),
     Diff: BusEvent.define(
       "session.diff",
       z.object({
@@ -349,18 +367,8 @@ export namespace Session {
   )
 
   export const touch = fn(SessionID.zod, async (sessionID) => {
-    const now = Date.now()
-    Database.use((db) => {
-      const row = db
-        .update(SessionTable)
-        .set({ time_updated: now })
-        .where(eq(SessionTable.id, sessionID))
-        .returning()
-        .get()
-      if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
-      const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
-    })
+    const time = Date.now()
+    SyncEvent.run(Event.Updated, { sessionID, info: { time: { updated: time } } })
   })
 
   export async function createNext(input: {
@@ -387,22 +395,24 @@ export namespace Session {
       },
     }
     log.info("created", result)
-    Database.use((db) => {
-      db.insert(SessionTable).values(toRow(result)).run()
-      Database.effect(() =>
-        Bus.publish(Event.Created, {
-          info: result,
-        }),
-      )
-    })
+
+    SyncEvent.run(Event.Created, { sessionID: result.id, info: result })
+
     const cfg = await Config.get()
     if (!result.parentID && (Flag.KILO_AUTO_SHARE || cfg.share === "auto"))
       share(result.id).catch(() => {
         // Silently ignore sharing errors during session creation
       })
-    Bus.publish(Event.Updated, {
-      info: result,
-    })
+
+    if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+      // This only exist for backwards compatibility. We should not be
+      // manually publishing this event; it is a sync event now
+      Bus.publish(Event.Updated, {
+        sessionID: result.id,
+        info: result,
+      })
+    }
+
     return result
   }
 
@@ -424,27 +434,20 @@ export namespace Session {
     if (cfg.share === "disabled") {
       throw new Error("Sharing is disabled in configuration")
     }
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions") // kilocode_change
     const share = await KiloSessions.share(id) // kilocode_change
-    Database.use((db) => {
-      const row = db.update(SessionTable).set({ share_url: share.url }).where(eq(SessionTable.id, id)).returning().get()
-      if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
-      const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
-    })
+
+    SyncEvent.run(Event.Updated, { sessionID: id, info: { share: { url: share.url } } })
+
     return share
   })
 
   export const unshare = fn(SessionID.zod, async (id) => {
     // Use ShareNext to remove the share (same as share function uses ShareNext to create)
-    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions") // kilocode_change
     await KiloSessions.unshare(id) // kilocode_change
-    Database.use((db) => {
-      const row = db.update(SessionTable).set({ share_url: null }).where(eq(SessionTable.id, id)).returning().get()
-      if (!row) throw new NotFoundError({ message: `Session not found: ${id}` })
-      const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
-    })
+
+    SyncEvent.run(Event.Updated, { sessionID: id, info: { share: { url: null } } })
   })
 
   export const setTitle = fn(
@@ -453,18 +456,7 @@ export namespace Session {
       title: z.string(),
     }),
     async (input) => {
-      return Database.use((db) => {
-        const row = db
-          .update(SessionTable)
-          .set({ title: input.title })
-          .where(eq(SessionTable.id, input.sessionID))
-          .returning()
-          .get()
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
-        return info
-      })
+      SyncEvent.run(Event.Updated, { sessionID: input.sessionID, info: { title: input.title } })
     },
   )
 
@@ -474,18 +466,7 @@ export namespace Session {
       time: z.number().optional(),
     }),
     async (input) => {
-      return Database.use((db) => {
-        const row = db
-          .update(SessionTable)
-          .set({ time_archived: input.time })
-          .where(eq(SessionTable.id, input.sessionID))
-          .returning()
-          .get()
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
-        return info
-      })
+      SyncEvent.run(Event.Updated, { sessionID: input.sessionID, info: { time: { archived: input.time } } })
     },
   )
 
@@ -495,17 +476,9 @@ export namespace Session {
       permission: Permission.Ruleset,
     }),
     async (input) => {
-      return Database.use((db) => {
-        const row = db
-          .update(SessionTable)
-          .set({ permission: input.permission, time_updated: Date.now() })
-          .where(eq(SessionTable.id, input.sessionID))
-          .returning()
-          .get()
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
-        return info
+      SyncEvent.run(Event.Updated, {
+        sessionID: input.sessionID,
+        info: { permission: input.permission, time: { updated: Date.now() } },
       })
     },
   )
@@ -517,43 +490,24 @@ export namespace Session {
       summary: Info.shape.summary,
     }),
     async (input) => {
-      return Database.use((db) => {
-        const row = db
-          .update(SessionTable)
-          .set({
-            revert: input.revert ?? null,
-            summary_additions: input.summary?.additions,
-            summary_deletions: input.summary?.deletions,
-            summary_files: input.summary?.files,
-            summary_diffs: input.summary?.diffs ?? null, // kilocode_change
-            time_updated: Date.now(),
-          })
-          .where(eq(SessionTable.id, input.sessionID))
-          .returning()
-          .get()
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
-        return info
+      SyncEvent.run(Event.Updated, {
+        sessionID: input.sessionID,
+        info: {
+          summary: input.summary,
+          time: { updated: Date.now() },
+          revert: input.revert,
+        },
       })
     },
   )
 
   export const clearRevert = fn(SessionID.zod, async (sessionID) => {
-    return Database.use((db) => {
-      const row = db
-        .update(SessionTable)
-        .set({
-          revert: null,
-          time_updated: Date.now(),
-        })
-        .where(eq(SessionTable.id, sessionID))
-        .returning()
-        .get()
-      if (!row) throw new NotFoundError({ message: `Session not found: ${sessionID}` })
-      const info = fromRow(row)
-      Database.effect(() => Bus.publish(Event.Updated, { info }))
-      return info
+    SyncEvent.run(Event.Updated, {
+      sessionID,
+      info: {
+        time: { updated: Date.now() },
+        revert: null,
+      },
     })
   })
 
@@ -563,22 +517,12 @@ export namespace Session {
       summary: Info.shape.summary,
     }),
     async (input) => {
-      return Database.use((db) => {
-        const row = db
-          .update(SessionTable)
-          .set({
-            summary_additions: input.summary?.additions,
-            summary_deletions: input.summary?.deletions,
-            summary_files: input.summary?.files,
-            time_updated: Date.now(),
-          })
-          .where(eq(SessionTable.id, input.sessionID))
-          .returning()
-          .get()
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        const info = fromRow(row)
-        Database.effect(() => Bus.publish(Event.Updated, { info }))
-        return info
+      SyncEvent.run(Event.Updated, {
+        sessionID: input.sessionID,
+        info: {
+          time: { updated: Date.now() },
+          summary: input.summary,
+        },
       })
     },
   )
@@ -769,52 +713,33 @@ export namespace Session {
   })
 
   export const remove = fn(SessionID.zod, async (sessionID) => {
-    const project = Instance.project
     try {
       const session = await get(sessionID)
       for (const child of await children(sessionID)) {
         await remove(child.id)
       }
-      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+      const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions") // kilocode_change
       await KiloSessions.remove(sessionID).catch(() => {}) // kilocode_change
       platformOverrides.delete(sessionID) // kilocode_change - clean up platform override
       // kilocode_change start - cancel running processor before deleting to avoid FK constraint errors
       SessionPrompt.cancel(sessionID)
       // kilocode_change end
-      // CASCADE delete handles messages and parts automatically
-      Database.use((db) => {
-        db.delete(SessionTable).where(eq(SessionTable.id, sessionID)).run()
-        Database.effect(() =>
-          Bus.publish(Event.Deleted, {
-            info: session,
-          }),
-        )
-      })
+
+      SyncEvent.run(Event.Deleted, { sessionID, info: session })
+
+      // Eagerly remove event sourcing data to free up space
+      SyncEvent.remove(sessionID)
     } catch (e) {
       log.error(e)
     }
   })
 
   export const updateMessage = fn(MessageV2.Info, async (msg) => {
-    const time_created = msg.time.created
-    const { id, sessionID, ...data } = msg
     // kilocode_change start - ignore FK errors when session was deleted while processor was still running
     try {
-      Database.use((db) => {
-        db.insert(MessageTable)
-          .values({
-            id,
-            session_id: sessionID,
-            time_created,
-            data,
-          })
-          .onConflictDoUpdate({ target: MessageTable.id, set: { data } })
-          .run()
-        Database.effect(() =>
-          Bus.publish(MessageV2.Event.Updated, {
-            info: msg,
-          }),
-        )
+      SyncEvent.run(MessageV2.Event.Updated, {
+        sessionID: msg.sessionID,
+        info: msg,
       })
     } catch (e: any) {
       if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {
@@ -833,17 +758,9 @@ export namespace Session {
       messageID: MessageID.zod,
     }),
     async (input) => {
-      // CASCADE delete handles parts automatically
-      Database.use((db) => {
-        db.delete(MessageTable)
-          .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
-          .run()
-        Database.effect(() =>
-          Bus.publish(MessageV2.Event.Removed, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-          }),
-        )
+      SyncEvent.run(MessageV2.Event.Removed, {
+        sessionID: input.sessionID,
+        messageID: input.messageID,
       })
       return input.messageID
     },
@@ -856,17 +773,10 @@ export namespace Session {
       partID: PartID.zod,
     }),
     async (input) => {
-      Database.use((db) => {
-        db.delete(PartTable)
-          .where(and(eq(PartTable.id, input.partID), eq(PartTable.session_id, input.sessionID)))
-          .run()
-        Database.effect(() =>
-          Bus.publish(MessageV2.Event.PartRemoved, {
-            sessionID: input.sessionID,
-            messageID: input.messageID,
-            partID: input.partID,
-          }),
-        )
+      SyncEvent.run(MessageV2.Event.PartRemoved, {
+        sessionID: input.sessionID,
+        messageID: input.messageID,
+        partID: input.partID,
       })
       return input.partID
     },
@@ -875,26 +785,12 @@ export namespace Session {
   const UpdatePartInput = MessageV2.Part
 
   export const updatePart = fn(UpdatePartInput, async (part) => {
-    const { id, messageID, sessionID, ...data } = part
-    const time = Date.now()
     // kilocode_change start - ignore FK errors when session was deleted while processor was still running
     try {
-      Database.use((db) => {
-        db.insert(PartTable)
-          .values({
-            id,
-            message_id: messageID,
-            session_id: sessionID,
-            time_created: time,
-            data,
-          })
-          .onConflictDoUpdate({ target: PartTable.id, set: { data } })
-          .run()
-        Database.effect(() =>
-          Bus.publish(MessageV2.Event.PartUpdated, {
-            part: structuredClone(part),
-          }),
-        )
+      SyncEvent.run(MessageV2.Event.PartUpdated, {
+        sessionID: part.sessionID,
+        part: structuredClone(part),
+        time: Date.now(),
       })
     } catch (e: any) {
       if (e?.code === "SQLITE_CONSTRAINT_FOREIGNKEY") {

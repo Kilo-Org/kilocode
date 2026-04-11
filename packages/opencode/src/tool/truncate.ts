@@ -1,7 +1,7 @@
 import { Cause, Duration, Effect, Layer, Schedule, ServiceMap } from "effect"
 import path from "path"
 import type { Agent } from "../agent/agent"
-import { makeRunPromise } from "@/effect/run-service"
+import { makeRuntime } from "@/effect/run-service"
 import { AppFileSystem } from "@/filesystem"
 import { evaluate } from "@/permission/evaluate"
 import { Identifier } from "../id/id"
@@ -135,7 +135,7 @@ export namespace Truncate {
 
   export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer)) as Layer.Layer<Service>
 
-  const runPromise = makeRunPromise(Service, defaultLayer)
+  const { runPromise } = makeRuntime(Service, defaultLayer)
 
   export async function output(text: string, options: Options = {}, agent?: Agent.Info): Promise<Result> {
     return runPromise((s) => s.output(text, options, agent))

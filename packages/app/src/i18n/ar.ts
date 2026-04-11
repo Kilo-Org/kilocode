@@ -137,7 +137,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "رمز التفويض غير صالح",
   "provider.connect.oauth.auto.visit.prefix": "قم بزيارة ",
   "provider.connect.oauth.auto.visit.link": "هذا الرابط",
-  "provider.connect.oauth.auto.visit.suffix": " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
+  "provider.connect.oauth.auto.visit.suffix":
+    " وأدخل الرمز أدناه لتوصيل حسابك واستخدام نماذج {{provider}} في Kilo.",
   "provider.connect.oauth.auto.confirmationCode": "رمز التأكيد",
   "provider.connect.toast.connected.title": "تم توصيل {{provider}}",
   "provider.connect.toast.connected.description": "نماذج {{provider}} متاحة الآن للاستخدام.",
@@ -721,8 +722,6 @@ export const dict = {
   "settings.permissions.tool.skill.description": "تحميل مهارة بالاسم",
   "settings.permissions.tool.lsp.title": "LSP",
   "settings.permissions.tool.lsp.description": "تشغيل استعلامات خادم اللغة",
-  "settings.permissions.tool.todoread.title": "قراءة المهام",
-  "settings.permissions.tool.todoread.description": "قراءة قائمة المهام",
   "settings.permissions.tool.todowrite.title": "كتابة المهام",
   "settings.permissions.tool.todowrite.description": "تحديث قائمة المهام",
   "settings.permissions.tool.webfetch.title": "جلب الويب",

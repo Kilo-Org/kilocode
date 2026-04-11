@@ -51,6 +51,7 @@ import type {
   GlobalDisposeResponses,
   GlobalEventResponses,
   GlobalHealthResponses,
+  GlobalSyncEventSubscribeResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
   InstanceDisposeResponses,
@@ -285,6 +286,20 @@ class HeyApiRegistry<T> {
   }
 }
 
+export class SyncEvent extends HeyApiClient {
+  /**
+   * Subscribe to global sync events
+   *
+   * Get global sync events
+   */
+  public subscribe<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
+    return (options?.client ?? this.client).sse.get<GlobalSyncEventSubscribeResponses, unknown, ThrowOnError>({
+      url: "/global/sync-event",
+      ...options,
+    })
+  }
+}
+
 export class Config extends HeyApiClient {
   /**
    * Get global configuration
@@ -382,6 +397,11 @@ export class Global extends HeyApiClient {
         ...params.headers,
       },
     })
+  }
+
+  private _syncEvent?: SyncEvent
+  get syncEvent(): SyncEvent {
+    return (this._syncEvent ??= new SyncEvent({ client: this.client }))
   }
 
   private _config?: Config

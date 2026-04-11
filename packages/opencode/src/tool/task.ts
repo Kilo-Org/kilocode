@@ -4,7 +4,6 @@ import z from "zod"
 import { Session } from "../session"
 import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
-import { Identifier } from "../id/id"
 import { Agent } from "../agent/agent"
 import { SessionPrompt } from "../session/prompt"
 import { iife } from "@/util/iife"
@@ -86,6 +85,8 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         (r) => r.permission === "edit" || r.permission === "bash" || isMcpRule(r.permission),
       )
       // kilocode_change end
+      const hasTaskPermission = agent.permission.some((rule) => rule.permission === "task")
+      const hasTodoWritePermission = agent.permission.some((rule) => rule.permission === "todowrite")
 
       const session = await iife(async () => {
         if (params.task_id) {
@@ -110,6 +111,24 @@ export const TaskTool = Tool.define("task", async (ctx) => {
             // kilocode_change start — unconditionally deny task for all subagent sessions
             { permission: "task", pattern: "*", action: "deny" },
             // kilocode_change end
+            ...(hasTodoWritePermission
+              ? []
+              : [
+                  {
+                    permission: "todowrite" as const,
+                    pattern: "*" as const,
+                    action: "deny" as const,
+                  },
+                ]),
+            ...(hasTaskPermission
+              ? []
+              : [
+                  {
+                    permission: "task" as const,
+                    pattern: "*" as const,
+                    action: "deny" as const,
+                  },
+                ]),
             ...(config.experimental?.primary_tools?.map((t) => ({
               pattern: "*",
               action: "allow" as const,
@@ -156,6 +175,8 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           todowrite: false,
           todoread: false,
           task: false, // kilocode_change
+          ...(hasTodoWritePermission ? {} : { todowrite: false }),
+          ...(hasTaskPermission ? {} : { task: false }),
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
         },
         parts: promptParts,

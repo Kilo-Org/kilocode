@@ -126,14 +126,16 @@ describe("session.retry.retryable", () => {
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
 
-  test("does not retry FreeUsageLimitError", () => {
+  test("retries ZlibError decompression failures", () => {
     const error = new MessageV2.APIError({
-      message: "rate limit exceeded",
+      message: "Response decompression failed",
       isRetryable: true,
-      responseBody: '{"error":{"code":"FreeUsageLimitError"}}',
-    }).toObject() as ReturnType<NamedError["toObject"]>
+      metadata: { code: "ZlibError" },
+    }).toObject() as MessageV2.APIError
 
-    expect(SessionRetry.retryable(error)).toBeUndefined()
+    const retryable = SessionRetry.retryable(error)
+    expect(retryable).toBeDefined()
+    expect(retryable).toBe("Response decompression failed")
   })
 })
 

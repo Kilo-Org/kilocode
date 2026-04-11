@@ -115,7 +115,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.create.schema),
+      validator("json", Worktree.CreateInput.optional()),
       async (c) => {
         const body = c.req.valid("json")
         const worktree = await Worktree.create(body)
@@ -162,7 +162,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.remove.schema),
+      validator("json", Worktree.RemoveInput),
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.remove(body)
@@ -188,7 +188,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.reset.schema),
+      validator("json", Worktree.ResetInput),
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.reset(body)
