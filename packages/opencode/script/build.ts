@@ -76,7 +76,7 @@ const createEmbeddedWebUIBundle = async()=>{
     ${allFiles.map((filePath, i) => `import file_${i} from "${path.join(appDir, "dist", filePath).replaceAll("\\", "/")}" with { type: "file" };`).join("\n")}
     // Export with original mappings
     export default {
-      ${allFiles.map((filePath, i)=>`"${filePath}": file_${i},`).join("\n")}
+      ${allFiles.map((filePath, i)=>`"${filePath.replaceAll("\\", "/")}": file_${i},`).join("\n")}
     }
     `.trim()
     return fileMap;
