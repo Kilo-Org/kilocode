@@ -12,6 +12,7 @@ import { Config } from "../config/config"
 import { PermissionNext } from "@/permission/next"
 import { resolveTaskModel, TeamConcurrencyError } from "@/devilcode/team/router" // devilcode_change
 import { getConcurrencyManager } from "@/devilcode/team/concurrency" // devilcode_change
+import { Log } from "@/util/log" // devilcode_change
 
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
@@ -93,9 +94,17 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       )
       // kilocode_change end
 
+      // devilcode_change start - fix log reference
+      const logger = Log.create({ service: "task.tool" })
+      // devilcode_change end
       const session = await iife(async () => {
         if (params.task_id) {
-          const found = await Session.get(params.task_id).catch(() => {})
+          const found = await Session.get(params.task_id).catch((err) => {
+          // devilcode_change start - use logger instead of undefined log
+          logger.error("failed to get task session", { err, taskID: params.task_id })
+          // devilcode_change end
+          return undefined
+        })
           if (found) return found
         }
 

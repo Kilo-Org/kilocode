@@ -760,7 +760,9 @@ export namespace Session {
         await remove(child.id)
       }
       const { DevilSessions } = await import("@/kilo-sessions/kilo-sessions")
-      await DevilSessions.remove(sessionID).catch(() => {}) // devilcode_change
+      await DevilSessions.remove(sessionID).catch((err) => {
+        log.error("failed to remove session from DevilSessions", { err, sessionID })
+      }) // devilcode_change
       platformOverrides.delete(sessionID) // devilcode_change - clean up platform override
       // devilcode_change start - cancel running processor before deleting to avoid FK constraint errors
       SessionPrompt.cancel(sessionID)
@@ -921,12 +923,13 @@ export namespace Session {
       const reasoningTokens = safe(input.usage.reasoningTokens ?? 0)
 
       const cacheReadInputTokens = safe(input.usage.cachedInputTokens ?? 0)
+      // Access provider-specific metadata using type assertion for dynamic property access
+      const bedrockUsage = input.metadata?.["bedrock"] as { usage?: { cacheWriteInputTokens?: number } } | undefined
+      const veniceUsage = input.metadata?.["venice"] as { usage?: { cacheCreationInputTokens?: number } } | undefined
       const cacheWriteInputTokens = safe(
         (input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
-          // @ts-expect-error
-          input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
-          // @ts-expect-error
-          input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
+          bedrockUsage?.usage?.cacheWriteInputTokens ??
+          veniceUsage?.usage?.cacheCreationInputTokens ??
           0) as number,
       )
 

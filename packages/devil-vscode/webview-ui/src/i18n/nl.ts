@@ -977,7 +977,8 @@ export const dict = {
   "settings.aboutDevilCode.version.label": "Versie:",
   "settings.aboutDevilCode.extensionName": "Devil Code Extensie",
   "settings.aboutDevilCode.community": "Community & Ondersteuning",
-  "settings.aboutDevilCode.feedback.prefix": "Als je vragen of feedback hebt, voel je vrij om een issue aan te maken op",
+  "settings.aboutDevilCode.feedback.prefix":
+    "Als je vragen of feedback hebt, voel je vrij om een issue aan te maken op",
   "settings.aboutDevilCode.feedback.or": "of",
   "settings.aboutDevilCode.support.prefix":
     "Voor vragen over facturering of je account, neem contact op met Klantenservice op",

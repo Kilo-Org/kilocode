@@ -21,7 +21,7 @@ export function WorkflowStatusBar() {
       <Show
         when={wf.state}
         fallback={
-          <text fg={theme.textMuted}>No workflow initialized. Type "plan" to start.</text>
+          <text fg={theme.textMuted}>No workflow initialized. Run /team init to create one.</text>
         }
       >
         {(state) => (
@@ -38,7 +38,10 @@ export function WorkflowStatusBar() {
               </text>
             </Show>
             <Show when={wf.executing}>
-              <text fg={theme.warning}>● EXECUTING</text>
+              <text fg={theme.warning}>{wf.pauseRequested ? "● PAUSING" : "● EXECUTING"}</text>
+            </Show>
+            <Show when={!wf.executing && state().currentStage === "build" && state().activeTasks.some((task) => task.status === "pending")}>
+              <text fg={theme.warning}>● PAUSED</text>
             </Show>
           </>
         )}

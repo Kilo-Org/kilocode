@@ -134,17 +134,32 @@ async function backupAndStripLegacy(file: string, source: string) {
     })
 }
 
-// devilcode_change start: use kilo directory everywhere
+// devilcode_change start: check both kilo and opencode config files for migration
 async function opencodeFiles(input: { directories: string[]; managed: string }) {
-  const project = Flag.DEVIL_DISABLE_PROJECT_CONFIG
-    ? []
-    : await ConfigPaths.projectFiles("kilo", Instance.directory, Instance.worktree)
-  const files = [...project, ...ConfigPaths.fileInDirectory(Global.Path.config, "kilo")]
+  const files: string[] = []
+
+  // Check project-level config files (both kilo and opencode variants)
+  if (!Flag.DEVIL_DISABLE_PROJECT_CONFIG) {
+    files.push(...(await ConfigPaths.projectFiles("kilo", Instance.directory, Instance.worktree)))
+    files.push(...(await ConfigPaths.projectFiles("opencode", Instance.directory, Instance.worktree)))
+  }
+
+  // Check global config directory
+  files.push(...ConfigPaths.fileInDirectory(Global.Path.config, "kilo"))
+  files.push(...ConfigPaths.fileInDirectory(Global.Path.config, "opencode"))
+
+  // Check .kilo/.opencode directories
   for (const dir of unique(input.directories)) {
     files.push(...ConfigPaths.fileInDirectory(dir, "kilo"))
+    files.push(...ConfigPaths.fileInDirectory(dir, "opencode"))
   }
+
+  // Check custom config path
   if (Flag.DEVIL_CONFIG) files.push(Flag.DEVIL_CONFIG)
+
+  // Check managed config directory
   files.push(...ConfigPaths.fileInDirectory(input.managed, "kilo"))
+  files.push(...ConfigPaths.fileInDirectory(input.managed, "opencode"))
 
   const existing = await Promise.all(
     unique(files).map(async (file) => {

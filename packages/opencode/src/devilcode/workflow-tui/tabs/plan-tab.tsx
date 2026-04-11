@@ -13,7 +13,7 @@ export function PlanTab() {
         when={wf.plans.length > 0}
         fallback={
           <text fg={theme.textMuted}>
-            No plans yet. Type "plan" to start decomposition.
+            No plans yet. Paste phase requirements below and press Enter to start planning.
           </text>
         }
       >

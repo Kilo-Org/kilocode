@@ -8,6 +8,7 @@ import { Snapshot } from "@/snapshot"
 
 import { Storage } from "@/storage/storage"
 import { Bus } from "@/bus"
+import { Log } from "@/util/log" // devilcode_change
 
 export namespace SessionSummary {
   function unquoteGitPath(input: string) {
@@ -136,7 +137,12 @@ export namespace SessionSummary {
         }
       })
       const changed = next.some((item, i) => item !== diffs[i])
-      if (changed) Storage.write(["session_diff", input.sessionID], next).catch(() => {})
+      // devilcode_change start - fix log reference
+      const logger = Log.create({ service: "session.summary" })
+      if (changed) Storage.write(["session_diff", input.sessionID], next).catch((err) => {
+        logger.error("failed to write session diff", { err, sessionID: input.sessionID })
+      })
+      // devilcode_change end
       // devilcode_change end
       return next
     },

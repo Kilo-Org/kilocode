@@ -1,6 +1,6 @@
 // devilcode_change new file
 import { fetchDevilModels } from "@devilcode/kilo-gateway"
-import { Config } from "../config/config"
+// devilcode_change - Config import moved to dynamic import in getAuthOptions() to break circular dependency with config.ts
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { Log } from "../util/log"
@@ -168,11 +168,17 @@ export namespace ModelCache {
     if (providerID === "apertis") {
       return fetchApertisModels(options)
     }
+
+    // These providers do not support model listing via the cache
+    const unsupportedProviders = ["anthropic", "bedrock", "ollama", "gemini", "openai", "openrouter", "azure"]
+    if (unsupportedProviders.includes(providerID)) {
+      log.debug("provider does not support model listing", { providerID })
+      return {}
+    }
     // devilcode_change end
 
-    // Other providers not implemented yet
-    log.debug("provider not implemented", { providerID })
-    return {}
+    log.error("unknown provider for model fetch", { providerID })
+    throw new Error(`Unknown provider: ${providerID}`)
   }
 
   // devilcode_change start
@@ -234,6 +240,8 @@ export namespace ModelCache {
    * @returns Options object with authentication credentials
    */
   async function getAuthOptions(providerID: string): Promise<any> {
+    // devilcode_change - dynamic import to break circular dependency with config.ts
+    const { Config } = await import("../config/config")
     const options: any = {}
 
     if (providerID === "kilo") {

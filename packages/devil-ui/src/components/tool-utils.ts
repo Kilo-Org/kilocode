@@ -150,7 +150,11 @@ export function useCollapsible(options: {
               c.style.height = "auto"
               options.onOpen?.()
             },
-            () => {},
+            (error) => {
+              if (import.meta.env.DEV) {
+                console.debug("[ToolUtils] Collapsible animation interrupted:", error)
+              }
+            },
           )
         })
         return
@@ -164,7 +168,11 @@ export function useCollapsible(options: {
           if (gen !== id) return
           content.style.display = "none"
         },
-        () => {},
+        (error) => {
+          if (import.meta.env.DEV) {
+            console.debug("[ToolUtils] Collapsible animation interrupted:", error)
+          }
+        },
       )
     }),
   )
@@ -254,7 +262,13 @@ export function useRowWipe(opts: {
         GROW_SPRING,
       )
 
-      anim.finished.catch(() => {}).finally(clear)
+      anim.finished
+        .catch((error) => {
+          if (import.meta.env.DEV) {
+            console.debug("[ToolUtils] Animation interrupted:", error)
+          }
+        })
+        .finally(clear)
     })
 
     onCleanup(() => {

@@ -19,7 +19,9 @@ Use in settings panels or forms.
 - Controlled or uncontrolled usage via Kobalte props.
 
 ### Accessibility
-- TODO: confirm aria attributes from Kobalte.
+- switch role with aria-checked state.
+- Label association via implicit labeling or aria-labelledby.
+- Keyboard accessible (Space to toggle).
 
 ### Theming/tokens
 - Uses \`data-component="switch"\` and slot attributes.

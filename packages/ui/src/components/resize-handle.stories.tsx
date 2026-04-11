@@ -18,7 +18,9 @@ Use alongside resizable panels and split layouts.
 - Drag updates size and calls \`onResize\` with clamped values.
 
 ### Accessibility
-- TODO: provide keyboard resizing guidance if needed.
+- separator role with aria-orientation (horizontal/vertical).
+- aria-valuenow indicates current size percentage.
+- Keyboard resizing via arrow keys with Shift modifier.
 
 ### Theming/tokens
 - Uses \`data-component="resize-handle"\` with direction/edge data attributes.

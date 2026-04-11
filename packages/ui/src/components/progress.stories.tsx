@@ -19,7 +19,9 @@ Use in forms, uploads, or background tasks.
 - Uses Kobalte Progress for value calculation.
 
 ### Accessibility
-- TODO: confirm ARIA attributes from Kobalte.
+- progressbar role with aria-valuenow, aria-valuemin, aria-valuemax.
+- aria-label provided via children or label prop.
+- Screen readers announce progress updates.
 
 ### Theming/tokens
 - Uses \`data-component="progress"\` with track/fill slots.

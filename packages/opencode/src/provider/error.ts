@@ -75,7 +75,9 @@ export namespace ProviderError {
         if (errMsg && typeof errMsg === "string") {
           return `${msg}: ${errMsg}`
         }
-      } catch {}
+      } catch (err) {
+        // ignore - error response body is not valid JSON, continue to HTML check below
+      }
 
       // If responseBody is HTML (e.g. from a gateway or proxy error page),
       // provide a human-readable message instead of dumping raw markup

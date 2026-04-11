@@ -229,7 +229,9 @@ export namespace LSPClient {
           }),
           3000,
         )
-          .catch(() => {})
+          .catch((err) => {
+            log.error("failed to unsubscribe from LSP", { err })
+          })
           .finally(() => {
             if (debounceTimer) clearTimeout(debounceTimer)
             unsub?.()

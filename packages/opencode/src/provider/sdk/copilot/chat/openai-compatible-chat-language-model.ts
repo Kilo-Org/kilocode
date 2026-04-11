@@ -299,6 +299,12 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV2 {
   ): Promise<Awaited<ReturnType<LanguageModelV2["doStream"]>>> {
     const { args, warnings } = await this.getArgs({ ...options })
 
+    // Capture chunkSchema in a local const so its type is available in closures
+    // (typeof this.chunkSchema cannot be used inside TransformStream transformer callbacks
+    // because `this` is rebound to the transformer object there)
+    const chunkSchema = this.chunkSchema
+    type ChunkParseResult = ParseResult<z.infer<typeof chunkSchema>>
+
     const body = {
       ...args,
       stream: true,
@@ -317,7 +323,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV2 {
       headers: combineHeaders(this.config.headers(), options.headers),
       body,
       failedResponseHandler: this.failedResponseHandler,
-      successfulResponseHandler: createEventSourceResponseHandler(this.chunkSchema),
+      successfulResponseHandler: createEventSourceResponseHandler(chunkSchema),
       abortSignal: options.abortSignal,
       fetch: this.config.fetch,
     })
@@ -366,13 +372,12 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV2 {
 
     return {
       stream: response.pipeThrough(
-        new TransformStream<ParseResult<z.infer<typeof this.chunkSchema>>, LanguageModelV2StreamPart>({
+        new TransformStream<ChunkParseResult, LanguageModelV2StreamPart>({
           start(controller) {
             controller.enqueue({ type: "stream-start", warnings })
           },
 
-          // TODO we lost type safety on Chunk, most likely due to the error schema. MUST FIX
-          transform(chunk, controller) {
+          transform(chunk: ChunkParseResult, controller) {
             // Emit raw chunk if requested (before anything else)
             if (options.includeRawChunks) {
               controller.enqueue({ type: "raw", rawValue: chunk.rawValue })

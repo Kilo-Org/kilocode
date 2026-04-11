@@ -322,42 +322,41 @@ export const BlockAnchorReplacer: Replacer = function* (content, find) {
     return
   }
 
-  // Calculate similarity for multiple candidates
-  let bestMatch: { startLine: number; endLine: number } | null = null
-  let maxSimilarity = -1
+  // Calculate similarity for multiple candidates and find best match
+  const bestMatch = (() => {
+    let maxSimilarity = -1
+    let match: { startLine: number; endLine: number } | null = null
 
-  for (const candidate of candidates) {
-    const { startLine, endLine } = candidate
-    const actualBlockSize = endLine - startLine + 1
+    for (const candidate of candidates) {
+      const { startLine, endLine } = candidate
+      const actualBlockSize = endLine - startLine + 1
 
-    let similarity = 0
-    let linesToCheck = Math.min(searchBlockSize - 2, actualBlockSize - 2) // Middle lines only
+      const linesToCheck = Math.min(searchBlockSize - 2, actualBlockSize - 2)
 
-    if (linesToCheck > 0) {
-      for (let j = 1; j < searchBlockSize - 1 && j < actualBlockSize - 1; j++) {
-        const originalLine = originalLines[startLine + j].trim()
-        const searchLine = searchLines[j].trim()
-        const maxLen = Math.max(originalLine.length, searchLine.length)
-        if (maxLen === 0) {
-          continue
-        }
-        const distance = levenshtein(originalLine, searchLine)
-        similarity += 1 - distance / maxLen
+      const similarity = linesToCheck > 0
+        ? (() => {
+            let sim = 0
+            for (let j = 1; j < searchBlockSize - 1 && j < actualBlockSize - 1; j++) {
+              const originalLine = originalLines[startLine + j].trim()
+              const searchLine = searchLines[j].trim()
+              const maxLen = Math.max(originalLine.length, searchLine.length)
+              if (maxLen === 0) continue
+              const distance = levenshtein(originalLine, searchLine)
+              sim += 1 - distance / maxLen
+            }
+            return sim / linesToCheck
+          })()
+        : 1.0
+
+      if (similarity > maxSimilarity) {
+        maxSimilarity = similarity
+        match = candidate
       }
-      similarity /= linesToCheck // Average similarity
-    } else {
-      // No middle lines to compare, just accept based on anchors
-      similarity = 1.0
     }
+    return maxSimilarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD ? match : null
+  })()
 
-    if (similarity > maxSimilarity) {
-      maxSimilarity = similarity
-      bestMatch = candidate
-    }
-  }
-
-  // Threshold judgment
-  if (maxSimilarity >= MULTIPLE_CANDIDATES_SIMILARITY_THRESHOLD && bestMatch) {
+  if (bestMatch) {
     const { startLine, endLine } = bestMatch
     let matchStartIndex = 0
     for (let k = 0; k < startLine; k++) {

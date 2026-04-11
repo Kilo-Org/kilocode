@@ -15,7 +15,8 @@ export const dict = {
   "devilcode:autocomplete.statusBar.tooltip.defaultProfile": "Padrão",
   "devilcode:autocomplete.statusBar.tooltip.completionSummary":
     "Realizadas {{count}} conclusões entre {{startTime}} e {{endTime}}, por um custo total de {{cost}}.",
-  "devilcode:autocomplete.statusBar.tooltip.providerInfo": "Autocompletações fornecidas por {{model}} via {{provider}}.",
+  "devilcode:autocomplete.statusBar.tooltip.providerInfo":
+    "Autocompletações fornecidas por {{model}} via {{provider}}.",
   "devilcode:autocomplete.statusBar.cost.zero": "$0.00",
   "devilcode:autocomplete.statusBar.cost.lessThanCent": "<$0.01",
   "devilcode:autocomplete.toggleMessage": "Devil Code Autocomplete {{status}}",

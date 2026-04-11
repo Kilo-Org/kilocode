@@ -19,7 +19,7 @@
     ],
     "withGlobalTauri": true,
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* ws://localhost:* https://api.devil.ai https://app.devil.ai https://us.i.posthog.com https://github.com https://models.dev https://ingest.devilsessions.ai; img-src 'self' data: https:; font-src 'self'"
     },
     "macOSPrivateApi": true
   },

@@ -26,13 +26,13 @@ export function TaskPanel() {
   useKeyboard((evt) => {
     const ids = flatTaskIds()
     if (ids.length === 0) return
-    if (evt.name === "up" || evt.name === "k") {
+    if (evt.name === "up") {
       evt.preventDefault()
       const currentIndex = ids.indexOf(wf.selectedTask ?? "")
       const nextIndex = currentIndex <= 0 ? ids.length - 1 : currentIndex - 1
       wf.selectTask(ids[nextIndex]!)
     }
-    if (evt.name === "down" || evt.name === "j") {
+    if (evt.name === "down") {
       evt.preventDefault()
       const currentIndex = ids.indexOf(wf.selectedTask ?? "")
       const nextIndex = currentIndex < 0 || currentIndex >= ids.length - 1 ? 0 : currentIndex + 1

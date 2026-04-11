@@ -993,7 +993,8 @@ export const dict = {
   "settings.aboutDevilCode.importSettings.tooLarge": "파일이 너무 큽니다. 설정 파일은 1 MB 이하여야 합니다.",
   "settings.aboutDevilCode.importSettings.newerVersion":
     "이 파일은 더 최신 버전의 Devil에서 내보낸 것입니다. 일부 설정이 무시될 수 있습니다.",
-  "settings.aboutDevilCode.importSettings.success": "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
+  "settings.aboutDevilCode.importSettings.success":
+    "설정을 가져왔습니다. 위의 변경 사항을 확인한 후 저장을 클릭하세요.",
 
   "settings.aboutDevilCode.telemetry.title": "원격 측정",
   "settings.aboutDevilCode.telemetry.description":

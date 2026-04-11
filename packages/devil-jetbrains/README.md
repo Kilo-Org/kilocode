@@ -1,5 +1,11 @@
 # Kilo JetBrains
 
+> **Status: Work in Progress**
+> 
+> This plugin currently bundles the CLI binary but has no IDE integration code yet.
+> The Kotlin/Java implementation for IDE features is not complete.
+> **Do not publish to JetBrains Marketplace** until implementation is finished.
+
 AI coding agent plugin for JetBrains IDEs.
 
 ---

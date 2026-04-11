@@ -93,7 +93,9 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       .abort({
         sessionID,
       })
-      .catch(() => {})
+      .catch((error) => {
+        console.warn("[Submit] Operation failed:", error)
+      })
   }
 
   const restoreCommentItems = (items: CommentItem[]) => {

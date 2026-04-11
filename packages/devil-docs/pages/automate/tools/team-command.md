@@ -68,7 +68,7 @@ Lists all tasks grouped by wave. Each task shows:
 
 ### Detail Panel
 
-Shows full details for the selected task: description, files, dependencies, verification commands, and completion output.
+Shows stage guidance, the selected task's files/dependencies/verification commands, and persisted summary output when a task has completed. The tab bar exposes agent output plus artifact views for Plan, Activity, Challenge, and Review as they become available.
 
 ### Command Input
 
@@ -86,8 +86,8 @@ These commands are entered in the command input at the bottom of the dashboard.
 | `challenge` | Submit plan for challenge review | `plan` |
 | `build` | Start building (after contract generation) | `contract` |
 | `review` | Submit build for code review | `build` |
-| `ship` | Run quality gates and prepare to ship | `review` (after passing review) |
-| `retro` | Start retrospective | `ship` |
+| `ship` | Run final quality gates, persist ship readiness, and mark the phase complete in `ROADMAP.md` | `review` (after passing review) |
+| `retro` | Persist retrospective lessons and follow-ups for the phase | `ship` |
 
 ### Control Commands
 
@@ -95,10 +95,12 @@ These commands are entered in the command input at the bottom of the dashboard.
 |---------|-------------|
 | `next` | Advance to the next valid stage automatically |
 | `status` | Refresh and display current workflow state |
-| `pause` | Pause the current stage (tasks keep running) |
-| `approve` | Approve the current challenge or review verdict |
-| `revise` | Request revision (sends back to previous stage) |
+| `pause` | Pause the build after the current wave finishes. Run `build` again to resume. |
+| `approve` | Resolve the canonical stage action (`challenge -> contract`, `contract -> build`, `review -> ship`) |
+| `revise` | Send the workflow back one stage where revision is supported (`challenge -> plan`, `contract -> challenge`, `review -> build`) |
 | `back` | Return to the chat view |
+
+Free-text input is currently the planning-stage happy path: paste phase requirements while the workflow is in `plan` and the planner will create or update the current phase context.
 
 ### Stage Transitions
 
@@ -162,10 +164,8 @@ Within the workflow dashboard:
 | Key | Action |
 |-----|--------|
 | Up / Down | Navigate task list |
-| Enter | Select task / Submit command |
-| Tab | Switch between task panel and command input |
+| Enter | Submit the command input |
 | Escape | Return to chat view |
-| q | Quit dashboard (same as `back` command) |
 
 ## Examples
 
@@ -181,9 +181,9 @@ v Created .planning/ directory structure
 ### Planning Phase
 
 ```
-> plan
-[PLAN] Enter your task description or paste requirements.
-The planning agent will break them into wave-structured tasks.
+> implement the auth workflow for API and CLI clients
+[PLAN] Phase requirements captured.
+[PLAN] Building a wave-structured task list for the new phase...
 ```
 
 ### Challenging a Plan
@@ -237,12 +237,12 @@ The planning agent will break them into wave-structured tasks.
 
 ```
 > ship
-[SHIP] Running quality gates...
+[SHIP] Running final quality gates...
   v TypeCheck: PASS (1.2s)
   v Test Suite: PASS (4.8s)
   v Lint: PASS (0.9s)
 
-All gates passed. Ready to commit.
+Ship ready. ROADMAP.md updated and the ship report was persisted to .planning/phases/01-auth/01-SHIP.md.
 ```
 
 ## Monitoring and Diagnostics
@@ -286,5 +286,6 @@ Lessons with high confidence (hit count >= 3) are marked as "proven" and given h
 - Team workflow is currently CLI-only. VS Code extension support requires the extension to poll the workflow API endpoints.
 - The workflow state is filesystem-based (`.planning/` directory). It does not persist across machines unless the directory is committed to version control.
 - Concurrent task execution depends on the AI provider's rate limits. If a provider rate-limits requests, tasks may queue silently.
+- Free-text guidance is only wired for the planning stage right now. Later stages are command-driven.
 - The maximum review cycle count is 3. After 3 failed reviews, the workflow escalates rather than continuing to loop.
 - File lock detection is advisory -- it prevents concurrent modification within the workflow but does not lock files at the OS level.

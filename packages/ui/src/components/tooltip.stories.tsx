@@ -18,7 +18,9 @@ Use for short hints; avoid long descriptions.
 - Opens on hover/focus; can be forced open.
 
 ### Accessibility
-- TODO: confirm trigger semantics and focus behavior.
+- Trigger element has aria-describedby linking to tooltip content.
+- Keyboard accessible (focus triggers tooltip).
+- Screen reader announces tooltip content as description.
 
 ### Theming/tokens
 - Uses \`data-component="tooltip"\` and related slots.

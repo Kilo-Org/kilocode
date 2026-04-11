@@ -266,23 +266,25 @@ export const TuiRoutes = lazy(() =>
       validator("json", z.object({ command: z.string() })),
       async (c) => {
         const command = c.req.valid("json").command
+          // Command mapping from TUI commands to internal command names
+        const cmdMap: Record<string, string> = {
+          session_new: "session.new",
+          session_share: "session.share",
+          session_interrupt: "session.interrupt",
+          session_compact: "session.compact",
+          messages_page_up: "session.page.up",
+          messages_page_down: "session.page.down",
+          messages_line_up: "session.line.up",
+          messages_line_down: "session.line.down",
+          messages_half_page_up: "session.half.page.up",
+          messages_half_page_down: "session.half.page.down",
+          messages_first: "session.first",
+          messages_last: "session.last",
+          agent_cycle: "agent.cycle",
+        }
+
         await Bus.publish(TuiEvent.CommandExecute, {
-          // @ts-expect-error
-          command: {
-            session_new: "session.new",
-            session_share: "session.share",
-            session_interrupt: "session.interrupt",
-            session_compact: "session.compact",
-            messages_page_up: "session.page.up",
-            messages_page_down: "session.page.down",
-            messages_line_up: "session.line.up",
-            messages_line_down: "session.line.down",
-            messages_half_page_up: "session.half.page.up",
-            messages_half_page_down: "session.half.page.down",
-            messages_first: "session.first",
-            messages_last: "session.last",
-            agent_cycle: "agent.cycle",
-          }[command],
+          command: cmdMap[command] as string & Record<never, never>,
         })
         return c.json(true)
       },

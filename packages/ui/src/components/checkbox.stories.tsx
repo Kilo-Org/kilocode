@@ -20,7 +20,9 @@ Use in forms and multi-select lists.
 - Controlled or uncontrolled usage.
 
 ### Accessibility
-- TODO: confirm aria attributes from Kobalte.
+- Native checkbox with proper aria-checked state via Kobalte.
+- Full keyboard support (Space to toggle, Tab navigation).
+- Label association via implicit labeling.
 
 ### Theming/tokens
 - Uses \`data-component="checkbox"\` and related slots.

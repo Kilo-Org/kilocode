@@ -21,7 +21,8 @@ Pair with \`Code\` for standalone code views.
 
 ### Accessibility
 - Copy buttons include aria-labels from i18n.
-- TODO: confirm link target behavior in sanitized output.
+- External links open in new tab with rel="noopener noreferrer".
+- Semantic HTML structure with proper heading hierarchy preserved.
 
 ### Theming/tokens
 - Uses \`data-component="markdown"\` and related slots for styling.

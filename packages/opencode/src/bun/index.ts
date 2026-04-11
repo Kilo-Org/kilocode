@@ -81,11 +81,12 @@ export namespace BunProc {
     }
 
     // Build command arguments
+    // Note: --no-cache is required due to Bun issue #19936 (cache performance)
+    // https://github.com/oven-sh/bun/issues/19936 - still open as of Bun 1.2.x
     const args = [
       "add",
       "--force",
       "--exact",
-      // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
       ...(proxied() || process.env.CI ? ["--no-cache"] : []),
       "--cwd",
       Global.Path.cache,

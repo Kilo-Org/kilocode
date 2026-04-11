@@ -2,11 +2,12 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Log } from "../util/log"
 import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "hono-openapi"
-import { Hono } from "hono"
+import { Hono, type Context } from "hono" // devilcode_change - added Context type
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
-// import { proxy } from "hono/proxy" // devilcode_change - disabled external proxy
 import { basicAuth } from "hono/basic-auth"
+// Rate limiting - to be implemented
+// import { rateLimiter } from "hono-rate-limiter"
 import z from "zod"
 import { Provider } from "../provider/provider"
 import { NamedError } from "@opencode-ai/util/error"
@@ -56,8 +57,15 @@ import { RemoteRoutes } from "./routes/remote" // devilcode_change
 import { GlobalRoutes } from "./routes/global"
 import { MDNS } from "./mdns"
 
-// @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
-globalThis.AI_SDK_LOG_WARNINGS = false
+// Disable ai-sdk warnings - this global is needed to prevent ai-sdk from logging warnings to stdout
+// https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
+try {
+  ;(globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false
+} catch {
+  // Ignore if global assignment fails
+}
+
+export const API_VERSION = "1.0.0" // devilcode_change
 
 export namespace Server {
   const log = Log.create({ service: "server" })
@@ -101,6 +109,25 @@ export namespace Server {
           const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
           return basicAuth({ username, password })(c, next)
         })
+        // devilcode_change start - Rate limiting: 100 requests per 15 minutes per IP (disabled - hono-rate-limiter not available)
+        // .use(
+        //   rateLimiter({
+        //     windowMs: 15 * 60 * 1000, // 15 minutes
+        //     limit: 100,
+        //     standardHeaders: "draft-6",
+        //     keyGenerator: (c: Context) => c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown",
+        //   }),
+        // )
+        // devilcode_change end
+        // devilcode_change start - Request body size limit: 10MB
+        .use(async (c, next) => {
+          const contentLength = c.req.header("content-length")
+          if (contentLength && parseInt(contentLength, 10) > 10 * 1024 * 1024) {
+            return c.json({ error: "Request body too large (max 10MB)" }, 413)
+          }
+          await next()
+        })
+        // devilcode_change end
         .use(async (c, next) => {
           // devilcode_change start
           // devilcode change add telemetry because it is high volume
@@ -127,13 +154,24 @@ export namespace Server {
             timer.stop()
           }
         })
+        // devilcode_change start - CORS whitelist with specific localhost ports only
         .use(
           cors({
             origin(input) {
               if (!input) return
 
-              if (input.startsWith("http://localhost:")) return input
-              if (input.startsWith("http://127.0.0.1:")) return input
+              // Only allow specific localhost ports: 3000, 5173, 8080, 4096
+              const allowedPorts = [3000, 5173, 8080, 4096]
+              if (input.startsWith("http://localhost:")) {
+                const port = parseInt(input.split(":")[2], 10)
+                if (allowedPorts.includes(port)) return input
+                return
+              }
+              if (input.startsWith("http://127.0.0.1:")) {
+                const port = parseInt(input.split(":")[2], 10)
+                if (allowedPorts.includes(port)) return input
+                return
+              }
               if (
                 input === "tauri://localhost" ||
                 input === "http://tauri.localhost" ||
@@ -153,6 +191,7 @@ export namespace Server {
             },
           }),
         )
+        // devilcode_change end
         .route("/global", GlobalRoutes())
         .put(
           "/auth/:providerID",
@@ -256,7 +295,7 @@ export namespace Server {
             documentation: {
               info: {
                 title: "kilo", // devilcode_change
-                version: "0.0.3",
+                version: API_VERSION,
                 description: "kilo api", // devilcode_change
               },
               openapi: "3.1.1",
@@ -580,8 +619,13 @@ export namespace Server {
           }),
           async (c) => {
             log.info("event connected")
+            // devilcode_change start - Security headers for SSE endpoints
             c.header("X-Accel-Buffering", "no")
             c.header("X-Content-Type-Options", "nosniff")
+            c.header("X-Frame-Options", "DENY")
+            c.header("Referrer-Policy", "strict-origin-when-cross-origin")
+            c.header("Content-Security-Policy", "default-src 'none'; connect-src 'self'; script-src 'none'")
+            // devilcode_change end
             return streamSSE(c, async (stream) => {
               stream.writeSSE({
                 data: JSON.stringify({
@@ -619,25 +663,8 @@ export namespace Server {
             })
           },
         )
-        // devilcode_change start - disable external proxy to app.opencode.ai for privacy/security
-        .all("/*", async (c) => {
-          // const path = c.req.path
-          //
-          // const response = await proxy(`https://app.opencode.ai${path}`, {
-          //   ...c.req,
-          //   headers: {
-          //     ...c.req.raw.headers,
-          //     host: "app.opencode.ai",
-          //   },
-          // })
-          // response.headers.set(
-          //   "Content-Security-Policy",
-          //   "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; media-src 'self' data:; connect-src 'self' data:",
-          // )
-          // return response
-          return c.notFound()
-        }) as unknown as Hono,
-    // devilcode_change end
+        // Return 404 for all unmatched routes
+        .all("/*", async (c) => c.notFound()) as unknown as Hono,
   )
 
   export async function openapi() {
@@ -646,7 +673,7 @@ export namespace Server {
       documentation: {
         info: {
           title: "kilo", // devilcode_change
-          version: "1.0.0",
+          version: API_VERSION,
           description: "kilo api", // devilcode_change
         },
         openapi: "3.1.1",

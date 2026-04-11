@@ -20,7 +20,9 @@ Use for view toggles or mode selection.
 - Maps options to segmented items and manages selection.
 
 ### Accessibility
-- TODO: confirm role/aria attributes from Kobalte SegmentedControl.
+- radiogroup role with aria-checked on individual radio items.
+- Arrow key navigation between options.
+- Screen reader announces selected option.
 
 ### Theming/tokens
 - Uses \`data-component="radio-group"\` with size/pad data attributes.

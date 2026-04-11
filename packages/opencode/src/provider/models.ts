@@ -5,7 +5,7 @@ import z from "zod"
 import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
-import { Config } from "../config/config" // devilcode_change
+// devilcode_change - Config import moved to dynamic import in get() to break circular dependency with config.ts
 import { ModelCache } from "./model-cache" // devilcode_change
 import { Auth } from "../auth" // devilcode_change
 import { AI_SDK_PROVIDERS, DEVIL_OPENROUTER_BASE, PROMPTS } from "@devilcode/kilo-gateway" // devilcode_change
@@ -15,7 +15,7 @@ import { provider as agentSdkProvider, AGENT_SDK_ID } from "@/devilcode/agent-sd
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
-/* @ts-ignore */
+// JSON import with 'with' attribute is supported in modern TS/Bun
 
 // devilcode_change start
 const normalizeDevilBaseURL = (baseURL: string | undefined, orgId: string | undefined): string | undefined => {
@@ -144,6 +144,8 @@ export namespace ModelsDev {
     // Skip injection entirely when enabled_providers is set and doesn't include "kilo",
     // or when "kilo" is in disabled_providers. This prevents unnecessary network calls
     // to the Devil API for teams using only their own providers (e.g. LiteLLM).
+    // devilcode_change - dynamic import to break circular dependency with config.ts
+    const { Config } = await import("../config/config")
     const config = await Config.get()
     const disabled = new Set(config.disabled_providers ?? [])
     const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null

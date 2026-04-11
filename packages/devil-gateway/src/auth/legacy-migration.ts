@@ -82,13 +82,23 @@ export async function migrateLegacyDevilAuth(
   // Migrate to new format
   // Use OAuth format if organization ID present, otherwise API format
   if (legacy.organizationId) {
-    await saveDevilAuth({
-      type: "oauth",
-      access: legacy.token,
-      refresh: "",
-      expires: 0,
-      accountId: legacy.organizationId,
-    })
+    // Set short expiration to force token validation on first use.
+    // Legacy tokens will expire in 5 minutes; the auth system will then
+    // attempt refresh, and with refresh: "" it will trigger a re-auth prompt.
+    const MIGRATION_TOKEN_LIFETIME_MS = 5 * 60 * 1000 // 5 minutes
+    try {
+      await saveDevilAuth({
+        type: "oauth",
+        access: legacy.token,
+        refresh: "", // Empty refresh token forces re-auth when access token expires
+        expires: Date.now() + MIGRATION_TOKEN_LIFETIME_MS,
+        accountId: legacy.organizationId,
+      })
+      console.warn("[Auth Migration] Migrated legacy OAuth token - will validate within 5 minutes")
+    } catch (error) {
+      console.warn("[Auth Migration] Failed to save migrated auth:", error)
+      return false
+    }
   } else {
     await saveDevilAuth({
       type: "api",

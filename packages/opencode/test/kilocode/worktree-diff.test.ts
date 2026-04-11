@@ -113,7 +113,7 @@ describe("worktree diff git commands", () => {
       .nothrow()
     const tracked = new Set<string>()
     const trackedFiles: string[] = []
-    for (const line of nameStatus.stdout.toString().trim().split("\n")) {
+    for (const line of nameStatus.stdout.toString().trim().replaceAll("\r\n", "\n").split("\n")) {
       if (!line) continue
       const parts = line.split("\t")
       const file = parts.slice(1).join("\t")
@@ -126,7 +126,7 @@ describe("worktree diff git commands", () => {
     // Step 2: git ls-files for untracked
     const untrackedResult = await $`git ls-files --others --exclude-standard`.cwd(dir).quiet().nothrow()
     const untrackedFiles: string[] = []
-    for (const file of untrackedResult.stdout.toString().trim().split("\n")) {
+    for (const file of untrackedResult.stdout.toString().trim().replaceAll("\r\n", "\n").split("\n")) {
       if (!file || tracked.has(file)) continue
       untrackedFiles.push(file)
     }
@@ -195,7 +195,7 @@ print("Game of Life")
     const diffs: { file: string; status: string }[] = []
 
     // Process tracked changes
-    for (const line of nameStatusRaw.split("\n")) {
+    for (const line of nameStatusRaw.replaceAll("\r\n", "\n").split("\n")) {
       if (!line) continue
       const parts = line.split("\t")
       const file = parts.slice(1).join("\t")
@@ -207,7 +207,7 @@ print("Game of Life")
 
     // Process untracked files
     if (untrackedResult.exitCode === 0) {
-      for (const file of untrackedRaw.split("\n")) {
+      for (const file of untrackedRaw.replaceAll("\r\n", "\n").split("\n")) {
         if (!file || seen.has(file)) continue
         const f = Bun.file(path.join(dir, file))
         if (!(await f.exists())) continue

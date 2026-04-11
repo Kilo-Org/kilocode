@@ -3,12 +3,9 @@ import { platform } from "node:os"
 
 const IS_DARWIN = platform() === "darwin"
 
-// Screenshot baselines are captured on Linux CI — font rendering and anti-aliasing
-// differ on macOS, which causes false-positive diffs.  Skip the entire suite there.
-if (IS_DARWIN) {
-  console.warn("Visual regression tests must be run on CI, skipping on local macOS.")
-  test.skip()
-}
+// Note: Visual regression tests may have font rendering differences on macOS vs Linux.
+// We run them anyway and use pixel-diff thresholds rather than exact matches.
+// For truly stable results, always run on CI (Linux) before merging.
 
 type Story = {
   id: string

@@ -859,7 +859,7 @@ describe("session.message-v2.fromError", () => {
       name: "APIError",
       data: {
         message:
-          "Please reauthenticate with the copilot provider to ensure your credentials work properly with OpenCode.",
+          "Please reauthenticate with the copilot provider to ensure your credentials work properly with Devil.",
         statusCode: 403,
         isRetryable: false,
         responseHeaders: { "content-type": "application/json" },

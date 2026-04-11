@@ -18,7 +18,9 @@ Use for short status lines; avoid long paragraphs.
 - Types one character at a time with randomized delays.
 
 ### Accessibility
-- TODO: confirm if cursor should be aria-hidden in all contexts.
+- Blinking cursor is aria-hidden to prevent screen reader announcement.
+- Live region announces completed text when animation finishes.
+- Respects prefers-reduced-motion to disable animation.
 
 ### Theming/tokens
 - Uses \`blinking-cursor\` class for cursor styling.

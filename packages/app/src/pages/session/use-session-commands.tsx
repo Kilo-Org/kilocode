@@ -308,7 +308,9 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
         const sessionID = params.id
         if (!sessionID) return
         if (status()?.type !== "idle") {
-          await sdk.client.session.abort({ sessionID }).catch(() => {})
+          await sdk.client.session.abort({ sessionID }).catch((error) => {
+            console.warn("[Session] Failed to abort session:", sessionID, error)
+          })
         }
         const revert = info()?.revert?.messageID
         const message = findLast(userMessages(), (x) => !revert || x.id < revert)
@@ -447,7 +449,10 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
           const url = await sdk.client.session
             .share({ sessionID: params.id })
             .then((res) => res.data?.share?.url)
-            .catch(() => undefined)
+            .catch((error) => {
+              console.warn("[Session] Failed to share session:", error)
+              return undefined
+            })
           if (!url) {
             showToast({
               title: language.t("toast.session.share.failed.title"),

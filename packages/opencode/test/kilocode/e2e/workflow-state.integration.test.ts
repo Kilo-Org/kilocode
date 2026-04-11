@@ -12,7 +12,7 @@ import { LessonStore, extractFromAgentReport, formatLessonsForPrompt } from "@/d
 import { EventLogger } from "@/devilcode/workflow/events"
 import type { PlanTask } from "@/devilcode/workflow/types"
 
-describe("e2e: workflow state round-trip", () => {
+describe("integration: workflow state round-trip", () => {
   let tmpDir: string
   let planningDir: string
   let manager: WorkflowStateManager
@@ -162,6 +162,7 @@ describe("e2e: workflow state round-trip", () => {
     // retro -> plan (new cycle)
     const afterNewPlan = await Workflow.advanceStage(manager, "plan")
     expect(afterNewPlan.currentStage).toBe("plan")
+    expect(afterNewPlan.currentPhase).toBe("")
   })
 
   test("invalid stage transition throws", async () => {

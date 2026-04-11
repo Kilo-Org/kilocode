@@ -6,10 +6,12 @@ const HAS_OPENAI = !!process.env.OPENAI_API_KEY
 const HAS_ANY_KEY = HAS_ANTHROPIC || HAS_OPENAI
 
 describe.skipIf(!HAS_ANY_KEY)("e2e: dispatch with real provider", () => {
-  test("generateObject produces valid structured output", async () => {
+  test.skip("generateObject produces valid structured output - IMPLEMENTATION PENDING", async () => {
+    // TODO: Implement real E2E test with actual LLM provider
     // This test requires ANTHROPIC_API_KEY or OPENAI_API_KEY
-    // It validates that dispatch functions work with real LLM providers
-    expect(true).toBe(true) // Placeholder — real implementation needs API key
+    // It should validate that dispatch functions work with real LLM providers
+    // Ticket: TEST-E2E-001
+    expect(true).toBe(true)
   })
 })
 

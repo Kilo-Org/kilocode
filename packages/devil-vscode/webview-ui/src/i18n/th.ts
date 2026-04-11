@@ -154,7 +154,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "รหัสการอนุญาตไม่ถูกต้อง",
   "provider.connect.oauth.auto.visit.prefix": "เยี่ยมชม ",
   "provider.connect.oauth.auto.visit.link": "ลิงก์นี้",
-  "provider.connect.oauth.auto.visit.suffix": " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Devil",
+  "provider.connect.oauth.auto.visit.suffix":
+    " และป้อนรหัสด้านล่างเพื่อเชื่อมต่อบัญชีและใช้โมเดล {{provider}} ใน Devil",
   "provider.connect.oauth.auto.confirmationCode": "รหัสยืนยัน",
   "provider.connect.toast.connected.title": "{{provider}} ที่เชื่อมต่อแล้ว",
   "provider.connect.toast.connected.description": "โมเดล {{provider}} พร้อมใช้งานแล้ว",
@@ -988,7 +989,8 @@ export const dict = {
   "settings.aboutDevilCode.importSettings.tooLarge": "ไฟล์มีขนาดใหญ่เกินไป ไฟล์การตั้งค่าต้องมีขนาดไม่เกิน 1 MB",
   "settings.aboutDevilCode.importSettings.newerVersion":
     "ไฟล์นี้ถูกส่งออกจาก Devil เวอร์ชันใหม่กว่า การตั้งค่าบางรายการอาจถูกข้ามไป",
-  "settings.aboutDevilCode.importSettings.success": "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
+  "settings.aboutDevilCode.importSettings.success":
+    "นำเข้าการตั้งค่าแล้ว ตรวจสอบการเปลี่ยนแปลงด้านบน จากนั้นคลิกบันทึก",
 
   "settings.aboutDevilCode.telemetry.title": "Telemetry",
   "settings.aboutDevilCode.telemetry.description":

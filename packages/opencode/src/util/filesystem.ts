@@ -1,7 +1,6 @@
-import { chmod, mkdir, readFile, writeFile } from "fs/promises"
-import { createWriteStream, existsSync, statSync } from "fs"
+import { chmod, mkdir, readFile, writeFile, realpath } from "fs/promises"
+import { createWriteStream, existsSync, statSync, realpathSync } from "fs"
 import { lookup } from "mime-types"
-import { realpathSync } from "fs"
 import { dirname, join, relative, resolve as pathResolve } from "path"
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
@@ -139,6 +138,20 @@ export namespace Filesystem {
 
   export function contains(parent: string, child: string) {
     return !relative(parent, child).startsWith("..")
+  }
+
+  /**
+   * Canonicalize a path to resolve symlinks and normalize it for secure containment checks.
+   * Returns the canonical path or the original path if realpath fails.
+   */
+  export async function canonicalize(p: string): Promise<string> {
+    try {
+      const resolved = await realpath(p)
+      return resolved
+    } catch {
+      // If realpath fails (e.g., path doesn't exist), return the normalized path
+      return pathResolve(p)
+    }
   }
 
   export async function findUp(target: string, start: string, stop?: string) {

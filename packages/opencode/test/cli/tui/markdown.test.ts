@@ -12,7 +12,7 @@ describe("formatMarkdownTables", () => {
     const result = formatMarkdownTables(input)
 
     // Each column should be padded to consistent width
-    const lines = result.split("\n")
+    const lines = result.replaceAll("\r\n", "\n").split("\n")
     expect(lines).toHaveLength(4)
 
     // Check that all pipes are aligned
@@ -37,7 +37,7 @@ describe("formatMarkdownTables", () => {
 | Much Longer Cell | X |`
 
     const result = formatMarkdownTables(input)
-    const lines = result.split("\n")
+    const lines = result.replaceAll("\r\n", "\n").split("\n")
 
     // Column widths should be normalized
     expect(lines[0]).toContain("Short")
@@ -51,7 +51,7 @@ describe("formatMarkdownTables", () => {
 | 1 | 2 | 3 |`
 
     const result = formatMarkdownTables(input)
-    const lines = result.split("\n")
+    const lines = result.replaceAll("\r\n", "\n").split("\n")
 
     // Check that alignment markers are preserved
     expect(lines[1]).toContain(":--")
@@ -98,7 +98,7 @@ Some text between tables.
 |  | Value |`
 
     const result = formatMarkdownTables(input)
-    const lines = result.split("\n")
+    const lines = result.replaceAll("\r\n", "\n").split("\n")
 
     // Should still format correctly with empty cells
     expect(lines).toHaveLength(4)
@@ -115,7 +115,7 @@ Some text between tables.
 | 1 | 2 | 3 |`
 
     const result = formatMarkdownTables(input)
-    const lines = result.split("\n")
+    const lines = result.replaceAll("\r\n", "\n").split("\n")
 
     // Should handle the extra column
     expect(lines[2]).toContain("3")

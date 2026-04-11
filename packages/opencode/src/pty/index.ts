@@ -93,15 +93,18 @@ export namespace Pty {
   const state = Instance.state(
     () => new Map<string, ActiveSession>(),
     async (sessions) => {
+      const log = Log.create({ service: "pty" })
       for (const session of sessions.values()) {
         try {
           session.process.kill()
-        } catch {}
+        } catch (err) {
+          log.error("failed to kill pty process", { err, sessionID: session.info.id })
+        }
         for (const [key, ws] of session.subscribers.entries()) {
           try {
             if (ws.data === key) ws.close()
-          } catch {
-            // ignore
+          } catch (err) {
+            log.error("failed to close websocket", { err, sessionID: session.info.id, subscriberKey: key })
           }
         }
       }
@@ -225,12 +228,14 @@ export namespace Pty {
     log.info("removing session", { id })
     try {
       session.process.kill()
-    } catch {}
+    } catch (err) {
+      log.error("failed to kill pty process during remove", { err, sessionID: id })
+    }
     for (const [key, ws] of session.subscribers.entries()) {
       try {
         if (ws.data === key) ws.close()
-      } catch {
-        // ignore
+      } catch (err) {
+        log.error("failed to close websocket during remove", { err, sessionID: id, subscriberKey: key })
       }
     }
     session.subscribers.clear()

@@ -286,7 +286,8 @@ export namespace Config {
       for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
         // devilcode_change end
         try {
-          result = mergeConfigConcatArrays(result, await loadFile(file))
+          // devilcode_change - use Instance.directory for project config, not cwd
+          result = mergeConfigConcatArrays(result, await loadFile(path.join(Instance.directory, file)))
         } catch (err) {
           caught(err, file)
         }
@@ -462,10 +463,11 @@ export namespace Config {
 
     // Install any additional dependencies defined in the package.json
     // This allows local plugins and custom tools to use external packages
+    // Note: --no-cache is required due to Bun issue #19936 (cache performance)
+    // https://github.com/oven-sh/bun/issues/19936 - still open as of Bun 1.2.x
     await BunProc.run(
       [
         "install",
-        // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
         ...(proxied() || process.env.CI ? ["--no-cache"] : []),
       ],
       { cwd: dir },
@@ -1238,28 +1240,30 @@ export namespace Config {
   })
   export type Layout = z.infer<typeof Layout>
 
-  export const Provider = ModelsDev.Provider.partial()
-    .extend({
-      whitelist: z.array(z.string()).optional(),
-      blacklist: z.array(z.string()).optional(),
-      models: z
-        .record(
-          z.string(),
-          ModelsDev.Model.partial().extend({
-            variants: z
-              .record(
-                z.string(),
-                z
-                  .object({
-                    disabled: z.boolean().optional().describe("Disable this variant for the model"),
-                  })
-                  .catchall(z.any()),
-              )
-              .optional()
-              .describe("Variant-specific configuration"),
-          }),
-        )
-        .optional(),
+  // devilcode_change - use z.lazy() to defer ModelsDev evaluation and break circular dependency
+  export const Provider = z.lazy(() =>
+    ModelsDev.Provider.partial()
+      .extend({
+        whitelist: z.array(z.string()).optional(),
+        blacklist: z.array(z.string()).optional(),
+        models: z
+          .record(
+            z.string(),
+            ModelsDev.Model.partial().extend({
+              variants: z
+                .record(
+                  z.string(),
+                  z
+                    .object({
+                      disabled: z.boolean().optional().describe("Disable this variant for the model"),
+                    })
+                    .catchall(z.any()),
+                )
+                .optional()
+                .describe("Variant-specific configuration"),
+            }),
+          )
+          .optional(),
       options: z
         .object({
           apiKey: z.string().optional(),
@@ -1289,6 +1293,7 @@ export namespace Config {
     .meta({
       ref: "ProviderConfig",
     })
+  ) // devilcode_change - close z.lazy()
   export type Provider = z.infer<typeof Provider>
 
   export const Info = z

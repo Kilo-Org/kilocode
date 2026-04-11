@@ -369,8 +369,8 @@ describe("tool.bash truncation", () => {
           ctx,
         )
         expect((result.metadata as any).truncated).toBe(false)
-        const eol = process.platform === "win32" ? "\r\n" : "\n"
-        expect(result.output).toBe(`hello${eol}`)
+        // Normalize line endings - shell output varies by environment even on Windows
+        expect(result.output.replaceAll("\r\n", "\n")).toBe("hello\n")
       },
     })
   })
@@ -394,7 +394,7 @@ describe("tool.bash truncation", () => {
         expect(filepath).toBeTruthy()
 
         const saved = await Filesystem.readText(filepath)
-        const lines = saved.trim().split("\n")
+        const lines = saved.trim().replaceAll("\r\n", "\n").split("\n")
         expect(lines.length).toBe(lineCount)
         expect(lines[0]).toBe("1")
         expect(lines[lineCount - 1]).toBe(String(lineCount))

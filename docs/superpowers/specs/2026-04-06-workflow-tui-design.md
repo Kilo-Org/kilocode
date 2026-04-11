@@ -6,12 +6,12 @@
 
 ## Overview
 
-A dedicated TUI view for managing the multi-model workflow engine. Acts as a mission control dashboard where the user directly drives the agent team through plan → challenge → build → review → ship → retro stages. Project-persistent state (`.planning/` on disk), session-scoped execution (agents only dispatch when the user is in the view and explicitly triggering stages).
+A dedicated TUI view for managing the multi-model workflow engine. Acts as a mission control dashboard where the user directly drives the agent team through plan → challenge → contract → build → review → ship → retro stages. Project-persistent state (`.planning/` on disk), session-scoped execution (agents only dispatch when the user is in the view and explicitly triggering stages).
 
 ## Design Decisions Summary
 
 - **Dedicated route** — New `WorkflowRoute` in the TUI route system (not an overlay or slash-command-only approach)
-- **Dashboard with tabbed detail pane** — Left: task list with wave grouping. Right: tabbed content (agent output, plan, challenge, review artifacts). Top: status bar. Bottom: command input.
+- **Dashboard with tabbed detail pane** — Left: task list with wave grouping. Right: stage guidance + selected task detail + tabbed content (agent output, plan, activity, challenge, review artifacts). Top: status bar. Bottom: command input.
 - **The view IS the orchestrator** — Typing `build` in the command input dispatches agents. The view drives execution, streams results, and handles escalations.
 - **Project-persistent state, session-scoped execution** — `.planning/` survives sessions. Active execution only happens while the user is in the view.
 
@@ -74,7 +74,7 @@ WorkflowView (route component)
 ├── WorkflowBody               ← Middle: split pane container
 │   ├── TaskPanel              ← Left (~30%): task list with wave grouping
 │   └── DetailPanel            ← Right (~70%): tabbed content area
-│       ├── TabBar             ← Tab headers (agents, plan, challenge, review)
+│       ├── TabBar             ← Tab headers (agents, plan, activity, challenge, review)
 │       └── TabContent         ← Active tab's content
 │           ├── AgentOutputTab ← Streaming agent output
 │           ├── PlanTab        ← Plan files viewer
@@ -151,14 +151,13 @@ Custom prompt prefix `workflow>`. Accepts:
 | `retro` | After ship | Triggers RETRO — logs learnings |
 | `next` | Any | Advances to next valid stage |
 | `status` | Any | Refreshes view from STATE.md |
-| `pause` | During build | Pauses after current wave |
+| `pause` | During build | Pauses after current wave; rerun `build` to resume |
 | `task <id>` | Any | Selects task, shows its output |
-| `approve` | Challenge | Approves plan, advances to build |
-| `revise` | Challenge | Sends plan back for revision |
-| `retry <id>` | After failure | Re-dispatches a failed task |
+| `approve` | Challenge / Contract / Review | Resolves the canonical next stage (`challenge -> contract`, `contract -> build`, `review -> ship`) |
+| `revise` | Challenge / Contract / Review | Sends the workflow back one stage where revision is supported |
 | `back` | Any | Exits workflow view |
 
-Free-text input sends guidance to the orchestrator.
+Free-text input is the planning-stage happy path: pasting requirements in `plan` seeds phase context and dispatches planning.
 
 ### Responsive Behavior
 
@@ -202,9 +201,9 @@ Root session ID stored in STATE.md as `rootSessionId`. Re-entering resumes this 
 6. Wave completes when all tasks finish
 After all waves, prompts `/review`.
 
-**REVIEW:** Dispatches code review → Codex, test/typecheck → Kimi workers. Runs `triageFindings()`. Results render in [Review] tab with severity colors (red=BLOCKER, yellow=WARNING, blue=SUGGESTION). If blockers found, auto-routes fixes via `routeFix()`, re-reviews changed files. Max 3 cycles. If cycles exhausted, escalates to user.
+**REVIEW:** Dispatches code review and persists findings in [Review]. Review only runs after all build tasks are completed. If blockers are found, the workflow routes back to build for fixes. Max 3 cycles. If cycles are exhausted, it escalates to the user.
 
-**SHIP:** Dispatches to orchestrator for commit synthesis. Creates atomic git commits. Updates ROADMAP.md. Prompts `/retro` or `/plan` for next phase.
+**SHIP:** Runs the final quality gates, persists a ship report, and updates ROADMAP.md when the phase is ready. Failed ship gates leave the workflow in review with the persisted ship report explaining what blocked release.
 
 ### Real-Time Streaming
 
@@ -217,14 +216,14 @@ After all waves, prompts `/review`.
 
 - `pause` during BUILD stops after current wave
 - `task <id>` inspects specific agent output
-- Free-text during any stage sends guidance to orchestrator
+- Free-text guidance is only wired for planning today
 - `approve` at any stage overrides normal gate and advances
 - Escalation toasts allow approve or redirect
 
 ### Error Recovery
 
 - **Agent crash:** Concurrency slot released. Task status = `failed`. User can `retry <id>`.
-- **Session dies mid-build:** STATE.md has last known state. Re-entering shows completed `✓`, failed `✗`, unstarted `○`. `build` resumes from current wave.
+- **Session dies mid-build:** STATE.md has last known state. Re-entering shows completed `✓`, failed `✗`, unstarted `○`. Running `build` resumes from the next pending wave.
 - **Rate limit:** Concurrency manager prevents over-dispatch. 429s retry with backoff. If exhausted, task returns `blocked`.
 
 ## Section 4: File Structure

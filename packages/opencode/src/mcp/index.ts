@@ -248,7 +248,9 @@ export namespace MCP {
         for (const dpid of await descendants(pid)) {
           try {
             process.kill(dpid, "SIGTERM")
-          } catch {}
+          } catch (err) {
+            log.error("failed to kill MCP descendant process", { err, pid: dpid })
+          }
         }
       }
 

@@ -1,150 +1,229 @@
-import { describe, expect, test } from "bun:test"
-import { resolveTaskModel, TeamDelegationError } from "@/devilcode/team/router"
+import { describe, it, expect } from "bun:test"
+import { resolveTaskModel, TeamDelegationError, TeamConcurrencyError } from "@/devilcode/team/router"
 import type { TeamConfig } from "@/devilcode/team/config"
 
-const teamConfig: TeamConfig = {
-  enabled: true,
-  roles: {
-    orchestrator: {
-      displayName: "Orchestrator",
-      provider: "anthropic",
-      model: "claude-opus-4-6",
-      effort: "max",
-      tier: 1,
-      canDelegate: ["senior", "worker"],
-      maxConcurrent: 1,
-      capabilities: [],
-    },
-    senior: {
-      displayName: "Senior",
-      provider: "openai",
-      model: "gpt-5.4-codex",
-      effort: "xhigh",
-      tier: 2,
-      canDelegate: ["worker"],
-      maxConcurrent: 2,
-      capabilities: [],
-    },
-    worker: {
-      displayName: "Worker",
-      provider: "fireworks-ai",
-      model: "kimi-k2p5-turbo",
-      effort: "default",
-      tier: 3,
-      canDelegate: [],
-      maxConcurrent: 5,
-      capabilities: [],
-    },
-  },
-  routing: {
-    strategy: "hierarchical",
-    defaultRole: "worker",
-    escalationEnabled: true,
-  },
-}
+describe("team router", () => {
+  describe("resolveTaskModel", () => {
+    it("returns undefined when team is not enabled", () => {
+      const result = resolveTaskModel({
+        subagentType: "worker",
+        teamConfig: undefined,
+        parentRole: undefined,
+      })
+      expect(result).toBeUndefined()
+    })
 
-describe("resolveTaskModel", () => {
-  test("resolves worker role to fireworks model", () => {
-    const result = resolveTaskModel({
-      subagentType: "worker",
-      teamConfig,
-      parentRole: "orchestrator",
-    })
-    expect(result).toEqual({
-      model: { providerID: "fireworks-ai", modelID: "kimi-k2p5-turbo" },
-      effort: "default",
-      role: "worker",
-    })
-  })
+    it("returns undefined when subagentType has no matching role", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          senior: {
+            displayName: "Senior Developer",
+            provider: "openai",
+            model: "gpt-4",
+            effort: "high",
+            tier: 2,
+            canDelegate: ["worker"],
+            maxConcurrent: 3,
+            capabilities: ["code-review", "architecture"],
+          },
+        },
+        routing: {
+          strategy: "flat",
+          defaultRole: "senior",
+          escalationEnabled: true,
+        },
+      }
 
-  test("resolves senior role to openai model", () => {
-    const result = resolveTaskModel({
-      subagentType: "senior",
-      teamConfig,
-      parentRole: "orchestrator",
+      const result = resolveTaskModel({
+        subagentType: "nonexistent",
+        teamConfig,
+        parentRole: undefined,
+      })
+      expect(result).toBeUndefined()
     })
-    expect(result).toEqual({
-      model: { providerID: "openai", modelID: "gpt-5.4-codex" },
-      effort: "xhigh",
-      role: "senior",
-    })
-  })
 
-  test("returns undefined when team is disabled", () => {
-    const result = resolveTaskModel({
-      subagentType: "worker",
-      teamConfig: { ...teamConfig, enabled: false },
-      parentRole: "orchestrator",
-    })
-    expect(result).toBeUndefined()
-  })
+    it("returns resolved model for valid subagentType", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          worker: {
+            displayName: "Worker",
+            provider: "anthropic",
+            model: "claude-sonnet",
+            effort: "medium",
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 5,
+            capabilities: ["coding"],
+          },
+        },
+        routing: {
+          strategy: "flat",
+          defaultRole: "worker",
+          escalationEnabled: false,
+        },
+      }
 
-  test("returns undefined for unknown role (falls back to existing behavior)", () => {
-    const result = resolveTaskModel({
-      subagentType: "explore",
-      teamConfig,
-      parentRole: "orchestrator",
-    })
-    expect(result).toBeUndefined()
-  })
+      const result = resolveTaskModel({
+        subagentType: "worker",
+        teamConfig,
+        parentRole: undefined,
+      })
 
-  test("throws when parent cannot delegate to target role", () => {
-    expect(() =>
-      resolveTaskModel({
+      expect(result).toBeDefined()
+      expect(result?.role).toBe("worker")
+      expect(result?.model.providerID).toBe("anthropic")
+      expect(result?.model.modelID).toBe("claude-sonnet")
+      expect(result?.effort).toBe("medium")
+    })
+
+    it("enforces hierarchical delegation rules", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          senior: {
+            displayName: "Senior",
+            provider: "openai",
+            model: "gpt-4",
+            effort: "high",
+            tier: 2,
+            canDelegate: ["worker"],
+            maxConcurrent: 3,
+            capabilities: [],
+          },
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-3.5",
+            effort: "low",
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 5,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "senior",
+          escalationEnabled: true,
+        },
+      }
+
+      // Senior can delegate to worker
+      const validResult = resolveTaskModel({
+        subagentType: "worker",
+        teamConfig,
+        parentRole: "senior",
+      })
+      expect(validResult).toBeDefined()
+
+      // Worker cannot delegate to senior
+      expect(() =>
+        resolveTaskModel({
+          subagentType: "senior",
+          teamConfig,
+          parentRole: "worker",
+        }),
+      ).toThrow(TeamDelegationError)
+    })
+
+    it("skips hierarchy check for flat strategy", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          senior: {
+            displayName: "Senior",
+            provider: "openai",
+            model: "gpt-4",
+            effort: "high",
+            tier: 2,
+            canDelegate: [],
+            maxConcurrent: 3,
+            capabilities: [],
+          },
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-3.5",
+            effort: "low",
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 5,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "flat",
+          defaultRole: "worker",
+          escalationEnabled: false,
+        },
+      }
+
+      // Flat strategy allows any delegation regardless of canDelegate
+      const result = resolveTaskModel({
         subagentType: "senior",
         teamConfig,
         parentRole: "worker",
-      }),
-    ).toThrow(TeamDelegationError)
-  })
+      })
+      expect(result).toBeDefined()
+    })
 
-  test("throws when worker tries to delegate", () => {
-    expect(() =>
-      resolveTaskModel({
+    it("skips hierarchy check when no parent role", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-3.5",
+            effort: "low",
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 5,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "worker",
+          escalationEnabled: true,
+        },
+      }
+
+      // Top-level dispatch (no parent) should work
+      const result = resolveTaskModel({
         subagentType: "worker",
         teamConfig,
-        parentRole: "worker",
-      }),
-    ).toThrow(TeamDelegationError)
+        parentRole: undefined,
+      })
+      expect(result).toBeDefined()
+    })
   })
 
-  test("allows orchestrator to delegate to worker (skipping senior)", () => {
-    const result = resolveTaskModel({
-      subagentType: "worker",
-      teamConfig,
-      parentRole: "orchestrator",
+  describe("TeamDelegationError", () => {
+    it("creates error with correct properties", () => {
+      const error = new TeamDelegationError({
+        parentRole: "senior",
+        targetRole: "architect",
+      })
+
+      expect(error.name).toBe("TeamDelegationError")
+      expect(error.data.parentRole).toBe("senior")
+      expect(error.data.targetRole).toBe("architect")
     })
-    expect(result?.role).toBe("worker")
   })
 
-  test("allows senior to delegate to worker", () => {
-    const result = resolveTaskModel({
-      subagentType: "worker",
-      teamConfig,
-      parentRole: "senior",
-    })
-    expect(result?.role).toBe("worker")
-  })
+  describe("TeamConcurrencyError", () => {
+    it("creates error with correct properties", () => {
+      const error = new TeamConcurrencyError({
+        role: "worker",
+        maxConcurrent: 5,
+      })
 
-  test("allows delegation when parentRole is undefined (top-level dispatch)", () => {
-    const result = resolveTaskModel({
-      subagentType: "senior",
-      teamConfig,
-      parentRole: undefined,
+      expect(error.name).toBe("TeamConcurrencyError")
+      expect(error.data.role).toBe("worker")
+      expect(error.data.maxConcurrent).toBe(5)
     })
-    expect(result?.role).toBe("senior")
-  })
-
-  test("uses flat strategy to skip hierarchy check", () => {
-    const flatConfig: TeamConfig = {
-      ...teamConfig,
-      routing: { ...teamConfig.routing, strategy: "flat" },
-    }
-    const result = resolveTaskModel({
-      subagentType: "senior",
-      teamConfig: flatConfig,
-      parentRole: "worker",
-    })
-    expect(result?.role).toBe("senior")
   })
 })

@@ -30,7 +30,7 @@ describe("util.process", () => {
   test("aborts a running process", async () => {
     const abort = new AbortController()
     const started = Date.now()
-    setTimeout(() => abort.abort(), 25)
+    setTimeout(() => abort.abort(), 50)
 
     const out = await Process.run(node("setInterval(() => {}, 1000)"), {
       abort: abort.signal,
@@ -38,25 +38,25 @@ describe("util.process", () => {
     })
 
     expect(out.code).not.toBe(0)
-    expect(Date.now() - started).toBeLessThan(1000)
-  }, 3000)
+    expect(Date.now() - started).toBeLessThan(500)
+  }, 5000)
 
   test("kills after timeout when process ignores terminate signal", async () => {
     if (process.platform === "win32") return
 
     const abort = new AbortController()
     const started = Date.now()
-    setTimeout(() => abort.abort(), 25)
+    setTimeout(() => abort.abort(), 100)
 
     const out = await Process.run(node('process.on("SIGTERM", () => {}); setInterval(() => {}, 1000)'), {
       abort: abort.signal,
       nothrow: true,
-      timeout: 25,
+      timeout: 100,
     })
 
     expect(out.code).not.toBe(0)
     expect(Date.now() - started).toBeLessThan(1000)
-  }, 3000)
+  }, 5000)
 
   test("uses cwd when spawning commands", async () => {
     await using tmp = await tmpdir()

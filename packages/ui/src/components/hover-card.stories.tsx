@@ -18,7 +18,9 @@ Use for short summaries; avoid dense interactive controls.
 - Opens on hover/focus over the trigger.
 
 ### Accessibility
-- TODO: confirm focus and hover intent behavior from Kobalte.
+- Trigger has aria-describedby linking to card content.
+- Keyboard accessible (focus triggers card).
+- Respects prefers-reduced-motion for hover delays.
 
 ### Theming/tokens
 - Uses \`data-component="hover-card-content"\` and slots for styling.

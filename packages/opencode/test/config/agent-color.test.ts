@@ -1,10 +1,23 @@
-import { test, expect } from "bun:test"
+import { test, expect, beforeAll, afterEach } from "bun:test"
 import path from "path"
+import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Config } from "../../src/config/config"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Color } from "../../src/util/color"
+import { Global } from "../../src/global"
+
+// Clear stale state from other test files
+beforeAll(async () => {
+  await Instance.disposeAll().catch(() => {})
+  Config.global?.reset?.()
+})
+
+afterEach(async () => {
+  Config.global?.reset?.()
+  await Instance.disposeAll().catch(() => {})
+})
 
 test("agent color parsed from project config", async () => {
   await using tmp = await tmpdir({

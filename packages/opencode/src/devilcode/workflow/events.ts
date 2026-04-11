@@ -2,6 +2,7 @@
 import fs from "fs/promises"
 import path from "path"
 import { Mutex } from "./mutex"
+import { Log } from "../../util/log"
 
 export type EventType =
   | "plan_created"
@@ -29,6 +30,8 @@ export type WorkflowEvent = {
   timestamp?: string
 }
 
+const log = Log.create({ service: "workflow.events" })
+
 export class EventLogger {
   private logPath: string
   private mutex = new Mutex()
@@ -51,17 +54,30 @@ export class EventLogger {
   async readAll(): Promise<WorkflowEvent[]> {
     try {
       const content = await fs.readFile(this.logPath, "utf-8")
-      return content
-        .split("\n")
-        .filter((line) => line.trim().length > 0)
+      const lines = content.split("\n").filter((line) => line.trim().length > 0)
+      let corruptLines = 0
+      const events = lines
         .map((line) => {
           try {
             return JSON.parse(line) as WorkflowEvent
-          } catch {
+          } catch (parseError) {
+            log.warn("corrupted event log entry", {
+              line: line.substring(0, 100),
+              error: parseError,
+            })
+            corruptLines++
             return null
           }
         })
         .filter((e): e is WorkflowEvent => e !== null)
+      if (corruptLines > 0) {
+        log.error("event log has corruption", {
+          path: this.logPath,
+          corruptLines,
+          totalLines: lines.length,
+        })
+      }
+      return events
     } catch {
       return []
     }
@@ -72,15 +88,29 @@ export class EventLogger {
       const content = await fs.readFile(this.logPath, "utf-8")
       const lines = content.split("\n").filter((line) => line.trim().length > 0)
       const tail = lines.slice(-count)
-      return tail
+      let corruptLines = 0
+      const events = tail
         .map((line) => {
           try {
             return JSON.parse(line) as WorkflowEvent
-          } catch {
+          } catch (parseError) {
+            log.warn("corrupted event log entry", {
+              line: line.substring(0, 100),
+              error: parseError,
+            })
+            corruptLines++
             return null
           }
         })
         .filter((e): e is WorkflowEvent => e !== null)
+      if (corruptLines > 0) {
+        log.error("event log has corruption", {
+          path: this.logPath,
+          corruptLines,
+          totalLines: lines.length,
+        })
+      }
+      return events
     } catch {
       return []
     }

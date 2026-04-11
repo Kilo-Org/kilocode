@@ -1700,7 +1700,8 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test("glm returns empty object", () => {
+  // kilocode_change - glm now returns reasoning variants via @ai-sdk/openai-compatible
+  test("glm returns reasoning variants", () => {
     const model = createMockModel({
       id: "glm/glm-4",
       providerID: "glm",
@@ -1711,7 +1712,8 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({})
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+    expect(result.low).toEqual({ reasoningEffort: "low" })
   })
 
   test("mistral returns empty object", () => {
@@ -1833,6 +1835,7 @@ describe("ProviderTransform.variants", () => {
           url: "https://gateway.devil.ai",
           npm: "@devilcode/kilo-gateway",
         },
+        capabilities: { reasoning: false },
       })
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual([])
@@ -1847,12 +1850,13 @@ describe("ProviderTransform.variants", () => {
           url: "https://gateway.devil.ai",
           npm: "@devilcode/kilo-gateway",
         },
+        capabilities: { reasoning: false },
       })
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual([])
     })
 
-    test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
+    test("gpt models return OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "kilo/openai/gpt-5",
         providerID: "kilo",
@@ -1864,11 +1868,7 @@ describe("ProviderTransform.variants", () => {
       })
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({
-        reasoningEffort: "low",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
-      })
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
     })
 
     test("gemini-3 models return OPENAI_EFFORTS with reasoning and encrypted content", () => {

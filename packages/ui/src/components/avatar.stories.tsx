@@ -19,7 +19,9 @@ Use in user lists and headers.
 - Uses grapheme-aware fallback rendering.
 
 ### Accessibility
-- TODO: provide alt text when using images; currently image is decorative.
+- Avatar image uses alt text from fallback prop when provided.
+- Fallback text is announced by screen readers.
+- Decorative images marked with empty alt when no meaningful text available.
 
 ### Theming/tokens
 - Uses \`data-component="avatar"\` with size and image state attributes.

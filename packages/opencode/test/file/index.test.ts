@@ -219,7 +219,7 @@ describe("file/index Filesystem patterns", () => {
 
           // This is how File.changed() reads untracked files
           const content = await Filesystem.readText(untrackedPath)
-          const lines = content.split("\n").length
+          const lines = content.replaceAll("\r\n", "\n").split("\n").length
           expect(lines).toBe(2)
         },
       })
