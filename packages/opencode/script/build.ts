@@ -73,7 +73,7 @@ const createEmbeddedWebUIBundle = async()=>{
     const allFiles = await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: path.join(appDir, "dist")}));
     const fileMap = `
     // Import all files as file_$i with type: "file" 
-    ${allFiles.map((filePath, i) => `import file_${i} from "${path.join(appDir, "dist", filePath)}" with { type: "file" };`).join("\n")}
+    ${allFiles.map((filePath, i) => `import file_${i} from "${path.join(appDir, "dist", filePath).replaceAll("\\", "/")}" with { type: "file" };`).join("\n")}
     // Export with original mappings
     export default {
       ${allFiles.map((filePath, i)=>`"${filePath}": file_${i},`).join("\n")}
