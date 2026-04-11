@@ -178,6 +178,111 @@ test("merges multiple config files with correct precedence", async () => {
   })
 })
 
+test("prefers kilo.json over opencode.json in project config", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await writeConfig(
+        dir,
+        {
+          $schema: "https://app.kilo.ai/config.json",
+          model: "opencode/project",
+          username: "opencode-user",
+        },
+        "opencode.json",
+      )
+      await writeConfig(
+        dir,
+        {
+          $schema: "https://app.kilo.ai/config.json",
+          model: "kilo/project",
+        },
+        "kilo.json",
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("kilo/project")
+      expect(config.username).toBe("opencode-user")
+    },
+  })
+})
+
+test("prefers kilo.json over opencode.json in .kilo config directory", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      await Filesystem.write(
+        path.join(dir, ".kilo", "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "opencode/local",
+          username: "opencode-local",
+        }),
+      )
+      await Filesystem.write(
+        path.join(dir, ".kilo", "kilo.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          model: "kilo/local",
+        }),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const config = await Config.get()
+      expect(config.model).toBe("kilo/local")
+      expect(config.username).toBe("opencode-local")
+    },
+  })
+})
+
+test("prefers kilo.json over opencode.json in global config", async () => {
+  await using globalTmp = await tmpdir()
+  await using tmp = await tmpdir()
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = globalTmp.path
+  Config.global.reset()
+
+  try {
+    await writeConfig(
+      globalTmp.path,
+      {
+        $schema: "https://app.kilo.ai/config.json",
+        model: "opencode/global",
+        username: "opencode-global",
+      },
+      "opencode.json",
+    )
+    await writeConfig(
+      globalTmp.path,
+      {
+        $schema: "https://app.kilo.ai/config.json",
+        model: "kilo/global",
+      },
+      "kilo.json",
+    )
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await Config.get()
+        expect(config.model).toBe("kilo/global")
+        expect(config.username).toBe("opencode-global")
+      },
+    })
+  } finally {
+    await Instance.disposeAll()
+    ;(Global.Path as { config: string }).config = prev
+    Config.global.reset()
+  }
+})
+
 test("prefers .kilo directory config over legacy .kilocode", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {

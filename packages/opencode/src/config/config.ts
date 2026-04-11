@@ -280,7 +280,7 @@ export namespace Config {
     // Project config overrides global and remote config.
     if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
       // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+      for (const file of ["opencode.jsonc", "opencode.json", "kilo.json", "kilo.jsonc"]) {
         try {
           result = mergeConfigConcatArrays(result, await loadFile(file))
         } catch (err) {
@@ -311,7 +311,7 @@ export namespace Config {
         dir.endsWith(".opencode") ||
         dir === Flag.KILO_CONFIG_DIR
       ) {
-        for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
+        for (const file of ["opencode.jsonc", "opencode.json", "kilo.json", "kilo.jsonc"]) {
           log.debug(`loading config from ${path.join(dir, file)}`)
           try {
             result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
@@ -1606,11 +1606,11 @@ export namespace Config {
       {},
       mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
       // kilocode_change start
+      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
+      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
       mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
       mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
       // kilocode_change end
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
     )
 
     const legacy = path.join(Global.Path.config, "config")
