@@ -308,7 +308,9 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
         const sessionID = params.id
         if (!sessionID) return
         if (status()?.type !== "idle") {
-          await sdk.client.session.abort({ sessionID }).catch(() => {})
+          await sdk.client.session.abort({ sessionID }).catch((error) => {
+            console.warn("[Session] Failed to abort session:", sessionID, error)
+          })
         }
         const revert = info()?.revert?.messageID
         const message = findLast(userMessages(), (x) => !revert || x.id < revert)

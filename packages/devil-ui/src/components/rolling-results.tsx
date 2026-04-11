@@ -115,7 +115,11 @@ export function RollingResults<T>(props: RollingResultsProps<T>) {
         const anim = animate(track, { transform: `translateY(${-next}px)` }, props.spring ?? GROW_SPRING)
         shift = anim
         anim.finished
-          .catch(() => {})
+          .catch((error) => {
+            if (import.meta.env.DEV) {
+              console.debug("[RollingResults] Animation failed:", error)
+            }
+          })
           .finally(() => {
             if (shift !== anim) return
             setTrack(next)
@@ -144,7 +148,11 @@ export function RollingResults<T>(props: RollingResultsProps<T>) {
         // Wait for the current offset animation to settle (if any).
         const done = shift?.finished ?? Promise.resolve()
         done
-          .catch(() => {})
+          .catch((error) => {
+            if (import.meta.env.DEV) {
+              console.debug("[RollingResults] Animation failed:", error)
+            }
+          })
           .then(() => {
             if (props.scrollable !== true) return
 

@@ -114,7 +114,11 @@ export function GrowBox(props: GrowBoxProps) {
     const current = animate(edgeRef, { opacity: 0 }, { type: "spring", visualDuration: edgeFade(), bounce: 0 })
     edgeAnim = current
     current.finished
-      .catch(() => {})
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.debug("[GrowBox] Animation failed:", error)
+        }
+      })
       .finally(() => {
         if (edgeAnim !== current) return
         edgeAnim = undefined
@@ -147,7 +151,11 @@ export function GrowBox(props: GrowBoxProps) {
     edgeAnim = current
     edgeOn = true
     current.finished
-      .catch(() => {})
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.debug("[GrowBox] Animation failed:", error)
+        }
+      })
       .finally(() => {
         if (edgeAnim !== current) return
         edgeAnim = undefined

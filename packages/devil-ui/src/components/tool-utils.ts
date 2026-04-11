@@ -254,7 +254,13 @@ export function useRowWipe(opts: {
         GROW_SPRING,
       )
 
-      anim.finished.catch(() => {}).finally(clear)
+      anim.finished
+        .catch((error) => {
+          if (import.meta.env.DEV) {
+            console.debug("[ToolUtils] Animation interrupted:", error)
+          }
+        })
+        .finally(clear)
     })
 
     onCleanup(() => {
