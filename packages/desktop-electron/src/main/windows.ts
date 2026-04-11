@@ -58,7 +58,8 @@ export function createMainWindow(globals: Globals) {
       : {}),
     webPreferences: {
       preload: join(root, "../preload/index.mjs"),
-      sandbox: false,
+      sandbox: true,
+      contextIsolation: true,
     },
   })
 
@@ -92,7 +93,8 @@ export function createLoadingWindow(globals: Globals) {
       : {}),
     webPreferences: {
       preload: join(root, "../preload/index.mjs"),
-      sandbox: false,
+      sandbox: true,
+      contextIsolation: true,
     },
   })
 
