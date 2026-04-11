@@ -169,10 +169,19 @@ export namespace ModelsDev {
         ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
       }
 
-      const [kiloModels, apertisModels] = await Promise.all([
+      const kymaConfig = config.provider?.kyma?.options
+      const kymaBaseURL = kymaConfig?.baseURL ?? "https://kymaapi.com/v1"
+      const kymaFetchOptions = {
+        ...(kymaConfig?.baseURL ? { baseURL: kymaConfig.baseURL } : {}),
+      }
+
+      const [kiloModels, apertisModels, kymaModels] = await Promise.all([
         ModelCache.fetch("kilo", kiloFetchOptions).catch(() => ({})),
         !providers["apertis"]
           ? ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+          : Promise.resolve(null),
+        !providers["kyma"]
+          ? ModelCache.fetch("kyma", kymaFetchOptions).catch(() => ({}))
           : Promise.resolve(null),
       ])
 
@@ -201,23 +210,58 @@ export namespace ModelsDev {
           ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
         }
       }
-    } else if (!providers["apertis"]) {
-      const apertisConfig = config.provider?.apertis?.options
-      const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
-      const apertisFetchOptions = {
-        ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+
+      if (!providers["kyma"] && kymaModels !== null) {
+        providers["kyma"] = {
+          id: "kyma",
+          name: "Kyma",
+          env: ["KYMA_API_KEY"],
+          api: kymaBaseURL,
+          npm: "@ai-sdk/openai-compatible",
+          models: kymaModels,
+        }
+        if (Object.keys(kymaModels).length === 0) {
+          ModelCache.refresh("kyma", kymaFetchOptions).catch(() => {})
+        }
       }
-      const apertisModels = await ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
-      providers["apertis"] = {
-        id: "apertis",
-        name: "Apertis",
-        env: ["APERTIS_API_KEY"],
-        api: apertisBaseURL,
-        npm: "@ai-sdk/openai-compatible",
-        models: apertisModels,
+    } else if (!providers["apertis"] || !providers["kyma"]) {
+      if (!providers["apertis"]) {
+        const apertisConfig = config.provider?.apertis?.options
+        const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
+        const apertisFetchOptions = {
+          ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
+        }
+        const apertisModels = await ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
+        providers["apertis"] = {
+          id: "apertis",
+          name: "Apertis",
+          env: ["APERTIS_API_KEY"],
+          api: apertisBaseURL,
+          npm: "@ai-sdk/openai-compatible",
+          models: apertisModels,
+        }
+        if (Object.keys(apertisModels).length === 0) {
+          ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+        }
       }
-      if (Object.keys(apertisModels).length === 0) {
-        ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+      if (!providers["kyma"]) {
+        const kymaConfig = config.provider?.kyma?.options
+        const kymaBaseURL = kymaConfig?.baseURL ?? "https://kymaapi.com/v1"
+        const kymaFetchOptions = {
+          ...(kymaConfig?.baseURL ? { baseURL: kymaConfig.baseURL } : {}),
+        }
+        const kymaModels = await ModelCache.fetch("kyma", kymaFetchOptions).catch(() => ({}))
+        providers["kyma"] = {
+          id: "kyma",
+          name: "Kyma",
+          env: ["KYMA_API_KEY"],
+          api: kymaBaseURL,
+          npm: "@ai-sdk/openai-compatible",
+          models: kymaModels,
+        }
+        if (Object.keys(kymaModels).length === 0) {
+          ModelCache.refresh("kyma", kymaFetchOptions).catch(() => {})
+        }
       }
     }
 

@@ -258,6 +258,13 @@ export const PROVIDER_MAP: Record<string, ProviderMapping> = {
     modelField: "apertisModelId",
     urlField: "apertisBaseUrl",
   },
+  kyma: {
+    id: "kyma",
+    key: "kymaApiKey",
+    name: "Kyma",
+    modelField: "kymaModelId",
+    urlField: "kymaBaseUrl",
+  },
   "openai-codex": {
     id: "openai",
     key: "",
