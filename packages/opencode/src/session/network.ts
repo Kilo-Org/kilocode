@@ -235,10 +235,16 @@ export namespace SessionNetwork {
       void MCP.status()
         .then((statuses) => {
           for (const [name, s] of Object.entries(statuses)) {
-            if (s.status === "failed") MCP.connect(name).catch(() => {})
+            if (s.status === "failed") {
+              MCP.connect(name).catch((err) => {
+                log.error("remote reconnect failed", { name, err })
+              })
+            }
           }
         })
-        .catch(() => {})
+        .catch((err) => {
+          log.error("failed to get MCP status for reconnect", { err })
+        })
       // kilocode_change end
       Bus.publish(Event.Replied, {
         sessionID: req.info.sessionID,
