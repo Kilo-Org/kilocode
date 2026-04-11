@@ -19,7 +19,7 @@ Auto Model is a smart model routing system that automatically selects the optima
 2. Start working in any mode (Code, Architect, Debug, etc.)
 3. The system automatically routes your requests to the best model for that task
 
-That's it. No configuration needed. 
+That's it. No configuration needed.
 
 You can see which underlying models are used, as well as the cost, in the expanded model picker. Model mapping information is also available on the [Gateway Model page](/docs/gateway/models-and-providers#kilo-autofrontier).
 
@@ -30,7 +30,6 @@ You can see which underlying models are used, as well as the cost, in the expand
 - **Free** — Routes to the best available free model on OpenRouter. Because free model availability shifts over time as providers change promotional periods, the mapping is updated server-side — you always get the best free option without having to track what's currently available. Quality will be lower than paid tiers, and the model may change over time.
 
 ## Benefits
-
 
 ### Cost Optimization
 

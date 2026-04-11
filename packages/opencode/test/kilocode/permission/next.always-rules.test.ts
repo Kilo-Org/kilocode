@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test"
-import { PermissionNext } from "../../../src/permission/next"
+import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { SessionID } from "../../../src/session/schema"
 import { Instance } from "../../../src/project/instance"
@@ -12,7 +12,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_1"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -22,14 +22,14 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_1"),
           approvedAlways: ["npm install"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_1"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_1"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
-        const result = await PermissionNext.ask({
+        const result = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["npm install"],
@@ -47,7 +47,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_2"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -57,15 +57,15 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_2"),
           deniedAlways: ["rm -rf /"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_2"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_2"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         await expect(
-          PermissionNext.ask({
+          Permission.ask({
             sessionID: SessionID.make("session_test"),
             permission: "bash",
             patterns: ["rm -rf /"],
@@ -73,7 +73,7 @@ describe("saveAlwaysRules", () => {
             always: [],
             ruleset: [],
           }),
-        ).rejects.toBeInstanceOf(PermissionNext.DeniedError)
+        ).rejects.toBeInstanceOf(Permission.DeniedError)
       },
     })
   })
@@ -84,7 +84,7 @@ describe("saveAlwaysRules", () => {
       directory: tmp.path,
       fn: async () => {
         await expect(
-          PermissionNext.saveAlwaysRules({
+          Permission.saveAlwaysRules({
             requestID: PermissionID.make("permission_nonexistent"),
             approvedAlways: ["npm install"],
           }),
@@ -98,7 +98,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_3"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -109,16 +109,16 @@ describe("saveAlwaysRules", () => {
         })
 
         // "curl" is not in metadata.rules or always — should be silently ignored
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_3"),
           approvedAlways: ["npm install", "curl http://evil.com"],
         })
 
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_3"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_3"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // npm install was in rules — auto-allowed
-        const result = await PermissionNext.ask({
+        const result = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["npm install"],
@@ -129,7 +129,7 @@ describe("saveAlwaysRules", () => {
         expect(result).toBeUndefined()
 
         // curl was NOT in rules — still requires permission
-        const curlPromise = PermissionNext.ask({
+        const curlPromise = Permission.ask({
           id: PermissionID.make("permission_curl"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -138,8 +138,8 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_curl"), reply: "reject" })
-        await expect(curlPromise).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await Permission.reply({ requestID: PermissionID.make("permission_curl"), reply: "reject" })
+        await expect(curlPromise).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })
@@ -149,7 +149,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_nonbash"),
           sessionID: SessionID.make("session_test"),
           permission: "read",
@@ -160,15 +160,15 @@ describe("saveAlwaysRules", () => {
         })
 
         // "*" is in always — should be accepted even without metadata.rules
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_nonbash"),
           approvedAlways: ["*"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_nonbash"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_nonbash"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // "*" wildcard should auto-allow any read
-        const result = await PermissionNext.ask({
+        const result = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "read",
           patterns: ["any/file.ts"],
@@ -186,7 +186,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_4"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -197,15 +197,15 @@ describe("saveAlwaysRules", () => {
         })
 
         // Approve the broadest hierarchy level
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_4"),
           approvedAlways: ["npm *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_4"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_4"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // "npm *" wildcard should auto-allow any npm command
-        const result = await PermissionNext.ask({
+        const result = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["npm test"],
@@ -223,7 +223,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_5"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -235,17 +235,17 @@ describe("saveAlwaysRules", () => {
         })
 
         // Deny broad, allow specific — specific should win
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_5"),
           approvedAlways: ["npm install *"],
           deniedAlways: ["npm *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_5"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_5"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // "npm install foo" matches both rules; "npm install *" (allow) comes
         // after "npm *" (deny) in metadata.rules order, so allow wins
-        const result = await PermissionNext.ask({
+        const result = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["npm install foo"],
@@ -263,7 +263,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_6"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -273,16 +273,16 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_6"),
           approvedAlways: ["git log *"],
           deniedAlways: ["git *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_6"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_6"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // "git log --oneline" should be allowed (specific allow after broad deny)
-        const allowed = await PermissionNext.ask({
+        const allowed = await Permission.ask({
           sessionID: SessionID.make("session_test"),
           permission: "bash",
           patterns: ["git log --oneline"],
@@ -294,7 +294,7 @@ describe("saveAlwaysRules", () => {
 
         // "git status" should be denied (only matches broad deny)
         await expect(
-          PermissionNext.ask({
+          Permission.ask({
             sessionID: SessionID.make("session_test"),
             permission: "bash",
             patterns: ["git status"],
@@ -302,7 +302,7 @@ describe("saveAlwaysRules", () => {
             always: [],
             ruleset: [],
           }),
-        ).rejects.toBeInstanceOf(PermissionNext.DeniedError)
+        ).rejects.toBeInstanceOf(Permission.DeniedError)
       },
     })
   })
@@ -312,7 +312,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askPromise = PermissionNext.ask({
+        const askPromise = Permission.ask({
           id: PermissionID.make("permission_7"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -323,15 +323,15 @@ describe("saveAlwaysRules", () => {
         })
 
         // "curl" is not in metadata.rules — should be silently ignored
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_7"),
           approvedAlways: ["npm *", "curl *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_7"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_7"), reply: "once" })
         await expect(askPromise).resolves.toBeUndefined()
 
         // curl should still require permission (not auto-allowed)
-        const curlPromise = PermissionNext.ask({
+        const curlPromise = Permission.ask({
           id: PermissionID.make("permission_curl2"),
           sessionID: SessionID.make("session_test"),
           permission: "bash",
@@ -340,8 +340,8 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_curl2"), reply: "reject" })
-        await expect(curlPromise).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await Permission.reply({ requestID: PermissionID.make("permission_curl2"), reply: "reject" })
+        await expect(curlPromise).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })
@@ -352,7 +352,7 @@ describe("saveAlwaysRules", () => {
       directory: tmp.path,
       fn: async () => {
         // Subagent A asks for bash permission
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_a"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -363,7 +363,7 @@ describe("saveAlwaysRules", () => {
         })
 
         // Subagent B asks for the same permission (different session)
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_b"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -374,13 +374,13 @@ describe("saveAlwaysRules", () => {
         })
 
         // User approves "npm *" on subagent A's permission
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_a"),
           approvedAlways: ["npm *"],
         })
 
         // Subagent B should auto-resolve because "npm test" matches "npm *"
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_a"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_a"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
         await expect(askB).resolves.toBeUndefined()
       },
@@ -392,7 +392,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_a2"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -402,7 +402,7 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_b2"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -412,7 +412,7 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        const askC = PermissionNext.ask({
+        const askC = Permission.ask({
           id: PermissionID.make("permission_c2"),
           sessionID: SessionID.make("session_c"),
           permission: "bash",
@@ -423,11 +423,11 @@ describe("saveAlwaysRules", () => {
         })
 
         // Approve "npm *" on session A — should auto-resolve B and C
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_a2"),
           approvedAlways: ["npm *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_a2"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_a2"), reply: "once" })
 
         await expect(askA).resolves.toBeUndefined()
         await expect(askB).resolves.toBeUndefined()
@@ -441,7 +441,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_a3"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -452,7 +452,7 @@ describe("saveAlwaysRules", () => {
         })
 
         // Subagent B asks for a different command
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_b3"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -463,16 +463,16 @@ describe("saveAlwaysRules", () => {
         })
 
         // Approve "npm *" — should NOT resolve B (curl doesn't match npm *)
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_a3"),
           approvedAlways: ["npm *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_a3"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_a3"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
 
         // B should still be pending — reject it to clean up
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_b3"), reply: "reject" })
-        await expect(askB).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await Permission.reply({ requestID: PermissionID.make("permission_b3"), reply: "reject" })
+        await expect(askB).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })
@@ -482,7 +482,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_a4"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -493,16 +493,16 @@ describe("saveAlwaysRules", () => {
         })
 
         // Save rules but don't reply yet — the request itself should not be auto-resolved
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_a4"),
           approvedAlways: ["npm *"],
         })
 
         // The original request should still be pending (needs explicit reply)
-        const pending = await PermissionNext.list()
+        const pending = await Permission.list()
         expect(pending.some((p) => String(p.id) === "permission_a4")).toBe(true)
 
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_a4"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_a4"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
       },
     })
@@ -513,7 +513,7 @@ describe("saveAlwaysRules", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_a5"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -523,7 +523,7 @@ describe("saveAlwaysRules", () => {
           ruleset: [],
         })
 
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_b5"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -534,15 +534,15 @@ describe("saveAlwaysRules", () => {
         })
 
         // User denies "git log *" on subagent A
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_a5"),
           deniedAlways: ["git log *"],
         })
 
         // Subagent B should auto-reject because "git log --oneline -10" matches denied "git log *"
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_a5"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_a5"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
-        await expect(askB).rejects.toBeInstanceOf(PermissionNext.DeniedError)
+        await expect(askB).rejects.toBeInstanceOf(Permission.DeniedError)
       },
     })
   })
@@ -554,7 +554,7 @@ describe("saveAlwaysRules", () => {
       fn: async () => {
         // Subagent B has "git status && npm install" — two patterns.
         // Its ruleset already allows "npm install" but "git status" is "ask".
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_multi_b"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -568,7 +568,7 @@ describe("saveAlwaysRules", () => {
         })
 
         // Subagent A gets "git status" approved
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_multi_a"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -579,11 +579,11 @@ describe("saveAlwaysRules", () => {
         })
 
         // User approves "git *" on subagent A
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_multi_a"),
           approvedAlways: ["git *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_multi_a"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_multi_a"), reply: "once" })
 
         // B should auto-resolve: "git status" covered by new rule, "npm install" covered by original ruleset
         await expect(askA).resolves.toBeUndefined()
@@ -599,7 +599,7 @@ describe("saveAlwaysRules", () => {
       fn: async () => {
         // Subagent B has "git status && curl http://evil.com" — two patterns.
         // Neither is allowed by the ruleset.
-        const askB = PermissionNext.ask({
+        const askB = Permission.ask({
           id: PermissionID.make("permission_multi_b2"),
           sessionID: SessionID.make("session_b"),
           permission: "bash",
@@ -609,7 +609,7 @@ describe("saveAlwaysRules", () => {
           ruleset: [{ permission: "bash", pattern: "*", action: "ask" }],
         })
 
-        const askA = PermissionNext.ask({
+        const askA = Permission.ask({
           id: PermissionID.make("permission_multi_a2"),
           sessionID: SessionID.make("session_a"),
           permission: "bash",
@@ -620,19 +620,19 @@ describe("saveAlwaysRules", () => {
         })
 
         // User approves "git *" — covers "git status" but NOT "curl"
-        await PermissionNext.saveAlwaysRules({
+        await Permission.saveAlwaysRules({
           requestID: PermissionID.make("permission_multi_a2"),
           approvedAlways: ["git *"],
         })
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_multi_a2"), reply: "once" })
+        await Permission.reply({ requestID: PermissionID.make("permission_multi_a2"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
 
         // B should still be pending (curl not covered)
-        const pending = await PermissionNext.list()
+        const pending = await Permission.list()
         expect(pending.some((p) => String(p.id) === "permission_multi_b2")).toBe(true)
 
-        await PermissionNext.reply({ requestID: PermissionID.make("permission_multi_b2"), reply: "reject" })
-        await expect(askB).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await Permission.reply({ requestID: PermissionID.make("permission_multi_b2"), reply: "reject" })
+        await expect(askB).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })

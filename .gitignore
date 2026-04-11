@@ -44,4 +44,4 @@ telemetry-id
 tsconfig.tsbuildinfo
 
 # Kilo
-.kilo/plans/*
+.kilo/plans/*upstream-merge-report-*.md

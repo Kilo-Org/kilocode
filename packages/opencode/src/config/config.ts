@@ -25,6 +25,7 @@ import {
 } from "jsonc-parser"
 // kilocode_change end
 import { Instance } from "../project/instance"
+import { State } from "../project/state" // kilocode_change
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
@@ -362,7 +363,7 @@ export namespace Config {
       // kilocode_change end
     }
 
-    const active = Account.active()
+    const active = await Account.active()
     if (active?.active_org_id) {
       try {
         const [config, token] = await Promise.all([
@@ -1357,7 +1358,12 @@ export namespace Config {
         })
         .optional(),
       plugin: z.string().array().optional(),
-      snapshot: z.boolean().optional(),
+      snapshot: z
+        .boolean()
+        .optional()
+        .describe(
+          "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
+        ),
       share: z
         .enum(["manual", "auto", "disabled"])
         .optional()
@@ -1892,7 +1898,7 @@ export namespace Config {
       // correct precedence order. This avoids the stale-cache problem without the
       // precedence bug that would occur if we merged the global patch directly into
       // the already-resolved config (which includes project overrides).
-      Instance.resetStateEntry(stateInit)
+      State.resetEntry(Instance.directory, stateInit) // kilocode_change
 
       GlobalBus.emit("event", {
         directory: "global",

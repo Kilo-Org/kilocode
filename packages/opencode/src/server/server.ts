@@ -1,10 +1,7 @@
-import { BusEvent } from "@/bus/bus-event"
-import { Bus } from "@/bus"
 import { Log } from "../util/log"
 import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "hono-openapi"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { streamSSE } from "hono/streaming"
 // import { proxy } from "hono/proxy" // kilocode_change - disabled external proxy
 import { basicAuth } from "hono/basic-auth"
 import z from "zod"
@@ -16,7 +13,7 @@ import { TuiRoutes } from "./routes/tui"
 import { Instance } from "../project/instance"
 import { Vcs } from "../project/vcs"
 import { Agent } from "../agent/agent"
-import { Skill } from "../skill/skill"
+import { Skill } from "../skill"
 import { Auth } from "../auth"
 import { ModelCache } from "../provider/model-cache" // kilocode_change
 import { Flag } from "../flag/flag"
@@ -33,29 +30,31 @@ import { McpRoutes } from "./routes/mcp"
 import { FileRoutes } from "./routes/file"
 import { ConfigRoutes } from "./routes/config"
 import { ExperimentalRoutes } from "./routes/experimental"
-import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
 import { ProviderRoutes } from "./routes/provider"
+import { EventRoutes } from "./routes/event"
+import { TelemetryRoutes } from "./routes/telemetry" // kilocode_change
+import { CommitMessageRoutes } from "./routes/commit-message" // kilocode_change
+import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
+import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
+import { PermissionKilocodeRoutes } from "../kilocode/permission/routes" // kilocode_change
+import { RemoteRoutes } from "./routes/remote" // kilocode_change
+import { NetworkRoutes } from "./routes/network" // kilocode_change
 import { createKiloRoutes } from "@kilocode/kilo-gateway" // kilocode_change
 import { Database } from "../storage/db" // kilocode_change
 import { Session } from "../session" // kilocode_change
 import { Identifier } from "../id/id" // kilocode_change
 import { SessionTable, MessageTable, PartTable } from "../session/session.sql" // kilocode_change
+import { Bus } from "@/bus" // kilocode_change
 import { InstanceBootstrap } from "../project/bootstrap"
 import { NotFoundError } from "../storage/db"
 import type { ContentfulStatusCode } from "hono/utils/http-status"
 import { websocket } from "hono/bun"
 import { HTTPException } from "hono/http-exception"
 import { errors } from "./error"
-import { CommitMessageRoutes } from "./routes/commit-message" // kilocode_change
-import { EnhancePromptRoutes } from "./routes/enhance-prompt" // kilocode_change
-import { KilocodeRoutes } from "./routes/kilocode" // kilocode_change
-import { PermissionKilocodeRoutes } from "../kilocode/permission/routes" // kilocode_change
 import { Filesystem } from "@/util/filesystem"
 import { QuestionRoutes } from "./routes/question"
 import { PermissionRoutes } from "./routes/permission"
-import { RemoteRoutes } from "./routes/remote" // kilocode_change
 import { GlobalRoutes } from "./routes/global"
-import { NetworkRoutes } from "./routes/network" // kilocode_change
 import { MDNS } from "./mdns"
 import { lazy } from "@/util/lazy"
 
@@ -79,6 +78,7 @@ export namespace Server {
             let status: ContentfulStatusCode
             if (err instanceof NotFoundError) status = 404
             else if (err instanceof Provider.ModelNotFoundError) status = 400
+            else if (err.name === "ProviderAuthValidationFailed") status = 400
             else if (err.name.startsWith("Worktree")) status = 400
             else status = 500
             return c.json(err.toObject(), { status })
@@ -100,8 +100,7 @@ export namespace Server {
         })
         .use(async (c, next) => {
           // kilocode_change start
-          // kilocode change add telemetry because it is high volume
-          // add early return to prevent logging timing
+          // add early return to prevent logging timing for high-volume paths
           const skipLogging =
             c.req.path === "/log" || c.req.path === "/telemetry/capture" || c.req.path === "/global/health"
           if (skipLogging) {
@@ -136,10 +135,12 @@ export namespace Server {
               )
                 return input
 
+              // kilocode_change start
               // *.opencode.ai (https only, adjust if needed)
-              if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
+              if (/^https:\/\/([a-z0-9-]+\.)*kilo\.ai$/.test(input)) {
                 return input
               }
+              // kilocode_change end
               if (opts?.cors?.includes(input)) {
                 return input
               }
@@ -173,7 +174,7 @@ export namespace Server {
               providerID: ProviderID.zod,
             }),
           ),
-          validator("json", Auth.Info),
+          validator("json", Auth.Info.zod),
           async (c) => {
             const providerID = c.req.valid("param").providerID
             const info = c.req.valid("json")
@@ -307,6 +308,7 @@ export namespace Server {
         )
         // kilocode_change end
         .route("/", FileRoutes())
+        .route("/", EventRoutes())
         .route("/mcp", McpRoutes())
         .route("/tui", TuiRoutes())
         .post(
@@ -556,70 +558,12 @@ export namespace Server {
             return c.json(await Format.status())
           },
         )
-        .get(
-          "/event",
-          describeRoute({
-            summary: "Subscribe to events",
-            description: "Get events",
-            operationId: "event.subscribe",
-            responses: {
-              200: {
-                description: "Event stream",
-                content: {
-                  "text/event-stream": {
-                    schema: resolver(BusEvent.payloads()),
-                  },
-                },
-              },
-            },
-          }),
-          async (c) => {
-            log.info("event connected")
-            c.header("X-Accel-Buffering", "no")
-            c.header("X-Content-Type-Options", "nosniff")
-            return streamSSE(c, async (stream) => {
-              stream.writeSSE({
-                data: JSON.stringify({
-                  type: "server.connected",
-                  properties: {},
-                }),
-              })
-              const unsub = Bus.subscribeAll(async (event) => {
-                await stream.writeSSE({
-                  data: JSON.stringify(event),
-                })
-                if (event.type === Bus.InstanceDisposed.type) {
-                  stream.close()
-                }
-              })
-
-              // Send heartbeat every 10s to prevent stalled proxy streams.
-              const heartbeat = setInterval(() => {
-                stream.writeSSE({
-                  data: JSON.stringify({
-                    type: "server.heartbeat",
-                    properties: {},
-                  }),
-                })
-              }, 10_000)
-
-              await new Promise<void>((resolve) => {
-                stream.onAbort(() => {
-                  clearInterval(heartbeat)
-                  unsub()
-                  resolve()
-                  log.info("event disconnected")
-                })
-              })
-            })
-          },
-        )
         // kilocode_change start - disable external proxy to app.opencode.ai for privacy/security
         .all("/*", async (c) => {
           return c.notFound()
         })
+      // kilocode_change end
     )
-    // kilocode_change end
   }
 
   export async function openapi() {

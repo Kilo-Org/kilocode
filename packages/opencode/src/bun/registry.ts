@@ -49,6 +49,12 @@ export namespace PackageRegistry {
 
     const isRange = /[\s^~*xX<>|=]/.test(cachedVersion)
     if (isRange) return !semver.satisfies(latestVersion, cachedVersion)
+    // kilocode_change start
+    if (!semver.valid(cachedVersion)) {
+      log.warn("Invalid cached version, treating as outdated", { pkg, cachedVersion })
+      return true
+    }
+    // kilocode_change end
 
     return semver.lt(cachedVersion, latestVersion)
   }

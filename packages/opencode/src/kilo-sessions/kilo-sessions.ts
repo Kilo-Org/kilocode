@@ -260,7 +260,8 @@ export namespace KiloSessions {
           getGitUrl().catch(() => undefined),
           Vcs.branch().catch(() => undefined),
         ])
-        const statuses = SessionStatus.list()
+        const statusMap = await SessionStatus.list()
+        const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
         const ids = new Set(Object.keys(statuses))
         for (const id of focused) ids.add(id)
         for (const id of opened) ids.add(id)

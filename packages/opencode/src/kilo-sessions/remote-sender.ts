@@ -5,7 +5,7 @@ import { Instance } from "@/project/instance"
 import { Session } from "@/session"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
@@ -118,7 +118,7 @@ export namespace RemoteSender {
     // sees state that was asked before it connected — analogous to the Cloud
     // Agent's `connected` event carrying pending question/permission fields.
     async function replay(sessionId: string) {
-      const [questions, permissions] = await Promise.all([Question.list(), PermissionNext.list()])
+      const [questions, permissions] = await Promise.all([Question.list(), Permission.list()])
       for (const q of questions) {
         if (q.sessionID !== sessionId) continue
         options.conn.send({
@@ -301,7 +301,7 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, () =>
-          PermissionNext.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) }),
+          Permission.reply({ ...parsed.data, requestID: PermissionID.make(parsed.data.requestID) }),
         )
         return
       }

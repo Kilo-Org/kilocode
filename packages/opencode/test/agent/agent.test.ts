@@ -1,15 +1,19 @@
-import { test, expect } from "bun:test"
+import { afterEach, test, expect } from "bun:test"
 import path from "path"
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
 import { Agent } from "../../src/agent/agent"
-import { PermissionNext } from "../../src/permission/next"
+import { Permission } from "../../src/permission"
 
 // Helper to evaluate permission for a tool with wildcard pattern
-function evalPerm(agent: Agent.Info | undefined, permission: string): PermissionNext.Action | undefined {
+function evalPerm(agent: Agent.Info | undefined, permission: string): Permission.Action | undefined {
   if (!agent) return undefined
-  return PermissionNext.evaluate(permission, "*", agent.permission).action
+  return Permission.evaluate(permission, "*", agent.permission).action
 }
+
+afterEach(async () => {
+  await Instance.disposeAll()
+})
 
 test("returns default native agents when no config", async () => {
   await using tmp = await tmpdir()
@@ -71,10 +75,10 @@ test("ask agent has correct default properties", async () => {
       expect(evalPerm(ask, "bash")).toBe("deny")
       expect(evalPerm(ask, "task")).toBe("deny")
       // ask agent should gate .env files
-      expect(PermissionNext.evaluate("read", ".env", ask!.permission).action).toBe("ask")
-      expect(PermissionNext.evaluate("read", "config.env.local", ask!.permission).action).toBe("ask")
-      expect(PermissionNext.evaluate("read", ".env.example", ask!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("read", "src/index.ts", ask!.permission).action).toBe("allow")
+      expect(Permission.evaluate("read", ".env", ask!.permission).action).toBe("ask")
+      expect(Permission.evaluate("read", "config.env.local", ask!.permission).action).toBe("ask")
+      expect(Permission.evaluate("read", ".env.example", ask!.permission).action).toBe("allow")
+      expect(Permission.evaluate("read", "src/index.ts", ask!.permission).action).toBe("allow")
     },
   })
 })
@@ -93,14 +97,14 @@ test("ask agent denies edit/write/bash even when user config adds a specific edi
       expect(ask).toBeDefined()
       // user config must not leak edit capability into ask mode — even for the
       // specific path the user allowed, ask mode must still deny it
-      expect(PermissionNext.evaluate("edit", "src/output.log", ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("edit", "src/output.log", ask!.permission).action).toBe("deny")
       expect(evalPerm(ask, "bash")).toBe("deny")
       expect(evalPerm(ask, "task")).toBe("deny")
       // safe tools still work
       expect(evalPerm(ask, "read")).toBe("allow")
       expect(evalPerm(ask, "grep")).toBe("allow")
       // disabled() must also reflect the deny (tools hidden from LLM)
-      const disabled = PermissionNext.disabled(["edit", "write", "bash"], ask!.permission)
+      const disabled = Permission.disabled(["edit", "write", "bash"], ask!.permission)
       expect(disabled.has("edit")).toBe(true)
       expect(disabled.has("write")).toBe(true)
       expect(disabled.has("bash")).toBe(true)
@@ -119,10 +123,12 @@ test("plan agent denies edits except .kilo/plans/* and .opencode/plans/*", async
       expect(plan).toBeDefined()
       // Wildcard is denied
       expect(evalPerm(plan, "edit")).toBe("deny")
+      // kilocode_change start
       // .kilo/plans/ is the primary allowed path
-      expect(PermissionNext.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", ".kilo/plans/foo.md", plan!.permission).action).toBe("allow")
+      // kilocode_change end
       // .opencode/plans/ is also allowed as backward compat fallback
-      expect(PermissionNext.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
+      expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
     },
   })
 })
@@ -145,15 +151,15 @@ test("explore agent denies edit and write", async () => {
 })
 
 test("explore agent asks for external directories and allows Truncate.GLOB", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/tool/truncate")
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
       const explore = await Agent.get("explore")
       expect(explore).toBeDefined()
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", explore!.permission).action).toBe("ask")
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, explore!.permission).action).toBe("allow")
+      expect(Permission.evaluate("external_directory", "/some/other/path", explore!.permission).action).toBe("ask")
+      expect(Permission.evaluate("external_directory", Truncate.GLOB, explore!.permission).action).toBe("allow")
     },
   })
 })
@@ -292,7 +298,7 @@ test("agent permission config merges with defaults", async () => {
       const code = await Agent.get("code")
       expect(code).toBeDefined()
       // Specific pattern is denied
-      expect(PermissionNext.evaluate("bash", "rm -rf *", code!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", "rm -rf *", code!.permission).action).toBe("deny")
       // Edit still allowed
       expect(evalPerm(code, "edit")).toBe("allow")
       // kilocode_change end
@@ -475,6 +481,32 @@ test("multiple custom agents can be defined", async () => {
   })
 })
 
+test("Agent.list keeps the default agent first and sorts the rest by name", async () => {
+  await using tmp = await tmpdir({
+    config: {
+      default_agent: "plan",
+      agent: {
+        zebra: {
+          description: "Zebra",
+          mode: "subagent",
+        },
+        alpha: {
+          description: "Alpha",
+          mode: "subagent",
+        },
+      },
+    },
+  })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const names = (await Agent.list()).map((a) => a.name)
+      expect(names[0]).toBe("plan")
+      expect(names.slice(1)).toEqual(names.slice(1).toSorted((a, b) => a.localeCompare(b)))
+    },
+  })
+})
+
 test("Agent.get returns undefined for non-existent agent", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
@@ -566,7 +598,7 @@ test("legacy tools config maps write/edit/patch/multiedit to edit permission", a
 })
 
 test("Truncate.GLOB is allowed even when user denies external_directory globally", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/tool/truncate")
   await using tmp = await tmpdir({
     config: {
       permission: {
@@ -580,15 +612,15 @@ test("Truncate.GLOB is allowed even when user denies external_directory globally
       // kilocode_change start - renamed from "build" to "code"
       const build = await Agent.get("code")
       // kilocode_change end
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(Permission.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
 test("Truncate.GLOB is allowed even when user denies external_directory per-agent", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/tool/truncate")
   await using tmp = await tmpdir({
     config: {
       agent: {
@@ -608,15 +640,15 @@ test("Truncate.GLOB is allowed even when user denies external_directory per-agen
       // kilocode_change start - renamed from "build" to "code"
       const build = await Agent.get("code")
       // kilocode_change end
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
-      expect(PermissionNext.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("allow")
+      expect(Permission.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", "/some/other/path", build!.permission).action).toBe("deny")
     },
   })
 })
 
 test("explicit Truncate.GLOB deny is respected", async () => {
-  const { Truncate } = await import("../../src/tool/truncation")
+  const { Truncate } = await import("../../src/tool/truncate")
   await using tmp = await tmpdir({
     config: {
       permission: {
@@ -633,8 +665,8 @@ test("explicit Truncate.GLOB deny is respected", async () => {
       // kilocode_change start - renamed from "build" to "code"
       const build = await Agent.get("code")
       // kilocode_change end
-      expect(PermissionNext.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("deny")
-      expect(PermissionNext.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", Truncate.GLOB, build!.permission).action).toBe("deny")
+      expect(Permission.evaluate("external_directory", Truncate.DIR, build!.permission).action).toBe("deny")
     },
   })
 })
@@ -667,7 +699,7 @@ description: Permission skill.
         const build = await Agent.get("build")
         const skillDir = path.join(tmp.path, ".kilo", "skill", "perm-skill") // kilocode_change: .kilo is primary
         const target = path.join(skillDir, "reference", "notes.md")
-        expect(PermissionNext.evaluate("external_directory", target, build!.permission).action).toBe("allow")
+        expect(Permission.evaluate("external_directory", target, build!.permission).action).toBe("allow")
       },
     })
   } finally {

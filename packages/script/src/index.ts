@@ -32,7 +32,7 @@ const CHANNEL = await (async () => {
   // kilocode_change end
   if (env.KILO_BUMP) return "latest" // kilocode_change
   if (env.KILO_VERSION && !env.KILO_VERSION.startsWith("0.0.0-")) return "latest" // kilocode_change
-  return await $`git branch --show-current`.text().then((x) => x.trim())
+  return await $`git branch --show-current`.text().then((x) => x.trim().replace(/[^0-9A-Za-z-]/g, "-")) // kilocode_change
 })()
 const IS_PREVIEW = CHANNEL !== "latest"
 

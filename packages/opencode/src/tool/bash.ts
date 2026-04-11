@@ -17,7 +17,7 @@ import { Shell } from "@/shell/shell"
 
 import { BashArity } from "@/permission/arity"
 import { BashHierarchy } from "@/kilocode/bash-hierarchy" // kilocode_change
-import { Truncate } from "./truncation"
+import { Truncate } from "./truncate"
 import { Plugin } from "@/plugin"
 
 const MAX_METADATA_LENGTH = 30_000

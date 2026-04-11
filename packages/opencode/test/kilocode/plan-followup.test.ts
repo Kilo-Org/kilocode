@@ -24,17 +24,20 @@ Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
 
 const model = {
-  providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4"),
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-4"),
 }
 
 const saved = {
-  providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-5"),
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-5"),
 }
 
 const savedVar = "high"
 
 const config = {
-  providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4.1"),
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-4.1"),
 }
 
 const configVar = "max"

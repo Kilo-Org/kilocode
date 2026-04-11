@@ -1,4 +1,4 @@
-import { spawn as _spawn, type ChildProcessWithoutNullStreams, type SpawnOptions } from "child_process"
+import type { ChildProcessWithoutNullStreams } from "child_process"
 import path from "path"
 import os from "os"
 import { Global } from "../global"
@@ -14,16 +14,7 @@ import { Archive } from "../util/archive"
 import { Process } from "../util/process"
 import { which } from "../util/which"
 import { Module } from "@opencode-ai/util/module"
-
-// kilocode_change start - prevent CMD window flash on Windows for all LSP server spawns
-function spawn(cmd: string, opts?: SpawnOptions): ChildProcessWithoutNullStreams
-function spawn(cmd: string, args: readonly string[], opts?: SpawnOptions): ChildProcessWithoutNullStreams
-function spawn(cmd: string, ...rest: any[]): ChildProcessWithoutNullStreams {
-  const opts = typeof rest[rest.length - 1] === "object" && !Array.isArray(rest[rest.length - 1]) ? rest.pop() : {}
-  const args = rest[0] as readonly string[] | undefined
-  return args ? _spawn(cmd, args, { ...opts, windowsHide: true }) : _spawn(cmd, { ...opts, windowsHide: true })
-}
-// kilocode_change end
+import { spawn } from "./launch"
 
 export namespace LSPServer {
   const log = Log.create({ service: "lsp.server" })
@@ -277,7 +268,7 @@ export namespace LSPServer {
       }
 
       if (lintBin) {
-        const proc = Process.spawn([lintBin, "--help"], { stdout: "pipe" })
+        const proc = spawn(lintBin, ["--help"])
         await proc.exited
         if (proc.stdout) {
           const help = await text(proc.stdout)

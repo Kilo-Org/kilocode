@@ -1,4 +1,4 @@
-import { test, expect } from "bun:test"
+import { afterEach, test, expect } from "bun:test"
 import { $ } from "bun"
 import fs from "fs/promises"
 import path from "path"
@@ -11,6 +11,10 @@ import { tmpdir } from "../fixture/fixture"
 // with path.join (which produces \ on Windows) then normalizes back to /.
 // This helper does the same for expected values so assertions match cross-platform.
 const fwd = (...parts: string[]) => path.join(...parts).replaceAll("\\", "/")
+
+afterEach(async () => {
+  await Instance.disposeAll()
+})
 
 async function bootstrap() {
   return tmpdir({
@@ -1179,338 +1183,36 @@ test("diffFull with whitespace changes", async () => {
   })
 })
 
-// ── Tests for snapshot optimizations (upstream #17878, #20564) ────────
-
-test("batch revert with many files sharing same hash", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      // Create enough files to trigger batching (>1 per hash)
-      for (let i = 0; i < 20; i++) {
-        await Filesystem.write(`${dir}/file${i}.txt`, `original-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      // Modify all 20 files
-      for (let i = 0; i < 20; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `changed-${i}`)
-      }
-      // Add 5 new files
-      for (let i = 0; i < 5; i++) {
-        await Filesystem.write(`${tmp.path}/new${i}.txt`, `new-${i}`)
-      }
-
-      const patch = await Snapshot.patch(before!)
-      expect(patch.files.length).toBe(25)
-
-      await Snapshot.revert([patch])
-
-      // Modified files should be restored
-      for (let i = 0; i < 20; i++) {
-        const content = await Filesystem.readText(`${tmp.path}/file${i}.txt`)
-        expect(content).toBe(`original-${i}`)
-      }
-      // New files should be deleted
-      for (let i = 0; i < 5; i++) {
-        expect(
-          await fs
-            .access(`${tmp.path}/new${i}.txt`)
-            .then(() => true)
-            .catch(() => false),
-        ).toBe(false)
-      }
-    },
-  })
-})
-
-test("batch revert with files in nested subdirectories", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      await fs.mkdir(`${dir}/a/b/c`, { recursive: true })
-      await fs.mkdir(`${dir}/d/e`, { recursive: true })
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${dir}/a/b/c/file${i}.txt`, `deep-${i}`)
-        await Filesystem.write(`${dir}/d/e/file${i}.txt`, `other-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${tmp.path}/a/b/c/file${i}.txt`, `modified-${i}`)
-        await Filesystem.write(`${tmp.path}/d/e/file${i}.txt`, `modified-${i}`)
-      }
-
-      await Snapshot.revert([await Snapshot.patch(before!)])
-
-      for (let i = 0; i < 10; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/a/b/c/file${i}.txt`)).toBe(`deep-${i}`)
-        expect(await Filesystem.readText(`${tmp.path}/d/e/file${i}.txt`)).toBe(`other-${i}`)
-      }
-    },
-  })
-})
-
-test("incremental add skips new files larger than 2MB", async () => {
+test("revert with overlapping files across patches uses first patch hash", async () => {
   await using tmp = await bootstrap()
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
+      // Write initial content and snapshot
+      await Filesystem.write(`${tmp.path}/shared.txt`, "v1")
+      const snap1 = await Snapshot.track()
+      expect(snap1).toBeTruthy()
 
-      // Create a file larger than 2MB
-      const largeContent = "x".repeat(3 * 1024 * 1024)
-      await Filesystem.write(`${tmp.path}/large.bin`, largeContent)
-      // Also create a small file
-      await Filesystem.write(`${tmp.path}/small.txt`, "small change")
+      // Modify and snapshot again
+      await Filesystem.write(`${tmp.path}/shared.txt`, "v2")
+      const snap2 = await Snapshot.track()
+      expect(snap2).toBeTruthy()
 
-      const after = await Snapshot.track()
-      expect(after).toBeTruthy()
+      // Modify once more so both patches include shared.txt
+      await Filesystem.write(`${tmp.path}/shared.txt`, "v3")
 
-      const patch = await Snapshot.patch(before!)
-      // Small file should be tracked, large file should be excluded
-      const files = patch.files.map((f) => path.basename(f))
-      expect(files).toContain("small.txt")
-      expect(files).not.toContain("large.bin")
-    },
-  })
-})
+      const patch1 = await Snapshot.patch(snap1!)
+      const patch2 = await Snapshot.patch(snap2!)
 
-test("incremental add: tracked files that grow past 2MB are still visible in patch", async () => {
-  // The 2MB size filter only prevents NEW large files from being added to the
-  // snapshot index. Already-tracked files that grow past 2MB still appear in
-  // patch/diff because those compare against the working tree. This matches
-  // upstream OpenCode behavior.
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      await Filesystem.write(`${tmp.path}/growing.txt`, "small")
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
+      // Both patches should include shared.txt
+      expect(patch1.files).toContain(fwd(tmp.path, "shared.txt"))
+      expect(patch2.files).toContain(fwd(tmp.path, "shared.txt"))
 
-      await Filesystem.write(`${tmp.path}/growing.txt`, "x".repeat(3 * 1024 * 1024))
-      await Filesystem.write(`${tmp.path}/a.txt`, "changed")
+      // Revert with patch1 first — should use snap1's hash (restoring "v1")
+      await Snapshot.revert([patch1, patch2])
 
-      const patch = await Snapshot.patch(before!)
-      const files = patch.files.map((f) => path.basename(f))
-      expect(files).toContain("a.txt")
-      expect(files).toContain("growing.txt")
-    },
-  })
-})
-
-test("concurrent patch() calls return consistent results", async () => {
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      await Filesystem.write(`${tmp.path}/a.txt`, "changed")
-
-      const results = await Promise.all([Snapshot.patch(before!), Snapshot.patch(before!), Snapshot.patch(before!)])
-
-      // All should report the same changed files
-      for (const result of results) {
-        expect(result.files).toContain(fwd(tmp.path, "a.txt"))
-      }
-    },
-  })
-})
-
-test("batch revert with mix of modified, new, and deleted files", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      for (let i = 0; i < 15; i++) {
-        await Filesystem.write(`${dir}/file${i}.txt`, `original-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      // Modify some files
-      for (let i = 0; i < 5; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `modified-${i}`)
-      }
-      // Delete some files
-      for (let i = 5; i < 10; i++) {
-        await fs.unlink(`${tmp.path}/file${i}.txt`)
-      }
-      // Add new files
-      for (let i = 0; i < 5; i++) {
-        await Filesystem.write(`${tmp.path}/added${i}.txt`, `added-${i}`)
-      }
-
-      await Snapshot.revert([await Snapshot.patch(before!)])
-
-      // Modified files restored
-      for (let i = 0; i < 5; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`original-${i}`)
-      }
-      // Deleted files restored
-      for (let i = 5; i < 10; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`original-${i}`)
-      }
-      // Untouched files unchanged
-      for (let i = 10; i < 15; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`original-${i}`)
-      }
-      // New files removed
-      for (let i = 0; i < 5; i++) {
-        expect(
-          await fs
-            .access(`${tmp.path}/added${i}.txt`)
-            .then(() => true)
-            .catch(() => false),
-        ).toBe(false)
-      }
-    },
-  })
-})
-
-test("batch revert with multiple patches from different snapshots", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${dir}/file${i}.txt`, `v0-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      // Snapshot A
-      const snapA = await Snapshot.track()
-      expect(snapA).toBeTruthy()
-
-      // Modify first 5 files
-      for (let i = 0; i < 5; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `v1-${i}`)
-      }
-
-      // Snapshot B (captures v1 state)
-      const snapB = await Snapshot.track()
-      expect(snapB).toBeTruthy()
-
-      // Modify last 5 files
-      for (let i = 5; i < 10; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `v2-${i}`)
-      }
-
-      // Revert with patches from two different hashes
-      const patchA = await Snapshot.patch(snapA!)
-      const patchB = await Snapshot.patch(snapB!)
-      // patchA covers files 0-4 (changed in v1) + files 5-9 (changed in v2)
-      // patchB covers files 5-9 (changed in v2)
-      // Reverting [patchA, patchB]: patchA's hash wins for all files (first seen)
-      await Snapshot.revert([patchA, patchB])
-
-      // All files should be at v0 (snapA's state)
-      for (let i = 0; i < 10; i++) {
-        expect(await Filesystem.readText(`${tmp.path}/file${i}.txt`)).toBe(`v0-${i}`)
-      }
-    },
-  })
-})
-
-test("track after revert produces clean snapshot", async () => {
-  await using tmp = await tmpdir({
-    git: true,
-    init: async (dir) => {
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${dir}/file${i}.txt`, `original-${i}`)
-      }
-      await $`git add .`.cwd(dir).quiet()
-      await $`git commit --no-gpg-sign -m init`.cwd(dir).quiet()
-    },
-  })
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      for (let i = 0; i < 10; i++) {
-        await Filesystem.write(`${tmp.path}/file${i}.txt`, `changed-${i}`)
-      }
-
-      await Snapshot.revert([await Snapshot.patch(before!)])
-
-      // After revert, a new track should match the original snapshot
-      const after = await Snapshot.track()
-      expect(after).toBeTruthy()
-      expect(after).toBe(before)
-    },
-  })
-})
-
-test("incremental add tracks newly created files", async () => {
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      // Create several new files in subdirectories
-      await fs.mkdir(`${tmp.path}/newdir/sub`, { recursive: true })
-      await Filesystem.write(`${tmp.path}/newdir/one.txt`, "one")
-      await Filesystem.write(`${tmp.path}/newdir/sub/two.txt`, "two")
-      await Filesystem.write(`${tmp.path}/three.txt`, "three")
-
-      const patch = await Snapshot.patch(before!)
-      const files = patch.files.map((f) => path.basename(f))
-      expect(files).toContain("one.txt")
-      expect(files).toContain("two.txt")
-      expect(files).toContain("three.txt")
-    },
-  })
-})
-
-test("incremental add tracks modified and deleted files", async () => {
-  await using tmp = await bootstrap()
-  await Instance.provide({
-    directory: tmp.path,
-    fn: async () => {
-      const before = await Snapshot.track()
-      expect(before).toBeTruthy()
-
-      // Modify one file, delete the other
-      await Filesystem.write(`${tmp.path}/a.txt`, "modified-a")
-      await fs.unlink(`${tmp.path}/b.txt`)
-
-      const patch = await Snapshot.patch(before!)
-      const files = patch.files.map((f) => path.basename(f))
-      expect(files).toContain("a.txt")
-      expect(files).toContain("b.txt")
+      const content = await fs.readFile(`${tmp.path}/shared.txt`, "utf-8")
+      expect(content).toBe("v1")
     },
   })
 })

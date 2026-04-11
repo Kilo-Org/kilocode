@@ -29,7 +29,7 @@ import { Filesystem } from "../util/filesystem" // kilocode_change: normalize di
 
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 import { Global } from "@/global"
 import type { LanguageModelV2Usage } from "@ai-sdk/provider"
 import { iife } from "@/util/iife"
@@ -123,7 +123,11 @@ export namespace Session {
   // kilocode_change start
   function family(id: string) {
     const row = Database.use((db) =>
-      db.select({ worktree: ProjectTable.worktree }).from(ProjectTable).where(eq(ProjectTable.id, ProjectID.make(id))).get(),
+      db
+        .select({ worktree: ProjectTable.worktree })
+        .from(ProjectTable)
+        .where(eq(ProjectTable.id, ProjectID.make(id)))
+        .get(),
     )
     const root = row?.worktree ? Filesystem.resolve(row.worktree) : undefined
     if (!root || root === "/") return [id]
@@ -179,7 +183,7 @@ export namespace Session {
         compacting: z.number().optional(),
         archived: z.number().optional(),
       }),
-      permission: PermissionNext.Ruleset.optional(),
+      permission: Permission.Ruleset.optional(),
       revert: z
         .object({
           messageID: MessageID.zod,
@@ -365,7 +369,7 @@ export namespace Session {
     parentID?: SessionID
     workspaceID?: WorkspaceID
     directory: string
-    permission?: PermissionNext.Ruleset
+    permission?: Permission.Ruleset
   }) {
     const result: Info = {
       id: SessionID.descending(input.id),
@@ -488,7 +492,7 @@ export namespace Session {
   export const setPermission = fn(
     z.object({
       sessionID: SessionID.zod,
-      permission: PermissionNext.Ruleset,
+      permission: Permission.Ruleset,
     }),
     async (input) => {
       return Database.use((db) => {
@@ -668,7 +672,12 @@ export namespace Session {
       if (ids.length === 1 && ids[0] === input.projectID) {
         conditions.push(eq(SessionTable.project_id, ProjectID.make(input.projectID)))
       } else {
-        conditions.push(inArray(SessionTable.project_id, ids.map(id => ProjectID.make(id))))
+        conditions.push(
+          inArray(
+            SessionTable.project_id,
+            ids.map((id) => ProjectID.make(id)),
+          ),
+        )
       }
     }
     // kilocode_change end

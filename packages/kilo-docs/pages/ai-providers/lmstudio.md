@@ -56,7 +56,7 @@ LM Studio runs locally, so no API key is needed. Configure the base URL if LM St
     "lmstudio": {
       "options": {
         "baseURL": "http://localhost:1234/v1",
-      }
+      },
     },
   },
 }

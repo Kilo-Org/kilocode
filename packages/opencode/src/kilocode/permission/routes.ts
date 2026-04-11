@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { Config } from "@/config/config"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 import { Session } from "@/session"
 import { SessionID } from "@/session/schema" // kilocode_change
 import { errors } from "../../server/error"
@@ -37,7 +37,7 @@ export const PermissionKilocodeRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const rules: PermissionNext.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
+      const rules: Permission.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
 
       if (!body.enable) {
         if (body.sessionID) {
@@ -48,12 +48,12 @@ export const PermissionKilocodeRoutes = lazy(() =>
               (rule) => !(rule.permission === "*" && rule.pattern === "*" && rule.action === "allow"),
             ),
           })
-          await PermissionNext.allowEverything({ enable: false, sessionID: SessionID.make(body.sessionID) })
+          await Permission.allowEverything({ enable: false, sessionID: SessionID.make(body.sessionID) })
           return c.json(true)
         }
 
         await Config.updateGlobal({ permission: { "*": { "*": null } } }, { dispose: false })
-        await PermissionNext.allowEverything({ enable: false })
+        await Permission.allowEverything({ enable: false })
         return c.json(true)
       }
 
@@ -64,10 +64,10 @@ export const PermissionKilocodeRoutes = lazy(() =>
           permission: [...(session.permission ?? []), ...rules],
         })
       } else {
-        await Config.updateGlobal({ permission: PermissionNext.toConfig(rules) }, { dispose: false })
+        await Config.updateGlobal({ permission: Permission.toConfig(rules) }, { dispose: false })
       }
 
-      await PermissionNext.allowEverything({
+      await Permission.allowEverything({
         enable: true,
         requestID: body.requestID,
         sessionID: body.sessionID ? SessionID.make(body.sessionID) : undefined,

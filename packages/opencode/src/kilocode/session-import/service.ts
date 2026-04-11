@@ -23,12 +23,20 @@ export namespace SessionImportService {
   }
 
   export async function session(input: SessionImportType.Session): Promise<SessionImportType.Result> {
-    const row = Database.use((db) => db.select().from(SessionTable).where(eq(target(SessionTable.id), input.id)).get())
+    const row = Database.use((db) =>
+      db
+        .select()
+        .from(SessionTable)
+        .where(eq(target(SessionTable.id), input.id))
+        .get(),
+    )
     if (row && !input.force) return { ok: true, id: input.id, skipped: true }
 
     Database.use((db) => {
       if (row && input.force) {
-        db.delete(SessionTable).where(eq(target(SessionTable.id), input.id)).run()
+        db.delete(SessionTable)
+          .where(eq(target(SessionTable.id), input.id))
+          .run()
       }
       // We still keep onConflictDoUpdate here so forced reimports can recreate the session row
       // and non-forced calls remain idempotent if they reach the DB after the existence guard.
@@ -47,7 +55,13 @@ export namespace SessionImportService {
           summary_deletions: input.summary?.deletions,
           summary_files: input.summary?.files,
           summary_diffs: input.summary?.diffs as never,
-          revert: input.revert ? { ...input.revert, messageID: MessageID.make(input.revert.messageID), partID: input.revert.partID ? PartID.make(input.revert.partID) : undefined } : undefined,
+          revert: input.revert
+            ? {
+                ...input.revert,
+                messageID: MessageID.make(input.revert.messageID),
+                partID: input.revert.partID ? PartID.make(input.revert.partID) : undefined,
+              }
+            : undefined,
           permission: input.permission as never,
           time_created: input.timeCreated,
           time_updated: input.timeUpdated,
@@ -69,7 +83,13 @@ export namespace SessionImportService {
             summary_deletions: input.summary?.deletions,
             summary_files: input.summary?.files,
             summary_diffs: input.summary?.diffs as never,
-            revert: input.revert ? { ...input.revert, messageID: MessageID.make(input.revert.messageID), partID: input.revert.partID ? PartID.make(input.revert.partID) : undefined } : undefined,
+            revert: input.revert
+              ? {
+                  ...input.revert,
+                  messageID: MessageID.make(input.revert.messageID),
+                  partID: input.revert.partID ? PartID.make(input.revert.partID) : undefined,
+                }
+              : undefined,
             permission: input.permission as never,
             time_created: input.timeCreated,
             time_updated: input.timeUpdated,

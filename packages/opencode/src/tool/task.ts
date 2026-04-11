@@ -10,7 +10,7 @@ import { SessionPrompt } from "../session/prompt"
 import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
@@ -31,12 +31,13 @@ export const TaskTool = Tool.define("task", async (ctx) => {
   // Filter agents by permissions if agent provided
   const caller = ctx?.agent
   const accessibleAgents = caller
-    ? agents.filter((a) => PermissionNext.evaluate("task", a.name, caller.permission).action !== "deny")
+    ? agents.filter((a) => Permission.evaluate("task", a.name, caller.permission).action !== "deny")
     : agents
+  const list = accessibleAgents.toSorted((a, b) => a.name.localeCompare(b.name))
 
   const description = DESCRIPTION.replace(
     "{agents}",
-    accessibleAgents
+    list
       .map((a) => `- ${a.name}: ${a.description ?? "This subagent should only be called manually by the user."}`)
       .join("\n"),
   )
@@ -74,7 +75,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       // were themselves inherited from a grandparent, so both sources are needed.
       const caller = await Agent.get(ctx.agent)
       const callerSession = await Session.get(ctx.sessionID)
-      const callerRules = PermissionNext.merge(caller?.permission ?? [], callerSession.permission ?? [])
+      const callerRules = Permission.merge(caller?.permission ?? [], callerSession.permission ?? [])
       // Build the set of MCP server prefixes (e.g. "servername_") so we can
       // include both server-wide wildcards ("servername_*") and specific MCP tool
       // permissions ("servername_create_issue") in the inherited ruleset.

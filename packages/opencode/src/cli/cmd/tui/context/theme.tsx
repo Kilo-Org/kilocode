@@ -1,6 +1,6 @@
-import { SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
+import { CliRenderEvents, SyntaxStyle, RGBA, type TerminalColors } from "@opentui/core"
 import path from "path"
-import { createEffect, createMemo, onMount } from "solid-js"
+import { createEffect, createMemo, onCleanup, onMount } from "solid-js"
 import { createSimpleContext } from "./helper"
 import { Glob } from "../../../../util/glob"
 import aura from "./theme/aura.json" with { type: "json" }
@@ -294,11 +294,18 @@ function ansiToRgba(code: number): RGBA {
 export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
   name: "Theme",
   init: (props: { mode: "dark" | "light" }) => {
+    const renderer = useRenderer()
     const config = useTuiConfig()
     const kv = useKV()
+    const pick = (value: unknown) => {
+      if (value === "dark" || value === "light") return value
+      return
+    }
+    const lock = pick(kv.get("theme_mode_lock"))
     const [store, setStore] = createStore({
       themes: DEFAULT_THEMES,
-      mode: kv.get("theme_mode", props.mode),
+      mode: lock ?? pick(kv.get("theme_mode", props.mode)) ?? props.mode,
+      lock,
       active: (config.theme ?? kv.get("theme", "kilo")) as string, // kilocode_change
       ready: false,
     })
@@ -309,7 +316,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     })
 
     function init() {
-      resolveSystemTheme()
+      resolveSystemTheme(store.mode)
       getCustomThemes()
         .then((custom) => {
           setStore(
@@ -330,14 +337,12 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
 
     onMount(init)
 
-    function resolveSystemTheme() {
-      console.log("resolveSystemTheme")
+    function resolveSystemTheme(mode: "dark" | "light" = store.mode) {
       renderer
         .getPalette({
           size: 16,
         })
         .then((colors) => {
-          console.log(colors.palette)
           if (!colors.palette[0]) {
             if (store.active === "system") {
               setStore(
@@ -351,7 +356,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
           }
           setStore(
             produce((draft) => {
-              draft.themes.system = generateSystem(colors, store.mode)
+              draft.themes.system = generateSystem(colors, mode)
               if (store.active === "system") {
                 draft.ready = true
               }
@@ -360,10 +365,34 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         })
     }
 
-    const renderer = useRenderer()
-    process.on("SIGUSR2", async () => {
+    function apply(mode: "dark" | "light") {
+      kv.set("theme_mode", mode)
+      if (store.mode === mode) return
+      setStore("mode", mode)
       renderer.clearPaletteCache()
-      init()
+      resolveSystemTheme(mode)
+    }
+
+    function pin(mode: "dark" | "light" = store.mode) {
+      setStore("lock", mode)
+      kv.set("theme_mode_lock", mode)
+      apply(mode)
+    }
+
+    function free() {
+      setStore("lock", undefined)
+      kv.set("theme_mode_lock", undefined)
+      const mode = renderer.themeMode
+      if (mode) apply(mode)
+    }
+
+    const handle = (mode: "dark" | "light") => {
+      if (store.lock) return
+      apply(mode)
+    }
+    renderer.on(CliRenderEvents.THEME_MODE, handle)
+    onCleanup(() => {
+      renderer.off(CliRenderEvents.THEME_MODE, handle)
     })
 
     // kilocode_change start - safe fallback to kilo import if store lookup fails
@@ -376,6 +405,10 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       }
     })
     // kilocode_change end
+
+    createEffect(() => {
+      renderer.setBackgroundColor(values().background)
+    })
 
     const syntax = createMemo(() => generateSyntax(values()))
     const subtleSyntax = createMemo(() => generateSubtleSyntax(values()))
@@ -399,9 +432,17 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       mode() {
         return store.mode
       },
+      locked() {
+        return store.lock !== undefined
+      },
+      lock() {
+        pin(store.mode)
+      },
+      unlock() {
+        free()
+      },
       setMode(mode: "dark" | "light") {
-        setStore("mode", mode)
-        kv.set("theme_mode", mode)
+        pin(mode)
       },
       set(theme: string) {
         setStore("active", theme)
@@ -455,7 +496,7 @@ export function tint(base: RGBA, overlay: RGBA, alpha: number): RGBA {
 function generateSystem(colors: TerminalColors, mode: "dark" | "light"): ThemeJson {
   const bg = RGBA.fromHex(colors.defaultBackground ?? colors.palette[0]!)
   const fg = RGBA.fromHex(colors.defaultForeground ?? colors.palette[7]!)
-  const transparent = RGBA.fromInts(0, 0, 0, 0)
+  const transparent = RGBA.fromValues(bg.r, bg.g, bg.b, 0)
   const isDark = mode == "dark"
 
   const col = (i: number) => {

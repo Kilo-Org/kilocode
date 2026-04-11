@@ -3,7 +3,7 @@ import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { Config } from "../../config/config"
 import { Provider } from "../../provider/provider"
-import { ModelID } from "../../provider/schema"
+import { ModelID, ProviderID } from "../../provider/schema"
 import { mapValues } from "remeda"
 import { errors } from "../error"
 import { Log } from "../../util/log"
@@ -117,7 +117,7 @@ export const ConfigRoutes = lazy(() =>
         // This prevents unnecessary network calls for teams using only their
         // own providers (e.g. LiteLLM) via enabled_providers config.
         let kiloApiDefault: string | undefined
-        if (providers["kilo"]) {
+        if (providers[ProviderID.kilo]) {
           const kiloAuth = await Auth.get("kilo")
           const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
           const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
@@ -127,8 +127,8 @@ export const ConfigRoutes = lazy(() =>
 
         // kilocode_change start - Use API default for Kilo provider if valid
         const defaults = mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id)
-        if (kiloApiDefault && providers["kilo"]?.models[kiloApiDefault]) {
-          defaults["kilo"] = ModelID.make(kiloApiDefault)
+        if (kiloApiDefault && providers[ProviderID.kilo]?.models[kiloApiDefault]) {
+          defaults[ProviderID.kilo] = ModelID.make(kiloApiDefault)
         }
         // kilocode_change end
 

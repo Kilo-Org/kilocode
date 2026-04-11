@@ -1597,7 +1597,7 @@ export namespace ACP {
     // returns earlier via `specified` (config.model) or the sorted providers list.
     if (providers.some((p) => p.id === "kilo")) {
       const freeModel = await fetchDefaultModel()
-      return { providerID: ProviderID.kilo, modelID: ModelID.make(freeModel) } 
+      return { providerID: ProviderID.kilo, modelID: ModelID.make(freeModel) }
     }
     throw new Error("no model available: no providers are configured and no default model is set")
     // kilocode_change end

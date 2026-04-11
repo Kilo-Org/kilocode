@@ -1,14 +1,12 @@
 import { Bus } from "@/bus"
 import { Deferred, Effect } from "effect"
-import { Wildcard } from "@/util/wildcard"
-import type { Ruleset, Request, RejectedError, CorrectedError } from "@/permission/service"
-import { Event, evaluate, DeniedError, RejectedError as RejectedErr } from "@/permission/service"
+import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 
 interface PendingEntry {
-  info: Request
-  ruleset: Ruleset
-  deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
+  info: Permission.Request
+  ruleset: Permission.Ruleset
+  deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
 /**
@@ -18,8 +16,8 @@ interface PendingEntry {
  */
 export function drainCovered(
   pending: Map<string, PendingEntry>,
-  approved: Ruleset,
-  _Denied: typeof DeniedError,
+  approved: Permission.Ruleset,
+  _Denied: typeof Permission.DeniedError,
   exclude?: string,
 ): Effect.Effect<void> {
   return Effect.gen(function* () {
@@ -27,24 +25,22 @@ export function drainCovered(
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions
       if (ConfigProtection.isRequest(entry.info)) continue
-      const actions = entry.info.patterns.map((pattern) =>
-        evaluate(entry.info.permission, pattern, entry.ruleset, approved),
+      const actions = entry.info.patterns.map((pattern: string) =>
+        Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved),
       )
-      const denied = actions.some((r) => r.action === "deny")
-      const allowed = !denied && actions.every((r) => r.action === "allow")
+      const denied = actions.some((r: Permission.Rule) => r.action === "deny")
+      const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
       if (!denied && !allowed) continue
       pending.delete(id)
       if (denied) {
-        void Bus.publish(Event.Replied, {
+        void Bus.publish(Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "reject",
         })
-        // Use RejectedError since DeniedError isn't in the deferred's error channel
-        // (DeniedError is thrown synchronously in ask() for rule violations detected immediately)
-        yield* Deferred.fail(entry.deferred, new RejectedErr())
+        yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
       } else {
-        void Bus.publish(Event.Replied, {
+        void Bus.publish(Permission.Event.Replied, {
           sessionID: entry.info.sessionID,
           requestID: entry.info.id,
           reply: "always",

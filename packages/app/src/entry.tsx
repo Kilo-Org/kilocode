@@ -97,23 +97,15 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
   throw new Error(getRootNotFoundError())
 }
 
-// kilocode_change start
-// Floating UI can call getComputedStyle with non-elements (e.g., null refs, virtual elements).
-// This happens on all platforms (WebView2 on Windows, WKWebView on macOS), not just Windows.
-const originalGetComputedStyle = window.getComputedStyle
-window.getComputedStyle = ((elt: Element, pseudoElt?: string | null) => {
-  if (!(elt instanceof Element)) {
-    // Fall back to a safe element when a non-element is passed.
-    return originalGetComputedStyle(document.documentElement, pseudoElt ?? undefined)
-  }
-  return originalGetComputedStyle(elt, pseudoElt ?? undefined)
-}) as typeof window.getComputedStyle
-// kilocode_change end
+const localUrl = () =>
+  `http://${import.meta.env.VITE_OPENCODE_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_OPENCODE_SERVER_PORT ?? "4096"}`
+
+const isLocalHost = () => ["localhost", "127.0.0.1", "0.0.0.0"].includes(location.hostname)
 
 const getCurrentUrl = () => {
-  if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
-  if (import.meta.env.DEV)
-    return `http://${import.meta.env.VITE_KILO_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_KILO_SERVER_PORT ?? "4096"}` // kilocode_change
+  if (location.hostname.includes("opencode.ai")) return localUrl()
+  if (import.meta.env.DEV) return localUrl()
+  if (isLocalHost()) return localUrl()
   return location.origin
 }
 

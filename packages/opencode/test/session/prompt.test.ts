@@ -1,6 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
+import { NamedError } from "@opencode-ai/util/error"
 import { fileURLToPath } from "url"
 import { Instance } from "../../src/project/instance"
 import { ModelID, ProviderID } from "../../src/provider/schema"
@@ -331,3 +332,78 @@ describe("session.prompt abort", () => {
   }, 15000)
 })
 // kilocode_change end
+
+describe("session.agent-resolution", () => {
+  test("unknown agent throws typed error", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const err = await SessionPrompt.prompt({
+          sessionID: session.id,
+          agent: "nonexistent-agent-xyz",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        }).then(
+          () => undefined,
+          (e) => e,
+        )
+        expect(err).toBeDefined()
+        expect(err).not.toBeInstanceOf(TypeError)
+        expect(NamedError.Unknown.isInstance(err)).toBe(true)
+        if (NamedError.Unknown.isInstance(err)) {
+          expect(err.data.message).toContain('Agent not found: "nonexistent-agent-xyz"')
+        }
+      },
+    })
+  }, 30000)
+
+  test("unknown agent error includes available agent names", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const err = await SessionPrompt.prompt({
+          sessionID: session.id,
+          agent: "nonexistent-agent-xyz",
+          noReply: true,
+          parts: [{ type: "text", text: "hello" }],
+        }).then(
+          () => undefined,
+          (e) => e,
+        )
+        expect(NamedError.Unknown.isInstance(err)).toBe(true)
+        if (NamedError.Unknown.isInstance(err)) {
+          expect(err.data.message).toContain("build")
+        }
+      },
+    })
+  }, 30000)
+
+  test("unknown command throws typed error with available names", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await Session.create({})
+        const err = await SessionPrompt.command({
+          sessionID: session.id,
+          command: "nonexistent-command-xyz",
+          arguments: "",
+        }).then(
+          () => undefined,
+          (e) => e,
+        )
+        expect(err).toBeDefined()
+        expect(err).not.toBeInstanceOf(TypeError)
+        expect(NamedError.Unknown.isInstance(err)).toBe(true)
+        if (NamedError.Unknown.isInstance(err)) {
+          expect(err.data.message).toContain('Command not found: "nonexistent-command-xyz"')
+          expect(err.data.message).toContain("init")
+        }
+      },
+    })
+  }, 30000)
+})

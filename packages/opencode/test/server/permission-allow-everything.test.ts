@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
-import { PermissionNext } from "../../src/permission/next"
+import { Permission } from "../../src/permission"
 import { PermissionID } from "../../src/permission/schema"
 import { Instance } from "../../src/project/instance"
 import { Server } from "../../src/server/server"
@@ -19,7 +19,7 @@ describe("permission.allowEverything endpoint", () => {
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
         })
 
-        await PermissionNext.allowEverything({
+        await Permission.allowEverything({
           enable: true,
           sessionID: session.id,
         })
@@ -39,7 +39,7 @@ describe("permission.allowEverything endpoint", () => {
         const next = await Session.get(session.id)
         expect(next.permission ?? []).toEqual([])
 
-        const pending = PermissionNext.ask({
+        const pending = Permission.ask({
           id: PermissionID.make("permission_session_disable"),
           sessionID: session.id,
           permission: "bash",
@@ -49,15 +49,15 @@ describe("permission.allowEverything endpoint", () => {
           ruleset: [],
         })
 
-        await PermissionNext.reply({
+        await Permission.reply({
           requestID: PermissionID.make("permission_session_disable"),
           reply: "reject",
         })
 
-        await expect(pending).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await expect(pending).rejects.toBeInstanceOf(Permission.RejectedError)
 
         const other = await Session.create({})
-        const blocked = PermissionNext.ask({
+        const blocked = Permission.ask({
           id: PermissionID.make("permission_other_session"),
           sessionID: other.id,
           permission: "bash",
@@ -67,12 +67,12 @@ describe("permission.allowEverything endpoint", () => {
           ruleset: [],
         })
 
-        await PermissionNext.reply({
+        await Permission.reply({
           requestID: PermissionID.make("permission_other_session"),
           reply: "reject",
         })
 
-        await expect(blocked).rejects.toBeInstanceOf(PermissionNext.RejectedError)
+        await expect(blocked).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })

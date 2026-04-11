@@ -38,7 +38,7 @@ describe("semver guard for isOutdated", () => {
 
   test("handles range in cached version", () => {
     expect(isOutdated("^1.0.0", "1.5.0")).toBe(false) // 1.5.0 satisfies ^1.0.0
-    expect(isOutdated("^1.0.0", "2.0.0")).toBe(true)  // 2.0.0 does not satisfy ^1.0.0
+    expect(isOutdated("^1.0.0", "2.0.0")).toBe(true) // 2.0.0 does not satisfy ^1.0.0
   })
 
   // kilocode_change — invalid semver guard tests

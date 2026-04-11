@@ -16,7 +16,8 @@ import { tmpdir } from "../fixture/fixture"
 Log.init({ print: false })
 
 const model = {
-  providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-4"),
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-4"),
 }
 
 async function withInstance(fn: () => Promise<void>) {

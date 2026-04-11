@@ -37,7 +37,8 @@ async function routeRequest(req: Request) {
 
 export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c, next) => {
   // Only available in development for now
-  if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) { // kilocode_change
+  if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+    // kilocode_change
     return next()
   }
 
