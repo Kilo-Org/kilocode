@@ -68,13 +68,18 @@ export namespace ModelCache {
 
       const models = await fetchModels(providerID, mergedOptions)
 
-      // Store in cache
-      cache.set(providerID, {
-        models,
-        timestamp: Date.now(),
-      })
+      // Only cache non-empty results; empty results (e.g. no API key yet) should
+      // not be stored so that the next call after auth triggers a fresh fetch.
+      if (Object.keys(models).length > 0) {
+        cache.set(providerID, {
+          models,
+          timestamp: Date.now(),
+        })
+        log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
+      } else {
+        log.debug("skipping cache for empty model list", { providerID })
+      }
 
-      log.info("models fetched and cached", { providerID, count: Object.keys(models).length })
       return models
     } catch (error) {
       log.error("failed to fetch models", { providerID, error })

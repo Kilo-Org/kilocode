@@ -197,7 +197,7 @@ export namespace ModelsDev {
         ModelCache.refresh("kilo", kiloFetchOptions).catch(() => {})
       }
 
-      if (!providers["apertis"] && apertisModels !== null) {
+      if (!providers["apertis"] && apertisModels !== null && Object.keys(apertisModels).length > 0) {
         providers["apertis"] = {
           id: "apertis",
           name: "Apertis",
@@ -206,12 +206,9 @@ export namespace ModelsDev {
           npm: "@ai-sdk/openai-compatible",
           models: apertisModels,
         }
-        if (Object.keys(apertisModels).length === 0) {
-          ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
-        }
       }
 
-      if (!providers["kyma"] && kymaModels !== null) {
+      if (!providers["kyma"] && kymaModels !== null && Object.keys(kymaModels).length > 0) {
         providers["kyma"] = {
           id: "kyma",
           name: "Kyma",
@@ -219,9 +216,6 @@ export namespace ModelsDev {
           api: kymaBaseURL,
           npm: "@ai-sdk/openai-compatible",
           models: kymaModels,
-        }
-        if (Object.keys(kymaModels).length === 0) {
-          ModelCache.refresh("kyma", kymaFetchOptions).catch(() => {})
         }
       }
     } else if (!providers["apertis"] || !providers["kyma"]) {
@@ -232,16 +226,15 @@ export namespace ModelsDev {
           ...(apertisConfig?.baseURL ? { baseURL: apertisConfig.baseURL } : {}),
         }
         const apertisModels = await ModelCache.fetch("apertis", apertisFetchOptions).catch(() => ({}))
-        providers["apertis"] = {
-          id: "apertis",
-          name: "Apertis",
-          env: ["APERTIS_API_KEY"],
-          api: apertisBaseURL,
-          npm: "@ai-sdk/openai-compatible",
-          models: apertisModels,
-        }
-        if (Object.keys(apertisModels).length === 0) {
-          ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+        if (Object.keys(apertisModels).length > 0) {
+          providers["apertis"] = {
+            id: "apertis",
+            name: "Apertis",
+            env: ["APERTIS_API_KEY"],
+            api: apertisBaseURL,
+            npm: "@ai-sdk/openai-compatible",
+            models: apertisModels,
+          }
         }
       }
       if (!providers["kyma"]) {
@@ -251,16 +244,15 @@ export namespace ModelsDev {
           ...(kymaConfig?.baseURL ? { baseURL: kymaConfig.baseURL } : {}),
         }
         const kymaModels = await ModelCache.fetch("kyma", kymaFetchOptions).catch(() => ({}))
-        providers["kyma"] = {
-          id: "kyma",
-          name: "Kyma",
-          env: ["KYMA_API_KEY"],
-          api: kymaBaseURL,
-          npm: "@ai-sdk/openai-compatible",
-          models: kymaModels,
-        }
-        if (Object.keys(kymaModels).length === 0) {
-          ModelCache.refresh("kyma", kymaFetchOptions).catch(() => {})
+        if (Object.keys(kymaModels).length > 0) {
+          providers["kyma"] = {
+            id: "kyma",
+            name: "Kyma",
+            env: ["KYMA_API_KEY"],
+            api: kymaBaseURL,
+            npm: "@ai-sdk/openai-compatible",
+            models: kymaModels,
+          }
         }
       }
     }
