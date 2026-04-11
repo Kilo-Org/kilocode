@@ -449,7 +449,10 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
           const url = await sdk.client.session
             .share({ sessionID: params.id })
             .then((res) => res.data?.share?.url)
-            .catch(() => undefined)
+            .catch((error) => {
+              console.warn("[Session] Failed to share session:", error)
+              return undefined
+            })
           if (!url) {
             showToast({
               title: language.t("toast.session.share.failed.title"),

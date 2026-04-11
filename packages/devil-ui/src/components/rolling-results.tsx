@@ -235,7 +235,11 @@ export function RollingResults<T>(props: RollingResultsProps<T>) {
     const anim = animate(view, { maskSize: "100% 200%" }, props.spring ?? GROW_SPRING)
     edgeFade = anim
     anim.finished
-      .catch(() => {})
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          console.debug("[RollingResults] Animation failed:", error)
+        }
+      })
       .then(() => {
         if (edgeFade !== anim || !view) return
         clearMaskStyles(view)
@@ -267,7 +271,11 @@ export function RollingResults<T>(props: RollingResultsProps<T>) {
           : animate(view, { height: `${next}px` }, spring)
       resize = anim
       anim.finished
-        .catch(() => {})
+        .catch((error) => {
+          if (import.meta.env.DEV) {
+            console.debug("[RollingResults] Animation failed:", error)
+          }
+        })
         .finally(() => {
           view.style.opacity = ""
           if (resize !== anim) return
