@@ -1,4 +1,4 @@
-import type { AuthOuathResult, Hooks } from "@opencode-ai/plugin"
+import type { AuthOuathResult, Hooks } from "@kilocode/plugin"
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"

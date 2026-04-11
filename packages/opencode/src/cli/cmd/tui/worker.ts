@@ -7,7 +7,7 @@ import { Rpc } from "@/util/rpc"
 import { upgrade } from "@/cli/upgrade"
 import { Config } from "@/config/config"
 import { GlobalBus } from "@/bus/global"
-import { createOpencodeClient, type Event } from "@opencode-ai/sdk/v2"
+import { createKiloClient, type Event } from "@kilocode/sdk/v2"
 import { Flag } from "@/flag/flag"
 import { setTimeout as sleep } from "node:timers/promises"
 import { writeHeapSnapshot } from "node:v8"
@@ -57,8 +57,8 @@ const startEventStream = (input: { directory: string; workspaceID?: string }) =>
     return Server.Default().fetch(request)
   }) as typeof globalThis.fetch
 
-  const sdk = createOpencodeClient({
-    baseUrl: "http://opencode.internal",
+  const sdk = createKiloClient({
+    baseUrl: "http://kilo.internal",
     directory: input.directory,
     experimental_workspaceID: input.workspaceID,
     fetch: fetchFn,

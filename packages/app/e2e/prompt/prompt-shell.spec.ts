@@ -1,4 +1,4 @@
-import type { ToolPart } from "@opencode-ai/sdk/v2/client"
+import type { ToolPart } from "@kilocode/sdk/v2/client"
 import { test, expect } from "../fixtures"
 import { sessionIDFromUrl } from "../actions"
 import { promptSelector } from "../selectors"
