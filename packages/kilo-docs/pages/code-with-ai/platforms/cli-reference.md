@@ -825,6 +825,21 @@ Options:
   --version  Show version number  [boolean]
 ```
 
+## kilo plugin
+
+```
+install plugin and update config
+
+Positionals:
+  module  npm module name  [string]
+
+Options:
+      --help     Show help  [boolean]
+      --version  Show version number  [boolean]
+  -g, --global   install in global config  [boolean] [default: false]
+  -f, --force    replace existing plugin version  [boolean] [default: false]
+```
+
 ## kilo help
 
 ```

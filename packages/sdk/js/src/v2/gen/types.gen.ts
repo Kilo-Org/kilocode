@@ -68,6 +68,13 @@ export type EventGlobalDisposed = {
   }
 }
 
+export type EventGlobalConfigUpdated = {
+  type: "global.config.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventLspClientDiagnostics = {
   type: "lsp.client.diagnostics"
   properties: {
@@ -80,6 +87,114 @@ export type EventLspUpdated = {
   type: "lsp.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventTuiPromptAppend = {
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    /**
+     * Duration in milliseconds
+     */
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
+}
+
+export type EventMcpToolsChanged = {
+  type: "mcp.tools.changed"
+  properties: {
+    server: string
+  }
+}
+
+export type EventMcpBrowserOpenFailed = {
+  type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
+export type SessionNetworkWait = {
+  id: string
+  sessionID: string
+  message: string
+  restored: boolean
+  time: {
+    created: number
+  }
+}
+
+export type EventSessionNetworkAsked = {
+  type: "session.network.asked"
+  properties: SessionNetworkWait
+}
+
+export type EventSessionNetworkReplied = {
+  type: "session.network.replied"
+  properties: {
+    sessionID: string
+    requestID: string
+  }
+}
+
+export type EventSessionNetworkRejected = {
+  type: "session.network.rejected"
+  properties: {
+    sessionID: string
+    requestID: string
+  }
+}
+
+export type EventSessionNetworkRestored = {
+  type: "session.network.restored"
+  properties: {
+    sessionID: string
+    requestID: string
   }
 }
 
@@ -120,35 +235,6 @@ export type EventPermissionReplied = {
     sessionID: string
     requestID: string
     reply: "once" | "always" | "reject"
-  }
-}
-
-export type SessionStatus =
-  | {
-      type: "idle"
-    }
-  | {
-      type: "retry"
-      attempt: number
-      message: string
-      next: number
-    }
-  | {
-      type: "busy"
-    }
-
-export type EventSessionStatus = {
-  type: "session.status"
-  properties: {
-    sessionID: string
-    status: SessionStatus
-  }
-}
-
-export type EventSessionIdle = {
-  type: "session.idle"
-  properties: {
-    sessionID: string
   }
 }
 
@@ -223,28 +309,6 @@ export type EventQuestionRejected = {
   }
 }
 
-export type EventSessionCompacted = {
-  type: "session.compacted"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventFileEdited = {
-  type: "file.edited"
-  properties: {
-    file: string
-  }
-}
-
-export type EventFileWatcherUpdated = {
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
 export type Todo = {
   /**
    * Brief description of the task
@@ -268,72 +332,59 @@ export type EventTodoUpdated = {
   }
 }
 
-export type EventTuiPromptAppend = {
-  type: "tui.prompt.append"
+export type SessionStatus =
+  | {
+      type: "idle"
+    }
+  | {
+      type: "retry"
+      attempt: number
+      message: string
+      next: number
+    }
+  | {
+      type: "busy"
+    }
+  | {
+      type: "offline"
+      requestID: string
+      message: string
+    }
+
+export type EventSessionStatus = {
+  type: "session.status"
   properties: {
-    text: string
+    sessionID: string
+    status: SessionStatus
   }
 }
 
-export type EventTuiCommandExecute = {
-  type: "tui.command.execute"
+export type EventSessionIdle = {
+  type: "session.idle"
   properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    /**
-     * Duration in milliseconds
-     */
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
     sessionID: string
   }
 }
 
-export type EventMcpToolsChanged = {
-  type: "mcp.tools.changed"
+export type EventSessionCompacted = {
+  type: "session.compacted"
   properties: {
-    server: string
+    sessionID: string
   }
 }
 
-export type EventMcpBrowserOpenFailed = {
-  type: "mcp.browser.open.failed"
+export type EventFileEdited = {
+  type: "file.edited"
   properties: {
-    mcpName: string
-    url: string
+    file: string
+  }
+}
+
+export type EventFileWatcherUpdated = {
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
   }
 }
 
@@ -344,6 +395,21 @@ export type EventCommandExecuted = {
     sessionID: string
     arguments: string
     messageID: string
+  }
+}
+
+export type EventSessionTurnOpen = {
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -444,6 +510,14 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
+  }
+}
+
+export type EventKiloSessionsRemoteStatusChanged = {
+  type: "kilo-sessions.remote-status-changed"
+  properties: {
+    enabled: boolean
+    connected: boolean
   }
 }
 
@@ -554,6 +628,12 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
+  editorContext?: {
+    visibleFiles?: Array<string>
+    openTabs?: Array<string>
+    activeFile?: string
+    shell?: string
+  }
 }
 
 export type AssistantMessage = {
@@ -917,7 +997,12 @@ export type Session = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<FileDiff>
+    diffs?: Array<{
+      file: string
+      additions: number
+      deletions: number
+      status?: "added" | "deleted" | "modified"
+    }>
   }
   share?: {
     url: string
@@ -970,30 +1055,38 @@ export type Event =
   | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
+  | EventGlobalConfigUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventMessagePartDelta
-  | EventPermissionAsked
-  | EventPermissionReplied
-  | EventSessionStatus
-  | EventSessionIdle
-  | EventQuestionAsked
-  | EventQuestionReplied
-  | EventQuestionRejected
-  | EventSessionCompacted
-  | EventFileEdited
-  | EventFileWatcherUpdated
-  | EventTodoUpdated
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
   | EventTuiSessionSelect
   | EventMcpToolsChanged
   | EventMcpBrowserOpenFailed
+  | EventSessionNetworkAsked
+  | EventSessionNetworkReplied
+  | EventSessionNetworkRejected
+  | EventSessionNetworkRestored
+  | EventMessagePartDelta
+  | EventPermissionAsked
+  | EventPermissionReplied
+  | EventQuestionAsked
+  | EventQuestionReplied
+  | EventQuestionRejected
+  | EventTodoUpdated
+  | EventSessionStatus
+  | EventSessionIdle
+  | EventSessionCompacted
+  | EventFileEdited
+  | EventFileWatcherUpdated
   | EventCommandExecuted
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
   | EventVcsBranchUpdated
+  | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventPtyCreated
@@ -1078,7 +1171,12 @@ export type SyncEventSessionUpdated = {
         additions: number
         deletions: number
         files: number
-        diffs?: Array<FileDiff>
+        diffs?: Array<{
+          file: string
+          additions: number
+          deletions: number
+          status?: "added" | "deleted" | "modified"
+        }>
       } | null
       share?: {
         url: string | null
@@ -1121,7 +1219,7 @@ export type SyncEvent = {
 export type LogLevel = "DEBUG" | "INFO" | "WARN" | "ERROR"
 
 /**
- * Server configuration for opencode serve and web commands
+ * Server configuration for kilo serve and web commands
  */
 export type ServerConfig = {
   /**
@@ -1137,7 +1235,7 @@ export type ServerConfig = {
    */
   mdns?: boolean
   /**
-   * Custom domain name for mDNS service (default: opencode.local)
+   * Custom domain name for mDNS service (default: kilo.local)
    */
   mdnsDomain?: string
   /**
@@ -1146,7 +1244,7 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
-export type PermissionActionConfig = "ask" | "allow" | "deny"
+export type PermissionActionConfig = "ask" | "allow" | "deny" | null
 
 export type PermissionObjectConfig = {
   [key: string]: PermissionActionConfig
@@ -1178,7 +1276,7 @@ export type PermissionConfig =
   | PermissionActionConfig
 
 export type AgentConfig = {
-  model?: string
+  model?: string | null
   /**
    * Default model variant for this agent (applies only when using the agent's configured model).
    */
@@ -1220,6 +1318,8 @@ export type AgentConfig = {
   permission?: PermissionConfig
   [key: string]:
     | unknown
+    | string
+    | null
     | string
     | number
     | {
@@ -1287,6 +1387,10 @@ export type ProviderConfig = {
         input: Array<"text" | "audio" | "image" | "video" | "pdf">
         output: Array<"text" | "audio" | "image" | "video" | "pdf">
       }
+      recommendedIndex?: number
+      prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
+      isFree?: boolean
+      ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
       experimental?: boolean
       status?: "alpha" | "beta" | "deprecated"
       options?: {
@@ -1327,7 +1431,7 @@ export type ProviderConfig = {
      */
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.
+     * Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.
      */
     timeout?: number | false
     /**
@@ -1420,7 +1524,7 @@ export type Config = {
   logLevel?: LogLevel
   server?: ServerConfig
   /**
-   * Command configuration, see https://opencode.ai/docs/commands
+   * Command configuration, see https://kilo.ai/docs/commands
    */
   command?: {
     [key: string]: {
@@ -1469,6 +1573,10 @@ export type Config = {
    */
   autoshare?: boolean
   /**
+   * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
+   */
+  remote_control?: boolean
+  /**
    * Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications
    */
   autoupdate?: boolean | "notify"
@@ -1483,13 +1591,13 @@ export type Config = {
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
-  model?: string
+  model?: string | null
   /**
    * Small model to use for tasks like title generation in the format of provider/model
    */
-  small_model?: string
+  small_model?: string | null
   /**
-   * Default agent to use when none is specified. Must be a primary agent. Falls back to 'build' if not set or if the specified agent is invalid.
+   * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
   default_agent?: string
   /**
@@ -1505,11 +1613,14 @@ export type Config = {
     [key: string]: AgentConfig | undefined
   }
   /**
-   * Agent configuration, see https://opencode.ai/docs/agents
+   * Agent configuration, see https://kilo.ai/docs/agents
    */
   agent?: {
     plan?: AgentConfig
     build?: AgentConfig
+    debug?: AgentConfig
+    orchestrator?: AgentConfig
+    ask?: AgentConfig
     general?: AgentConfig
     explore?: AgentConfig
     title?: AgentConfig
@@ -1601,7 +1712,11 @@ export type Config = {
      */
     batch_tool?: boolean
     /**
-     * Enable OpenTelemetry spans for AI SDK calls (using the 'experimental_telemetry' flag)
+     * Enable AI-powered codebase search
+     */
+    codebase_search?: boolean
+    /**
+     * Enable telemetry. Set to false to opt-out.
      */
     openTelemetry?: boolean
     /**
@@ -1725,6 +1840,10 @@ export type Model = {
       [key: string]: unknown
     }
   }
+  recommendedIndex?: number
+  prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
+  isFree?: boolean
+  ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
 }
 
 export type Provider = {
@@ -1783,6 +1902,19 @@ export type WorktreeResetInput = {
   directory: string
 }
 
+export type WorktreeDiffItem = {
+  file: string
+  before: string
+  after: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+  tracked: boolean
+  generatedLike: boolean
+  summarized: boolean
+  stamp: string
+}
+
 export type ProjectSummary = {
   id: string
   name?: string
@@ -1800,7 +1932,12 @@ export type GlobalSession = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<FileDiff>
+    diffs?: Array<{
+      file: string
+      additions: number
+      deletions: number
+      status?: "added" | "deleted" | "modified"
+    }>
   }
   share?: {
     url: string
@@ -1821,6 +1958,7 @@ export type GlobalSession = {
     diff?: string
   }
   project: ProjectSummary | null
+  worktreeName?: string
 }
 
 export type McpResource = {
@@ -2018,7 +2156,9 @@ export type Command = {
 
 export type Agent = {
   name: string
+  displayName?: string
   description?: string
+  deprecated?: boolean
   mode: "subagent" | "primary" | "all"
   native?: boolean
   hidden?: boolean
@@ -2628,6 +2768,29 @@ export type ConfigUpdateResponses = {
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
 
+export type ConfigWarningsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/warnings"
+}
+
+export type ConfigWarningsResponses = {
+  /**
+   * Config warnings
+   */
+  200: Array<{
+    path: string
+    message: string
+    detail?: string
+  }>
+}
+
+export type ConfigWarningsResponse = ConfigWarningsResponses[keyof ConfigWarningsResponses]
+
 export type ConfigProvidersData = {
   body?: never
   path?: never
@@ -2900,6 +3063,106 @@ export type WorktreeResetResponses = {
 
 export type WorktreeResetResponse = WorktreeResetResponses[keyof WorktreeResetResponses]
 
+export type WorktreeDiffData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+  }
+  url: "/experimental/worktree/diff"
+}
+
+export type WorktreeDiffErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffError = WorktreeDiffErrors[keyof WorktreeDiffErrors]
+
+export type WorktreeDiffResponses = {
+  /**
+   * File diffs
+   */
+  200: Array<FileDiff>
+}
+
+export type WorktreeDiffResponse = WorktreeDiffResponses[keyof WorktreeDiffResponses]
+
+export type WorktreeDiffSummaryData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+  }
+  url: "/experimental/worktree/diff/summary"
+}
+
+export type WorktreeDiffSummaryErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffSummaryError = WorktreeDiffSummaryErrors[keyof WorktreeDiffSummaryErrors]
+
+export type WorktreeDiffSummaryResponses = {
+  /**
+   * Diff summary items
+   */
+  200: Array<WorktreeDiffItem>
+}
+
+export type WorktreeDiffSummaryResponse = WorktreeDiffSummaryResponses[keyof WorktreeDiffSummaryResponses]
+
+export type WorktreeDiffFileData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    /**
+     * Base branch or ref to diff against
+     */
+    base?: string
+    /**
+     * Relative file path to load diff contents for
+     */
+    file: string
+  }
+  url: "/experimental/worktree/diff/file"
+}
+
+export type WorktreeDiffFileErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type WorktreeDiffFileError = WorktreeDiffFileErrors[keyof WorktreeDiffFileErrors]
+
+export type WorktreeDiffFileResponses = {
+  /**
+   * Diff detail item
+   */
+  200: WorktreeDiffItem | null
+}
+
+export type WorktreeDiffFileResponse = WorktreeDiffFileResponses[keyof WorktreeDiffFileResponses]
+
 export type ExperimentalSessionListData = {
   body?: never
   path?: never
@@ -2909,6 +3172,14 @@ export type ExperimentalSessionListData = {
      */
     directory?: string
     workspace?: string
+    /**
+     * Filter sessions by project ID
+     */
+    projectID?: string
+    /**
+     * Restrict sessions to the current repo worktree family or current directory
+     */
+    worktrees?: boolean
     /**
      * Only return root sessions (no parentID)
      */
@@ -3011,6 +3282,7 @@ export type SessionCreateData = {
     parentID?: string
     title?: string
     permission?: PermissionRuleset
+    platform?: string
     workspaceID?: string
   }
   path?: never
@@ -3527,6 +3799,12 @@ export type SessionPromptData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3727,6 +4005,12 @@ export type SessionPromptAsyncData = {
     format?: OutputFormat
     system?: string
     variant?: string
+    editorContext?: {
+      visibleFiles?: Array<string>
+      openTabs?: Array<string>
+      activeFile?: string
+      shell?: string
+    }
     parts: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
   }
   path: {
@@ -3962,6 +4246,28 @@ export type PermissionRespondResponses = {
 
 export type PermissionRespondResponse = PermissionRespondResponses[keyof PermissionRespondResponses]
 
+export type SessionViewedData = {
+  body?: {
+    focused?: Array<string>
+    open?: Array<string>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/viewed"
+}
+
+export type SessionViewedResponses = {
+  /**
+   * Viewed sessions updated
+   */
+  200: boolean
+}
+
+export type SessionViewedResponse = SessionViewedResponses[keyof SessionViewedResponses]
+
 export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
@@ -3998,6 +4304,44 @@ export type PermissionReplyResponses = {
 }
 
 export type PermissionReplyResponse = PermissionReplyResponses[keyof PermissionReplyResponses]
+
+export type PermissionSaveAlwaysRulesData = {
+  body?: {
+    approvedAlways?: Array<string>
+    deniedAlways?: Array<string>
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/{requestID}/always-rules"
+}
+
+export type PermissionSaveAlwaysRulesErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type PermissionSaveAlwaysRulesError = PermissionSaveAlwaysRulesErrors[keyof PermissionSaveAlwaysRulesErrors]
+
+export type PermissionSaveAlwaysRulesResponses = {
+  /**
+   * Always rules saved successfully
+   */
+  200: boolean
+}
+
+export type PermissionSaveAlwaysRulesResponse =
+  PermissionSaveAlwaysRulesResponses[keyof PermissionSaveAlwaysRulesResponses]
 
 export type PermissionListData = {
   body?: never
@@ -4167,6 +4511,10 @@ export type ProviderListResponses = {
             input: Array<"text" | "audio" | "image" | "video" | "pdf">
             output: Array<"text" | "audio" | "image" | "video" | "pdf">
           }
+          recommendedIndex?: number
+          prompt?: "codex" | "gemini" | "beast" | "anthropic" | "trinity" | "anthropic_without_todo"
+          isFree?: boolean
+          ai_sdk_provider?: "anthropic" | "openai" | "openai-compatible" | "openrouter"
           experimental?: boolean
           status?: "alpha" | "beta" | "deprecated"
           options: {
@@ -5163,3 +5511,1047 @@ export type FormatterStatusResponses = {
 }
 
 export type FormatterStatusResponse = FormatterStatusResponses[keyof FormatterStatusResponses]
+
+export type PermissionAllowEverythingData = {
+  body?: {
+    enable: boolean
+    requestID?: string
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/allow-everything"
+}
+
+export type PermissionAllowEverythingErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type PermissionAllowEverythingError = PermissionAllowEverythingErrors[keyof PermissionAllowEverythingErrors]
+
+export type PermissionAllowEverythingResponses = {
+  /**
+   * Success
+   */
+  200: boolean
+}
+
+export type PermissionAllowEverythingResponse =
+  PermissionAllowEverythingResponses[keyof PermissionAllowEverythingResponses]
+
+export type NetworkListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/network"
+}
+
+export type NetworkListResponses = {
+  /**
+   * List of pending network reconnect requests
+   */
+  200: Array<SessionNetworkWait>
+}
+
+export type NetworkListResponse = NetworkListResponses[keyof NetworkListResponses]
+
+export type NetworkReplyData = {
+  body?: never
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/network/{requestID}/reply"
+}
+
+export type NetworkReplyErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type NetworkReplyError = NetworkReplyErrors[keyof NetworkReplyErrors]
+
+export type NetworkReplyResponses = {
+  /**
+   * Network wait resumed successfully
+   */
+  200: boolean
+}
+
+export type NetworkReplyResponse = NetworkReplyResponses[keyof NetworkReplyResponses]
+
+export type NetworkRejectData = {
+  body?: never
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/network/{requestID}/reject"
+}
+
+export type NetworkRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type NetworkRejectError = NetworkRejectErrors[keyof NetworkRejectErrors]
+
+export type NetworkRejectResponses = {
+  /**
+   * Network wait rejected successfully
+   */
+  200: boolean
+}
+
+export type NetworkRejectResponse = NetworkRejectResponses[keyof NetworkRejectResponses]
+
+export type TelemetryCaptureData = {
+  body?: {
+    /**
+     * Event name
+     */
+    event: string
+    /**
+     * Event properties
+     */
+    properties?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/telemetry/capture"
+}
+
+export type TelemetryCaptureErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type TelemetryCaptureError = TelemetryCaptureErrors[keyof TelemetryCaptureErrors]
+
+export type TelemetryCaptureResponses = {
+  /**
+   * Event captured
+   */
+  200: boolean
+}
+
+export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
+
+export type RemoteEnableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/enable"
+}
+
+export type RemoteEnableResponses = {
+  /**
+   * Remote connection enabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteEnableResponse = RemoteEnableResponses[keyof RemoteEnableResponses]
+
+export type RemoteDisableData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/disable"
+}
+
+export type RemoteDisableResponses = {
+  /**
+   * Remote connection disabled
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteDisableResponse = RemoteDisableResponses[keyof RemoteDisableResponses]
+
+export type RemoteStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/remote/status"
+}
+
+export type RemoteStatusResponses = {
+  /**
+   * Remote connection status
+   */
+  200: {
+    enabled: boolean
+    connected: boolean
+  }
+}
+
+export type RemoteStatusResponse = RemoteStatusResponses[keyof RemoteStatusResponses]
+
+export type CommitMessageGenerateData = {
+  body?: {
+    /**
+     * Workspace/repo path
+     */
+    path: string
+    /**
+     * Optional subset of files to include
+     */
+    selectedFiles?: Array<string>
+    /**
+     * Previously generated message — triggers regeneration with a different result
+     */
+    previousMessage?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/commit-message"
+}
+
+export type CommitMessageGenerateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type CommitMessageGenerateError = CommitMessageGenerateErrors[keyof CommitMessageGenerateErrors]
+
+export type CommitMessageGenerateResponses = {
+  /**
+   * Generated commit message
+   */
+  200: {
+    message: string
+  }
+}
+
+export type CommitMessageGenerateResponse = CommitMessageGenerateResponses[keyof CommitMessageGenerateResponses]
+
+export type EnhancePromptEnhanceData = {
+  body?: {
+    /**
+     * The user's draft prompt to enhance
+     */
+    text: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/enhance-prompt"
+}
+
+export type EnhancePromptEnhanceErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type EnhancePromptEnhanceError = EnhancePromptEnhanceErrors[keyof EnhancePromptEnhanceErrors]
+
+export type EnhancePromptEnhanceResponses = {
+  /**
+   * Enhanced prompt text
+   */
+  200: {
+    text: string
+  }
+}
+
+export type EnhancePromptEnhanceResponse = EnhancePromptEnhanceResponses[keyof EnhancePromptEnhanceResponses]
+
+export type KilocodeSessionImportProjectData = {
+  body?: {
+    id: string
+    worktree: string
+    vcs?: string
+    name?: string
+    iconUrl?: string
+    iconColor?: string
+    timeCreated: number
+    timeUpdated: number
+    timeInitialized?: number
+    sandboxes: Array<string>
+    commands?: {
+      start?: string
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/project"
+}
+
+export type KilocodeSessionImportProjectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportProjectError =
+  KilocodeSessionImportProjectErrors[keyof KilocodeSessionImportProjectErrors]
+
+export type KilocodeSessionImportProjectResponses = {
+  /**
+   * Project import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportProjectResponse =
+  KilocodeSessionImportProjectResponses[keyof KilocodeSessionImportProjectResponses]
+
+export type KilocodeSessionImportSessionData = {
+  body?: {
+    id: string
+    projectID: string
+    force?: boolean
+    workspaceID?: string
+    parentID?: string
+    slug: string
+    directory: string
+    title: string
+    version: string
+    shareURL?: string
+    summary?: {
+      additions: number
+      deletions: number
+      files: number
+      diffs?: Array<{
+        [key: string]: unknown
+      }>
+    }
+    revert?: {
+      messageID: string
+      partID?: string
+      snapshot?: string
+      diff?: string
+    }
+    permission?: {
+      [key: string]: unknown
+    }
+    timeCreated: number
+    timeUpdated: number
+    timeCompacting?: number
+    timeArchived?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/session"
+}
+
+export type KilocodeSessionImportSessionErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportSessionError =
+  KilocodeSessionImportSessionErrors[keyof KilocodeSessionImportSessionErrors]
+
+export type KilocodeSessionImportSessionResponses = {
+  /**
+   * Session import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportSessionResponse =
+  KilocodeSessionImportSessionResponses[keyof KilocodeSessionImportSessionResponses]
+
+export type KilocodeSessionImportMessageData = {
+  body?: {
+    id: string
+    sessionID: string
+    timeCreated: number
+    data:
+      | {
+          role: "user"
+          time: {
+            created: number
+          }
+          agent: string
+          model: {
+            providerID: string
+            modelID: string
+          }
+          tools?: {
+            [key: string]: boolean
+          }
+        }
+      | {
+          role: "assistant"
+          time: {
+            created: number
+            completed?: number
+          }
+          parentID: string
+          modelID: string
+          providerID: string
+          mode: string
+          agent: string
+          path: {
+            cwd: string
+            root: string
+          }
+          summary?: boolean
+          cost: number
+          tokens: {
+            total?: number
+            input: number
+            output: number
+            reasoning: number
+            cache: {
+              read: number
+              write: number
+            }
+          }
+          structured?: unknown
+          variant?: string
+          finish?: string
+        }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/message"
+}
+
+export type KilocodeSessionImportMessageErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportMessageError =
+  KilocodeSessionImportMessageErrors[keyof KilocodeSessionImportMessageErrors]
+
+export type KilocodeSessionImportMessageResponses = {
+  /**
+   * Message import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportMessageResponse =
+  KilocodeSessionImportMessageResponses[keyof KilocodeSessionImportMessageResponses]
+
+export type KilocodeSessionImportPartData = {
+  body?: {
+    id: string
+    messageID: string
+    sessionID: string
+    timeCreated?: number
+    data:
+      | {
+          type: "text"
+          text: string
+          synthetic?: boolean
+          ignored?: boolean
+          time?: {
+            start: number
+            end?: number
+          }
+          metadata?: {
+            [key: string]: unknown
+          }
+        }
+      | {
+          type: "reasoning"
+          text: string
+          metadata?: {
+            [key: string]: unknown
+          }
+          time: {
+            start: number
+            end?: number
+          }
+        }
+      | {
+          type: "tool"
+          callID: string
+          tool: string
+          state:
+            | {
+                status: "pending"
+                input: {
+                  [key: string]: unknown
+                }
+                raw: string
+              }
+            | {
+                status: "running"
+                input: {
+                  [key: string]: unknown
+                }
+                title?: string
+                metadata?: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                }
+              }
+            | {
+                status: "completed"
+                input: {
+                  [key: string]: unknown
+                }
+                output: string
+                title: string
+                metadata: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                  end: number
+                  compacted?: number
+                }
+              }
+            | {
+                status: "error"
+                input: {
+                  [key: string]: unknown
+                }
+                error: string
+                metadata?: {
+                  [key: string]: unknown
+                }
+                time: {
+                  start: number
+                  end: number
+                }
+              }
+          metadata?: {
+            [key: string]: unknown
+          }
+        }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/session-import/part"
+}
+
+export type KilocodeSessionImportPartErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeSessionImportPartError = KilocodeSessionImportPartErrors[keyof KilocodeSessionImportPartErrors]
+
+export type KilocodeSessionImportPartResponses = {
+  /**
+   * Part import result
+   */
+  200: {
+    ok: boolean
+    id: string
+    skipped?: boolean
+  }
+}
+
+export type KilocodeSessionImportPartResponse =
+  KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
+
+export type KilocodeRemoveSkillData = {
+  body?: {
+    location: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/skill/remove"
+}
+
+export type KilocodeRemoveSkillErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRemoveSkillError = KilocodeRemoveSkillErrors[keyof KilocodeRemoveSkillErrors]
+
+export type KilocodeRemoveSkillResponses = {
+  /**
+   * Skill removed
+   */
+  200: boolean
+}
+
+export type KilocodeRemoveSkillResponse = KilocodeRemoveSkillResponses[keyof KilocodeRemoveSkillResponses]
+
+export type KilocodeRemoveAgentData = {
+  body?: {
+    name: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent/remove"
+}
+
+export type KilocodeRemoveAgentErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeRemoveAgentError = KilocodeRemoveAgentErrors[keyof KilocodeRemoveAgentErrors]
+
+export type KilocodeRemoveAgentResponses = {
+  /**
+   * Agent removed
+   */
+  200: boolean
+}
+
+export type KilocodeRemoveAgentResponse = KilocodeRemoveAgentResponses[keyof KilocodeRemoveAgentResponses]
+
+export type KiloProfileData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/profile"
+}
+
+export type KiloProfileErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloProfileError = KiloProfileErrors[keyof KiloProfileErrors]
+
+export type KiloProfileResponses = {
+  /**
+   * Profile data
+   */
+  200: {
+    profile: {
+      email: string
+      name?: string
+      organizations?: Array<{
+        id: string
+        name: string
+        role: string
+      }>
+    }
+    balance: {
+      balance: number
+    } | null
+    currentOrgId: string | null
+  }
+}
+
+export type KiloProfileResponse = KiloProfileResponses[keyof KiloProfileResponses]
+
+export type KiloOrganizationSetData = {
+  body?: {
+    organizationId: string | null
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/organization"
+}
+
+export type KiloOrganizationSetErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloOrganizationSetError = KiloOrganizationSetErrors[keyof KiloOrganizationSetErrors]
+
+export type KiloOrganizationSetResponses = {
+  /**
+   * Organization updated successfully
+   */
+  200: boolean
+}
+
+export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
+
+export type KiloModesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/modes"
+}
+
+export type KiloModesResponses = {
+  /**
+   * Organization modes list
+   */
+  200: {
+    modes: Array<{
+      id: string
+      organization_id: string
+      name: string
+      slug: string
+      created_by: string
+      created_at: string
+      updated_at: string
+      config: {
+        roleDefinition?: string
+        whenToUse?: string
+        description?: string
+        customInstructions?: string
+        groups?: Array<
+          | string
+          | [
+              string,
+              {
+                fileRegex?: string
+                description?: string
+              },
+            ]
+        >
+      }
+    }>
+  }
+}
+
+export type KiloModesResponse = KiloModesResponses[keyof KiloModesResponses]
+
+export type KiloFimData = {
+  body?: {
+    prefix: string
+    suffix: string
+    model?: string
+    maxTokens?: number
+    temperature?: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/fim"
+}
+
+export type KiloFimErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloFimError = KiloFimErrors[keyof KiloFimErrors]
+
+export type KiloFimResponses = {
+  /**
+   * Streaming FIM completion response
+   */
+  200: {
+    choices?: Array<{
+      delta?: {
+        content?: string
+      }
+    }>
+    usage?: {
+      prompt_tokens?: number
+      completion_tokens?: number
+    }
+    cost?: number
+  }
+}
+
+export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
+
+export type KiloNotificationsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/notifications"
+}
+
+export type KiloNotificationsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloNotificationsError = KiloNotificationsErrors[keyof KiloNotificationsErrors]
+
+export type KiloNotificationsResponses = {
+  /**
+   * Notifications list
+   */
+  200: Array<{
+    id: string
+    title: string
+    message: string
+    action?: {
+      actionText: string
+      actionURL: string
+    }
+    showIn?: Array<string>
+    suggestModelId?: string
+  }>
+}
+
+export type KiloNotificationsResponse = KiloNotificationsResponses[keyof KiloNotificationsResponses]
+
+export type KiloCloudSessionGetData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/cloud/session/{id}"
+}
+
+export type KiloCloudSessionGetErrors = {
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KiloCloudSessionGetError = KiloCloudSessionGetErrors[keyof KiloCloudSessionGetErrors]
+
+export type KiloCloudSessionGetResponses = {
+  /**
+   * Cloud session data
+   */
+  200: unknown
+}
+
+export type KiloCloudSessionImportData = {
+  body?: {
+    sessionId: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/cloud/session/import"
+}
+
+export type KiloCloudSessionImportErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KiloCloudSessionImportError = KiloCloudSessionImportErrors[keyof KiloCloudSessionImportErrors]
+
+export type KiloCloudSessionImportResponses = {
+  /**
+   * Imported session info
+   */
+  200: unknown
+}
+
+export type KiloClawStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/claw/status"
+}
+
+export type KiloClawStatusResponses = {
+  /**
+   * Instance status
+   */
+  200: {
+    status: "provisioned" | "starting" | "restarting" | "running" | "stopped" | "destroying" | null
+    sandboxId?: string
+    flyRegion?: string
+    machineSize?: {
+      cpus: number
+      memory_mb: number
+    }
+    openclawVersion?: string | null
+    lastStartedAt?: string | null
+    lastStoppedAt?: string | null
+    channelCount?: number
+    secretCount?: number
+    userId?: string
+  }
+}
+
+export type KiloClawStatusResponse = KiloClawStatusResponses[keyof KiloClawStatusResponses]
+
+export type KiloClawChatCredentialsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilo/claw/chat-credentials"
+}
+
+export type KiloClawChatCredentialsResponses = {
+  /**
+   * Stream Chat credentials or null
+   */
+  200: {
+    apiKey: string
+    userId: string
+    userToken: string
+    channelId: string
+  } | null
+}
+
+export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
+
+export type KiloCloudSessionsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+    cursor?: string
+    limit?: number
+    gitUrl?: string
+  }
+  url: "/kilo/cloud-sessions"
+}
+
+export type KiloCloudSessionsErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KiloCloudSessionsError = KiloCloudSessionsErrors[keyof KiloCloudSessionsErrors]
+
+export type KiloCloudSessionsResponses = {
+  /**
+   * Cloud sessions list
+   */
+  200: {
+    cliSessions: Array<{
+      session_id: string
+      title: string | null
+      created_at: string
+      updated_at: string
+      version: number
+    }>
+    nextCursor: string | null
+  }
+}
+
+export type KiloCloudSessionsResponse = KiloCloudSessionsResponses[keyof KiloCloudSessionsResponses]

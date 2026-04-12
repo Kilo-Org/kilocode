@@ -22,5 +22,6 @@
 | `kilo remote`             | enable remote connection for real-time session relay |
 | `kilo db`                 | database tools                                       |
 | `kilo config`             | configuration tools                                  |
+| `kilo plugin <module>`    | install plugin and update config                     |
 | `kilo help [command]`     | show full CLI reference                              |
 | `kilo completion`         | generate shell completion script                     |
