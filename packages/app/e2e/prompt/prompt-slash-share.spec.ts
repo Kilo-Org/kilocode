@@ -2,7 +2,7 @@ import { test, expect } from "../fixtures"
 import { promptSelector } from "../selectors"
 import { withSession } from "../actions"
 
-const shareDisabled = process.env.OPENCODE_DISABLE_SHARE === "true" || process.env.OPENCODE_DISABLE_SHARE === "1"
+const shareDisabled = process.env.KILO_DISABLE_SHARE === "true" || process.env.KILO_DISABLE_SHARE === "1"
 
 async function seed(sdk: Parameters<typeof withSession>[0], sessionID: string) {
   await sdk.session.promptAsync({
@@ -23,7 +23,7 @@ async function seed(sdk: Parameters<typeof withSession>[0], sessionID: string) {
 }
 
 test("/share and /unshare update session share state", async ({ page, sdk, gotoSession }) => {
-  test.skip(shareDisabled, "Share is disabled in this environment (OPENCODE_DISABLE_SHARE).")
+  test.skip(shareDisabled, "Share is disabled in this environment (KILO_DISABLE_SHARE).")
 
   await withSession(sdk, `e2e slash share ${Date.now()}`, async (session) => {
     const prompt = page.locator(promptSelector)

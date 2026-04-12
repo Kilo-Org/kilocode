@@ -8,7 +8,7 @@ import {
   type TuiPluginMeta,
   type TuiPluginStatus,
   type TuiTheme,
-} from "@opencode-ai/plugin/tui"
+} from "@kilocode/plugin/tui"
 import path from "path"
 import { fileURLToPath } from "url"
 

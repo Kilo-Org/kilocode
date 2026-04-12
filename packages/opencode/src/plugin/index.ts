@@ -1,8 +1,8 @@
-import type { Hooks, PluginInput, Plugin as PluginInstance, PluginModule } from "@opencode-ai/plugin"
+import type { Hooks, PluginInput, Plugin as PluginInstance, PluginModule } from "@kilocode/plugin"
 import { Config } from "../config/config"
 import { Bus } from "../bus"
 import { Log } from "../util/log"
-import { createOpencodeClient } from "@opencode-ai/sdk"
+import { createKiloClient } from "@kilocode/sdk"
 import { Flag } from "../flag/flag"
 import { CodexAuthPlugin } from "./codex"
 import { Session } from "../session"
@@ -193,7 +193,7 @@ export namespace Plugin {
 
           const { Server } = yield* Effect.promise(() => import("../server/server"))
 
-          const client = createOpencodeClient({
+          const client = createKiloClient({
             baseUrl: "http://localhost:4096",
             directory: ctx.directory,
             headers: Flag.OPENCODE_SERVER_PASSWORD

@@ -3,7 +3,7 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { createEffect, createMemo, createSignal, onMount } from "solid-js"
-import { createOpencodeClient, type Session } from "@opencode-ai/sdk/v2"
+import { createKiloClient, type Session } from "@kilocode/sdk/v2"
 import { useSDK } from "../context/sdk"
 import { useToast } from "../ui/toast"
 import { useKeybind } from "../context/keybind"
@@ -11,7 +11,7 @@ import { DialogSessionList } from "./workspace/dialog-session-list"
 import { setTimeout as sleep } from "node:timers/promises"
 
 function scoped(sdk: ReturnType<typeof useSDK>, sync: ReturnType<typeof useSync>, workspaceID?: string) {
-  return createOpencodeClient({
+  return createKiloClient({
     baseUrl: sdk.url,
     fetch: sdk.fetch,
     directory: sync.data.path.directory || sdk.directory,

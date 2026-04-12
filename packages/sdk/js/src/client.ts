@@ -2,8 +2,8 @@ export * from "./gen/types.gen.js"
 
 import { createClient } from "./gen/client/client.gen.js"
 import { type Config } from "./gen/client/types.gen.js"
-import { OpencodeClient } from "./gen/sdk.gen.js"
-export { type Config as OpencodeClientConfig, OpencodeClient }
+import { KiloClient } from "./gen/sdk.gen.js"
+export { type Config as KiloClientConfig, KiloClient }
 
 function pick(value: string | null, fallback?: string) {
   if (!value) return
@@ -29,7 +29,7 @@ function rewrite(request: Request, directory?: string) {
   return next
 }
 
-export function createOpencodeClient(config?: Config & { directory?: string }) {
+export function createKiloClient(config?: Config & { directory?: string }) {
   if (!config?.fetch) {
     const customFetch: any = (req: any) => {
       // @ts-ignore
@@ -51,5 +51,5 @@ export function createOpencodeClient(config?: Config & { directory?: string }) {
 
   const client = createClient(config)
   client.interceptors.request.use((request) => rewrite(request, config?.directory))
-  return new OpencodeClient({ client })
+  return new KiloClient({ client })
 }

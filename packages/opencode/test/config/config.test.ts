@@ -772,7 +772,7 @@ test("installs dependencies in writable OPENCODE_CONFIG_DIR", async () => {
     await fs.mkdir(mod, { recursive: true })
     await Filesystem.write(
       path.join(mod, "package.json"),
-      JSON.stringify({ name: "@opencode-ai/plugin", version: "1.0.0" }),
+      JSON.stringify({ name: "@kilocode/plugin", version: "1.0.0" }),
     )
     return {
       code: 0,
@@ -831,7 +831,7 @@ test("dedupes concurrent config dependency installs for the same dir", async () 
     await fs.mkdir(mod, { recursive: true })
     await Filesystem.write(
       path.join(mod, "package.json"),
-      JSON.stringify({ name: "@opencode-ai/plugin", version: "1.0.0" }),
+      JSON.stringify({ name: "@kilocode/plugin", version: "1.0.0" }),
     )
     return {
       code: 0,
@@ -901,7 +901,7 @@ test("serializes config dependency installs across dirs", async () => {
     await fs.mkdir(mod, { recursive: true })
     await Filesystem.write(
       path.join(mod, "package.json"),
-      JSON.stringify({ name: "@opencode-ai/plugin", version: "1.0.0" }),
+      JSON.stringify({ name: "@kilocode/plugin", version: "1.0.0" }),
     )
     if (hit) {
       open -= 1

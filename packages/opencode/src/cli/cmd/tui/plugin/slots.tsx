@@ -1,4 +1,4 @@
-import { type SlotMode, type TuiPluginApi, type TuiSlotContext, type TuiSlotMap } from "@opencode-ai/plugin/tui"
+import { type SlotMode, type TuiPluginApi, type TuiSlotContext, type TuiSlotMap } from "@kilocode/plugin/tui"
 import { createSlot, createSolidSlotRegistry, type JSX, type SolidPlugin } from "@opentui/solid"
 import { isRecord } from "@/util/record"
 
