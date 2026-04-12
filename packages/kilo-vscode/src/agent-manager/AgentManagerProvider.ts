@@ -316,13 +316,16 @@ export class AgentManagerProvider implements Disposable {
       this.activeSessionId = m.sessionID
       this.connectionService.registerFocused("agent-manager", m.sessionID)
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
-      this.prBridge.poller.setActiveWorktreeId(this.state?.getSession(m.sessionID)?.worktreeId ?? undefined)
+      const worktreeId = this.state?.getSession(m.sessionID)?.worktreeId ?? undefined
+      this.prBridge.poller.setActiveWorktreeId(worktreeId)
+      this.statsPoller.setActiveWorktreeId(worktreeId)
       return msg
     }
 
     if (m.type === "clearSession") {
       this.activeSessionId = undefined
       this.connectionService.unregisterFocused("agent-manager")
+      this.statsPoller.setActiveWorktreeId(undefined)
       void Promise.resolve().then(() => {
         if (!this.panel || !this.state) return
         for (const id of this.state.worktreeSessionIds()) {
