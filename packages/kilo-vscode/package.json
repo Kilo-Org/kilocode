@@ -1,6 +1,6 @@
 {
   "name": "kilo-code",
-  "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
+  "displayName": "Kilo Code: Azure Voice Edition",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
   "version": "7.2.4",
   "icon": "assets/icons/logo-outline-black.png",
@@ -783,6 +783,152 @@
           "type": "boolean",
           "default": true,
           "description": "Show the task timeline graph in the chat header"
+        },
+        "kilo-code.new.speech.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Azure Voice Studio for text-to-speech responses"
+        },
+        "kilo-code.new.speech.autoSpeak": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically speak assistant replies when they complete"
+        },
+        "kilo-code.new.speech.volume": {
+          "type": "number",
+          "default": 80,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Speech output volume level (0-100)"
+        },
+        "kilo-code.new.speech.interactionMode": {
+          "type": "string",
+          "default": "assist",
+          "enum": ["assist", "conversation", "minimal"],
+          "description": "How voice responses work during your session"
+        },
+        "kilo-code.new.speech.interruptOnType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Stop speech when you start typing"
+        },
+        "kilo-code.new.speech.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show verbose speech engine logs in developer console"
+        },
+        "kilo-code.new.speech.sentimentIntensity": {
+          "type": "number",
+          "default": 70,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "How strongly pitch/rate shift to match emotional tone (0-100)"
+        },
+        "kilo-code.new.speech.multiVoiceMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Each AI agent speaks in a distinct voice"
+        },
+        "kilo-code.new.speech.azure.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Azure Cognitive Services Speech API key"
+        },
+        "kilo-code.new.speech.azure.region": {
+          "type": "string",
+          "default": "westus",
+          "description": "Azure Speech resource region"
+        },
+        "kilo-code.new.speech.azure.voiceId": {
+          "type": "string",
+          "default": "en-GB-MaisieNeural",
+          "description": "Azure Neural TTS voice ID"
+        },
+        "kilo-code.new.speech.tuning.pitch": {
+          "type": "number",
+          "default": 0,
+          "minimum": -50,
+          "maximum": 50,
+          "description": "Voice pitch adjustment (-50% to +50%)"
+        },
+        "kilo-code.new.speech.tuning.rate": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.5,
+          "maximum": 2.0,
+          "description": "Speech rate/speed (0.5x to 2.0x)"
+        },
+        "kilo-code.new.speech.tuning.volume": {
+          "type": ["number", "null"],
+          "default": null,
+          "description": "Per-voice volume override (null = use global)"
+        },
+        "kilo-code.new.speech.tuning.style": {
+          "type": "string",
+          "default": "default",
+          "description": "Speaking style (voice-dependent)"
+        },
+        "kilo-code.new.speech.tuning.styleDegree": {
+          "type": "number",
+          "default": 1.0,
+          "minimum": 0.5,
+          "maximum": 2.0,
+          "description": "Style intensity (0.5x to 2.0x)"
+        },
+        "kilo-code.new.speech.tuning.sentencePause": {
+          "type": "number",
+          "default": 250,
+          "minimum": 0,
+          "maximum": 2000,
+          "description": "Silence between sentences (ms)"
+        },
+        "kilo-code.new.speech.tuning.paragraphBreak": {
+          "type": "number",
+          "default": 500,
+          "minimum": 0,
+          "maximum": 5000,
+          "description": "Silence between paragraphs (ms)"
+        },
+        "kilo-code.new.speech.tuning.emphasis": {
+          "type": "string",
+          "default": "moderate",
+          "enum": ["none", "reduced", "moderate", "strong"],
+          "description": "Word emphasis level"
+        },
+        "kilo-code.new.speech.tuning.pronunciations": {
+          "type": "array",
+          "default": [],
+          "description": "Custom pronunciation overrides for technical terms"
+        },
+        "kilo-code.new.speech.tuning.audioFormat": {
+          "type": "string",
+          "default": "audio-24khz-48kbitrate-mono-mp3",
+          "enum": [
+            "audio-16khz-32kbitrate-mono-mp3",
+            "audio-24khz-48kbitrate-mono-mp3",
+            "audio-48khz-96kbitrate-mono-mp3"
+          ],
+          "enumDescriptions": [
+            "Low quality (16kHz) - smallest size",
+            "Standard quality (24kHz) - recommended",
+            "High quality (48kHz) - best audio"
+          ],
+          "description": "Audio output format and quality"
+        },
+        "kilo-code.new.speech.favorites.starredVoices": {
+          "type": "array",
+          "default": ["en-GB-MaisieNeural"],
+          "description": "Starred favorite voices"
+        },
+        "kilo-code.new.speech.favorites.order": {
+          "type": "array",
+          "default": ["en-GB-MaisieNeural"],
+          "description": "Display order of favorites"
+        },
+        "kilo-code.new.speech.presets": {
+          "type": "array",
+          "default": [],
+          "description": "Saved voice + tuning presets"
         }
       }
     }
