@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, on, Switch, Match, Show, onMount, onCleanup } from "solid-js"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
@@ -32,6 +32,9 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import { speak, stop as stopSpeech, ensureAudioReady } from "./utils/speech-playback"
+import type { SpeechSettings } from "./types/voice"
+import type { ExtensionMessage } from "./types/messages"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -213,6 +216,101 @@ const AppContent: Component = () => {
     window.addEventListener("message", handler)
     onCleanup(() => window.removeEventListener("message", handler))
   })
+
+  // ── Auto-speak: speak last assistant reply when session goes idle ──
+  const [speechSettings, setSpeechSettings] = createSignal<SpeechSettings | null>(null)
+  let lastSpokenMessageId = ""
+
+  onMount(() => {
+    vscode.postMessage({ type: "requestSpeechSettings" })
+  })
+  const unsubSpeech = vscode.onMessage((msg: ExtensionMessage) => {
+    if (msg.type === "speechSettingsLoaded") {
+      setSpeechSettings(msg.settings)
+    }
+  })
+  onCleanup(unsubSpeech)
+
+  // Watch for busy → idle transition to auto-speak
+  createEffect(
+    on(
+      () => session.status(),
+      (newStatus, prevStatus) => {
+        if (prevStatus !== "busy" || newStatus !== "idle") return
+        const ss = speechSettings()
+        if (!ss?.enabled || !ss?.autoSpeak) return
+        if (!ss.azure.apiKey || !ss.azure.region) return
+
+        const id = session.currentSessionID()
+        if (!id) return
+        const msgs = session.messages()
+        if (!msgs.length) return
+
+        const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant")
+        if (!lastAssistant || lastAssistant.id === lastSpokenMessageId) return
+        lastSpokenMessageId = lastAssistant.id
+
+        const parts = session.allParts()[lastAssistant.id] ?? []
+        const rawText = parts
+          .filter((p: any) => p.type === "text")
+          .map((p: any) => p.text)
+          .join(" ")
+          .trim()
+        if (!rawText) return
+
+        // Strip markdown code blocks and URLs for cleaner speech
+        const textContent = rawText
+          .replace(/```[\s\S]*?```/g, "")
+          .replace(/`[^`]+`/g, (m) => m.slice(1, -1))
+          .replace(/https?:\/\/\S+/g, "")
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/#{1,6}\s/g, "")
+          .replace(/[*_~]+/g, "")
+          .trim()
+        if (!textContent) return
+
+        ensureAudioReady()
+        speak(textContent, {
+          region: ss.azure.region,
+          apiKey: ss.azure.apiKey,
+          voiceId: ss.azure.voiceId,
+          pitch: ss.tuning.pitch,
+          rate: ss.tuning.rate,
+          volume: ss.tuning.volume ?? undefined,
+          style: ss.tuning.style,
+          styleDegree: ss.tuning.styleDegree,
+          emphasis: ss.tuning.emphasis,
+          pronunciations: ss.tuning.pronunciations,
+          audioFormat: ss.tuning.audioFormat,
+          globalVolume: ss.volume,
+        }).catch((err) => console.error("[Speech] Auto-speak failed:", err))
+      },
+    ),
+  )
+
+  // Interrupt speech on typing (keydown in the window)
+  const handleInterruptOnType = (e: KeyboardEvent) => {
+    const ss = speechSettings()
+    if (!ss?.interruptOnType) return
+    // Only interrupt on printable characters, not modifier keys alone
+    if (e.key.length === 1 || e.key === "Backspace" || e.key === "Enter") {
+      stopSpeech()
+    }
+  }
+  window.addEventListener("keydown", handleInterruptOnType)
+  onCleanup(() => window.removeEventListener("keydown", handleInterruptOnType))
+
+  // Stop speech on session switch
+  createEffect(
+    on(
+      () => session.currentSessionID(),
+      (_newId, prevId) => {
+        if (prevId && _newId !== prevId) {
+          stopSpeech()
+        }
+      },
+    ),
+  )
 
   const handleSelectSession = (id: string) => {
     session.selectSession(id)
