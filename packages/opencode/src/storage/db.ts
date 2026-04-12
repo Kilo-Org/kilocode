@@ -10,7 +10,6 @@ import { NamedError } from "@opencode-ai/util/error"
 import z from "zod"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
-import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
 import { init } from "#db"
@@ -27,13 +26,11 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export namespace Database {
+  // kilocode_change start - always use kilo.db regardless of channel
   export function getChannelPath() {
-    const channel = Installation.CHANNEL
-    if (["latest", "beta"].includes(channel) || Flag.KILO_DISABLE_CHANNEL_DB)
-      return path.join(Global.Path.data, "kilo.db") // kilocode_change
-    const safe = channel.replace(/[^a-zA-Z0-9._-]/g, "-")
-    return path.join(Global.Path.data, `kilo-${safe}.db`) // kilocode_change
+    return path.join(Global.Path.data, "kilo.db")
   }
+  // kilocode_change end
 
   export const Path = iife(() => {
     if (Flag.KILO_DB) {
