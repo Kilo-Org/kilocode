@@ -63,7 +63,7 @@ export namespace TuiConfig {
   }
 
   function customPath() {
-    return Flag.OPENCODE_TUI_CONFIG
+    return Flag.KILO_TUI_CONFIG
   }
 
   function normalize(raw: Record<string, unknown>) {
@@ -104,7 +104,7 @@ export namespace TuiConfig {
   }
 
   const state = Instance.state(async () => {
-    let projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+    let projectFiles = Flag.KILO_DISABLE_PROJECT_CONFIG
       ? []
       : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
     const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
@@ -112,7 +112,7 @@ export namespace TuiConfig {
     const managed = Config.managedConfigDir()
     await migrateTuiConfig({ directories, custom, managed })
     // Re-compute after migration since migrateTuiConfig may have created new tui.json files
-    projectFiles = Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+    projectFiles = Flag.KILO_DISABLE_PROJECT_CONFIG
       ? []
       : await ConfigPaths.projectFiles("tui", Instance.directory, Instance.worktree)
 
@@ -135,7 +135,7 @@ export namespace TuiConfig {
     }
 
     for (const dir of unique(directories)) {
-      if (!dir.endsWith(".opencode") && dir !== Flag.OPENCODE_CONFIG_DIR) continue
+      if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
       for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
         await mergeFile(acc, file)
       }
@@ -157,7 +157,7 @@ export namespace TuiConfig {
     const deps: Promise<void>[] = []
     if (acc.result.plugin?.length) {
       for (const dir of unique(directories)) {
-        if (!dir.endsWith(".opencode") && dir !== Flag.OPENCODE_CONFIG_DIR) continue
+        if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
         deps.push(installDeps(dir))
       }
     }

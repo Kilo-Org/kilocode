@@ -42,7 +42,7 @@ test("loads npm tui plugin from package ./tui export", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   const get = spyOn(TuiConfig, "get").mockResolvedValue({
     plugin: [[tmp.extra.spec, { marker: tmp.extra.marker }]],
     plugin_meta: {
@@ -66,7 +66,7 @@ test("loads npm tui plugin from package ./tui export", async () => {
     cwd.mockRestore()
     get.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })
 
@@ -104,7 +104,7 @@ test("rejects npm tui export that resolves outside plugin directory", async () =
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   const get = spyOn(TuiConfig, "get").mockResolvedValue({
     plugin: [tmp.extra.spec],
     plugin_meta: {
@@ -127,7 +127,7 @@ test("rejects npm tui export that resolves outside plugin directory", async () =
     cwd.mockRestore()
     get.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })
 
@@ -163,7 +163,7 @@ test("rejects npm tui plugin that exports server and tui together", async () => 
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   const get = spyOn(TuiConfig, "get").mockResolvedValue({
     plugin: [tmp.extra.spec],
     plugin_meta: {
@@ -184,6 +184,6 @@ test("rejects npm tui plugin that exports server and tui together", async () => 
     cwd.mockRestore()
     get.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })

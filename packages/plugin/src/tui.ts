@@ -1,5 +1,5 @@
 import type {
-  OpencodeClient,
+  KiloClient,
   Event,
   LspStatus,
   McpStatus,
@@ -12,7 +12,7 @@ import type {
   SessionStatus,
   Workspace,
   Config as SdkConfig,
-} from "@opencode-ai/sdk/v2"
+} from "@kilocode/sdk/v2"
 import type { CliRenderer, ParsedKey, RGBA } from "@opentui/core"
 import type { JSX, SolidPlugin } from "@opentui/solid"
 import type { Config as PluginConfig, PluginOptions } from "./index.js"
@@ -415,8 +415,8 @@ export type TuiPluginApi = {
   kv: TuiKV
   state: TuiState
   theme: TuiTheme
-  client: OpencodeClient
-  scopedClient: (workspaceID?: string) => OpencodeClient
+  client: KiloClient
+  scopedClient: (workspaceID?: string) => KiloClient
   workspace: TuiWorkspace
   event: TuiEventBus
   renderer: CliRenderer

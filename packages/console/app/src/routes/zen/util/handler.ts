@@ -91,10 +91,10 @@ export async function handler(
     const model = opts.parseModel(url, body)
     const isStream = opts.parseIsStream(url, body)
     const ip = input.request.headers.get("x-real-ip") ?? ""
-    const sessionId = input.request.headers.get("x-opencode-session") ?? ""
-    const requestId = input.request.headers.get("x-opencode-request") ?? ""
-    const projectId = input.request.headers.get("x-opencode-project") ?? ""
-    const ocClient = input.request.headers.get("x-opencode-client") ?? ""
+    const sessionId = input.request.headers.get("x-kilo-session") ?? ""
+    const requestId = input.request.headers.get("x-kilo-request") ?? ""
+    const projectId = input.request.headers.get("x-kilo-project") ?? ""
+    const ocClient = input.request.headers.get("x-kilo-client") ?? ""
     logger.metric({
       is_stream: isStream,
       session: sessionId,
@@ -165,10 +165,10 @@ export async function handler(
           })
           headers.delete("host")
           headers.delete("content-length")
-          headers.delete("x-opencode-request")
-          headers.delete("x-opencode-session")
-          headers.delete("x-opencode-project")
-          headers.delete("x-opencode-client")
+          headers.delete("x-kilo-request")
+          headers.delete("x-kilo-session")
+          headers.delete("x-kilo-project")
+          headers.delete("x-kilo-client")
           return headers
         })(),
         body: reqBody,

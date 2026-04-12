@@ -276,10 +276,10 @@ export namespace LLM {
       headers: {
         ...(input.model.providerID.startsWith("opencode")
           ? {
-              "x-opencode-project": Instance.project.id,
-              "x-opencode-session": input.sessionID,
-              "x-opencode-request": input.user.id,
-              "x-opencode-client": Flag.OPENCODE_CLIENT,
+              "x-kilo-project": Instance.project.id,
+              "x-kilo-session": input.sessionID,
+              "x-kilo-request": input.user.id,
+              "x-kilo-client": Flag.KILO_CLIENT,
             }
           : {
               "User-Agent": `opencode/${Installation.VERSION}`,

@@ -68,7 +68,7 @@ export namespace Config {
   }
 
   export function managedConfigDir() {
-    return process.env.OPENCODE_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
+    return process.env.KILO_TEST_MANAGED_CONFIG_DIR || systemManagedConfigDir()
   }
 
   const managedDir = managedConfigDir()
@@ -115,7 +115,7 @@ export namespace Config {
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@opencode-ai/plugin": target,
+      "@kilocode/plugin": target,
     }
     await Filesystem.writeJson(pkg, json)
 
@@ -153,7 +153,7 @@ export namespace Config {
           stdout: err.stdout.toString(),
           stderr: err.stderr.toString(),
         }
-        if (Flag.OPENCODE_STRICT_CONFIG_DEPS) {
+        if (Flag.KILO_STRICT_CONFIG_DEPS) {
           log.error("failed to install dependencies", detail)
           throw err
         }
@@ -161,7 +161,7 @@ export namespace Config {
         return
       }
 
-      if (Flag.OPENCODE_STRICT_CONFIG_DEPS) {
+      if (Flag.KILO_STRICT_CONFIG_DEPS) {
         log.error("failed to install dependencies", { dir, error: err })
         throw err
       }
@@ -196,16 +196,16 @@ export namespace Config {
 
     const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
     const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@opencode-ai/plugin"]
+    const depVersion = dependencies["@kilocode/plugin"]
     if (!depVersion) return true
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
       if (!online()) return false
-      const stale = await PackageRegistry.isOutdated("@opencode-ai/plugin", depVersion, dir)
+      const stale = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
       if (!stale) return false
       log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@opencode-ai/plugin",
+        pkg: "@kilocode/plugin",
         cachedVersion: depVersion,
       })
       return true
@@ -1331,12 +1331,12 @@ export namespace Config {
 
           result = mergeConfigConcatArrays(result, yield* getGlobal())
 
-          if (Flag.OPENCODE_CONFIG) {
-            result = mergeConfigConcatArrays(result, yield* loadFile(Flag.OPENCODE_CONFIG))
-            log.debug("loaded custom config", { path: Flag.OPENCODE_CONFIG })
+          if (Flag.KILO_CONFIG) {
+            result = mergeConfigConcatArrays(result, yield* loadFile(Flag.KILO_CONFIG))
+            log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
           }
 
-          if (!Flag.OPENCODE_DISABLE_PROJECT_CONFIG) {
+          if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
             for (const file of yield* Effect.promise(() =>
               ConfigPaths.projectFiles("opencode", ctx.directory, ctx.worktree),
             )) {
@@ -1350,14 +1350,14 @@ export namespace Config {
 
           const directories = yield* Effect.promise(() => ConfigPaths.directories(ctx.directory, ctx.worktree))
 
-          if (Flag.OPENCODE_CONFIG_DIR) {
-            log.debug("loading config from OPENCODE_CONFIG_DIR", { path: Flag.OPENCODE_CONFIG_DIR })
+          if (Flag.KILO_CONFIG_DIR) {
+            log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
           }
 
           const deps: Promise<void>[] = []
 
           for (const dir of unique(directories)) {
-            if (dir.endsWith(".opencode") || dir === Flag.OPENCODE_CONFIG_DIR) {
+            if (dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR) {
               for (const file of ["opencode.jsonc", "opencode.json"]) {
                 log.debug(`loading config from ${path.join(dir, file)}`)
                 result = mergeConfigConcatArrays(result, yield* loadFile(path.join(dir, file)))
@@ -1382,15 +1382,15 @@ export namespace Config {
             result.plugin.push(...(yield* Effect.promise(() => loadPlugin(dir))))
           }
 
-          if (process.env.OPENCODE_CONFIG_CONTENT) {
+          if (process.env.KILO_CONFIG_CONTENT) {
             result = mergeConfigConcatArrays(
               result,
-              yield* loadConfig(process.env.OPENCODE_CONFIG_CONTENT, {
+              yield* loadConfig(process.env.KILO_CONFIG_CONTENT, {
                 dir: ctx.directory,
-                source: "OPENCODE_CONFIG_CONTENT",
+                source: "KILO_CONFIG_CONTENT",
               }),
             )
-            log.debug("loaded custom config from OPENCODE_CONFIG_CONTENT")
+            log.debug("loaded custom config from KILO_CONFIG_CONTENT")
           }
 
           const active = Option.getOrUndefined(yield* accountSvc.active().pipe(Effect.orDie))
@@ -1402,8 +1402,8 @@ export namespace Config {
               )
               const token = Option.getOrUndefined(tokenOpt)
               if (token) {
-                process.env["OPENCODE_CONSOLE_TOKEN"] = token
-                Env.set("OPENCODE_CONSOLE_TOKEN", token)
+                process.env["KILO_CONSOLE_TOKEN"] = token
+                Env.set("KILO_CONSOLE_TOKEN", token)
               }
 
               const config = Option.getOrUndefined(configOpt)
@@ -1441,8 +1441,8 @@ export namespace Config {
             })
           }
 
-          if (Flag.OPENCODE_PERMISSION) {
-            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.OPENCODE_PERMISSION))
+          if (Flag.KILO_PERMISSION) {
+            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
           }
 
           if (result.tools) {
@@ -1464,10 +1464,10 @@ export namespace Config {
             result.share = "auto"
           }
 
-          if (Flag.OPENCODE_DISABLE_AUTOCOMPACT) {
+          if (Flag.KILO_DISABLE_AUTOCOMPACT) {
             result.compaction = { ...result.compaction, auto: false }
           }
-          if (Flag.OPENCODE_DISABLE_PRUNE) {
+          if (Flag.KILO_DISABLE_PRUNE) {
             result.compaction = { ...result.compaction, prune: false }
           }
 

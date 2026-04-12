@@ -22,7 +22,7 @@ export namespace ConfigPaths {
   export async function directories(directory: string, worktree: string) {
     return [
       Global.Path.config,
-      ...(!Flag.OPENCODE_DISABLE_PROJECT_CONFIG
+      ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
         ? await Array.fromAsync(
             Filesystem.up({
               targets: [".opencode"],
@@ -38,7 +38,7 @@ export namespace ConfigPaths {
           stop: Global.Path.home,
         }),
       )),
-      ...(Flag.OPENCODE_CONFIG_DIR ? [Flag.OPENCODE_CONFIG_DIR] : []),
+      ...(Flag.KILO_CONFIG_DIR ? [Flag.KILO_CONFIG_DIR] : []),
     ]
   }
 

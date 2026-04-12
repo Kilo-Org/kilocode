@@ -1,6 +1,6 @@
 import type {
   Event,
-  createOpencodeClient,
+  createKiloClient,
   Project,
   Model,
   Provider,
@@ -10,7 +10,7 @@ import type {
   Part,
   Auth,
   Config as SDKConfig,
-} from "@opencode-ai/sdk"
+} from "@kilocode/sdk"
 
 import type { BunShell } from "./shell.js"
 import { type ToolDefinition } from "./tool.js"
@@ -24,7 +24,7 @@ export type ProviderContext = {
 }
 
 export type PluginInput = {
-  client: ReturnType<typeof createOpencodeClient>
+  client: ReturnType<typeof createKiloClient>
   project: Project
   directory: string
   worktree: string

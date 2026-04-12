@@ -6,7 +6,7 @@ import SidebarTodo from "../feature-plugins/sidebar/todo"
 import SidebarFiles from "../feature-plugins/sidebar/files"
 import SidebarFooter from "../feature-plugins/sidebar/footer"
 import PluginManager from "../feature-plugins/system/plugins"
-import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui"
+import type { TuiPlugin, TuiPluginModule } from "@kilocode/plugin/tui"
 
 export type InternalTuiPlugin = TuiPluginModule & {
   id: string

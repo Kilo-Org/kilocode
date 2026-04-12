@@ -88,7 +88,7 @@ export const oxfmt: Info = {
   },
   extensions: [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"],
   async enabled() {
-    if (!Flag.OPENCODE_EXPERIMENTAL_OXFMT) return false
+    if (!Flag.KILO_EXPERIMENTAL_OXFMT) return false
     const items = await Filesystem.findUp("package.json", Instance.directory, Instance.worktree)
     for (const item of items) {
       const json = await Filesystem.readJson<{

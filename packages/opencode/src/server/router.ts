@@ -27,7 +27,7 @@ function local(method: string, path: string) {
 const routes = lazy(() => InstanceRoutes())
 
 export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c) => {
-  const raw = c.req.query("directory") || c.req.header("x-opencode-directory") || process.cwd()
+  const raw = c.req.query("directory") || c.req.header("x-kilo-directory") || process.cwd()
   const directory = Filesystem.resolve(
     (() => {
       try {
@@ -88,7 +88,7 @@ export const WorkspaceRouterMiddleware: MiddlewareHandler = async (c) => {
 
   const adaptor = await getAdaptor(workspace.type)
   const headers = new Headers(c.req.raw.headers)
-  headers.delete("x-opencode-workspace")
+  headers.delete("x-kilo-workspace")
 
   return adaptor.fetch(workspace, `${url.pathname}${url.search}`, {
     method: c.req.method,

@@ -8,7 +8,7 @@ import {
   type TuiPluginMeta,
   type TuiPluginStatus,
   type TuiTheme,
-} from "@opencode-ai/plugin/tui"
+} from "@kilocode/plugin/tui"
 import path from "path"
 import { fileURLToPath } from "url"
 
@@ -929,8 +929,8 @@ export namespace TuiPluginRuntime {
       directory: cwd,
       fn: async () => {
         const config = await TuiConfig.get()
-        const plugins = Flag.OPENCODE_PURE ? [] : (config.plugin ?? [])
-        if (Flag.OPENCODE_PURE && config.plugin?.length) {
+        const plugins = Flag.KILO_PURE ? [] : (config.plugin ?? [])
+        if (Flag.KILO_PURE && config.plugin?.length) {
           log.info("skipping external tui plugins in pure mode", { count: config.plugin.length })
         }
 

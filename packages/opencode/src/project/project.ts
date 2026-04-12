@@ -141,7 +141,7 @@ export namespace Project {
           }),
         )
 
-      const fakeVcs = Info.shape.vcs.parse(Flag.OPENCODE_FAKE_VCS)
+      const fakeVcs = Info.shape.vcs.parse(Flag.KILO_FAKE_VCS)
 
       const resolveGitPath = (cwd: string, name: string) => {
         if (!name) return cwd
@@ -256,7 +256,7 @@ export namespace Project {
               time: { created: Date.now(), updated: Date.now() },
             }
 
-        if (Flag.OPENCODE_EXPERIMENTAL_ICON_DISCOVERY)
+        if (Flag.KILO_EXPERIMENTAL_ICON_DISCOVERY)
           yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
 
         const result: Info = {

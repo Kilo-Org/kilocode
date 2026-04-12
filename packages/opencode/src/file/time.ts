@@ -53,7 +53,7 @@ export namespace FileTime {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const disableCheck = yield* Flag.OPENCODE_DISABLE_FILETIME_CHECK
+      const disableCheck = yield* Flag.KILO_DISABLE_FILETIME_CHECK
       const state = yield* InstanceState.make<State>(
         Effect.fn("FileTime.state")(() =>
           Effect.succeed({

@@ -1,5 +1,5 @@
 import type { ParsedKey } from "@opentui/core"
-import type { TuiDialogSelectOption, TuiPluginApi, TuiRouteDefinition } from "@opencode-ai/plugin/tui"
+import type { TuiDialogSelectOption, TuiPluginApi, TuiRouteDefinition } from "@kilocode/plugin/tui"
 import type { useCommandDialog } from "@tui/component/dialog-command"
 import type { useKeybind } from "@tui/context/keybind"
 import type { useRoute } from "@tui/context/route"
@@ -17,7 +17,7 @@ import { DialogSelect, type DialogSelectOption as SelectOption } from "../ui/dia
 import { Prompt } from "../component/prompt"
 import type { useToast } from "../ui/toast"
 import { Installation } from "@/installation"
-import { createOpencodeClient, type OpencodeClient } from "@opencode-ai/sdk/v2"
+import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2"
 
 type RouteEntry = {
   key: symbol
@@ -43,7 +43,7 @@ type Input = {
 }
 
 type TuiHostPluginApi = TuiPluginApi & {
-  map: Map<string | undefined, OpencodeClient>
+  map: Map<string | undefined, KiloClient>
   dispose: () => void
 }
 
@@ -206,12 +206,12 @@ function appApi(): TuiPluginApi["app"] {
 }
 
 export function createTuiApi(input: Input): TuiHostPluginApi {
-  const map = new Map<string | undefined, OpencodeClient>()
+  const map = new Map<string | undefined, KiloClient>()
   const scoped: TuiPluginApi["scopedClient"] = (workspaceID) => {
     const hit = map.get(workspaceID)
     if (hit) return hit
 
-    const next = createOpencodeClient({
+    const next = createKiloClient({
       baseUrl: input.sdk.url,
       fetch: input.sdk.fetch,
       directory: input.sync.data.path.directory || input.sdk.directory,
