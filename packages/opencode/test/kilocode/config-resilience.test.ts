@@ -197,10 +197,10 @@ Broken command`,
     })
   })
 
-  test("collects warnings for invalid schema in .kilo directory config", async () => {
+  test("strips unrecognized top-level keys in .kilo directory config without warning", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {
-        await Filesystem.write(path.join(dir, ".kilo", "kilo.json"), JSON.stringify({ unknownField: true }))
+        await Filesystem.write(path.join(dir, ".kilo", "kilo.json"), JSON.stringify({ unknownField: true, model: "test/model" }))
       },
     })
 
@@ -211,7 +211,8 @@ Broken command`,
         const warns = await Config.warnings()
 
         expect(cfg).toBeDefined()
-        expect(warns.some((w) => w.path.includes("kilo.json") && w.message.includes("invalid"))).toBe(true)
+        expect(cfg.model).toBe("test/model")
+        expect(warns.some((w) => w.path.includes("kilo.json") && w.message.includes("invalid"))).toBe(false)
       },
     })
   })

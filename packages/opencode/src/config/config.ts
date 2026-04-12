@@ -1546,7 +1546,7 @@ export namespace Config {
         })
         .optional(),
     })
-    .strict()
+    // kilocode_change - removed .strict() to silently strip unrecognized top-level keys instead of crashing (fixes #8751)
     .meta({
       ref: "Config",
     })

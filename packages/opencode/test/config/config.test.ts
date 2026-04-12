@@ -358,20 +358,22 @@ test("handles file inclusion with replacement tokens", async () => {
   })
 })
 
-test("validates config schema and throws on invalid fields", async () => {
+test("strips unrecognized top-level config keys instead of throwing", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
         $schema: "https://app.kilo.ai/config.json",
-        invalid_field: "should cause error",
+        invalid_field: "should be stripped",
+        model: "test/model",
       })
     },
   })
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // Strict schema should throw an error for invalid fields
-      await expect(Config.get()).rejects.toThrow()
+      const config = await Config.get()
+      expect(config.model).toBe("test/model")
+      expect((config as Record<string, unknown>).invalid_field).toBeUndefined()
     },
   })
 })
