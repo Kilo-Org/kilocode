@@ -40,11 +40,11 @@ test("loads tui config with the same precedence order as server config paths", a
   })
 })
 
-test("migrates tui-specific keys from opencode.json when tui.json does not exist", async () => {
+test("migrates tui-specific keys from kilo.json when tui.json does not exist", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "kilo.json"),
         JSON.stringify(
           {
             theme: "migrated-theme",
@@ -70,11 +70,11 @@ test("migrates tui-specific keys from opencode.json when tui.json does not exist
         theme: "migrated-theme",
         scroll_speed: 5,
       })
-      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "opencode.json")))
+      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "kilo.json")))
       expect(server.theme).toBeUndefined()
       expect(server.keybinds).toBeUndefined()
       expect(server.tui).toBeUndefined()
-      expect(await Filesystem.exists(path.join(tmp.path, "opencode.json.tui-migration.bak"))).toBe(true)
+      expect(await Filesystem.exists(path.join(tmp.path, "kilo.json.tui-migration.bak"))).toBe(true)
       expect(await Filesystem.exists(path.join(tmp.path, "tui.json"))).toBe(true)
     },
   })
@@ -85,7 +85,7 @@ test("migrates project legacy tui keys even when global tui.json already exists"
     init: async (dir) => {
       await Bun.write(path.join(Global.Path.config, "tui.json"), JSON.stringify({ theme: "global" }, null, 2))
       await Bun.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "kilo.json"),
         JSON.stringify(
           {
             theme: "project-migrated",
@@ -106,7 +106,7 @@ test("migrates project legacy tui keys even when global tui.json already exists"
       expect(config.scroll_speed).toBe(2)
       expect(await Filesystem.exists(path.join(tmp.path, "tui.json"))).toBe(true)
 
-      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "opencode.json")))
+      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "kilo.json")))
       expect(server.theme).toBeUndefined()
       expect(server.tui).toBeUndefined()
     },
@@ -117,7 +117,7 @@ test("drops unknown legacy tui keys during migration", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.json"),
+        path.join(dir, "kilo.json"),
         JSON.stringify(
           {
             theme: "migrated-theme",
@@ -145,11 +145,11 @@ test("drops unknown legacy tui keys during migration", async () => {
   })
 })
 
-test("skips migration when opencode.jsonc is syntactically invalid", async () => {
+test("skips migration when kilo.jsonc is syntactically invalid", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.jsonc"),
+        path.join(dir, "kilo.jsonc"),
         `{
   "theme": "broken-theme",
   "tui": { "scroll_speed": 2 }
@@ -166,8 +166,8 @@ test("skips migration when opencode.jsonc is syntactically invalid", async () =>
       expect(config.theme).toBeUndefined()
       expect(config.scroll_speed).toBeUndefined()
       expect(await Filesystem.exists(path.join(tmp.path, "tui.json"))).toBe(false)
-      expect(await Filesystem.exists(path.join(tmp.path, "opencode.jsonc.tui-migration.bak"))).toBe(false)
-      const source = await Filesystem.readText(path.join(tmp.path, "opencode.jsonc"))
+      expect(await Filesystem.exists(path.join(tmp.path, "kilo.jsonc.tui-migration.bak"))).toBe(false)
+      const source = await Filesystem.readText(path.join(tmp.path, "kilo.jsonc"))
       expect(source).toContain('"theme": "broken-theme"')
       expect(source).toContain('"tui": { "scroll_speed": 2 }')
     },
@@ -177,7 +177,7 @@ test("skips migration when opencode.jsonc is syntactically invalid", async () =>
 test("skips migration when tui.json already exists", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ theme: "legacy" }, null, 2))
+      await Bun.write(path.join(dir, "kilo.json"), JSON.stringify({ theme: "legacy" }, null, 2))
       await Bun.write(path.join(dir, "tui.json"), JSON.stringify({ diff_style: "stacked" }, null, 2))
     },
   })
@@ -189,9 +189,9 @@ test("skips migration when tui.json already exists", async () => {
       expect(config.diff_style).toBe("stacked")
       expect(config.theme).toBeUndefined()
 
-      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "opencode.json")))
+      const server = JSON.parse(await Filesystem.readText(path.join(tmp.path, "kilo.json")))
       expect(server.theme).toBe("legacy")
-      expect(await Filesystem.exists(path.join(tmp.path, "opencode.json.tui-migration.bak"))).toBe(false)
+      expect(await Filesystem.exists(path.join(tmp.path, "kilo.json.tui-migration.bak"))).toBe(false)
     },
   })
 })
@@ -199,11 +199,11 @@ test("skips migration when tui.json already exists", async () => {
 test("continues loading tui config when legacy source cannot be stripped", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ theme: "readonly-theme" }, null, 2))
+      await Bun.write(path.join(dir, "kilo.json"), JSON.stringify({ theme: "readonly-theme" }, null, 2))
     },
   })
 
-  const source = path.join(tmp.path, "opencode.json")
+  const source = path.join(tmp.path, "kilo.json")
   await fs.chmod(source, 0o444)
 
   try {
@@ -227,7 +227,7 @@ test("migration backup preserves JSONC comments", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
-        path.join(dir, "opencode.jsonc"),
+        path.join(dir, "kilo.jsonc"),
         `{
   // top-level comment
   "theme": "jsonc-theme",
@@ -244,7 +244,7 @@ test("migration backup preserves JSONC comments", async () => {
     directory: tmp.path,
     fn: async () => {
       await TuiConfig.get()
-      const backup = await Filesystem.readText(path.join(tmp.path, "opencode.jsonc.tui-migration.bak"))
+      const backup = await Filesystem.readText(path.join(tmp.path, "kilo.jsonc.tui-migration.bak"))
       expect(backup).toContain("// top-level comment")
       expect(backup).toContain("// nested comment")
       expect(backup).toContain('"theme": "jsonc-theme"')
@@ -258,8 +258,8 @@ test("migrates legacy tui keys across multiple opencode.json levels", async () =
     init: async (dir) => {
       const nested = path.join(dir, "apps", "client")
       await fs.mkdir(nested, { recursive: true })
-      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ theme: "root-theme" }, null, 2))
-      await Bun.write(path.join(nested, "opencode.json"), JSON.stringify({ theme: "nested-theme" }, null, 2))
+      await Bun.write(path.join(dir, "kilo.json"), JSON.stringify({ theme: "root-theme" }, null, 2))
+      await Bun.write(path.join(nested, "kilo.json"), JSON.stringify({ theme: "nested-theme" }, null, 2))
     },
   })
 
@@ -386,9 +386,9 @@ test("does not derive tui path from KILO_CONFIG", async () => {
     init: async (dir) => {
       const customDir = path.join(dir, "custom")
       await fs.mkdir(customDir, { recursive: true })
-      await Bun.write(path.join(customDir, "opencode.json"), JSON.stringify({ model: "test/model" }))
+      await Bun.write(path.join(customDir, "kilo.json"), JSON.stringify({ model: "test/model" }))
       await Bun.write(path.join(customDir, "tui.json"), JSON.stringify({ theme: "should-not-load" }))
-      process.env.KILO_CONFIG = path.join(customDir, "opencode.json")
+      process.env.KILO_CONFIG = path.join(customDir, "kilo.json")
     },
   })
 

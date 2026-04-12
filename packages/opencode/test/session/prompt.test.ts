@@ -606,7 +606,7 @@ describe("session.agent-resolution", () => {
         )
         expect(NamedError.Unknown.isInstance(err)).toBe(true)
         if (NamedError.Unknown.isInstance(err)) {
-          expect(err.data.message).toContain("build")
+          expect(err.data.message).toContain("code") // kilocode_change - "build" renamed to "code"
         }
       },
     })

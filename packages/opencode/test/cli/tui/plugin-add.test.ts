@@ -30,7 +30,7 @@ test("adds tui plugin at runtime from spec", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   const get = spyOn(TuiConfig, "get").mockResolvedValue({
     plugin: [],
     plugin_meta: undefined,
@@ -56,6 +56,6 @@ test("adds tui plugin at runtime from spec", async () => {
     cwd.mockRestore()
     get.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })

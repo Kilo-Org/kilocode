@@ -30,8 +30,8 @@ description: ${description}
       },
     })
 
-    const home = process.env.OPENCODE_TEST_HOME
-    process.env.OPENCODE_TEST_HOME = tmp.path
+    const home = process.env.KILO_TEST_HOME
+    process.env.KILO_TEST_HOME = tmp.path
 
     try {
       await Instance.provide({
@@ -53,7 +53,7 @@ description: ${description}
         },
       })
     } finally {
-      process.env.OPENCODE_TEST_HOME = home
+      process.env.KILO_TEST_HOME = home
     }
   })
 })

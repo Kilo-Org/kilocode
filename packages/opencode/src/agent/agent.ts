@@ -320,6 +320,10 @@ export namespace Agent {
               if (agent.hidden === true) throw new Error(`default agent "${c.default_agent}" is hidden`)
               return agent.name
             }
+            // kilocode_change start - prefer "code" as default agent (key order changes after rename from "build")
+            const code = agents.code
+            if (code && code.mode !== "subagent" && code.hidden !== true) return code.name
+            // kilocode_change end
             const visible = Object.values(agents).find((a) => a.mode !== "subagent" && a.hidden !== true)
             if (!visible) throw new Error("no primary visible agent found")
             return visible.name

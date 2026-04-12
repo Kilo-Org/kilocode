@@ -1847,7 +1847,8 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({})
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+    expect(result.low).toEqual({ reasoningEffort: "low" })
   })
 
   test("mistral returns empty object", () => {
@@ -1964,6 +1965,7 @@ describe("ProviderTransform.variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
+        capabilities: { reasoning: false },
         api: {
           id: "anthropic/claude-sonnet-4",
           url: "https://gateway.kilo.ai",
@@ -1978,6 +1980,7 @@ describe("ProviderTransform.variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-opus-4",
         providerID: "kilo",
+        capabilities: { reasoning: false },
         api: {
           id: "anthropic/claude-opus-4",
           url: "https://gateway.kilo.ai",
@@ -1988,7 +1991,7 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual([])
     })
 
-    test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
+    test("gpt models return OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "kilo/openai/gpt-5",
         providerID: "kilo",
@@ -2000,11 +2003,7 @@ describe("ProviderTransform.variants", () => {
       })
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({
-        reasoningEffort: "low",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
-      })
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
     })
 
     test("gemini-3 models return OPENAI_EFFORTS with reasoning and encrypted content", () => {

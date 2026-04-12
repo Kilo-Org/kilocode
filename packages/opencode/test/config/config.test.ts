@@ -378,7 +378,7 @@ test("handles file inclusion with replacement tokens", async () => {
   })
 })
 
-test("validates config schema and throws on invalid fields", async () => {
+test("validates config schema and reports warning on invalid fields", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await writeConfig(dir, {
@@ -390,13 +390,16 @@ test("validates config schema and throws on invalid fields", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      // Strict schema should throw an error for invalid fields
-      await expect(Config.get()).rejects.toThrow()
+      // Invalid fields are caught as warnings, config loads with defaults
+      const config = await Config.get()
+      expect(config).toBeDefined()
+      const warns = await Config.warnings()
+      expect(warns.length).toBeGreaterThan(0)
     },
   })
 })
 
-test("throws error for invalid JSON", async () => {
+test("reports warning for invalid JSON", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Filesystem.write(path.join(dir, "kilo.json"), "{ invalid json }")
@@ -405,7 +408,11 @@ test("throws error for invalid JSON", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      await expect(Config.get()).rejects.toThrow()
+      // Invalid JSON is caught as a warning, config loads with defaults
+      const config = await Config.get()
+      expect(config).toBeDefined()
+      const warns = await Config.warnings()
+      expect(warns.length).toBeGreaterThan(0)
     },
   })
 })

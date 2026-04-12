@@ -84,8 +84,8 @@ describe("Project.fromDirectory", () => {
     expect(project.vcs).toBe("git")
     expect(project.worktree).toBe(tmp.path)
 
-    const opencodeFile = path.join(tmp.path, ".git", "opencode")
-    expect(await Bun.file(opencodeFile).exists()).toBe(true)
+    const kiloFile = path.join(tmp.path, ".git", "kilo")
+    expect(await Bun.file(kiloFile).exists()).toBe(true)
   })
 
   test("returns global for non-git directory", async () => {
@@ -183,7 +183,7 @@ describe("Project.fromDirectory with worktrees", () => {
       expect(wt.id).toBe(main.id)
 
       // Cache should live in the common .git dir, not the worktree's .git file
-      const cache = path.join(tmp.path, ".git", "opencode")
+      const cache = path.join(tmp.path, ".git", "kilo")
       const exists = await Bun.file(cache).exists()
       expect(exists).toBe(true)
     } finally {

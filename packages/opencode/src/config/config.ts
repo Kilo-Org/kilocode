@@ -203,7 +203,7 @@ export namespace Config {
       return false
     }
 
-    const mod = path.join(dir, "node_modules", "@opencode-ai", "plugin")
+    const mod = path.join(dir, "node_modules", "@kilocode", "plugin") // kilocode_change
     if (!existsSync(mod)) return true
 
     const pkg = path.join(dir, "package.json")

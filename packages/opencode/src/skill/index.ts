@@ -18,6 +18,7 @@ import { Glob } from "../util/glob"
 import { Log } from "../util/log"
 import { Discovery } from "./discovery"
 import { rm } from "fs/promises" // kilocode_change
+import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 
 export namespace Skill {
   const log = Log.create({ service: "skill" })
@@ -146,6 +147,17 @@ export namespace Skill {
     directory: string,
     worktree: string,
   ) {
+    // kilocode_change start - seed built-in skills (user skills with the same name override)
+    for (const skill of BUILTIN_SKILLS) {
+      state.skills[skill.name] = {
+        name: skill.name,
+        description: skill.description,
+        location: BUILTIN_LOCATION,
+        content: skill.content,
+      }
+    }
+    // kilocode_change end
+
     if (!Flag.KILO_DISABLE_EXTERNAL_SKILLS) {
       for (const dir of EXTERNAL_DIRS) {
         const root = path.join(Global.Path.home, dir)

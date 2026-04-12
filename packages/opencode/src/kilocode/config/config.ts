@@ -180,8 +180,9 @@ export namespace KilocodeConfig {
       log.warn("failed to load kilocode rules", { error: err })
     }
 
-    // Load Kilocode MCP servers
-    const mcp = await McpMigrator.loadMcpConfig(input.projectDir)
+    // Load Kilocode MCP servers (skip global VSCode extension paths unless running in the extension)
+    const skipGlobal = process.env["KILO_PLATFORM"] !== "vscode"
+    const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })
     }

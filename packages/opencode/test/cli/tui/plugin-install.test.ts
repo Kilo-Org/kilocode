@@ -45,7 +45,7 @@ test("installs plugin without loading it", async () => {
     },
   })
 
-  process.env.OPENCODE_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
+  process.env.KILO_PLUGIN_META_FILE = path.join(tmp.path, "plugin-meta.json")
   let cfg: Awaited<ReturnType<typeof TuiConfig.get>> = {
     plugin: [],
     plugin_meta: undefined,
@@ -90,6 +90,6 @@ test("installs plugin without loading it", async () => {
     cwd.mockRestore()
     get.mockRestore()
     wait.mockRestore()
-    delete process.env.OPENCODE_PLUGIN_META_FILE
+    delete process.env.KILO_PLUGIN_META_FILE
   }
 })

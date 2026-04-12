@@ -98,7 +98,7 @@ let cli = yargs(hideBin(process.argv)) // kilocode_change
   })
   .middleware(async (opts) => {
     if (opts.pure) {
-      process.env.OPENCODE_PURE = "1"
+      process.env.KILO_PURE = "1" // kilocode_change
     }
 
     await Log.init({

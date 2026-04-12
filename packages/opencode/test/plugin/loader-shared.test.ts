@@ -5,8 +5,8 @@ import { pathToFileURL } from "url"
 import { tmpdir } from "../fixture/fixture"
 import { Filesystem } from "../../src/util/filesystem"
 
-const disableDefault = process.env.OPENCODE_DISABLE_DEFAULT_PLUGINS
-process.env.OPENCODE_DISABLE_DEFAULT_PLUGINS = "1"
+const disableDefault = process.env.KILO_DISABLE_DEFAULT_PLUGINS
+process.env.KILO_DISABLE_DEFAULT_PLUGINS = "1"
 
 const { Plugin } = await import("../../src/plugin/index")
 const { Instance } = await import("../../src/project/instance")
@@ -16,10 +16,10 @@ const { Session } = await import("../../src/session")
 
 afterAll(() => {
   if (disableDefault === undefined) {
-    delete process.env.OPENCODE_DISABLE_DEFAULT_PLUGINS
+    delete process.env.KILO_DISABLE_DEFAULT_PLUGINS
     return
   }
-  process.env.OPENCODE_DISABLE_DEFAULT_PLUGINS = disableDefault
+  process.env.KILO_DISABLE_DEFAULT_PLUGINS = disableDefault
 })
 
 afterEach(async () => {
@@ -604,8 +604,8 @@ describe("plugin.loader.shared", () => {
       },
     })
 
-    const pure = process.env.OPENCODE_PURE
-    process.env.OPENCODE_PURE = "1"
+    const pure = process.env.KILO_PURE
+    process.env.KILO_PURE = "1"
 
     try {
       await load(tmp.path)
@@ -616,9 +616,9 @@ describe("plugin.loader.shared", () => {
       expect(called).toBe(false)
     } finally {
       if (pure === undefined) {
-        delete process.env.OPENCODE_PURE
+        delete process.env.KILO_PURE
       } else {
-        process.env.OPENCODE_PURE = pure
+        process.env.KILO_PURE = pure
       }
     }
   })
