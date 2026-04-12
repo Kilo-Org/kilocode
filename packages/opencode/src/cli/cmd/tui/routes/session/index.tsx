@@ -1112,6 +1112,11 @@ export function Session() {
               scrollAcceleration={scrollAcceleration()}
             >
               <box height={1} />
+              <Show when={session()?.parentID && messages().length === 0}>
+                <box paddingLeft={3}>
+                  <text fg={theme.textMuted}>↳ Initializing...</text>
+                </box>
+              </Show>
               <For each={messages()}>
                 {(message, index) => (
                   <Switch>
@@ -2060,10 +2065,15 @@ function Task(props: ToolProps<typeof TaskTool>) {
     if (!props.input.description) return ""
     let content = [`${Locale.titlecase(props.input.subagent_type ?? "General")} Task — ${props.input.description}`]
 
-    if (isRunning() && tools().length > 0) {
-      // content[0] += ` · ${tools().length} toolcalls`
-      if (current()) content.push(`↳ ${Locale.titlecase(current()!.tool)} ${(current()!.state as any).title}`)
-      else content.push(`↳ ${tools().length} toolcalls`)
+    if (isRunning()) {
+      if (tools().length === 0) {
+        content.push(`↳ Starting...`)
+      } else if (current()) {
+        // content[0] += ` · ${tools().length} toolcalls`
+        content.push(`↳ ${Locale.titlecase(current()!.tool)} ${(current()!.state as any).title}`)
+      } else {
+        content.push(`↳ ${tools().length} toolcalls`)
+      }
     }
 
     if (props.part.state.status === "completed") {
