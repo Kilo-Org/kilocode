@@ -1507,6 +1507,8 @@ export type ExtensionMessage =
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
   | RemoteStatusMessage
+  | SpeechSettingsLoadedMessage
+  | AzureKeyValidationResultMessage
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2325,6 +2327,29 @@ export interface ContinueInWorktreeProgressMessage {
   error?: string
 }
 
+// Speech settings messages (webview → extension)
+export interface RequestSpeechSettingsMessage {
+	type: "requestSpeechSettings"
+}
+
+export interface ValidateAzureKeyMessage {
+	type: "validateAzureKey"
+	apiKey: string
+	region: string
+}
+
+// Speech settings messages (extension → webview)
+export interface SpeechSettingsLoadedMessage {
+	type: "speechSettingsLoaded"
+	settings: import("./voice").SpeechSettings
+}
+
+export interface AzureKeyValidationResultMessage {
+	type: "azureKeyValidationResult"
+	valid: boolean
+	error?: string
+}
+
 export type WebviewMessage =
   | SendMessageRequest
   | AbortRequest
@@ -2468,6 +2493,8 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | RequestSpeechSettingsMessage
+  | ValidateAzureKeyMessage
 
 // ============================================
 // VS Code API type
