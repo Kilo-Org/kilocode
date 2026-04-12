@@ -130,6 +130,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             onSelectSession={props.onSelectSession}
             onShowHistory={props.onShowHistory}
             questions={standaloneQuestions}
+            readonly={props.readonly}
           />
         </div>
       </div>

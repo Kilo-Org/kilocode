@@ -117,6 +117,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
+            <Show when={running() && childToolParts().length === 0}>
+              <div data-slot="task-tool-item" data-state="starting">
+                <span data-slot="task-tool-title">Starting...</span>
+              </div>
+            </Show>
             <For each={childToolParts()}>
               {(item) => {
                 const info = createMemo(() => getToolInfo(item.tool, item.state?.input))
