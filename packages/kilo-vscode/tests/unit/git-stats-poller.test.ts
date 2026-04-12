@@ -569,9 +569,7 @@ describe("GitStatsPoller", () => {
     poller.stop()
 
     // After tick 0 (full sync), subsequent ticks should only call "a"
-    const bCallsAfterFirst = calls
-      .filter((c) => c.includes("/tmp/b"))
-      .slice(1) // ignore tick 0 (full sync)
+    const bCallsAfterFirst = calls.filter((c) => c.includes("/tmp/b")).slice(1) // ignore tick 0 (full sync)
     expect(bCallsAfterFirst.length).toBe(0)
   })
 

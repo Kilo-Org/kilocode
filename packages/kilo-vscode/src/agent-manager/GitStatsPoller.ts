@@ -182,9 +182,7 @@ export class GitStatsPoller {
     // Every FULL_SYNC_EVERY ticks (or when no active worktree is set) poll
     // all available worktrees so that inactive ones stay reasonably current.
     const isFullSync = !this.activeWorktreeId || this.tickCount % GitStatsPoller.FULL_SYNC_EVERY === 0
-    const targets = isFullSync
-      ? available
-      : available.filter((wt) => wt.id === this.activeWorktreeId)
+    const targets = isFullSync ? available : available.filter((wt) => wt.id === this.activeWorktreeId)
     this.tickCount++
 
     // Gate the HTTP diffSummary call through the semaphore but NOT the
@@ -223,7 +221,9 @@ export class GitStatsPoller {
     })
 
     const hash = allStats
-      .map((item) => `${item.worktreeId}:${item.files}:${item.additions}:${item.deletions}:${item.ahead}:${item.behind}`)
+      .map(
+        (item) => `${item.worktreeId}:${item.files}:${item.additions}:${item.deletions}:${item.ahead}:${item.behind}`,
+      )
       .join("|")
     if (hash === this.lastHash) return
     this.lastHash = hash
