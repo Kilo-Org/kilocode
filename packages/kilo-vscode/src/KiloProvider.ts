@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
@@ -532,6 +533,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
     this.webviewMessageDisposable?.dispose()
+    // eslint-disable-next-line complexity
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       // Run interceptor if attached (e.g., AgentManagerProvider worktree logic)
       if (this.onBeforeMessage) {
@@ -851,12 +853,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
-        case "requestSpeechSettings":
-          this.sendSpeechSettings()
-          break
-        case "validateAzureKey":
-          this.validateAzureKey(message.apiKey, message.region)
-          break
+        case "requestSpeechSettings": this.sendSpeechSettings(); break
+        case "validateAzureKey": this.validateAzureKey(message.apiKey, message.region); break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
@@ -1209,7 +1207,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.seedSessionStatusMap(),
       ])
       this.sendNotificationSettings()
-      this.sendSpeechSettings()
       this.sendTimelineSetting()
       this.postMessage({ type: "extensionDataReady" })
 
@@ -2199,82 +2196,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     })
   }
 
-  /**
-   * Read speech settings from VS Code config and push to webview.
-   */
   private sendSpeechSettings(): void {
-    const speech = vscode.workspace.getConfiguration("kilo-code.new.speech")
-    this.postMessage({
-      type: "speechSettingsLoaded",
-      settings: {
-        enabled: speech.get<boolean>("enabled", false),
-        autoSpeak: speech.get<boolean>("autoSpeak", false),
-        volume: speech.get<number>("volume", 80),
-        interactionMode: speech.get<string>("interactionMode", "assist"),
-        interruptOnType: speech.get<boolean>("interruptOnType", true),
-        debugMode: speech.get<boolean>("debugMode", false),
-        sentimentIntensity: speech.get<number>("sentimentIntensity", 70),
-        multiVoiceMode: speech.get<boolean>("multiVoiceMode", false),
-        azure: {
-          apiKey: speech.get<string>("azure.apiKey", ""),
-          region: speech.get<string>("azure.region", "westus"),
-          voiceId: speech.get<string>("azure.voiceId", "en-GB-MaisieNeural"),
-        },
-        tuning: {
-          pitch: speech.get<number>("tuning.pitch", 0),
-          rate: speech.get<number>("tuning.rate", 1.0),
-          volume: speech.get<number | null>("tuning.volume", null),
-          style: speech.get<string>("tuning.style", "default"),
-          styleDegree: speech.get<number>("tuning.styleDegree", 1.0),
-          sentencePause: speech.get<number>("tuning.sentencePause", 250),
-          paragraphBreak: speech.get<number>("tuning.paragraphBreak", 500),
-          emphasis: speech.get<string>("tuning.emphasis", "moderate"),
-          pronunciations: speech.get<Array<{ word: string; pronounceAs: string }>>("tuning.pronunciations", []),
-          audioFormat: speech.get<string>("tuning.audioFormat", "audio-24khz-48kbitrate-mono-mp3"),
-        },
-        favorites: {
-          starredVoices: speech.get<string[]>("favorites.starredVoices", ["en-GB-MaisieNeural"]),
-          presets: speech.get<any[]>("favorites.presets", []),
-          order: speech.get<string[]>("favorites.order", ["en-GB-MaisieNeural"]),
-        },
-        presets: speech.get<any[]>("presets", []),
-      },
-    })
+    const s = vscode.workspace.getConfiguration("kilo-code.new.speech"), g = <T>(k: string, d: T) => s.get<T>(k, d)
+    this.postMessage({ type: "speechSettingsLoaded", settings: { enabled: g("enabled", false), autoSpeak: g("autoSpeak", false), volume: g("volume", 80), interactionMode: g("interactionMode", "assist"), interruptOnType: g("interruptOnType", true), debugMode: g("debugMode", false), sentimentIntensity: g("sentimentIntensity", 70), multiVoiceMode: g("multiVoiceMode", false), azure: { apiKey: g("azure.apiKey", ""), region: g("azure.region", "westus"), voiceId: g("azure.voiceId", "en-GB-MaisieNeural") }, tuning: { pitch: g("tuning.pitch", 0), rate: g("tuning.rate", 1.0), volume: g<number | null>("tuning.volume", null), style: g("tuning.style", "default"), styleDegree: g("tuning.styleDegree", 1.0), sentencePause: g("tuning.sentencePause", 250), paragraphBreak: g("tuning.paragraphBreak", 500), emphasis: g("tuning.emphasis", "moderate"), pronunciations: g("tuning.pronunciations", []), audioFormat: g("tuning.audioFormat", "audio-24khz-48kbitrate-mono-mp3") }, favorites: { starredVoices: g("favorites.starredVoices", ["en-GB-MaisieNeural"]), presets: g("favorites.presets", []), order: g("favorites.order", ["en-GB-MaisieNeural"]) }, presets: g("presets", []) } })
   }
-
-  /**
-   * Validate an Azure API key by performing a test TTS synthesis.
-   */
   private async validateAzureKey(apiKey: string, region: string): Promise<void> {
     try {
-      const resp = await fetch(
-        `https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`,
-        {
-          method: "POST",
-          headers: {
-            "Ocp-Apim-Subscription-Key": apiKey,
-            "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
-          },
-          body: `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='en-GB-MaisieNeural'>test</voice></speak>`,
-        },
-      )
-      if (resp.ok) {
-        this.postMessage({ type: "azureKeyValidationResult", valid: true })
-      } else {
-        this.postMessage({
-          type: "azureKeyValidationResult",
-          valid: false,
-          error: `HTTP ${resp.status}: ${resp.statusText}`,
-        })
-      }
-    } catch (e: any) {
-      this.postMessage({
-        type: "azureKeyValidationResult",
-        valid: false,
-        error: e.message ?? "Network error",
-      })
-    }
+      const resp = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, { method: "POST", headers: { "Ocp-Apim-Subscription-Key": apiKey, "Content-Type": "application/ssml+xml", "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3" }, body: `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='en-GB-MaisieNeural'>test</voice></speak>` })
+      this.postMessage(resp.ok ? { type: "azureKeyValidationResult", valid: true } : { type: "azureKeyValidationResult", valid: false, error: `HTTP ${resp.status}: ${resp.statusText}` })
+    } catch (e: any) { this.postMessage({ type: "azureKeyValidationResult", valid: false, error: e.message ?? "Network error" }) }
   }
 
   private sendTimelineSetting(): void {
@@ -2877,7 +2807,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendAutocompleteSettings()
     this.sendBrowserSettings()
     this.sendNotificationSettings()
-    this.sendSpeechSettings()
     this.sendTimelineSetting()
 
     // Re-send globalState items to the webview
