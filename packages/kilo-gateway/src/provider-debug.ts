@@ -100,10 +100,11 @@ export function createKiloDebug(options: KiloProviderOptions = {}): SDK {
   console.log("✅ [KILO DEBUG] Creating OpenRouter provider with configuration\n")
 
   // Create OpenRouter provider with KiloCode configuration
+  // Cast needed: OpenRouterProvider extends ProviderV2 which doesn't yet align with ai@6 Provider type
   return createOpenRouter({
     baseURL: openRouterUrl,
     apiKey: apiKey ?? ANONYMOUS_API_KEY,
     headers: customHeaders,
     fetch: wrappedFetch as typeof fetch,
-  })
+  }) as unknown as SDK
 }

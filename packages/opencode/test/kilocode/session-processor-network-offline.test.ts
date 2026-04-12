@@ -115,7 +115,7 @@ describe("session processor network offline", () => {
             })(),
           } as unknown as Awaited<ReturnType<typeof LLM.stream>>)
 
-        const processor = SessionProcessor.create({
+        const processor = await SessionProcessor.create({
           assistantMessage: assistant,
           sessionID: session.id,
           model: m,

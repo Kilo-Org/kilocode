@@ -137,7 +137,17 @@ export namespace Session {
           additions: z.number(),
           deletions: z.number(),
           files: z.number(),
-          diffs: Snapshot.FileDiff.array().optional(),
+          // kilocode_change start - use lightweight diff schema (without before/after file contents)
+          diffs: z
+            .object({
+              file: z.string(),
+              additions: z.number(),
+              deletions: z.number(),
+              status: z.enum(["added", "deleted", "modified"]).optional(),
+            })
+            .array()
+            .optional(),
+          // kilocode_change end
         })
         .optional(),
       share: z
@@ -461,7 +471,8 @@ export namespace Session {
         yield* Effect.sync(() => SyncEvent.run(Event.Created, { sessionID: result.id, info: result }))
 
         const cfg = yield* config.get()
-        if (!result.parentID && (Flag.KILO_AUTO_SHARE || Flag.OPENCODE_AUTO_SHARE || cfg.share === "auto")) {
+        if (!result.parentID && (Flag.KILO_AUTO_SHARE || cfg.share === "auto")) {
+          // kilocode_change
           // kilocode_change
           yield* share(result.id).pipe(Effect.ignore, Effect.forkIn(scope))
         }

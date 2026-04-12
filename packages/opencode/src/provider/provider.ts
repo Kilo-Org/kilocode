@@ -134,7 +134,7 @@ export namespace Provider {
     "@ai-sdk/openai": createOpenAI,
     "@ai-sdk/openai-compatible": createOpenAICompatible,
     "@openrouter/ai-sdk-provider": createOpenRouter,
-    "@kilocode/kilo-gateway": createKilo, // kilocode_change
+    "@kilocode/kilo-gateway": createKilo as unknown as (options: any) => BundledSDK, // kilocode_change
     "@ai-sdk/xai": createXai,
     "@ai-sdk/mistral": createMistral,
     "@ai-sdk/groq": createGroq,

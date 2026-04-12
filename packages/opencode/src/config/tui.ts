@@ -157,7 +157,7 @@ export namespace TuiConfig {
     const deps: Promise<void>[] = []
     if (acc.result.plugin?.length) {
       for (const dir of unique(directories)) {
-        if (!dir.endsWith(".opencode") && dir !== Flag.OPENCODE_CONFIG_DIR) continue
+        if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
         deps.push(installDeps(dir))
       }
     }

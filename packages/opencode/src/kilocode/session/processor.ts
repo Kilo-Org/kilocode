@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { SessionNetwork } from "@/session/network"
+import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { Log } from "@/util/log"
 import { Effect } from "effect"
@@ -46,9 +47,9 @@ export namespace KiloSessionProcessor {
    */
   export function handleOffline(input: {
     error: unknown
-    sessionID: string
+    sessionID: SessionID
     abort: AbortSignal
-    set: (sessionID: string, status: SessionStatus.Info) => Effect.Effect<void>
+    set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
   }): Effect.Effect<"retry" | "blocked" | "aborted"> {
     return Effect.gen(function* () {
       const msg = SessionNetwork.message(input.error)

@@ -1477,14 +1477,14 @@ export namespace Config {
                     }),
                   ),
                   Effect.tap(() => Effect.sync(() => log.debug("loaded remote config from well-known", { url }))),
-                  Effect.catchAll((err) => {
+                  Effect.catch((err: unknown) => {
                     const w = toWarning(err)
                     if (w) warnings.push(w)
                     else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
                     log.warn("skipped remote config due to error", { url, err })
                     return Effect.succeed({} as Info)
                   }),
-                  Effect.catchAllDefect((err) => {
+                  Effect.catchDefect((err: unknown) => {
                     const w = toWarning(err)
                     if (w) warnings.push(w)
                     else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
@@ -1501,7 +1501,7 @@ export namespace Config {
           result = mergeConfigConcatArrays(
             result,
             yield* getGlobal().pipe(
-              Effect.catchAllDefect((err) => {
+              Effect.catchDefect((err: unknown) => {
                 caughtWarning(warnings, "global config", err)
                 return Effect.succeed({} as Info)
               }),
@@ -1515,8 +1515,8 @@ export namespace Config {
               result,
               yield* loadFile(Flag.KILO_CONFIG).pipe(
                 Effect.tap(() => Effect.sync(() => log.debug("loaded custom config", { path: Flag.KILO_CONFIG }))),
-                Effect.catchAllDefect((err) => {
-                  caughtWarning(warnings, Flag.KILO_CONFIG, err)
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, Flag.KILO_CONFIG!, err)
                   return Effect.succeed({} as Info)
                 }),
               ),
@@ -1533,7 +1533,7 @@ export namespace Config {
                 result = mergeConfigConcatArrays(
                   result,
                   yield* loadFile(file).pipe(
-                    Effect.catchAllDefect((err) => {
+                    Effect.catchDefect((err: unknown) => {
                       caughtWarning(warnings, file, err)
                       return Effect.succeed({} as Info)
                     }),
@@ -1564,7 +1564,7 @@ export namespace Config {
                 result = mergeConfigConcatArrays(
                   result,
                   yield* loadFile(path.join(dir, file)).pipe(
-                    Effect.catchAllDefect((err) => {
+                    Effect.catchDefect((err: unknown) => {
                       caughtWarning(warnings, path.join(dir, file), err)
                       return Effect.succeed({} as Info)
                     }),
@@ -1590,7 +1590,7 @@ export namespace Config {
             yield* Effect.promise(async () => {
               try {
                 result.command = mergeDeep(result.command ?? {}, await loadCommand(dir, warnings))
-                result.agent = mergeDeep(result.agent, await loadAgent(dir, warnings))
+                result.agent = mergeDeep(result.agent ?? {}, await loadAgent(dir, warnings))
                 result.agent = mergeDeep(result.agent, await loadMode(dir, warnings))
                 result.plugin!.push(...(await loadPlugin(dir)))
               } catch (err: unknown) {
@@ -1609,7 +1609,7 @@ export namespace Config {
                 source: "KILO_CONFIG_CONTENT",
               }).pipe(
                 Effect.tap(() => Effect.sync(() => log.debug("loaded custom config from KILO_CONFIG_CONTENT"))),
-                Effect.catchAllDefect((err) => {
+                Effect.catchDefect((err: unknown) => {
                   caughtWarning(warnings, "KILO_CONFIG_CONTENT", err)
                   return Effect.succeed({} as Info)
                 }),

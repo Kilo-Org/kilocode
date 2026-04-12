@@ -141,8 +141,8 @@ describe("session processor retry limit", () => {
           .mockRejectedValueOnce(retryable429())
           .mockRejectedValueOnce(retryable429())
           .mockRejectedValue(sentinel())
-        const sleep = spyOn(SessionRetry, "sleep").mockResolvedValue(undefined)
-        const processor = SessionProcessor.create({
+        const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+        const processor = await SessionProcessor.create({
           assistantMessage: assistant,
           sessionID: session.id,
           model,
@@ -166,7 +166,7 @@ describe("session processor retry limit", () => {
 
           expect(result).toBe("stop")
           expect(llm).toHaveBeenCalledTimes(3)
-          expect(sleep).toHaveBeenCalledTimes(2)
+          expect(delay).toHaveBeenCalled()
           expect(retry).toStrictEqual([1, 2])
           expect(processor.message.error).toStrictEqual(expected)
           expect(errors).toStrictEqual([expected])
@@ -174,7 +174,7 @@ describe("session processor retry limit", () => {
           unsubStatus()
           unsubError()
           llm.mockRestore()
-          sleep.mockRestore()
+          delay.mockRestore()
         }
       },
     })

@@ -287,6 +287,7 @@ export namespace ProviderTransform {
       const encryptedDataSet = new Set<string>()
       const textSet = new Set<string>()
       for (const part of msg.content) {
+        if (!("providerOptions" in part)) continue // kilocode_change - ToolApprovalRequest lacks providerOptions
         const openrouterProviderOptions = part.providerOptions?.openrouter as
           | {
               reasoning_details?: { data?: string; text?: string; signature?: string }[]
