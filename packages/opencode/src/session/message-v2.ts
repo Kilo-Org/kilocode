@@ -11,10 +11,18 @@ import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/stora
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
 import { ProviderError } from "@/provider/error"
 import { iife } from "@/util/iife"
+import { errorMessage } from "@/util/error"
 import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { SessionNetwork } from "./network" // kilocode_change
+
+/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
+interface FetchDecompressionError extends Error {
+  code: "ZlibError"
+  errno: number
+  path: string
+}
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -643,11 +651,11 @@ export namespace MessageV2 {
     }))
   }
 
-  export function toModelMessages(
+  export async function toModelMessages(
     input: WithParts[],
     model: Provider.Model,
     options?: { stripMedia?: boolean },
-  ): ModelMessage[] {
+  ): Promise<ModelMessage[]> {
     const result: UIMessage[] = []
     const toolNames = new Set<string>()
     // Track media from tool results that need to be injected as user messages
@@ -671,7 +679,8 @@ export namespace MessageV2 {
       return false
     })()
 
-    const toModelOutput = (output: unknown) => {
+    const toModelOutput = (options: { toolCallId: string; input: unknown; output: unknown }) => {
+      const output = options.output
       if (typeof output === "string") {
         return { type: "text", value: output }
       }
@@ -869,7 +878,7 @@ export namespace MessageV2 {
 
     const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
-    return convertToModelMessages(
+    return await convertToModelMessages(
       result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
       {
         //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
@@ -940,7 +949,17 @@ export namespace MessageV2 {
     const rows = Database.use((db) =>
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
-    return rows.map((row) => part(row)) // kilocode_change - stripping applied inside part() helper
+    return rows.map(
+      (row) =>
+        // kilcode_change - apply stripping to parts fetched individually as well to cover all read paths
+        stripPartMetadata({
+          ...row.data,
+          id: row.id,
+          sessionID: row.session_id,
+          messageID: row.message_id,
+        } as MessageV2.Part),
+      // kilocode_change end
+    )
   })
 
   export const get = fn(
@@ -1059,7 +1078,7 @@ export namespace MessageV2 {
           { cause: e },
         ).toObject()
       case e instanceof Error:
-        return new NamedError.Unknown({ message: e instanceof Error ? e.message : String(e) }, { cause: e }).toObject()
+        return new NamedError.Unknown({ message: errorMessage(e) }, { cause: e }).toObject()
       default:
         try {
           const parsed = ProviderError.parseStreamError(e)

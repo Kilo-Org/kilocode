@@ -1,0 +1,156 @@
+// kilocode_change - new file
+import path from "path"
+import fs from "fs/promises"
+import { StringDecoder } from "string_decoder"
+import { SessionID, PartID } from "@/session/schema"
+import { MessageV2 } from "@/session/message-v2"
+import { Session } from "@/session"
+import { Flag } from "@/flag/flag"
+import { PlanFollowup } from "@/kilocode/plan-followup"
+import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
+import { Identifier } from "@/id/id"
+import { Filesystem } from "@/util/filesystem"
+import PROMPT_PLAN from "@/session/prompt/plan.txt"
+
+export namespace KiloSessionPrompt {
+  /**
+   * Determines whether the plan follow-up prompt should be shown.
+   * Checks if the plan_exit tool was called in the last assistant turn.
+   * Exported so tests can verify the logic independently.
+   */
+  export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
+    if (input.abort.aborted) return false
+    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
+    const idx = input.messages.findLastIndex((m) => m.info.role === "user")
+    return input.messages
+      .slice(idx + 1)
+      .some((msg) =>
+        msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
+      )
+  }
+
+  /**
+   * Checks for plan follow-up and asks the user if needed.
+   * Returns "continue" if the loop should continue, "break" otherwise.
+   */
+  export async function askPlanFollowup(input: {
+    sessionID: SessionID
+    messages: MessageV2.WithParts[]
+    abort: AbortSignal
+  }): Promise<"continue" | "break"> {
+    if (!shouldAskPlanFollowup({ messages: input.messages, abort: input.abort })) return "break"
+    const action = await PlanFollowup.ask({
+      sessionID: input.sessionID,
+      messages: input.messages,
+      abort: input.abort,
+    })
+    return action === "continue" ? "continue" : "break"
+  }
+
+  /**
+   * Mutable cache for environment details, keyed by user message ID
+   * so it recomputes when a new user message arrives.
+   */
+  export interface EnvCache {
+    block?: string
+    user?: string
+  }
+
+  /**
+   * Ephemerally injects dynamic editor context (visible files, open tabs, etc.)
+   * into the last user message. Caches the result per user message ID so repeated
+   * loop iterations produce byte-identical messages (prompt caching).
+   */
+  export function injectEditorContext(input: {
+    msgs: MessageV2.WithParts[]
+    lastUser: MessageV2.User
+    sessionID: SessionID
+    cache: EnvCache
+  }) {
+    if (input.cache.user !== input.lastUser.id) {
+      input.cache.block = environmentDetails(input.lastUser.editorContext)
+      input.cache.user = input.lastUser.id
+    }
+    if (!input.cache.block) return
+    const idx = input.msgs.findLastIndex((m) => m.info.role === "user")
+    if (idx === -1) return
+    input.msgs[idx] = {
+      ...input.msgs[idx],
+      parts: [
+        ...input.msgs[idx].parts,
+        {
+          id: PartID.make(Identifier.ascending("part")),
+          sessionID: input.sessionID,
+          messageID: input.msgs[idx].info.id,
+          type: "text",
+          text: input.cache.block,
+        } satisfies MessageV2.TextPart,
+      ],
+    }
+  }
+
+  /**
+   * Creates StringDecoder-based helpers for shell stdout/stderr that correctly
+   * handle multi-byte UTF-8 characters split across chunks.
+   */
+  export function createShellDecoders() {
+    const stdout = new StringDecoder("utf8")
+    const stderr = new StringDecoder("utf8")
+    return {
+      /** Decode a chunk from the given stream. */
+      write(stream: "stdout" | "stderr", chunk: Buffer) {
+        return stream === "stdout" ? stdout.write(chunk) : stderr.write(chunk)
+      },
+      /** Flush any trailing buffered bytes from both decoders. */
+      flush() {
+        return stdout.end() + stderr.end()
+      },
+    }
+  }
+
+  /**
+   * Injects plan-specific reminders into the user message when using the plan agent.
+   * Ensures the plan file directory exists and tells the agent where to write.
+   */
+  export async function insertPlanReminders(input: {
+    agent: { name: string }
+    session: Session.Info
+    userMessage: MessageV2.WithParts
+  }) {
+    if (input.agent.name !== "plan") return
+    const plan = Session.plan(input.session)
+    const exists = await Filesystem.exists(plan)
+    if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
+    const info = exists
+      ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
+      : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
+    input.userMessage.parts.push({
+      id: PartID.ascending(),
+      messageID: input.userMessage.info.id,
+      sessionID: input.userMessage.info.sessionID,
+      type: "text",
+      text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
+      synthetic: true,
+    })
+  }
+
+  /**
+   * End-of-loop handler: returns the most recent assistant message from the stream,
+   * resolves any queued callbacks, and handles abort.
+   */
+  export async function resolveFinishedMessages(input: {
+    sessionID: SessionID
+    callbacks: { resolve(input: MessageV2.WithParts): void; reject(reason?: any): void }[]
+    abort: AbortSignal
+  }): Promise<MessageV2.WithParts> {
+    for await (const item of MessageV2.stream(input.sessionID)) {
+      if (item.info.role === "user") continue
+      for (const q of input.callbacks) {
+        q.resolve(item)
+      }
+      return item
+    }
+    if (input.abort.aborted) input.abort.throwIfAborted()
+    throw new Error("Impossible")
+  }
+}

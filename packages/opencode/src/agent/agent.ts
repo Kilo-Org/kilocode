@@ -75,13 +75,14 @@ export namespace Agent {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const config = () => Effect.promise(() => Config.get())
+      const config = yield* Config.Service
       const auth = yield* Auth.Service
+      const skill = yield* Skill.Service
 
       const state = yield* InstanceState.make<State>(
         Effect.fn("Agent.state")(function* (ctx) {
-          const cfg = yield* config()
-          const skillDirs = yield* Effect.promise(() => Skill.dirs())
+          const cfg = yield* config.get()
+          const skillDirs = yield* skill.dirs()
           const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
 
           const baseDefaults = Permission.fromConfig({
@@ -298,7 +299,7 @@ export namespace Agent {
           })
 
           const list = Effect.fnUntraced(function* () {
-            const cfg = yield* config()
+            const cfg = yield* config.get()
             return pipe(
               agents,
               values(),
@@ -310,7 +311,7 @@ export namespace Agent {
           })
 
           const defaultAgent = Effect.fnUntraced(function* () {
-            const c = yield* config()
+            const c = yield* config.get()
             if (c.default_agent) {
               const effective = KiloAgent.resolveKey(c.default_agent) // kilocode_change - treat "build" as "code"
               const agent = agents[effective] // kilocode_change
@@ -346,7 +347,7 @@ export namespace Agent {
           description: string
           model?: { providerID: ProviderID; modelID: ModelID }
         }) {
-          const cfg = yield* config()
+          const cfg = yield* config.get()
           const model = input.model ?? (yield* Effect.promise(() => Provider.defaultModel()))
           const resolved = yield* Effect.promise(() => Provider.getModel(model.providerID, model.modelID))
           const language = yield* Effect.promise(() => Provider.getLanguage(resolved))
@@ -406,7 +407,11 @@ export namespace Agent {
     }),
   )
 
-  export const defaultLayer = layer.pipe(Layer.provide(Auth.layer))
+  export const defaultLayer = layer.pipe(
+    Layer.provide(Auth.layer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Skill.defaultLayer),
+  )
 
   const { runPromise } = makeRuntime(Service, defaultLayer)
 

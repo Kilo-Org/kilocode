@@ -27,16 +27,20 @@ export const NotFoundError = NamedError.create(
 const log = Log.create({ service: "db" })
 
 export namespace Database {
-  export const Path = iife(() => {
-    if (Flag.KILO_DB) {
-      if (Flag.KILO_DB === ":memory:" || path.isAbsolute(Flag.KILO_DB)) return Flag.KILO_DB
-      return path.join(Global.Path.data, Flag.KILO_DB)
-    }
+  export function getChannelPath() {
     const channel = Installation.CHANNEL
     if (["latest", "beta"].includes(channel) || Flag.KILO_DISABLE_CHANNEL_DB)
       return path.join(Global.Path.data, "kilo.db") // kilocode_change
     const safe = channel.replace(/[^a-zA-Z0-9._-]/g, "-")
     return path.join(Global.Path.data, `kilo-${safe}.db`) // kilocode_change
+  }
+
+  export const Path = iife(() => {
+    if (Flag.KILO_DB) {
+      if (Flag.KILO_DB === ":memory:" || path.isAbsolute(Flag.KILO_DB)) return Flag.KILO_DB
+      return path.join(Global.Path.data, Flag.KILO_DB)
+    }
+    return getChannelPath()
   })
 
   export type Transaction = SQLiteTransaction<"sync", void>

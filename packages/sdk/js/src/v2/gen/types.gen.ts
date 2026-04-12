@@ -90,114 +90,6 @@ export type EventLspUpdated = {
   }
 }
 
-export type EventTuiPromptAppend = {
-  type: "tui.prompt.append"
-  properties: {
-    text: string
-  }
-}
-
-export type EventTuiCommandExecute = {
-  type: "tui.command.execute"
-  properties: {
-    command:
-      | "session.list"
-      | "session.new"
-      | "session.share"
-      | "session.interrupt"
-      | "session.compact"
-      | "session.page.up"
-      | "session.page.down"
-      | "session.line.up"
-      | "session.line.down"
-      | "session.half.page.up"
-      | "session.half.page.down"
-      | "session.first"
-      | "session.last"
-      | "prompt.clear"
-      | "prompt.submit"
-      | "agent.cycle"
-      | string
-  }
-}
-
-export type EventTuiToastShow = {
-  type: "tui.toast.show"
-  properties: {
-    title?: string
-    message: string
-    variant: "info" | "success" | "warning" | "error"
-    /**
-     * Duration in milliseconds
-     */
-    duration?: number
-  }
-}
-
-export type EventTuiSessionSelect = {
-  type: "tui.session.select"
-  properties: {
-    /**
-     * Session ID to navigate to
-     */
-    sessionID: string
-  }
-}
-
-export type EventMcpToolsChanged = {
-  type: "mcp.tools.changed"
-  properties: {
-    server: string
-  }
-}
-
-export type EventMcpBrowserOpenFailed = {
-  type: "mcp.browser.open.failed"
-  properties: {
-    mcpName: string
-    url: string
-  }
-}
-
-export type SessionNetworkWait = {
-  id: string
-  sessionID: string
-  message: string
-  restored: boolean
-  time: {
-    created: number
-  }
-}
-
-export type EventSessionNetworkAsked = {
-  type: "session.network.asked"
-  properties: SessionNetworkWait
-}
-
-export type EventSessionNetworkReplied = {
-  type: "session.network.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
-
-export type EventSessionNetworkRejected = {
-  type: "session.network.rejected"
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
-
-export type EventSessionNetworkRestored = {
-  type: "session.network.restored"
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
-
 export type EventMessagePartDelta = {
   type: "message.part.delta"
   properties: {
@@ -250,11 +142,6 @@ export type SessionStatus =
     }
   | {
       type: "busy"
-    }
-  | {
-      type: "offline"
-      requestID: string
-      message: string
     }
 
 export type EventSessionStatus = {
@@ -388,6 +275,75 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventTuiPromptAppend = {
+  type: "tui.prompt.append"
+  properties: {
+    text: string
+  }
+}
+
+export type EventTuiCommandExecute = {
+  type: "tui.command.execute"
+  properties: {
+    command:
+      | "session.list"
+      | "session.new"
+      | "session.share"
+      | "session.interrupt"
+      | "session.compact"
+      | "session.page.up"
+      | "session.page.down"
+      | "session.line.up"
+      | "session.line.down"
+      | "session.half.page.up"
+      | "session.half.page.down"
+      | "session.first"
+      | "session.last"
+      | "prompt.clear"
+      | "prompt.submit"
+      | "agent.cycle"
+      | string
+  }
+}
+
+export type EventTuiToastShow = {
+  type: "tui.toast.show"
+  properties: {
+    title?: string
+    message: string
+    variant: "info" | "success" | "warning" | "error"
+    /**
+     * Duration in milliseconds
+     */
+    duration?: number
+  }
+}
+
+export type EventTuiSessionSelect = {
+  type: "tui.session.select"
+  properties: {
+    /**
+     * Session ID to navigate to
+     */
+    sessionID: string
+  }
+}
+
+export type EventMcpToolsChanged = {
+  type: "mcp.tools.changed"
+  properties: {
+    server: string
+  }
+}
+
+export type EventMcpBrowserOpenFailed = {
+  type: "mcp.browser.open.failed"
+  properties: {
+    mcpName: string
+    url: string
+  }
+}
+
 export type EventCommandExecuted = {
   type: "command.executed"
   properties: {
@@ -491,33 +447,10 @@ export type EventSessionError = {
   }
 }
 
-export type EventSessionTurnOpen = {
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    reason: "completed" | "error" | "interrupted"
-  }
-}
-
 export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
-  }
-}
-
-export type EventKiloSessionsRemoteStatusChanged = {
-  type: "kilo-sessions.remote-status-changed"
-  properties: {
-    enabled: boolean
-    connected: boolean
   }
 }
 
@@ -628,12 +561,6 @@ export type UserMessage = {
     [key: string]: boolean
   }
   variant?: string
-  editorContext?: {
-    visibleFiles?: Array<string>
-    openTabs?: Array<string>
-    activeFile?: string
-    shell?: string
-  }
 }
 
 export type AssistantMessage = {
@@ -1058,16 +985,6 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventTuiPromptAppend
-  | EventTuiCommandExecute
-  | EventTuiToastShow
-  | EventTuiSessionSelect
-  | EventMcpToolsChanged
-  | EventMcpBrowserOpenFailed
-  | EventSessionNetworkAsked
-  | EventSessionNetworkReplied
-  | EventSessionNetworkRejected
-  | EventSessionNetworkRestored
   | EventMessagePartDelta
   | EventPermissionAsked
   | EventPermissionReplied
@@ -1171,12 +1088,7 @@ export type SyncEventSessionUpdated = {
         additions: number
         deletions: number
         files: number
-        diffs?: Array<{
-          file: string
-          additions: number
-          deletions: number
-          status?: "added" | "deleted" | "modified"
-        }>
+        diffs?: Array<FileDiff>
       } | null
       share?: {
         url: string | null
@@ -1551,11 +1463,19 @@ export type Config = {
   watcher?: {
     ignore?: Array<string>
   }
-  plugin?: Array<string>
   /**
    * Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.
    */
   snapshot?: boolean
+  plugin?: Array<
+    | string
+    | [
+        string,
+        {
+          [key: string]: unknown
+        },
+      ]
+  >
   /**
    * Control sharing behavior:'manual' allows manual sharing via commands, 'auto' enables automatic sharing, 'disabled' disables all sharing
    */
@@ -2380,6 +2300,53 @@ export type AuthSetResponses = {
 }
 
 export type AuthSetResponse = AuthSetResponses[keyof AuthSetResponses]
+
+export type AppLogData = {
+  body?: {
+    /**
+     * Service name for the log entry
+     */
+    service: string
+    /**
+     * Log level
+     */
+    level: "debug" | "info" | "error" | "warn"
+    /**
+     * Log message
+     */
+    message: string
+    /**
+     * Additional metadata for the log entry
+     */
+    extra?: {
+      [key: string]: unknown
+    }
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/log"
+}
+
+export type AppLogErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type AppLogError = AppLogErrors[keyof AppLogErrors]
+
+export type AppLogResponses = {
+  /**
+   * Log entry written successfully
+   */
+  200: boolean
+}
+
+export type AppLogResponse = AppLogResponses[keyof AppLogResponses]
 
 export type ProjectListData = {
   body?: never
@@ -6419,53 +6386,6 @@ export type CommandListResponses = {
 }
 
 export type CommandListResponse = CommandListResponses[keyof CommandListResponses]
-
-export type AppLogData = {
-  body?: {
-    /**
-     * Service name for the log entry
-     */
-    service: string
-    /**
-     * Log level
-     */
-    level: "debug" | "info" | "error" | "warn"
-    /**
-     * Log message
-     */
-    message: string
-    /**
-     * Additional metadata for the log entry
-     */
-    extra?: {
-      [key: string]: unknown
-    }
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/log"
-}
-
-export type AppLogErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type AppLogError = AppLogErrors[keyof AppLogErrors]
-
-export type AppLogResponses = {
-  /**
-   * Log entry written successfully
-   */
-  200: boolean
-}
-
-export type AppLogResponse = AppLogResponses[keyof AppLogResponses]
 
 export type AppAgentsData = {
   body?: never

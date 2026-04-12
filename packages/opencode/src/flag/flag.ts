@@ -14,13 +14,16 @@ export namespace Flag {
   export const KILO_AUTO_SHARE = truthy("KILO_AUTO_SHARE")
   export const KILO_GIT_BASH_PATH = process.env["KILO_GIT_BASH_PATH"]
   export const KILO_CONFIG = process.env["KILO_CONFIG"]
+  export declare const KILO_PURE: boolean
   export declare const KILO_TUI_CONFIG: string | undefined
   export declare const KILO_CONFIG_DIR: string | undefined
+  export declare const KILO_PLUGIN_META_FILE: string | undefined
   export const KILO_CONFIG_CONTENT = process.env["KILO_CONFIG_CONTENT"]
   export const KILO_DISABLE_AUTOUPDATE = truthy("KILO_DISABLE_AUTOUPDATE")
   export const KILO_ALWAYS_NOTIFY_UPDATE = truthy("KILO_ALWAYS_NOTIFY_UPDATE")
   export const KILO_DISABLE_PRUNE = truthy("KILO_DISABLE_PRUNE")
   export const KILO_DISABLE_TERMINAL_TITLE = truthy("KILO_DISABLE_TERMINAL_TITLE")
+  export const KILO_SHOW_TTFD = truthy("KILO_SHOW_TTFD")
   export const KILO_PERMISSION = process.env["KILO_PERMISSION"]
   export const KILO_DISABLE_DEFAULT_PLUGINS = truthy("KILO_DISABLE_DEFAULT_PLUGINS")
   export const KILO_DISABLE_LSP_DOWNLOAD = truthy("KILO_DISABLE_LSP_DOWNLOAD")
@@ -109,6 +112,28 @@ Object.defineProperty(Flag, "KILO_TUI_CONFIG", {
 Object.defineProperty(Flag, "KILO_CONFIG_DIR", {
   get() {
     return process.env["KILO_CONFIG_DIR"]
+  },
+  enumerable: true,
+  configurable: false,
+})
+
+// Dynamic getter for KILO_PURE
+// This must be evaluated at access time, not module load time,
+// because the CLI can set this flag at runtime
+Object.defineProperty(Flag, "KILO_PURE", {
+  get() {
+    return truthy("KILO_PURE")
+  },
+  enumerable: true,
+  configurable: false,
+})
+
+// Dynamic getter for KILO_PLUGIN_META_FILE
+// This must be evaluated at access time, not module load time,
+// because tests and external tooling may set this env var at runtime
+Object.defineProperty(Flag, "KILO_PLUGIN_META_FILE", {
+  get() {
+    return process.env["KILO_PLUGIN_META_FILE"]
   },
   enumerable: true,
   configurable: false,

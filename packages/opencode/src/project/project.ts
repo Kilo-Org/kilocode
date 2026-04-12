@@ -111,7 +111,7 @@ export namespace Project {
   > = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fsys = yield* AppFileSystem.Service
+      const fs = yield* AppFileSystem.Service
       const pathSvc = yield* Path.Path
       const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
 
@@ -156,7 +156,7 @@ export namespace Project {
 
       const readCachedProjectId = Effect.fnUntraced(function* (dir: string) {
         // kilocode change start
-        return yield* fsys.readFileString(pathSvc.join(dir, "kilo")).pipe(
+        return yield* fs.readFileString(pathSvc.join(dir, "kilo")).pipe(
           // kilocode change end
           Effect.map((x) => x.trim()),
           Effect.map(ProjectID.make),
@@ -171,7 +171,7 @@ export namespace Project {
         type DiscoveryResult = { id: ProjectID; worktree: string; sandbox: string; vcs: Info["vcs"] }
 
         const data: DiscoveryResult = yield* Effect.gen(function* () {
-          const dotgitMatches = yield* fsys.up({ targets: [".git"], start: directory }).pipe(Effect.orDie)
+          const dotgitMatches = yield* fs.up({ targets: [".git"], start: directory }).pipe(Effect.orDie)
           const dotgit = dotgitMatches[0]
 
           if (!dotgit) {
@@ -225,7 +225,7 @@ export namespace Project {
             id = roots[0] ? ProjectID.make(roots[0]) : undefined
             if (id) {
               // kilocode_change start
-              yield* fsys.writeFileString(pathSvc.join(worktree, ".git", "kilo"), id).pipe(Effect.ignore)
+              yield* fs.writeFileString(pathSvc.join(worktree, ".git", "kilo"), id).pipe(Effect.ignore)
               // kilocode_change end
             }
           }
@@ -273,7 +273,7 @@ export namespace Project {
         result.sandboxes = yield* Effect.forEach(
           result.sandboxes,
           (s) =>
-            fsys.exists(s).pipe(
+            fs.exists(s).pipe(
               Effect.orDie,
               Effect.map((exists) => (exists ? s : undefined)),
             ),
@@ -332,7 +332,7 @@ export namespace Project {
         if (input.icon?.override) return
         if (input.icon?.url) return
 
-        const matches = yield* fsys
+        const matches = yield* fs
           .glob("**/favicon.{ico,png,svg,jpg,jpeg,webp}", {
             cwd: input.worktree,
             absolute: true,
@@ -342,7 +342,7 @@ export namespace Project {
         const shortest = matches.sort((a, b) => a.length - b.length)[0]
         if (!shortest) return
 
-        const buffer = yield* fsys.readFile(shortest).pipe(Effect.orDie)
+        const buffer = yield* fs.readFile(shortest).pipe(Effect.orDie)
         const base64 = Buffer.from(buffer).toString("base64")
         const mime = AppFileSystem.mimeType(shortest)
         const url = `data:${mime};base64,${base64}`
@@ -403,7 +403,7 @@ export namespace Project {
         return yield* Effect.forEach(
           data.sandboxes,
           (dir) =>
-            fsys.isDir(dir).pipe(
+            fs.isDir(dir).pipe(
               Effect.orDie,
               Effect.map((ok) => (ok ? dir : undefined)),
             ),
@@ -460,9 +460,8 @@ export namespace Project {
   )
 
   export const defaultLayer = layer.pipe(
-    Layer.provide(CrossSpawnSpawner.layer),
+    Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provide(NodeFileSystem.layer),
     Layer.provide(NodePath.layer),
   )
   const { runPromise } = makeRuntime(Service, defaultLayer)

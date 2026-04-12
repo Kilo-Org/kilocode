@@ -1,7 +1,7 @@
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
-import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
+import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import z from "zod"
 import { Filesystem } from "../util/filesystem"
 import { SessionID, MessageID, PartID } from "./schema"
@@ -12,7 +12,7 @@ import { Session } from "."
 import { Agent } from "../agent/agent"
 import { Provider } from "../provider/provider"
 import { ModelID, ProviderID } from "../provider/schema"
-import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
+import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { SessionCompaction } from "./compaction"
 import { Instance } from "../project/instance"
 import { Bus } from "../bus"
@@ -20,7 +20,6 @@ import { ProviderTransform } from "../provider/transform"
 import { SystemPrompt } from "./system"
 import { InstructionPrompt } from "./instruction"
 import { Plugin } from "../plugin"
-import PROMPT_PLAN from "../session/prompt/plan.txt"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
 import { defer } from "../util/defer"
@@ -48,10 +47,7 @@ import { LLM } from "./llm"
 import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncate"
-import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
-import { environmentDetails } from "@/kilocode/editor-context" // kilocode_change
 import { decodeDataUrl } from "@/util/data-url"
-import { Identifier } from "@/id/id" // kilocode_change
 import { Process } from "@/util/process"
 
 // @ts-ignore
@@ -68,18 +64,8 @@ IMPORTANT:
 const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
 
 export namespace SessionPrompt {
-  // kilocode_change start - share follow-up trigger logic with tests
-  export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
-    if (input.abort.aborted) return false
-    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
-    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
-    return input.messages
-      .slice(lastUserIdx + 1)
-      .some((msg) =>
-        msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
-      )
-  }
-  // kilocode_change end
+  // kilocode_change
+  export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup
 
   const log = Log.create({ service: "session.prompt" })
 
@@ -329,11 +315,8 @@ export namespace SessionPrompt {
     // on the user message and will be retrieved from lastUser below
     let structuredOutput: unknown | undefined
 
-    // kilocode_change — cache environment details per turn so the last user
-    // message stays byte-identical across tool-loop steps (prompt caching).
-    // Keyed by user message ID so it recomputes when a new user message arrives.
-    let envBlock: string | undefined
-    let envUser: string | undefined
+    // kilocode_change — cache environment details per turn (prompt caching)
+    const envCache: KiloSessionPrompt.EnvCache = {}
 
     let step = 0
     const session = await Session.get(sessionID)
@@ -368,15 +351,17 @@ export namespace SessionPrompt {
       if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
       if (
         lastAssistant?.finish &&
-        !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
+        ![
+          "tool-calls",
+          // in v6 unknown became other but other existed in v5 too and was distinctly different
+          // I think there are certain providers that used to have bad stop reasons, not rlly sure which
+          // ones if any still have this?
+          // "unknown",
+        ].includes(lastAssistant.finish) &&
         lastUser.id < lastAssistant.id
       ) {
-        // kilocode_change start - ask follow-up when plan_exit tool was called
-        if (shouldAskPlanFollowup({ messages: msgs, abort })) {
-          const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
-          if (action === "continue") continue
-        }
-        // kilocode_change end
+        // kilocode_change - ask follow-up when plan_exit tool was called
+        if ((await KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort })) === "continue") continue
         log.info("exiting loop", { sessionID })
         break
       }
@@ -642,7 +627,7 @@ export namespace SessionPrompt {
         session,
       })
 
-      const processor = SessionProcessor.create({
+      const processor = await SessionProcessor.create({
         assistantMessage: (await Session.updateMessage({
           id: MessageID.ascending(),
           parentID: lastUser.id,
@@ -726,29 +711,8 @@ export namespace SessionPrompt {
 
       await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
-      // kilocode_change start — ephemerally inject dynamic editor context into last user message
-      if (envUser !== lastUser.id) {
-        envBlock = environmentDetails(lastUser.editorContext)
-        envUser = lastUser.id
-      }
-      if (envBlock) {
-        const idx = msgs.findLastIndex((m) => m.info.role === "user")
-        if (idx !== -1)
-          msgs[idx] = {
-            ...msgs[idx],
-            parts: [
-              ...msgs[idx].parts,
-              {
-                id: PartID.make(Identifier.ascending("part")),
-                sessionID,
-                messageID: msgs[idx].info.id,
-                type: "text",
-                text: envBlock,
-              } satisfies MessageV2.TextPart,
-            ],
-          }
-      }
-      // kilocode_change end
+      // kilocode_change — ephemerally inject dynamic editor context into last user message
+      KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
 
       // Build system prompt, adding structured output instruction if needed
       const skills = await SystemPrompt.skills(agent)
@@ -770,7 +734,7 @@ export namespace SessionPrompt {
         sessionID,
         system,
         messages: [
-          ...MessageV2.toModelMessages(msgs, model),
+          ...(await MessageV2.toModelMessages(msgs, model)),
           ...(isLastStep
             ? [
                 {
@@ -830,18 +794,12 @@ export namespace SessionPrompt {
     SessionCompaction.prune({ sessionID })
     // kilocode_change start
     finished = true
-    // Return the stored interrupted assistant turn before surfacing AbortError.
-    for await (const item of MessageV2.stream(sessionID)) {
-      if (item.info.role === "user") continue
-      const queued = state()[sessionID]?.callbacks ?? []
-      for (const q of queued) {
-        q.resolve(item)
-      }
-      return item
-    }
-    if (abort.aborted) abort.throwIfAborted()
+    return KiloSessionPrompt.resolveFinishedMessages({
+      sessionID,
+      callbacks: state()[sessionID]?.callbacks ?? [],
+      abort,
+    })
     // kilocode_change end
-    throw new Error("Impossible")
   })
 
   async function lastModel(sessionID: SessionID) {
@@ -864,7 +822,7 @@ export namespace SessionPrompt {
     using _ = log.time("resolveTools")
     const tools: Record<string, AITool> = {}
 
-    const context = (args: any, options: ToolCallOptions): Tool.Context => ({
+    const context = (args: any, options: ToolExecutionOptions): Tool.Context => ({
       sessionID: input.session.id,
       abort: options.abortSignal!,
       messageID: input.processor.message.id,
@@ -950,7 +908,8 @@ export namespace SessionPrompt {
       const execute = item.execute
       if (!execute) continue
 
-      const transformed = ProviderTransform.schema(input.model, asSchema(item.inputSchema).jsonSchema)
+      const schema = await asSchema(item.inputSchema).jsonSchema
+      const transformed = ProviderTransform.schema(input.model, schema)
       item.inputSchema = jsonSchema(transformed)
       // Wrap execute to add plugin hooks and format output
       item.execute = async (args, opts) => {
@@ -1063,10 +1022,10 @@ export namespace SessionPrompt {
           metadata: { valid: true },
         }
       },
-      toModelOutput(result) {
+      toModelOutput({ output }) {
         return {
           type: "text",
-          value: result.output,
+          value: output.output,
         }
       },
     })
@@ -1482,24 +1441,8 @@ export namespace SessionPrompt {
 
     // Original logic when experimental plan mode is disabled
     if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
-      // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
-      if (input.agent.name === "plan") {
-        const plan = Session.plan(input.session)
-        const exists = await Filesystem.exists(plan)
-        if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
-        const info = exists
-          ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-          : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-        userMessage.parts.push({
-          id: PartID.ascending(),
-          messageID: userMessage.info.id,
-          sessionID: userMessage.info.sessionID,
-          type: "text",
-          text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
-          synthetic: true,
-        })
-      }
-      // kilocode_change end
+      // kilocode_change - inject plan file path so agent writes to .kilo/plans/
+      await KiloSessionPrompt.insertPlanReminders({ agent: input.agent, session: input.session, userMessage })
       const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
       // kilocode_change start - renamed from "build" to "code"
       if (wasPlan && input.agent.name === "code") {
@@ -1815,12 +1758,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     let output = ""
     // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
-    // separate decoder per stream so partial bytes from one pipe don't corrupt the other
-    const stdoutDecoder = new StringDecoder("utf8")
-    const stderrDecoder = new StringDecoder("utf8")
+    const decoders = KiloSessionPrompt.createShellDecoders()
 
-    proc.stdout?.on("data", (chunk) => {
-      output += stdoutDecoder.write(chunk)
+    proc.stdout?.on("data", (chunk: Buffer) => {
+      output += decoders.write("stdout", chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1830,8 +1771,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
     })
 
-    proc.stderr?.on("data", (chunk) => {
-      output += stderrDecoder.write(chunk)
+    proc.stderr?.on("data", (chunk: Buffer) => {
+      output += decoders.write("stderr", chunk)
       if (part.state.status === "running") {
         part.state.metadata = {
           output: output,
@@ -1868,8 +1809,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     // kilocode_change - flush any trailing buffered bytes from decoders
-    output += stdoutDecoder.end()
-    output += stderrDecoder.end()
+    output += decoders.flush()
 
     if (aborted) {
       output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
@@ -2119,28 +2059,28 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         (await Provider.getSmallModel(input.providerID)) ?? (await Provider.getModel(input.providerID, input.modelID))
       )
     })
-    const result = await LLM.stream({
-      agent,
-      user: firstRealUser.info as MessageV2.User,
-      system: [],
-      small: true,
-      tools: {},
-      model,
-      abort: new AbortController().signal,
-      sessionID: `title-${input.session.id}`, // kilocode_change - separate taskID to prevent small-model leak (#6552)
-      retries: 2,
-      messages: [
-        {
-          role: "user",
-          content: "Generate a title for this conversation:\n",
-        },
-        ...(hasOnlySubtaskParts
-          ? [{ role: "user" as const, content: subtaskParts.map((p) => p.prompt).join("\n") }]
-          : MessageV2.toModelMessages(contextMessages, model)),
-      ],
-    })
-    const text = await result.text.catch((err) => log.error("failed to generate title", { error: err }))
-    if (text) {
+    try {
+      const result = await LLM.stream({
+        agent,
+        user: firstRealUser.info as MessageV2.User,
+        system: [],
+        small: true,
+        tools: {},
+        model,
+        abort: new AbortController().signal,
+        sessionID: input.session.id,
+        retries: 2,
+        messages: [
+          {
+            role: "user",
+            content: "Generate a title for this conversation:\n",
+          },
+          ...(hasOnlySubtaskParts
+            ? [{ role: "user" as const, content: subtaskParts.map((p) => p.prompt).join("\n") }]
+            : await MessageV2.toModelMessages(contextMessages, model)),
+        ],
+      })
+      const text = await result.text
       const cleaned = text
         .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
         .split("\n")
@@ -2153,6 +2093,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         if (NotFoundError.isInstance(err)) return
         throw err
       })
+    } catch (error) {
+      log.error("failed to generate title", { error })
     }
   }
 }

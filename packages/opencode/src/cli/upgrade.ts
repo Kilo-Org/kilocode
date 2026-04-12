@@ -4,7 +4,7 @@ import { Flag } from "@/flag/flag"
 import { Installation } from "@/installation"
 
 export async function upgrade() {
-  const config = await Config.global()
+  const config = await Config.getGlobal()
   const method = await Installation.method()
   // kilocode_change start - only auto-upgrade for npm/pnpm/bun (we only publish @kilocode/cli via npm registry)
   if (method !== "npm" && method !== "pnpm" && method !== "bun") return

@@ -17,7 +17,6 @@ import { Installation } from "./installation"
 import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
-import { WorkspaceServeCommand } from "./cli/cmd/workspace-serve"
 import { Filesystem } from "./util/filesystem"
 import { ConfigCommand as ConfigCLICommand } from "./cli/cmd/config" // kilocode_change
 import { DebugCommand } from "./cli/cmd/debug"
@@ -61,20 +60,22 @@ import { Global } from "./global"
 import { createHelpCommand } from "./kilocode/help-command" // kilocode_change
 import { JsonMigration } from "./storage/json-migration"
 import { Database } from "./storage/db"
+import { errorMessage } from "./util/error"
+import { PluginCommand } from "./cli/cmd/plug"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
-    e: e instanceof Error ? e.message : e,
+    e: errorMessage(e),
   })
 })
 
 process.on("uncaughtException", (e) => {
   Log.Default.error("exception", {
-    e: e instanceof Error ? e.message : e,
+    e: errorMessage(e),
   })
 })
 
-let cli = yargs(hideBin(process.argv))
+let cli = yargs(hideBin(process.argv)) // kilocode_change
   .parserConfiguration({ "populate--": true })
   .scriptName("kilo") // kilocode_change
   .wrap(100)
@@ -91,7 +92,15 @@ let cli = yargs(hideBin(process.argv))
     type: "string",
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
+  .option("pure", {
+    describe: "run without external plugins",
+    type: "boolean",
+  })
   .middleware(async (opts) => {
+    if (opts.pure) {
+      process.env.OPENCODE_PURE = "1"
+    }
+
     await Log.init({
       print: process.argv.includes("--print-logs"),
       dev: Installation.isLocal(),
@@ -202,18 +211,15 @@ let cli = yargs(hideBin(process.argv))
   .command(PrCommand)
   .command(SessionCommand)
   .command(RemoteCommand) // kilocode_change
-  .command(DbCommand)
   .command(ConfigCLICommand) // kilocode_change
+  .command(PluginCommand)
+  .command(DbCommand)
 
 // kilocode_change start - registered after initial chain to avoid self-referential type error
 cli = cli.command(createHelpCommand(() => cli))
-// kilocode_change end
-
-if (Installation.isLocal()) {
-  cli = cli.command(WorkspaceServeCommand)
-}
 
 cli = cli
+  // kilocode_change end
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -264,7 +270,7 @@ try {
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
     UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
-    process.stderr.write((e instanceof Error ? e.message : String(e)) + EOL)
+    process.stderr.write(errorMessage(e) + EOL)
   }
   process.exitCode = 1
 } finally {

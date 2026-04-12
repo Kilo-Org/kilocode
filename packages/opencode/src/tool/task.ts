@@ -98,19 +98,6 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           parentID: ctx.sessionID,
           title: params.description + ` (@${agent.name} subagent)`,
           permission: [
-            {
-              permission: "todowrite",
-              pattern: "*",
-              action: "deny",
-            },
-            {
-              permission: "todoread",
-              pattern: "*",
-              action: "deny",
-            },
-            // kilocode_change start — unconditionally deny task for all subagent sessions
-            { permission: "task", pattern: "*", action: "deny" },
-            // kilocode_change end
             ...(hasTodoWritePermission
               ? []
               : [
@@ -129,6 +116,9 @@ export const TaskTool = Tool.define("task", async (ctx) => {
                     action: "deny" as const,
                   },
                 ]),
+            // kilocode_change start — unconditionally deny task for all subagent sessions
+            { permission: "task", pattern: "*", action: "deny" },
+            // kilocode_change end
             ...(config.experimental?.primary_tools?.map((t) => ({
               pattern: "*",
               action: "allow" as const,
@@ -172,9 +162,6 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         },
         agent: agent.name,
         tools: {
-          todowrite: false,
-          todoread: false,
-          task: false, // kilocode_change
           ...(hasTodoWritePermission ? {} : { todowrite: false }),
           ...(hasTaskPermission ? {} : { task: false }),
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),

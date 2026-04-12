@@ -7,6 +7,7 @@ import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
 import { Log } from "@/util/log"
+import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
@@ -164,7 +165,7 @@ export const TuiThreadCommand = cmd({
       const reload = () => {
         client.call("reload", undefined).catch((err) => {
           Log.Default.warn("worker reload failed", {
-            error: err instanceof Error ? err.message : String(err),
+            error: errorMessage(err),
           })
         })
       }
@@ -181,7 +182,7 @@ export const TuiThreadCommand = cmd({
         process.off("SIGUSR2", reload)
         await withTimeout(client.call("shutdown", undefined), 5000).catch((error) => {
           Log.Default.warn("worker shutdown failed", {
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           })
         })
         worker.terminate()
