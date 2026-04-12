@@ -65,7 +65,7 @@ function buildSSML(text: string, opts: AzureTTSOptions): string {
 	const prosodyAttrs: string[] = []
 	if (opts.pitch && opts.pitch !== 0) prosodyAttrs.push(`pitch="${opts.pitch > 0 ? "+" : ""}${opts.pitch}%"`)
 	if (opts.rate && opts.rate !== 1.0) prosodyAttrs.push(`rate="${opts.rate}"`)
-	if (opts.volume != null) prosodyAttrs.push(`volume="${opts.volume}"`)
+	if (opts.volume !== undefined && opts.volume !== null) prosodyAttrs.push(`volume="${opts.volume}"`)
 	if (prosodyAttrs.length > 0) {
 		processedText = `<prosody ${prosodyAttrs.join(" ")}>${processedText}</prosody>`
 	}

@@ -734,7 +734,7 @@ const SpeechTab: Component = () => {
 
 						{/* Per-Voice Volume */}
 						<SettingsRow
-							title={settings().tuning.volume != null ? `Voice Volume: ${settings().tuning.volume}%` : "Voice Volume: Global"}
+							title={settings().tuning.volume !== null ? `Voice Volume: ${settings().tuning.volume}%` : "Voice Volume: Global"}
 							description="Override volume for this voice, or use the global setting"
 						>
 							<div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
@@ -744,13 +744,13 @@ const SpeechTab: Component = () => {
 									max="100"
 									value={settings().tuning.volume ?? settings().volume}
 									onInput={(e) => updateTuning("volume", parseInt(e.currentTarget.value))}
-									disabled={settings().tuning.volume == null}
-									style={{ ...sliderStyle, flex: "1", opacity: settings().tuning.volume == null ? "0.4" : "1" }}
+									disabled={settings().tuning.volume === null}
+									style={{ ...sliderStyle, flex: "1", opacity: settings().tuning.volume === null ? "0.4" : "1" }}
 								/>
 								<label style={{ "font-size": "11px", display: "flex", "align-items": "center", gap: "4px", "white-space": "nowrap" }}>
 									<input
 										type="checkbox"
-										checked={settings().tuning.volume == null}
+										checked={settings().tuning.volume === null}
 										onChange={(e) => {
 											if (e.currentTarget.checked) {
 												updateTuning("volume", null)
