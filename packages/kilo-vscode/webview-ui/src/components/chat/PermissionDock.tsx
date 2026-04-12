@@ -110,8 +110,15 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const title = () =>
-    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
+  const toolLabel = () => resolveLabel(props.request.toolName, language.t)
+
+  const title = () => {
+    const base = fromChild()
+      ? language.t("notification.permission.titleSubagent")
+      : language.t("notification.permission.title")
+    const label = toolLabel()
+    return label ? `${base}: ${label}` : base
+  }
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
