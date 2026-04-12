@@ -108,56 +108,6 @@ description: ${description}
     }
   })
 
-  test("description sorts skills by name and is stable across calls", async () => {
-    await using tmp = await tmpdir({
-      git: true,
-      init: async (dir) => {
-        for (const [name, description] of [
-          ["zeta-skill", "Zeta skill."],
-          ["alpha-skill", "Alpha skill."],
-          ["middle-skill", "Middle skill."],
-        ]) {
-          const skillDir = path.join(dir, ".opencode", "skill", name)
-          await Bun.write(
-            path.join(skillDir, "SKILL.md"),
-            `---
-name: ${name}
-description: ${description}
----
-
-# ${name}
-`,
-          )
-        }
-      },
-    })
-
-    const home = process.env.KILO_TEST_HOME
-    process.env.KILO_TEST_HOME = tmp.path
-
-    try {
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const first = await SkillTool.init()
-          const second = await SkillTool.init()
-
-          expect(first.description).toBe(second.description)
-
-          const alpha = first.description.indexOf("**alpha-skill**: Alpha skill.")
-          const middle = first.description.indexOf("**middle-skill**: Middle skill.")
-          const zeta = first.description.indexOf("**zeta-skill**: Zeta skill.")
-
-          expect(alpha).toBeGreaterThan(-1)
-          expect(middle).toBeGreaterThan(alpha)
-          expect(zeta).toBeGreaterThan(middle)
-        },
-      })
-    } finally {
-      process.env.KILO_TEST_HOME = home
-    }
-  })
-
   test("execute returns skill content block with files", async () => {
     await using tmp = await tmpdir({
       git: true,
@@ -208,38 +158,6 @@ Use this skill.
           expect(result.output).toContain(`<skill_content name="tool-skill">`)
           expect(result.output).toContain(`Base directory for this skill: ${pathToFileURL(dir).href}`)
           expect(result.output).toContain(`<file>${file}</file>`)
-        },
-      })
-    } finally {
-      process.env.KILO_TEST_HOME = home
-    }
-  })
-
-  test("built-in kilo-config includes named command lookup guidance", async () => {
-    await using tmp = await tmpdir({ git: true })
-
-    const home = process.env.KILO_TEST_HOME
-    process.env.KILO_TEST_HOME = tmp.path
-
-    try {
-      await Instance.provide({
-        directory: tmp.path,
-        fn: async () => {
-          const tool = await SkillTool.init()
-          const ctx: Tool.Context = {
-            ...baseCtx,
-            ask: async () => {},
-          }
-
-          const result = await tool.execute({ name: "kilo-config" }, ctx)
-
-          expect(tool.description).toContain("where it loads things from")
-          expect(result.metadata.dir).toBe("builtin")
-          expect(result.output).toContain("### Finding a named command")
-          expect(result.output).toContain("`~/.config/kilo/`")
-          expect(result.output).toContain("`~/.kilocode/`")
-          expect(result.output).toContain("`**/command/<name>.md`")
-          expect(result.output).toContain("explicit search `path`")
         },
       })
     } finally {

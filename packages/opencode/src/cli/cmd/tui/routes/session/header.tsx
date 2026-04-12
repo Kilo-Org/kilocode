@@ -1,3 +1,4 @@
+// kilocode_change - retained; upstream moved session header into prompt footer in #19486, Kilo keeps the dedicated header UI
 import { type Accessor, createMemo, createSignal, Match, Show, Switch } from "solid-js"
 import { useRouteData } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"

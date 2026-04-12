@@ -147,17 +147,6 @@ export namespace Skill {
     directory: string,
     worktree: string,
   ) {
-    // kilocode_change start - seed built-in skills (user skills with the same name override)
-    for (const skill of BUILTIN_SKILLS) {
-      state.skills[skill.name] = {
-        name: skill.name,
-        description: skill.description,
-        location: BUILTIN_LOCATION,
-        content: skill.content,
-      }
-    }
-    // kilocode_change end
-
     if (!Flag.KILO_DISABLE_EXTERNAL_SKILLS) {
       for (const dir of EXTERNAL_DIRS) {
         const root = path.join(Global.Path.home, dir)

@@ -388,7 +388,7 @@ test("does not derive tui path from KILO_CONFIG", async () => {
       await fs.mkdir(customDir, { recursive: true })
       await Bun.write(path.join(customDir, "kilo.json"), JSON.stringify({ model: "test/model" }))
       await Bun.write(path.join(customDir, "tui.json"), JSON.stringify({ theme: "should-not-load" }))
-      process.env.KILO_CONFIG = path.join(customDir, "kilo.json")
+      process.env.KILO_CONFIG = path.join(customDir, "kilo.json") // kilocode_change
     },
   })
 

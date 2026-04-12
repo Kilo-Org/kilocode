@@ -31,6 +31,13 @@ interface FetchDecompressionError extends Error {
   path: string
 }
 
+/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
+interface FetchDecompressionError extends Error {
+  code: "ZlibError"
+  errno: number
+  path: string
+}
+
 export namespace MessageV2 {
   export function isMedia(mime: string) {
     return mime.startsWith("image/") || mime === "application/pdf"

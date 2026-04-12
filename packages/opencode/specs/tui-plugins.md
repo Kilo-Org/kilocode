@@ -148,7 +148,7 @@ npm plugins can declare a version compatibility range in `package.json` using th
 - There is no uninstall, list, or update CLI command for external plugins.
 - Local file plugins are configured directly in `tui.json`.
 
-When `plugin` entries exist in a writable `.opencode` dir or `OPENCODE_CONFIG_DIR`, OpenCode installs `@kilocode/plugin` into that dir and writes:
+When `plugin` entries exist in a writable `.opencode` dir or `KILO_CONFIG_DIR`, OpenCode installs `@kilocode/plugin` into that dir and writes:
 
 - `package.json`
 - `bun.lock`
@@ -330,7 +330,7 @@ Metadata is persisted by plugin id.
 
 - Internal TUI plugins load first.
 - External TUI plugins load from `tuiConfig.plugin`.
-- `--pure` / `OPENCODE_PURE` skips external TUI plugins only.
+- `--pure` / `KILO_PURE` skips external TUI plugins only.
 - External plugin resolution and import are parallel.
 - External plugin activation is sequential to keep command, route, and side-effect order deterministic.
 - File plugins that fail initially are retried once after waiting for config dependency installation.

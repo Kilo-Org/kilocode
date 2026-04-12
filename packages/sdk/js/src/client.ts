@@ -16,7 +16,7 @@ function pick(value: string | null, fallback?: string) {
 function rewrite(request: Request, directory?: string) {
   if (request.method !== "GET" && request.method !== "HEAD") return request
 
-  const value = pick(request.headers.get("x-opencode-directory"), directory)
+  const value = pick(request.headers.get("x-kilo-directory"), directory)
   if (!value) return request
 
   const url = new URL(request.url)
@@ -25,7 +25,7 @@ function rewrite(request: Request, directory?: string) {
   }
 
   const next = new Request(url.href, request) // kilocode_change - Bun Request() only accepts string | Request
-  next.headers.delete("x-opencode-directory")
+  next.headers.delete("x-kilo-directory")
   return next
 }
 

@@ -1,3 +1,4 @@
+// kilocode_change - retained; upstream removed workspace-server subsystem in #19316, routing refactor incomplete in v1.3.5
 import { Hono } from "hono"
 import { Instance } from "../../project/instance"
 import { InstanceBootstrap } from "../../project/bootstrap"

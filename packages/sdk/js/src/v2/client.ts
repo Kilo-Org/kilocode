@@ -20,8 +20,8 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   let changed = false
 
   for (const [name, key] of [
-    ["x-opencode-directory", "directory"],
-    ["x-opencode-workspace", "workspace"],
+    ["x-kilo-directory", "directory"],
+    ["x-kilo-workspace", "workspace"],
   ] as const) {
     const value = pick(
       request.headers.get(name),
@@ -38,8 +38,8 @@ function rewrite(request: Request, values: { directory?: string; workspace?: str
   if (!changed) return request
 
   const next = new Request(url.href, request) // kilocode_change - Bun Request() only accepts string | Request
-  next.headers.delete("x-opencode-directory")
-  next.headers.delete("x-opencode-workspace")
+  next.headers.delete("x-kilo-directory")
+  next.headers.delete("x-kilo-workspace")
   return next
 }
 

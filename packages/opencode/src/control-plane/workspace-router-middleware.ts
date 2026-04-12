@@ -1,3 +1,4 @@
+// kilocode_change - retained; upstream removed workspace-server subsystem in #19316, routing refactor incomplete in v1.3.5
 import type { MiddlewareHandler } from "hono"
 import { Flag } from "../flag/flag"
 import { getAdaptor } from "./adaptors"

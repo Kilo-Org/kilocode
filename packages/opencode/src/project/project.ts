@@ -260,7 +260,9 @@ export namespace Project {
               time: { created: Date.now(), updated: Date.now() },
             }
 
+        // kilocode_change start
         if (Flag.KILO_EXPERIMENTAL_ICON_DISCOVERY) yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
+        // kilocode_change end
 
         const result: Info = {
           ...existing,

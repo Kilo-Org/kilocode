@@ -10,7 +10,7 @@ await Bun.write("./package.json", JSON.stringify(pkg, null, 2) + "\n")
 console.log(`Updated package.json version to ${Script.version}`)
 
 const sidecarConfig = getCurrentSidecar()
-const artifact = process.env.OPENCODE_CLI_ARTIFACT ?? "opencode-cli"
+const artifact = process.env.KILO_CLI_ARTIFACT ?? "kilo-cli"
 
 const dir = "src-tauri/target/kilo-binaries"
 

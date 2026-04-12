@@ -1852,6 +1852,10 @@ export namespace Config {
     return runPromise((svc) => svc.waitForDependencies())
   }
 
+  export async function waitForDependencies() {
+    return runPromise((svc) => svc.waitForDependencies())
+  }
+
   // kilocode_change start
   export async function warnings() {
     return runPromise((svc) => svc.warnings())

@@ -1,3 +1,4 @@
+// kilocode_change - retained; upstream removed workspace-server subsystem in #19316, routing refactor incomplete in v1.3.5
 import { afterEach, describe, expect, test } from "bun:test"
 import { Log } from "../../src/util/log"
 import { WorkspaceServer } from "../../src/control-plane/workspace-server/server"
