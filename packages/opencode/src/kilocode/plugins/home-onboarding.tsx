@@ -21,11 +21,11 @@ const tui: TuiPlugin = async (api) => {
         const onboarding = createMemo(() => first() && !connected())
         const show = createMemo(() => onboarding() && !hidden())
         return (
-          <box height={4} minHeight={0} width="100%" maxWidth={75} alignItems="center" paddingTop={3} flexShrink={1}>
-            <Show when={show()}>
+          <Show when={show()}>
+            <box height={4} minHeight={0} width="100%" maxWidth={75} alignItems="center" paddingTop={3} flexShrink={1}>
               <Tips tip={ONBOARDING_TIP} />
-            </Show>
-          </box>
+            </box>
+          </Show>
         )
       },
     },
