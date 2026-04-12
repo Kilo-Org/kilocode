@@ -17,6 +17,7 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
+import SpeechTab from "./SpeechTab"
 
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
@@ -138,6 +139,11 @@ const Settings: Component<SettingsProps> = (props) => {
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
 
+          <Tabs.Trigger value="speech">
+            <Icon name="speech-bubble" />
+            <span class="label">Speech</span>
+          </Tabs.Trigger>
+
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -191,6 +197,11 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
+        </Tabs.Content>
+
+        <Tabs.Content value="speech">
+          <h3>Speech</h3>
+          <SpeechTab />
         </Tabs.Content>
 
         <Tabs.Content value="experimental">
