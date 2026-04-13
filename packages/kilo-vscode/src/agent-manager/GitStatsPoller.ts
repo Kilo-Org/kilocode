@@ -68,6 +68,8 @@ export class GitStatsPoller {
   private tickCount = 0
   /** Poll all worktrees every N ticks; active worktree is polled every tick. */
   private static readonly FULL_SYNC_EVERY = 6
+	/** Worktree ID that needs an immediate poll after the current in-flight fetch. */
+	private pendingActiveWorktreeId: string | undefined
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
@@ -86,7 +88,7 @@ export class GitStatsPoller {
    * Mark the worktree whose session the user is actively viewing.
    * On most ticks only this worktree will be polled; all worktrees are
    * polled every {@link FULL_SYNC_EVERY} ticks.  Passing `undefined`
-   * reverts to the original behaviour of polling all worktrees every tick.
+   * still uses the periodic full-sync cadence (avoids every-tick load).
    *
    * Mirrors {@link PRStatusPoller.setActiveWorktreeId}.
    */
@@ -95,7 +97,14 @@ export class GitStatsPoller {
     this.activeWorktreeId = id
     // Immediately refresh the newly-active worktree so the user sees
     // up-to-date stats without waiting for the next scheduled tick.
-    if (id && id !== prev && this.active) void this.poll()
+    if (id && id !== prev && this.active) {
+      if (this.busy) {
+        // A fetch is in flight — queue the refresh so it runs right after.
+        this.pendingActiveWorktreeId = id
+      } else {
+        void this.poll()
+      }
+    }
   }
 
   setEnabled(enabled: boolean): void {
@@ -140,6 +149,13 @@ export class GitStatsPoller {
     this.busy = true
     return this.fetch().finally(() => {
       this.busy = false
+      // If setActiveWorktreeId was called while we were fetching,
+      // trigger the queued refresh immediately instead of waiting.
+      if (this.pendingActiveWorktreeId) {
+        this.pendingActiveWorktreeId = undefined
+        void this.poll()
+        return
+      }
       this.schedule(this.intervalMs)
     })
   }
@@ -179,10 +195,15 @@ export class GitStatsPoller {
     }
 
     // Most ticks only poll the active worktree for fast, cheap feedback.
-    // Every FULL_SYNC_EVERY ticks (or when no active worktree is set) poll
-    // all available worktrees so that inactive ones stay reasonably current.
-    const isFullSync = !this.activeWorktreeId || this.tickCount % GitStatsPoller.FULL_SYNC_EVERY === 0
-    const targets = isFullSync ? available : available.filter((wt) => wt.id === this.activeWorktreeId)
+    // Every FULL_SYNC_EVERY ticks poll all available worktrees so that
+    // inactive ones stay reasonably current. When no active worktree is
+    // set we still use the same cadence (full sync on every
+    // FULL_SYNC_EVERY-th tick) to avoid the original every-tick load.
+    const isFullSync = this.tickCount % GitStatsPoller.FULL_SYNC_EVERY === 0
+    const targets =
+      this.activeWorktreeId && !isFullSync
+        ? available.filter((wt) => wt.id === this.activeWorktreeId)
+        : available
     this.tickCount++
 
     // Gate the HTTP diffSummary call through the semaphore but NOT the

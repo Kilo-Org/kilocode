@@ -708,4 +708,93 @@ describe("GitStatsPoller", () => {
 
     expect(aCalls).toBeGreaterThan(callsAfterFirstSync)
   })
+
+  it("polls newly-active worktree after in-flight fetch completes", async () => {
+    let resolvePoll: () => void = () => undefined
+    const calls: string[] = []
+
+    const client = {
+      worktree: {
+        diffSummary: async ({ directory }: { directory: string }) => {
+          calls.push(directory)
+          // Stall the first poll so we can trigger setActiveWorktreeId while busy
+          if (calls.length === 1) await new Promise<void>((r) => (resolvePoll = r))
+          return { data: diff(1, 0) }
+        },
+      },
+    } as unknown as KiloClient
+
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [
+        { ...worktree("a"), path: "/tmp/a" },
+        { ...worktree("b"), path: "/tmp/b" },
+      ],
+      getWorkspaceRoot: () => undefined,
+      getClient: () => client,
+      onStats: () => undefined,
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 60_000,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    // Wait for the first poll to start (it will stall)
+    await waitFor(() => calls.length >= 1)
+    // The poller is busy — setActiveWorktreeId should queue a pending refresh
+    poller.setActiveWorktreeId("b")
+    // Resolve the stalled poll so the pending refresh can fire
+    resolvePoll()
+    await waitFor(() => calls.filter((c) => c === "/tmp/b").length >= 2, 1000)
+    poller.stop()
+
+    // "b" should have been polled again after the in-flight fetch completed
+    expect(calls.filter((c) => c === "/tmp/b").length).toBeGreaterThanOrEqual(2)
+  })
+
+  it("uses periodic full-sync cadence even when no active worktree is set", async () => {
+    const bCalls: number[] = []
+    let tickRef = 0
+
+    const client = {
+      worktree: {
+        diffSummary: async ({ directory }: { directory: string }) => {
+          if (directory === "/tmp/b") bCalls.push(tickRef)
+          return { data: diff(tickRef, 0) }
+        },
+      },
+    } as unknown as KiloClient
+
+    // No activeWorktreeId set — should still only full-sync every FULL_SYNC_EVERY ticks
+    const poller = new GitStatsPoller({
+      getWorktrees: () => [
+        { ...worktree("a"), path: "/tmp/a" },
+        { ...worktree("b"), path: "/tmp/b" },
+      ],
+      getWorkspaceRoot: () => undefined,
+      getClient: () => client,
+      onStats: () => {
+        tickRef++
+      },
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+        return ""
+      }),
+    })
+
+    // Don't set activeWorktreeId — simulates clearSession state
+    poller.setEnabled(true)
+    await waitFor(() => tickRef >= 7, 3000)
+    poller.stop()
+
+    // With FULL_SYNC_EVERY=6, "b" should only be polled at ticks 0 and 6 (not every tick)
+    expect(bCalls.length).toBeLessThan(tickRef)
+    expect(bCalls.length).toBeGreaterThanOrEqual(2)
+  })
 })
