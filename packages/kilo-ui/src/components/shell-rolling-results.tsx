@@ -3,6 +3,7 @@ import stripAnsi from "strip-ansi"
 import type { ToolPart } from "@kilocode/sdk/v2"
 import { useReducedMotion } from "../hooks/use-reduced-motion"
 import { useI18n } from "../context/i18n"
+import { useToolActions } from "../context/tool-actions"
 import { RollingResults } from "./rolling-results"
 import { Icon } from "./icon"
 import { IconButton } from "./icon-button"
@@ -11,6 +12,8 @@ import { Tooltip } from "./tooltip"
 import { GROW_SPRING } from "./motion"
 import { useSpring } from "./motion-spring"
 import { busy, createThrottledValue, updateScrollMask, useCollapsible, useRowWipe, useToolFade } from "./tool-utils"
+
+const ELAPSED_THRESHOLD = 30
 
 function ShellRollingSubtitle(props: { text: string; animate?: boolean }) {
   let ref: HTMLSpanElement | undefined
@@ -171,12 +174,37 @@ function ShellExpanded(props: { cmd: string; out: string; open: boolean }) {
 export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; defaultOpen?: boolean }) {
   const i18n = useI18n()
   const reduce = useReducedMotion()
+  const actions = useToolActions()
   const wiped = new Set<string>()
   const [mounted, setMounted] = createSignal(false)
   const [open, setOpen] = createSignal(props.defaultOpen ?? true)
+  const [elapsed, setElapsed] = createSignal(0)
   onMount(() => setMounted(true))
   const state = createMemo(() => props.part.state as Record<string, any>)
   const pending = createMemo(() => busy(props.part.state.status))
+
+  // Track elapsed time while the tool is running
+  const start = createMemo(() => {
+    const t = state().time?.start
+    return typeof t === "number" ? t : undefined
+  })
+  createEffect(() => {
+    const s = start()
+    if (!pending() || !s) {
+      setElapsed(0)
+      return
+    }
+    const tick = () => setElapsed(Math.floor((Date.now() - s) / 1000))
+    tick()
+    const id = setInterval(tick, 1000)
+    onCleanup(() => clearInterval(id))
+  })
+
+  const handleStop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const sid = props.part.sessionID
+    if (sid && actions.abort) actions.abort(sid)
+  }
   const expanded = createMemo(() => open() && !pending())
   const previewOpen = createMemo(() => open() && pending())
   const command = createMemo(() => {
@@ -242,6 +270,22 @@ export function ShellRollingResults(props: { part: ToolPart; animate?: boolean; 
           </span>
           <Show when={subtitle()}>{(text) => <ShellRollingSubtitle text={text()} animate={props.animate} />}</Show>
           <span data-slot="shell-rolling-actions">
+            <Show when={pending() && elapsed() >= ELAPSED_THRESHOLD}>
+              <span data-slot="shell-rolling-elapsed">{i18n.t("ui.tool.elapsed", { seconds: elapsed() })}</span>
+            </Show>
+            <Show when={pending() && actions.abort}>
+              <Tooltip value={i18n.t("ui.tool.stop")} placement="top" gutter={4}>
+                <IconButton
+                  icon="close"
+                  size="small"
+                  variant="ghost"
+                  class="shell-rolling-stop"
+                  onMouseDown={(e: MouseEvent) => e.preventDefault()}
+                  onClick={handleStop}
+                  aria-label={i18n.t("ui.tool.stop")}
+                />
+              </Tooltip>
+            </Show>
             <span data-slot="shell-rolling-arrow" data-open={open() ? "true" : "false"}>
               <Icon name="chevron-down" size="small" />
             </span>

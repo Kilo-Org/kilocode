@@ -70,6 +70,7 @@
     "./context/helper": "./src/context/helper.tsx",
     "./context/i18n": "./src/context/i18n.tsx",
     "./context/marked": "./src/context/marked.tsx",
+    "./context/tool-actions": "./src/context/tool-actions.tsx",
     "./context/worker-pool": "./src/context/worker-pool.tsx",
     "./context/file": "./src/context/file.tsx",
     "./i18n/*": "./src/i18n/*.ts",

@@ -9,6 +9,7 @@ import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
+import { ToolActionsProvider } from "@kilocode/kilo-ui/context/tool-actions"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
@@ -104,6 +105,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
   }
 
+  const abort = (sessionID: string) => {
+    vscode.postMessage({ type: "abort", sessionID })
+  }
+
   return (
     <DataProvider
       data={data()}
@@ -115,7 +120,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenFile={open}
       onOpenUrl={openUrl}
     >
-      {props.children}
+      <ToolActionsProvider abort={abort}>{props.children}</ToolActionsProvider>
     </DataProvider>
   )
 }

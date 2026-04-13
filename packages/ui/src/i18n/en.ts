@@ -113,6 +113,8 @@ export const dict: Record<string, string> = {
   "ui.tool.agent": "{{type}} Agent",
   "ui.tool.agent.default": "Agent",
   "ui.tool.skill": "Skill",
+  "ui.tool.stop": "Stop", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
 
   "ui.basicTool.called": "Called `{{tool}}`",
   "ui.toolErrorCard.failed": "Failed",

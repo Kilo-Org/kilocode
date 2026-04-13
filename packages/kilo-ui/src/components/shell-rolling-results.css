@@ -1,0 +1,26 @@
+/* Stop button and elapsed time indicator for running shell commands */
+[data-component="shell-rolling-results"] {
+  [data-slot="shell-rolling-actions"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  [data-slot="shell-rolling-elapsed"] {
+    font-size: 11px;
+    color: var(--text-weak);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .shell-rolling-stop {
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}

@@ -12,8 +12,10 @@ import { ToolRegistry, ToolProps, getToolInfo } from "@kilocode/kilo-ui/message-
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useData } from "@kilocode/kilo-ui/context/data"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
+import { useToolActions } from "@kilocode/kilo-ui/context/tool-actions"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
@@ -41,6 +43,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
   const session = useSession()
   const vscode = useVSCode()
+  const actions = useToolActions()
 
   const childSessionId = () =>
     childID({
@@ -85,6 +88,12 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     vscode.postMessage({ type: "openSubAgentViewer", sessionID: id, title: description() })
   }
 
+  const handleStop = (e: MouseEvent) => {
+    e.stopPropagation()
+    const id = childSessionId()
+    if (id && actions.abort) actions.abort(id)
+  }
+
   const trigger = () => (
     <div data-slot="basic-tool-tool-info-structured">
       <div data-slot="basic-tool-tool-info-main">
@@ -100,6 +109,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
           </span>
         </Show>
       </div>
+      <Show when={running() && actions.abort}>
+        <Tooltip value={i18n.t("ui.tool.stop")} placement="top" gutter={4}>
+          <IconButton
+            icon="close"
+            size="small"
+            variant="ghost"
+            aria-label={i18n.t("ui.tool.stop")}
+            onClick={handleStop}
+          />
+        </Tooltip>
+      </Show>
       <Show when={childSessionId()}>
         <IconButton
           icon="square-arrow-top-right"
