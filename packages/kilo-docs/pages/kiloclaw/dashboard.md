@@ -88,7 +88,7 @@ For access to the full catalog of 335+ models, use the `/model` and `/models` co
 
 ### Channels
 
-You can connect Telegram, Discord, and Slack by entering bot tokens in the Settings tab. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
+You can connect Telegram and Slack by entering bot tokens in the Settings tab. Existing instances that already had Discord configured can continue managing it there as well. See [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms) for setup instructions.
 
 {% callout type="info" %}
 After saving channel tokens, you need to **Redeploy** or **Restart OpenClaw** for the changes to take effect.
