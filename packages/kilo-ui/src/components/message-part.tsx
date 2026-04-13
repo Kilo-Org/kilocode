@@ -836,7 +836,26 @@ export function UserMessageDisplay(props: {
                 </div>
               </GrowBox>
             </div>
-
+          </>
+        </Show>
+        <Show when={!text() && props.queued}>
+          <GrowBox animate={!!props.animate} open={!!props.queued}>
+            <div data-slot="user-message-queued-indicator">
+              <TextShimmer text={i18n.t("ui.message.queued")} />
+              <Show when={props.onDeleteQueued}>
+                <IconButton
+                  icon="trash"
+                  label={i18n.t("ui.message.deleteQueued")}
+                  size="xs"
+                  variant="ghost"
+                  onClick={props.onDeleteQueued}
+                />
+              </Show>
+            </div>
+          </GrowBox>
+        </Show>
+        <Show when={text()}>
+          <>
             <div data-slot="user-message-copy-wrapper" data-interrupted={props.interrupted ? "" : undefined}>
               <Show when={metaHead() || metaTail()}>
                 <span data-slot="user-message-meta-wrap">

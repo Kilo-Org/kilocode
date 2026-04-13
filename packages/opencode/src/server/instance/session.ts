@@ -760,17 +760,23 @@ export const SessionRoutes = lazy(() =>
       ),
       async (c) => {
         const params = c.req.valid("param")
-        await AppRuntime.runPromise(
-          Effect.gen(function* () {
-            const state = yield* SessionRunState.Service
-            const session = yield* Session.Service
-            yield* state.assertNotBusy(params.sessionID)
-            yield* session.removeMessage({
-              sessionID: params.sessionID,
-              messageID: params.messageID,
-            })
-          }),
-        )
+        // kilocode_change start
+        const msgs = await Session.messages({ sessionID: params.sessionID })
+        const target = msgs.find((msg) => msg.info.id === params.messageID)
+        const newer = msgs.find((msg) => msg.info.role === "user" && msg.info.id > params.messageID)
+        if (!target || target.info.role !== "user" || !newer) {
+          await AppRuntime.runPromise(
+            Effect.gen(function* () {
+              const state = yield* SessionRunState.Service
+              yield* state.assertNotBusy(params.sessionID)
+            }),
+          )
+        }
+        // kilocode_change end
+        await Session.removeMessage({
+          sessionID: params.sessionID,
+          messageID: params.messageID,
+        })
         return c.json(true)
       },
     )
