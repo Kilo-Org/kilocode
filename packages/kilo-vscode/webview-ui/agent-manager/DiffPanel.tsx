@@ -41,6 +41,8 @@ interface DiffPanelProps {
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string) => void
+  onRevertFile?: (file: string) => void
+  revertingFiles?: Set<string>
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -468,6 +470,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                   onClick={(e: MouseEvent) => {
                                     e.stopPropagation()
                                     props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
+                            </Show>
+                            <Show when={props.onRevertFile}>
+                              <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
+                                <IconButton
+                                  icon="discard"
+                                  size="small"
+                                  variant="ghost"
+                                  class="am-diff-revert-btn"
+                                  label={t("agentManager.diff.revertFile")}
+                                  disabled={props.revertingFiles?.has(diff.file) ?? false}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onRevertFile?.(diff.file)
                                   }}
                                 />
                               </Tooltip>

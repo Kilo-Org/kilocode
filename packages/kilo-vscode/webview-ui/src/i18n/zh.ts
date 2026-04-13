@@ -927,6 +927,7 @@ export const dict = {
   "session.status.retry": "正在重试…",
   "session.status.retrying": "正在重试（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "处理中…",
+  "session.status.offline": "网络已断开 — 正在重连...",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
@@ -939,6 +940,7 @@ export const dict = {
   "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",
+  "context.usage.olderSessions": "{{count}} 个较早的会话",
   "context.stats.thisSession": "此会话",
 
   "time.justNow": "刚刚",
@@ -1048,6 +1050,13 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "权限被拒绝时继续智能体循环",
   "settings.experimental.mcpTimeout.title": "MCP 超时（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 服务器请求的超时时间（毫秒）",
+  "settings.experimental.remote.title": "Remote 控制",
+  "settings.experimental.remote.description": "通过 Kilo Cloud 启用会话的 Remote 控制。这也会影响此计算机上的 CLI。",
+  "settings.experimental.remote.current": "当前状态：",
+  "settings.experimental.remote.startup": "启动时自动启用：",
+  "settings.experimental.remote.active": "已启用",
+  "settings.experimental.remote.inactive": "未启用",
+  "settings.experimental.remote.hint": "在聊天中使用 /remote 进行切换",
   "settings.experimental.toolToggles": "工具开关",
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",

@@ -1,0 +1,182 @@
+/* Session List (inside History View) */
+.session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Session List Items */
+.session-list [data-slot="list-item-title"],
+.cloud-session-list [data-slot="list-item-title"] {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.session-list [data-slot="list-item-description"],
+.cloud-session-list [data-slot="list-item-description"] {
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  white-space: nowrap;
+}
+
+body.vscode-light .session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light .session-list [data-slot="list-item"][data-selected="true"] [data-slot="list-item-description"],
+body.vscode-light .cloud-session-list [data-slot="list-item"][data-active="true"] [data-slot="list-item-description"],
+body.vscode-light
+  .cloud-session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="list-item-description"] {
+  color: var(--text-on-interactive-base, white);
+}
+
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-active="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"],
+body.vscode-light
+  .session-list
+  [data-slot="list-item"][data-selected="true"]
+  [data-slot="session-delete-button"]
+  [data-slot="icon-svg"] {
+  color: var(--text-on-interactive-base, white);
+}
+
+.session-list [data-slot="session-delete-button"] {
+  flex-shrink: 0;
+  margin-left: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.session-list [data-slot="list-item"]:hover [data-slot="session-delete-button"],
+.session-list [data-slot="list-item"][data-active="true"] [data-slot="session-delete-button"] {
+  opacity: 1;
+}
+
+/* History View (unified Local + Cloud tabs) */
+.history-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.history-view-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  min-height: 40px;
+}
+
+.history-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+}
+
+.history-tab-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  transition:
+    opacity 0.1s,
+    background 0.1s;
+  white-space: nowrap;
+}
+
+.history-tab-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}
+
+.history-tab-btn--active {
+  opacity: 1;
+  background: var(--vscode-toolbar-activeBackground, rgba(128, 128, 128, 0.2));
+  font-weight: 600;
+}
+
+.history-import-btn {
+  flex-shrink: 0;
+}
+
+.history-view-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cloud Session List (inside History View) */
+.cloud-session-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Make the list search wrapper wrap so the repo filter appears below search */
+.cloud-session-list [data-slot="list-search-wrapper"] {
+  flex-wrap: wrap;
+}
+
+.cloud-session-repo-filter {
+  width: 100%;
+  padding: 4px 10px 2px;
+
+  [data-component="checkbox"] {
+    gap: 8px;
+
+    [data-slot="checkbox-checkbox-label"] {
+      padding-inline-start: 0;
+      margin-inline-end: 0;
+    }
+  }
+}
+
+[data-component="input"][data-variant="normal"] [data-slot="input-wrapper"]:focus-within:not(:has([data-readonly])) {
+  border-color: transparent;
+  box-shadow: none;
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.cloud-session-load-more {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  padding: 8px;
+}
+
+.cloud-session-load-more-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  opacity: 0.6;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.cloud-session-load-more-btn:hover {
+  opacity: 1;
+  background: var(--vscode-toolbar-hoverBackground, rgba(128, 128, 128, 0.1));
+}

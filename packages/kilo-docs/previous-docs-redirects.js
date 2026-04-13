@@ -691,7 +691,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/free-and-budget-models",
-    destination: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
     basePath: false,
     permanent: true,
   },

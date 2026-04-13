@@ -15,10 +15,10 @@ export namespace Global {
   export const Path = {
     // Allow override via KILO_TEST_HOME for test isolation
     get home() {
-      return process.env.KILO_TEST_HOME || os.homedir() // kilocode_change
+      return process.env.KILO_TEST_HOME || os.homedir()
     },
     data,
-    bin: path.join(data, "bin"),
+    bin: path.join(cache, "bin"),
     log: path.join(data, "log"),
     cache,
     config,

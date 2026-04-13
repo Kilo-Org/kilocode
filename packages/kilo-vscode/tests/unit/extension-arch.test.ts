@@ -170,16 +170,11 @@ describe("Extension — KiloProvider handler wiring", () => {
 // ---------------------------------------------------------------------------
 
 describe("KiloProvider — continueInWorktree error fallback", () => {
-  const provider = fs.readFileSync(KILO_PROVIDER_FILE, "utf-8")
+  const helper = fs.readFileSync(path.join(ROOT, "src/kilo-provider/continue-worktree.ts"), "utf-8")
 
   it("sends error progress when handler is missing", () => {
-    const caseStart = provider.indexOf('case "continueInWorktree"')
-    expect(caseStart, "continueInWorktree case must exist").toBeGreaterThan(-1)
-    const caseEnd = provider.indexOf("break", caseStart)
-    const block = provider.slice(caseStart, caseEnd)
-
-    expect(block, "must have else branch for missing handler").toContain("else if")
-    expect(block, "must send error status back to webview").toContain('"error"')
-    expect(block, "must use continueInWorktreeProgress message type").toContain("continueInWorktreeProgress")
+    expect(helper, "must send error status back to webview").toContain('"error"')
+    expect(helper, "must use continueInWorktreeProgress message type").toContain("continueInWorktreeProgress")
+    expect(helper, "must handle missing handler case").toContain("no handler registered")
   })
 })

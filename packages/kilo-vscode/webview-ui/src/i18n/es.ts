@@ -948,6 +948,7 @@ export const dict = {
   "session.status.retry": "Reintentando…",
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
+  "session.status.offline": "Red desconectada — reconectando...",
 
   "ui.sessionTurn.cancel": "Cancelar",
   "ui.sessionTurn.status.thinking": "Pensando...",
@@ -960,6 +961,7 @@ export const dict = {
   "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",
+  "context.usage.olderSessions": "{{count}} sesiones anteriores",
   "context.stats.thisSession": "Esta sesión",
 
   "time.justNow": "justo ahora",
@@ -1077,6 +1079,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
+  "settings.experimental.remote.title": "Control Remote",
+  "settings.experimental.remote.description":
+    "Habilite el control Remote de las sesiones a través de Kilo Cloud. Esto también afectará a las CLI de este equipo.",
+  "settings.experimental.remote.current": "Estado actual:",
+  "settings.experimental.remote.startup": "Activar automáticamente al inicio:",
+  "settings.experimental.remote.active": "Activo",
+  "settings.experimental.remote.inactive": "Inactivo",
+  "settings.experimental.remote.hint": "Usa /remote en el chat para alternar",
   "settings.experimental.toolToggles": "Interruptores de herramientas",
   "settings.agentBehaviour.defaultAgent.title": "Agente predeterminado",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar cuando no se especifica ninguno",

@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "worktrees를 사용하려면 git 리포지토리가 포함된 폴더를 여세요.",
   "agentManager.setup.error.lfs_missing":
     "이 리포지토리는 Git LFS를 사용하지만 git-lfs를 찾을 수 없습니다. Git LFS를 설치하세요.",
+  "agentManager.setup.error.no_commits":
+    "이 리포지토리에는 아직 커밋이 없습니다. worktrees를 사용하기 전에 초기 커밋을 생성하세요.",
   "agentManager.shortcuts.title": "키보드 단축키",
   "agentManager.shortcuts.category.sidebar": "사이드바",
   "agentManager.shortcuts.category.tabs": "탭",
@@ -71,6 +73,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "새 탭",
   "agentManager.shortcuts.closeTab": "탭 닫기",
   "agentManager.shortcuts.toggleTerminal": "터미널 전환",
+  "agentManager.shortcuts.runScript": "스크립트 실행",
+  "agentManager.run.options": "실행 옵션",
+  "agentManager.run.configure": "실행 스크립트 구성",
   "agentManager.shortcuts.openAgentManager": "Agent Manager 열기",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -108,6 +113,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "차이점 전환",
   "agentManager.diff.openFile": "파일 열기",
+  "agentManager.diff.revertFile": "파일 되돌리기",
+  "agentManager.diff.revertSuccess": "파일이 되돌려졌습니다",
+  "agentManager.diff.revertError": "되돌리기 실패",
   "agentManager.open.button": "열기",
   "agentManager.open.tooltip": "이 Worktree를 VS Code에서 열기",
   "agentManager.apply.button": "로컬에 적용",

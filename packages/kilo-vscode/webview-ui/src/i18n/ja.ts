@@ -939,6 +939,7 @@ export const dict = {
   "session.status.retry": "再試行中…",
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
+  "session.status.offline": "ネットワークが切断されました — 再接続中…",
 
   "ui.sessionTurn.cancel": "キャンセル",
   "ui.sessionTurn.status.thinking": "考え中...",
@@ -951,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
+  "context.usage.olderSessions": "{{count}} 件の古いセッション",
   "context.stats.thisSession": "このセッション",
 
   "time.justNow": "たった今",
@@ -1066,6 +1068,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
+  "settings.experimental.remote.title": "Remote コントロール",
+  "settings.experimental.remote.description":
+    "Kilo Cloud 経由でのセッションの Remote コントロールを有効にします。これはこのマシンの CLI にも影響します。",
+  "settings.experimental.remote.current": "現在の状態:",
+  "settings.experimental.remote.startup": "起動時の自動有効化:",
+  "settings.experimental.remote.active": "アクティブ",
+  "settings.experimental.remote.inactive": "非アクティブ",
+  "settings.experimental.remote.hint": "チャットで /remote を使用して切り替えます",
   "settings.experimental.toolToggles": "ツールトグル",
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",

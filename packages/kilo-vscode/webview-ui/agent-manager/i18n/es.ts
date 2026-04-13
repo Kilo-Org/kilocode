@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Abra una carpeta que contenga un repositorio git para usar worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Este repositorio usa Git LFS, pero no se encontró git-lfs. Por favor instale Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Este repositorio aún no tiene commits. Cree un commit inicial antes de usar worktrees.",
   "agentManager.shortcuts.title": "Atajos de teclado",
   "agentManager.shortcuts.category.sidebar": "Barra lateral",
   "agentManager.shortcuts.category.tabs": "Pestañas",
@@ -71,6 +73,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nueva pestaña",
   "agentManager.shortcuts.closeTab": "Cerrar pestaña",
   "agentManager.shortcuts.toggleTerminal": "Alternar terminal",
+  "agentManager.shortcuts.runScript": "Ejecutar script",
+  "agentManager.run.options": "Opciones de ejecución",
+  "agentManager.run.configure": "Configurar script de ejecución",
   "agentManager.shortcuts.openAgentManager": "Abrir Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -109,6 +114,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Alternar diff",
   "agentManager.diff.openFile": "Abrir archivo",
+  "agentManager.diff.revertFile": "Revertir archivo",
+  "agentManager.diff.revertSuccess": "Archivo revertido",
+  "agentManager.diff.revertError": "Error al revertir",
   "agentManager.open.button": "Abrir",
   "agentManager.open.tooltip": "Abrir este Worktree en VS Code",
   "agentManager.apply.button": "Aplicar en local",

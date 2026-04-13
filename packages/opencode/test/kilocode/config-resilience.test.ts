@@ -7,7 +7,7 @@ import { tmpdir } from "../fixture/fixture"
 
 afterEach(async () => {
   await Instance.disposeAll()
-  Config.global.reset()
+  await Config.invalidate()
 })
 
 describe("config resilience", () => {

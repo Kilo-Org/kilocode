@@ -1,13 +1,11 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.2.1",
+  "version": "7.2.4",
   "type": "module",
   "license": "MIT",
   "exports": {
     "./package.json": "./package.json",
     "./*": "./src/components/*.tsx",
-    "./tool-utils": "./src/components/tool-utils.ts",
-    "./text-utils": "./src/components/text-utils.ts",
     "./i18n/*": "./src/i18n/*.ts",
     "./pierre": "./src/pierre/index.ts",
     "./pierre/*": "./src/pierre/*.ts",
@@ -66,6 +64,7 @@
     "motion-dom": "12.34.3",
     "motion-utils": "12.29.2",
     "remeda": "catalog:",
+    "remend": "catalog:",
     "shiki": "catalog:",
     "solid-js": "catalog:",
     "solid-list": "catalog:",

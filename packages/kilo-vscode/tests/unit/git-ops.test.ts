@@ -3,9 +3,10 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as nodePath from "path"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { Semaphore } from "../../src/agent-manager/semaphore"
 
-function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
-  return new GitOps({ log: () => undefined, runGit: handler })
+function ops(handler: (args: string[], cwd: string) => Promise<string>, semaphore?: Semaphore): GitOps {
+  return new GitOps({ log: () => undefined, runGit: handler, semaphore })
 }
 
 function sleep(ms: number): Promise<void> {
@@ -554,6 +555,39 @@ describe("GitOps", () => {
       git.dispose()
       git.dispose()
       expect(git.disposed).toBe(true)
+    })
+  })
+
+  describe("semaphore integration", () => {
+    it("limits concurrent raw() calls", async () => {
+      let running = 0
+      let peak = 0
+      const sem = new Semaphore(2)
+      const git = ops(async () => {
+        running++
+        peak = Math.max(peak, running)
+        await sleep(10)
+        running--
+        return "ok"
+      }, sem)
+
+      await Promise.all(Array.from({ length: 6 }, () => git.currentBranch("/repo")))
+      expect(peak).toBe(2)
+    })
+
+    it("works without a semaphore (no gating)", async () => {
+      let running = 0
+      let peak = 0
+      const git = ops(async () => {
+        running++
+        peak = Math.max(peak, running)
+        await sleep(10)
+        running--
+        return "ok"
+      })
+
+      await Promise.all(Array.from({ length: 4 }, () => git.currentBranch("/repo")))
+      expect(peak).toBe(4)
     })
   })
 })

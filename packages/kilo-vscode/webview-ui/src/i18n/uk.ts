@@ -944,6 +944,7 @@ export const dict = {
   "session.status.retry": "Повторна спроба…",
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
+  "session.status.offline": "Мережу відключено — перепідключення...",
 
   "ui.sessionTurn.cancel": "Скасувати",
   "ui.sessionTurn.status.thinking": "Думаю...",
@@ -956,6 +957,7 @@ export const dict = {
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
+  "context.usage.olderSessions": "{{count}} старіших сесій",
   "context.stats.thisSession": "Ця сесія",
 
   "time.justNow": "щойно",
@@ -1075,6 +1077,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
+  "settings.experimental.remote.title": "Керування Remote",
+  "settings.experimental.remote.description":
+    "Увімкніть керування Remote сеансами через Kilo Cloud. Це також вплине на CLI на цьому комп'ютері.",
+  "settings.experimental.remote.current": "Поточний стан:",
+  "settings.experimental.remote.startup": "Автоматичне ввімкнення під час запуску:",
+  "settings.experimental.remote.active": "Активний",
+  "settings.experimental.remote.inactive": "Неактивний",
+  "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
 
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",

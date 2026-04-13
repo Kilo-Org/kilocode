@@ -56,6 +56,8 @@ export const dict = {
     "Otvorite fasciklu koja sadrži git repozitorijum da biste koristili worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Ovaj repozitorijum koristi Git LFS, ali git-lfs nije pronađen. Molimo instalirajte Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Ovaj repozitorijum još uvek nema commit-ova. Napravite početni commit pre korišćenja worktrees.",
   "agentManager.shortcuts.title": "Prečice na tastaturi",
   "agentManager.shortcuts.category.sidebar": "Bočna traka",
   "agentManager.shortcuts.category.tabs": "Kartice",
@@ -72,6 +74,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nova kartica",
   "agentManager.shortcuts.closeTab": "Zatvori karticu",
   "agentManager.shortcuts.toggleTerminal": "Prebaci terminal",
+  "agentManager.shortcuts.runScript": "Pokreni skriptu",
+  "agentManager.run.options": "Opcije pokretanja",
+  "agentManager.run.configure": "Konfiguriši skriptu za pokretanje",
   "agentManager.shortcuts.openAgentManager": "Otvori Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -110,6 +115,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Prebaci diff",
   "agentManager.diff.openFile": "Otvori datoteku",
+  "agentManager.diff.revertFile": "Vrati datoteku",
+  "agentManager.diff.revertSuccess": "Datoteka vraćena",
+  "agentManager.diff.revertError": "Vraćanje neuspješno",
   "agentManager.open.button": "Otvori",
   "agentManager.open.tooltip": "Otvori ovaj worktree u VS Code-u",
   "agentManager.apply.button": "Primijeni lokalno",

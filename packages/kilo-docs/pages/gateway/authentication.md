@@ -74,38 +74,36 @@ Free models include models tagged with `:free` in their model ID, such as `minim
 
 ## Bring Your Own Key (BYOK)
 
-BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BYOK key is configured, the gateway routes requests through Vercel AI Gateway using your key. You are billed directly by the provider -- Kilo does not add any markup.
+BYOK lets you use your own provider API keys with the Kilo AI Gateway. When a BYOK key is configured, requests are sent to the provider using your key. You are billed directly by the provider -- Kilo does not add any markup.
 
 ### Supported BYOK providers
 
-| Provider         | BYOK Key ID |
-| ---------------- | ----------- |
-| Anthropic        | `anthropic` |
-| OpenAI           | `openai`    |
-| Google AI Studio | `google`    |
-| Mistral          | `mistral`   |
-| MiniMax          | `minimax`   |
-| xAI              | `xai`       |
-| Z.AI             | `zai`       |
-| Codestral (FIM)  | `codestral` |
+| Provider             | BYOK Key ID       |
+| -------------------- | ----------------- |
+| Anthropic            | `anthropic`       |
+| AWS Bedrock          | `bedrock`         |
+| Google AI Studio     | `google`          |
+| Inception            | `inception`       |
+| OpenAI               | `openai`          |
+| MiniMax              | `minimax`         |
+| Mistral              | `mistral`         |
+| xAI                  | `xai`             |
+| Z.AI                 | `zai`             |
+| BytePlus Coding Plan | `byteplus-coding` |
+| Codestral (FIM)      | `codestral`       |
+| Kimi Code            | `kimi-coding`     |
+| Neuralwatt           | `neuralwatt`      |
+| Z.AI Coding Plan     | `zai-coding`      |
 
 ### How BYOK works
 
-1. Add your provider API key in the Kilo dashboard or through your Kilo Code extension settings
-2. Keys are encrypted at rest using AES encryption
+1. Add your provider API key in the [Kilo dashboard](https://app.kilo.ai) or through your Kilo Code extension settings
+2. Keys are encrypted at rest using AES-256 encryption
 3. When you make a request for a model from that provider, the gateway automatically uses your key
 4. Usage is tracked but not billed to your Kilo balance (cost is set to $0)
 5. If your BYOK key fails, the request will not automatically fall back to Kilo's keys
 
-### BYOK routing
-
-When a BYOK key is detected, the request is routed through Vercel AI Gateway with your credentials:
-
-```
-Client → Kilo Gateway → Vercel AI Gateway (with your key) → Provider
-```
-
-This provides the benefit of Vercel's reliability infrastructure while using your own billing relationship with the provider.
+BYOK keys can be configured at the personal level or at the organization level. Organization-level keys apply to all members of the organization and require owner or billing manager access to manage.
 
 ## Request headers
 

@@ -75,6 +75,54 @@ export function adjacentHint(
 }
 
 /**
+ * Compute which session IDs should populate the "local" tab on state restore.
+ *
+ * Managed sessions with `worktreeId === null` are non-worktree sessions that
+ * were persisted to agent-manager.json.  On restore we use them as the local
+ * tab list, optionally applying a persisted tab order.
+ *
+ * @param sessions   - All managed sessions from agent-manager.json
+ * @param current    - The webview's current localSessionIDs (may contain pending tabs)
+ * @param tabOrder   - Persisted tab order for the "local" key, if any
+ * @param isPending  - Predicate to identify pending (not-yet-created) tab IDs
+ * @param applyOrder - Reorder helper: (items, order) → ordered items
+ */
+export function restoreLocalSessions(
+  sessions: { id: string; worktreeId: string | null }[],
+  current: string[],
+  tabOrder: string[] | undefined,
+  isPending: (id: string) => boolean,
+  applyOrder: (items: { id: string }[], order: string[]) => { id: string }[],
+): string[] | undefined {
+  const locals = sessions.filter((s) => !s.worktreeId).map((s) => s.id)
+  const real = current.filter((id) => !isPending(id))
+
+  // First restore: current has no real sessions but disk has some
+  if (locals.length > 0 && real.length === 0) {
+    if (!tabOrder) return locals
+    return applyOrder(
+      locals.map((id) => ({ id })),
+      tabOrder,
+    ).map((item) => item.id)
+  }
+
+  // Merge any disk-persisted sessions missing from current (e.g. vscode.setState
+  // debounce didn't fire before close, but persistSession already wrote to disk)
+  const missing = locals.filter((id) => !current.includes(id))
+  const merged = missing.length > 0 ? [...current, ...missing] : current
+
+  // Apply tab order if present
+  if (tabOrder && merged.length > 0) {
+    return applyOrder(
+      merged.map((id) => ({ id })),
+      tabOrder,
+    ).map((item) => item.id)
+  }
+
+  return missing.length > 0 ? merged : undefined
+}
+
+/**
  * After removing a worktree, pick the nearest remaining sidebar neighbor.
  * Order: the worktree just below → the one above → LOCAL.
  */

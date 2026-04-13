@@ -98,6 +98,14 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
         vscode.postMessage({ type: "openSettingsPanel" })
       },
     },
+    {
+      name: "remote",
+      description: "Toggle remote control",
+      hints: [],
+      action: () => {
+        vscode.postMessage({ type: "toggleRemote" })
+      },
+    },
   ]
 
   const client = exclude ? all.filter((c) => !exclude.has(c.name)) : all

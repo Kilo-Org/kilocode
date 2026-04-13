@@ -64,6 +64,12 @@ When a tool is set to `"ask"`, Kilo pauses and displays a permission prompt with
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
+## MCP Tool Permissions
+
+MCP tools use the same `allow` / `ask` / `deny` permission system as built-in tools. Each MCP tool's permission key is its namespaced name: `{server}_{tool}` (e.g. `github_create_pull_request`). You can use glob patterns like `github_*` for broad rules.
+
+For full details and examples, see [MCP Tool Permissions](/docs/automate/mcp/using-in-kilo-code#auto-approve-tools).
+
 ## Defaults
 
 Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Notable exceptions that prompt by default:
@@ -207,6 +213,12 @@ Most tools default to `"*": "allow"` for a smooth out-of-the-box experience. Not
 - **`.env` files** — reading `.env` files prompts for approval. Files matching `*.env.*` (e.g., `.env.local`, `.env.production`) also trigger an ask, while `*.env.example` is explicitly allowed.
 - **`external_directory`** — accessing files outside the project prompts for approval
 - **`doom_loop`** — prompts when the agent enters a repeated failure cycle
+
+## MCP Tool Permissions
+
+MCP tools use the same `allow` / `ask` / `deny` permission system as built-in tools. Each MCP tool's permission key is its namespaced name: `{server}_{tool}` (e.g. `github_create_pull_request`). You can use glob patterns like `github_*` for broad rules.
+
+For full details and examples, see [MCP Tool Permissions](/docs/automate/mcp/using-in-kilo-code#auto-approve-tools).
 
 ## Full Configuration Example
 

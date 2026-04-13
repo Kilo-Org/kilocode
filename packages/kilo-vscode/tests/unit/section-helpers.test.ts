@@ -1,5 +1,13 @@
 import { describe, it, expect } from "bun:test"
-import { buildTopLevelItems, isGrouped, isGroupStart, isGroupEnd } from "../../webview-ui/agent-manager/section-helpers"
+import {
+  buildTopLevelItems,
+  buildSidebarOrder,
+  buildShortcutMap,
+  completeSidebarOrder,
+  isGrouped,
+  isGroupStart,
+  isGroupEnd,
+} from "../../webview-ui/agent-manager/section-helpers"
 import type { WorktreeState, SectionState } from "../../webview-ui/src/types/messages"
 
 function wt(id: string, opts: Partial<WorktreeState> = {}): WorktreeState {
@@ -57,6 +65,32 @@ describe("buildTopLevelItems", () => {
     const result = buildTopLevelItems([s1], [w1], [w1], ["s1", "w1", "s1", "w1"])
     expect(result).toHaveLength(2)
   })
+
+  it("ignores section member ids while placing top-level sections", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    const result = buildTopLevelItems([s1], [w2], [w1, w2], ["w1", "s1", "w2"])
+    expect(result).toEqual([
+      { kind: "section", section: s1 },
+      { kind: "worktree", wt: w2 },
+    ])
+  })
+})
+
+describe("completeSidebarOrder", () => {
+  it("keeps section ids while adding missing worktree ids", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    expect(completeSidebarOrder([s1], [w1, w2], ["w2", "s1"])).toEqual(["w2", "s1", "w1"])
+  })
+
+  it("drops stale ids and skips duplicates", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1")
+    expect(completeSidebarOrder([s1], [w1], ["old", "w1", "w1", "s1"])).toEqual(["w1", "s1"])
+  })
 })
 
 describe("isGrouped", () => {
@@ -110,5 +144,104 @@ describe("isGroupEnd", () => {
 
   it("returns false for ungrouped worktree", () => {
     expect(isGroupEnd(list[3]!, 3, list)).toBe(false)
+  })
+})
+
+describe("buildSidebarOrder", () => {
+  it("returns LOCAL + all sorted worktrees when no sections exist", () => {
+    const sorted = [wt("a"), wt("b"), wt("c")]
+    const items = buildTopLevelItems([], [], sorted, [])
+    const result = buildSidebarOrder(items, sorted, [], () => [], [])
+    expect(result).toEqual([
+      { type: "local", id: "local" },
+      { type: "wt", id: "a" },
+      { type: "wt", id: "b" },
+      { type: "wt", id: "c" },
+    ])
+  })
+
+  it("includes section worktrees in visual order", () => {
+    const s1 = sec("s1", 0)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2", { sectionId: "s1" })
+    const w3 = wt("w3")
+    const sorted = [w1, w2, w3]
+    const items = buildTopLevelItems([s1], [w3], sorted, ["s1", "w3"])
+    const members = (id: string) => (id === "s1" ? [w1, w2] : [])
+    const result = buildSidebarOrder(items, sorted, [s1], members, [])
+    expect(result).toEqual([
+      { type: "local", id: "local" },
+      { type: "wt", id: "w1" },
+      { type: "wt", id: "w2" },
+      { type: "wt", id: "w3" },
+    ])
+  })
+
+  it("skips worktrees in collapsed sections", () => {
+    const s1 = sec("s1", 0, { collapsed: true })
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    const sorted = [w1, w2]
+    const items = buildTopLevelItems([s1], [w2], sorted, ["s1", "w2"])
+    const members = (id: string) => (id === "s1" ? [w1] : [])
+    const result = buildSidebarOrder(items, sorted, [s1], members, [])
+    expect(result).toEqual([
+      { type: "local", id: "local" },
+      { type: "wt", id: "w2" },
+    ])
+  })
+
+  it("respects section order between sections and ungrouped worktrees", () => {
+    const s1 = sec("s1", 0)
+    const s2 = sec("s2", 1)
+    const w1 = wt("w1", { sectionId: "s1" })
+    const w2 = wt("w2")
+    const w3 = wt("w3", { sectionId: "s2" })
+    const sorted = [w1, w2, w3]
+    const items = buildTopLevelItems([s1, s2], [w2], sorted, ["s1", "w2", "s2"])
+    const members = (id: string) => {
+      if (id === "s1") return [w1]
+      if (id === "s2") return [w3]
+      return []
+    }
+    const result = buildSidebarOrder(items, sorted, [s1, s2], members, [])
+    expect(result.map((r) => r.id)).toEqual(["local", "w1", "w2", "w3"])
+  })
+
+  it("appends unassigned sessions after worktrees", () => {
+    const sorted = [wt("a")]
+    const items = buildTopLevelItems([], [], sorted, [])
+    const sessions = [{ id: "sess1" }, { id: "sess2" }]
+    const result = buildSidebarOrder(items, sorted, [], () => [], sessions)
+    expect(result).toEqual([
+      { type: "local", id: "local" },
+      { type: "wt", id: "a" },
+      { type: "session", id: "sess1" },
+      { type: "session", id: "sess2" },
+    ])
+  })
+})
+
+describe("buildShortcutMap", () => {
+  it("assigns 1-based shortcuts up to 9", () => {
+    const order = [
+      { type: "local" as const, id: "local" },
+      { type: "wt" as const, id: "a" },
+      { type: "wt" as const, id: "b" },
+    ]
+    const map = buildShortcutMap(order)
+    expect(map.get("local")).toBe(1)
+    expect(map.get("a")).toBe(2)
+    expect(map.get("b")).toBe(3)
+  })
+
+  it("caps at 9 shortcuts", () => {
+    const order = Array.from({ length: 12 }, (_, i) => ({
+      type: "wt" as const,
+      id: `w${i}`,
+    }))
+    const map = buildShortcutMap(order)
+    expect(map.size).toBe(9)
+    expect(map.has("w9")).toBe(false)
   })
 })

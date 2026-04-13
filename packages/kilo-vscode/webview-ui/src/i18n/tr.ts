@@ -943,6 +943,7 @@ export const dict = {
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
+  "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -955,6 +956,7 @@ export const dict = {
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
+  "context.usage.olderSessions": "{{count}} eski oturum",
   "context.stats.thisSession": "Bu oturum",
 
   "time.justNow": "az önce",
@@ -1072,6 +1074,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
+  "settings.experimental.remote.title": "Remote Kontrolü",
+  "settings.experimental.remote.description":
+    "Kilo Cloud üzerinden oturumların Remote kontrolünü etkinleştirin. Bu, bu makinedeki CLI'leri de etkileyecektir.",
+  "settings.experimental.remote.current": "Mevcut durum:",
+  "settings.experimental.remote.startup": "Başlangıçta otomatik etkinleştir:",
+  "settings.experimental.remote.active": "Aktif",
+  "settings.experimental.remote.inactive": "Pasif",
+  "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
 
   "settings.agentBehaviour.defaultAgent.title": "Varsayılan Ajan",

@@ -1,0 +1,362 @@
+/* ============================================
+   Kilo Logo (empty state)
+   ============================================ */
+
+.kilo-logo {
+  width: 48px;
+  height: 48px;
+  opacity: 0.85;
+}
+
+.kilo-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.kilo-about-text {
+  max-width: 260px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ============================================
+   Feedback Button (empty state)
+   ============================================ */
+
+.feedback-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 1px dashed var(--vscode-textLink-foreground, #3794ff);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vscode-textLink-foreground, #3794ff);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.feedback-button:hover {
+  background: var(--vscode-textLink-foreground, #3794ff);
+  color: var(--vscode-editor-background, #1e1e1e);
+  border-style: solid;
+  border-color: var(--vscode-textLink-foreground, #3794ff);
+}
+
+.feedback-button [data-component="icon"] {
+  --icon-base: currentColor;
+}
+
+.feedback-button:hover [data-slot="icon-svg"] {
+  color: var(--vscode-editor-background, #1e1e1e);
+}
+
+.feedback-button:hover [data-component="icon"] {
+  --icon-base: var(--vscode-editor-background, #1e1e1e);
+}
+
+/* Feedback Dialog */
+
+@keyframes feedback-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes feedback-dialog-logo-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes feedback-dialog-item-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feedback-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  text-align: center;
+  animation: feedback-dialog-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.feedback-dialog-logo {
+  width: 48px;
+  height: 48px;
+  animation: feedback-dialog-logo-enter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s both;
+}
+
+.feedback-dialog-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.feedback-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--vscode-foreground);
+  max-width: 280px;
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both;
+}
+
+.feedback-dialog-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(1) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(2) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
+}
+
+.feedback-dialog-actions > [data-component="button"]:nth-child(3) {
+  animation: feedback-dialog-item-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both;
+}
+
+/* ============================================
+   Recent Sessions (empty state)
+   ============================================ */
+
+.recent-sessions {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 300px;
+  gap: 4px;
+}
+
+.recent-sessions-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  padding: 0 8px 4px;
+  text-align: left;
+}
+
+.recent-session-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  font-size: 13px;
+  gap: 8px;
+}
+
+.recent-session-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.recent-session-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.show-history-btn {
+  appearance: none;
+  border: 1px solid var(--vscode-button-secondaryBorder, var(--vscode-contrastBorder, transparent));
+  border-radius: 4px;
+  background: var(--vscode-button-secondaryBackground, transparent);
+  color: var(--vscode-button-secondaryForeground, var(--vscode-foreground));
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  margin-top: 4px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.show-history-btn:hover {
+  background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground));
+}
+
+.recent-session-date {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================
+   Account Switcher (welcome screen header)
+   ============================================ */
+
+.account-switcher {
+  position: relative;
+}
+
+.welcome-header {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.account-switcher-welcome {
+  width: 160px;
+}
+
+.account-switcher-trigger {
+  width: 100%;
+  cursor: pointer;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border-radius: 4px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  opacity: 0.9;
+  transition:
+    opacity 150ms,
+    background 150ms,
+    border-color 150ms;
+}
+
+.account-switcher-switching {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: default;
+}
+
+.account-switcher-trigger:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.account-switcher-trigger:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.account-switcher-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-switcher-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.account-switcher-role {
+  border-radius: 9999px;
+  padding: 1px 12px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.account-switcher-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 150ms;
+}
+
+.account-switcher-chevron.open {
+  transform: rotate(180deg);
+}
+
+.account-switcher-dropdown {
+  position: absolute;
+  z-index: 20;
+  margin-top: 4px;
+  right: 0;
+  width: max-content;
+  min-width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-dropdown-border);
+  background: var(--vscode-dropdown-background);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.account-switcher-item {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--vscode-foreground);
+  font-family: inherit;
+  font-size: var(--vscode-font-size);
+  text-align: left;
+}
+
+.account-switcher-item:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.account-switcher-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

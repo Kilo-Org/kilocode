@@ -8,6 +8,7 @@ import { RecallTool } from "../../src/tool/recall"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import type { Tool } from "../../src/tool/tool"
+import { SessionID, MessageID } from "../../src/session/schema"
 
 mock.module("@/kilo-sessions/remote-sender", () => ({
   RemoteSender: {
@@ -21,8 +22,8 @@ mock.module("@/kilo-sessions/remote-sender", () => ({
 }))
 
 const ctx: Tool.Context = {
-  sessionID: "ses_test",
-  messageID: "msg_test",
+  sessionID: SessionID.make("ses_test"),
+  messageID: MessageID.make("msg_test"),
   callID: "call_test",
   agent: "code",
   abort: AbortSignal.any([]),

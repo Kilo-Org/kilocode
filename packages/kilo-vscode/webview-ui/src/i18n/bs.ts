@@ -947,6 +947,7 @@ export const dict = {
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
+  "session.status.offline": "Mreža prekinuta — ponovno povezivanje...",
 
   "ui.sessionTurn.cancel": "Otkaži",
   "ui.sessionTurn.status.thinking": "Razmišljam...",
@@ -959,6 +960,7 @@ export const dict = {
   "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
+  "context.usage.olderSessions": "{{count}} starijih sesija",
   "context.stats.thisSession": "Ova sesija",
 
   "time.justNow": "upravo sada",
@@ -1072,6 +1074,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
+  "settings.experimental.remote.title": "Remote kontrola",
+  "settings.experimental.remote.description":
+    "Omogućite Remote kontrolu sesija putem Kilo Cloud. Ovo će također utjecati na CLI-jeve na ovoj mašini.",
+  "settings.experimental.remote.current": "Trenutno stanje:",
+  "settings.experimental.remote.startup": "Automatsko uključivanje pri pokretanju:",
+  "settings.experimental.remote.active": "Aktivno",
+  "settings.experimental.remote.inactive": "Neaktivno",
+  "settings.experimental.remote.hint": "Koristite /remote u chatu za prebacivanje",
   "settings.experimental.toolToggles": "Prekidači alata",
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",

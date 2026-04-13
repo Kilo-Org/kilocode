@@ -2,14 +2,14 @@ import { Tool } from "./tool"
 import DESCRIPTION from "./task.txt"
 import z from "zod"
 import { Session } from "../session"
+import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
-import { Identifier } from "../id/id"
 import { Agent } from "../agent/agent"
 import { SessionPrompt } from "../session/prompt"
 import { iife } from "@/util/iife"
 import { defer } from "@/util/defer"
 import { Config } from "../config/config"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 
 const parameters = z.object({
   description: z.string().describe("A short (3-5 words) description of the task"),
@@ -30,12 +30,13 @@ export const TaskTool = Tool.define("task", async (ctx) => {
   // Filter agents by permissions if agent provided
   const caller = ctx?.agent
   const accessibleAgents = caller
-    ? agents.filter((a) => PermissionNext.evaluate("task", a.name, caller.permission).action !== "deny")
+    ? agents.filter((a) => Permission.evaluate("task", a.name, caller.permission).action !== "deny")
     : agents
+  const list = accessibleAgents.toSorted((a, b) => a.name.localeCompare(b.name))
 
   const description = DESCRIPTION.replace(
     "{agents}",
-    accessibleAgents
+    list
       .map((a) => `- ${a.name}: ${a.description ?? "This subagent should only be called manually by the user."}`)
       .join("\n"),
   )
@@ -60,8 +61,10 @@ export const TaskTool = Tool.define("task", async (ctx) => {
 
       const agent = await Agent.get(params.subagent_type)
       if (!agent) throw new Error(`Unknown agent type: ${params.subagent_type} is not a valid agent type`)
-
-      const allowsTask = agent.permission.some((rule) => rule.permission === "task" && rule.action === "allow") // kilocode_change
+      // kilocode_change start — reject primary agents; only subagent/all modes allowed
+      if (agent.mode === "primary")
+        throw new Error(`Agent "${params.subagent_type}" is a primary agent and cannot be used as a subagent`)
+      // kilocode_change end
 
       // kilocode_change start — inherit edit and bash restrictions from the calling agent so
       // sub-agents cannot perform actions the parent agent is not allowed to perform.
@@ -71,7 +74,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
       // were themselves inherited from a grandparent, so both sources are needed.
       const caller = await Agent.get(ctx.agent)
       const callerSession = await Session.get(ctx.sessionID)
-      const callerRules = PermissionNext.merge(caller?.permission ?? [], callerSession.permission ?? [])
+      const callerRules = Permission.merge(caller?.permission ?? [], callerSession.permission ?? [])
       // Build the set of MCP server prefixes (e.g. "servername_") so we can
       // include both server-wide wildcards ("servername_*") and specific MCP tool
       // permissions ("servername_create_issue") in the inherited ruleset.
@@ -82,10 +85,12 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         (r) => r.permission === "edit" || r.permission === "bash" || isMcpRule(r.permission),
       )
       // kilocode_change end
+      const hasTaskPermission = agent.permission.some((rule) => rule.permission === "task")
+      const hasTodoWritePermission = agent.permission.some((rule) => rule.permission === "todowrite")
 
       const session = await iife(async () => {
         if (params.task_id) {
-          const found = await Session.get(params.task_id).catch(() => {})
+          const found = await Session.get(SessionID.make(params.task_id)).catch(() => {})
           if (found) return found
         }
 
@@ -93,17 +98,16 @@ export const TaskTool = Tool.define("task", async (ctx) => {
           parentID: ctx.sessionID,
           title: params.description + ` (@${agent.name} subagent)`,
           permission: [
-            {
-              permission: "todowrite",
-              pattern: "*",
-              action: "deny",
-            },
-            {
-              permission: "todoread",
-              pattern: "*",
-              action: "deny",
-            },
-            ...(allowsTask
+            ...(hasTodoWritePermission
+              ? []
+              : [
+                  {
+                    permission: "todowrite" as const,
+                    pattern: "*" as const,
+                    action: "deny" as const,
+                  },
+                ]),
+            ...(hasTaskPermission
               ? []
               : [
                   {
@@ -112,6 +116,9 @@ export const TaskTool = Tool.define("task", async (ctx) => {
                     action: "deny" as const,
                   },
                 ]),
+            // kilocode_change start — unconditionally deny task for all subagent sessions
+            { permission: "task", pattern: "*", action: "deny" },
+            // kilocode_change end
             ...(config.experimental?.primary_tools?.map((t) => ({
               pattern: "*",
               action: "allow" as const,
@@ -137,7 +144,7 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         },
       })
 
-      const messageID = Identifier.ascending("message")
+      const messageID = MessageID.ascending()
 
       function cancel() {
         SessionPrompt.cancel(session.id)
@@ -155,9 +162,8 @@ export const TaskTool = Tool.define("task", async (ctx) => {
         },
         agent: agent.name,
         tools: {
-          todowrite: false,
-          todoread: false,
-          ...(allowsTask ? {} : { task: false }),
+          ...(hasTodoWritePermission ? {} : { todowrite: false }),
+          ...(hasTaskPermission ? {} : { task: false }),
           ...Object.fromEntries((config.experimental?.primary_tools ?? []).map((t) => [t, false])),
         },
         parts: promptParts,

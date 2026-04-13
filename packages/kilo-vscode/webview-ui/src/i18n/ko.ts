@@ -939,6 +939,7 @@ export const dict = {
   "session.status.retry": "재시도 중…",
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
+  "session.status.offline": "네트워크 연결 끊김 — 다시 연결 중...",
 
   "ui.sessionTurn.cancel": "취소",
   "ui.sessionTurn.status.thinking": "생각 중...",
@@ -951,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
+  "context.usage.olderSessions": "{{count}}개의 이전 세션",
   "context.stats.thisSession": "이 세션",
 
   "time.justNow": "방금",
@@ -1063,6 +1065,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
+  "settings.experimental.remote.title": "Remote 제어",
+  "settings.experimental.remote.description":
+    "Kilo Cloud를 통한 세션의 Remote 제어를 활성화합니다. 이는 이 컴퓨터의 CLI에도 영향을 미칩니다.",
+  "settings.experimental.remote.current": "현재 상태:",
+  "settings.experimental.remote.startup": "시작 시 자동 활성화:",
+  "settings.experimental.remote.active": "활성",
+  "settings.experimental.remote.inactive": "비활성",
+  "settings.experimental.remote.hint": "채팅에서 /remote를 사용하여 전환하세요",
   "settings.experimental.toolToggles": "도구 토글",
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",

@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Ouvrez un dossier contenant un dépôt git pour utiliser les worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Ce dépôt utilise Git LFS, mais git-lfs n'a pas été trouvé. Veuillez installer Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Ce dépôt n'a pas encore de commits. Créez un commit initial avant d'utiliser les worktrees.",
   "agentManager.shortcuts.title": "Raccourcis clavier",
   "agentManager.shortcuts.category.sidebar": "Barre latérale",
   "agentManager.shortcuts.category.tabs": "Onglets",
@@ -71,6 +73,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nouvel onglet",
   "agentManager.shortcuts.closeTab": "Fermer l'onglet",
   "agentManager.shortcuts.toggleTerminal": "Basculer le terminal",
+  "agentManager.shortcuts.runScript": "Exécuter le script",
+  "agentManager.run.options": "Options d'exécution",
+  "agentManager.run.configure": "Configurer le script d'exécution",
   "agentManager.shortcuts.openAgentManager": "Ouvrir Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -109,6 +114,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Basculer le diff",
   "agentManager.diff.openFile": "Ouvrir le fichier",
+  "agentManager.diff.revertFile": "Rétablir le fichier",
+  "agentManager.diff.revertSuccess": "Fichier rétabli",
+  "agentManager.diff.revertError": "Échec du rétablissement",
   "agentManager.open.button": "Ouvrir",
   "agentManager.open.tooltip": "Ouvrir ce worktree dans VS Code",
   "agentManager.apply.button": "Appliquer en local",

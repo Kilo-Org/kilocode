@@ -4,39 +4,55 @@
 // transitively load flag.ts to ensure the env is captured at load time.
 process.env.KILO_SESSION_RETRY_LIMIT = "2"
 
-import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
-
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        queue() {},
-        flush: async () => undefined,
-      }
-    },
-  },
-}))
-
-// Modules that do NOT transitively import flag.ts can be statically imported.
+import { NodeFileSystem } from "@effect/platform-node"
+import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
+import { Effect, Layer, ServiceMap } from "effect"
+import * as Stream from "effect/Stream"
+import path from "path"
+import { Agent as AgentSvc } from "../../src/agent/agent"
+import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
+import { Permission } from "../../src/permission"
+import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import type { LLM as LLMType } from "../../src/session/llm"
-import type { MessageV2 } from "../../src/session/message-v2"
+import { ModelID, ProviderID } from "../../src/provider/schema"
+import { Session } from "../../src/session"
+import { LLM } from "../../src/session/llm"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionProcessor } from "../../src/session/processor"
+import { SessionRetry } from "../../src/session/retry"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { SessionStatus } from "../../src/session/status"
+import { Snapshot } from "../../src/snapshot"
 import { Log } from "../../src/util/log"
-import { tmpdir } from "../fixture/fixture"
+import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { provideTmpdirInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
-function createModel(): Provider.Model {
+const ref = {
+  providerID: ProviderID.make("test"),
+  modelID: ModelID.make("test-model"),
+}
+
+type Script = Stream.Stream<LLM.Event, unknown>
+
+class TestLLM extends ServiceMap.Service<
+  TestLLM,
+  {
+    readonly push: (stream: Script) => Effect.Effect<void>
+    readonly calls: Effect.Effect<number>
+  }
+>()("@test/RetryLimitLLM") {}
+
+function model(): Provider.Model {
   return {
-    id: "gpt-4",
-    providerID: "openai",
-    name: "GPT-4",
-    limit: {
-      context: 128000,
-      input: 0,
-      output: 4096,
-    },
+    id: "test-model",
+    providerID: "test",
+    name: "Test",
+    limit: { context: 128000, output: 4096 },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
     capabilities: {
       toolcall: true,
@@ -46,9 +62,8 @@ function createModel(): Provider.Model {
       input: { text: true, image: false, audio: false, video: false },
       output: { text: true, image: false, audio: false, video: false },
     },
-    api: { id: "openai", url: "https://api.openai.com/v1", npm: "@ai-sdk/openai" },
+    api: { npm: "@ai-sdk/openai" },
     options: {},
-    headers: {},
   } as Provider.Model
 }
 
@@ -63,146 +78,168 @@ function retryable429() {
   })
 }
 
-function sentinel() {
-  return new Error("unexpected extra llm call")
-}
+const llm = Layer.unwrap(
+  Effect.gen(function* () {
+    const queue: Script[] = []
+    let calls = 0
+    const push = (item: Script) => {
+      queue.push(item)
+      return Effect.void
+    }
+    return Layer.mergeAll(
+      Layer.succeed(
+        LLM.Service,
+        LLM.Service.of({
+          stream: () => {
+            calls += 1
+            const item = queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
+            return item
+          },
+        }),
+      ),
+      Layer.succeed(TestLLM, TestLLM.of({ push, calls: Effect.sync(() => calls) })),
+    )
+  }),
+)
+
+const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const deps = Layer.mergeAll(
+  Session.defaultLayer,
+  Snapshot.defaultLayer,
+  AgentSvc.defaultLayer,
+  Permission.layer,
+  Plugin.defaultLayer,
+  Config.defaultLayer,
+  status,
+  llm,
+).pipe(Layer.provideMerge(infra))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
+
+const it = testEffect(env)
 
 afterEach(() => {
   delete process.env.KILO_SESSION_RETRY_LIMIT
 })
 
 describe("session processor retry limit", () => {
-  test("stops after two retries with the normalized retryable error", async () => {
-    // Dynamic imports so that flag.ts sees KILO_SESSION_RETRY_LIMIT="2" set above
-    const { Bus } = await import("../../src/bus")
-    const { Identifier } = await import("../../src/id/id")
-    const { Instance } = await import("../../src/project/instance")
-    const { LLM } = await import("../../src/session/llm")
-    const { MessageV2 } = await import("../../src/session/message-v2")
-    const { SessionRetry } = await import("../../src/session/retry")
-    const { SessionStatus } = await import("../../src/session/status")
+  it.effect("stops after two retries with the normalized retryable error", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
 
-    await using tmp = await tmpdir({ git: true })
+          // 3 retryable 429 errors + sentinel (should not be reached)
+          yield* test.push(Stream.fail(retryable429()))
+          yield* test.push(Stream.fail(retryable429()))
+          yield* test.push(Stream.fail(retryable429()))
+          yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
 
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const { Session } = await import("../../src/session")
-        const { SessionProcessor } = await import("../../src/session/processor")
-        const model = createModel()
-        const session = await Session.create({})
-        const user = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          role: "user",
-          sessionID: session.id,
-          time: { created: Date.now() },
-          agent: "code",
-          model: { providerID: model.providerID, modelID: model.id },
-          tools: {},
-        })) as MessageV2.User
-        const assistant = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          parentID: user.id,
-          role: "assistant",
-          mode: "code",
-          agent: "code",
-          path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
-          },
-          cost: 0,
-          tokens: {
-            input: 0,
-            output: 0,
-            reasoning: 0,
-            cache: { read: 0, write: 0 },
-          },
-          modelID: model.id,
-          providerID: model.providerID,
-          time: { created: Date.now() },
-          sessionID: session.id,
-        })) as MessageV2.Assistant
+          const retry: number[] = []
+          const errors: Array<MessageV2.Assistant["error"]> = []
+          const unsubStatus = Bus.subscribe(SessionStatus.Event.Status, (event) => {
+            if (event.properties.status.type !== "retry") return
+            retry.push(event.properties.status.attempt)
+          })
+          const unsubError = Bus.subscribe(Session.Event.Error, (event) => {
+            errors.push(event.properties.error)
+          })
+          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-        const retry: number[] = []
-        const errors: Array<MessageV2.Assistant["error"]> = []
-        const unsubStatus = Bus.subscribe(SessionStatus.Event.Status, (event) => {
-          if (event.properties.sessionID !== session.id) return
-          if (event.properties.status.type !== "retry") return
-          retry.push(event.properties.status.attempt)
-        })
-        const unsubError = Bus.subscribe(Session.Event.Error, (event) => {
-          if (event.properties.sessionID !== session.id) return
-          errors.push(event.properties.error)
-        })
-        const llm = spyOn(LLM, "stream")
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValueOnce(retryable429())
-          .mockRejectedValue(sentinel())
-        const sleep = spyOn(SessionRetry, "sleep").mockResolvedValue(undefined)
-        const processor = SessionProcessor.create({
-          assistantMessage: assistant,
-          sessionID: session.id,
-          model,
-          abort: AbortSignal.any([]),
-        })
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
 
-        const inp: LLMType.StreamInput = {
-          user,
-          sessionID: session.id,
-          model,
-          agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-          system: [],
-          abort: AbortSignal.any([]),
-          messages: [],
-          tools: {},
-        }
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
 
-        try {
-          const result = await processor.process(inp)
-          const expected = MessageV2.fromError(retryable429(), { providerID: "openai" })
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
 
-          expect(result).toBe("stop")
-          expect(llm).toHaveBeenCalledTimes(3)
-          expect(sleep).toHaveBeenCalledTimes(2)
-          expect(retry).toStrictEqual([1, 2])
-          expect(processor.message.error).toStrictEqual(expected)
-          expect(errors).toStrictEqual([expected])
-        } finally {
-          unsubStatus()
-          unsubError()
-          llm.mockRestore()
-          sleep.mockRestore()
-        }
-      },
-    })
-  })
+          const expected = MessageV2.fromError(retryable429(), { providerID: ProviderID.make("test") })
+          try {
+            const result = yield* handle.process(input)
+            const calls = yield* test.calls
 
-  test("only positive integers enable the limit", async () => {
-    const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
+            expect(result).toBe("stop")
+            expect(calls).toBe(3)
+            expect(delay).toHaveBeenCalled()
+            expect(retry).toStrictEqual([1, 2])
+            expect(handle.message.error).toStrictEqual(expected)
+            expect(errors).toStrictEqual([expected])
+          } finally {
+            unsubStatus()
+            unsubError()
+            delay.mockRestore()
+          }
+        }),
+      { git: true },
+    ),
+  )
 
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+  it.effect("only positive integers enable the limit", () =>
+    Effect.promise(async () => {
+      const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "0"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      delete process.env.KILO_SESSION_RETRY_LIMIT
+      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "-1"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "0"
+      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "abc"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "-1"
+      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-    process.env.KILO_SESSION_RETRY_LIMIT = "2"
-    expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
-  })
+      process.env.KILO_SESSION_RETRY_LIMIT = "abc"
+      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
-  test("does not change after import", async () => {
-    delete process.env.KILO_SESSION_RETRY_LIMIT
-    const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
-    const { Flag: loaded } = await import("../../src/flag/flag?" + id)
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-    process.env.KILO_SESSION_RETRY_LIMIT = "5"
-    expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
-  })
+      process.env.KILO_SESSION_RETRY_LIMIT = "2"
+      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
+    }),
+  )
+
+  it.effect("does not change after import", () =>
+    Effect.promise(async () => {
+      delete process.env.KILO_SESSION_RETRY_LIMIT
+      const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
+      const { Flag: loaded } = await import("../../src/flag/flag?" + id)
+      expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      process.env.KILO_SESSION_RETRY_LIMIT = "5"
+      expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+    }),
+  )
 })

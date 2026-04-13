@@ -217,7 +217,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   // Focus textarea when any part of the app requests it
-  const onFocusPrompt = () => textareaRef?.focus()
+  const onFocusPrompt = (event: Event) => {
+    const focus = () => {
+      const ref = textareaRef
+      if (!ref) return
+      ref.focus({ preventScroll: true })
+    }
+    focus()
+    if (!(event instanceof CustomEvent) || !event.detail?.restore) return
+    const restore = () => {
+      window.focus()
+      focus()
+    }
+    queueMicrotask(restore)
+    requestAnimationFrame(() => {
+      restore()
+      requestAnimationFrame(restore)
+      setTimeout(restore, 0)
+      setTimeout(restore, 50)
+    })
+  }
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 

@@ -1,0 +1,172 @@
+/* Startup Error Banner */
+.startup-error-banner {
+  margin: 8px 12px;
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  font-size: 12px;
+}
+
+.startup-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.startup-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.startup-error-firstline {
+  font-weight: 400;
+}
+
+.startup-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.startup-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.startup-error-retry {
+  background: none;
+  border: none;
+  color: var(--vscode-textLink-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.startup-error-retry:hover {
+  text-decoration: underline;
+}
+
+.startup-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* ============================================
+   Revert Banner
+   ============================================ */
+
+.revert-banner {
+  margin: 8px 12px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--surface-secondary, var(--vscode-editorWidget-background, #252526));
+  border: 1px solid var(--border-base, var(--vscode-editorWidget-border, #454545));
+  font-size: 12px;
+}
+
+.revert-banner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.revert-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+}
+
+.revert-banner-count {
+  font-weight: 500;
+}
+
+.revert-banner-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.revert-banner-files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.revert-banner-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 1px 0;
+  color: var(--text-base, var(--vscode-foreground));
+}
+
+.revert-banner-filename {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  direction: rtl;
+  text-align: left;
+}
+
+.revert-banner-hint {
+  margin-top: 6px;
+  color: var(--text-muted, var(--vscode-descriptionForeground));
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ============================================
+   Auth Prompt (sign in / sign up error displays)
+   ============================================ */
+
+[data-component="auth-prompt"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-header"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-icon"] {
+  font-size: 16px;
+  line-height: 1;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-title"] {
+  font-weight: 600;
+  color: var(--text-strong, var(--vscode-foreground));
+  font-size: 13px;
+}
+
+[data-component="auth-prompt"] [data-slot="auth-prompt-description"] {
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+}

@@ -22,7 +22,7 @@
         default =
           let
             kilo-dev = pkgs.writeShellScriptBin "kilo-dev" ''
-              cd "$KILO_ROOT"
+                cd "$KILO_ROOT"
               exec ${pkgs.bun}/bin/bun dev "$@"
             '';
 
@@ -155,6 +155,7 @@
               [
                 bun
                 nodejs_20
+                python3
                 pkg-config
                 openssl
                 git

@@ -935,6 +935,7 @@ export const dict = {
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.retrying": "กำลังลองใหม่ (ครั้งที่ {{ attempt }})… {{ message }}",
   "session.status.working": "กำลังทำงาน...",
+  "session.status.offline": "เครือข่ายถูกตัดการเชื่อมต่อ — กำลังเชื่อมต่อใหม่...",
 
   "ui.sessionTurn.cancel": "ยกเลิก",
   "ui.sessionTurn.status.thinking": "กำลังคิด...",
@@ -947,6 +948,7 @@ export const dict = {
   "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
+  "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
   "context.stats.thisSession": "เซสชันนี้",
 
   "time.justNow": "เมื่อสักครู่",
@@ -1058,6 +1060,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "ดำเนินลูปเอเจนต์ต่อเมื่อสิทธิ์ถูกปฏิเสธ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
+  "settings.experimental.remote.title": "การควบคุม Remote",
+  "settings.experimental.remote.description":
+    "เปิดใช้งานการควบคุม Remote ของเซสชันผ่าน Kilo Cloud ซึ่งจะส่งผลต่อ CLI บนเครื่องนี้ด้วย",
+  "settings.experimental.remote.current": "สถานะปัจจุบัน:",
+  "settings.experimental.remote.startup": "เปิดใช้งานอัตโนมัติเมื่อเริ่มต้น:",
+  "settings.experimental.remote.active": "เปิดใช้งาน",
+  "settings.experimental.remote.inactive": "ปิดใช้งาน",
+  "settings.experimental.remote.hint": "ใช้ /remote ในแชทเพื่อสลับสถานะ",
   "settings.experimental.toolToggles": "สวิตช์เครื่องมือ",
   "settings.agentBehaviour.defaultAgent.title": "เอเจนต์เริ่มต้น",
   "settings.agentBehaviour.defaultAgent.description": "เอเจนต์ที่ใช้เมื่อไม่ได้ระบุ",

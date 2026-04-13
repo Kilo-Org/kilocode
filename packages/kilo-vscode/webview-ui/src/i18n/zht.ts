@@ -929,6 +929,7 @@ export const dict = {
   "session.status.retry": "正在重試…",
   "session.status.retrying": "正在重試（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "處理中…",
+  "session.status.offline": "網路已斷線 — 正在重新連線...",
 
   "ui.sessionTurn.cancel": "取消",
   "ui.sessionTurn.status.thinking": "思考中...",
@@ -941,6 +942,7 @@ export const dict = {
   "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
+  "context.usage.olderSessions": "{{count}} 個較早的工作階段",
   "context.stats.thisSession": "此工作階段",
 
   "time.justNow": "剛剛",
@@ -1050,6 +1052,13 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
+  "settings.experimental.remote.title": "Remote 控制",
+  "settings.experimental.remote.description": "透過 Kilo Cloud 啟用工作階段的 Remote 控制。這也會影響此電腦上的 CLI。",
+  "settings.experimental.remote.current": "目前狀態：",
+  "settings.experimental.remote.startup": "啟動時自動啟用：",
+  "settings.experimental.remote.active": "已啟用",
+  "settings.experimental.remote.inactive": "已停用",
+  "settings.experimental.remote.hint": "在聊天中使用 /remote 來切換",
   "settings.experimental.toolToggles": "工具開關",
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
