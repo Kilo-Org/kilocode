@@ -154,6 +154,8 @@ export const dict = {
   "ui.fileSearch.close": "検索を閉じる",
   "ui.tool.task": "タスク",
   "ui.tool.skill": "スキル",
+  "ui.tool.stop": "停止", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}秒", // kilocode_change
   "ui.basicTool.called": "`{{tool}}` を呼び出しました",
   "ui.toolErrorCard.failed": "失敗",
   "ui.toolErrorCard.copyError": "エラーをコピー",

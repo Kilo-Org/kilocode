@@ -161,6 +161,8 @@ export const dict = {
   "ui.fileSearch.close": "Aramayı kapat",
   "ui.tool.task": "Görev",
   "ui.tool.skill": "Yetenek",
+  "ui.tool.stop": "Durdur", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}sn", // kilocode_change
   "ui.basicTool.called": "`{{tool}}` çağrıldı",
   "ui.toolErrorCard.failed": "Başarısız",
   "ui.toolErrorCard.copyError": "Hatayı kopyala",

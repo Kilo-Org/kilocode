@@ -160,6 +160,8 @@ export const dict = {
   "ui.fileSearch.close": "Suche schließen",
   "ui.tool.task": "Aufgabe",
   "ui.tool.skill": "Fähigkeit",
+  "ui.tool.stop": "Stopp", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
   "ui.basicTool.called": "`{{tool}}` aufgerufen",
   "ui.toolErrorCard.failed": "Fehlgeschlagen",
   "ui.toolErrorCard.copyError": "Fehler kopieren",

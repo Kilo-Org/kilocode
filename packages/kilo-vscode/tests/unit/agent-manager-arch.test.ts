@@ -684,6 +684,9 @@ describe("Agent Manager — provider chain parity with sidebar", () => {
     // which the agent manager already includes in its provider chain.
     "LanguageProvider",
     "DataProvider",
+    // ToolActionsProvider is nested inside DataBridge, so it's already
+    // present in the agent manager via the shared DataBridge component.
+    "ToolActionsProvider",
   ]
 
   it("agent manager includes all context providers from sidebar App.tsx", () => {

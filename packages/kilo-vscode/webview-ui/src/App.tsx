@@ -105,6 +105,9 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     return dir.endsWith("/") || dir.endsWith("\\") ? dir : dir + "/"
   }
 
+  // Abort a session by ID. The CLI backend only supports session-level abort
+  // (no per-tool cancel), so stopping a shell/subtask halts the whole session.
+  // For subtasks this is the child session, leaving the parent unaffected.
   const abort = (sessionID: string) => {
     vscode.postMessage({ type: "abort", sessionID })
   }

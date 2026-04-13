@@ -158,6 +158,8 @@ export const dict: Record<Keys, string> = {
   "ui.fileSearch.close": "Lukk søk",
   "ui.tool.task": "Oppgave",
   "ui.tool.skill": "Ferdighet",
+  "ui.tool.stop": "Stopp", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
   "ui.basicTool.called": "Kalte `{{tool}}`",
   "ui.toolErrorCard.failed": "Mislyktes",
   "ui.toolErrorCard.copyError": "Kopier feil",

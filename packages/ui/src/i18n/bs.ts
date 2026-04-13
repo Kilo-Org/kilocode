@@ -159,6 +159,8 @@ export const dict = {
   "ui.fileSearch.close": "Zatvori pretragu",
   "ui.tool.task": "Zadatak",
   "ui.tool.skill": "Vještina",
+  "ui.tool.stop": "Zaustavi", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
   "ui.basicTool.called": "Pozvan `{{tool}}`",
   "ui.toolErrorCard.failed": "Neuspješno",
   "ui.toolErrorCard.copyError": "Kopiraj grešku",

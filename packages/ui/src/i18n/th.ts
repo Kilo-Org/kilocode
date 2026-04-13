@@ -156,6 +156,8 @@ export const dict = {
   "ui.fileSearch.close": "ปิดการค้นหา",
   "ui.tool.task": "งาน",
   "ui.tool.skill": "ทักษะ",
+  "ui.tool.stop": "หยุด", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}วิ", // kilocode_change
   "ui.basicTool.called": "เรียกใช้ `{{tool}}`",
   "ui.toolErrorCard.failed": "ล้มเหลว",
   "ui.toolErrorCard.copyError": "คัดลอกข้อผิดพลาด",

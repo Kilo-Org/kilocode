@@ -155,6 +155,8 @@ export const dict = {
   "ui.fileSearch.close": "Cerrar búsqueda",
   "ui.tool.task": "Tarea",
   "ui.tool.skill": "Habilidad",
+  "ui.tool.stop": "Detener", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
   "ui.basicTool.called": "Llamado `{{tool}}`",
   "ui.toolErrorCard.failed": "Falló",
   "ui.toolErrorCard.copyError": "Copiar error",

@@ -159,6 +159,8 @@ export const dict = {
   "ui.fileSearch.close": "關閉搜尋",
   "ui.tool.task": "任務",
   "ui.tool.skill": "技能",
+  "ui.tool.stop": "停止", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}秒", // kilocode_change
   "ui.basicTool.called": "呼叫了 `{{tool}}`",
   "ui.toolErrorCard.failed": "失敗",
   "ui.toolErrorCard.copyError": "複製錯誤",

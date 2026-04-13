@@ -121,6 +121,8 @@ export const dict = {
   "ui.tool.questions": "Питання",
   "ui.tool.task": "Завдання",
   "ui.tool.skill": "Навичка",
+  "ui.tool.stop": "Зупинити", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}с", // kilocode_change
   "ui.tool.agent": "{{type}} Агент",
   "ui.tool.agent.default": "Агент",
 

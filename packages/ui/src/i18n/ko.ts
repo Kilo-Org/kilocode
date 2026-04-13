@@ -155,6 +155,8 @@ export const dict = {
   "ui.fileSearch.close": "검색 닫기",
   "ui.tool.task": "작업",
   "ui.tool.skill": "스킬",
+  "ui.tool.stop": "중지", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}초", // kilocode_change
   "ui.basicTool.called": "`{{tool}}` 호출됨",
   "ui.toolErrorCard.failed": "실패",
   "ui.toolErrorCard.copyError": "오류 복사",

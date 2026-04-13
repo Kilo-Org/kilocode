@@ -116,6 +116,8 @@ export const dict: Record<string, string> = {
   "ui.tool.questions": "Vragen",
   "ui.tool.task": "Taak",
   "ui.tool.skill": "Vaardigheid",
+  "ui.tool.stop": "Stoppen", // kilocode_change
+  "ui.tool.elapsed": "{{seconds}}s", // kilocode_change
   "ui.tool.agent": "{{type}} Agent",
   "ui.tool.agent.default": "Agent",
 
