@@ -214,6 +214,10 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     font-size: var(--font-size-small);
     color: var(--text-weak);
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
   }
 }
 

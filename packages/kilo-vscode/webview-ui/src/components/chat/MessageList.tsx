@@ -238,7 +238,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return index() > active
                   })
 
-                  return <VscodeSessionTurn turn={turn} queued={queued()} />
+                  return (
+                    <VscodeSessionTurn
+                      turn={turn}
+                      queued={queued()}
+                      onDeleteQueued={
+                        queued()
+                          ? () => session.deleteMessage(session.currentSessionID() ?? "", turn.user.id)
+                          : undefined
+                      }
+                    />
+                  )
                 }}
               </Virtualizer>
             </Show>

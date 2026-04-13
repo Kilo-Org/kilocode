@@ -233,6 +233,7 @@ interface SessionContextValue {
   loadOlderMessages: () => void
   selectSession: (id: string) => void
   deleteSession: (id: string) => void
+  deleteMessage: (sessionID: string, messageID: string) => void
   renameSession: (id: string, title: string) => void
   syncSession: (sessionID: string) => void
 
@@ -1987,6 +1988,15 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "deleteSession", sessionID: id })
   }
 
+  function deleteMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) {
+      console.warn("[Kilo New] Cannot delete message: not connected")
+      return
+    }
+    handleMessageRemoved(sessionID, messageID)
+    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+  }
+
   function renameSession(id: string, title: string) {
     if (!server.isConnected()) {
       console.warn("[Kilo New] Cannot rename session: not connected")
@@ -2253,6 +2263,7 @@ export const SessionProvider: ParentComponent = (props) => {
     loadOlderMessages,
     selectSession,
     deleteSession,
+    deleteMessage,
     renameSession,
     syncSession,
     cloudPreviewId,

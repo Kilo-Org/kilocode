@@ -706,6 +706,7 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  onDeleteQueued?: () => void
   onRevert?: () => void
 }) {
   const data = useData()
@@ -823,6 +824,15 @@ export function UserMessageDisplay(props: {
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Show when={props.onDeleteQueued}>
+                    <IconButton
+                      icon="trash"
+                      label={i18n.t("ui.message.deleteQueued")}
+                      size="xs"
+                      variant="ghost"
+                      onClick={props.onDeleteQueued}
+                    />
+                  </Show>
                 </div>
               </GrowBox>
             </div>

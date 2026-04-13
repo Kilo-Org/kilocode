@@ -848,6 +848,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "chatCompletionAccepted":
           this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
           break
+        case "deleteSession":
+          await this.handleDeleteSession(message.sessionID)
+          break
+        case "deleteMessage":
+          await this.handleDeleteMessage(message.sessionID, message.messageID)
+          break
+        case "renameSession":
+          await this.handleRenameSession(message.sessionID, message.title)
+          break
         case "toggleRemote":
         case "setRemoteEnabled":
         case "requestRemoteStatus":
@@ -857,12 +866,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
               if (s) this.sendRemoteStatus()
             })
             .catch((err) => console.error("[Kilo New] remote message failed:", err))
-          break
-        case "deleteSession":
-          await this.handleDeleteSession(message.sessionID)
-          break
-        case "renameSession":
-          await this.handleRenameSession(message.sessionID, message.title)
           break
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
@@ -1545,6 +1548,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to delete session",
+      })
+    }
+  }
+
+  private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      return
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory(sessionID)
+      await this.client.session.deleteMessage({ sessionID, messageID, directory: dir }, { throwOnError: true })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to delete message",
+        sessionID,
       })
     }
   }

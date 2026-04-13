@@ -1892,6 +1892,12 @@ export interface DeleteSessionRequest {
   sessionID: string
 }
 
+export interface DeleteMessageRequest {
+  type: "deleteMessage"
+  sessionID: string
+  messageID: string
+}
+
 export interface RenameSessionRequest {
   type: "renameSession"
   sessionID: string
@@ -2527,6 +2533,7 @@ export type WebviewMessage =
   | SuggestionAcceptRequest
   | SuggestionDismissRequest
   | DeleteSessionRequest
+  | DeleteMessageRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
   | UpdateAutocompleteSettingMessage
