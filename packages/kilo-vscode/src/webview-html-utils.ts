@@ -27,7 +27,7 @@ export function buildCspString(cspSource: string, nonce: string, port?: number):
     `style-src 'unsafe-inline' ${cspSource}`,
     `script-src 'nonce-${nonce}' 'wasm-unsafe-eval'`,
     `font-src ${cspSource}`,
-    `connect-src ${cspSource} ${connectSrc}`,
+    `connect-src ${cspSource} ${connectSrc} https://*.tts.speech.microsoft.com`,
     `img-src ${cspSource} data: https:`,
   ]
   return joinCspDirectives(directives)

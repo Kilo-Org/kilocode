@@ -33,6 +33,7 @@ import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { speak, stop as stopSpeech, ensureAudioReady } from "./utils/speech-playback"
+import { filterTextForSpeech, detectSentiment } from "./utils/speech-text-filter"
 import type { SpeechSettings } from "./types/voice"
 import type { ExtensionMessage } from "./types/messages"
 import "./styles/chat.css"
@@ -258,24 +259,20 @@ const AppContent: Component = () => {
           .trim()
         if (!rawText) return
 
-        // Strip markdown code blocks and URLs for cleaner speech
-        const textContent = rawText
-          .replace(/```[\s\S]*?```/g, "")
-          .replace(/`[^`]+`/g, (m) => m.slice(1, -1))
-          .replace(/https?:\/\/\S+/g, "")
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-          .replace(/#{1,6}\s/g, "")
-          .replace(/[*_~]+/g, "")
-          .trim()
+        // 25-rule text filter: strips code, tool artifacts, identifiers, markdown, enforces length cap
+        const textContent = filterTextForSpeech(rawText)
         if (!textContent) return
+
+        // Sentiment-based pitch/rate adjustment
+        const sentiment = detectSentiment(textContent)
 
         ensureAudioReady()
         speak(textContent, {
           region: ss.azure.region,
           apiKey: ss.azure.apiKey,
           voiceId: ss.azure.voiceId,
-          pitch: ss.tuning.pitch,
-          rate: ss.tuning.rate,
+          pitch: ss.tuning.pitch + sentiment.pitchModifier,
+          rate: ss.tuning.rate * sentiment.rateModifier,
           volume: ss.tuning.volume ?? undefined,
           style: ss.tuning.style,
           styleDegree: ss.tuning.styleDegree,

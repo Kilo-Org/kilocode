@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import * as path from "path"
 import * as vscode from "vscode"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
@@ -822,15 +821,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         }
-        case "chatCompletionAccepted":
-          this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
-          break
-        case "deleteSession":
-          await this.handleDeleteSession(message.sessionID)
-          break
-        case "renameSession":
-          await this.handleRenameSession(message.sessionID, message.title)
-          break
+        case "chatCompletionAccepted": this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength); break
+        case "deleteSession": await this.handleDeleteSession(message.sessionID); break
+        case "renameSession": await this.handleRenameSession(message.sessionID, message.title); break
         case "toggleRemote":
         case "setRemoteEnabled":
         case "requestRemoteStatus":
@@ -844,20 +837,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
           break
-        case "requestBrowserSettings":
-          this.sendBrowserSettings()
-          break
-        case "requestClaudeCompatSetting":
-          this.sendClaudeCompatSetting()
-          break
-        case "requestNotificationSettings":
-          this.sendNotificationSettings()
-          break
+        case "requestBrowserSettings": this.sendBrowserSettings(); break
+        case "requestClaudeCompatSetting": this.sendClaudeCompatSetting(); break
+        case "requestNotificationSettings": this.sendNotificationSettings(); break
         case "requestSpeechSettings": this.sendSpeechSettings(); break
         case "validateAzureKey": this.validateAzureKey(message.apiKey, message.region); break
-        case "requestTimelineSetting":
-          this.sendTimelineSetting()
-          break
+        case "requestTimelineSetting": this.sendTimelineSetting(); break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
             console.error("[Kilo New] fetchAndSendNotifications failed:", e),
