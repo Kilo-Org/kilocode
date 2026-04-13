@@ -518,7 +518,7 @@
         "command": "kilo-code.new.agentManager.runScript",
         "key": "ctrl+e",
         "mac": "cmd+e",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (isMac || !terminalFocus)"
       },
       {
         "command": "kilo-code.new.agentManager.toggleDiff",

@@ -86,15 +86,13 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Ensure Agent Manager keybindings work when a VS Code terminal has focus.
+  // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
   // commands by default.
-  ensureCommandsSkipShell([
-    "kilo-code.new.agentManagerOpen",
-    "kilo-code.new.agentManager.showTerminal",
-    "kilo-code.new.agentManager.runScript",
-  ])
+  const skip = ["kilo-code.new.agentManagerOpen", "kilo-code.new.agentManager.showTerminal"]
+  if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
+  ensureCommandsSkipShell(skip)
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
