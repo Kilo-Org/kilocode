@@ -1993,7 +1993,6 @@ export const SessionProvider: ParentComponent = (props) => {
       console.warn("[Kilo New] Cannot delete message: not connected")
       return
     }
-    handleMessageRemoved(sessionID, messageID)
     vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
