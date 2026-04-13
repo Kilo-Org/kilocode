@@ -87,3 +87,47 @@ export const DEFAULT_SPEECH_SETTINGS: SpeechSettings = {
 	},
 	presets: [],
 }
+
+export interface SpeechVoice {
+	id: string
+	name: string
+	locale: string
+	gender: "Female" | "Male" | "Unknown"
+	description: string
+	provider: string
+	styles?: string[]
+}
+
+export interface SynthesisOptions {
+	voiceId: string
+	pitch?: number
+	rate?: number
+	volume?: number
+	style?: string
+	styleDegree?: number
+	emphasis?: string
+	pronunciations?: PronunciationEntry[]
+	audioFormat?: string
+	apiKey?: string
+	region?: string
+}
+
+export interface SpeechProvider {
+	id: string
+	name: string
+	tier: "free" | "freeTier"
+	requiresApiKey: boolean
+	description: string
+	freeAllowance: string
+	capabilities: {
+		ssml: boolean
+		styles: boolean
+		emphasis: boolean
+		pronunciations: boolean
+		audioFormats: string[]
+	}
+	getVoices(): SpeechVoice[]
+	synthesize(text: string, opts: SynthesisOptions): Promise<Blob | void>
+	stop(): void
+	testConnection?(apiKey: string, region?: string): Promise<boolean>
+}
