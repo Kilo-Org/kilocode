@@ -1205,7 +1205,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendNotifications(),
         this.seedSessionStatusMap(),
       ])
-      this.cachedGitRepo = await hasGit(this.client!)
+      this.cachedGitRepo = await hasGit(this.client!, this.getWorkspaceDirectory())
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
