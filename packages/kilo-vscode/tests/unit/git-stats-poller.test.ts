@@ -756,14 +756,14 @@ describe("GitStatsPoller", () => {
   })
 
   it("uses periodic full-sync cadence even when no active worktree is set", async () => {
-    const bCalls: number[] = []
-    let tickRef = 0
+    const calls: string[] = []
+    let statsEmissions = 0
 
     const client = {
       worktree: {
         diffSummary: async ({ directory }: { directory: string }) => {
-          if (directory === "/tmp/b") bCalls.push(tickRef)
-          return { data: diff(tickRef, 0) }
+          calls.push(directory)
+          return { data: diff(calls.length, 0) }
         },
       },
     } as unknown as KiloClient
@@ -777,7 +777,7 @@ describe("GitStatsPoller", () => {
       getWorkspaceRoot: () => undefined,
       getClient: () => client,
       onStats: () => {
-        tickRef++
+        statsEmissions++
       },
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -790,11 +790,15 @@ describe("GitStatsPoller", () => {
 
     // Don't set activeWorktreeId — simulates clearSession state
     poller.setEnabled(true)
-    await waitFor(() => tickRef >= 7, 3000)
+    // Wait long enough for at least 2 full-sync ticks (tick 0 and tick 6)
+    await waitFor(() => calls.filter((c) => c === "/tmp/b").length >= 2, 4000)
     poller.stop()
 
-    // With FULL_SYNC_EVERY=6, "b" should only be polled at ticks 0 and 6 (not every tick)
-    expect(bCalls.length).toBeLessThan(tickRef)
-    expect(bCalls.length).toBeGreaterThanOrEqual(2)
+    // Both worktrees should have been polled (full sync happened)
+    expect(calls).toContain("/tmp/a")
+    expect(calls).toContain("/tmp/b")
+    // "b" should only have been polled on full-sync ticks (0 and 6), not every tick
+    const bCount = calls.filter((c) => c === "/tmp/b").length
+    expect(bCount).toBeLessThanOrEqual(3) // at most tick 0, 6, and maybe 12
   })
 })

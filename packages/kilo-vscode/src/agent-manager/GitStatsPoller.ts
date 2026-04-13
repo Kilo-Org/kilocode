@@ -197,13 +197,19 @@ export class GitStatsPoller {
     // Most ticks only poll the active worktree for fast, cheap feedback.
     // Every FULL_SYNC_EVERY ticks poll all available worktrees so that
     // inactive ones stay reasonably current. When no active worktree is
-    // set we still use the same cadence (full sync on every
-    // FULL_SYNC_EVERY-th tick) to avoid the original every-tick load.
+    // set (e.g. after clearSession) non-full-sync ticks are skipped
+    // entirely — stats from the last full sync remain cached.
     const isFullSync = this.tickCount % GitStatsPoller.FULL_SYNC_EVERY === 0
-    const targets =
-      this.activeWorktreeId && !isFullSync
-        ? available.filter((wt) => wt.id === this.activeWorktreeId)
-        : available
+    let targets: Worktree[]
+    if (isFullSync) {
+      targets = available
+    } else if (this.activeWorktreeId) {
+      targets = available.filter((wt) => wt.id === this.activeWorktreeId)
+    } else {
+      // No active session and not a full-sync tick — skip polling entirely.
+      // Stats from the last full sync remain in lastStats for the webview.
+      targets = []
+    }
     this.tickCount++
 
     // Gate the HTTP diffSummary call through the semaphore but NOT the
