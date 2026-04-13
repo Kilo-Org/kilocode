@@ -47,7 +47,7 @@ The extension uses `gh` to automatically discover PRs for each worktree branch. 
 2. **Branch name** — `gh pr view <branch>` matches same-repo branches pushed to origin
 3. **HEAD commit SHA** — `gh pr list --search "<sha>"` as a last resort, matching PRs whose head ref points to the exact same commit
 
-You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
+You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
 
 #### Badge colors
 
