@@ -764,7 +764,7 @@ export const SessionRoutes = lazy(() =>
         const messages = await Session.messages({ sessionID: params.sessionID })
         const user = messages.filter((msg) => msg.info.role === "user")
         const target = user.find((msg) => msg.info.id === params.messageID)
-        const latest = messages.filter((msg) => msg.info.role === "assistant" && msg.info.finish).at(0)
+        const latest = messages.filter((msg) => msg.info.role === "assistant" && msg.info.finish).at(-1)
         const current = user.find((msg) => !latest || msg.info.id > latest.info.id) ?? user.at(-1)
         if (!target || target.info.id <= (current?.info.id ?? "")) {
           await AppRuntime.runPromise(
