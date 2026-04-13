@@ -60,6 +60,15 @@ function parseApiPrice(price: string | null | undefined): number | undefined {
 }
 
 /**
+ * Client-side overrides for specific models.
+ * These ensure certain models appear in the Recommended section and/or are marked free,
+ * regardless of what the API returns.
+ */
+const MODEL_OVERRIDES: Record<string, { preferredIndex?: number; isFree?: boolean }> = {
+  "openrouter/elephant-alpha": { preferredIndex: 0, isFree: true },
+}
+
+/**
  * Fetch models from Kilo API (OpenRouter-compatible endpoint)
  *
  * @param options - Configuration options
@@ -115,6 +124,13 @@ export async function fetchKiloModels(options?: {
       // Skip image generation models
       if (model.architecture?.output_modalities?.includes("image")) {
         continue
+      }
+
+      // Apply client-side overrides for specific models
+      const override = MODEL_OVERRIDES[model.id]
+      if (override) {
+        if (override.preferredIndex !== undefined) model.preferredIndex = override.preferredIndex
+        if (override.isFree !== undefined) model.isFree = override.isFree
       }
 
       const transformedModel = transformToModelDevFormat(model)
