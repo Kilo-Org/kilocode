@@ -1301,16 +1301,18 @@ export namespace Provider {
       log.info("found", { providerID })
     }
 
-    const gitlab = ProviderID.make("gitlab")
-    if (discoveryLoaders[gitlab] && providers[gitlab]) {
+    // Run all dynamic model discovery loaders
+    for (const [providerID, loader] of Object.entries(discoveryLoaders)) {
+      if (!providers[providerID]) continue
+
       await (async () => {
-        const discovered = await discoveryLoaders[gitlab]()
+        const discovered = await loader()
         for (const [modelID, model] of Object.entries(discovered)) {
-          if (!providers[gitlab].models[modelID]) {
-            providers[gitlab].models[modelID] = model
+          if (!providers[providerID].models[modelID]) {
+            providers[providerID].models[modelID] = model
           }
         }
-      })().catch((e) => log.warn("state discovery error", { id: "gitlab", error: e }))
+      })().catch((e) => log.warn("state discovery error", { id: providerID, error: e }))
     }
 
     return {
