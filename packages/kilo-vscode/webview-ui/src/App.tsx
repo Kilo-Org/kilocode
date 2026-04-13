@@ -18,6 +18,7 @@ import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
+import { ImageModeProvider } from "./context/ImageModeContext"
 import { ChatView } from "./components/chat"
 import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
@@ -285,11 +286,13 @@ const App: Component = () => {
                       <ProviderProvider>
                         <ConfigProvider>
                           <NotificationsProvider>
-                            <SessionProvider>
-                              <DataBridge>
-                                <AppContent />
-                              </DataBridge>
-                            </SessionProvider>
+                            <ImageModeProvider>
+                              <SessionProvider>
+                                <DataBridge>
+                                  <AppContent />
+                                </DataBridge>
+                              </SessionProvider>
+                            </ImageModeProvider>
                           </NotificationsProvider>
                         </ConfigProvider>
                       </ProviderProvider>

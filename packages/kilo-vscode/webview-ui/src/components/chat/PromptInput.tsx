@@ -15,6 +15,7 @@ import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useImageMode } from "../../context/ImageModeContext"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
@@ -56,11 +57,25 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
+  const imageMode = useImageMode()
   const dialog = useDialog()
   const mention = useFileMention(vscode)
   const excluded = worktree ? new Set(["sessions"]) : undefined
   const slash = useSlashCommand(vscode, excluded)
-  const imageAttach = useImageAttachments()
+  const imageAttach = useImageAttachments({ imageMode: imageMode })
+
+  createEffect(() => {
+    const mode = imageMode()
+    imageAttach.replace([])
+  })
+
+  onCleanup(
+    vscode.onMessage((msg: any) => {
+      if (msg.type === "imageSaved") {
+        imageAttach.handleImageSaved(msg.id, msg.filePath)
+      }
+    }),
+  )
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
     const resolved = paths.map((p) => convertToMentionPath(p, cwd))

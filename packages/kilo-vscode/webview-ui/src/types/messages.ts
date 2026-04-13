@@ -1441,6 +1441,8 @@ export type ExtensionMessage =
   | QuestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | ImageModeLoadedMessage
+  | ImageSavedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | GlobalConfigLoadedMessage
@@ -1808,6 +1810,21 @@ export interface ClaudeCompatSettingLoadedMessage {
   enabled: boolean
 }
 
+export interface RequestImageModeMessage {
+  type: "requestImageMode"
+}
+
+export interface ImageModeLoadedMessage {
+  type: "imageModeLoaded"
+  mode: "data" | "path"
+}
+
+export interface ImageSavedMessage {
+  type: "imageSaved"
+  id: string
+  filePath: string
+}
+
 export interface RequestConfigMessage {
   type: "requestConfig"
 }
@@ -1932,6 +1949,14 @@ export interface RenameWorktreeRequest {
   type: "agentManager.renameWorktree"
   worktreeId: string
   label: string
+}
+
+export interface SaveImageToTempRequest {
+  type: "saveImageToTemp"
+  id: string
+  mime: string
+  base64: string
+  filename: string
 }
 
 export interface RequestRepoInfoMessage {
@@ -2374,6 +2399,7 @@ export type WebviewMessage =
   | RequestTimelineSettingMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
+  | RequestImageModeMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | UpdateConfigMessage
@@ -2468,6 +2494,7 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | SaveImageToTempRequest
 
 // ============================================
 // VS Code API type

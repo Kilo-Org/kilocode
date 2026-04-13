@@ -1,4 +1,4 @@
-import { createSignal } from "solid-js"
+import { createSignal, type Accessor } from "solid-js"
 import { ACCEPTED_IMAGE_TYPES, isAcceptedImageType, isDragLeavingComponent } from "./image-attachments-utils"
 import { extractDropPaths } from "../utils/path-mentions"
 
@@ -12,18 +12,38 @@ export interface ImageAttachment {
 /** Callback for handling text/URI file path drops. */
 export type FilePathDropHandler = (paths: string[]) => void
 
-export function useImageAttachments() {
+export interface UseImageAttachmentsOptions {
+  imageMode?: Accessor<"data" | "path">
+}
+
+export function useImageAttachments(options: UseImageAttachmentsOptions = {}) {
   const [images, setImages] = createSignal<ImageAttachment[]>([])
   const [dragging, setDragging] = createSignal(false)
   let onFilePaths: FilePathDropHandler | undefined
 
-  /** Register a handler for file path drops (text/URI-list). */
-  const setFilePathDropHandler = (handler: FilePathDropHandler) => {
-    onFilePaths = handler
-  }
+  const getMode = () => options.imageMode?.() ?? "data"
 
   const add = (file: File) => {
     if (!isAcceptedImageType(file.type)) return
+    const mode = getMode()
+    if (mode === "path") {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        const base64 = dataUrl.split(",")[1]
+        if (!base64) return
+        const id = crypto.randomUUID()
+        window.vscode?.postMessage({
+          type: "saveImageToTemp",
+          id,
+          mime: file.type || "image/png",
+          base64,
+          filename: file.name || "image.png",
+        })
+      }
+      reader.readAsDataURL(file)
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => {
       const attachment: ImageAttachment = {
@@ -35,6 +55,11 @@ export function useImageAttachments() {
       setImages((prev) => [...prev, attachment])
     }
     reader.readAsDataURL(file)
+  }
+
+  /** Register a handler for file path drops (text/URI-list). */
+  const setFilePathDropHandler = (handler: FilePathDropHandler) => {
+    onFilePaths = handler
   }
 
   const remove = (id: string) => {
@@ -59,8 +84,6 @@ export function useImageAttachments() {
   const handleDragOver = (event: DragEvent) => {
     const types = event.dataTransfer?.types
     if (!types) return
-    // Accept file drops and VS Code URI-list drops (explorer, editor tabs).
-    // Do NOT accept bare text/plain here — that would intercept normal text drags.
     const acceptable = types.includes("Files") || types.includes("application/vnd.code.uri-list")
     if (!acceptable) return
     event.preventDefault()
@@ -79,17 +102,25 @@ export function useImageAttachments() {
     const dt = event.dataTransfer
     if (!dt) return
 
-    // First: check for text/URI file path drops (VS Code explorer, editor tabs)
     const paths = extractDropPaths(dt)
     if (paths && paths.length > 0 && onFilePaths) {
       onFilePaths(paths)
       return
     }
 
-    // Second: fall through to image file drops
     const files = dt.files
     if (!files) return
     for (const file of Array.from(files)) add(file)
+  }
+
+  const handleImageSaved = (id: string, filePath: string) => {
+    const attachment: ImageAttachment = {
+      id,
+      filename: filePath.split("/").pop() || "image",
+      mime: "image/png",
+      dataUrl: `file://${filePath}`,
+    }
+    setImages((prev) => [...prev, attachment])
   }
 
   return {
@@ -104,5 +135,6 @@ export function useImageAttachments() {
     handleDragLeave,
     handleDrop,
     setFilePathDropHandler,
+    handleImageSaved,
   }
 }

@@ -687,6 +687,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "previewImage":
           this.handlePreviewImage(message.dataUrl, message.filename)
           break
+        case "saveImageToTemp":
+          await this.handleSaveImageToTemp(message.id, message.mime, message.base64, message.filename)
+          break
         case "openFile":
           if (message.filePath) {
             this.handleOpenFile(message.filePath, message.line, message.column)
@@ -847,6 +850,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestClaudeCompatSetting":
           this.sendClaudeCompatSetting()
+          break
+        case "requestImageMode":
+          this.sendImageMode()
           break
         case "requestNotificationSettings":
           this.sendNotificationSettings()
@@ -2720,6 +2726,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       .then(open, (err) => console.error("[Kilo New] KiloProvider: Failed to preview image:", err))
   }
 
+  private async handleSaveImageToTemp(id: string, mime: string, base64: string, filename: string): Promise<void> {
+    const tempDir = vscode.env.tempFilesStoragePath
+    if (!tempDir) {
+      console.error("[Kilo New] KiloProvider: tempFilesStoragePath not available")
+      return
+    }
+
+    try {
+      const uri = vscode.Uri.joinPath(vscode.Uri.file(tempDir), `image-${Date.now()}-${filename}`)
+      const data = Buffer.from(base64, "base64")
+      await vscode.workspace.fs.writeFile(uri, data)
+      this.postMessage({
+        type: "imageSaved",
+        id,
+        filePath: uri.toString(),
+      })
+    } catch (err) {
+      console.error("[Kilo New] KiloProvider: Failed to save image to temp:", err)
+    }
+  }
+
   /**
    * Handle openFile request from the webview — open a file in the VS Code editor.
    * Resolves relative paths against the current session's directory (which may be
@@ -2827,6 +2854,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "claudeCompatSettingLoaded",
       enabled: enabled ?? false,
+    })
+  }
+
+  private sendImageMode(): void {
+    const config = vscode.workspace.getConfiguration("kilo-code.new.attachments")
+    const mode = config.get<"data" | "path">("imageMode", "data")
+    this.postMessage({
+      type: "imageModeLoaded",
+      mode,
     })
   }
 

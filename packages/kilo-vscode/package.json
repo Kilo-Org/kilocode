@@ -783,6 +783,15 @@
           "type": "boolean",
           "default": true,
           "description": "Show the task timeline graph in the chat header"
+        },
+        "kilo-code.new.attachments.imageMode": {
+          "type": "string",
+          "default": "data",
+          "enum": [
+            "data",
+            "path"
+          ],
+          "description": "How to send image attachments: 'data' sends base64 data URLs, 'path' sends file:// paths for MCP servers that expect file paths."
         }
       }
     }
