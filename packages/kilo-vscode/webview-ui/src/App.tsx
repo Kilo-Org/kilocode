@@ -98,6 +98,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openExternal", url })
   }
 
+  const abort = (sessionID: string) => {
+    session.abort(sessionID)
+  }
+
   const directory = () => {
     const dir = server.workspaceDirectory()
     if (!dir) return ""
@@ -114,6 +118,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onQuestionReject={reject}
       onOpenFile={open}
       onOpenUrl={openUrl}
+      onAbortSession={abort}
     >
       {props.children}
     </DataProvider>

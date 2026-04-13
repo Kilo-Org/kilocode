@@ -33,6 +33,13 @@
     gap: 8px;
   }
 
+  [data-slot="basic-tool-actions"] {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   [data-slot="basic-tool-tool-indicator"] {
     width: 16px;
     height: 16px;

@@ -11,6 +11,13 @@
     text-align: start;
   }
 
+  [data-slot="basic-tool-actions"] {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   [data-slot="basic-tool-tool-info-structured"] {
     min-width: 0;
     overflow: hidden;

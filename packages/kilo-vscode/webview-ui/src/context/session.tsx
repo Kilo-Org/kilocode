@@ -215,7 +215,7 @@ interface SessionContextValue {
     files?: FileAttachment[],
     draftID?: string,
   ) => void
-  abort: () => void
+  abort: (sessionID?: string) => void
   compact: () => void
   respondToPermission: (
     permissionId: string,
@@ -1764,8 +1764,7 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function abort() {
-    const sessionID = currentSessionID()
+  function abort(sessionID = currentSessionID()) {
     if (!sessionID) {
       console.warn("[Kilo New] Cannot abort: no current session")
       return

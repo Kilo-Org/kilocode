@@ -34,6 +34,8 @@ export type OpenFileFn = (filePath: string, line?: number, column?: number) => v
 
 export type OpenUrlFn = (url: string) => void // kilocode_change
 
+export type AbortSessionFn = (sessionID: string) => void // kilocode_change
+
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: (props: {
@@ -43,6 +45,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onSessionHref?: SessionHrefFn
     onOpenFile?: OpenFileFn // kilocode_change
     onOpenUrl?: OpenUrlFn // kilocode_change
+    onAbortSession?: AbortSessionFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -55,6 +58,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       sessionHref: props.onSessionHref,
       openFile: props.onOpenFile, // kilocode_change
       openUrl: props.onOpenUrl, // kilocode_change
+      abortSession: props.onAbortSession, // kilocode_change
     }
   },
 })

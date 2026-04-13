@@ -37,6 +37,7 @@ export interface BasicToolProps {
   onTriggerClick?: JSX.EventHandlerUnion<HTMLElement, MouseEvent>
   triggerHref?: string
   clickable?: boolean
+  actions?: JSX.Element // kilocode_change
 }
 
 const SPRING = { type: "spring" as const, visualDuration: 0.35, bounce: 0 }
@@ -195,6 +196,11 @@ export function BasicTool(props: BasicToolProps) {
           </Switch>
         </div>
       </div>
+      <Show when={props.actions}>
+        <span data-slot="basic-tool-actions" onClick={(e) => e.stopPropagation()}>
+          {props.actions}
+        </span>
+      </Show>
       <Show when={props.children && !props.hideDetails && !props.locked && !pending()}>
         <Collapsible.Arrow />
       </Show>

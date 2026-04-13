@@ -1854,6 +1854,11 @@ ToolRegistry.register({
     })
     const running = createMemo(() => busy(props.status))
     const reveal = useToolReveal(running, () => props.reveal !== false)
+    const stop = () => {
+      const id = childSessionId()
+      if (!id) return
+      data.abortSession?.(id)
+    }
 
     const href = createMemo(() => {
       const sessionId = childSessionId()
@@ -1912,7 +1917,29 @@ ToolRegistry.register({
       </div>
     )
 
-    return <BasicTool hideDetails icon="task" status={props.status} trigger={trigger()} animated />
+    return (
+      <BasicTool
+        hideDetails
+        icon="task"
+        status={props.status}
+        trigger={trigger()}
+        animated
+        actions={
+          <Show when={running() && data.abortSession && childSessionId()}>
+            <Tooltip value={i18n.t("prompt.action.stop")} placement="top" gutter={4}>
+              <IconButton
+                icon="stop"
+                size="small"
+                variant="secondary"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={stop}
+                aria-label={i18n.t("prompt.action.stop")}
+              />
+            </Tooltip>
+          </Show>
+        }
+      />
+    )
   },
 })
 
