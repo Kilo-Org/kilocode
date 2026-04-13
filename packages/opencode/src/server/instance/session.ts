@@ -764,7 +764,7 @@ export const SessionRoutes = lazy(() =>
         const messages = await Session.messages({ sessionID: params.sessionID })
         const user = messages.filter((msg) => msg.info.role === "user")
         const target = user.find((msg) => msg.info.id === params.messageID)
-        const active = user.at(0)
+        const active = user.at(-1)
         if (!target || target.info.id <= (active?.info.id ?? "")) {
           await AppRuntime.runPromise(
             Effect.gen(function* () {
