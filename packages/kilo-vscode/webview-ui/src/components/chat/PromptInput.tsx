@@ -72,7 +72,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   onCleanup(
     vscode.onMessage((msg: any) => {
       if (msg.type === "imageSaved") {
-        imageAttach.handleImageSaved(msg.id, msg.filePath)
+        imageAttach.handleImageSaved(msg.id, msg.filePath, msg.mime)
       }
     }),
   )

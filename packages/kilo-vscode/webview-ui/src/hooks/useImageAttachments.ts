@@ -113,12 +113,12 @@ export function useImageAttachments(options: UseImageAttachmentsOptions = {}) {
     for (const file of Array.from(files)) add(file)
   }
 
-  const handleImageSaved = (id: string, filePath: string) => {
+  const handleImageSaved = (id: string, filePath: string, mime: string) => {
     const attachment: ImageAttachment = {
       id,
       filename: filePath.split("/").pop() || "image",
-      mime: "image/png",
-      dataUrl: `file://${filePath}`,
+      mime: mime || "image/png",
+      dataUrl: filePath,
     }
     setImages((prev) => [...prev, attachment])
   }

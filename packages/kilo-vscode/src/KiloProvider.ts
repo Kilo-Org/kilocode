@@ -224,6 +224,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.slimEditMetadata = options?.slimEditMetadata ?? true
 
     TelemetryProxy.getInstance().setProvider(this)
+
+    // Listen for imageMode setting changes and push to webview
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.attachments")) {
+        this.sendImageMode()
+      }
+    })
   }
 
   setRemoteService(service: RemoteStatusService): void {
@@ -2741,6 +2748,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         type: "imageSaved",
         id,
         filePath: uri.toString(),
+        mime,
       })
     } catch (err) {
       console.error("[Kilo New] KiloProvider: Failed to save image to temp:", err)

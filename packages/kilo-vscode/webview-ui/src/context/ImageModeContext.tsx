@@ -4,7 +4,7 @@
  * "data" sends base64 data URLs, "path" sends file:// paths for MCP servers.
  */
 
-import { createContext, useContext, createSignal, onCleanup, ParentComponent, createEffect } from "solid-js"
+import { createContext, useContext, createSignal, onCleanup, ParentComponent } from "solid-js"
 import type { Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type { ExtensionMessage } from "../types/messages"
@@ -29,6 +29,7 @@ export const ImageModeProvider: ParentComponent = (props) => {
 
   onCleanup(unsubscribe)
 
+  // Request initial value and listen for changes
   vscode.postMessage({ type: "requestImageMode" })
 
   const value: ImageModeContextValue = { imageMode }

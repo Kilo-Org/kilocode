@@ -1823,6 +1823,7 @@ export interface ImageSavedMessage {
   type: "imageSaved"
   id: string
   filePath: string
+  mime: string
 }
 
 export interface RequestConfigMessage {
