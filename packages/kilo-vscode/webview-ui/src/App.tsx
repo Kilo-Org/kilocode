@@ -34,12 +34,22 @@ import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { speak, stop as stopSpeech, ensureAudioReady } from "./utils/speech-playback"
 import { filterTextForSpeech, detectSentiment } from "./utils/speech-text-filter"
+import { SpeechProviderRegistry } from "./data/speech-providers"
 import type { SpeechSettings } from "./types/voice"
 import type { ExtensionMessage } from "./types/messages"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
 const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings", "subAgentViewer"])
+
+function getApiKeyForProvider(ss: SpeechSettings, pid: string): string {
+  if (pid === "azure") return ss.azure?.apiKey ?? ""
+  if (pid === "google") return ss.google?.apiKey ?? ""
+  if (pid === "openai") return ss.openai?.apiKey ?? ""
+  if (pid === "elevenlabs") return ss.elevenlabs?.apiKey ?? ""
+  if (pid === "polly") return ss.polly?.accessKeyId ?? ""
+  return ""
+}
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
@@ -240,7 +250,10 @@ const AppContent: Component = () => {
         if (prevStatus !== "busy" || newStatus !== "idle") return
         const ss = speechSettings()
         if (!ss?.enabled || !ss?.autoSpeak) return
-        if (!ss.azure.apiKey || !ss.azure.region) return
+
+        const provider = SpeechProviderRegistry.get(ss.provider ?? "browser")
+        if (!provider) return
+        if (provider.requiresApiKey && !getApiKeyForProvider(ss, provider.id)) return
 
         const id = session.currentSessionID()
         if (!id) return
@@ -253,8 +266,8 @@ const AppContent: Component = () => {
 
         const parts = session.allParts()[lastAssistant.id] ?? []
         const rawText = parts
-          .filter((p: any) => p.type === "text")
-          .map((p: any) => p.text)
+          .filter((p: SDKPart) => p.type === "text")
+          .map((p: SDKPart) => (p as unknown as { text: string }).text)
           .join(" ")
           .trim()
         if (!rawText) return
@@ -267,9 +280,9 @@ const AppContent: Component = () => {
         const sentiment = detectSentiment(textContent)
 
         ensureAudioReady()
-        speak(textContent, {
-          region: ss.azure.region,
-          apiKey: ss.azure.apiKey,
+        speak(textContent, provider, {
+          region: ss.azure?.region,
+          apiKey: getApiKeyForProvider(ss, provider.id),
           voiceId: ss.azure.voiceId,
           pitch: ss.tuning.pitch + sentiment.pitchModifier,
           rate: ss.tuning.rate * sentiment.rateModifier,
