@@ -16,6 +16,7 @@ import type { EditorContext } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { buildWebviewHtml } from "./utils"
+import { EXTENSION_DISPLAY_NAME } from "./constants"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
@@ -230,6 +231,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
+  /** Panel reference for editor tab instances — used to update the tab title. */
+  private panel: vscode.WebviewPanel | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -422,6 +425,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
     this.webview = panel.webview
+    this.panel = panel
 
     panel.webview.options = {
       enableScripts: true,
@@ -438,6 +442,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
+  private static readonly MAX_TAB_TITLE = 50
+
+  /** Update the VS Code editor tab title from the current session title, truncated. */
+  private updatePanelTitle(): void {
+    if (!this.panel) return
+    const title = this.currentSession?.title
+    if (!title || /^(New|Child) session - \d{4}-/.test(title)) {
+      this.panel.title = EXTENSION_DISPLAY_NAME
+      return
+    }
+    this.panel.title =
+      title.length > KiloProvider.MAX_TAB_TITLE ? title.substring(0, KiloProvider.MAX_TAB_TITLE - 1) + "…" : title
+  }
+
   /**
    * Register a session created externally (e.g., worktree sessions from AgentManagerProvider).
    * Sets currentSession, adds to trackedSessionIds, and notifies the webview.
@@ -446,6 +464,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.currentSession = session
     this.contextSessionID = session.id
     this.trackedSessionIds.add(session.id)
+    this.updatePanelTitle()
     this.postMessage({
       type: "sessionCreated",
       session: this.sessionToWebview(session),
@@ -645,6 +664,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "clearSession":
           this.contextSessionID = this.currentSession?.id ?? this.contextSessionID
           this.currentSession = null
+          this.updatePanelTitle()
           this.focusSession()
           break
         case "loadMessages":
@@ -1274,6 +1294,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.contextSessionID = session.id
       this.trackDirectory(session.id, workspaceDir)
       this.trackedSessionIds.add(session.id)
+      this.updatePanelTitle()
 
       // Notify webview of the new session
       this.postMessage({
@@ -1298,6 +1319,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (r.data && !signal?.aborted) {
           this.currentSession = r.data
           this.contextSessionID = r.data.id
+          this.updatePanelTitle()
         }
       })
       .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e))
@@ -1537,6 +1559,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
+        this.updatePanelTitle()
         this.focusSession(undefined)
       }
       this.postMessage({ type: "sessionDeleted", sessionID })
@@ -1566,6 +1589,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
       if (this.currentSession?.id === sessionID) {
         this.currentSession = updated
+        this.updatePanelTitle()
       }
       this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(updated) })
     } catch (error) {
@@ -2320,6 +2344,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.contextSessionID = session.id
       this.trackDirectory(session.id, dir)
       this.trackedSessionIds.add(session.id)
+      this.updatePanelTitle()
       if (draftID) this.contextSessionID = session.id
       this.postMessage({
         type: "sessionCreated",
@@ -2967,10 +2992,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
       this.trackedSessionIds.add(event.properties.info.id)
+      this.updatePanelTitle()
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.info.id) {
       this.currentSession = event.properties.info
       this.contextSessionID = event.properties.info.id
+      this.updatePanelTitle()
     }
 
     // Auto-adopt child sessions as soon as the task tool part reveals their ID.
