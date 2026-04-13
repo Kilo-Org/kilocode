@@ -69,24 +69,28 @@ export const AzureProvider: SpeechProvider = {
 	},
 
 	async testConnection(apiKey: string, region?: string): Promise<boolean> {
-		const endpoint = region ?? "westus"
-		const ssml =
-			`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">` +
-			`<voice name="en-US-JennyNeural">test</voice></speak>`
+		try {
+			const endpoint = region ?? "westus"
+			const ssml =
+				`<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">` +
+				`<voice name="en-US-JennyNeural">test</voice></speak>`
 
-		const resp = await fetch(
-			`https://${endpoint}.tts.speech.microsoft.com/cognitiveservices/v1`,
-			{
-				method: "POST",
-				headers: {
-					"Ocp-Apim-Subscription-Key": apiKey,
-					"Content-Type": "application/ssml+xml",
-					"X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3",
-					"User-Agent": "KiloCode-Azure",
+			const resp = await fetch(
+				`https://${endpoint}.tts.speech.microsoft.com/cognitiveservices/v1`,
+				{
+					method: "POST",
+					headers: {
+						"Ocp-Apim-Subscription-Key": apiKey,
+						"Content-Type": "application/ssml+xml",
+						"X-Microsoft-OutputFormat": "audio-16khz-32kbitrate-mono-mp3",
+						"User-Agent": "KiloCode-Azure",
+					},
+					body: ssml,
 				},
-				body: ssml,
-			},
-		)
-		return resp.ok
+			)
+			return resp.ok
+		} catch {
+			return false
+		}
 	},
 }

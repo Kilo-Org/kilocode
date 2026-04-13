@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test"
+import { describe, it, expect } from "bun:test"
 import { SpeechProviderRegistry } from "../../webview-ui/src/data/speech-providers"
 import type { SpeechProvider, SpeechVoice, SynthesisOptions } from "../../webview-ui/src/types/voice"
 
@@ -28,15 +28,6 @@ function stub(overrides: Partial<SpeechProvider> & { id: string }): SpeechProvid
 }
 
 describe("SpeechProviderRegistry", () => {
-	beforeEach(() => {
-		// Clear registry between tests by re-registering nothing
-		// The registry is module-level state, so we unregister by overwriting
-		for (const p of SpeechProviderRegistry.list()) {
-			// Remove by registering undefined-id providers won't work;
-			// instead we just accept accumulation and test with unique ids
-		}
-	})
-
 	it("registers and retrieves a provider", () => {
 		const provider = stub({ id: "test-get" })
 		SpeechProviderRegistry.register(provider)
