@@ -47,7 +47,7 @@ export function useImageAttachments() {
 
   const handlePaste = (event: ClipboardEvent) => {
     const items = Array.from(event.clipboardData?.items ?? [])
-    const imageItems = items.filter((item) => item.kind === "file" && ACCEPTED_IMAGE_TYPES.includes(item.type))
+    const imageItems = items.filter((item) => item.kind === "file" && isAcceptedImageType(item.type))
     if (imageItems.length === 0) return
     event.preventDefault()
     for (const item of imageItems) {

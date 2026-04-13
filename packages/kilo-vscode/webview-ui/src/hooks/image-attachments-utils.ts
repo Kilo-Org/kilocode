@@ -8,6 +8,8 @@ export const ACCEPTED_IMAGE_TYPES = [
   "image/tiff",
   "image/heic",
   "image/avif",
+  "image/x-icon",
+  "image/svg+xml",
 ]
 
 const IMAGE_PREFIX = "image/"
