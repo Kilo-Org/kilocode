@@ -9,7 +9,7 @@ import { Config } from "../config/config"
 import { Flag } from "../flag/flag"
 import { Installation } from "../installation"
 
-import { Database, NotFoundError, eq, and, gte, isNull, desc, like } from "../storage/db"
+import { Database, NotFoundError, eq, and, gte, isNull, desc, like, or } from "../storage/db" // kilocode_change
 import { SyncEvent } from "../sync"
 import { SessionTable } from "./session.sql"
 import { Storage } from "@/storage/storage"
@@ -795,16 +795,23 @@ export namespace Session {
     limit?: number
   }) {
     const project = Instance.project
-    const conditions = [eq(SessionTable.project_id, project.id)]
+    // kilocode_change start: preserve directory lookups across project id changes
+    const dir = input?.directory ? Filesystem.resolve(input.directory) : undefined
+    const conditions = [
+      dir
+        ? or(eq(SessionTable.project_id, project.id), eq(SessionTable.directory, dir))
+        : eq(SessionTable.project_id, project.id),
+    ]
+    // kilocode_change end
 
+    // kilocode_change start: preserve directory lookups across project id changes
     if (input?.workspaceID) {
       conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
     }
-    if (input?.directory) {
-      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
-      conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
-      // kilocode_change end
+    if (dir) {
+      conditions.push(eq(SessionTable.directory, dir))
     }
+    // kilocode_change end
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))
     }
