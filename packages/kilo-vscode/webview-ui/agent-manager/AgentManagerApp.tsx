@@ -3018,7 +3018,8 @@ const AgentManagerContent: Component = () => {
                       onRequestDiff={requestDiffFile}
                       onOpenFile={(file, line) => {
                         const id = currentDiffSessionId()
-                        if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                        if (id)
+                          vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
                         else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                       }}
                       onRevertFile={revertCtl.revert}
