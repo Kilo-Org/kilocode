@@ -33,11 +33,16 @@ export interface SpeechSettings {
 	debugMode: boolean
 	sentimentIntensity: number
 	multiVoiceMode: boolean
+	provider: string
 	azure: {
 		apiKey: string
 		region: string
 		voiceId: string
 	}
+	google?: { apiKey: string }
+	openai?: { apiKey: string }
+	elevenlabs?: { apiKey: string }
+	polly?: { accessKeyId: string; secretAccessKey: string; region: string }
 	tuning: {
 		pitch: number
 		rate: number
@@ -63,6 +68,7 @@ export const DEFAULT_SPEECH_SETTINGS: SpeechSettings = {
 	debugMode: false,
 	sentimentIntensity: 70,
 	multiVoiceMode: false,
+	provider: "browser",
 	azure: {
 		apiKey: "",
 		region: "westus",

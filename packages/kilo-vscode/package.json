@@ -941,6 +941,42 @@
           "type": "array",
           "default": [],
           "description": "Saved voice + tuning presets"
+        },
+        "kilo-code.new.speech.provider": {
+          "type": "string",
+          "default": "browser",
+          "description": "Active speech provider",
+          "enum": ["browser", "azure", "google", "openai", "elevenlabs", "polly"]
+        },
+        "kilo-code.new.speech.google.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Google Cloud TTS API key"
+        },
+        "kilo-code.new.speech.openai.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API key for TTS"
+        },
+        "kilo-code.new.speech.elevenlabs.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "ElevenLabs API key"
+        },
+        "kilo-code.new.speech.polly.accessKeyId": {
+          "type": "string",
+          "default": "",
+          "description": "AWS access key ID for Amazon Polly"
+        },
+        "kilo-code.new.speech.polly.secretAccessKey": {
+          "type": "string",
+          "default": "",
+          "description": "AWS secret access key for Amazon Polly"
+        },
+        "kilo-code.new.speech.polly.region": {
+          "type": "string",
+          "default": "us-east-1",
+          "description": "AWS region for Amazon Polly"
         }
       }
     }
