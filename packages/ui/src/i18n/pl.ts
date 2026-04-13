@@ -46,6 +46,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Dodaj kredyty",
 
   "ui.sessionTurn.status.delegating": "Delegowanie pracy",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planowanie kolejnych kroków",
   "ui.sessionTurn.status.gatheringContext": "Eksplorowanie",
   "ui.sessionTurn.status.gatheredContext": "Wyeksplorowano",
@@ -59,7 +61,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Rozważanie kolejnych kroków",
 
   "ui.messagePart.questions.dismissed": "Pytania odrzucone",
-  "ui.messagePart.compaction": "Historia skompaktowana",
+  "ui.messagePart.compaction": "Sesja skompaktowana",
   "ui.messagePart.context.read.one": "{{count}} odczyt",
   "ui.messagePart.context.read.other": "{{count}} odczyty",
   "ui.messagePart.context.search.one": "{{count}} wyszukiwanie",
@@ -125,6 +127,8 @@ export const dict = {
   "ui.message.collapse": "Zwiń wiadomość",
   "ui.message.copy": "Kopiuj",
   "ui.message.copyMessage": "Kopiuj wiadomość",
+  "ui.message.forkMessage": "Rozwidlij do nowej sesji",
+  "ui.message.revertMessage": "Zresetuj do tego punktu",
   "ui.message.copyResponse": "Kopiuj odpowiedź",
   "ui.message.copied": "Skopiowano!",
   "ui.message.revert": "Revert to here",
@@ -143,4 +147,16 @@ export const dict = {
   "ui.question.multiHint": "Zaznacz wszystkie pasujące",
   "ui.question.singleHint": "Wybierz jedną odpowiedź",
   "ui.question.custom.placeholder": "Wpisz swoją odpowiedź...",
+
+  "ui.fileSearch.placeholder": "Szukaj",
+  "ui.fileSearch.previousMatch": "Poprzednie",
+  "ui.fileSearch.nextMatch": "Następne",
+  "ui.fileSearch.close": "Zamknij wyszukiwanie",
+  "ui.tool.task": "Zadanie",
+  "ui.tool.skill": "Umiejętność",
+  "ui.basicTool.called": "Wywołano `{{tool}}`",
+  "ui.toolErrorCard.failed": "Błąd",
+  "ui.toolErrorCard.copyError": "Kopiuj błąd",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 }

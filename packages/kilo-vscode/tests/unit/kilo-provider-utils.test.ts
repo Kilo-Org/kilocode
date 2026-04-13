@@ -7,6 +7,8 @@ import {
   mapSSEEventToWebviewMessage,
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
+  MessageConfirmation,
+  mergeFileSearchResults,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -92,6 +94,44 @@ function makeAssistantMessage(overrides: Partial<AssistantMessage> = {}): Assist
     ...overrides,
   }
 }
+
+describe("MessageConfirmation", () => {
+  it("reports tracked confirmed messages", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+    state.confirm("msg-1")
+
+    expect(state.has("msg-1")).toBe(true)
+    expect(await state.wait("msg-1", 1)).toBe(true)
+  })
+
+  it("resolves waiters when a message is confirmed", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+    const wait = state.wait("msg-1", 50)
+
+    state.confirm("msg-1")
+
+    expect(await wait).toBe(true)
+  })
+
+  it("returns false when confirmation does not arrive", async () => {
+    const state = new MessageConfirmation()
+    state.track("msg-1")
+
+    expect(await state.wait("msg-1", 1)).toBe(false)
+  })
+
+  it("forgets confirmations after release", () => {
+    const state = new MessageConfirmation()
+    const release = state.track("msg-1")
+    state.confirm("msg-1")
+
+    release()
+
+    expect(state.has("msg-1")).toBe(false)
+  })
+})
 
 describe("sessionToWebview", () => {
   it("converts epoch timestamps to ISO strings", () => {
@@ -363,11 +403,21 @@ describe("mapSSEEventToWebviewMessage", () => {
       properties: {
         id: "q1",
         sessionID: "sess-1",
-        questions: [],
+        questions: [
+          {
+            question: "Ready to implement?",
+            header: "Implement",
+            options: [{ label: "Implement", description: "Switch to code", mode: "code" }],
+          },
+        ],
       },
     }
     const msg = mapSSEEventToWebviewMessage(event, "sess-1")
     expect(msg?.type).toBe("questionRequest")
+    if (msg?.type === "questionRequest") {
+      const questions = msg.question.questions as Array<{ options?: Array<{ mode?: string }> }>
+      expect(questions[0]?.options?.[0]?.mode).toBe("code")
+    }
   })
 
   it("maps question.replied to questionResolved", () => {
@@ -511,5 +561,100 @@ describe("mapCloudSessionMessage", () => {
   it("maps user role correctly", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
+  })
+})
+
+describe("mergeFileSearchResults", () => {
+  it("returns backend results when no open files", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/a.ts", "src/b.ts"],
+      open: new Set(),
+    })
+    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+  })
+
+  it("places open files before backend results", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/a.ts", "src/b.ts", "src/c.ts"],
+      open: new Set(["src/c.ts", "src/d.ts"]),
+    })
+    expect(result).toEqual(["src/c.ts", "src/d.ts", "src/a.ts", "src/b.ts"])
+  })
+
+  it("places active file first among open files", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/a.ts"],
+      open: new Set(["src/b.ts", "src/c.ts"]),
+      active: "src/c.ts",
+    })
+    expect(result).toEqual(["src/c.ts", "src/b.ts", "src/a.ts"])
+  })
+
+  it("ignores active file when it is not in open set", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/a.ts"],
+      open: new Set(["src/b.ts"]),
+      active: "src/x.ts",
+    })
+    expect(result).toEqual(["src/b.ts", "src/a.ts"])
+  })
+
+  it("deduplicates open files from backend results", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/a.ts", "src/b.ts"],
+      open: new Set(["src/a.ts"]),
+    })
+    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+  })
+
+  it("filters open files by query", () => {
+    const result = mergeFileSearchResults({
+      query: "config",
+      backend: ["src/config.ts", "src/util.ts"],
+      open: new Set(["src/index.ts", "src/config.ts", "README.md"]),
+    })
+    expect(result).toEqual(["src/config.ts", "src/util.ts"])
+  })
+
+  it("query filtering is case-insensitive", () => {
+    const result = mergeFileSearchResults({
+      query: "READ",
+      backend: [],
+      open: new Set(["README.md", "src/index.ts"]),
+    })
+    expect(result).toEqual(["README.md"])
+  })
+
+  it("shows all open files on empty query", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: [],
+      open: new Set(["src/a.ts", "src/b.ts"]),
+    })
+    expect(result).toEqual(["src/a.ts", "src/b.ts"])
+  })
+
+  it("shows all open files on whitespace-only query", () => {
+    const result = mergeFileSearchResults({
+      query: "  ",
+      backend: ["src/x.ts"],
+      open: new Set(["src/a.ts"]),
+    })
+    expect(result).toEqual(["src/a.ts", "src/x.ts"])
+  })
+
+  it("handles forward-slash paths (Windows-normalized)", () => {
+    const result = mergeFileSearchResults({
+      query: "",
+      backend: ["src/utils/path.ts"],
+      open: new Set(["src/utils/path.ts", "src/index.ts"]),
+      active: "src/utils/path.ts",
+    })
+    expect(result).toEqual(["src/utils/path.ts", "src/index.ts"])
   })
 })

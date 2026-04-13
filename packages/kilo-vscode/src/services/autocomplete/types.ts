@@ -1,15 +1,10 @@
 import * as vscode from "vscode"
 import type { AutocompleteCodeSnippet } from "./continuedev/core/autocomplete/types"
-import type {
-  Position,
-  Range,
-  RangeInFile,
-  TabAutocompleteOptions as CoreTabAutocompleteOptions,
-} from "./continuedev/core"
-import { FileIgnoreController } from "./shims/FileIgnoreController"
-import { ContextRetrievalService } from "./continuedev/core/autocomplete/context/ContextRetrievalService"
-import { VsCodeIde } from "./continuedev/core/vscode-test-harness/src/VSCodeIde"
-import { AutocompleteModel } from "./AutocompleteModel"
+import type { Position, Range, RangeInFile } from "./continuedev/core"
+import type { FileIgnoreController } from "./shims/FileIgnoreController"
+import type { ContextRetrievalService } from "./continuedev/core/autocomplete/context/ContextRetrievalService"
+import type { VsCodeIde } from "./continuedev/core/vscode-test-harness/src/VSCodeIde"
+import type { AutocompleteModel } from "./AutocompleteModel"
 
 export interface ResponseMetaData {
   cost: number
@@ -25,15 +20,6 @@ export interface AutocompleteSuggestionContext {
   recentlyVisitedRanges?: AutocompleteCodeSnippet[]
   recentlyEditedRanges?: RecentlyEditedRange[]
 }
-
-export interface AutocompleteTabExtensions {
-  template?: string
-  useOtherFiles?: boolean
-  recentlyEditedSimilarityThreshold?: number
-  maxSnippetTokens?: number
-}
-
-export type TabAutocompleteOptions = Partial<CoreTabAutocompleteOptions> & AutocompleteTabExtensions
 
 export interface RecentlyEditedRange extends RangeInFile {
   timestamp: number
@@ -57,35 +43,6 @@ export interface AutocompleteInput {
     range: Range
   }
   injectDetails?: string
-}
-
-export interface AutocompleteOutcome extends TabAutocompleteOptions {
-  accepted?: boolean
-  time: number
-  prefix: string
-  suffix: string
-  prompt: string
-  completion: string
-  modelProvider: string
-  modelName: string
-  completionOptions: Record<string, unknown>
-  cacheHit: boolean
-  numLines: number
-  filepath: string
-  gitRepo?: string
-  completionId: string
-  uniqueId: string
-  timestamp: string
-  enabledStaticContextualization?: boolean
-  profileType?: "local" | "platform" | "control-plane"
-}
-
-export interface PromptResult {
-  systemPrompt: string
-  userPrompt: string
-  prefix: string
-  suffix: string
-  completionId: string
 }
 
 // ============================================================================
@@ -212,25 +169,6 @@ export interface VisibleCodeContext {
   timestamp: number
   /** Information about all visible editors */
   editors: VisibleEditorInfo[]
-}
-
-// ============================================================================
-// Chat Text Area Autocomplete Types
-// ============================================================================
-
-/**
- * Request for chat text area completion
- */
-export interface ChatCompletionRequest {
-  text: string
-}
-
-/**
- * Result of chat text area completion (distinct from code editor ChatCompletionResult)
- */
-export interface ChatTextCompletionResult {
-  suggestion: string
-  requestId: string
 }
 
 // ============================================================================

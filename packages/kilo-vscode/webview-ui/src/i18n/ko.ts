@@ -939,6 +939,11 @@ export const dict = {
   "session.status.retry": "재시도 중…",
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",
   "session.status.working": "작업 중...",
+  "session.status.offline": "네트워크 연결 끊김 — 다시 연결 중...",
+
+  "ui.sessionTurn.cancel": "취소",
+  "ui.sessionTurn.status.thinking": "생각 중...",
+  "ui.sessionTurn.status.consideringNextSteps": "다음 단계 고려 중...",
 
   "dialog.model.noProviders": "공급자 없음",
 
@@ -947,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
+  "context.usage.olderSessions": "{{count}}개의 이전 세션",
   "context.stats.thisSession": "이 세션",
 
   "time.justNow": "방금",
@@ -1059,6 +1065,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "권한이 거부되면 에이전트 루프 계속",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
+  "settings.experimental.remote.title": "Remote 제어",
+  "settings.experimental.remote.description":
+    "Kilo Cloud를 통한 세션의 Remote 제어를 활성화합니다. 이는 이 컴퓨터의 CLI에도 영향을 미칩니다.",
+  "settings.experimental.remote.current": "현재 상태:",
+  "settings.experimental.remote.startup": "시작 시 자동 활성화:",
+  "settings.experimental.remote.active": "활성",
+  "settings.experimental.remote.inactive": "비활성",
+  "settings.experimental.remote.hint": "채팅에서 /remote를 사용하여 전환하세요",
   "settings.experimental.toolToggles": "도구 토글",
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",
@@ -1119,6 +1133,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "이것은 내장 모드입니다. 기본 정의는 변경할 수 없지만, 아래에서 재정의를 구성할 수 있습니다.",
   "settings.agentBehaviour.editMode.promptOverride": "이 내장 모드에 대한 사용자 지정 프롬프트 재정의",
+  "settings.agentBehaviour.badge.subagent": "서브에이전트",
+  "settings.agentBehaviour.permissions.title": "계산된 권한",
+  "settings.agentBehaviour.permissions.count": "{{count}}개 규칙",
+  "settings.agentBehaviour.permissions.effective": "유효 (와일드카드):",
+  "settings.agentBehaviour.permissions.col.tool": "도구",
+  "settings.agentBehaviour.permissions.col.pattern": "패턴",
+  "settings.agentBehaviour.permissions.col.action": "작업",
+  "settings.agentBehaviour.permissions.copy": "권한을 JSON으로 복사",
+  "settings.agentBehaviour.permissions.hint":
+    "규칙은 순서대로 평가되며, 마지막에 일치하는 규칙이 적용됩니다. 이것은 CLI 백엔드에서 확인된 규칙 세트입니다.",
   "settings.agentBehaviour.removeMode.title": "모드 제거",
   "settings.agentBehaviour.removeMode.confirm":
     '모드 "{{name}}"을(를) 제거하시겠습니까? 구성을 업데이트하여 모드를 비활성화합니다.',
@@ -1250,6 +1274,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "모든 Kilo 제품에 걸쳐 하나의 작고 효율적인 코어. 어떤 방식으로 작업하든 익숙한 경험을 제공합니다.",
   "migration.whatsNew.blogLink": "전체 공지 읽기",
+  "migration.whatsNew.docsLink": "새로운 기능 및 자주 묻는 질문",
   "migration.whatsNew.continue": "계속",
 
   // Screen 2 — Migrate Settings
@@ -1286,6 +1311,36 @@ export const dict = {
   "migration.error.continue": "계속",
   "migration.error.action.copy": "복사",
   "migration.error.toast.copied": "오류가 클립보드에 복사되었습니다",
+
+  "migration.sessionSummary.title": "요약:",
+  "migration.sessionSummary.copy": "보고서 복사",
+  "migration.sessionSummary.toast.copied": "보고서가 복사되었습니다",
+  "migration.sessionSummary.successful": "성공",
+  "migration.sessionSummary.skipped": "건너뜀",
+  "migration.sessionSummary.alreadyMigrated": "이미 마이그레이션됨",
+  "migration.sessionSummary.errored": "오류 발생",
+  "migration.sessionSummary.none": "없음",
+  "migration.forceReimport.title": "강제 재가져오기",
+  "migration.forceReimport.description":
+    "{{target}}을 다시 가져오면 덮어쓰게 되며, 해당 세션에서 이미 생성된 새 메시지는 삭제됩니다.",
+  "migration.forceReimport.target.one": "이 세션",
+  "migration.forceReimport.target.many": "이 {{count}}개 세션",
+  "migration.forceReimport.button": "강제 재가져오기",
+  "migration.forceReimport.all": "모두 다시 가져오기",
+  "migration.forceReimport.proceed": "진행",
+  "migration.forceReimport.toast.started": "강제 재가져오기가 시작되었습니다",
+  "migration.running.title": "마이그레이션 진행 중",
+  "migration.running.description.line1": "아직 마이그레이션 중인 세션이 남아 있는 상태에서 종료하려고 합니다.",
+  "migration.running.description.line2": "지금 나가면 일부 세션이 완료되지 않은 상태로 남을 수 있습니다.",
+  "migration.running.stay": "머무르기",
+  "migration.running.proceed": "진행",
+  "migration.sessionProgress.preparing": "세션 준비 중",
+  "migration.sessionProgress.storing": "세션 저장 중",
+  "migration.sessionProgress.skipped": "세션 건너뜀",
+  "migration.sessionProgress.header": "{{total}}개 중 {{current}}개 마이그레이션 중",
+  "migration.sessionFormat.unknownDate": "알 수 없는 날짜",
+  "migration.sessionFormat.unknown": "알 수 없음",
+  "migration.sessionFormat.unknownError": "알 수 없는 오류",
   // legacy-migration end
 
   "error.details.show": "상세 정보",
@@ -1302,4 +1357,5 @@ export const dict = {
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",
+  "notifications.action.tryModelGeneric": "모델 시도",
 }

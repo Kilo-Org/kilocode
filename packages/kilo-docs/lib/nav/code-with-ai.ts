@@ -14,7 +14,11 @@ export const CodeWithAiNav: NavSection[] = [
         href: "/code-with-ai/platforms/jetbrains",
         children: "JetBrains Extension",
       },
-      { href: "/code-with-ai/platforms/cli", children: "CLI" },
+      {
+        href: "/code-with-ai/platforms/cli",
+        children: "CLI",
+        subLinks: [{ href: "/code-with-ai/platforms/cli-reference", children: "Command Reference" }],
+      },
       { href: "/code-with-ai/platforms/cloud-agent", children: "Cloud Agent" },
       { href: "/code-with-ai/platforms/mobile", children: "Mobile Apps" },
       { href: "/code-with-ai/platforms/slack", children: "Slack" },
@@ -44,10 +48,6 @@ export const CodeWithAiNav: NavSection[] = [
         href: "/code-with-ai/agents/custom-models",
         children: "Custom Models",
         platform: "new",
-      },
-      {
-        href: "/code-with-ai/agents/free-and-budget-models",
-        children: "Free & Budget Models",
       },
       {
         href: "/code-with-ai/agents/using-agents",

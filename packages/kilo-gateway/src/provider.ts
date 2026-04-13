@@ -84,8 +84,11 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     languageModel(modelId) {
       return openrouter(modelId)
     },
-    textEmbeddingModel(modelId) {
+    embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
+    },
+    rerankingModel(modelId: string): never {
+      throw new Error(`Reranking model not supported: ${modelId}`)
     },
     imageModel(modelId) {
       return openrouter.imageModel(modelId)

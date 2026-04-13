@@ -4,12 +4,14 @@ import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
+import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
-  refreshMs?: number
   /** Override git command execution for testing. */
   runGit?: (args: string[], cwd: string) => Promise<string>
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 export interface ApplyConflict {
@@ -40,26 +42,72 @@ interface ExecResult {
   stderr: string
 }
 
+/**
+ * Build environment variables that prevent git and SSH from opening interactive
+ * prompts. Used for background operations (e.g. periodic fetch) so users with
+ * SSH keys that require passphrase confirmation are not bombarded with dialogs.
+ *
+ * Returns a full `process.env` overlay suitable for `simple-git.env()` or
+ * `child_process.spawn`. `GIT_SSH_COMMAND` is only overridden when the user
+ * hasn't already configured their own.
+ */
+export function nonInteractiveEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    GIT_TERMINAL_PROMPT: "0",
+  }
+  if (!process.env.GIT_SSH_COMMAND) {
+    env.GIT_SSH_COMMAND = "ssh -o BatchMode=yes"
+  }
+  return env
+}
+
 export class GitOps {
-  private lastFetch = new Map<string, number>()
-  private inflightFetch = new Map<string, Promise<void>>()
-  private readonly refreshMs: number
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
+  private readonly controller = new AbortController()
+  private readonly semaphore: Semaphore | undefined
+
+  get disposed(): boolean {
+    return this.controller.signal.aborted
+  }
 
   constructor(options: GitOpsOptions) {
-    this.refreshMs = options.refreshMs ?? 120000
     this.log = options.log
+    this.semaphore = options.semaphore
     this.runGit =
       options.runGit ??
       ((args, cwd) =>
-        simpleGit(cwd)
+        simpleGit(cwd, { abort: this.controller.signal })
           .raw(args)
           .then((out) => out.trim()))
   }
 
+  dispose(): void {
+    if (!this.controller.signal.aborted) {
+      this.controller.abort()
+    }
+  }
+
   private raw(args: string[], cwd: string): Promise<string> {
-    return this.runGit(args, cwd)
+    const signal = this.controller.signal
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    const invoke = () =>
+      new Promise<string>((resolve, reject) => {
+        const onAbort = () => reject(new Error("GitOps disposed"))
+        signal.addEventListener("abort", onAbort, { once: true })
+        this.runGit(args, cwd).then(
+          (value) => {
+            signal.removeEventListener("abort", onAbort)
+            resolve(value)
+          },
+          (err) => {
+            signal.removeEventListener("abort", onAbort)
+            reject(err)
+          },
+        )
+      })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -114,42 +162,15 @@ export class GitOps {
       .catch(() => false)
   }
 
-  async refreshRemote(cwd: string, remote: string): Promise<void> {
-    if (!remote) return
-
-    const commonRaw = await this.raw(["rev-parse", "--git-common-dir"], cwd).catch(() => cwd)
-    const common = nodePath.isAbsolute(commonRaw) ? commonRaw : nodePath.resolve(cwd, commonRaw)
-    const key = `${common}:${remote}`
-
-    const existing = this.inflightFetch.get(key)
-    if (existing) return existing
-
-    const prev = this.lastFetch.get(key) ?? 0
-    const now = Date.now()
-    if (now - prev < this.refreshMs) return
-    this.lastFetch.set(key, now)
-
-    const job = this.raw(["fetch", "--quiet", "--no-tags", remote], cwd)
-      .catch((err) => {
-        this.log(`Failed to refresh remote refs for ${cwd}:`, err)
-      })
-      .then(() => undefined)
-      .finally(() => {
-        this.inflightFetch.delete(key)
-      })
-    this.inflightFetch.set(key, job)
-    return job
-  }
-
   /** Return the set of worktree paths for the repo, excluding bare entries. */
-  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+  async listWorktreePaths(cwd: string): Promise<Map<string, string>> {
     const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
-    const paths = new Set<string>()
+    const result = new Map<string, string>()
     for (const entry of parseWorktreeList(raw)) {
       if (entry.bare) continue
-      paths.add(normalizePath(entry.path))
+      result.set(normalizePath(entry.path), entry.branch)
     }
-    return paths
+    return result
   }
 
   /**
@@ -211,12 +232,11 @@ export class GitOps {
   /**
    * Count commits ahead and behind using `rev-list --left-right --count`.
    * Callers are expected to pass a fully-qualified ref (e.g. "origin/main").
-   * Pass `remote` explicitly to refresh the tracking ref before counting;
-   * the remote is NOT inferred from the ref to avoid misinterpreting
-   * branch names that contain slashes (e.g. "release/1.0").
+   * Counts are computed against local tracking refs only — no fetch is
+   * performed, so values may be stale until an explicit git operation
+   * (push, pull, etc.) updates the refs.
    */
-  async aheadBehind(cwd: string, base: string, remote?: string): Promise<{ ahead: number; behind: number }> {
-    if (remote) await this.refreshRemote(cwd, remote)
+  async aheadBehind(cwd: string, base: string): Promise<{ ahead: number; behind: number }> {
     return this.parseLeftRight(cwd, base)
   }
 
@@ -271,6 +291,55 @@ export class GitOps {
     } finally {
       await fs.rm(tmp, { recursive: true, force: true })
     }
+  }
+
+  /**
+   * Revert a single file in a worktree back to the merge-base state.
+   * For modified/deleted files: restores the file from the merge-base commit.
+   * For added (new) files: removes the file from the worktree.
+   */
+  async revertFile(
+    cwd: string,
+    baseBranch: string,
+    file: string,
+    status?: "added" | "deleted" | "modified",
+  ): Promise<{ ok: boolean; message: string }> {
+    // Validate path: no absolute paths, no ".." traversal
+    if (nodePath.isAbsolute(file) || file.split(/[\\/]/).includes("..")) {
+      return { ok: false, message: "Invalid file path" }
+    }
+
+    const base = (await this.raw(["merge-base", "HEAD", baseBranch], cwd).catch(() => "")).trim()
+    if (!base) {
+      return { ok: false, message: "Could not resolve merge-base" }
+    }
+
+    if (status === "added") {
+      // New file — remove it from disk and unstage
+      const full = nodePath.resolve(cwd, file)
+      const root = await fs.realpath(cwd)
+      const resolved = await fs.realpath(full).catch(() => full)
+      if (resolved !== root && !resolved.startsWith(root + nodePath.sep)) {
+        return { ok: false, message: "File path outside worktree" }
+      }
+      await fs.rm(full, { force: true })
+      // Also remove from git index in case it was staged
+      await this.raw(["rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(() => "")
+      return { ok: true, message: "Removed added file" }
+    }
+
+    // Modified or deleted file — restore from merge-base
+    const result = await this.exec(["checkout", base, "--", file], cwd)
+    if (result.code !== 0) {
+      return { ok: false, message: result.stderr.trim() || "Failed to revert file" }
+    }
+    // Only unstage for modified files. For deleted files the checkout already
+    // restored the file into the index correctly — resetting to HEAD would drop
+    // it from the index and make it appear as a new untracked file.
+    if (status === "modified") {
+      await this.raw(["reset", "HEAD", "--", file], cwd).catch(() => "")
+    }
+    return { ok: true, message: "Reverted file to base" }
   }
 
   async checkApplyPatch(targetPath: string, patch: string): Promise<ApplyCheckResult> {
@@ -348,36 +417,42 @@ export class GitOps {
   }
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
-    return new Promise((resolve) => {
-      const child = spawn("git", args, {
-        cwd,
-        env: options?.env,
-        stdio: ["pipe", "pipe", "pipe"],
-      })
+    if (this.controller.signal.aborted) {
+      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+    }
+    const invoke = () =>
+      new Promise<ExecResult>((resolve) => {
+        const child = spawn("git", args, {
+          cwd,
+          env: options?.env,
+          signal: this.controller.signal,
+          stdio: ["pipe", "pipe", "pipe"],
+        })
 
-      if (options?.stdin !== undefined) {
-        if (!child.stdin) {
-          resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
-          return
+        if (options?.stdin !== undefined) {
+          if (!child.stdin) {
+            resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+            return
+          }
+          child.stdin.end(options.stdin)
         }
-        child.stdin.end(options.stdin)
-      }
 
-      const out: Buffer[] = []
-      const err: Buffer[] = []
-      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
-      child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
+        const out: Buffer[] = []
+        const err: Buffer[] = []
+        child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+        child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
-      child.on("error", (error) => {
-        resolve({ code: 1, stdout: "", stderr: error.message })
-      })
-      child.on("close", (code) => {
-        resolve({
-          code: code ?? 1,
-          stdout: Buffer.concat(out).toString("utf8"),
-          stderr: Buffer.concat(err).toString("utf8"),
+        child.on("error", (error) => {
+          resolve({ code: 1, stdout: "", stderr: error.message })
+        })
+        child.on("close", (code) => {
+          resolve({
+            code: code ?? 1,
+            stdout: Buffer.concat(out).toString("utf8"),
+            stderr: Buffer.concat(err).toString("utf8"),
+          })
         })
       })
-    })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 }

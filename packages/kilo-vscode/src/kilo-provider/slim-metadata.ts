@@ -59,25 +59,24 @@ function slimEdit(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** apply_patch: strip files[].before/after/diff + input.patchText. */
+/** apply_patch: strip files[].before/after/diff, metadata.diff, + input.patchText. */
 function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
-  if (isObj(meta) && Array.isArray(meta.files)) {
-    next.metadata = {
-      ...meta,
-      files: (meta.files as Record<string, unknown>[]).map((f) => ({
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (Array.isArray(meta.files)) {
+      slim.files = (meta.files as Record<string, unknown>[]).map((f) => ({
         filePath: f.filePath,
         relativePath: f.relativePath,
         type: f.type,
         additions: f.additions,
         deletions: f.deletions,
         movePath: f.movePath,
-      })),
+      }))
     }
-    if (isObj(meta) && meta.diagnostics) {
-      ;(next.metadata as Record<string, unknown>).diagnostics = meta.diagnostics
-    }
+    next.metadata = slim
   }
   // Strip the full patch text from input — only keep files count for title
   const input = state.input
@@ -87,37 +86,55 @@ function slimPatch(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** multiedit: strip nested results (each is a full edit metadata object). */
+/** multiedit: strip nested results (each is a full edit metadata object) and top-level diff. */
 function slimMultiedit(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const meta = state.metadata
-  if (isObj(meta) && Array.isArray(meta.results)) {
-    next.metadata = {
-      ...meta,
-      results: (meta.results as Record<string, unknown>[]).map((r) => {
-        const slim: Record<string, unknown> = {}
-        if (r.diagnostics) slim.diagnostics = r.diagnostics
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    if (Array.isArray(meta.results)) {
+      slim.results = (meta.results as Record<string, unknown>[]).map((r) => {
+        const rs: Record<string, unknown> = {}
+        if (r.diagnostics) rs.diagnostics = r.diagnostics
         const fd = r.filediff
         if (isObj(fd)) {
-          slim.filediff = {
+          rs.filediff = {
             ...(typeof fd.file === "string" ? { file: fd.file } : {}),
             additions: typeof fd.additions === "number" ? fd.additions : 0,
             deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
           }
         }
-        return slim
-      }),
+        return rs
+      })
     }
+    next.metadata = slim
   }
   return next
 }
 
-/** write: strip input.content (entire file). Keep filePath + diagnostics. */
+/** write: strip input.content, raw diff text, and filediff.before/after. Keep filepath + exists + diagnostics. */
 function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
   const input = state.input
   if (isObj(input) && typeof input.content === "string") {
     next.input = { ...input, content: undefined }
+  }
+  const meta = state.metadata
+  if (isObj(meta)) {
+    const slim: Record<string, unknown> = {}
+    if (meta.filepath) slim.filepath = meta.filepath
+    if (meta.exists !== undefined) slim.exists = meta.exists
+    if (meta.diagnostics) slim.diagnostics = meta.diagnostics
+    const fd = meta.filediff
+    if (isObj(fd)) {
+      slim.filediff = {
+        ...(typeof fd.file === "string" ? { file: fd.file } : {}),
+        additions: typeof fd.additions === "number" ? fd.additions : 0,
+        deletions: typeof fd.deletions === "number" ? fd.deletions : 0,
+      }
+    }
+    next.metadata = slim
   }
   return next
 }

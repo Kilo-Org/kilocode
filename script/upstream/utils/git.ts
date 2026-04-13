@@ -146,6 +146,12 @@ export async function hasUncommittedChanges(): Promise<boolean> {
   return result.trim().length > 0
 }
 
+export async function restoreDirectories(dirs: string[]): Promise<void> {
+  for (const dir of dirs) {
+    await $`git restore ${dir}`.quiet().nothrow()
+  }
+}
+
 export async function stageAll(): Promise<void> {
   await $`git add -A`
 }

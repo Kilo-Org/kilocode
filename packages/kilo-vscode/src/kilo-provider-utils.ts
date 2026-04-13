@@ -58,6 +58,81 @@ export function getErrorMessage(error: unknown): string {
   return String(error)
 }
 
+export class MessageConfirmation {
+  private readonly ids = new Map<string, { confirmed: boolean; waits: Set<() => void> }>()
+
+  track(id?: string): () => void {
+    if (!id) return () => {}
+    const entry = this.ids.get(id) ?? { confirmed: false, waits: new Set<() => void>() }
+    this.ids.set(id, entry)
+    return () => {
+      this.ids.delete(id)
+    }
+  }
+
+  confirm(id: string): void {
+    const entry = this.ids.get(id)
+    if (!entry) return
+    entry.confirmed = true
+    for (const done of [...entry.waits]) {
+      done()
+    }
+  }
+
+  has(id?: string): boolean {
+    if (!id) return false
+    return this.ids.get(id)?.confirmed ?? false
+  }
+
+  wait(id?: string, timeout = 1_500): Promise<boolean> {
+    if (!id) return Promise.resolve(false)
+    const entry = this.ids.get(id)
+    if (!entry) return Promise.resolve(false)
+    if (entry.confirmed) return Promise.resolve(true)
+
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        cleanup()
+        resolve(entry.confirmed)
+      }, timeout)
+
+      const cleanup = () => {
+        clearTimeout(timer)
+        entry.waits.delete(done)
+      }
+
+      const done = () => {
+        cleanup()
+        resolve(true)
+      }
+
+      entry.waits.add(done)
+    })
+  }
+}
+
+export async function runWithMessageConfirmation<T>(
+  state: MessageConfirmation,
+  id: string | undefined,
+  label: string,
+  run: () => Promise<T>,
+): Promise<T | undefined> {
+  const release = state.track(id)
+  try {
+    return await run()
+  } catch (error) {
+    if (await state.wait(id)) {
+      console.warn(`[Kilo New] ${label} ended after server accepted it; ignoring transport error`, {
+        error: getErrorMessage(error),
+      })
+      return undefined
+    }
+    throw error
+  } finally {
+    release()
+  }
+}
+
 export function sessionToWebview(session: Session) {
   return {
     id: session.id,
@@ -274,11 +349,24 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
     }
     case "session.status": {
       const info = event.properties.status
+      // "offline" is not yet in the SDK SessionStatus type (pending SDK regeneration),
+      // so we use string comparison to forward the message field for offline status.
+      const status = info.type as string
+      const extra =
+        status === "retry"
+          ? {
+              attempt: (info as any).attempt as number,
+              message: (info as any).message as string,
+              next: (info as any).next as number,
+            }
+          : status === "offline"
+            ? { message: (info as any).message as string }
+            : {}
       return {
-        type: "sessionStatus",
+        type: "sessionStatus" as const,
         sessionID: event.properties.sessionID,
-        status: info.type,
-        ...(info.type === "retry" ? { attempt: info.attempt, message: info.message, next: info.next } : {}),
+        status,
+        ...extra,
       }
     }
     case "permission.asked":
@@ -370,4 +458,27 @@ export function isEventFromForeignProject(event: Event, expectedProjectID: strin
     return event.properties.info.projectID !== expectedProjectID
   }
   return false
+}
+
+/**
+ * Merge open-tab paths with backend file search results for the @ mention dropdown.
+ *
+ * Ordering: active file → other open tabs → backend results (all deduplicated).
+ * When a query is present, open tabs are filtered to only include matches.
+ * The `active` path (if provided) is placed first when it exists in `open`.
+ */
+export function mergeFileSearchResults(input: {
+  query: string
+  backend: string[]
+  open: Set<string>
+  active?: string
+}): string[] {
+  const query = input.query.trim().toLowerCase()
+  const ok = (p: string) => !query || p.toLowerCase().includes(query)
+  const tabs =
+    input.active && input.open.has(input.active) && ok(input.active)
+      ? [input.active, ...[...input.open].filter((p) => p !== input.active && ok(p))]
+      : [...input.open].filter(ok)
+  const seen = new Set(tabs)
+  return [...tabs, ...input.backend.filter((p) => !seen.has(p))]
 }

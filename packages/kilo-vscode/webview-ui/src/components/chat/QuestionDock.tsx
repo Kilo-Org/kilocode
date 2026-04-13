@@ -4,14 +4,15 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { Component, For, Show, createMemo, createEffect } from "solid-js"
+import { For, Show, createMemo, createEffect } from "solid-js"
+import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
-import { toggleAnswer } from "./question-dock-utils"
+import { resolveOptimisticQuestionAgent, resolveSelectedQuestionMode, toggleAnswer } from "./question-dock-utils"
 
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
@@ -24,17 +25,23 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     tab: 0,
     answers: [] as string[][],
     custom: [] as string[],
+    kinds: [] as Record<string, "option" | "custom">[],
     editing: false,
     sending: false,
     collapsed: false,
   })
 
   let root!: HTMLDivElement
+  let prevAgent: string | undefined
 
-  // Reset sending state when an error occurs for this question
+  // Reset sending state and roll back the optimistic agent change on error
   createEffect(() => {
     if (session.questionErrors().has(props.request.id)) {
       setStore("sending", false)
+      if (prevAgent !== undefined) {
+        session.selectAgent(prevAgent)
+        prevAgent = undefined
+      }
     }
   })
 
@@ -64,6 +71,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("sending", true)
     session.replyToQuestion(props.request.id, answers)
     focusPrompt()
+    // prevAgent is intentionally left set until either questionError (rollback)
+    // or the question is dismissed (success — the question unmounts, so no cleanup needed)
   }
 
   const reject = () => {
@@ -83,16 +92,32 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     setStore("editing", false)
   }
 
+  const syncAgent = (answers: string[][], kinds: Record<string, "option" | "custom">[] = store.kinds) => {
+    const mode = resolveSelectedQuestionMode(questions(), answers, kinds)
+    const next = resolveOptimisticQuestionAgent(prevAgent, session.selectedAgent(), mode)
+
+    prevAgent = next.base
+    if (!next.agent) return
+    if (next.agent === session.selectedAgent()) return
+    session.selectAgent(next.agent)
+  }
+
   const pick = (answer: string, custom = false) => {
     const answers = [...store.answers]
     answers[store.tab] = [answer]
     setStore("answers", answers)
+
+    const kinds = [...store.kinds]
+    kinds[store.tab] = { [answer]: custom ? "custom" : "option" }
+    setStore("kinds", kinds)
 
     if (custom) {
       const inputs = [...store.custom]
       inputs[store.tab] = answer
       setStore("custom", inputs)
     }
+
+    syncAgent(answers, kinds)
 
     if (!single() && !multi()) {
       setStore("tab", store.tab + 1)
@@ -104,6 +129,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     const answers = [...store.answers]
     answers[store.tab] = next
     setStore("answers", answers)
+    const kinds = [...store.kinds]
+    const current = { ...(kinds[store.tab] ?? {}) }
+    if (next.includes(answer)) current[answer] = "option"
+    else delete current[answer]
+    kinds[store.tab] = current
+    setStore("kinds", kinds)
+    syncAgent(answers, kinds)
   }
 
   const selectTab = (index: number) => {
@@ -167,6 +199,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       const answers = [...store.answers]
       answers[store.tab] = next
       setStore("answers", answers)
+      const kinds = [...store.kinds]
+      const current = { ...(kinds[store.tab] ?? {}) }
+      current[value] = "custom"
+      kinds[store.tab] = current
+      setStore("kinds", kinds)
+      syncAgent(answers, kinds)
       setStore("editing", false)
       return
     }
@@ -176,7 +214,15 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     if (single()) submit()
   }
 
-  const toggleCollapse = () => setStore("collapsed", !store.collapsed)
+  const toggleCollapse = () => {
+    const collapsing = !store.collapsed
+    setStore("collapsed", collapsing)
+    // When collapsing inline, the content shrinks and can leave an empty gap
+    // below the viewport. Scroll the dock into view so the gap is eliminated.
+    if (collapsing) {
+      requestAnimationFrame(() => root?.scrollIntoView({ block: "nearest", behavior: "smooth" }))
+    }
+  }
 
   const onRoot = (e: KeyboardEvent) => {
     if (e.key === "Escape") {

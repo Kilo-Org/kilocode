@@ -4,7 +4,7 @@
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
-import { Skill } from "../../skill/skill"
+import { Skill } from "../../skill"
 import { Agent } from "../../agent/agent"
 import { lazy } from "../../util/lazy"
 import { errors } from "../error"

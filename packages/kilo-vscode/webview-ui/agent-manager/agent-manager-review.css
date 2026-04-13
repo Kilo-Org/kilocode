@@ -397,6 +397,44 @@
   color: var(--syntax-diff-delete, #da3319);
 }
 
+/* File tree revert button — always visible */
+
+.am-file-tree-file-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.am-file-tree-revert-btn {
+  flex-shrink: 0;
+  color: var(--text-weaker);
+}
+
+.am-file-tree-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
+/* Diff header revert button — always visible */
+
+.am-diff-revert-btn {
+  color: var(--text-weaker);
+}
+
+.am-diff-revert-btn:not(:disabled):hover {
+  color: var(--syntax-diff-delete, #da3319);
+}
+
 /* File tree summary footer */
 
 .am-file-tree-summary {

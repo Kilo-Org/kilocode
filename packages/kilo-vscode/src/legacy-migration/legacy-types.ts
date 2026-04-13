@@ -299,11 +299,18 @@ export interface MigrationCustomModeInfo {
   nativeSlug?: string
 }
 
+export interface MigrationSessionInfo {
+  id: string
+  title: string
+  directory: string
+  time: number
+}
+
 export interface LegacyMigrationData {
   providers: MigrationProviderInfo[]
   mcpServers: MigrationMcpServerInfo[]
   customModes: MigrationCustomModeInfo[]
-  sessions?: string[]
+  sessions?: MigrationSessionInfo[]
   defaultModel?: { provider: string; model: string }
   settings?: LegacySettings
   hasData: boolean
@@ -330,11 +337,26 @@ export interface MigrationSettingsSelections {
   autocomplete: boolean
 }
 
+export interface MigrationSessionSelection {
+  id: string
+  force?: boolean
+}
+
 export interface MigrationSelections {
   providers: string[]
   mcpServers: string[]
   customModes: string[]
-  sessions?: string[]
+  sessions?: MigrationSessionSelection[]
   defaultModel: boolean
   settings: MigrationSettingsSelections
+}
+
+export type MigrationSessionPhase = "preparing" | "storing" | "skipped" | "done" | "summary" | "error"
+
+export interface MigrationSessionProgress {
+  session: MigrationSessionInfo
+  index: number
+  total: number
+  phase: MigrationSessionPhase
+  error?: string
 }

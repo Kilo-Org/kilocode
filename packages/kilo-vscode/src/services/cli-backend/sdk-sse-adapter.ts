@@ -175,7 +175,10 @@ export class SdkSSEAdapter {
 
           // The SDK yields GlobalEvent = { directory, payload: Event }.
           const globalEvent = event as GlobalEvent
-          console.log("[Kilo New] SSE: 📨 Event:", globalEvent.payload.type)
+          const type = (globalEvent.payload as { type: string }).type
+          if (type !== "server.heartbeat") {
+            console.log("[Kilo New] SSE: 📨 Event:", type)
+          }
           this.notifyEvent(globalEvent.payload)
         }
 

@@ -13,7 +13,7 @@ const log = Log.create({ service: "instruction" })
 
 const FILES = [
   "AGENTS.md",
-  "CLAUDE.md",
+  ...(Flag.KILO_DISABLE_CLAUDE_CODE_PROMPT ? [] : ["CLAUDE.md"]),
   "CONTEXT.md", // deprecated
 ]
 
@@ -34,7 +34,9 @@ async function resolveRelative(instruction: string): Promise<string[]> {
     return Filesystem.globUp(instruction, Instance.directory, Instance.worktree).catch(() => [])
   }
   if (!Flag.KILO_CONFIG_DIR) {
-    log.warn(`Skipping relative instruction "${instruction}" - no KILO_CONFIG_DIR set while project config is disabled`)
+    log.warn(
+      `Skipping relative instruction "${instruction}" - no KILO_CONFIG_DIR set while project config is disabled`,
+    )
     return []
   }
   return Filesystem.globUp(instruction, Flag.KILO_CONFIG_DIR, Flag.KILO_CONFIG_DIR).catch(() => [])

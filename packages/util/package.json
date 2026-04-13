@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/util",
-  "version": "7.1.20",
+  "version": "7.2.4",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,5 +16,6 @@
   "devDependencies": {
     "typescript": "catalog:",
     "@types/bun": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

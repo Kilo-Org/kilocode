@@ -940,6 +940,11 @@ export const dict = {
   "session.status.retry": "Retrying…",
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",
   "session.status.working": "Working...",
+  "session.status.offline": "Network disconnected — reconnecting...",
+
+  "ui.sessionTurn.cancel": "Cancel",
+  "ui.sessionTurn.status.thinking": "Thinking...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
   "dialog.model.noProviders": "No providers",
 
@@ -948,6 +953,7 @@ export const dict = {
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
+  "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
 
   "time.justNow": "just now",
@@ -1063,6 +1069,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
+  "settings.experimental.remote.title": "Remote Control",
+  "settings.experimental.remote.description":
+    "Enable remote control of sessions via Kilo Cloud. This will also affect CLIs on this machine.",
+  "settings.experimental.remote.current": "Current state:",
+  "settings.experimental.remote.startup": "Auto-enable on startup:",
+  "settings.experimental.remote.active": "Active",
+  "settings.experimental.remote.inactive": "Inactive",
+  "settings.experimental.remote.hint": "Use /remote in chat to toggle",
   "settings.experimental.toolToggles": "Tool Toggles",
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
@@ -1171,8 +1185,19 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "System Prompt",
   "settings.agentBehaviour.editMode.save": "Done",
   "settings.agentBehaviour.editMode.back": "Back to list",
-  "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
+  "settings.agentBehaviour.editMode.native":
+    "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Calculated Permissions",
+  "settings.agentBehaviour.permissions.count": "{{count}} rules",
+  "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Tool",
+  "settings.agentBehaviour.permissions.col.pattern": "Pattern",
+  "settings.agentBehaviour.permissions.col.action": "Action",
+  "settings.agentBehaviour.permissions.copy": "Copy permissions as JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Rules are evaluated in order — last matching rule wins. This is the resolved ruleset from the CLI backend.",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
@@ -1272,6 +1297,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "One small, efficient core across every Kilo product. A familiar experience however you choose to work.",
   "migration.whatsNew.blogLink": "Read the full announcement",
+  "migration.whatsNew.docsLink": "What's new & FAQ",
   "migration.whatsNew.continue": "Continue",
 
   // Screen 2 — Migrate Settings
@@ -1308,6 +1334,35 @@ export const dict = {
   "migration.error.continue": "Continue",
   "migration.error.action.copy": "Copy",
   "migration.error.toast.copied": "Error copied to clipboard",
+  "migration.sessionSummary.title": "Summary:",
+  "migration.sessionSummary.copy": "Copy Report",
+  "migration.sessionSummary.toast.copied": "Copied report",
+  "migration.sessionSummary.successful": "Successful",
+  "migration.sessionSummary.skipped": "Skipped",
+  "migration.sessionSummary.alreadyMigrated": "Already migrated",
+  "migration.sessionSummary.errored": "Errored",
+  "migration.sessionSummary.none": "None",
+  "migration.forceReimport.title": "Force Re-import",
+  "migration.forceReimport.description":
+    "Re-importing {{target}} will overwrite them and delete any new messages already made in those sessions.",
+  "migration.forceReimport.target.one": "this session",
+  "migration.forceReimport.target.many": "these {{count}} sessions",
+  "migration.forceReimport.button": "Force Re-import",
+  "migration.forceReimport.all": "Re-import all",
+  "migration.forceReimport.proceed": "Proceed",
+  "migration.forceReimport.toast.started": "Force re-import started",
+  "migration.running.title": "Migration in Progress",
+  "migration.running.description.line1": "You are about to finish while there are still sessions being migrated.",
+  "migration.running.description.line2": "If you leave now, some sessions may remain incomplete.",
+  "migration.running.stay": "Stay",
+  "migration.running.proceed": "Proceed",
+  "migration.sessionProgress.preparing": "Preparing session",
+  "migration.sessionProgress.storing": "Storing session",
+  "migration.sessionProgress.skipped": "Session skipped",
+  "migration.sessionProgress.header": "Migrating {{current}} of {{total}}",
+  "migration.sessionFormat.unknownDate": "Unknown date",
+  "migration.sessionFormat.unknown": "Unknown",
+  "migration.sessionFormat.unknownError": "Unknown error",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1326,4 +1381,5 @@ export const dict = {
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
+  "notifications.action.tryModelGeneric": "Try Model",
 }

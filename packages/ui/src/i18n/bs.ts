@@ -51,6 +51,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Dodaj kredite",
 
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planiranje sljedećih koraka",
   "ui.sessionTurn.status.gatheringContext": "Istraživanje",
   "ui.sessionTurn.status.gatheredContext": "Istraženo",
@@ -64,7 +66,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Razmatranje sljedećih koraka",
 
   "ui.messagePart.questions.dismissed": "Pitanja odbačena",
-  "ui.messagePart.compaction": "Historija sažeta",
+  "ui.messagePart.compaction": "Sesija sažeta",
   "ui.messagePart.context.read.one": "{{count}} čitanje",
   "ui.messagePart.context.read.other": "{{count}} čitanja",
   "ui.messagePart.context.search.one": "{{count}} pretraga",
@@ -130,6 +132,8 @@ export const dict = {
   "ui.message.collapse": "Sažmi poruku",
   "ui.message.copy": "Kopiraj",
   "ui.message.copyMessage": "Kopiraj poruku",
+  "ui.message.forkMessage": "Forkaj u novu sesiju",
+  "ui.message.revertMessage": "Resetuj na ovu tačku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
   "ui.message.revert": "Revert to here",
@@ -148,4 +152,16 @@ export const dict = {
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",
   "ui.question.custom.placeholder": "Unesi svoj odgovor...",
+
+  "ui.fileSearch.placeholder": "Pronađi",
+  "ui.fileSearch.previousMatch": "Prethodno",
+  "ui.fileSearch.nextMatch": "Sljedeće",
+  "ui.fileSearch.close": "Zatvori pretragu",
+  "ui.tool.task": "Zadatak",
+  "ui.tool.skill": "Vještina",
+  "ui.basicTool.called": "Pozvan `{{tool}}`",
+  "ui.toolErrorCard.failed": "Neuspješno",
+  "ui.toolErrorCard.copyError": "Kopiraj grešku",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 } satisfies Partial<Record<Keys, string>>

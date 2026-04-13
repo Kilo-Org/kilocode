@@ -47,6 +47,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Adicionar créditos",
 
   "ui.sessionTurn.status.delegating": "Delegando trabalho",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planejando próximos passos",
   "ui.sessionTurn.status.gatheringContext": "Explorando",
   "ui.sessionTurn.status.gatheredContext": "Explorado",
@@ -60,7 +62,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos",
 
   "ui.messagePart.questions.dismissed": "Perguntas descartadas",
-  "ui.messagePart.compaction": "Histórico compactado",
+  "ui.messagePart.compaction": "Sessão compactada",
   "ui.messagePart.context.read.one": "{{count}} leitura",
   "ui.messagePart.context.read.other": "{{count}} leituras",
   "ui.messagePart.context.search.one": "{{count}} pesquisa",
@@ -126,6 +128,8 @@ export const dict = {
   "ui.message.collapse": "Recolher mensagem",
   "ui.message.copy": "Copiar",
   "ui.message.copyMessage": "Copiar mensagem",
+  "ui.message.forkMessage": "Bifurcar para nova sessão",
+  "ui.message.revertMessage": "Redefinir para este ponto",
   "ui.message.copyResponse": "Copiar resposta",
   "ui.message.copied": "Copiado!",
   "ui.message.revert": "Revert to here",
@@ -144,4 +148,16 @@ export const dict = {
   "ui.question.multiHint": "Selecione todas que se aplicam",
   "ui.question.singleHint": "Selecione uma resposta",
   "ui.question.custom.placeholder": "Digite sua resposta...",
+
+  "ui.fileSearch.placeholder": "Localizar",
+  "ui.fileSearch.previousMatch": "Ocorrência anterior",
+  "ui.fileSearch.nextMatch": "Próxima ocorrência",
+  "ui.fileSearch.close": "Fechar busca",
+  "ui.tool.task": "Tarefa",
+  "ui.tool.skill": "Habilidade",
+  "ui.basicTool.called": "Chamou `{{tool}}`",
+  "ui.toolErrorCard.failed": "Falhou",
+  "ui.toolErrorCard.copyError": "Copiar erro",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 }

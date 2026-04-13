@@ -51,6 +51,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "添加积分",
 
   "ui.sessionTurn.status.delegating": "正在委派工作",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "正在规划下一步",
   "ui.sessionTurn.status.gatheringContext": "正在探索",
   "ui.sessionTurn.status.gatheredContext": "已探索",
@@ -64,7 +66,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考虑下一步",
 
   "ui.messagePart.questions.dismissed": "问题已忽略",
-  "ui.messagePart.compaction": "历史已压缩",
+  "ui.messagePart.compaction": "会话已压缩",
   "ui.messagePart.context.read.one": "{{count}} 次读取",
   "ui.messagePart.context.read.other": "{{count}} 次读取",
   "ui.messagePart.context.search.one": "{{count}} 次搜索",
@@ -130,6 +132,8 @@ export const dict = {
   "ui.message.collapse": "收起消息",
   "ui.message.copy": "复制",
   "ui.message.copyMessage": "复制消息",
+  "ui.message.forkMessage": "分叉到新会话",
+  "ui.message.revertMessage": "重置到此点",
   "ui.message.copyResponse": "复制回复",
   "ui.message.copied": "已复制！",
   "ui.message.revert": "Revert to here",
@@ -148,4 +152,16 @@ export const dict = {
   "ui.question.multiHint": "可多选",
   "ui.question.singleHint": "选择一个答案",
   "ui.question.custom.placeholder": "输入你的答案...",
+
+  "ui.fileSearch.placeholder": "查找",
+  "ui.fileSearch.previousMatch": "上一个",
+  "ui.fileSearch.nextMatch": "下一个",
+  "ui.fileSearch.close": "关闭搜索",
+  "ui.tool.task": "任务",
+  "ui.tool.skill": "技能",
+  "ui.basicTool.called": "调用了 `{{tool}}`",
+  "ui.toolErrorCard.failed": "失败",
+  "ui.toolErrorCard.copyError": "复制错误",
+  "ui.message.duration.seconds": "{{count}}秒",
+  "ui.message.duration.minutesSeconds": "{{minutes}}分 {{seconds}}秒",
 } satisfies Partial<Record<Keys, string>>

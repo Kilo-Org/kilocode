@@ -57,12 +57,15 @@ export const UpgradeCommand = {
     if (err) {
       spinner.stop("Upgrade failed", 1)
       if (err instanceof Installation.UpgradeFailedError) {
+        // kilocode_change start - removed choco special case
+        prompts.log.error(err.stderr)
         // necessary because choco only allows install/upgrade in elevated terminals
-        if (method === "choco" && err.data.stderr.includes("not running from an elevated command shell")) {
-          prompts.log.error("Please run the terminal as Administrator and try again")
-        } else {
-          prompts.log.error(err.data.stderr)
-        }
+        // if (method === "choco" && err.stderr.includes("not running from an elevated command shell")) {
+        //   prompts.log.error("Please run the terminal as Administrator and try again")
+        // } else {
+        //   prompts.log.error(err.stderr)
+        // }
+        // kilocode_change end
       } else if (err instanceof Error) prompts.log.error(err.message)
       prompts.outro("Done")
       return

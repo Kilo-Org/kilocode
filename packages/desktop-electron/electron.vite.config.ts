@@ -2,7 +2,7 @@ import { defineConfig } from "electron-vite"
 import appPlugin from "@opencode-ai/app/vite"
 
 const channel = (() => {
-  const raw = process.env.OPENCODE_CHANNEL
+  const raw = process.env.KILO_CHANNEL
   if (raw === "dev" || raw === "beta" || raw === "prod") return raw
   return "dev"
 })()
@@ -10,7 +10,7 @@ const channel = (() => {
 export default defineConfig({
   main: {
     define: {
-      "import.meta.env.OPENCODE_CHANNEL": JSON.stringify(channel),
+      "import.meta.env.KILO_CHANNEL": JSON.stringify(channel),
     },
     build: {
       rollupOptions: {
@@ -27,7 +27,7 @@ export default defineConfig({
   },
   renderer: {
     plugins: [appPlugin],
-    publicDir: "../app/public",
+    publicDir: "../../../app/public",
     root: "src/renderer",
     build: {
       rollupOptions: {

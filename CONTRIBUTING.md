@@ -72,12 +72,10 @@ During development, `bun dev` is the local equivalent of the built `kilo` comman
 # Development (from project root)
 bun dev --help           # Show all available commands
 bun dev serve            # Start headless API server
-bun dev web              # Start server + open web interface
 
 # Production
 kilo --help          # Show all available commands
 kilo serve           # Start headless API server
-kilo web             # Start server + open web interface
 ```
 
 ### Testing with a local backend

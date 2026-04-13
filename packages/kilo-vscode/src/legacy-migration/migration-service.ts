@@ -33,7 +33,10 @@ import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
+  MigrationSessionInfo,
+  MigrationSessionProgress,
 } from "./legacy-types"
+import { buildSessionMeta, buildSessionProgress } from "./migration-session-progress"
 import type { MigrationResultItem } from "./migration-types"
 import { createSessionID } from "./sessions/lib/ids"
 import { migrate as migrateSession } from "./sessions/migrate"
@@ -46,7 +49,7 @@ const SECRET_KEY = "roo_cline_config_api_config"
 const CODEX_OAUTH_SECRET_KEY = "openai-codex-oauth-credentials"
 const MIGRATION_STATUS_KEY = "kilo.legacyMigrationStatus"
 
-type MigrationStatus = "completed" | "skipped"
+type MigrationStatus = "completed" | "completed_with_errors" | "skipped"
 
 // ---------------------------------------------------------------------------
 // Status helpers
@@ -114,18 +117,27 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
 }
 
 async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
-  const items = context.globalState.get<{ id: string }[]>("taskHistory", [])
+  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>(
+    "taskHistory",
+    [],
+  )
   const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
-  const ids: string[] = []
+  const sessions: MigrationSessionInfo[] = []
   for (const item of items) {
     const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
     const exists = await vscode.workspace.fs.stat(file).then(
       () => true,
       () => false,
     )
-    if (exists) ids.push(item.id)
+    if (!exists) continue
+    sessions.push({
+      id: item.id,
+      title: item.task?.trim() || item.id,
+      directory: item.workspace?.trim() || "",
+      time: item.ts ?? 0,
+    })
   }
-  return ids
+  return sessions
 }
 
 // ---------------------------------------------------------------------------
@@ -137,6 +149,11 @@ export type ProgressCallback = (
   status: "migrating" | "success" | "warning" | "error",
   message?: string,
 ) => void
+
+export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
+
+const SESSION_DELAY = 300
+const SESSION_SUMMARY_DELAY = 1000
 
 /**
  * Executes migration for the selected items.
@@ -150,13 +167,16 @@ export async function migrate(
   client: KiloClient,
   selections: MigrationSelections,
   onProgress: ProgressCallback,
+  onSessionProgress?: SessionProgressCallback,
   cachedSettings?: LegacySettings,
+  cachedSessions?: MigrationSessionInfo[],
 ): Promise<MigrationResultItem[]> {
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
   const prompts = readLegacyCustomModePrompts(context)
   const legacySettings = cachedSettings ?? readLegacySettings(context)
+  const sessions = cachedSessions ?? (await readSessionsInGlobalStorage(context))
 
   const results: MigrationResultItem[] = []
 
@@ -257,17 +277,35 @@ export async function migrate(
   }
 
   if (selections.sessions?.length) {
-    for (const id of selections.sessions) {
-      onProgress(id, "migrating")
-      const result = await migrateSession(id, context, client)
+    const list = selections.sessions
+    for (const [index, item] of list.entries()) {
+      onProgress(item.id, "migrating")
+      const session = sessions.find((entry: MigrationSessionInfo) => entry.id === item.id)
+      const meta = buildSessionMeta(session, index, list.length)
+      const progress = buildSessionProgress(meta, onSessionProgress)
+      const result = await migrateSession(item, context, client, meta, progress)
       const reason = result.ok ? "Session migrated" : result.message
       results.push({
-        item: id,
+        item: item.id,
         category: "session",
         status: result.ok ? "success" : "error",
         message: reason,
       })
-      onProgress(id, result.ok ? "success" : "error", reason)
+      onProgress(item.id, result.ok ? "success" : "error", reason)
+      if (index < list.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY))
+      }
+    }
+    const last = list.at(-1)
+    const session = last ? sessions.find((item: MigrationSessionInfo) => item.id === last.id) : undefined
+    if (session && onSessionProgress) {
+      onSessionProgress({
+        session,
+        index: list.length,
+        total: list.length,
+        phase: "summary",
+      })
+      await new Promise((resolve) => setTimeout(resolve, SESSION_SUMMARY_DELAY))
     }
   }
 

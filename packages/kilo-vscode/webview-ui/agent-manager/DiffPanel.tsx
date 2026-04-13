@@ -41,6 +41,8 @@ interface DiffPanelProps {
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
   onOpenFile?: (relativePath: string) => void
+  onRevertFile?: (file: string) => void
+  revertingFiles?: Set<string>
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -307,6 +309,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     sendAllToChat()
   }
 
+  const handleExpandAll = () => {
+    const allOpen = open().length === props.diffs.length
+    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+  }
+
   const totals = createMemo(() => ({
     files: props.diffs.length,
     additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
@@ -354,6 +361,28 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           </Show>
         </div>
         <div class="am-diff-header-actions">
+          <Show when={props.diffs.length > 0}>
+            <Tooltip
+              value={
+                open().length === props.diffs.length
+                  ? t("ui.sessionReview.collapseAll")
+                  : t("ui.sessionReview.expandAll")
+              }
+              placement="bottom"
+            >
+              <IconButton
+                icon="chevron-grabber-vertical"
+                size="small"
+                variant="ghost"
+                label={
+                  open().length === props.diffs.length
+                    ? t("ui.sessionReview.collapseAll")
+                    : t("ui.sessionReview.expandAll")
+                }
+                onClick={handleExpandAll}
+              />
+            </Tooltip>
+          </Show>
           <Show when={props.onExpand}>
             <Tooltip value={t("command.review.toggle")} placement="bottom">
               <IconButton
@@ -441,6 +470,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                   onClick={(e: MouseEvent) => {
                                     e.stopPropagation()
                                     props.onOpenFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
+                            </Show>
+                            <Show when={props.onRevertFile}>
+                              <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
+                                <IconButton
+                                  icon="discard"
+                                  size="small"
+                                  variant="ghost"
+                                  class="am-diff-revert-btn"
+                                  label={t("agentManager.diff.revertFile")}
+                                  disabled={props.revertingFiles?.has(diff.file) ?? false}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onRevertFile?.(diff.file)
                                   }}
                                 />
                               </Tooltip>

@@ -46,17 +46,17 @@ Free models on OpenRouter appear and disappear based on promotional periods. A m
 
 **Pricing**: Paid. Uses credits.
 
-For the current mode-to-model mappings, see the [Auto Model user docs](/docs/code-with-ai/agents/auto-model#auto-frontier).
+For the current mode-to-model mappings, see the [Auto Model user docs](/docs/code-with-ai/agents/auto-model#tiers).
 
 ### Auto: Balanced
 
 **Who it's for**: Cost-conscious developers who want better results than free models at a fraction of frontier cost.
 
-**What it does**: Follows the same mode-based routing structure as Frontier but uses cost-effective open-weight models for both reasoning and implementation tasks.
+**What it does**: Follows the same mode-based routing structure as Frontier but uses GPT 5.3 Codex — a cost-effective model with strong reasoning and coding capabilities — across all modes.
 
 **Pricing**: Paid, but significantly cheaper than Frontier.
 
-For the current mode-to-model mappings, see the [Auto Model user docs](/docs/code-with-ai/agents/auto-model#auto-balanced).
+For the current mode-to-model mappings, see the [Auto Model user docs](/docs/code-with-ai/agents/auto-model#tiers).
 
 ### Auto: Free
 
@@ -160,12 +160,12 @@ The client-side chain works as follows:
 
 ## Risks
 
-| Risk                                              | User impact                                            | Mitigation                                                                                                                                                  |
-| ------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Free model disappears mid-session                 | User's next message fails                              | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted.                                                    |
-| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier           | Set clear expectations in UI. Curate model lists, don't just pick the cheapest.                                                                             |
-| Cross-family model switching breaks context       | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free and Balanced. |
-| Users don't understand the tier differences       | Wrong tier selected, poor experience                   | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose.                     |
+| Risk                                              | User impact                                            | Mitigation                                                                                                                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Free model disappears mid-session                 | User's next message fails                              | Fallback chain: primary → secondary → tertiary free model. Graceful error only if all options exhausted.                                                                      |
+| Model quality variance across free/balanced tiers | Inconsistent experience compared to Frontier           | Set clear expectations in UI. Curate model lists, don't just pick the cheapest.                                                                                               |
+| Cross-family model switching breaks context       | Thinking blocks from Model A incompatible with Model B | Strip thinking blocks when the underlying model family changes between turns. Frontier stays within one family so this primarily affects Free tier (which may switch models). |
+| Users don't understand the tier differences       | Wrong tier selected, poor experience                   | Clear descriptions in the model picker. Good defaults (Balanced for paid, Free for unpaid) so most users never need to actively choose.                                       |
 
 ## Data and compliance
 

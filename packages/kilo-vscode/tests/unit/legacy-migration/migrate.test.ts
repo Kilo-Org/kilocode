@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { createSessionID } from "../../../src/legacy-migration/sessions/lib/ids"
 
 const parseSession = mock(async () => ({
   project: {
@@ -43,8 +44,12 @@ function ctx() {
 
 function client() {
   const calls: Array<{ name: string; body: unknown }> = []
+  const get = mock(async () => ({ data: null as { id: string } | null }))
   return {
     calls,
+    session: {
+      get,
+    },
     kilocode: {
       sessionImport: {
         project: async (body: unknown) => {
@@ -73,9 +78,57 @@ describe("legacy migration migrate", () => {
     parseSession.mockClear()
   })
 
+  it("skips before parsing when the migrated session already exists and force is false", async () => {
+    const api = {
+      session: {
+        get: async (body: unknown) => {
+          expect(body).toEqual({ sessionID: createSessionID("legacy-task-1") })
+          return { data: { id: createSessionID("legacy-task-1") } }
+        },
+      },
+      kilocode: {
+        sessionImport: {
+          project: async () => {
+            throw new Error("should not import project")
+          },
+          session: async () => {
+            throw new Error("should not import session")
+          },
+          message: async () => {
+            throw new Error("should not import message")
+          },
+          part: async () => {
+            throw new Error("should not import part")
+          },
+        },
+      },
+    }
+
+    const result = await migrate({ id: "legacy-task-1" }, ctx() as never, api as never)
+
+    expect(result.ok).toBe(true)
+    expect(result).toHaveProperty("skipped", true)
+    expect(parseSession).not.toHaveBeenCalled()
+  })
+
+  it("continues with import when force is true even if the migrated session already exists", async () => {
+    const api = client()
+    api.session.get.mockImplementation(async () => ({ data: { id: createSessionID("legacy-task-1") } }))
+
+    await migrate({ id: "legacy-task-1", force: true }, ctx() as never, api as never)
+
+    expect(parseSession).toHaveBeenCalledTimes(1)
+    const call = api.calls.find((item) => item.name === "session")
+    expect(call).toBeDefined()
+    expect((call?.body as { force?: boolean }).force).toBe(true)
+  })
+
   it("inserts project then session then message then part in the correct order", async () => {
     const calls: string[] = []
     const api = {
+      session: {
+        get: async () => ({ data: null }),
+      },
       kilocode: {
         sessionImport: {
           project: async () => {
@@ -144,7 +197,7 @@ describe("legacy migration migrate", () => {
       ] as never,
     })
 
-    await migrate("legacy-task-1", ctx() as never, api as never)
+    await migrate({ id: "legacy-task-1" }, ctx() as never, api as never)
 
     expect(calls).toEqual(["project", "session", "message", "part"])
   })
@@ -152,7 +205,7 @@ describe("legacy migration migrate", () => {
   it("uses the projectID returned by backend when inserting the session", async () => {
     const api = client()
 
-    await migrate("legacy-task-1", ctx() as never, api as never)
+    await migrate({ id: "legacy-task-1" }, ctx() as never, api as never)
 
     const call = api.calls.find((x) => x.name === "session")
     expect(call).toBeDefined()
@@ -161,6 +214,9 @@ describe("legacy migration migrate", () => {
 
   it("returns ok false without throwing when one backend insert fails", async () => {
     const api = {
+      session: {
+        get: async () => ({ data: null }),
+      },
       kilocode: {
         sessionImport: {
           project: async () => ({ data: { id: "project-real" } }),
@@ -173,7 +229,7 @@ describe("legacy migration migrate", () => {
       },
     }
 
-    const result = await migrate("legacy-task-1", ctx() as never, api as never)
+    const result = await migrate({ id: "legacy-task-1" }, ctx() as never, api as never)
 
     expect(result.ok).toBe(false)
   })
@@ -181,6 +237,9 @@ describe("legacy migration migrate", () => {
   it("skips message and part imports when backend reports the session already exists", async () => {
     const calls: string[] = []
     const api = {
+      session: {
+        get: async () => ({ data: null }),
+      },
       kilocode: {
         sessionImport: {
           project: async () => {
@@ -203,7 +262,7 @@ describe("legacy migration migrate", () => {
       },
     }
 
-    const result = await migrate("legacy-task-1", ctx() as never, api as never)
+    const result = await migrate({ id: "legacy-task-1" }, ctx() as never, api as never)
 
     expect(result.ok).toBe(true)
     expect(result).toHaveProperty("skipped", true)

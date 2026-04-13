@@ -2,8 +2,16 @@ import { describe, expect, test } from "bun:test"
 import type { NamedError } from "@opencode-ai/util/error"
 import { APICallError } from "ai"
 import { setTimeout as sleep } from "node:timers/promises"
+import { Effect, Schedule } from "effect"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageV2 } from "../../src/session/message-v2"
+import { ProviderID } from "../../src/provider/schema"
+import { SessionID } from "../../src/session/schema"
+import { SessionStatus } from "../../src/session/status"
+import { Instance } from "../../src/project/instance"
+import { tmpdir } from "../fixture/fixture"
+
+const providerID = ProviderID.make("test")
 
 function apiError(headers?: Record<string, string>): MessageV2.APIError {
   return new MessageV2.APIError({
@@ -66,24 +74,47 @@ describe("session.retry.delay", () => {
     expect(SessionRetry.delay(1, longError)).toBe(700000)
   })
 
-  test("sleep caps delay to max 32-bit signed integer to avoid TimeoutOverflowWarning", async () => {
-    const controller = new AbortController()
+  test("caps oversized header delays to the runtime timer limit", () => {
+    const error = apiError({ "retry-after-ms": "999999999999" })
+    expect(SessionRetry.delay(1, error)).toBe(SessionRetry.RETRY_MAX_DELAY)
+  })
 
-    const warnings: string[] = []
-    const originalWarn = process.emitWarning
-    process.emitWarning = (warning: string | Error) => {
-      warnings.push(typeof warning === "string" ? warning : warning.message)
-    }
+  test("policy updates retry status and increments attempts", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const sessionID = SessionID.make("session-retry-test")
+        const error = apiError({ "retry-after-ms": "0" })
 
-    const promise = SessionRetry.sleep(2_560_914_000, controller.signal)
-    controller.abort()
+        await Effect.runPromise(
+          Effect.gen(function* () {
+            const step = yield* Schedule.toStepWithMetadata(
+              SessionRetry.policy({
+                parse: (err) => err as MessageV2.APIError,
+                set: (info) =>
+                  Effect.promise(() =>
+                    SessionStatus.set(sessionID, {
+                      type: "retry",
+                      attempt: info.attempt,
+                      message: info.message,
+                      next: info.next,
+                    }),
+                  ),
+              }),
+            )
+            yield* step(error)
+            yield* step(error)
+          }),
+        )
 
-    try {
-      await promise
-    } catch {}
-
-    process.emitWarning = originalWarn
-    expect(warnings.some((w) => w.includes("TimeoutOverflowWarning"))).toBe(false)
+        expect(await SessionStatus.get(sessionID)).toMatchObject({
+          type: "retry",
+          attempt: 2,
+          message: "boom",
+        })
+      },
+    })
   })
 })
 
@@ -98,9 +129,9 @@ describe("session.retry.retryable", () => {
     expect(SessionRetry.retryable(error)).toBe("Provider is overloaded")
   })
 
-  test("handles json messages without code", () => {
+  test("does not retry unknown json messages", () => {
     const error = wrap(JSON.stringify({ error: { message: "no_kv_space" } }))
-    expect(SessionRetry.retryable(error)).toBe(`{"error":{"message":"no_kv_space"}}`)
+    expect(SessionRetry.retryable(error)).toBeUndefined()
   })
 
   test("does not throw on numeric error codes", () => {
@@ -123,14 +154,16 @@ describe("session.retry.retryable", () => {
     expect(SessionRetry.retryable(error)).toBeUndefined()
   })
 
-  test("does not retry FreeUsageLimitError", () => {
+  test("retries ZlibError decompression failures", () => {
     const error = new MessageV2.APIError({
-      message: "rate limit exceeded",
+      message: "Response decompression failed",
       isRetryable: true,
-      responseBody: '{"error":{"code":"FreeUsageLimitError"}}',
-    }).toObject() as ReturnType<NamedError["toObject"]>
+      metadata: { code: "ZlibError" },
+    }).toObject() as MessageV2.APIError
 
-    expect(SessionRetry.retryable(error)).toBeUndefined()
+    const retryable = SessionRetry.retryable(error)
+    expect(retryable).toBeDefined()
+    expect(retryable).toBe("Response decompression failed")
   })
 })
 
@@ -160,7 +193,7 @@ describe("session.message-v2.fromError", () => {
         .then((res) => res.text())
         .catch((e) => e)
 
-      const result = MessageV2.fromError(error, { providerID: "test" })
+      const result = MessageV2.fromError(error, { providerID })
 
       expect(MessageV2.APIError.isInstance(result)).toBe(true)
       expect((result as MessageV2.APIError).data.isRetryable).toBe(true)
@@ -183,6 +216,23 @@ describe("session.message-v2.fromError", () => {
     expect(retryable).toBe("Connection reset by server")
   })
 
+  // kilocode_change start
+  test("ECONNREFUSED socket error is retryable", () => {
+    const result = MessageV2.fromError(
+      {
+        code: "ECONNREFUSED",
+        syscall: "connect",
+        message: "connect ECONNREFUSED 127.0.0.1:3000",
+      },
+      { providerID: ProviderID.make("test") },
+    ) as MessageV2.APIError
+
+    expect(result.data.isRetryable).toBe(true)
+    expect(result.data.message).toBe("Connection refused")
+    expect(result.data.metadata?.code).toBe("ECONNREFUSED")
+  })
+  // kilocode_change end
+
   test("marks OpenAI 404 status codes as retryable", () => {
     const error = new APICallError({
       message: "boom",
@@ -193,7 +243,7 @@ describe("session.message-v2.fromError", () => {
       responseBody: '{"error":"boom"}',
       isRetryable: false,
     })
-    const result = MessageV2.fromError(error, { providerID: "openai" }) as MessageV2.APIError
+    const result = MessageV2.fromError(error, { providerID: ProviderID.make("openai") }) as MessageV2.APIError
     expect(result.data.isRetryable).toBe(true)
   })
 })

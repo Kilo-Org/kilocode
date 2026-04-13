@@ -20,6 +20,7 @@ interface ServerContextValue {
   vscodeLanguage: Accessor<string | undefined>
   languageOverride: Accessor<string | undefined>
   workspaceDirectory: Accessor<string>
+  gitInstalled: Accessor<boolean>
 }
 
 export const ServerContext = createContext<ServerContextValue>()
@@ -39,6 +40,11 @@ export const ServerProvider: ParentComponent = (props) => {
   const [vscodeLanguage, setVscodeLanguage] = createSignal<string | undefined>()
   const [languageOverride, setLanguageOverride] = createSignal<string | undefined>()
   const [workspaceDirectory, setWorkspaceDirectory] = createSignal<string>("")
+  const [gitInstalled, setGitInstalled] = createSignal<boolean>(false)
+
+  const gitSub = vscode.onMessage((m: ExtensionMessage) => {
+    if (m.type === "gitStatus") setGitInstalled(m.repo)
+  })
 
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
@@ -121,7 +127,10 @@ export const ServerProvider: ParentComponent = (props) => {
       }
     })
 
-    onCleanup(unsubscribe)
+    onCleanup(() => {
+      gitSub()
+      unsubscribe()
+    })
 
     // Let the extension know the webview has mounted and message handlers are registered.
     // Without this handshake, messages posted during a webview refresh can be lost.
@@ -151,6 +160,7 @@ export const ServerProvider: ParentComponent = (props) => {
     vscodeLanguage,
     languageOverride,
     workspaceDirectory,
+    gitInstalled,
   }
 
   return <ServerContext.Provider value={value}>{props.children}</ServerContext.Provider>

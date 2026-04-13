@@ -1,4 +1,4 @@
-import { LineStream } from "../../../diff/util"
+import type { LineStream } from "../../../diff/util"
 import { lineIsRepeated } from "../../util/textSimilarity"
 
 export { lineIsRepeated }
@@ -178,19 +178,6 @@ export async function* stopAtLines(
 }
 
 /**
- * Yield until an exact stop line is encountered, then call fullStop.
- */
-export async function* stopAtLinesExact(stream: LineStream, fullStop: () => void, linesToStopAt: string[]): LineStream {
-  for await (const line of stream) {
-    if (linesToStopAt.some((stopAt) => line === stopAt)) {
-      fullStop()
-      break
-    }
-    yield line
-  }
-}
-
-/**
  * On the first line only, strip any configured prefix (e.g. "<COMPLETION>").
  */
 export async function* skipPrefixes(lines: LineStream): LineStream {
@@ -228,43 +215,5 @@ export async function* stopAtRepeatingLines(lines: LineStream, fullStop: () => v
       repeatCount = 1
     }
     previousLine = line
-  }
-}
-
-/**
- * Pass through lines, but if the stream takes longer than ms after we have at least one non-empty line, stop early.
- */
-export async function* showWhateverWeHaveAtXMs(lines: LineStream, ms: number): LineStream {
-  const startTime = Date.now()
-  let firstNonWhitespaceLineYielded = false
-
-  for await (const line of lines) {
-    yield line
-
-    if (!firstNonWhitespaceLineYielded && line.trim() !== "") {
-      firstNonWhitespaceLineYielded = true
-    }
-
-    const isTakingTooLong = Date.now() - startTime > ms
-    if (isTakingTooLong && firstNonWhitespaceLineYielded) {
-      break
-    }
-  }
-}
-
-/**
- * Yield lines until the first blank line after some content; then stop.
- */
-export async function* noDoubleNewLine(lines: LineStream): LineStream {
-  let isFirstLine = true
-
-  for await (const line of lines) {
-    if (line.trim() === "" && !isFirstLine) {
-      return
-    }
-
-    isFirstLine = false
-
-    yield line
   }
 }

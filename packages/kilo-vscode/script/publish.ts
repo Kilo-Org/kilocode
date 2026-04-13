@@ -4,7 +4,9 @@ import { join } from "node:path"
 import { existsSync } from "node:fs"
 import { Script } from "@opencode-ai/script"
 
-console.log(`Publishing VSCode extension for release: v${Script.version}`)
+const prerelease = process.env.KILO_PRE_RELEASE === "true"
+
+console.log(`Publishing VSCode extension for ${prerelease ? "pre-release" : "release"}: v${Script.version}`)
 
 const outDir = process.env.VSIX_DIR || join(import.meta.dir, "..", "out")
 
@@ -36,14 +38,16 @@ for (const target of targets) {
 
 console.log(`\nFound ${vsixFiles.length} VSIX files`)
 
+const flag = prerelease ? ["--pre-release"] : []
+
 for (const target of targets) {
   const vsixPath = join(outDir, `kilo-vscode-${target}.vsix`)
-  console.log(`\n🚀 Publishing ${target} to VS Code Marketplace...`)
-  await $`vsce publish --packagePath ${vsixPath}`
+  console.log(`\n🚀 Publishing ${target} to VS Code Marketplace${prerelease ? " (pre-release)" : ""}...`)
+  await $`vsce publish ${flag} --packagePath ${vsixPath}`
   console.log(`  ✅ Published ${target} to VS Code Marketplace`)
 
-  console.log(`\n📤 Publishing ${target} to Open VSX...`)
-  await $`npx ovsx publish --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`
+  console.log(`\n📤 Publishing ${target} to Open VSX${prerelease ? " (pre-release)" : ""}...`)
+  await $`npx ovsx publish ${flag} --pat ${process.env.OPENVSX_TOKEN} --packagePath ${vsixPath}`
   console.log(`  ✅ Published ${target} to Open VSX`)
 }
 

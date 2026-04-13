@@ -1,7 +1,7 @@
 {
   "name": "@opencode-ai/desktop-electron",
   "private": true,
-  "version": "7.1.20",
+  "version": "7.2.4",
   "type": "module",
   "license": "MIT",
   "homepage": "https://opencode.ai",
@@ -30,6 +30,7 @@
     "@solid-primitives/storage": "catalog:",
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "0.15.4",
+    "effect": "catalog:",
     "electron-log": "^5",
     "electron-store": "^10",
     "electron-updater": "^6",
@@ -43,10 +44,11 @@
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "electron": "40.4.1",
+    "electron": "40.8.5",
     "electron-builder": "^26",
     "electron-vite": "^5",
     "typescript": "~5.6.2",
     "vite": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

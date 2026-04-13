@@ -58,19 +58,21 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button className="theme-toggle" aria-label="Toggle theme" style={{ width: "32px", height: "32px" }}>
-        <span style={{ opacity: 0 }}>🌙</span>
+        <span style={{ opacity: 0 }}>
+          <MoonIcon />
+        </span>
       </button>
     )
   }
 
   const getIcon = () => {
     if (theme === "system") {
-      return "💻"
+      return <SystemIcon />
     }
     if (theme === "dark") {
-      return "🌙"
+      return <MoonIcon />
     }
-    return "☀️"
+    return <SunIcon />
   }
 
   const getLabel = () => {
@@ -86,7 +88,7 @@ export function ThemeToggle() {
   return (
     <>
       <button onClick={cycleTheme} className="theme-toggle" aria-label={getLabel()} title={getLabel()}>
-        <span>{getIcon()}</span>
+        {getIcon()}
       </button>
       <style jsx>{`
         .theme-toggle {
@@ -99,19 +101,78 @@ export function ThemeToggle() {
           border: 1px solid var(--border-color);
           border-radius: 6px;
           background: var(--bg-secondary);
+          color: var(--text-color);
           cursor: pointer;
-          font-size: 16px;
           transition:
             background-color 0.2s ease,
-            border-color 0.2s ease;
+            border-color 0.2s ease,
+            color 0.2s ease;
         }
         .theme-toggle:hover {
           background: var(--border-color);
         }
-        .theme-toggle span {
-          line-height: 1;
-        }
       `}</style>
     </>
+  )
+}
+
+function SunIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="8" cy="8" r="3.5" />
+      <path d="M8 2.5V1" />
+      <path d="M8 15v-1.5" />
+      <path d="M11.889 4.111l.707-.707" />
+      <path d="M3.404 12.596l.707-.707" />
+      <path d="M13.5 8h1.5" />
+      <path d="M1 8h1.5" />
+      <path d="M11.889 11.889l.707.707" />
+      <path d="M3.404 3.404l.707.707" />
+    </svg>
+  )
+}
+
+function MoonIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M14 8.526A6 6 0 1 1 7.473 2 4.666 4.666 0 0 0 14 8.526z" />
+    </svg>
+  )
+}
+
+function SystemIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect x="2" y="3" width="12" height="8" rx="1" />
+      <path d="M5 13h6" />
+      <path d="M8 11v2" />
+    </svg>
   )
 }
