@@ -1,17 +1,16 @@
 import { Log } from "../util/log"
 import path from "path"
-import { pathToFileURL, fileURLToPath } from "url"
-import { createRequire } from "module"
+import { pathToFileURL } from "url"
 import os from "os"
 import z from "zod"
 import { ModelsDev } from "../provider/models"
 import { mergeDeep, pipe, unique } from "remeda"
 import { Global } from "../global"
-import fs from "fs/promises"
-import { lazy } from "../util/lazy"
+import fsNode from "fs/promises"
 import { NamedError } from "@opencode-ai/util/error"
 import { Flag } from "../flag/flag"
 import { Auth } from "../auth"
+import { Env } from "../env"
 // kilocode_change start
 import {
   type ParseError as JsoncParseError,
@@ -22,8 +21,9 @@ import {
   parseTree,
   printParseErrorCode,
 } from "jsonc-parser"
+import { KilocodeConfig } from "../kilocode/config/config"
 // kilocode_change end
-import { Instance } from "../project/instance"
+import { Instance, type InstanceContext } from "../project/instance"
 import { LSPServer } from "../lsp/server"
 import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
@@ -34,21 +34,27 @@ import { GlobalBus } from "@/bus/global"
 import { Event } from "../server/event"
 import { Glob } from "../util/glob"
 import { PackageRegistry } from "@/bun/registry"
-import { proxied } from "@/util/proxied"
+import { online, proxied } from "@/util/network"
 import { iife } from "@/util/iife"
-import { Control } from "@/control"
+import { Account } from "@/account"
+import { isRecord } from "@/util/record"
 import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
-
-import { ModesMigrator } from "../kilocode/modes-migrator" // kilocode_change
-import { fetchOrganizationModes } from "@kilocode/kilo-gateway" // kilocode_change
-import { RulesMigrator } from "../kilocode/rules-migrator" // kilocode_change
-import { WorkflowsMigrator } from "../kilocode/workflows-migrator" // kilocode_change
-import { McpMigrator } from "../kilocode/mcp-migrator" // kilocode_change
-import { IgnoreMigrator } from "../kilocode/ignore-migrator" // kilocode_change
+import { Process } from "@/util/process"
+import { AppFileSystem } from "@/filesystem"
+import { InstanceState } from "@/effect/instance-state"
+import { makeRuntime } from "@/effect/run-service"
+import { Duration, Effect, Layer, Option, ServiceMap } from "effect"
+import { Flock } from "@/util/flock"
+import { isPathPluginSpec, parsePluginSpecifier, resolvePathPluginTarget } from "@/plugin/shared"
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
+  const PluginOptions = z.record(z.string(), z.unknown())
+  export const PluginSpec = z.union([z.string(), z.tuple([z.string(), PluginOptions])])
+
+  export type PluginOptions = z.infer<typeof PluginOptions>
+  export type PluginSpec = z.infer<typeof PluginSpec>
 
   const log = Log.create({ service: "config" })
 
@@ -59,6 +65,8 @@ export namespace Config {
     detail: z.string().optional(),
   })
   export type Warning = z.infer<typeof Warning>
+
+  const { toWarning, caught: caughtWarning, handleInvalid } = KilocodeConfig
   // kilocode_change end
 
   // Managed settings directory for enterprise deployments (highest priority, admin-controlled)
@@ -92,385 +100,93 @@ export namespace Config {
     return merged
   }
 
-  // kilocode_change start — capture init so resetState() can invalidate the cache entry
-  const stateInit = async () => {
-    // kilocode_change end
-    // kilocode_change start
-    const warnings: Warning[] = []
-    const caught = (err: unknown, source: string) => {
-      const w = toWarning(err)
-      if (w) {
-        warnings.push(w)
-        log.warn("skipped config due to error", { source, err })
-        return
-      }
-      throw err
-    }
-    // kilocode_change end
-    const auth = await Auth.all()
+  export type InstallInput = {
+    signal?: AbortSignal
+    waitTick?: (input: { dir: string; attempt: number; delay: number; waited: number }) => void | Promise<void>
+  }
 
-    // This ensures Opencode native configs always take precedence over legacy Kilocode configs
-    // Config loading order (low -> high precedence): https://opencode.ai/docs/config#precedence-order
-    // 1) Remote .well-known/opencode (org defaults)
-    // 2) Global config (~/.config/opencode/opencode.json{,c})
-    // 3) Custom config (KILO_CONFIG)
-    // 4) Project config (opencode.json{,c})
-    // 5) .opencode directories (.opencode/agents/, .opencode/commands/, .opencode/plugins/, .opencode/opencode.json{,c})
-    // 6) Inline config (KILO_CONFIG_CONTENT)
-    // Managed config directory is enterprise-only and always overrides everything above.
-    let result: Info = {}
+  export async function installDependencies(dir: string, input?: InstallInput) {
+    if (!(await needsInstall(dir))) return
 
-    // kilocode_change start - Load Kilocode configs first (lowest precedence)
-    // Load Kilocode custom modes (legacy fallback)
-    try {
-      const kilocodeMigration = await ModesMigrator.migrate({
-        projectDir: Instance.directory,
-      })
-      if (Object.keys(kilocodeMigration.agents).length > 0) {
-        result = mergeConfigConcatArrays(result, { agent: kilocodeMigration.agents })
-        log.debug("loaded kilocode custom modes", {
-          count: Object.keys(kilocodeMigration.agents).length,
-          modes: Object.keys(kilocodeMigration.agents),
-        })
-      }
-      for (const skipped of kilocodeMigration.skipped) {
-        log.debug("skipped kilocode mode", { slug: skipped.slug, reason: skipped.reason })
-      }
-    } catch (err) {
-      log.warn("failed to load kilocode modes", { error: err })
-    }
-
-    // Load Kilocode workflows as commands (legacy fallback)
-    try {
-      const workflowsMigration = await WorkflowsMigrator.migrate({
-        projectDir: Instance.directory,
-      })
-      if (Object.keys(workflowsMigration.commands).length > 0) {
-        result = mergeConfigConcatArrays(result, { command: workflowsMigration.commands })
-        log.debug("loaded kilocode workflows as commands", {
-          count: Object.keys(workflowsMigration.commands).length,
-          commands: Object.keys(workflowsMigration.commands),
-        })
-      }
-    } catch (err) {
-      log.warn("failed to load kilocode workflows", { error: err })
-    }
-
-    // Load Kilocode rules (legacy fallback)
-    try {
-      const kilocodeRules = await RulesMigrator.migrate({
-        projectDir: Instance.directory,
-      })
-      if (kilocodeRules.instructions.length > 0) {
-        result = mergeConfigConcatArrays(result, { instructions: kilocodeRules.instructions })
-        log.debug("loaded kilocode rules", {
-          count: kilocodeRules.instructions.length,
-          files: kilocodeRules.instructions,
-        })
-      }
-      for (const warning of kilocodeRules.warnings) {
-        log.debug("kilocode rules warning", { warning })
-      }
-    } catch (err) {
-      log.warn("failed to load kilocode rules", { error: err })
-    }
-
-    // Load Kilocode MCP servers (legacy fallback)
-    const kilocodeMcp = await McpMigrator.loadMcpConfig(Instance.directory)
-    if (Object.keys(kilocodeMcp).length > 0) {
-      result = mergeConfigConcatArrays(result, { mcp: kilocodeMcp })
-    }
-
-    // Load .kilocodeignore patterns (legacy fallback)
-    try {
-      const ignorePermission = await IgnoreMigrator.loadIgnoreConfig(Instance.directory)
-      if (Object.keys(ignorePermission).length > 0) {
-        result = mergeConfigConcatArrays(result, { permission: ignorePermission })
-        log.debug("loaded kilocode ignore patterns", {
-          hasRead: !!ignorePermission.read,
-          hasEdit: !!ignorePermission.edit,
-        })
-      }
-    } catch (err) {
-      log.warn("failed to load kilocode ignore patterns", { error: err })
-    }
-    // kilocode_change end
-
-    // kilocode_change start - Load organization custom modes from Kilo Cloud API
-    // These override legacy Kilocode modes but are overridden by well-known, global, and project config
-    try {
-      const kilo = auth["kilo"]
-      if (kilo?.type === "oauth" && kilo.access && kilo.accountId) {
-        const modes = await fetchOrganizationModes(kilo.access, kilo.accountId)
-        if (modes.length > 0) {
-          const agents = ModesMigrator.convertOrganizationModes(modes)
-          result = mergeConfigConcatArrays(result, { agent: agents })
-          log.debug("loaded organization custom modes", {
-            count: modes.length,
-            modes: modes.map((m) => m.slug),
-          })
-        }
-      }
-    } catch (err) {
-      log.warn("failed to load organization custom modes", { error: err })
-    }
-    // kilocode_change end
-
-    // Load remote/well-known config (overrides Kilocode legacy configs)
-    // This allows organizations to provide default configs that users can override
-    for (const [key, value] of Object.entries(auth)) {
-      if (value.type === "wellknown") {
-        const url = key.replace(/\/+$/, "")
-        // kilocode_change start
-        const source = `${url}/.well-known/opencode`
-        try {
-          process.env[value.key] = value.token
-          log.debug("fetching remote config", { url: source })
-          const response = await fetch(source)
-          if (!response.ok) {
-            throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
-          }
-          const wellknown = (await response.json()) as any
-          const remoteConfig = wellknown.config ?? {}
-          // Add $schema to prevent load() from trying to write back to a non-existent file
-          if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
-          result = mergeConfigConcatArrays(
-            result,
-            await load(JSON.stringify(remoteConfig), {
-              dir: path.dirname(source),
-              source,
-            }),
-          )
-          log.debug("loaded remote config from well-known", { url })
-        } catch (err) {
-          const w = toWarning(err)
-          if (w) warnings.push(w)
-          else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
-          log.warn("skipped remote config due to error", { url, err })
-          // kilocode_change end
-        }
-      }
-    }
-
-    const token = await Control.token()
-    if (token) {
-    }
-
-    // Global user config overrides remote config.
-    // kilocode_change start
-    try {
-      result = mergeConfigConcatArrays(result, await global())
-    } catch (err) {
-      caught(err, "global config")
-    }
-    // kilocode_change end
-
-    // Custom config path overrides global config.
-    if (Flag.KILO_CONFIG) {
-      // kilocode_change start
-      try {
-        result = mergeConfigConcatArrays(result, await loadFile(Flag.KILO_CONFIG))
-        log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
-      } catch (err) {
-        caught(err, Flag.KILO_CONFIG)
-      }
-      // kilocode_change end
-    }
-
-    // Project config overrides global and remote config.
-    if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-      // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        try {
-          result = mergeConfigConcatArrays(result, await loadFile(file))
-        } catch (err) {
-          caught(err, file)
-        }
-      }
-      // kilocode_change end
-    }
-
-    result.agent = result.agent || {}
-    result.mode = result.mode || {}
-    result.plugin = result.plugin || []
-
-    const directories = await ConfigPaths.directories(Instance.directory, Instance.worktree)
-
-    // .opencode directory config overrides (project and global) config sources.
-    if (Flag.KILO_CONFIG_DIR) {
-      log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
-    }
-
-    const deps = []
-
-    for (const dir of unique(directories)) {
-      // kilocode_change start
-      if (
-        dir.endsWith(".kilo") ||
-        dir.endsWith(".kilocode") ||
-        dir.endsWith(".opencode") ||
-        dir === Flag.KILO_CONFIG_DIR
-      ) {
-        for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-          log.debug(`loading config from ${path.join(dir, file)}`)
-          try {
-            result = mergeConfigConcatArrays(result, await loadFile(path.join(dir, file)))
-          } catch (err) {
-            caught(err, path.join(dir, file))
-          }
-          // to satisfy the type checker
-          result.agent ??= {}
-          result.mode ??= {}
-          result.plugin ??= []
-        }
-        // kilocode_change end
-      }
-
-      deps.push(
-        iife(async () => {
-          const shouldInstall = await needsInstall(dir)
-          if (shouldInstall) await installDependencies(dir)
+    await using _ = await Flock.acquire(`config-install:${Filesystem.resolve(dir)}`, {
+      signal: input?.signal,
+      onWait: (tick) =>
+        input?.waitTick?.({
+          dir,
+          attempt: tick.attempt,
+          delay: tick.delay,
+          waited: tick.waited,
         }),
-      )
+    })
 
-      // kilocode_change start
-      try {
-        result.command = mergeDeep(result.command ?? {}, await loadCommand(dir, warnings))
-        result.agent = mergeDeep(result.agent, await loadAgent(dir, warnings))
-        result.agent = mergeDeep(result.agent, await loadMode(dir, warnings))
-        result.plugin.push(...(await loadPlugin(dir)))
-      } catch (err: unknown) {
-        log.error("failed to load config directory", { dir, err })
-      }
-      // kilocode_change end
-    }
+    input?.signal?.throwIfAborted()
+    if (!(await needsInstall(dir))) return
 
-    // Inline config content overrides all non-managed config sources.
-    if (process.env.KILO_CONFIG_CONTENT) {
-      // kilocode_change start
-      try {
-        result = mergeConfigConcatArrays(
-          result,
-          await load(process.env.KILO_CONFIG_CONTENT, {
-            dir: Instance.directory,
-            source: "KILO_CONFIG_CONTENT",
-          }),
-        )
-        log.debug("loaded custom config from KILO_CONFIG_CONTENT")
-      } catch (err) {
-        caught(err, "KILO_CONFIG_CONTENT")
-      }
-      // kilocode_change end
-    }
-
-    // Load managed config files last (highest priority) - enterprise admin-controlled
-    // Kept separate from directories array to avoid write operations when installing plugins
-    // which would fail on system directories requiring elevated permissions
-    // This way it only loads config file and not skills/plugins/commands
-    if (existsSync(managedDir)) {
-      // kilocode_change start
-      for (const file of ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"]) {
-        result = mergeConfigConcatArrays(result, await loadFile(path.join(managedDir, file)))
-      }
-      // kilocode_change end
-    }
-
-    // Migrate deprecated mode field to agent field
-    for (const [name, mode] of Object.entries(result.mode ?? {})) {
-      result.agent = mergeDeep(result.agent ?? {}, {
-        [name]: {
-          ...mode,
-          mode: "primary" as const,
-        },
-      })
-    }
-
-    if (Flag.KILO_PERMISSION) {
-      result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
-    }
-
-    // Backwards compatibility: legacy top-level `tools` config
-    if (result.tools) {
-      const perms: Record<string, Config.PermissionAction> = {}
-      for (const [tool, enabled] of Object.entries(result.tools)) {
-        const action: Config.PermissionAction = enabled ? "allow" : "deny"
-        if (tool === "write" || tool === "edit" || tool === "patch" || tool === "multiedit") {
-          perms.edit = action
-          continue
-        }
-        perms[tool] = action
-      }
-      result.permission = mergeDeep(perms, result.permission ?? {})
-    }
-
-    if (!result.username) result.username = os.userInfo().username
-
-    // Handle migration from autoshare to share field
-    if (result.autoshare === true && !result.share) {
-      result.share = "auto"
-    }
-
-    // Apply flag overrides for compaction settings
-    if (Flag.KILO_DISABLE_AUTOCOMPACT) {
-      result.compaction = { ...result.compaction, auto: false }
-    }
-    if (Flag.KILO_DISABLE_PRUNE) {
-      result.compaction = { ...result.compaction, prune: false }
-    }
-
-    result.plugin = deduplicatePlugins(result.plugin ?? [])
-
-    return {
-      config: result,
-      directories,
-      deps,
-      warnings, // kilocode_change
-    }
-  }
-  // kilocode_change start — create state from named init so resetState() can invalidate it
-  export const state = Instance.state(stateInit)
-  // kilocode_change end
-
-  export async function waitForDependencies() {
-    const deps = await state().then((x) => x.deps)
-    await Promise.all(deps)
-  }
-
-  export async function installDependencies(dir: string) {
     const pkg = path.join(dir, "package.json")
-    const targetVersion = Installation.isLocal() ? "*" : Installation.VERSION
+    const target = Installation.isLocal() ? "*" : Installation.VERSION
 
     const json = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => ({
       dependencies: {},
     }))
     json.dependencies = {
       ...json.dependencies,
-      "@kilocode/plugin": targetVersion,
+      "@kilocode/plugin": target,
     }
     await Filesystem.writeJson(pkg, json)
 
     const gitignore = path.join(dir, ".gitignore")
-    const hasGitIgnore = await Filesystem.exists(gitignore)
-    if (!hasGitIgnore)
+    const ignore = await Filesystem.exists(gitignore)
+    if (!ignore) {
       await Filesystem.write(gitignore, ["node_modules", "package.json", "bun.lock", ".gitignore"].join("\n"))
+    }
 
-    // Install any additional dependencies defined in the package.json
-    // This allows local plugins and custom tools to use external packages
+    // Bun can race cache writes on Windows when installs run in parallel across dirs.
+    // Serialize installs globally on win32, but keep parallel installs on other platforms.
+    await using __ =
+      process.platform === "win32"
+        ? await Flock.acquire("config-install:bun", {
+            signal: input?.signal,
+          })
+        : undefined
+
     await BunProc.run(
       [
         "install",
         // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
         ...(proxied() || process.env.CI ? ["--no-cache"] : []),
       ],
-      { cwd: dir },
+      {
+        cwd: dir,
+        abort: input?.signal,
+      },
     ).catch((err) => {
+      if (err instanceof Process.RunFailedError) {
+        const detail = {
+          dir,
+          cmd: err.cmd,
+          code: err.code,
+          stdout: err.stdout.toString(),
+          stderr: err.stderr.toString(),
+        }
+        if (Flag.KILO_STRICT_CONFIG_DEPS) {
+          log.error("failed to install dependencies", detail)
+          throw err
+        }
+        log.warn("failed to install dependencies", detail)
+        return
+      }
+
+      if (Flag.KILO_STRICT_CONFIG_DEPS) {
+        log.error("failed to install dependencies", { dir, error: err })
+        throw err
+      }
       log.warn("failed to install dependencies", { dir, error: err })
     })
   }
 
   async function isWritable(dir: string) {
     try {
-      await fs.access(dir, constants.W_OK)
+      await fsNode.access(dir, constants.W_OK)
       return true
     } catch {
       return false
@@ -486,8 +202,8 @@ export namespace Config {
       return false
     }
 
-    const nodeModules = path.join(dir, "node_modules")
-    if (!existsSync(nodeModules)) return true
+    const mod = path.join(dir, "node_modules", "@kilocode", "plugin") // kilocode_change
+    if (!existsSync(mod)) return true
 
     const pkg = path.join(dir, "package.json")
     const pkgExists = await Filesystem.exists(pkg)
@@ -500,8 +216,9 @@ export namespace Config {
 
     const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
     if (targetVersion === "latest") {
-      const isOutdated = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
-      if (!isOutdated) return false
+      if (!online()) return false
+      const stale = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
+      if (!stale) return false
       log.info("Cached version is outdated, proceeding with install", {
         pkg: "@kilocode/plugin",
         cachedVersion: depVersion,
@@ -527,60 +244,7 @@ export namespace Config {
     return ext.length ? file.slice(0, -ext.length) : file
   }
 
-  // kilocode_change start
-  function toWarning(err: unknown): Warning | undefined {
-    if (ConfigPaths.JsonError.isInstance(err))
-      return {
-        path: err.data.path,
-        message: `Config file at ${err.data.path} is not valid JSON(C)`,
-        detail: err.data.message || undefined,
-      }
-    if (ConfigPaths.InvalidError.isInstance(err)) {
-      const text = err.data.issues ? detail(err.data.issues) : err.data.message
-      return {
-        path: err.data.path,
-        message: text
-          ? `Configuration is invalid at ${err.data.path}: ${text}`
-          : `Configuration is invalid at ${err.data.path}`,
-      }
-    }
-    return undefined
-  }
-
-  function detail(issues: z.core.$ZodIssue[]) {
-    return issues
-      .map((issue) => {
-        const loc = issue.path.map(String).join(".")
-        if (!loc) return issue.message
-        return `${loc}: ${issue.message}`
-      })
-      .join("\n")
-  }
-
-  async function invalid(
-    kind: "agent" | "command",
-    item: string,
-    issues: z.core.$ZodIssue[],
-    cause: Error,
-    warnings?: Warning[],
-  ) {
-    const text = detail(issues)
-    const message = text ? `Config file at ${item} is invalid: ${text}` : `Config file at ${item} is invalid`
-    const err = new InvalidError({ path: item, issues }, { cause })
-    if (warnings) warnings.push({ path: item, message, detail: text || undefined })
-    try {
-      const { Session } = await import("@/session")
-      Bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-    } catch (e) {
-      log.warn("could not publish session error", { message, err: e })
-    }
-    if (kind === "command") {
-      log.error("failed to load command", { command: item, err, message })
-      return
-    }
-    log.error("failed to load agent", { agent: item, err, message })
-  }
-  // kilocode_change end
+  // kilocode_change — toWarning, caughtWarning, handleInvalid are imported from KilocodeConfig above
 
   // kilocode_change start
   async function loadCommand(dir: string, warnings?: Warning[]) {
@@ -634,7 +298,7 @@ export namespace Config {
         continue
       }
       // kilocode_change start
-      await invalid("command", item, parsed.error.issues, parsed.error, warnings)
+      await handleInvalid("command", item, parsed.error.issues, parsed.error, warnings)
       // kilocode_change end
     }
     return result
@@ -695,7 +359,7 @@ export namespace Config {
         continue
       }
       // kilocode_change start
-      await invalid("agent", item, parsed.error.issues, parsed.error, warnings)
+      await handleInvalid("agent", item, parsed.error.issues, parsed.error, warnings)
       // kilocode_change end
     }
     return result
@@ -743,14 +407,14 @@ export namespace Config {
         continue
       }
       // kilocode_change start
-      await invalid("agent", item, parsed.error.issues, parsed.error, warnings)
+      await handleInvalid("agent", item, parsed.error.issues, parsed.error, warnings)
       // kilocode_change end
     }
     return result
   }
 
   async function loadPlugin(dir: string) {
-    const plugins: string[] = []
+    const plugins: PluginSpec[] = []
 
     for (const item of await Glob.scan("{plugin,plugins}/*.{ts,js}", {
       cwd: dir,
@@ -763,25 +427,29 @@ export namespace Config {
     return plugins
   }
 
-  /**
-   * Extracts a canonical plugin name from a plugin specifier.
-   * - For file:// URLs: extracts filename without extension
-   * - For npm packages: extracts package name without version
-   *
-   * @example
-   * getPluginName("file:///path/to/plugin/foo.js") // "foo"
-   * getPluginName("oh-my-opencode@2.4.3") // "oh-my-opencode"
-   * getPluginName("@scope/pkg@1.0.0") // "@scope/pkg"
-   */
-  export function getPluginName(plugin: string): string {
-    if (plugin.startsWith("file://")) {
-      return path.parse(new URL(plugin).pathname).name
-    }
-    const lastAt = plugin.lastIndexOf("@")
-    if (lastAt > 0) {
-      return plugin.substring(0, lastAt)
-    }
-    return plugin
+  export function pluginSpecifier(plugin: PluginSpec): string {
+    return Array.isArray(plugin) ? plugin[0] : plugin
+  }
+
+  export function pluginOptions(plugin: PluginSpec): PluginOptions | undefined {
+    return Array.isArray(plugin) ? plugin[1] : undefined
+  }
+
+  export async function resolvePluginSpec(plugin: PluginSpec, configFilepath: string): Promise<PluginSpec> {
+    const spec = pluginSpecifier(plugin)
+    if (!isPathPluginSpec(spec)) return plugin
+
+    const base = path.dirname(configFilepath)
+    const file = (() => {
+      if (spec.startsWith("file://")) return spec
+      if (path.isAbsolute(spec) || /^[A-Za-z]:[\\/]/.test(spec)) return pathToFileURL(spec).href
+      return pathToFileURL(path.resolve(base, spec)).href
+    })()
+
+    const resolved = await resolvePathPluginTarget(file).catch(() => file)
+
+    if (Array.isArray(plugin)) return [resolved, plugin[1]]
+    return resolved
   }
 
   /**
@@ -795,17 +463,13 @@ export namespace Config {
    * Since plugins are added in low-to-high priority order,
    * we reverse, deduplicate (keeping first occurrence), then restore order.
    */
-  export function deduplicatePlugins(plugins: string[]): string[] {
-    // seenNames: canonical plugin names for duplicate detection
-    // e.g., "oh-my-opencode", "@scope/pkg"
+  export function deduplicatePlugins(plugins: PluginSpec[]): PluginSpec[] {
     const seenNames = new Set<string>()
-
-    // uniqueSpecifiers: full plugin specifiers to return
-    // e.g., "oh-my-opencode@2.4.3", "file:///path/to/plugin.js"
-    const uniqueSpecifiers: string[] = []
+    const uniqueSpecifiers: PluginSpec[] = []
 
     for (const specifier of plugins.toReversed()) {
-      const name = getPluginName(specifier)
+      const spec = pluginSpecifier(specifier)
+      const name = spec.startsWith("file://") ? spec : parsePluginSpecifier(spec).pkg
       if (!seenNames.has(name)) {
         seenNames.add(name)
         uniqueSpecifiers.push(specifier)
@@ -929,7 +593,6 @@ export namespace Config {
           task: PermissionRule.optional(),
           external_directory: PermissionRule.optional(),
           todowrite: PermissionAction.optional(),
-          todoread: PermissionAction.optional(),
           question: PermissionAction.optional(),
           webfetch: PermissionAction.optional(),
           websearch: PermissionAction.optional(),
@@ -1207,6 +870,7 @@ export namespace Config {
       terminal_title_toggle: z.string().optional().default("none").describe("Toggle terminal title"),
       tips_toggle: z.string().optional().default("<leader>h").describe("Toggle tips on home screen"),
       news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
+      plugin_manager: z.string().optional().default("none").describe("Open plugin manager dialog"),
       display_thinking: z.string().optional().default("none").describe("Toggle thinking blocks visibility"),
     })
     .strict()
@@ -1277,6 +941,14 @@ export namespace Config {
             .describe(
               "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.", // kilocode_change
             ),
+          chunkTimeout: z
+            .number()
+            .int()
+            .positive()
+            .optional()
+            .describe(
+              "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
+            ),
         })
         .catchall(z.any())
         .optional(),
@@ -1302,8 +974,13 @@ export namespace Config {
           ignore: z.array(z.string()).optional(),
         })
         .optional(),
-      plugin: z.string().array().optional(),
-      snapshot: z.boolean().optional(),
+      snapshot: z
+        .boolean()
+        .optional()
+        .describe(
+          "Enable or disable snapshot tracking. When false, filesystem snapshots are not recorded and undoing or reverting will not undo/redo file changes. Defaults to true.",
+        ),
+      plugin: PluginSpec.array().optional(),
       share: z
         .enum(["manual", "auto", "disabled"])
         .optional()
@@ -1494,183 +1171,25 @@ export namespace Config {
 
   export type Info = z.output<typeof Info>
 
-  // kilocode_change start — migrate bash permission for existing users before config is consumed
-  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
-
-  async function migrateBashPermission() {
-    const files = GLOBAL_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
-    // also check legacy TOML config — its presence means existing user
-    const legacy = path.join(Global.Path.config, "config")
-    const existing = files.filter((file) => existsSync(file))
-    const hasLegacy = existsSync(legacy)
-    // no global config → new user, they'll get the new bash:ask default
-    if (existing.length === 0 && !hasLegacy) return
-    // check if any config file already has an explicit bash permission
-    for (const file of existing) {
-      const text = await Bun.file(file)
-        .text()
-        .catch(() => "")
-      const data = parseJsonc(text) ?? {}
-      if (data.permission?.bash) return
-    }
-    // also check legacy TOML config for bash permission
-    if (hasLegacy) {
-      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
-      if (toml?.default?.permission?.bash) return
-    }
-    // existing user without bash permission in any file → write bash:allow to the
-    // highest-precedence existing file to preserve their current behavior.
-    // if only the legacy TOML file exists, write to config.json (the TOML migration will merge into it)
-    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
-    const text = await Bun.file(target)
-      .text()
-      .catch(() => "{}")
-    if (target.endsWith(".jsonc")) {
-      const edits = modify(text, ["permission", "bash"], "allow", {
-        formattingOptions: { insertSpaces: true, tabSize: 2 },
-      })
-      await Bun.write(target, applyEdits(text, edits))
-      log.info("migrated bash permission to allow for existing user", { path: target })
-      return
-    }
-    const data = parseJsonc(text) ?? {}
-    const merged = { ...data, permission: { ...data.permission, bash: "allow" } }
-    await Bun.write(target, JSON.stringify(merged, null, 2))
-    log.info("migrated bash permission to allow for existing user", { path: target })
-  }
-  // kilocode_change end
-
-  export const global = lazy(async () => {
-    await migrateBashPermission() // kilocode_change — run before config is read
-    let result: Info = pipe(
-      {},
-      mergeDeep(await loadFile(path.join(Global.Path.config, "config.json"))),
-      // kilocode_change start
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
-      // kilocode_change end
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.json"))),
-      mergeDeep(await loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
-    )
-
-    const legacy = path.join(Global.Path.config, "config")
-    if (existsSync(legacy)) {
-      await import(pathToFileURL(legacy).href, {
-        with: {
-          type: "toml",
-        },
-      })
-        .then(async (mod) => {
-          const { provider, model, ...rest } = mod.default
-          if (provider && model) result.model = `${provider}/${model}`
-          result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
-          result = mergeDeep(result, rest)
-          await Filesystem.writeJson(path.join(Global.Path.config, "config.json"), result)
-          await fs.unlink(legacy)
-        })
-        .catch(() => {})
-    }
-
-    return result
-  })
-
-  export const { readFile } = ConfigPaths
-
-  async function loadFile(filepath: string): Promise<Info> {
-    log.info("loading", { path: filepath })
-    const text = await readFile(filepath)
-    if (!text) return {}
-    return load(text, { path: filepath })
+  type State = {
+    config: Info
+    directories: string[]
+    deps: Promise<void>[]
+    warnings: Warning[] // kilocode_change
   }
 
-  async function load(text: string, options: { path: string } | { dir: string; source: string }) {
-    const original = text
-    const source = "path" in options ? options.path : options.source
-    const isFile = "path" in options
-    const data = await ConfigPaths.parseText(
-      text,
-      "path" in options ? options.path : { source: options.source, dir: options.dir },
-    )
-
-    const normalized = (() => {
-      if (!data || typeof data !== "object" || Array.isArray(data)) return data
-      const copy = { ...(data as Record<string, unknown>) }
-      const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
-      if (!hadLegacy) return copy
-      delete copy.theme
-      delete copy.keybinds
-      delete copy.tui
-      log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
-      return copy
-    })()
-
-    const parsed = Info.safeParse(normalized)
-    if (parsed.success) {
-      if (!parsed.data.$schema && isFile) {
-        parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
-        const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
-        await Filesystem.write(options.path, updated).catch(() => {})
-      }
-      const data = parsed.data
-      if (data.plugin && isFile) {
-        for (let i = 0; i < data.plugin.length; i++) {
-          const plugin = data.plugin[i]
-          try {
-            // kilocode_change start: on Windows, import.meta.resolve may return a bare path without file:// prefix
-            const resolved = import.meta.resolve!(plugin, options.path)
-            data.plugin[i] = resolved.startsWith("file://") ? resolved : pathToFileURL(resolved).href
-            // kilocode_change end
-          } catch (e) {
-            try {
-              // import.meta.resolve sometimes fails with newly created node_modules
-              const require = createRequire(options.path)
-              const resolvedPath = require.resolve(plugin)
-              data.plugin[i] = pathToFileURL(resolvedPath).href
-            } catch {
-              // Ignore, plugin might be a generic string identifier like "mcp-server"
-            }
-          }
-        }
-      }
-      return data
-    }
-
-    throw new InvalidError({
-      path: source,
-      issues: parsed.error.issues,
-    })
-  }
-  export const { JsonError, InvalidError } = ConfigPaths
-
-  export const ConfigDirectoryTypoError = NamedError.create(
-    "ConfigDirectoryTypoError",
-    z.object({
-      path: z.string(),
-      dir: z.string(),
-      suggestion: z.string(),
-    }),
-  )
-
-  export async function get() {
-    return state().then((x) => x.config)
+  export interface Interface {
+    readonly get: () => Effect.Effect<Info>
+    readonly getGlobal: () => Effect.Effect<Info>
+    readonly update: (config: Info) => Effect.Effect<void>
+    readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<Info> // kilocode_change
+    readonly invalidate: (wait?: boolean) => Effect.Effect<void>
+    readonly directories: () => Effect.Effect<string[]>
+    readonly waitForDependencies: () => Effect.Effect<void>
+    readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
   }
 
-  // kilocode_change start
-  export async function warnings() {
-    return state().then((x) => x.warnings)
-  }
-  // kilocode_change end
-
-  export async function getGlobal() {
-    return global()
-  }
-
-  export async function update(config: Info) {
-    const filepath = path.join(Instance.directory, "config.json")
-    const existing = await loadFile(filepath)
-    await Filesystem.writeJson(filepath, mergeConfig(existing, config)) // kilocode_change
-    await Instance.dispose()
-  }
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Config") {}
 
   function globalConfigFile() {
     // kilocode_change start
@@ -1683,55 +1202,6 @@ export namespace Config {
     }
     return candidates[0]
   }
-
-  function isRecord(value: unknown): value is Record<string, unknown> {
-    return !!value && typeof value === "object" && !Array.isArray(value)
-  }
-
-  // kilocode_change start - strip null delete sentinels after merge
-  /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
-  function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
-    const result: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(obj)) {
-      if (value === null) continue
-      if (isRecord(value)) {
-        result[key] = stripNulls(value)
-      } else {
-        result[key] = value
-      }
-    }
-    return result
-  }
-  // kilocode_change end
-
-  // kilocode_change start — merge config with normalization pipeline
-  /**
-   * Merge a patch into an existing config:
-   * 1. Normalize permission scalars → objects when the patch has an object
-   *    (e.g. existing `"bash": "ask"` + patch `"bash": { "npm *": "allow" }`
-   *    → promotes existing to `"bash": { "*": "ask" }` so mergeDeep works)
-   * 2. Deep-merge
-   * 3. Strip null delete sentinels
-   */
-  function mergeConfig(existing: Info, patch: Info): Info {
-    const e = { ...existing } as Record<string, unknown>
-    const p = patch as Record<string, unknown>
-    // Normalize permission scalars before merge (clone to avoid mutating the input)
-    const existingPerm = e.permission
-    const patchPerm = p.permission
-    if (isRecord(existingPerm) && isRecord(patchPerm)) {
-      const cloned = { ...existingPerm }
-      for (const [key, patchValue] of Object.entries(patchPerm)) {
-        const existingValue = cloned[key]
-        if (typeof existingValue === "string" && isRecord(patchValue)) {
-          cloned[key] = { "*": existingValue }
-        }
-      }
-      e.permission = cloned
-    }
-    return stripNulls(mergeDeep(e, p) as Record<string, unknown>) as Info
-  }
-  // kilocode_change end
 
   function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
     if (!isRecord(patch)) {
@@ -1805,68 +1275,570 @@ export namespace Config {
     })
   }
 
-  // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
-  export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
-    const dispose = options?.dispose ?? true
-    // kilocode_change end
-    const filepath = globalConfigFile()
-    const before = await Filesystem.readText(filepath).catch((err: any) => {
-      if (err.code === "ENOENT") return "{}"
-      throw new JsonError({ path: filepath }, { cause: err })
-    })
+  export const { JsonError, InvalidError } = ConfigPaths
 
-    const next = await (async () => {
-      if (!filepath.endsWith(".jsonc")) {
-        const existing = parseConfig(before, filepath)
-        const merged = mergeConfig(existing, config) // kilocode_change
-        await Filesystem.writeJson(filepath, merged)
-        return merged
-      }
+  export const ConfigDirectoryTypoError = NamedError.create(
+    "ConfigDirectoryTypoError",
+    z.object({
+      path: z.string(),
+      dir: z.string(),
+      suggestion: z.string(),
+    }),
+  )
 
-      const updated = patchJsonc(before, config)
-      const merged = parseConfig(updated, filepath)
-      await Filesystem.write(filepath, updated)
-      return merged
-    })()
+  export const layer: Layer.Layer<Service, never, AppFileSystem.Service | Auth.Service | Account.Service> =
+    Layer.effect(
+      Service,
+      Effect.gen(function* () {
+        const fs = yield* AppFileSystem.Service
+        const authSvc = yield* Auth.Service
+        const accountSvc = yield* Account.Service
 
-    // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
-    await global.reset()
-
-    if (!dispose) {
-      // Reset Config.state for all instances so the next Config.get() call re-reads
-      // from disk and re-merges all layers (global + project + workspace) in the
-      // correct precedence order. This avoids the stale-cache problem without the
-      // precedence bug that would occur if we merged the global patch directly into
-      // the already-resolved config (which includes project overrides).
-      Instance.resetStateEntry(stateInit)
-
-      GlobalBus.emit("event", {
-        directory: "global",
-        payload: {
-          type: Event.ConfigUpdated.type,
-          properties: {},
-        },
-      })
-      return next
-    }
-    // kilocode_change end
-
-    void Instance.disposeAll()
-      .catch(() => undefined)
-      .finally(() => {
-        GlobalBus.emit("event", {
-          directory: "global",
-          payload: {
-            type: Event.Disposed.type,
-            properties: {},
-          },
+        const readConfigFile = Effect.fnUntraced(function* (filepath: string) {
+          return yield* fs.readFileString(filepath).pipe(
+            Effect.catchIf(
+              (e) => e.reason._tag === "NotFound",
+              () => Effect.succeed(undefined),
+            ),
+            Effect.orDie,
+          )
         })
-      })
 
-    return next
+        const loadConfig = Effect.fnUntraced(function* (
+          text: string,
+          options: { path: string } | { dir: string; source: string },
+        ) {
+          const original = text
+          const source = "path" in options ? options.path : options.source
+          const isFile = "path" in options
+          const data = yield* Effect.promise(() =>
+            ConfigPaths.parseText(
+              text,
+              "path" in options ? options.path : { source: options.source, dir: options.dir },
+            ),
+          )
+
+          const normalized = (() => {
+            if (!data || typeof data !== "object" || Array.isArray(data)) return data
+            const copy = { ...(data as Record<string, unknown>) }
+            const hadLegacy = "theme" in copy || "keybinds" in copy || "tui" in copy
+            if (!hadLegacy) return copy
+            delete copy.theme
+            delete copy.keybinds
+            delete copy.tui
+            log.warn("tui keys in opencode config are deprecated; move them to tui.json", { path: source })
+            return copy
+          })()
+
+          const parsed = Info.safeParse(normalized)
+          if (parsed.success) {
+            if (!parsed.data.$schema && isFile) {
+              parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+              const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+              yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
+            }
+            const data = parsed.data
+            if (data.plugin && isFile) {
+              const list = data.plugin
+              for (let i = 0; i < list.length; i++) {
+                list[i] = yield* Effect.promise(() => resolvePluginSpec(list[i], options.path))
+              }
+            }
+            return data
+          }
+
+          throw new InvalidError({
+            path: source,
+            issues: parsed.error.issues,
+          })
+        })
+
+        const loadFile = Effect.fnUntraced(function* (filepath: string) {
+          log.info("loading", { path: filepath })
+          const text = yield* readConfigFile(filepath)
+          if (!text) return {} as Info
+          return yield* loadConfig(text, { path: filepath })
+        })
+
+        const loadGlobal = Effect.fnUntraced(function* () {
+          yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+          let result: Info = pipe(
+            {},
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "config.json"))),
+            // kilocode_change start
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "kilo.json"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "kilo.jsonc"))),
+            // kilocode_change end
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.json"))),
+            mergeDeep(yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"))),
+          )
+
+          const legacy = path.join(Global.Path.config, "config")
+          if (existsSync(legacy)) {
+            yield* Effect.promise(() =>
+              import(pathToFileURL(legacy).href, { with: { type: "toml" } })
+                .then(async (mod) => {
+                  const { provider, model, ...rest } = mod.default
+                  if (provider && model) result.model = `${provider}/${model}`
+                  result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
+                  result = mergeDeep(result, rest)
+                  await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
+                  await fsNode.unlink(legacy)
+                })
+                .catch(() => {}),
+            )
+          }
+
+          return result
+        })
+
+        const [cachedGlobal, invalidateGlobal] = yield* Effect.cachedInvalidateWithTTL(
+          loadGlobal().pipe(
+            Effect.tapError((error) =>
+              Effect.sync(() => log.error("failed to load global config, using defaults", { error: String(error) })),
+            ),
+            Effect.orElseSucceed((): Info => ({})),
+          ),
+          Duration.infinity,
+        )
+
+        const getGlobal = Effect.fn("Config.getGlobal")(function* () {
+          return yield* cachedGlobal
+        })
+
+        const loadInstanceState = Effect.fnUntraced(function* (ctx: InstanceContext) {
+          // kilocode_change start — warning accumulator
+          const warnings: Warning[] = []
+          // kilocode_change end
+          const auth = yield* authSvc.all().pipe(Effect.orDie)
+
+          let result: Info = {}
+
+          // kilocode_change start — load Kilocode legacy configs (lowest precedence)
+          const legacy = yield* Effect.promise(() =>
+            KilocodeConfig.loadLegacyConfigs({
+              projectDir: ctx.directory,
+              merge: mergeConfigConcatArrays,
+            }),
+          )
+          result = mergeConfigConcatArrays(result, legacy.config)
+          warnings.push(...legacy.warnings)
+
+          // Load organization modes from Kilo Cloud API
+          const orgModes = yield* Effect.promise(() => KilocodeConfig.loadOrganizationModes(auth))
+          if (Object.keys(orgModes.agents).length > 0) {
+            result = mergeConfigConcatArrays(result, { agent: orgModes.agents })
+          }
+          warnings.push(...orgModes.warnings)
+          // kilocode_change end
+
+          for (const [key, value] of Object.entries(auth)) {
+            if (value.type === "wellknown") {
+              const url = key.replace(/\/+$/, "")
+              // kilocode_change start
+              const source = `${url}/.well-known/opencode`
+              process.env[value.key] = value.token
+              log.debug("fetching remote config", { url: source })
+              result = mergeConfigConcatArrays(
+                result,
+                yield* Effect.tryPromise({
+                  try: async () => {
+                    const response = await fetch(source)
+                    if (!response.ok) {
+                      throw new Error(`failed to fetch remote config from ${url}: ${response.status}`)
+                    }
+                    const wellknown = (await response.json()) as any
+                    const remoteConfig = wellknown.config ?? {}
+                    if (!remoteConfig.$schema) remoteConfig.$schema = "https://app.kilo.ai/config.json"
+                    return remoteConfig
+                  },
+                  catch: (err) => err,
+                }).pipe(
+                  Effect.flatMap((remoteConfig) =>
+                    loadConfig(JSON.stringify(remoteConfig), {
+                      dir: path.dirname(source),
+                      source,
+                    }),
+                  ),
+                  Effect.tap(() => Effect.sync(() => log.debug("loaded remote config from well-known", { url }))),
+                  Effect.catch((err: unknown) => {
+                    const w = toWarning(err)
+                    if (w) warnings.push(w)
+                    else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
+                    log.warn("skipped remote config due to error", { url, err })
+                    return Effect.succeed({} as Info)
+                  }),
+                  Effect.catchDefect((err: unknown) => {
+                    const w = toWarning(err)
+                    if (w) warnings.push(w)
+                    else warnings.push({ path: source, message: err instanceof Error ? err.message : String(err) })
+                    log.warn("skipped remote config due to error", { url, err })
+                    return Effect.succeed({} as Info)
+                  }),
+                ),
+              )
+              // kilocode_change end
+            }
+          }
+
+          // kilocode_change start
+          result = mergeConfigConcatArrays(
+            result,
+            yield* getGlobal().pipe(
+              Effect.catchDefect((err: unknown) => {
+                caughtWarning(warnings, "global config", err)
+                return Effect.succeed({} as Info)
+              }),
+            ),
+          )
+          // kilocode_change end
+
+          if (Flag.KILO_CONFIG) {
+            // kilocode_change start
+            result = mergeConfigConcatArrays(
+              result,
+              yield* loadFile(Flag.KILO_CONFIG).pipe(
+                Effect.tap(() => Effect.sync(() => log.debug("loaded custom config", { path: Flag.KILO_CONFIG }))),
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, Flag.KILO_CONFIG!, err)
+                  return Effect.succeed({} as Info)
+                }),
+              ),
+            )
+            // kilocode_change end
+          }
+
+          if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+            // kilocode_change start
+            for (const name of ["kilo", "opencode"] as const) {
+              for (const file of yield* Effect.promise(() =>
+                ConfigPaths.projectFiles(name, ctx.directory, ctx.worktree),
+              )) {
+                result = mergeConfigConcatArrays(
+                  result,
+                  yield* loadFile(file).pipe(
+                    Effect.catchDefect((err: unknown) => {
+                      caughtWarning(warnings, file, err)
+                      return Effect.succeed({} as Info)
+                    }),
+                  ),
+                )
+              }
+            }
+            // kilocode_change end
+          }
+
+          result.agent = result.agent || {}
+          result.mode = result.mode || {}
+          result.plugin = result.plugin || []
+
+          const directories = yield* Effect.promise(() => ConfigPaths.directories(ctx.directory, ctx.worktree))
+
+          if (Flag.KILO_CONFIG_DIR) {
+            log.debug("loading config from KILO_CONFIG_DIR", { path: Flag.KILO_CONFIG_DIR })
+          }
+
+          const deps: Promise<void>[] = []
+
+          for (const dir of unique(directories)) {
+            // kilocode_change start
+            if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
+              for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+                log.debug(`loading config from ${path.join(dir, file)}`)
+                result = mergeConfigConcatArrays(
+                  result,
+                  yield* loadFile(path.join(dir, file)).pipe(
+                    Effect.catchDefect((err: unknown) => {
+                      caughtWarning(warnings, path.join(dir, file), err)
+                      return Effect.succeed({} as Info)
+                    }),
+                  ),
+                )
+                result.agent ??= {}
+                result.mode ??= {}
+                result.plugin ??= []
+              }
+            }
+            // kilocode_change end
+
+            const dep = iife(async () => {
+              const stale = await needsInstall(dir)
+              if (stale) await installDependencies(dir)
+            })
+            void dep.catch((err) => {
+              log.warn("background dependency install failed", { dir, error: err })
+            })
+            deps.push(dep)
+
+            // kilocode_change start
+            yield* Effect.promise(async () => {
+              try {
+                result.command = mergeDeep(result.command ?? {}, await loadCommand(dir, warnings))
+                result.agent = mergeDeep(result.agent ?? {}, await loadAgent(dir, warnings))
+                result.agent = mergeDeep(result.agent, await loadMode(dir, warnings))
+                result.plugin!.push(...(await loadPlugin(dir)))
+              } catch (err: unknown) {
+                log.error("failed to load config directory", { dir, err })
+              }
+            })
+            // kilocode_change end
+          }
+
+          if (process.env.KILO_CONFIG_CONTENT) {
+            // kilocode_change start
+            result = mergeConfigConcatArrays(
+              result,
+              yield* loadConfig(process.env.KILO_CONFIG_CONTENT, {
+                dir: ctx.directory,
+                source: "KILO_CONFIG_CONTENT",
+              }).pipe(
+                Effect.tap(() => Effect.sync(() => log.debug("loaded custom config from KILO_CONFIG_CONTENT"))),
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, "KILO_CONFIG_CONTENT", err)
+                  return Effect.succeed({} as Info)
+                }),
+              ),
+            )
+            // kilocode_change end
+          }
+
+          const active = Option.getOrUndefined(yield* accountSvc.active().pipe(Effect.orDie))
+          if (active?.active_org_id) {
+            yield* Effect.gen(function* () {
+              const [configOpt, tokenOpt] = yield* Effect.all(
+                [accountSvc.config(active.id, active.active_org_id!), accountSvc.token(active.id)],
+                { concurrency: 2 },
+              )
+              const token = Option.getOrUndefined(tokenOpt)
+              if (token) {
+                process.env["KILO_CONSOLE_TOKEN"] = token
+                Env.set("KILO_CONSOLE_TOKEN", token)
+              }
+
+              const config = Option.getOrUndefined(configOpt)
+              if (config) {
+                result = mergeConfigConcatArrays(
+                  result,
+                  yield* loadConfig(JSON.stringify(config), {
+                    dir: path.dirname(`${active.url}/api/config`),
+                    source: `${active.url}/api/config`,
+                  }),
+                )
+              }
+            }).pipe(
+              Effect.catch((err) => {
+                log.debug("failed to fetch remote account config", {
+                  error: err instanceof Error ? err.message : String(err),
+                })
+                return Effect.void
+              }),
+            )
+          }
+
+          // kilocode_change start
+          if (existsSync(managedDir)) {
+            for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+              result = mergeConfigConcatArrays(result, yield* loadFile(path.join(managedDir, file)))
+            }
+          }
+          // kilocode_change end
+
+          for (const [name, mode] of Object.entries(result.mode ?? {})) {
+            result.agent = mergeDeep(result.agent ?? {}, {
+              [name]: {
+                ...mode,
+                mode: "primary" as const,
+              },
+            })
+          }
+
+          if (Flag.KILO_PERMISSION) {
+            result.permission = mergeDeep(result.permission ?? {}, JSON.parse(Flag.KILO_PERMISSION))
+          }
+
+          if (result.tools) {
+            const perms: Record<string, Config.PermissionAction> = {}
+            for (const [tool, enabled] of Object.entries(result.tools)) {
+              const action: Config.PermissionAction = enabled ? "allow" : "deny"
+              if (tool === "write" || tool === "edit" || tool === "patch" || tool === "multiedit") {
+                perms.edit = action
+                continue
+              }
+              perms[tool] = action
+            }
+            result.permission = mergeDeep(perms, result.permission ?? {})
+          }
+
+          if (!result.username) result.username = os.userInfo().username
+
+          if (result.autoshare === true && !result.share) {
+            result.share = "auto"
+          }
+
+          if (Flag.KILO_DISABLE_AUTOCOMPACT) {
+            result.compaction = { ...result.compaction, auto: false }
+          }
+          if (Flag.KILO_DISABLE_PRUNE) {
+            result.compaction = { ...result.compaction, prune: false }
+          }
+
+          result.plugin = deduplicatePlugins(result.plugin ?? [])
+
+          return {
+            config: result,
+            directories,
+            deps,
+            warnings, // kilocode_change
+          }
+        })
+
+        const state = yield* InstanceState.make<State>(
+          Effect.fn("Config.state")(function* (ctx) {
+            return yield* loadInstanceState(ctx)
+          }),
+        )
+
+        const get = Effect.fn("Config.get")(function* () {
+          return yield* InstanceState.use(state, (s) => s.config)
+        })
+
+        const directories = Effect.fn("Config.directories")(function* () {
+          return yield* InstanceState.use(state, (s) => s.directories)
+        })
+
+        const waitForDependencies = Effect.fn("Config.waitForDependencies")(function* () {
+          yield* InstanceState.useEffect(state, (s) => Effect.promise(() => Promise.all(s.deps).then(() => undefined)))
+        })
+
+        // kilocode_change start
+        const warnings = Effect.fn("Config.warnings")(function* () {
+          return yield* InstanceState.use(state, (s) => s.warnings)
+        })
+        // kilocode_change end
+
+        const update = Effect.fn("Config.update")(function* (config: Info) {
+          const file = path.join(Instance.directory, "config.json")
+          const existing = yield* loadFile(file)
+          yield* fs
+            .writeFileString(file, JSON.stringify(KilocodeConfig.mergeConfig(existing, config), null, 2))
+            .pipe(Effect.orDie) // kilocode_change
+          yield* Effect.promise(() => Instance.dispose())
+        })
+
+        const invalidate = Effect.fn("Config.invalidate")(function* (wait?: boolean) {
+          yield* invalidateGlobal
+          const task = Instance.disposeAll()
+            .catch(() => undefined)
+            .finally(() =>
+              GlobalBus.emit("event", {
+                directory: "global",
+                payload: {
+                  type: Event.Disposed.type,
+                  properties: {},
+                },
+              }),
+            )
+          if (wait) yield* Effect.promise(() => task)
+          else void task
+        })
+
+        // kilocode_change start — add dispose option to skip Instance.disposeAll for permission-only changes
+        const updateGlobal = Effect.fn("Config.updateGlobal")(function* (
+          config: Info,
+          options?: { dispose?: boolean },
+        ) {
+          const dispose = options?.dispose ?? true
+          // kilocode_change end
+          const file = globalConfigFile()
+          const before = (yield* readConfigFile(file)) ?? "{}"
+
+          let next: Info
+          if (!file.endsWith(".jsonc")) {
+            const existing = parseConfig(before, file)
+            const merged = KilocodeConfig.mergeConfig(existing, config) // kilocode_change
+            yield* fs.writeFileString(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+            next = merged
+          } else {
+            const updated = patchJsonc(before, config)
+            next = parseConfig(updated, file)
+            yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
+          }
+
+          // kilocode_change start — skip dispose when caller opts out (e.g. permission-only saves)
+          if (!dispose) {
+            yield* invalidateGlobal
+            yield* InstanceState.invalidate(state)
+            yield* Effect.sync(() =>
+              GlobalBus.emit("event", {
+                directory: "global",
+                payload: {
+                  type: Event.ConfigUpdated.type,
+                  properties: {},
+                },
+              }),
+            )
+            return next
+          }
+          // kilocode_change end
+
+          yield* invalidate()
+          return next
+        })
+
+        return Service.of({
+          get,
+          getGlobal,
+          update,
+          updateGlobal,
+          invalidate,
+          directories,
+          waitForDependencies,
+          warnings, // kilocode_change
+        })
+      }),
+    )
+
+  export const defaultLayer = layer.pipe(
+    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(Account.defaultLayer),
+  )
+
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+
+  export async function get() {
+    return runPromise((svc) => svc.get())
+  }
+
+  export async function getGlobal() {
+    return runPromise((svc) => svc.getGlobal())
+  }
+
+  export async function update(config: Info) {
+    return runPromise((svc) => svc.update(config))
+  }
+
+  // kilocode_change start — add dispose option to async wrapper
+  export async function updateGlobal(config: Info, options?: { dispose?: boolean }) {
+    return runPromise((svc) => svc.updateGlobal(config, options))
+  }
+  // kilocode_change end
+
+  export async function invalidate(wait = false) {
+    return runPromise((svc) => svc.invalidate(wait))
   }
 
   export async function directories() {
-    return state().then((x) => x.directories)
+    return runPromise((svc) => svc.directories())
   }
+
+  export async function waitForDependencies() {
+    return runPromise((svc) => svc.waitForDependencies())
+  }
+
+  // kilocode_change start
+  export async function warnings() {
+    return runPromise((svc) => svc.warnings())
+  }
+  // kilocode_change end
 }

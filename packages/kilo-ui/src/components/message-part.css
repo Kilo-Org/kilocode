@@ -158,6 +158,65 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 }
 
+/* Tool error inline card (upstream removed these styles in v1.2.25) */
+[data-component="tool-error"] {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+
+  [data-slot="icon-svg"] {
+    color: var(--icon-critical-base);
+    margin-top: 4px;
+  }
+
+  [data-slot="message-part-tool-error-content"] {
+    display: flex;
+    align-items: start;
+    gap: 8px;
+  }
+
+  [data-slot="message-part-tool-error-title"] {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    font-style: normal;
+    font-weight: var(--font-weight-medium);
+    line-height: var(--line-height-large);
+    letter-spacing: var(--letter-spacing-normal);
+    color: var(--text-on-critical-base);
+    white-space: nowrap;
+  }
+
+  [data-slot="message-part-tool-error-message"] {
+    color: var(--text-on-critical-weak);
+    max-height: 240px;
+    overflow-y: auto;
+    word-break: break-word;
+  }
+}
+
+/* Queued state (upstream removed in v1.2.25) */
+[data-component="user-message"] {
+  [data-slot="user-message-attachment"][data-queued] {
+    opacity: 0.6;
+  }
+
+  [data-slot="user-message-text"] {
+    transition: opacity 0.3s ease;
+
+    &[data-queued] {
+      opacity: 0.6;
+    }
+  }
+
+  [data-slot="user-message-queued-indicator"] {
+    margin-top: 6px;
+    margin-right: 2px;
+    font-size: var(--font-size-small);
+    color: var(--text-weak);
+    user-select: none;
+  }
+}
+
 [data-component="tool-output"] {
   margin-bottom: 0px;
 }

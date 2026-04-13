@@ -1,4 +1,5 @@
-import { $, semver } from "bun"
+import { $ } from "bun"
+import semver from "semver"
 import path from "path"
 
 const rootPkgPath = path.resolve(import.meta.dir, "../../../package.json")
@@ -31,7 +32,7 @@ const CHANNEL = await (async () => {
   // kilocode_change end
   if (env.KILO_BUMP) return "latest" // kilocode_change
   if (env.KILO_VERSION && !env.KILO_VERSION.startsWith("0.0.0-")) return "latest" // kilocode_change
-  return await $`git branch --show-current`.text().then((x) => x.trim())
+  return await $`git branch --show-current`.text().then((x) => x.trim().replace(/[^0-9A-Za-z-]/g, "-")) // kilocode_change
 })()
 const IS_PREVIEW = CHANNEL !== "latest"
 
@@ -65,7 +66,7 @@ async function fetchLatest() {
 }
 
 async function fetchHighest() {
-  if (!env.KILO_RELEASE || !process.env.GH_REPO) return fetchLatest()
+  if (!process.env.GH_REPO) return fetchLatest()
   const data: { tagName: string }[] = await $`gh release list --json tagName --limit 100 --repo ${process.env.GH_REPO}`
     .json()
     .catch(() => [])
@@ -157,7 +158,7 @@ export const Script = {
     return IS_PREVIEW
   },
   get release(): boolean {
-    return !!env.KILO_RELEASE // kilocode_change
+    return !!env.KILO_RELEASE
   },
   get team() {
     return team

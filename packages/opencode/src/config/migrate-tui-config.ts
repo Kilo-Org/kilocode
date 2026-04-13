@@ -144,7 +144,7 @@ async function opencodeFiles(input: { directories: string[]; managed: string }) 
     files.push(...ConfigPaths.fileInDirectory(dir, "kilo"))
   }
   if (Flag.KILO_CONFIG) files.push(Flag.KILO_CONFIG)
-  files.push(...ConfigPaths.fileInDirectory(input.managed, "kilo"))
+  files.push(...ConfigPaths.fileInDirectory(input.managed, "kilo")) // kilocode_change
 
   const existing = await Promise.all(
     unique(files).map(async (file) => {

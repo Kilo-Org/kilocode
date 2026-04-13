@@ -7,4 +7,3 @@ export * from "./image.markdoc"
 export * from "./kilo-code-icon.markdoc"
 export * from "./video.markdoc"
 export * from "./youtube.markdoc"
-

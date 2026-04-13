@@ -148,3 +148,30 @@ export function buildCostBreakdown(
   }
   return items
 }
+
+const VISIBLE_CHILDREN = 8
+
+/**
+ * Collapse a cost breakdown for display in the tooltip.
+ * - The root entry (first item) always stays at the top.
+ * - Child entries are shown in reverse order (most recent first).
+ * - When there are more than VISIBLE_CHILDREN child entries, the
+ *   oldest are aggregated into a single summary line.
+ *
+ * Pure function — no store dependency.
+ */
+export function collapseCostBreakdown(
+  items: Array<{ label: string; cost: number }>,
+  summaryLabel: (count: number) => string,
+): Array<{ label: string; cost: number }> {
+  const root = items[0]
+  const children = items.slice(1)
+  const reversed = [...children].reverse()
+
+  if (reversed.length <= VISIBLE_CHILDREN) return [root, ...reversed]
+
+  const visible = reversed.slice(0, VISIBLE_CHILDREN)
+  const hidden = reversed.slice(VISIBLE_CHILDREN)
+  const aggregated = hidden.reduce((sum, e) => sum + e.cost, 0)
+  return [root, ...visible, { label: summaryLabel(hidden.length), cost: aggregated }]
+}

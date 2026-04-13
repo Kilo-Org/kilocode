@@ -87,7 +87,8 @@ async function read(params: { sessionID?: string }, ctx: Tool.Context) {
   }
 
   const { Session } = await import("../session/index") // kilocode_change
-  const session = await Session.get(params.sessionID).catch(() => {
+  const { SessionID } = await import("../session/schema") // kilocode_change
+  const session = await Session.get(SessionID.make(params.sessionID)).catch(() => {
     throw new Error(`Session "${params.sessionID}" not found. Use search mode first to find valid session IDs.`)
   })
   const dirs = await WorktreeFamily.list() // kilocode_change

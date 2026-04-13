@@ -3,4 +3,35 @@
         <module name="intellij.platform.frontend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
+
+    <resource-bundle>messages.KiloBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow id="Kilo Code"
+                    anchor="left"
+                    icon="/icons/kilo.svg"
+                    factoryClass="ai.kilocode.KiloToolWindowFactory"/>
+    </extensions>
+
+    <actions>
+        <action id="Kilo.Restart"
+                class="ai.kilocode.actions.RestartKiloAction"/>
+
+        <action id="Kilo.Reinstall"
+                class="ai.kilocode.actions.ReinstallKiloAction"/>
+
+        <action id="Kilo.StatusInfo"
+                class="ai.kilocode.actions.StatusInfoAction"/>
+
+        <group id="Kilo.SettingsGroup">
+            <reference ref="Kilo.Restart"/>
+            <reference ref="Kilo.Reinstall"/>
+            <separator/>
+            <reference ref="Kilo.StatusInfo"/>
+        </group>
+
+        <action id="Kilo.Settings"
+                class="ai.kilocode.actions.KiloSettingsAction"
+                icon="AllIcons.General.GearPlain"/>
+    </actions>
 </idea-plugin>

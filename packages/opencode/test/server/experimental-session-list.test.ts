@@ -44,8 +44,8 @@ describe("experimental.session.list", () => {
         const root = await Instance.provide({
           directory: first.path,
           fn: async () => ({
-            app: Server.App(),
-            project: await Server.App().request("/project/current", {
+            app: Server.Default(),
+            project: await Server.Default().request("/project/current", {
               headers: { "x-kilo-directory": first.path },
             }),
             session: await Session.create({ title: "root-session" }),

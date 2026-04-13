@@ -209,7 +209,7 @@ export namespace ModelCache {
         name: model.id,
         family: model.owned_by ?? "",
         release_date: "",
-        attachment: false,
+        attachment: true,
         reasoning: false,
         temperature: true,
         tool_call: true,
@@ -217,7 +217,7 @@ export namespace ModelCache {
         limit: { context: 128000, output: 4096 },
         options: {},
         modalities: {
-          input: ["text"],
+          input: ["text", "image"],
           output: ["text"],
         },
       }

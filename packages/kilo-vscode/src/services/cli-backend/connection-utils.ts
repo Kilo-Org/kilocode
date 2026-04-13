@@ -42,6 +42,11 @@ export function resolveEventSessionId(
     case "question.rejected":
       return event.properties.sessionID
     default:
+      // session.network.* events are not yet in the SDK Event type union
+      // (pending SDK regeneration). Handle them via string comparison.
+      if ((event.type as string).startsWith("session.network.")) {
+        return (event.properties as { sessionID: string }).sessionID
+      }
       return undefined
   }
 }

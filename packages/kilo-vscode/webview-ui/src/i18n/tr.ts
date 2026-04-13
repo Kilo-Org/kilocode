@@ -943,6 +943,7 @@ export const dict = {
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
+  "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
 
   "ui.sessionTurn.cancel": "İptal",
   "ui.sessionTurn.status.thinking": "Düşünüyor...",
@@ -955,6 +956,7 @@ export const dict = {
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
+  "context.usage.olderSessions": "{{count}} eski oturum",
   "context.stats.thisSession": "Bu oturum",
 
   "time.justNow": "az önce",
