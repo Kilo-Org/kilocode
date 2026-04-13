@@ -757,6 +757,9 @@ export namespace Provider {
       return {
         autoload: true,
         options: input.options,
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>) {
+          return sdk(modelID)
+        },
         async discoverModels(): Promise<Record<string, Model>> {
           try {
             const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
