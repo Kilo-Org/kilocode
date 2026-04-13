@@ -68,8 +68,8 @@ export class GitStatsPoller {
   private tickCount = 0
   /** Poll all worktrees every N ticks; active worktree is polled every tick. */
   private static readonly FULL_SYNC_EVERY = 6
-	/** Worktree ID that needs an immediate poll after the current in-flight fetch. */
-	private pendingActiveWorktreeId: string | undefined
+  /** Worktree ID that needs an immediate poll after the current in-flight fetch. */
+  private pendingActiveWorktreeId: string | undefined
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
