@@ -19,6 +19,7 @@ const forceRebuild = process.argv.includes("--force")
 
 const kiloVscodeDir = join(import.meta.dir, "..")
 const packagesDir = join(kiloVscodeDir, "..")
+const repo = join(packagesDir, "..")
 const opencodeDir = join(packagesDir, "opencode")
 
 const targetBinDir = join(kiloVscodeDir, "bin")
@@ -127,12 +128,13 @@ async function ensureBuiltBinary(): Promise<string> {
     )
   }
 
-  // Ensure dependencies are installed before building.
-  log("Installing dependencies in opencode package...")
-  await $`bun install --frozen-lockfile`.cwd(opencodeDir)
+  // Ensure workspace dependencies match the root lockfile before building.
+  log("Installing workspace dependencies...")
+  await $`bun install --frozen-lockfile`.cwd(repo)
 
-  // Build using the opencode package script.
-  await $`bun run build --single`.cwd(opencodeDir)
+  // Build using the opencode package script. Dependencies are already installed
+  // above, so skip the build script's package-install step to avoid mutating package.json.
+  await $`bun run build --single --skip-install`.cwd(opencodeDir)
 
   const built = await findKiloBinaryInOpencodeDist()
   if (!built) {
