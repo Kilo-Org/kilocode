@@ -752,6 +752,78 @@ export namespace Provider {
         },
       }
     },
+    // kilocode_change start - NVIDIA dynamic model discovery
+    nvidia: async (input) => {
+      return {
+        autoload: true,
+        options: input.options,
+        async discoverModels(): Promise<Record<string, Model>> {
+          try {
+            const response = await fetch("https://integrate.api.nvidia.com/v1/models", {
+              headers: { "User-Agent": Installation.USER_AGENT },
+              signal: AbortSignal.timeout(10000),
+            })
+
+            if (!response.ok) return {}
+
+            const { data } = (await response.json()) as {
+              data: Array<{ id: string; owned_by: string; created: number }>
+            }
+            const models: Record<string, Model> = {}
+
+            for (const item of data) {
+              // Use metadata from static snapshot if available
+              if (input.models[item.id]) {
+                models[item.id] = {
+                  ...input.models[item.id],
+                  id: ModelID.make(item.id),
+                  providerID: ProviderID.make("nvidia"),
+                  cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+                  isFree: true,
+                }
+              } else {
+                // New dynamic model
+                models[item.id] = {
+                  id: ModelID.make(item.id),
+                  providerID: ProviderID.make("nvidia"),
+                  name: item.id.split("/")[1]?.replace(/-/g, " ") || item.id,
+                  family: item.owned_by,
+                  status: "beta",
+                  isFree: true,
+                  cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
+                  limit: { context: 128000, output: 4096 },
+                  capabilities: {
+                    temperature: true,
+                    reasoning: item.id.includes("thinking"),
+                    attachment: item.id.includes("vision") || item.id.includes("vl"),
+                    toolcall: true,
+                    input: {
+                      text: true,
+                      image: item.id.includes("vl") || item.id.includes("vision"),
+                      audio: false,
+                      video: false,
+                      pdf: false,
+                    },
+                    output: { text: true, image: false, audio: false, video: false, pdf: false },
+                    interleaved: false,
+                  },
+                  release_date: new Date(item.created * 1000).toISOString().split("T")[0],
+                  api: { id: item.id, url: "https://integrate.api.nvidia.com/v1", npm: "@ai-sdk/openai-compatible" },
+                  headers: {},
+                  options: {},
+                  variants: {},
+                }
+              }
+            }
+
+            return models
+          } catch {
+            return {}
+          }
+        },
+      }
+    },
+    // kilocode_change end
     // kilocode_change start
     kilo: async (input) => {
       const env = Env.all()
