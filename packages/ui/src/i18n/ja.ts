@@ -142,6 +142,7 @@ export const dict = {
   "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "中断",
   "ui.message.queued": "待機中",
+  "ui.message.deleteQueued": "Remove queued message",
   "ui.message.attachment.alt": "添付ファイル",
 
   "ui.patch.action.deleted": "削除済み",

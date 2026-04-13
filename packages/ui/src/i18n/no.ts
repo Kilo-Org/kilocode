@@ -146,6 +146,7 @@ export const dict: Record<Keys, string> = {
   "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Avbrutt",
   "ui.message.queued": "I kø",
+  "ui.message.deleteQueued": "Remove queued message",
   "ui.message.attachment.alt": "vedlegg",
 
   "ui.patch.action.deleted": "Slettet",

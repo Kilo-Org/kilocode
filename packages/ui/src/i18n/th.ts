@@ -144,6 +144,7 @@ export const dict = {
   "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "ถูกขัดจังหวะ",
   "ui.message.queued": "อยู่ในคิว",
+  "ui.message.deleteQueued": "Remove queued message",
   "ui.message.attachment.alt": "ไฟล์แนบ",
 
   "ui.patch.action.deleted": "ลบ",

@@ -156,6 +156,7 @@ export const dict: Record<string, string> = {
   "ui.message.revert": "Hiernaar terugdraaien",
   "ui.message.interrupted": "Onderbroken",
   "ui.message.queued": "In wachtrij",
+  "ui.message.deleteQueued": "Remove queued message",
   "ui.message.attachment.alt": "bijlage",
   "ui.message.duration.seconds": "{{count}}s",
   "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",

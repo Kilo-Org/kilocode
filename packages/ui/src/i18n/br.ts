@@ -143,6 +143,7 @@ export const dict = {
   "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Interrompido",
   "ui.message.queued": "Na fila",
+  "ui.message.deleteQueued": "Remove queued message",
   "ui.message.attachment.alt": "anexo",
 
   "ui.patch.action.deleted": "Excluído",
