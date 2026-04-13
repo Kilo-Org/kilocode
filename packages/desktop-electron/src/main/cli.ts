@@ -35,6 +35,7 @@ export type CommandEvent =
 export type SqliteMigrationProgress = { type: "InProgress"; value: number } | { type: "Done" }
 
 export type CommandChild = {
+  pid: number | undefined
   kill: () => void
 }
 
@@ -107,7 +108,7 @@ export function syncCli() {
 
   let version = ""
   try {
-    version = execFileSync(installPath, ["--version"]).toString().trim()
+    version = execFileSync(installPath, ["--version"], { windowsHide: true }).toString().trim()
   } catch {
     return
   }
@@ -122,8 +123,8 @@ export function syncCli() {
 export function serve(hostname: string, port: number, password: string) {
   const args = `--print-logs --log-level WARN serve --hostname ${hostname} --port ${port}`
   const env = {
-    OPENCODE_SERVER_USERNAME: "opencode",
-    OPENCODE_SERVER_PASSWORD: password,
+    KILO_SERVER_USERNAME: "opencode",
+    KILO_SERVER_PASSWORD: password,
   }
 
   return spawnCommand(args, env)
@@ -136,9 +137,9 @@ export function spawnCommand(args: string, extraEnv: Record<string, string>) {
   )
   const envs = {
     ...base,
-    OPENCODE_EXPERIMENTAL_ICON_DISCOVERY: "true",
-    OPENCODE_EXPERIMENTAL_FILEWATCHER: "true",
-    OPENCODE_CLIENT: "desktop",
+    KILO_EXPERIMENTAL_ICON_DISCOVERY: "true",
+    KILO_EXPERIMENTAL_FILEWATCHER: "true",
+    KILO_CLIENT: "desktop",
     XDG_STATE_HOME: app.getPath("userData"),
     ...extraEnv,
   }
@@ -147,7 +148,7 @@ export function spawnCommand(args: string, extraEnv: Record<string, string>) {
   console.log(`[cli] Executing: ${cmd} ${cmdArgs.join(" ")}`)
   const child = spawn(cmd, cmdArgs, {
     env: envs,
-    detached: true,
+    detached: process.platform !== "win32",
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
   })
@@ -191,7 +192,7 @@ export function spawnCommand(args: string, extraEnv: Record<string, string>) {
     treeKill(child.pid)
   }
 
-  return { events, child: { kill }, exit }
+  return { events, child: { pid: child.pid, kill }, exit }
 }
 
 function handleSqliteProgress(events: EventEmitter, line: string) {

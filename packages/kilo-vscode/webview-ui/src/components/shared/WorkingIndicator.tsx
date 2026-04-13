@@ -63,6 +63,9 @@ export const WorkingIndicator: Component = () => {
       const retryMsg = info.message || language.t("session.status.retry")
       return countdown > 0 ? `${retryMsg} (${countdown}s)` : retryMsg
     }
+    if (info.type === "offline") {
+      return info.message || language.t("session.status.offline")
+    }
     return session.statusText() ?? language.t("ui.sessionTurn.status.thinking")
   }
 

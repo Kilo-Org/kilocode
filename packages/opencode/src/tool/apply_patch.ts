@@ -14,6 +14,7 @@ import { Filesystem } from "../util/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { Format } from "../format"
 
 const PatchParams = z.object({
   patchText: z.string().describe("The full patch text that describes all changes to be made"),
@@ -221,9 +222,8 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
       }
 
       if (edited) {
-        await Bus.publish(File.Event.Edited, {
-          file: edited,
-        })
+        await Format.file(edited)
+        Bus.publish(File.Event.Edited, { file: edited })
       }
     }
 

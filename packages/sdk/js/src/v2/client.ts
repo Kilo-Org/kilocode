@@ -5,6 +5,44 @@ import { type Config } from "./gen/client/types.gen.js"
 import { KiloClient } from "./gen/sdk.gen.js"
 export { type Config as KiloClientConfig, KiloClient }
 
+function pick(value: string | null, fallback?: string, encode?: (value: string) => string) {
+  if (!value) return
+  if (!fallback) return value
+  if (value === fallback) return fallback
+  if (encode && value === encode(fallback)) return fallback
+  return value
+}
+
+function rewrite(request: Request, values: { directory?: string; workspace?: string }) {
+  if (request.method !== "GET" && request.method !== "HEAD") return request
+
+  const url = new URL(request.url)
+  let changed = false
+
+  for (const [name, key] of [
+    ["x-kilo-directory", "directory"],
+    ["x-kilo-workspace", "workspace"],
+  ] as const) {
+    const value = pick(
+      request.headers.get(name),
+      key === "directory" ? values.directory : values.workspace,
+      key === "directory" ? encodeURIComponent : undefined,
+    )
+    if (!value) continue
+    if (!url.searchParams.has(key)) {
+      url.searchParams.set(key, value)
+    }
+    changed = true
+  }
+
+  if (!changed) return request
+
+  const next = new Request(url, request)
+  next.headers.delete("x-kilo-directory")
+  next.headers.delete("x-kilo-workspace")
+  return next
+}
+
 export function createKiloClient(config?: Config & { directory?: string; experimental_workspaceID?: string }) {
   if (!config?.fetch) {
     const customFetch: any = (req: any) => {
@@ -23,11 +61,9 @@ export function createKiloClient(config?: Config & { directory?: string; experim
   }
 
   if (config?.directory) {
-    const isNonASCII = /[^\x00-\x7F]/.test(config.directory)
-    const encodedDirectory = isNonASCII ? encodeURIComponent(config.directory) : config.directory
     config.headers = {
       ...config.headers,
-      "x-kilo-directory": encodedDirectory,
+      "x-kilo-directory": encodeURIComponent(config.directory),
     }
   }
 
@@ -44,5 +80,11 @@ export function createKiloClient(config?: Config & { directory?: string; experim
   ;(config as any).duplex = "half"
 
   const client = createClient(config)
+  client.interceptors.request.use((request) =>
+    rewrite(request, {
+      directory: config?.directory,
+      workspace: config?.experimental_workspaceID,
+    }),
+  )
   return new KiloClient({ client })
 }

@@ -5,6 +5,7 @@ import type { PromptInfo } from "../component/prompt/history"
 export type HomeRoute = {
   type: "home"
   initialPrompt?: PromptInfo
+  workspaceID?: string
 }
 
 export type SessionRoute = {
@@ -19,7 +20,13 @@ export type KiloClawRoute = {
 }
 // kilocode_change end
 
-export type Route = HomeRoute | SessionRoute | KiloClawRoute // kilocode_change
+export type PluginRoute = {
+  type: "plugin"
+  id: string
+  data?: Record<string, unknown>
+}
+
+export type Route = HomeRoute | SessionRoute | PluginRoute | KiloClawRoute // kilocode_change
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
@@ -41,7 +48,6 @@ export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
         return store
       },
       navigate(route: Route) {
-        console.log("navigate", route)
         previous = structuredClone(unwrap(store)) // kilocode_change
         setStore(route)
       },

@@ -941,6 +941,7 @@ export const dict = {
   "session.status.retry": "Opnieuw proberen...",
   "session.status.retrying": "Opnieuw proberen (poging {{ attempt }})... {{ message }}",
   "session.status.working": "Bezig...",
+  "session.status.offline": "Netwerkverbinding verbroken — opnieuw verbinden...",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -953,6 +954,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",

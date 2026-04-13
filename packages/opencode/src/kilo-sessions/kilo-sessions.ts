@@ -2,6 +2,9 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session"
+import { KiloSession } from "@/kilocode/session"
+import { SessionID } from "@/session/schema"
+import { ModelID, ProviderID } from "@/provider/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
 import { Log } from "@/util/log"
@@ -159,14 +162,17 @@ export namespace KiloSessions {
     })
 
     Bus.subscribe(Session.Event.Updated, async (evt) => {
-      await ingest.sync(evt.properties.info.id, [
+      const sessionID = evt.properties.sessionID // kilocode_change
+      const session = await Session.get(sessionID).catch(() => null) // kilocode_change
+      if (!session) return
+      await ingest.sync(sessionID, [
         {
           type: "kilo_meta",
-          data: await meta(evt.properties.info.id),
+          data: await meta(sessionID),
         },
         {
           type: "session",
-          data: evt.properties.info,
+          data: session,
         },
       ])
     })
@@ -258,13 +264,14 @@ export namespace KiloSessions {
           getGitUrl().catch(() => undefined),
           Vcs.branch().catch(() => undefined),
         ])
-        const statuses = SessionStatus.list()
+        const statusMap = await SessionStatus.list()
+        const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
         const ids = new Set(Object.keys(statuses))
         for (const id of focused) ids.add(id)
         for (const id of opened) ids.add(id)
         const results = await Promise.all(
           [...ids].map(async (id) => {
-            const session = await Session.get(id).catch(() => undefined)
+            const session = await Session.get(SessionID.make(id)).catch(() => undefined)
             if (!session) return undefined
             return {
               id,
@@ -525,15 +532,15 @@ export namespace KiloSessions {
   async function fullSync(sessionId: string) {
     log.info("full sync", { sessionId })
 
-    const session = await Session.get(sessionId)
-    const diffs = await Session.diff(sessionId)
-    const messages = await Array.fromAsync(MessageV2.stream(sessionId))
+    const session = await Session.get(SessionID.make(sessionId))
+    const diffs = await Session.diff(SessionID.make(sessionId))
+    const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(
       messages
         .filter((m) => m.info.role === "user")
         .map((m) => (m.info as SDK.UserMessage).model)
-        .map((m) => Provider.getModel(m.providerID, m.modelID).then((m) => m)),
+        .map((m) => Provider.getModel(ProviderID.make(m.providerID), ModelID.make(m.modelID)).then((m) => m)),
     )
 
     await ingest.sync(sessionId, [
@@ -601,7 +608,7 @@ export namespace KiloSessions {
   }
 
   async function meta(sessionId?: string) {
-    const override = sessionId ? Session.getPlatformOverride(sessionId) : undefined
+    const override = sessionId ? KiloSession.getPlatformOverride(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
     const orgId = await getOrgId()
     const gitBranch = await Vcs.branch().catch(() => undefined)

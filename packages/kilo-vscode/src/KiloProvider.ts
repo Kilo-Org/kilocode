@@ -47,6 +47,7 @@ import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles } from "./kilo-provider/message-files"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { childID } from "./kilo-provider/task-session"
+import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -2946,6 +2947,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
     }
 
+    handleNetworkEvent(event.type as string, event.properties as any, this.client, (s) => this.getWorkspaceDirectory(s))
+
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (msg) {
       if (msg.type === "partUpdated") {
@@ -3289,6 +3292,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
+    clearNetworkWaits(this.trackedSessionIds)
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()

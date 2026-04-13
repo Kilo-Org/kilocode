@@ -944,6 +944,7 @@ export const dict = {
   "session.status.retry": "Ponawianie…",
   "session.status.retrying": "Ponawiam próbę ({{ attempt }})… {{ message }}",
   "session.status.working": "Pracuję…",
+  "session.status.offline": "Odłączono od sieci — ponowne łączenie...",
 
   "ui.sessionTurn.cancel": "Anuluj",
   "ui.sessionTurn.status.thinking": "Myślę...",
@@ -956,6 +957,7 @@ export const dict = {
   "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
+  "context.usage.olderSessions": "{{count}} starszych sesji",
   "context.stats.thisSession": "Ta sesja",
 
   "time.justNow": "przed chwilą",

@@ -3,7 +3,7 @@
 This guide walks you through setting up Mistral's Codestral model for free autocomplete in Kilo Code. Mistral offers a free tier that's perfect for getting started with AI-powered code completions.
 
 {% tabs %}
-{% tab label="VS Code" %}
+{% tab label="VSCode" %}
 
 ## Prerequisites
 
@@ -74,7 +74,7 @@ Your Editor → Kilo Gateway (with your key) → Mistral
 - **Seeing charges on your Kilo balance?** If you haven't configured BYOK, autocomplete defaults to using your Kilo credits. Add your Codestral key via BYOK to route requests through your own Mistral account.
 
 {% /tab %}
-{% tab label="VS Code Legacy" %}
+{% tab label="VSCode (Legacy)" %}
 
 ## Video Walkthrough
 

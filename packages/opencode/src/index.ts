@@ -3,7 +3,11 @@ import { hideBin } from "yargs/helpers"
 import { RunCommand } from "./cli/cmd/run"
 import { GenerateCommand } from "./cli/cmd/generate"
 import { Log } from "./util/log"
-import { AuthCommand } from "./cli/cmd/auth"
+// kilocode_change start
+// import { LoginCommand, LogoutCommand, SwitchCommand, OrgsCommand } from "./cli/cmd/account"
+// import { ConsoleCommand } from "./cli/cmd/account"
+// kilocode_change end
+import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
 import { UninstallCommand } from "./cli/cmd/uninstall"
@@ -13,7 +17,6 @@ import { Installation } from "./installation"
 import { NamedError } from "@opencode-ai/util/error"
 import { FormatError } from "./cli/error"
 import { ServeCommand } from "./cli/cmd/serve"
-import { WorkspaceServeCommand } from "./cli/cmd/workspace-serve"
 import { Filesystem } from "./util/filesystem"
 import { ConfigCommand as ConfigCLICommand } from "./cli/cmd/config" // kilocode_change
 import { DebugCommand } from "./cli/cmd/debug"
@@ -57,25 +60,22 @@ import { Global } from "./global"
 import { createHelpCommand } from "./kilocode/help-command" // kilocode_change
 import { JsonMigration } from "./storage/json-migration"
 import { Database } from "./storage/db"
+import { errorMessage } from "./util/error"
+import { PluginCommand } from "./cli/cmd/plug"
 
 process.on("unhandledRejection", (e) => {
   Log.Default.error("rejection", {
-    e: e instanceof Error ? e.message : e,
+    e: errorMessage(e),
   })
 })
 
 process.on("uncaughtException", (e) => {
   Log.Default.error("exception", {
-    e: e instanceof Error ? e.message : e,
+    e: errorMessage(e),
   })
 })
 
-// Ensure the process exits on terminal hangup (eg. closing the terminal tab).
-// Without this, long-running commands like `serve` block on a never-resolving
-// promise and survive as orphaned processes.
-process.on("SIGHUP", () => process.exit())
-
-let cli = yargs(hideBin(process.argv))
+let cli = yargs(hideBin(process.argv)) // kilocode_change
   .parserConfiguration({ "populate--": true })
   .scriptName("kilo") // kilocode_change
   .wrap(100)
@@ -92,7 +92,15 @@ let cli = yargs(hideBin(process.argv))
     type: "string",
     choices: ["DEBUG", "INFO", "WARN", "ERROR"],
   })
+  .option("pure", {
+    describe: "run without external plugins",
+    type: "boolean",
+  })
   .middleware(async (opts) => {
+    if (opts.pure) {
+      process.env.KILO_PURE = "1"
+    }
+
     await Log.init({
       print: process.argv.includes("--print-logs"),
       dev: Installation.isLocal(),
@@ -182,7 +190,14 @@ let cli = yargs(hideBin(process.argv))
   .command(RunCommand)
   .command(GenerateCommand)
   .command(DebugCommand)
-  .command(AuthCommand)
+  // kilocode_change start
+  // .command(LoginCommand)
+  // .command(LogoutCommand)
+  // .command(SwitchCommand)
+  // .command(OrgsCommand)
+  // .command(ConsoleCommand)
+  // kilocode_change end
+  .command(ProvidersCommand)
   .command(AgentCommand)
   .command(UpgradeCommand)
   .command(UninstallCommand)
@@ -196,18 +211,15 @@ let cli = yargs(hideBin(process.argv))
   .command(PrCommand)
   .command(SessionCommand)
   .command(RemoteCommand) // kilocode_change
-  .command(DbCommand)
   .command(ConfigCLICommand) // kilocode_change
+  .command(PluginCommand)
+  .command(DbCommand)
 
 // kilocode_change start - registered after initial chain to avoid self-referential type error
 cli = cli.command(createHelpCommand(() => cli))
-// kilocode_change end
-
-if (Installation.isLocal()) {
-  cli = cli.command(WorkspaceServeCommand)
-}
 
 cli = cli
+  // kilocode_change end
   .fail((msg, err) => {
     if (
       msg?.startsWith("Unknown argument") ||
@@ -258,7 +270,7 @@ try {
   if (formatted) UI.error(formatted)
   if (formatted === undefined) {
     UI.error("Unexpected error, check log file at " + Log.file() + " for more details" + EOL)
-    process.stderr.write((e instanceof Error ? e.message : String(e)) + EOL)
+    process.stderr.write(errorMessage(e) + EOL)
   }
   process.exitCode = 1
 } finally {

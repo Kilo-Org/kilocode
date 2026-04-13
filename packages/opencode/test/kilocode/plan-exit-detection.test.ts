@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Identifier } from "../../src/id/id"
+import { SessionID, MessageID, PartID } from "../../src/session/schema"
+import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
 import { PlanFollowup } from "../../src/kilocode/plan-followup"
 import { Question } from "../../src/question"
@@ -14,8 +16,8 @@ import { tmpdir } from "../fixture/fixture"
 Log.init({ print: false })
 
 const model = {
-  providerID: "openai",
-  modelID: "gpt-4",
+  providerID: ProviderID.make("openai"),
+  modelID: ModelID.make("gpt-4"),
 }
 
 async function withInstance(fn: () => Promise<void>) {
@@ -31,7 +33,7 @@ async function seed(input: {
 }) {
   const session = await Session.create({})
   const user = await Session.updateMessage({
-    id: Identifier.ascending("message"),
+    id: MessageID.ascending(),
     role: "user",
     sessionID: session.id,
     time: { created: Date.now() },
@@ -39,7 +41,7 @@ async function seed(input: {
     model,
   })
   await Session.updatePart({
-    id: Identifier.ascending("part"),
+    id: PartID.ascending(),
     messageID: user.id,
     sessionID: session.id,
     type: "text",
@@ -47,7 +49,7 @@ async function seed(input: {
   })
 
   const assistant: MessageV2.Assistant = {
-    id: Identifier.ascending("message"),
+    id: MessageID.ascending(),
     role: "assistant",
     sessionID: session.id,
     time: { created: Date.now() },
@@ -73,7 +75,7 @@ async function seed(input: {
   await Session.updateMessage(assistant)
   if (input.text !== undefined) {
     await Session.updatePart({
-      id: Identifier.ascending("part"),
+      id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
       type: "text",
@@ -83,7 +85,7 @@ async function seed(input: {
 
   for (const t of input.tools ?? []) {
     await Session.updatePart({
-      id: Identifier.ascending("part"),
+      id: PartID.ascending(),
       messageID: assistant.id,
       sessionID: session.id,
       type: "tool",
@@ -195,7 +197,7 @@ describe("plan_exit detection", () => {
     withInstance(async () => {
       const session = await Session.create({})
       const user = await Session.updateMessage({
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
         time: { created: Date.now() },
@@ -203,7 +205,7 @@ describe("plan_exit detection", () => {
         model,
       })
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
         type: "text",
@@ -211,7 +213,7 @@ describe("plan_exit detection", () => {
       })
 
       const assistant: MessageV2.Assistant = {
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "assistant",
         sessionID: session.id,
         time: { created: Date.now() },
@@ -233,14 +235,14 @@ describe("plan_exit detection", () => {
       }
       await Session.updateMessage(assistant)
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant.id,
         sessionID: session.id,
         type: "text",
         text: "Here is the plan",
       })
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant.id,
         sessionID: session.id,
         type: "tool",
@@ -276,7 +278,7 @@ describe("plan_exit detection", () => {
       // Use explicit timestamps to ensure deterministic message ordering
       const now = Date.now()
       const user = await Session.updateMessage({
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
         time: { created: now },
@@ -284,7 +286,7 @@ describe("plan_exit detection", () => {
         model,
       })
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
         type: "text",
@@ -293,7 +295,7 @@ describe("plan_exit detection", () => {
 
       // First assistant message: has plan_exit tool, finish = tool-calls
       const assistant1: MessageV2.Assistant = {
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "assistant",
         sessionID: session.id,
         time: { created: now + 1 },
@@ -309,7 +311,7 @@ describe("plan_exit detection", () => {
       }
       await Session.updateMessage(assistant1)
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
         type: "tool",
@@ -327,7 +329,7 @@ describe("plan_exit detection", () => {
 
       // Second assistant message: text only, finish = end_turn (this is what lastAssistantMsg would point to)
       const assistant2: MessageV2.Assistant = {
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "assistant",
         sessionID: session.id,
         time: { created: now + 2 },
@@ -343,7 +345,7 @@ describe("plan_exit detection", () => {
       }
       await Session.updateMessage(assistant2)
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant2.id,
         sessionID: session.id,
         type: "text",
@@ -393,7 +395,7 @@ describe("plan_exit detection", () => {
       // Use explicit timestamps to ensure deterministic message ordering
       const now = Date.now()
       const user = await Session.updateMessage({
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "user",
         sessionID: session.id,
         time: { created: now },
@@ -401,7 +403,7 @@ describe("plan_exit detection", () => {
         model,
       })
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: user.id,
         sessionID: session.id,
         type: "text",
@@ -410,7 +412,7 @@ describe("plan_exit detection", () => {
 
       // First assistant message: has plan text + plan_exit tool
       const assistant1: MessageV2.Assistant = {
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "assistant",
         sessionID: session.id,
         time: { created: now + 1 },
@@ -426,14 +428,14 @@ describe("plan_exit detection", () => {
       }
       await Session.updateMessage(assistant1)
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
         type: "text",
         text: "Here is the detailed plan:\n\n## Step 1\nDo something\n\n## Step 2\nDo something else",
       })
       await Session.updatePart({
-        id: Identifier.ascending("part"),
+        id: PartID.ascending(),
         messageID: assistant1.id,
         sessionID: session.id,
         type: "tool",
@@ -451,7 +453,7 @@ describe("plan_exit detection", () => {
 
       // Second assistant message: empty (LLM follow-up after tool result)
       const assistant2: MessageV2.Assistant = {
-        id: Identifier.ascending("message"),
+        id: MessageID.ascending(),
         role: "assistant",
         sessionID: session.id,
         time: { created: now + 2 },

@@ -7,6 +7,7 @@ import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
 import { Log } from "@/util/log"
+import { errorMessage } from "@/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
@@ -17,9 +18,10 @@ import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/config/tui"
 import { Instance } from "@/project/instance"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { writeHeapSnapshot } from "v8"
 
 declare global {
-  const KILO_WORKER_PATH: string // kilocode_change
+  const KILO_WORKER_PATH: string
 }
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
@@ -163,7 +165,7 @@ export const TuiThreadCommand = cmd({
       const reload = () => {
         client.call("reload", undefined).catch((err) => {
           Log.Default.warn("worker reload failed", {
-            error: err instanceof Error ? err.message : String(err),
+            error: errorMessage(err),
           })
         })
       }
@@ -180,7 +182,7 @@ export const TuiThreadCommand = cmd({
         process.off("SIGUSR2", reload)
         await withTimeout(client.call("shutdown", undefined), 5000).catch((error) => {
           Log.Default.warn("worker shutdown failed", {
-            error: error instanceof Error ? error.message : String(error),
+            error: errorMessage(error),
           })
         })
         worker.terminate()
@@ -303,6 +305,11 @@ export const TuiThreadCommand = cmd({
 
         await tui({
           url: transport.url,
+          async onSnapshot() {
+            const tui = writeHeapSnapshot("tui.heapsnapshot")
+            const server = await client.call("snapshot", undefined)
+            return [tui, server]
+          },
           config,
           directory: cwd,
           fetch: transport.fetch,

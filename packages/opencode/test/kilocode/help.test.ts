@@ -6,7 +6,7 @@ import { McpCommand } from "../../src/cli/cmd/mcp"
 import { RunCommand } from "../../src/cli/cmd/run"
 import { GenerateCommand } from "../../src/cli/cmd/generate"
 import { DebugCommand } from "../../src/cli/cmd/debug"
-import { AuthCommand } from "../../src/cli/cmd/auth"
+import { ProvidersCommand } from "../../src/cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
 import { AgentCommand } from "../../src/cli/cmd/agent"
 import { UpgradeCommand } from "../../src/cli/cmd/upgrade"
 import { UninstallCommand } from "../../src/cli/cmd/uninstall"
@@ -18,6 +18,9 @@ import { ExportCommand } from "../../src/cli/cmd/export"
 import { ImportCommand } from "../../src/cli/cmd/import"
 import { PrCommand } from "../../src/cli/cmd/pr"
 import { SessionCommand } from "../../src/cli/cmd/session"
+import { RemoteCommand } from "../../src/cli/cmd/remote"
+import { ConfigCommand as ConfigCLICommand } from "../../src/cli/cmd/config"
+import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
 
@@ -36,6 +39,13 @@ const AttachStub = {
   handler() {},
 }
 
+// Synthetic entry for the yargs built-in .completion() command
+const CompletionStub = {
+  command: "completion",
+  describe: "generate shell completion script",
+  handler() {},
+}
+
 const commands = [
   AcpCommand,
   McpCommand,
@@ -44,7 +54,7 @@ const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  AuthCommand,
+  ProvidersCommand,
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
@@ -56,8 +66,12 @@ const commands = [
   ImportCommand,
   PrCommand,
   SessionCommand,
+  RemoteCommand,
   DbCommand,
+  ConfigCLICommand,
+  PluginCommand,
   HelpCommand,
+  CompletionStub,
 ] as any[]
 
 describe("kilo help --all (markdown)", () => {
