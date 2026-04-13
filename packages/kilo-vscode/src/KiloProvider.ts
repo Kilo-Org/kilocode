@@ -48,6 +48,7 @@ import { parseMessageFiles } from "./kilo-provider/message-files"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { childID } from "./kilo-provider/task-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
+import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -199,6 +200,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private statsPoller: GitStatsPoller | null = null
   private statsGitOps: GitOps | null = null
   private cachedStats: unknown = null
+  private cachedGitRepo = false
 
   /** Optional interceptor called before the standard message handler.
    *  Return null to consume the message, or return a (possibly transformed) message. */
@@ -340,8 +342,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         data: profileData,
       })
 
-      // Re-send cached worktree stats so the badge renders immediately after webview reload.
+      // Re-send cached worktree stats and git status after webview reload.
       if (this.cachedStats) this.postMessage(this.cachedStats)
+      this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
 
       // Seed session status map so the Settings panel knows about already-running sessions.
       // Must run after webview is ready (postMessage is a no-op before that).
@@ -1201,12 +1204,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.fetchAndSendNotifications(),
         this.seedSessionStatusMap(),
       ])
+      this.cachedGitRepo = await hasGit(this.client!)
+      this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
       this.postMessage({ type: "extensionDataReady" })
 
-      // Start polling worktree diff stats for the sidebar badge
-      this.startStatsPolling()
+      if (this.cachedGitRepo) this.startStatsPolling()
 
       console.log("[Kilo New] KiloProvider: ✅ initializeConnection completed successfully")
     } catch (error) {
