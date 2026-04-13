@@ -18,10 +18,11 @@ export function DialogStatus() {
 
   const plugins = createMemo(() => {
     const list = sync.data.config.plugin ?? []
-    const result = list.map((value) => {
+    const result = list.map((item) => {
+      const value = typeof item === "string" ? item : item[0]
       if (value.startsWith("file://")) {
         const path = fileURLToPath(value)
-        const parts = path.split("/")
+        const parts = path.split(/[/\\]/) // kilocode_change: fix Windows backslash paths
         const filename = parts.pop() || path
         if (!filename.includes(".")) return { name: filename }
         const basename = filename.split(".")[0]

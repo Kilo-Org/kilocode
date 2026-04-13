@@ -1,84 +1,115 @@
-// kilocode_change - new file
-import { afterEach, beforeEach, describe, expect, test } from "bun:test"
-import { Log } from "../../src/util/log"
-import { State } from "../../src/project/state"
+import { afterEach, expect, test } from "bun:test"
 
-Log.init({ print: false })
+import { Instance } from "../../src/project/instance"
+import { tmpdir } from "../fixture/fixture"
 
-const clock = { now: 0 }
-const tasks = new Map<number, { at: number; fn: () => void }>()
-let next = 1
+afterEach(async () => {
+  await Instance.disposeAll()
+})
 
-const realSetTimeout = globalThis.setTimeout
+test("Instance.state caches values for the same instance", async () => {
+  await using tmp = await tmpdir()
+  let n = 0
+  const state = Instance.state(() => ({ n: ++n }))
 
-function schedule(fn: () => void, ms = 0) {
-  const id = next
-  next += 1
-  const timer = {
-    unref() {
-      return timer
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      const a = state()
+      const b = state()
+      expect(a).toBe(b)
+      expect(n).toBe(1)
     },
-  }
-  tasks.set(id, { at: clock.now + ms, fn })
-  return timer as unknown as ReturnType<typeof globalThis.setTimeout>
-}
+  })
+})
 
-function flush() {
-  while (true) {
-    const due = Array.from(tasks.entries())
-      .filter(([, task]) => task.at <= clock.now)
-      .sort((a, b) => a[1].at - b[1].at)
-    if (due.length === 0) return
-    for (const [id, task] of due) {
-      tasks.delete(id)
-      task.fn()
-    }
-  }
-}
+test("Instance.state isolates values by directory", async () => {
+  await using a = await tmpdir()
+  await using b = await tmpdir()
+  let n = 0
+  const state = Instance.state(() => ({ n: ++n }))
 
-describe("State.dispose", () => {
-  beforeEach(() => {
-    clock.now = 0
-    tasks.clear()
-    next = 1
-    globalThis.setTimeout = schedule as typeof globalThis.setTimeout
+  const x = await Instance.provide({
+    directory: a.path,
+    fn: async () => state(),
+  })
+  const y = await Instance.provide({
+    directory: b.path,
+    fn: async () => state(),
+  })
+  const z = await Instance.provide({
+    directory: a.path,
+    fn: async () => state(),
   })
 
-  afterEach(() => {
-    globalThis.setTimeout = realSetTimeout
+  expect(x).toBe(z)
+  expect(x).not.toBe(y)
+  expect(n).toBe(2)
+})
+
+test("Instance.state is disposed on instance reload", async () => {
+  await using tmp = await tmpdir()
+  const seen: string[] = []
+  let n = 0
+  const state = Instance.state(
+    () => ({ n: ++n }),
+    async (value) => {
+      seen.push(String(value.n))
+    },
+  )
+
+  const a = await Instance.provide({
+    directory: tmp.path,
+    fn: async () => state(),
+  })
+  await Instance.reload({ directory: tmp.path })
+  const b = await Instance.provide({
+    directory: tmp.path,
+    fn: async () => state(),
   })
 
-  test("continues after a disposer times out", async () => {
-    const calls: string[] = []
-    const root = () => "test-key"
-    const hung = State.create(
-      root,
-      () => "hung",
-      async () => {
-        calls.push("hung:start")
-        await new Promise(() => {})
-      },
-    )
-    const fast = State.create(
-      root,
-      () => "fast",
-      async () => {
-        calls.push("fast")
-      },
-    )
+  expect(a).not.toBe(b)
+  expect(seen).toEqual(["1"])
+})
 
-    hung()
-    fast()
+test("Instance.state is disposed on disposeAll", async () => {
+  await using a = await tmpdir()
+  await using b = await tmpdir()
+  const seen: string[] = []
+  const state = Instance.state(
+    () => ({ dir: Instance.directory }),
+    async (value) => {
+      seen.push(value.dir)
+    },
+  )
 
-    const dispose = State.dispose("test-key")
-    await Promise.resolve()
-    expect(calls).toEqual(["hung:start", "fast"])
-
-    clock.now = 15_000
-    flush()
-    await dispose
-
-    const again = State.create(root, () => "again")
-    expect(again()).toBe("again")
+  await Instance.provide({
+    directory: a.path,
+    fn: async () => state(),
   })
+  await Instance.provide({
+    directory: b.path,
+    fn: async () => state(),
+  })
+  await Instance.disposeAll()
+
+  expect(seen.sort()).toEqual([a.path, b.path].sort())
+})
+
+test("Instance.state dedupes concurrent promise initialization", async () => {
+  await using tmp = await tmpdir()
+  let n = 0
+  const state = Instance.state(async () => {
+    n += 1
+    await Bun.sleep(10)
+    return { n }
+  })
+
+  const [a, b] = await Instance.provide({
+    directory: tmp.path,
+    fn: async () => Promise.all([state(), state()]),
+  })
+
+  expect(a).toBe(b)
+  expect(n).toBe(1)
 })

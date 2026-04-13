@@ -10,7 +10,7 @@ import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats } from "../types/messages"
+import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -251,6 +251,152 @@ export const WorktreeItemWithStats: Story = {
     </StoryProviders>
   ),
 }
+
+// ---------------------------------------------------------------------------
+// PR badge mock helpers
+// ---------------------------------------------------------------------------
+
+const basePR: PRStatus = {
+  number: 8594,
+  title: "feat: add inline delete",
+  url: "https://github.com/org/repo/pull/8594",
+  state: "open",
+  review: null,
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  additions: 978,
+  deletions: 202,
+  files: 12,
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — PR badge stories
+// ---------------------------------------------------------------------------
+
+export const PRBadgeApproved: Story = {
+  name: "PR Badge — approved + checks pass",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "approved" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgePending: Story = {
+  name: "PR Badge — pending review",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "pending" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChangesRequested: Story = {
+  name: "PR Badge — changes requested",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "changes_requested" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksFailing: Story = {
+  name: "PR Badge — checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksPending: Story = {
+  name: "PR Badge — checks pending",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "pending", passed: 2, pending: 3 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeDraft: Story = {
+  name: "PR Badge — draft",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "draft" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeMerged: Story = {
+  name: "PR Badge — merged",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "merged" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeClosed: Story = {
+  name: "PR Badge — closed",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "closed" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeNoReview: Story = {
+  name: "PR Badge — open, no review decision",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={basePR} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeApprovedChecksFailing: Story = {
+  name: "PR Badge — approved but checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, review: "approved", checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — grouped
+// ---------------------------------------------------------------------------
 
 export const WorktreeItemGrouped: Story = {
   name: "WorktreeItem — grouped (3 versions)",

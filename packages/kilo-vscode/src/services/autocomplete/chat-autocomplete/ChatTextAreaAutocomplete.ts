@@ -1,14 +1,23 @@
 import * as vscode from "vscode"
 import { AutocompleteModel } from "../AutocompleteModel"
-import { AutocompleteContext, VisibleCodeContext } from "../types"
+import type { AutocompleteContext, VisibleCodeContext } from "../types"
 import { removePrefixOverlap } from "../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
-import type { ChatCompletionRequestMessage, ChatCompletionResponseSender } from "./handleChatCompletionRequest"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
+
+interface ChatCompletionRequestMessage {
+  type: "requestChatCompletion"
+  text: string
+  requestId: string
+}
+
+interface ChatCompletionResponseSender {
+  postMessage(message: { type: "chatCompletionResult"; text: string; requestId: string }): void
+}
 
 /**
  * Chat textarea autocomplete with cached per-request objects.

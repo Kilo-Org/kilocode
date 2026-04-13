@@ -1,117 +1,53 @@
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import { createMemo, Match, onMount, Show, Switch } from "solid-js"
-import { useTheme } from "@tui/context/theme"
-import { useKeybind } from "@tui/context/keybind"
+import { createEffect, on, onMount } from "solid-js"
 import { Logo } from "../component/logo"
-import { Tips } from "../component/tips"
-import { Locale } from "@/util/locale"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
-import { useDirectory } from "../context/directory"
 import { useRouteData } from "@tui/context/route"
 import { usePromptRef } from "../context/prompt"
-import { Installation } from "@/installation"
-import { useKV } from "../context/kv"
-import { useCommandDialog } from "../component/dialog-command"
-import { KiloNews } from "@/kilocode/components/kilo-news" // kilocode_change
-import { useConnected } from "../component/dialog-model" // kilocode_change
-import { RemoteIndicator } from "@/kilocode/remote-tui" // kilocode_change
-import { useSDK } from "../context/sdk" // kilocode_change
+import { useLocal } from "../context/local"
+import { TuiPluginRuntime } from "../plugin"
 
 // TODO: what is the best way to do this?
 let once = false
+const placeholder = {
+  normal: ["Fix a TODO in the codebase", "What is the tech stack of this project?", "Fix broken tests"],
+  shell: ["ls -la", "git status", "pwd"],
+}
 
 export function Home() {
   const sync = useSync()
-  const kv = useKV()
-  const { theme } = useTheme()
   const route = useRouteData("home")
   const promptRef = usePromptRef()
-  const command = useCommandDialog()
-  const sdk = useSDK() // kilocode_change
-  const mcp = createMemo(() => Object.keys(sync.data.mcp).length > 0)
-  const mcpError = createMemo(() => {
-    return Object.values(sync.data.mcp).some((x) => x.status === "failed")
-  })
-
-  const connectedMcpCount = createMemo(() => {
-    return Object.values(sync.data.mcp).filter((x) => x.status === "connected").length
-  })
-
-  const isFirstTimeUser = createMemo(() => sync.data.session.length === 0)
-  const tipsHidden = createMemo(() => kv.get("tips_hidden", false))
-  const newsHidden = createMemo(() => kv.get("news_hidden", false)) // kilocode_change
-  // kilocode_change start
-  const connected = useConnected()
-  const onboarding = createMemo(() => isFirstTimeUser() && !connected())
-  // kilocode_change end
-  const showTips = createMemo(() => {
-    if (onboarding()) return !tipsHidden() // kilocode_change - show onboarding tip
-    // kilocode_change - don't hide tips for connected first-time users
-    return !tipsHidden()
-  })
-
-  command.register(() => [
-    {
-      title: tipsHidden() ? "Show tips" : "Hide tips",
-      value: "tips.toggle",
-      keybind: "tips_toggle",
-      category: "System",
-      onSelect: (dialog) => {
-        kv.set("tips_hidden", !tipsHidden())
-        dialog.clear()
-      },
-    },
-    // kilocode_change start
-    {
-      title: newsHidden() ? "Show news" : "Hide news",
-      value: "news.toggle",
-      keybind: "news_toggle",
-      category: "System",
-      onSelect: (dialog) => {
-        kv.set("news_hidden", !newsHidden())
-        dialog.clear()
-      },
-    },
-    // kilocode_change end
-  ])
-
-  const Hint = (
-    <Show when={connectedMcpCount() > 0}>
-      <box flexShrink={0} flexDirection="row" gap={1}>
-        <text fg={theme.text}>
-          <Switch>
-            <Match when={mcpError()}>
-              <span style={{ fg: theme.error }}>•</span> mcp errors{" "}
-              <span style={{ fg: theme.textMuted }}>ctrl+x s</span>
-            </Match>
-            <Match when={true}>
-              <span style={{ fg: theme.success }}>•</span>{" "}
-              {Locale.pluralize(connectedMcpCount(), "{} mcp server", "{} mcp servers")}
-            </Match>
-          </Switch>
-        </text>
-      </box>
-    </Show>
-  )
-
-  let prompt: PromptRef
+  let prompt: PromptRef | undefined
   const args = useArgs()
+  const local = useLocal()
   onMount(() => {
     if (once) return
+    if (!prompt) return
     if (route.initialPrompt) {
       prompt.set(route.initialPrompt)
       once = true
     } else if (args.prompt) {
       prompt.set({ input: args.prompt, parts: [] })
       once = true
-      prompt.submit()
     }
   })
-  const directory = useDirectory()
 
-  const keybind = useKeybind()
+  // Wait for sync and model store to be ready before auto-submitting --prompt
+  createEffect(
+    on(
+      () => sync.ready && local.model.ready,
+      (ready) => {
+        if (!ready) return
+        if (!prompt) return
+        if (!args.prompt) return
+        if (prompt.current?.input !== args.prompt) return
+        prompt.submit()
+      },
+    ),
+  )
 
   return (
     <>
@@ -119,59 +55,29 @@ export function Home() {
         <box flexGrow={1} minHeight={0} />
         <box height={4} minHeight={0} flexShrink={1} />
         <box flexShrink={0}>
-          <Logo />
+          <TuiPluginRuntime.Slot name="home_logo" mode="replace">
+            <Logo />
+          </TuiPluginRuntime.Slot>
         </box>
         <box height={1} minHeight={0} flexShrink={1} />
         <box width="100%" maxWidth={75} zIndex={1000} paddingTop={1} flexShrink={0}>
-          <Prompt
-            ref={(r) => {
-              prompt = r
-              promptRef.set(r)
-            }}
-            hint={Hint}
-          />
-        </box>
-        {/* kilocode_change - KiloNews added */}
-        <box width="100%" maxWidth={75} alignItems="center" paddingTop={2} gap={1}>
-          <Show when={!newsHidden()}>
-            <KiloNews />
-          </Show>
-          <Show when={showTips()}>
-            <Tips
-              tip={
-                onboarding()
-                  ? "Using a free model \u2014 run {highlight}/connect{/highlight} to add your API key"
-                  : undefined
-              }
+          <TuiPluginRuntime.Slot name="home_prompt" mode="replace" workspace_id={route.workspaceID}>
+            <Prompt
+              ref={(r) => {
+                prompt = r
+                promptRef.set(r)
+              }}
+              workspaceID={route.workspaceID}
+              placeholders={placeholder}
             />
-          </Show>
+          </TuiPluginRuntime.Slot>
         </box>
+        <TuiPluginRuntime.Slot name="home_bottom" />
         <box flexGrow={1} minHeight={0} />
         <Toast />
       </box>
-      <box paddingTop={1} paddingBottom={1} paddingLeft={2} paddingRight={2} flexDirection="row" flexShrink={0} gap={2}>
-        <text fg={theme.textMuted}>{directory()}</text>
-        <box gap={1} flexDirection="row" flexShrink={0}>
-          <RemoteIndicator sdk={sdk} theme={theme} kilo={sync.data.provider_next.connected.includes("kilo")} />
-          <Show when={mcp()}>
-            <text fg={theme.text}>
-              <Switch>
-                <Match when={mcpError()}>
-                  <span style={{ fg: theme.error }}>⊙ </span>
-                </Match>
-                <Match when={true}>
-                  <span style={{ fg: connectedMcpCount() > 0 ? theme.success : theme.textMuted }}>⊙ </span>
-                </Match>
-              </Switch>
-              {connectedMcpCount()} MCP
-            </text>
-            <text fg={theme.textMuted}>/status</text>
-          </Show>
-        </box>
-        <box flexGrow={1} />
-        <box flexShrink={0}>
-          <text fg={theme.textMuted}>{Installation.VERSION}</text>
-        </box>
+      <box width="100%" flexShrink={0}>
+        <TuiPluginRuntime.Slot name="home_footer" mode="single_winner" />
       </box>
     </>
   )

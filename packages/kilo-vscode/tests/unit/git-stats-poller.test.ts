@@ -3,8 +3,9 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { GitStatsPoller } from "../../src/agent-manager/GitStatsPoller"
+import { GitStatsPoller, type WorktreePresenceResult } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { Semaphore } from "../../src/agent-manager/semaphore"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
 
 function sleep(ms: number): Promise<void> {
@@ -128,7 +129,7 @@ describe("GitStatsPoller", () => {
     const wtPath = path.join(root, "wt-a")
     fs.mkdirSync(wtPath, { recursive: true })
 
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
@@ -154,7 +155,10 @@ describe("GitStatsPoller", () => {
     poller.stop()
     fs.rmSync(root, { recursive: true, force: true })
 
-    expect(presence[0]).toEqual({ worktrees: [{ worktreeId: "a", missing: false }], degraded: false })
+    expect(presence[0]).toEqual({
+      worktrees: [{ worktreeId: "a", missing: false, branch: "branch-a" }],
+      degraded: false,
+    })
   })
 
   it("emits degraded probe when git worktree listing fails", async () => {
@@ -162,7 +166,7 @@ describe("GitStatsPoller", () => {
     const wtPath = path.join(root, "wt-a")
     fs.mkdirSync(wtPath, { recursive: true })
 
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
@@ -199,7 +203,7 @@ describe("GitStatsPoller", () => {
 
     const calls: string[] = []
     const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
-    const presence: Array<{ worktrees: Array<{ worktreeId: string; missing: boolean }>; degraded: boolean }> = []
+    const presence: WorktreePresenceResult[] = []
 
     const client = {
       worktree: {
@@ -240,8 +244,8 @@ describe("GitStatsPoller", () => {
     expect(calls.some((cwd) => cwd === wtBPath)).toBe(false)
     expect(presence[0]).toEqual({
       worktrees: [
-        { worktreeId: "a", missing: false },
-        { worktreeId: "b", missing: true },
+        { worktreeId: "a", missing: false, branch: "branch-a" },
+        { worktreeId: "b", missing: true, branch: undefined },
       ],
       degraded: false,
     })
@@ -426,5 +430,56 @@ describe("GitStatsPoller", () => {
 
     const fetches = commands.filter((cmd) => cmd[0] === "fetch")
     expect(fetches.length).toBe(0)
+  })
+
+  it("limits concurrent diffSummary calls when semaphore is provided", async () => {
+    let running = 0
+    let peak = 0
+    let ticks = 0
+    const sem = new Semaphore(2)
+
+    const client = {
+      worktree: {
+        diffSummary: async () => {
+          running++
+          peak = Math.max(peak, running)
+          await sleep(20)
+          running--
+          return { data: diff(1, 0) }
+        },
+      },
+    } as unknown as KiloClient
+
+    // Wire the SAME semaphore into GitOps to prove there's no deadlock —
+    // aheadBehind acquires the semaphore independently, not nested inside
+    // the diffSummary gate.
+    const wts = Array.from({ length: 5 }, (_, i) => worktree(String(i)))
+    const poller = new GitStatsPoller({
+      getWorktrees: () => wts,
+      getWorkspaceRoot: () => undefined,
+      getClient: () => client,
+      onStats: () => {
+        ticks++
+      },
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      semaphore: sem,
+      git: new GitOps({
+        log: () => undefined,
+        semaphore: sem,
+        runGit: async (args) => {
+          if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+          return ""
+        },
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => ticks >= 1)
+    poller.stop()
+
+    // Only diffSummary calls are tracked — they should be bounded.
+    expect(peak).toBeLessThanOrEqual(2)
   })
 })

@@ -1,6 +1,6 @@
 import type { Argv } from "yargs"
 import path from "path"
-import { pathToFileURL } from "bun"
+import { pathToFileURL } from "url"
 import { UI } from "../ui"
 import { cmd } from "./cmd"
 import { Flag } from "../../flag/flag"
@@ -12,7 +12,7 @@ import { createKiloClient, type Message, type KiloClient, type ToolPart } from "
 import { Server } from "../../server/server"
 import { Provider } from "../../provider/provider"
 import { Agent } from "../../agent/agent"
-import { PermissionNext } from "../../permission/next"
+import { Permission } from "../../permission"
 import { Tool } from "../../tool/tool"
 import { GlobTool } from "../../tool/glob"
 import { GrepTool } from "../../tool/grep"
@@ -250,10 +250,6 @@ export const RunCommand = cmd({
           describe: "fork the session before continuing (requires --continue or --session)",
           type: "boolean",
         })
-        .option("cloud-fork", {
-          describe: "fetch session from cloud and continue locally (requires --session)",
-          type: "boolean",
-        })
         .option("share", {
           type: "boolean",
           describe: "share the session",
@@ -287,13 +283,11 @@ export const RunCommand = cmd({
           type: "string",
           describe: "attach to a running opencode server (e.g., http://localhost:4096)",
         })
-        // kilocode_change start
         .option("password", {
           alias: ["p"],
           type: "string",
           describe: "basic auth password (defaults to KILO_SERVER_PASSWORD)",
         })
-        // kilocode_change end
         .option("dir", {
           type: "string",
           describe: "directory to run in, path on remote server if attaching",
@@ -306,18 +300,18 @@ export const RunCommand = cmd({
           type: "string",
           describe: "model variant (provider-specific reasoning effort, e.g., high, max, minimal)",
         })
-        .option("thinking", {
-          type: "boolean",
-          describe: "show thinking blocks",
-          default: false,
-        })
         // kilocode_change start - auto approve all permissions
         .option("auto", {
           type: "boolean",
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-      // kilocode_change end
+        // kilocode_change end
+        .option("thinking", {
+          type: "boolean",
+          describe: "show thinking blocks",
+          default: false,
+        })
     )
   },
   handler: async (args) => {
@@ -378,7 +372,7 @@ export const RunCommand = cmd({
     }
     // kilocode_change end
 
-    const rules: PermissionNext.Ruleset = [
+    const rules: Permission.Ruleset = [
       {
         permission: "question",
         action: "deny",
@@ -478,6 +472,8 @@ export const RunCommand = cmd({
 
       async function loop() {
         const toggles = new Map<string, boolean>()
+        const MAX_RETRIES = 3 // kilocode_change
+        let retries = 0 // kilocode_change
 
         for await (const event of events.stream) {
           if (
@@ -568,6 +564,16 @@ export const RunCommand = cmd({
             UI.error(err)
           }
 
+          // kilocode_change start
+          if (
+            event.type === "session.status" &&
+            event.properties.sessionID === sessionID &&
+            event.properties.status.type === "busy"
+          ) {
+            retries = 0
+          }
+          // kilocode_change end
+
           if (
             event.type === "session.status" &&
             event.properties.sessionID === sessionID &&
@@ -599,8 +605,28 @@ export const RunCommand = cmd({
             await sdk.permission.reply({
               requestID: permission.id,
               reply: "reject",
+            }) // kilocode_change
+          } // kilocode_change
+          // kilocode_change start - network retry handling
+          if (event.type === "session.network.asked") {
+            const request = event.properties
+            if (request.sessionID !== sessionID) continue
+            retries++
+            if (retries > MAX_RETRIES) {
+              UI.println(
+                UI.Style.TEXT_WARNING_BOLD + "!",
+                UI.Style.TEXT_NORMAL + `network retry limit reached (${MAX_RETRIES}); rejecting`,
+              )
+              await sdk.network.reject({ requestID: request.id })
+              continue
+            }
+            const delay = Math.min(5000 * Math.pow(2, retries - 1), 60000)
+            await new Promise((r) => setTimeout(r, delay))
+            await sdk.network.reply({
+              requestID: request.id,
             })
           }
+          // kilocode_change end
         }
       }
 
@@ -716,7 +742,7 @@ export const RunCommand = cmd({
     await bootstrap(process.cwd(), async () => {
       const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, init)
-        return Server.App().fetch(request)
+        return Server.Default().fetch(request)
       }) as typeof globalThis.fetch
       const sdk = createKiloClient({ baseUrl: "http://kilo.internal", fetch: fetchFn })
       await execute(sdk)

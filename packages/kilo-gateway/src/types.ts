@@ -1,5 +1,5 @@
 import type { LanguageModel, Provider, Provider as SDK } from "ai"
-import type { LanguageModelV2 } from "@openrouter/ai-sdk-provider"
+import type { LanguageModelV3 } from "@openrouter/ai-sdk-provider"
 
 // ============================================================================
 // Authentication Types
@@ -138,7 +138,7 @@ export interface CustomLoaderResult {
   /**
    * Custom function to get a model instance
    */
-  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModelV2>
+  getModel?: (sdk: SDK, modelID: string, options?: Record<string, any>) => Promise<LanguageModelV3>
 
   /**
    * Options to merge with provider configuration
@@ -165,5 +165,5 @@ export type KiloProvider = Provider & {
   openaiCompatible(modelId: string): LanguageModel
 }
 
-// Re-export LanguageModelV2 for convenience
-export type { LanguageModelV2 }
+// Re-export LanguageModelV3 for convenience
+export type { LanguageModelV3 }

@@ -944,6 +944,11 @@ export const dict = {
   "session.status.retry": "Ponawianie…",
   "session.status.retrying": "Ponawiam próbę ({{ attempt }})… {{ message }}",
   "session.status.working": "Pracuję…",
+  "session.status.offline": "Odłączono od sieci — ponowne łączenie...",
+
+  "ui.sessionTurn.cancel": "Anuluj",
+  "ui.sessionTurn.status.thinking": "Myślę...",
+  "ui.sessionTurn.status.consideringNextSteps": "Rozważam następne kroki...",
 
   "dialog.model.noProviders": "Brak dostawców",
 
@@ -952,6 +957,7 @@ export const dict = {
   "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
+  "context.usage.olderSessions": "{{count}} starszych sesji",
   "context.stats.thisSession": "Ta sesja",
 
   "time.justNow": "przed chwilą",
@@ -1066,6 +1072,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
+  "settings.experimental.remote.title": "Sterowanie Remote",
+  "settings.experimental.remote.description":
+    "Włącz sterowanie Remote sesjami za pośrednictwem Kilo Cloud. Wpłynie to również na CLI na tej maszynie.",
+  "settings.experimental.remote.current": "Aktualny stan:",
+  "settings.experimental.remote.startup": "Automatyczne włączanie przy starcie:",
+  "settings.experimental.remote.active": "Aktywny",
+  "settings.experimental.remote.inactive": "Nieaktywny",
+  "settings.experimental.remote.hint": "Użyj /remote na czacie, aby przełączyć",
   "settings.experimental.toolToggles": "Przełączniki narzędzi",
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
@@ -1129,6 +1143,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
+  "settings.agentBehaviour.permissions.count": "{{count}} reguł",
+  "settings.agentBehaviour.permissions.effective": "Efektywne (wieloznacznik):",
+  "settings.agentBehaviour.permissions.col.tool": "Narzędzie",
+  "settings.agentBehaviour.permissions.col.pattern": "Wzorzec",
+  "settings.agentBehaviour.permissions.col.action": "Akcja",
+  "settings.agentBehaviour.permissions.copy": "Kopiuj uprawnienia jako JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Reguły są sprawdzane po kolei — ostatnia pasująca reguła wygrywa. To jest wynikowy zestaw reguł z backendu CLI.",
   "settings.agentBehaviour.removeMode.title": "Usuń tryb",
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
@@ -1354,4 +1378,5 @@ export const dict = {
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
+  "notifications.action.tryModelGeneric": "Wypróbuj model",
 }

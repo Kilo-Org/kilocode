@@ -9,6 +9,7 @@ import type {
   Command,
   PermissionRequest,
   QuestionRequest,
+  SessionNetworkWait, // kilocode_change
   LspStatus,
   McpStatus,
   McpResource,
@@ -27,6 +28,7 @@ import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
 import { Log } from "@/util/log"
+import { useToast } from "@tui/ui/toast" // kilocode_change
 import type { Path } from "@kilocode/sdk"
 import type { Workspace } from "@kilocode/sdk/v2"
 
@@ -47,6 +49,11 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       question: {
         [sessionID: string]: QuestionRequest[]
       }
+      // kilocode_change start
+      network: {
+        [sessionID: string]: SessionNetworkWait[]
+      }
+      // kilocode_change end
       config: Config
       session: Session[]
       session_status: {
@@ -87,6 +94,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       agent: [],
       permission: {},
       question: {},
+      // kilocode_change start
+      network: {},
+      // kilocode_change end
       command: [],
       provider: [],
       provider_default: {},
@@ -106,6 +116,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     })
 
     const sdk = useSDK()
+    const toast = useToast() // kilocode_change
 
     const fullSyncedSessions = new Set<string>() // kilocode_change
 
@@ -129,6 +140,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           delete draft.session_diff[sessionID]
           delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
+          delete draft.network[sessionID]
         }),
       )
       fullSyncedSessions.delete(sessionID)
@@ -222,7 +234,57 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             }),
           )
           break
+        } // kilocode_change
+
+        // kilocode_change start
+        case "session.network.replied":
+        case "session.network.rejected": {
+          const requests = store.network[event.properties.sessionID]
+          if (!requests) break
+          const match = Binary.search(requests, event.properties.requestID, (r) => r.id)
+          if (!match.found) break
+          setStore(
+            "network",
+            event.properties.sessionID,
+            produce((draft) => {
+              draft.splice(match.index, 1)
+            }),
+          )
+          break
         }
+
+        case "session.network.restored": {
+          const requests = store.network[event.properties.sessionID]
+          if (!requests) break
+          const match = Binary.search(requests, event.properties.requestID, (r) => r.id)
+          if (match.found) {
+            setStore("network", event.properties.sessionID, match.index, "restored", true)
+          }
+          break
+        }
+
+        case "session.network.asked": {
+          const request = event.properties
+          const requests = store.network[request.sessionID]
+          if (!requests) {
+            setStore("network", request.sessionID, [request])
+            break
+          }
+          const match = Binary.search(requests, request.id, (r) => r.id)
+          if (match.found) {
+            setStore("network", request.sessionID, match.index, reconcile(request))
+            break
+          }
+          setStore(
+            "network",
+            request.sessionID,
+            produce((draft) => {
+              draft.splice(match.index, 0, request)
+            }),
+          )
+          break
+        }
+        // kilocode_change end
 
         case "todo.updated":
           setStore("todo", event.properties.sessionID, event.properties.todos)
@@ -390,6 +452,15 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           setStore("vcs", { branch: event.properties.branch })
           break
         }
+
+        // kilocode_change start
+        case "global.config.updated": {
+          sdk.client.config.get().then((x) => {
+            if (x.data) setStore("config", reconcile(x.data))
+          })
+          break
+        }
+        // kilocode_change end
       }
     })
 
@@ -456,7 +527,17 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.lsp.status().then((x) => setStore("lsp", reconcile(x.data!))),
             sdk.client.mcp.status().then((x) => setStore("mcp", reconcile(x.data!))),
             sdk.client.experimental.resource.list().then((x) => setStore("mcp_resource", reconcile(x.data ?? {}))),
-            sdk.client.formatter.status().then((x) => setStore("formatter", reconcile(x.data!))),
+            sdk.client.formatter.status().then((x) => setStore("formatter", reconcile(x.data!))), // kilocode_change
+            // kilocode_change start
+            sdk.client.network.list().then((x) => {
+              const next: Record<string, SessionNetworkWait[]> = {}
+              for (const item of x.data ?? []) {
+                if (!next[item.sessionID]) next[item.sessionID] = []
+                next[item.sessionID].push(item)
+              }
+              setStore("network", reconcile(next))
+            }),
+            // kilocode_change end
             sdk.client.session.status().then((x) => {
               setStore("session_status", reconcile(x.data!))
             }),
@@ -464,6 +545,23 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
             sdk.client.vcs.get().then((x) => setStore("vcs", reconcile(x.data))),
             sdk.client.path.get().then((x) => setStore("path", reconcile(x.data!))),
             syncWorkspaces(),
+            // kilocode_change start - show config warnings as persistent toast
+            sdk.client.config
+              .warnings()
+              .then((x) => {
+                const list = x.data ?? []
+                if (list.length === 0) return
+                const first = list[0]
+                const suffix = list.length > 1 ? ` (and ${list.length - 1} more)` : ""
+                toast.show({
+                  title: "Config Warning",
+                  message: first.message + suffix,
+                  variant: "warning",
+                  duration: 0,
+                })
+              })
+              .catch(() => {}),
+            // kilocode_change end
           ]).then(() => {
             setStore("status", "complete")
           })

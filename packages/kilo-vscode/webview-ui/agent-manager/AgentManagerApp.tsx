@@ -7,7 +7,6 @@ import {
   createSignal,
   createMemo,
   createEffect,
-  createRoot,
   on,
   onMount,
   onCleanup,
@@ -37,6 +36,7 @@ import type {
   PRStatus,
   AgentManagerPRStatusMessage,
   ManagedSessionState,
+  SectionState,
   SessionInfo,
   BranchInfo,
 } from "../src/types/messages"
@@ -47,9 +47,8 @@ import {
   SortableProvider,
   closestCenter,
   createSortable,
-  useDragDropContext,
 } from "@thisbeyond/solid-dnd"
-import type { DragEvent, Transformer } from "@thisbeyond/solid-dnd"
+import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
@@ -86,12 +85,27 @@ import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, LOCAL } f
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { ConstrainDragYAxis, SortableReviewTab, SortableTab } from "./sortable-tab"
 import { DiffPanel } from "./DiffPanel"
+import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "./FullScreenDiffView"
 import { ApplyDialog } from "./ApplyDialog"
 import { groupApplyConflicts } from "./apply-conflicts"
 import type { ReviewComment } from "./review-comments"
 import { BranchSelect } from "./BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
+import SectionHeader from "./SectionHeader"
+import { randomColor } from "./section-colors"
+import {
+  buildTopLevelItems,
+  buildSidebarOrder,
+  buildShortcutMap,
+  completeSidebarOrder,
+  isGrouped,
+  isGroupStart,
+  isGroupEnd,
+  type TopLevelItem,
+} from "./section-helpers"
+import { sectionAwareDetector } from "./section-dnd"
+import { ConstrainDragXAxis } from "./constrain-drag-x"
 import { mergeWorktreeDiffs } from "./diff-state"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
@@ -198,7 +212,6 @@ function useTabScroll(activeTabs: Accessor<SessionInfo[]>, activeId: Accessor<st
     })
   })
 
-  // Auto-scroll active tab into view
   createEffect(() => {
     const id = activeId()
     const el = ref()
@@ -325,6 +338,7 @@ const AgentManagerContent: Component = () => {
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
+  const [sections, setSections] = createSignal<SectionState[]>([])
 
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
@@ -616,6 +630,8 @@ const AgentManagerContent: Component = () => {
   // Sidebar worktree order (persisted to extension state)
   const [sidebarWorktreeOrder, setSidebarWorktreeOrder] = createSignal<string[]>([])
   const [draggingWorktree, setDraggingWorktree] = createSignal<string | undefined>()
+  const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
+  let pendingNewSection = false
 
   const addPendingTab = () => {
     const id = `${PENDING_PREFIX}${++pendingCounter}`
@@ -861,73 +877,63 @@ const AgentManagerContent: Component = () => {
     return result
   })
 
-  /** Check if this worktree is part of a group. */
-  const isGrouped = (wt: WorktreeState) => !!wt.groupId
+  const worktreesInSection = (id: string) => sortedWorktrees().filter((wt) => wt.sectionId === id)
+  const ungrouped = createMemo(() => sortedWorktrees().filter((wt) => !wt.sectionId))
+  const topLevelItems = createMemo((): TopLevelItem[] =>
+    buildTopLevelItems(sections(), ungrouped(), sortedWorktrees(), sidebarWorktreeOrder()),
+  )
 
-  /** Check if this is the first item in its group. */
-  const isGroupStart = (wt: WorktreeState, idx: number) => {
-    if (!wt.groupId) return false
-    const list = sortedWorktrees()
-    if (idx === 0) return true
-    return list[idx - 1]?.groupId !== wt.groupId
+  /** Flat visual order of all visible sidebar items — used for navigation and shortcut assignment. */
+  const sidebarOrder = createMemo(() =>
+    buildSidebarOrder(topLevelItems(), sortedWorktrees(), sections(), worktreesInSection, unassignedSessions()),
+  )
+  /** Map from sidebar item id → 1-based shortcut number (⌘1 for LOCAL, ⌘2 for first worktree, etc.) */
+  const shortcutMap = createMemo(() => buildShortcutMap(sidebarOrder()))
+
+  const moveToSection = (ids: string[], sec: string | null) =>
+    vscode.postMessage({ type: "agentManager.moveToSection", worktreeIds: ids, sectionId: sec })
+  const moveSection = (sectionId: string, dir: -1 | 1) =>
+    vscode.postMessage({ type: "agentManager.moveSection", sectionId, dir })
+  const newSection = (ids?: string[]) => {
+    pendingNewSection = true
+    vscode.postMessage({
+      type: "agentManager.createSection",
+      name: t("agentManager.section.defaultName"),
+      color: randomColor(),
+      worktreeIds: ids,
+    })
   }
 
-  /** Check if this is the last item in its group. */
-  const isGroupEnd = (wt: WorktreeState, idx: number) => {
-    if (!wt.groupId) return false
-    const list = sortedWorktrees()
-    if (idx === list.length - 1) return true
-    return list[idx + 1]?.groupId !== wt.groupId
-  }
+  const scrollIntoView = (el: HTMLElement) => el.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
-  const scrollIntoView = (el: HTMLElement) => {
-    el.scrollIntoView({ block: "nearest", behavior: "smooth" })
-  }
-
-  // Navigate sidebar items with arrow keys
-  const navigate = (direction: "up" | "down") => {
-    const flat: { type: typeof LOCAL | "wt" | "session"; id: string }[] = [
-      { type: LOCAL, id: LOCAL },
-      ...sortedWorktrees().map((wt) => ({ type: "wt" as const, id: wt.id })),
-      ...unassignedSessions().map((s) => ({ type: "session" as const, id: s.id })),
-    ]
-    if (flat.length === 0) return
-
-    const current = selection() ?? session.currentSessionID()
-    const idx = current ? flat.findIndex((f) => f.id === current) : -1
-    const next = direction === "up" ? idx - 1 : idx + 1
-    if (next < 0 || next >= flat.length) return
-
-    const item = flat[next]!
-    if (item.type === LOCAL) {
-      selectLocal()
-    } else if (item.type === "wt") {
-      selectWorktree(item.id)
-    } else {
+  const focusSidebarItem = (item: { type: string; id: string }) => {
+    if (item.type === "local") selectLocal()
+    else if (item.type === "wt") selectWorktree(item.id)
+    else {
       saveTabMemory()
       setSelection(null)
       setReviewActive(false)
       session.selectSession(item.id)
     }
-
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
 
-  // Jump to sidebar item by 1-based index (⌘1 = LOCAL, ⌘2 = first worktree, etc.)
+  // Navigate sidebar items with arrow keys (uses visual order from sidebarOrder)
+  const navigate = (direction: "up" | "down") => {
+    const flat = sidebarOrder()
+    if (flat.length === 0) return
+    const current = selection() ?? session.currentSessionID()
+    const idx = current ? flat.findIndex((f) => f.id === current) : -1
+    const next = direction === "up" ? idx - 1 : idx + 1
+    if (next < 0 || next >= flat.length) return
+    focusSidebarItem(flat[next]!)
+  }
+
+  // Jump to sidebar item by 0-based index into sidebarOrder (⌘1 = index 0 = LOCAL, ⌘2 = index 1, etc.)
   const jumpToItem = (index: number) => {
-    if (index === 0) {
-      selectLocal()
-      const el = document.querySelector(`[data-sidebar-id="local"]`)
-      if (el instanceof HTMLElement) scrollIntoView(el)
-      return
-    }
-    const wts = sortedWorktrees()
-    const wt = wts[index - 1]
-    if (!wt) return
-    selectWorktree(wt.id)
-    const el = document.querySelector(`[data-sidebar-id="${wt.id}"]`)
-    if (el instanceof HTMLElement) scrollIntoView(el)
+    const item = sidebarOrder()[index]
+    if (item) focusSidebarItem(item)
   }
 
   // Navigate tabs with Cmd+Alt+Left/Right
@@ -1206,6 +1212,14 @@ const AgentManagerContent: Component = () => {
         // When not a git repo, also mark sessions as loaded since the Kilo
         // server won't connect to send the sessionsLoaded message.
         if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
+        const prev = new Set(sections().map((s) => s.id)),
+          incoming = state.sections ?? []
+        setSections(incoming)
+        if (pendingNewSection) {
+          pendingNewSection = false
+          const c = incoming.find((s) => !prev.has(s.id))
+          if (c) setRenamingSection(c.id)
+        }
         if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
         if (state.worktreeOrder) setSidebarWorktreeOrder(state.worktreeOrder)
         if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
@@ -1297,6 +1311,7 @@ const AgentManagerContent: Component = () => {
             providerID: ev.providerID,
             modelID: ev.modelID,
             agent: ev.agent,
+            variant: ev.variant,
             files: ev.files,
           })
         }
@@ -1382,6 +1397,8 @@ const AgentManagerContent: Component = () => {
           showToast({ variant: "error", title: t("agentManager.apply.error"), description: ev.message })
         }
       }
+
+      if (msg.type === "agentManager.revertWorktreeFileResult") revertCtl.onResult(msg as never)
 
       if (msg.type === "agentManager.worktreeStats") {
         const ev = msg as AgentManagerWorktreeStatsMessage
@@ -1584,6 +1601,8 @@ const AgentManagerContent: Component = () => {
     return new Set(Object.keys(diffFileLoading()[sessionId] ?? {}))
   })
 
+  const revertCtl = createRevertFile(currentDiffSessionId, vscode, showToast, t)
+
   const handleConfigureSetupScript = () => {
     vscode.postMessage({ type: "agentManager.configureSetupScript" })
   }
@@ -1740,7 +1759,9 @@ const AgentManagerContent: Component = () => {
       if (selection() === wt.id) {
         const next = nextSelectionAfterDelete(
           wt.id,
-          worktrees().map((w) => w.id),
+          sidebarOrder()
+            .filter((f) => f.type === "wt")
+            .map((f) => f.id),
         )
         if (next === LOCAL) selectLocal()
         else selectWorktree(next)
@@ -1763,7 +1784,9 @@ const AgentManagerContent: Component = () => {
       if (selection() === wt.id) {
         const next = nextSelectionAfterDelete(
           wt.id,
-          worktrees().map((w) => w.id),
+          sidebarOrder()
+            .filter((f) => f.type === "wt")
+            .map((f) => f.id),
         )
         if (next === LOCAL) selectLocal()
         if (next !== LOCAL) selectWorktree(next)
@@ -2145,6 +2168,11 @@ const AgentManagerContent: Component = () => {
                             ))}
                           </span>
                         </DropdownMenu.Item>
+                        <DropdownMenu.Separator />
+                        <DropdownMenu.Item onSelect={() => newSection()}>
+                          <Icon name="plus" size="small" />
+                          <DropdownMenu.ItemLabel>{t("agentManager.worktree.newSection")}</DropdownMenu.ItemLabel>
+                        </DropdownMenu.Item>
                       </DropdownMenu.Content>
                     </DropdownMenu.Portal>
                   </DropdownMenu>
@@ -2233,56 +2261,38 @@ const AgentManagerContent: Component = () => {
                     setRenamingWt(null)
                   }
 
+                  const hasSections = createMemo(() => sections().length > 0)
                   const wtIds = createMemo(() => sortedWorktrees().map((wt) => wt.id))
+                  const secIds = createMemo(() => new Set(sections().map((s) => s.id)))
+                  const home = () => new Map(sortedWorktrees().map((w) => [w.id, w.sectionId] as const))
+                  const sectionAware = sectionAwareDetector(secIds, home)
 
                   const onWtDragStart = (event: DragEvent) => {
                     const id = event.draggable?.id
                     if (typeof id === "string") setDraggingWorktree(id)
                     document.body.classList.add("am-wt-dragging-active")
                   }
-
                   const onWtDragOver = (event: DragEvent) => {
                     const from = event.draggable?.id
                     const to = event.droppable?.id
                     if (typeof from !== "string" || typeof to !== "string") return
+                    if (secIds().has(to)) return
                     setSidebarWorktreeOrder((prev) => {
-                      const current = applyTabOrder(
-                        sortedWorktrees().map((wt) => ({ id: wt.id })),
-                        prev,
-                      ).map((item) => item.id)
-                      return reorderTabs(current, from, to) ?? prev
+                      const cur = completeSidebarOrder(sections(), sortedWorktrees(), prev)
+                      return reorderTabs(cur, from, to) ?? prev
                     })
                   }
-
-                  const onWtDragEnd = () => {
+                  const onWtDragEnd = (event: DragEvent) => {
+                    const from = event.draggable?.id
+                    const to = event.droppable?.id
                     setDraggingWorktree(undefined)
                     document.body.classList.remove("am-wt-dragging-active")
-                    const order = sortedWorktrees().map((wt) => wt.id)
-                    if (order.length > 0) {
-                      vscode.postMessage({ type: "agentManager.setWorktreeOrder", order })
+                    if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
+                      vscode.postMessage({ type: "agentManager.setWorktreeOrder", order: sidebarWorktreeOrder() })
+                      moveToSection([from], to)
+                      return
                     }
-                  }
-
-                  /** Lock drag movement to the Y axis (vertical-only worktree dragging). */
-                  const ConstrainDragXAxis: Component = () => {
-                    const ctx = useDragDropContext()
-                    if (!ctx) return null
-                    const [
-                      ,
-                      { onDragStart: onStart, onDragEnd: onEnd, addTransformer: add, removeTransformer: remove },
-                    ] = ctx
-                    const xform: Transformer = { id: "constrain-x-axis", order: 100, callback: (t) => ({ ...t, x: 0 }) }
-                    const dispose = createRoot((dispose) => {
-                      onStart(({ draggable }) => {
-                        if (draggable) add("draggables", draggable.id as string, xform)
-                      })
-                      onEnd(({ draggable }) => {
-                        if (draggable) remove("draggables", draggable.id as string, xform.id)
-                      })
-                      return dispose
-                    })
-                    onCleanup(dispose)
-                    return null
+                    vscode.postMessage({ type: "agentManager.setWorktreeOrder", order: sidebarWorktreeOrder() })
                   }
 
                   return (
@@ -2290,33 +2300,26 @@ const AgentManagerContent: Component = () => {
                       onDragStart={onWtDragStart}
                       onDragEnd={onWtDragEnd}
                       onDragOver={onWtDragOver}
-                      collisionDetector={closestCenter}
+                      collisionDetector={sectionAware}
                     >
                       <DragDropSensors />
                       <ConstrainDragXAxis />
                       <SortableProvider ids={wtIds()}>
-                        <For each={sortedWorktrees()}>
-                          {(wt, idx) => {
-                            const sessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
-                            const navHint = () => {
-                              const flat = [
-                                LOCAL as string,
-                                ...sortedWorktrees().map((w) => w.id),
-                                ...unassignedSessions().map((s) => s.id),
-                              ]
-                              const active = selection() ?? session.currentSessionID() ?? ""
-                              return adjacentHint(
+                        {(() => {
+                          const renderWt = (wt: WorktreeState, idx: () => number, list?: WorktreeState[]) => {
+                            const wtSessions = createMemo(() =>
+                              managedSessions().filter((ms) => ms.worktreeId === wt.id),
+                            )
+                            const navHint = () =>
+                              adjacentHint(
                                 wt.id,
-                                active,
-                                flat,
+                                selection() ?? session.currentSessionID() ?? "",
+                                sidebarOrder().map((f) => f.id),
                                 kb().previousSession ?? "",
                                 kb().nextSession ?? "",
                               )
-                            }
-                            const groupSize = () => {
-                              if (!wt.groupId) return 0
-                              return sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
-                            }
+                            const groupSize = () =>
+                              !wt.groupId ? 0 : sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
                             const sortable = createSortable(wt.id)
                             void sortable
                             return (
@@ -2333,46 +2336,28 @@ const AgentManagerContent: Component = () => {
                                   busy={busyWorktrees().has(wt.id)}
                                   working={isAgentBusy(wt.id)}
                                   stale={isStaleWorktree(wt.id)}
-                                  shortcut={idx() + 2}
+                                  shortcut={shortcutMap().get(wt.id)}
                                   stats={worktreeStats()[wt.id]}
                                   navHint={navHint()}
-                                  sessions={sessions().length}
+                                  sessions={wtSessions().length}
                                   grouped={isGrouped(wt)}
-                                  groupStart={isGroupStart(wt, idx())}
-                                  groupEnd={isGroupEnd(wt, idx())}
+                                  groupStart={isGroupStart(wt, idx(), list ?? sortedWorktrees())}
+                                  groupEnd={isGroupEnd(wt, idx(), list ?? sortedWorktrees())}
                                   groupSize={groupSize()}
                                   renaming={renamingWt() === wt.id}
                                   renameValue={renameValue()}
                                   closeKeybind={kb().closeWorktree ?? ""}
                                   openKeybind={kb().openWorktree ?? ""}
                                   pr={
-                                    prStatuses()[wt.id] !== undefined
-                                      ? prStatuses()[wt.id]
-                                      : wt.prNumber
-                                        ? {
-                                            number: wt.prNumber,
-                                            title: "",
-                                            url: wt.prUrl ?? "",
-                                            state: (wt.prState ?? "open") as PRStatus["state"],
-                                            review: null,
-                                            checks: {
-                                              status: "none" as const,
-                                              total: 0,
-                                              passed: 0,
-                                              failed: 0,
-                                              pending: 0,
-                                              items: [],
-                                            },
-                                            comments: { total: 0, unresolved: 0, items: [] },
-                                            additions: 0,
-                                            deletions: 0,
-                                            files: 0,
-                                          }
-                                        : undefined
+                                    prStatuses()[wt.id] !== undefined ? (prStatuses()[wt.id] ?? undefined) : undefined
                                   }
                                   onOpenPR={() =>
                                     vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id })
                                   }
+                                  sections={sections()}
+                                  currentSectionId={wt.sectionId}
+                                  onMoveToSection={(secId) => moveToSection([wt.id], secId)}
+                                  onMoveToNewSection={() => newSection()}
                                   onClick={() => {
                                     if (pendingDelete() === wt.id) {
                                       confirmDeleteWorktree(wt.id)
@@ -2386,17 +2371,60 @@ const AgentManagerContent: Component = () => {
                                   onCommitRename={() => commitRename(wt.id)}
                                   onCancelRename={cancelRename}
                                   onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                                  onCopyPath={() =>
-                                    vscode.postMessage({ type: "agentManager.copyToClipboard", text: wt.path })
-                                  }
+                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
                                   onOpen={() =>
                                     vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id })
                                   }
                                 />
                               </div>
                             )
-                          }}
-                        </For>
+                          }
+                          if (hasSections()) {
+                            const post = vscode.postMessage.bind(vscode)
+                            return (
+                              <For each={topLevelItems()}>
+                                {(item, idx) => {
+                                  if (item.kind === "section") {
+                                    const sec = item.section
+                                    const members = createMemo(() => worktreesInSection(sec.id))
+                                    return (
+                                      <SectionHeader
+                                        section={sec}
+                                        count={members().length}
+                                        autoRename={renamingSection() === sec.id}
+                                        onRenameEnd={() => setRenamingSection(null)}
+                                        onToggle={() =>
+                                          post({ type: "agentManager.toggleSectionCollapsed", sectionId: sec.id })
+                                        }
+                                        onRename={(name) =>
+                                          post({ type: "agentManager.renameSection", sectionId: sec.id, name })
+                                        }
+                                        onDelete={() => post({ type: "agentManager.deleteSection", sectionId: sec.id })}
+                                        onSetColor={(color) =>
+                                          post({ type: "agentManager.setSectionColor", sectionId: sec.id, color })
+                                        }
+                                        isFirst={idx() === 0}
+                                        isLast={idx() === topLevelItems().length - 1}
+                                        onMoveUp={() => moveSection(sec.id, -1)}
+                                        onMoveDown={() => moveSection(sec.id, 1)}
+                                      >
+                                        <Show when={!sec.collapsed}>
+                                          <div class="am-section-group-body">
+                                            <For each={members()}>{(wt, wtIdx) => renderWt(wt, wtIdx, members())}</For>
+                                          </div>
+                                        </Show>
+                                      </SectionHeader>
+                                    )
+                                  }
+                                  const ug = ungrouped()
+                                  const wtIdx = () => ug.indexOf(item.wt)
+                                  return renderWt(item.wt, wtIdx, ug)
+                                }}
+                              </For>
+                            )
+                          }
+                          return <For each={sortedWorktrees()}>{(wt, idx) => renderWt(wt, idx)}</For>
+                        })()}
                       </SortableProvider>
                       <DragOverlay>
                         {(() => {
@@ -2894,6 +2922,8 @@ const AgentManagerContent: Component = () => {
                         if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                         else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                       }}
+                      onRevertFile={revertCtl.revert}
+                      revertingFiles={revertCtl.reverting()}
                     />
                   </Show>
                 </div>
@@ -2920,6 +2950,8 @@ const AgentManagerContent: Component = () => {
                   if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
                   else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
                 }}
+                onRevertFile={revertCtl.revert}
+                revertingFiles={revertCtl.reverting()}
                 onClose={closeReviewTab}
               />
             </div>

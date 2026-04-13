@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
+import { ProviderID, ModelID } from "../../provider/schema"
 import { ToolRegistry } from "../../tool/registry"
 import { Worktree } from "../../worktree"
 import { Instance } from "../../project/instance"
@@ -13,8 +14,11 @@ import { lazy } from "../../util/lazy"
 import { Snapshot } from "../../snapshot" // kilocode_change
 import { Review } from "../../kilocode/review/review" // kilocode_change
 import { WorktreeDiff } from "../../kilocode/review/worktree-diff" // kilocode_change
+import { WorktreeFamily } from "../../kilocode/worktree-family" // kilocode_change
 import { Log } from "../../util/log" // kilocode_change
 import { WorkspaceRoutes } from "./workspace"
+import { Filesystem } from "../../util/filesystem" // kilocode_change
+import path from "path" // kilocode_change
 
 export const ExperimentalRoutes = lazy(() =>
   new Hono()
@@ -81,7 +85,7 @@ export const ExperimentalRoutes = lazy(() =>
       ),
       async (c) => {
         const { provider, model } = c.req.valid("query")
-        const tools = await ToolRegistry.tools({ providerID: provider, modelID: model })
+        const tools = await ToolRegistry.tools({ providerID: ProviderID.make(provider), modelID: ModelID.make(model) })
         return c.json(
           tools.map((t) => ({
             id: t.id,
@@ -111,7 +115,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.create.schema),
+      validator("json", Worktree.CreateInput.optional()),
       async (c) => {
         const body = c.req.valid("json")
         const worktree = await Worktree.create(body)
@@ -158,7 +162,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.remove.schema),
+      validator("json", Worktree.RemoveInput),
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.remove(body)
@@ -184,7 +188,7 @@ export const ExperimentalRoutes = lazy(() =>
           ...errors(400),
         },
       }),
-      validator("json", Worktree.reset.schema),
+      validator("json", Worktree.ResetInput),
       async (c) => {
         const body = c.req.valid("json")
         await Worktree.reset(body)
@@ -326,7 +330,14 @@ export const ExperimentalRoutes = lazy(() =>
       validator(
         "query",
         z.object({
+          // kilocode_change start
+          projectID: z.string().optional().meta({ description: "Filter sessions by project ID" }),
           directory: z.string().optional().meta({ description: "Filter sessions by project directory" }),
+          worktrees: z.coerce
+            .boolean()
+            .optional()
+            .meta({ description: "Restrict sessions to the current repo worktree family or current directory" }),
+          // kilocode_change end
           roots: z.coerce.boolean().optional().meta({ description: "Only return root sessions (no parentID)" }),
           start: z.coerce
             .number()
@@ -343,10 +354,19 @@ export const ExperimentalRoutes = lazy(() =>
       ),
       async (c) => {
         const query = c.req.valid("query")
-        const limit = query.limit ?? 100
+        const limit = query.limit ?? 100 // kilocode_change
+        // kilocode_change start
+        const projectID = query.worktrees && !query.projectID ? Instance.project.id : query.projectID
+        // kilocode_change end
+        const directories = query.worktrees ? await WorktreeFamily.list() : undefined // kilocode_change
+        // kilocode_change start - sort longest-first so most specific worktree matches first
+        const sorted = directories ? [...directories].sort((a, b) => b.length - a.length) : undefined
+        // kilocode_change end
         const sessions: Session.GlobalInfo[] = []
         for await (const session of Session.listGlobal({
+          projectID, // kilocode_change
           directory: query.directory,
+          directories, // kilocode_change
           roots: query.roots,
           start: query.start,
           cursor: query.cursor,
@@ -354,6 +374,13 @@ export const ExperimentalRoutes = lazy(() =>
           limit: limit + 1,
           archived: query.archived,
         })) {
+          // kilocode_change start - resolve worktree folder name for each session
+          if (sorted) {
+            const root = sorted.find((d) => Filesystem.contains(d, session.directory))
+            sessions.push({ ...session, worktreeName: path.basename(root ?? session.directory) })
+            continue
+          }
+          // kilocode_change end
           sessions.push(session)
         }
         const hasMore = sessions.length > limit

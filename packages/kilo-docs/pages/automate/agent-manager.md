@@ -31,6 +31,17 @@ The panel opens as an editor tab and stays active across focus changes.
 
 Each Agent Manager session runs in an isolated git worktree on a separate branch, keeping your main branch clean.
 
+### PR Status Badges
+
+Worktree items in the sidebar display a **PR status badge** when the branch has an associated pull request:
+
+- **Open** — badge indicating the PR is open (its color can also reflect review and check status)
+- **Merged** — purple badge indicating the PR has been merged
+- **Closed** — red badge indicating the PR was closed without merging
+- **Draft** — gray badge indicating the PR is in draft state
+
+The badge appears on the right side of each worktree item and updates automatically via polling. If the worktree's branch doesn't have a PR yet, no badge is shown.
+
 ### Creating a New Worktree Session
 
 1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree
@@ -53,6 +64,43 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 - **From a GitHub PR URL:** Paste a PR URL to import it as a worktree
 - **From an external worktree:** Import a worktree that already exists on disk
 - **Continue in Worktree:** From the sidebar chat, promote the current session to a new Agent Manager worktree
+
+## Sections
+
+Sections let you group worktrees into collapsible, color-coded folders in the sidebar. Use them to organize your workflow however you like — by status ("Review Pending", "In Progress"), by project area ("Frontend", "Backend"), priority, or any other scheme that fits.
+
+### Creating a Section
+
+- **Right-click** any worktree and select **New Section** from the context menu
+- A new section is created with a random color and enters rename mode immediately — type a name and press `Enter`
+
+### Assigning Worktrees to Sections
+
+**Via context menu:** Right-click a worktree, hover **Move to Section**, and pick a section from the list. Select **Ungrouped** to remove it from its current section.
+
+**Via drag and drop:** Drag a worktree and drop it onto a section header to move it there.
+
+Multi-version worktrees (created via Multi-Version Mode) are moved together — assigning one version to a section moves all versions in the group.
+
+### Renaming
+
+Right-click the section header and select **Rename Section**. An inline text field appears — type the new name and press `Enter` to confirm or `Escape` to cancel.
+
+### Colors
+
+Right-click the section header and select **Set Color** to open the color picker. Eight colors are available (Red, Orange, Yellow, Green, Cyan, Blue, Purple, Magenta) plus a **Default** option that uses the standard panel border color. The selected color appears as a left border stripe on the section.
+
+### Reordering
+
+Right-click the section header and use **Move Up** / **Move Down** to reposition it in the sidebar. Sections and ungrouped worktrees share the same ordering space.
+
+### Collapsing
+
+Click the section header to toggle it open or closed. Collapsed sections hide their worktrees and show only the section name and a member count badge. Collapse state is persisted across reloads.
+
+### Deleting a Section
+
+Right-click the section header and select **Delete Section**. The section is removed but its worktrees are preserved — they become ungrouped.
 
 ## Sending Messages, Approvals, and Control
 

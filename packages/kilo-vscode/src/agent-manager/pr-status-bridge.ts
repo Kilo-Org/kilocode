@@ -7,6 +7,7 @@
 import type { Worktree } from "./WorktreeStateManager"
 import type { AgentManagerOutMessage, PRStatus } from "./types"
 import type { Disposable } from "./host"
+import type { Semaphore } from "./semaphore"
 import { PRStatusPoller } from "./PRStatusPoller"
 
 interface PRBridgeHost {
@@ -17,6 +18,7 @@ interface PRBridgeHost {
   hasPersistedPR(id: string): boolean
   openExternal(url: string): void
   log(...args: unknown[]): void
+  semaphore?: Semaphore
 }
 
 /** Minimal panel surface needed by the bridge (subset of PanelContext). */
@@ -43,6 +45,7 @@ export class PRStatusBridge {
     hasPersistedPR: (id: string) => boolean
     openExternal: (url: string) => void
     log: (...args: unknown[]) => void
+    semaphore?: Semaphore
   }): PRStatusBridge {
     return new PRStatusBridge(opts)
   }
@@ -85,6 +88,7 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
   return {
     getWorktrees: () => host.getWorktrees(),
     getWorkspaceRoot: () => host.getWorkspaceRoot(),
+    semaphore: host.semaphore,
     onStatus: (id: string, pr: PRStatus | null, err?: "gh_missing" | "gh_auth" | "fetch_failed") => {
       if (err) {
         // Don't forward errors to the webview when we have prior PR data

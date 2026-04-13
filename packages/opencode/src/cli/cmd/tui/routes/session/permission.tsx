@@ -149,6 +149,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
   })
 
   const { theme } = useTheme()
+  const keybind = useKeybind() // kilocode_change
 
   return (
     <Switch>
@@ -426,6 +427,13 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 </text>
                 <text fg={theme.text}>{current.title}</text>
               </box>
+              {/* // kilocode_change start - explain config file edits always require approval */}
+              <Show when={props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]}>
+                <box paddingLeft={4} flexShrink={0}>
+                  <text fg={theme.textMuted}>Config file edits always require approval</text>
+                </box>
+              </Show>
+              {/* // kilocode_change end */}
             </box>
           )
 

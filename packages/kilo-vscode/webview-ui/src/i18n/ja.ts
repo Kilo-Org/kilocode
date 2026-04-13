@@ -939,6 +939,11 @@ export const dict = {
   "session.status.retry": "再試行中…",
   "session.status.retrying": "再試行中（{{ attempt }}回目）… {{ message }}",
   "session.status.working": "作業中…",
+  "session.status.offline": "ネットワークが切断されました — 再接続中…",
+
+  "ui.sessionTurn.cancel": "キャンセル",
+  "ui.sessionTurn.status.thinking": "考え中...",
+  "ui.sessionTurn.status.consideringNextSteps": "次のステップを検討中...",
 
   "dialog.model.noProviders": "プロバイダーなし",
 
@@ -947,6 +952,7 @@ export const dict = {
   "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
+  "context.usage.olderSessions": "{{count}} 件の古いセッション",
   "context.stats.thisSession": "このセッション",
 
   "time.justNow": "たった今",
@@ -1062,6 +1068,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "権限が拒否された場合にエージェントループを続行",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
+  "settings.experimental.remote.title": "Remote コントロール",
+  "settings.experimental.remote.description":
+    "Kilo Cloud 経由でのセッションの Remote コントロールを有効にします。これはこのマシンの CLI にも影響します。",
+  "settings.experimental.remote.current": "現在の状態:",
+  "settings.experimental.remote.startup": "起動時の自動有効化:",
+  "settings.experimental.remote.active": "アクティブ",
+  "settings.experimental.remote.inactive": "非アクティブ",
+  "settings.experimental.remote.hint": "チャットで /remote を使用して切り替えます",
   "settings.experimental.toolToggles": "ツールトグル",
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
@@ -1125,6 +1139,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "これは組み込みモードです。基本定義は変更できませんが、以下でオーバーライドを設定できます。",
   "settings.agentBehaviour.editMode.promptOverride": "この組み込みモードのカスタムプロンプト上書き",
+  "settings.agentBehaviour.badge.subagent": "サブエージェント",
+  "settings.agentBehaviour.permissions.title": "計算された権限",
+  "settings.agentBehaviour.permissions.count": "{{count}} 個のルール",
+  "settings.agentBehaviour.permissions.effective": "有効（ワイルドカード）:",
+  "settings.agentBehaviour.permissions.col.tool": "ツール",
+  "settings.agentBehaviour.permissions.col.pattern": "パターン",
+  "settings.agentBehaviour.permissions.col.action": "アクション",
+  "settings.agentBehaviour.permissions.copy": "権限をJSONとしてコピー",
+  "settings.agentBehaviour.permissions.hint":
+    "ルールは順番に評価され、最後に一致したルールが適用されます。これはCLIバックエンドから解決されたルールセットです。",
   "settings.agentBehaviour.removeMode.title": "モードを削除",
   "settings.agentBehaviour.removeMode.confirm":
     'モード "{{name}}" を削除しますか？設定を更新してモードを無効にします。',
@@ -1345,4 +1369,5 @@ export const dict = {
   "notifications.action.next": "次へ",
   "notifications.action.close": "閉じる",
   "notifications.action.tryModel": "{{model}}を試す",
+  "notifications.action.tryModelGeneric": "モデルを試す",
 }

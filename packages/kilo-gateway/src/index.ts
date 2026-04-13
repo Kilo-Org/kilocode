@@ -71,7 +71,7 @@ export type {
   KiloMetadata,
   CustomLoaderResult,
   ProviderInfo,
-  LanguageModelV2,
+  LanguageModelV3,
 } from "./types.js"
 
 // ============================================================================

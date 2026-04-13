@@ -396,12 +396,25 @@ export namespace Review {
 
     log.info("getting branch changes", { baseBranch: base })
 
-    // git diff base...HEAD shows all changes on current branch since diverging
-    // Using triple-dot to get merge-base comparison
-    const result = await $`git -c core.quotepath=false diff ${base}...HEAD`.cwd(Instance.directory).quiet().nothrow()
+    // Compute merge-base explicitly, then diff working tree against it.
+    // This matches WorktreeDiff (the diff viewer) and includes uncommitted
+    // changes + untracked files — unlike `git diff base...HEAD` which only
+    // shows committed differences.
+    const ancestor = await $`git merge-base HEAD ${base}`.cwd(Instance.directory).quiet().nothrow()
+    if (ancestor.exitCode !== 0) {
+      log.warn("git merge-base failed", {
+        exitCode: ancestor.exitCode,
+        stderr: ancestor.stderr.toString(),
+        baseBranch: base,
+      })
+      return { files: [], raw: "" }
+    }
+    const hash = ancestor.stdout.toString().trim()
+
+    // Two-dot diff against working tree: includes staged, unstaged, and committed changes since merge-base
+    const result = await $`git -c core.quotepath=false diff ${hash}`.cwd(Instance.directory).quiet().nothrow()
 
     if (result.exitCode !== 0) {
-      // May fail if on base branch or no common ancestor
       log.warn("git diff failed", {
         exitCode: result.exitCode,
         stderr: result.stderr.toString(),
@@ -412,6 +425,23 @@ export namespace Review {
 
     const raw = result.stdout.toString()
     const parsed = parseDiff(raw)
+
+    // Include untracked files (same as WorktreeDiff) so new files show up in the review
+    const untracked = await $`git ls-files --others --exclude-standard`.cwd(Instance.directory).quiet().nothrow()
+    if (untracked.exitCode === 0) {
+      const paths = untracked.stdout.toString().trim()
+      if (paths) {
+        const existing = new Set(parsed.files.map((f) => f.path))
+        for (const file of paths.split("\n")) {
+          if (!file || existing.has(file)) continue
+          parsed.files.push({
+            path: file,
+            status: "added",
+            hunks: [],
+          })
+        }
+      }
+    }
 
     log.info("parsed branch changes", {
       baseBranch: base,

@@ -1,7 +1,9 @@
+import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
 import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { classifyPRError } from "./git-import"
+import type { Semaphore } from "./semaphore"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -9,11 +11,16 @@ interface PRStatusPollerOptions {
   onStatus: (worktreeId: string, pr: PRStatus | null, error?: "gh_missing" | "gh_auth" | "fetch_failed") => void
   log: (...args: unknown[]) => void
   intervalMs?: number
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
 const MAX_BACKOFF = 120_000 // 2 minutes — cap for exponential backoff on repeated errors
 const BACKOFF_MULTIPLIER = 2
+const PR_LOOKUP_TTL = 10_000 // 10 seconds — short TTL; only the active worktree polls so this stays cheap
+const FULL_SYNC_INTERVAL = 120_000 // 2 minutes — periodic sync of ALL worktrees (badges stay fresh)
+const FULL_SYNC_CONCURRENCY = 3 // max parallel gh processes during a full sync (caps the burst)
 
 export class PRStatusPoller {
   private timer: ReturnType<typeof setTimeout> | undefined
@@ -27,10 +34,24 @@ export class PRStatusPoller {
   private ghProbeTime = 0
   private activeWorktreeId: string | undefined
   private cachedRepo: { owner: string; name: string; cwd: string } | undefined
+  private prCache = new Map<string, { result: PRResult | null; expires: number }>()
+  private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
+  private readonly semaphore: Semaphore | undefined
 
   constructor(private readonly options: PRStatusPollerOptions) {
     this.intervalMs = options.intervalMs ?? 15_000
+    this.semaphore = options.semaphore
+  }
+
+  /** Run a command through the shared concurrency gate (when configured). */
+  private shell(
+    cmd: string,
+    args: string[],
+    options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+  ): Promise<{ stdout: string; stderr: string }> {
+    const invoke = () => execWithShellEnv(cmd, args, options)
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
   setEnabled(enabled: boolean): void {
@@ -48,9 +69,13 @@ export class PRStatusPoller {
     this.visible = visible
     if (!this.active) return
     if (visible) {
-      // Resume — poll immediately then schedule normally
+      // Resume — expire all PR caches and fetch all worktrees once to catch up,
+      // then resume the normal active-only poll cycle.
       if (this.timer) clearTimeout(this.timer)
       this.timer = undefined
+      this.prCache.clear()
+      this.lastHash.clear()
+      this.lastFullSync = 0
       void this.poll()
       return
     }
@@ -74,16 +99,24 @@ export class PRStatusPoller {
     this.ghAvailable = undefined
     this.ghProbeTime = 0
     this.cachedRepo = undefined
+    this.prCache.clear()
+    this.lastFullSync = 0
   }
 
-  /** Force-refresh a specific worktree immediately. */
+  /** Force-refresh a specific worktree immediately, bypassing the PR cache. */
   refresh(worktreeId: string): void {
     if (!this.active) return
+    const wt = this.options.getWorktrees().find((w) => w.id === worktreeId)
+    if (wt) this.prCache.delete(wt.branch)
     void this.fetchOne(worktreeId)
   }
 
   setActiveWorktreeId(id: string | undefined): void {
+    const prev = this.activeWorktreeId
     this.activeWorktreeId = id
+    // When switching to a different worktree, fetch it immediately so the
+    // badge updates without waiting for the next poll cycle.
+    if (id && id !== prev && this.active) void this.fetchOne(id)
   }
 
   private start(): void {
@@ -123,7 +156,7 @@ export class PRStatusPoller {
       return this.ghAvailable
     }
     try {
-      await execWithShellEnv("gh", ["--version"], { timeout: 5_000 })
+      await this.shell("gh", ["--version"], { timeout: 5_000 })
       this.ghAvailable = true
     } catch {
       this.ghAvailable = false
@@ -146,8 +179,27 @@ export class PRStatusPoller {
     }
 
     this.lastError = undefined
+
+    // Most ticks only poll the active worktree for fast feedback. Every
+    // FULL_SYNC_INTERVAL we poll ALL worktrees so badges stay current even
+    // for sessions that aren't selected (e.g. CI results changing).
+    // The very first poll (lastHash empty) also fetches everything.
     const worktrees = this.options.getWorktrees()
-    const results = await Promise.allSettled(worktrees.map((wt) => this.fetchOne(wt.id)))
+    const now = Date.now()
+    const initial = this.lastHash.size === 0
+    const full = initial || now - this.lastFullSync >= FULL_SYNC_INTERVAL
+    const targets = full ? worktrees : worktrees.filter((wt) => wt.id === this.activeWorktreeId)
+    if (full) this.lastFullSync = now
+
+    if (targets.length === 0) {
+      this.failures = 0
+      return
+    }
+
+    const thunks = targets.map((wt) => () => this.fetchOne(wt.id))
+    const results = full
+      ? await settled(thunks, FULL_SYNC_CONCURRENCY)
+      : await Promise.allSettled(thunks.map((fn) => fn()))
     const ok = results.every((r) => r.status === "fulfilled")
     if (ok) {
       this.failures = 0
@@ -164,7 +216,7 @@ export class PRStatusPoller {
     if (!this.options.getWorkspaceRoot()) return
 
     try {
-      const pr = await this.fetchPRForBranch(wt.branch, wt.path)
+      const pr = await this.cachedFetchPR(wt.branch, wt.path)
       if (!pr) {
         const hash = `${worktreeId}:none`
         if (this.lastHash.get(worktreeId) === hash) return
@@ -217,6 +269,17 @@ export class PRStatusPoller {
   private static readonly PR_JSON_FIELDS =
     "number,title,url,state,isDraft,reviewDecision,additions,deletions,changedFiles,headRefName,headRefOid"
 
+  /** Return a cached PR lookup if still fresh, otherwise fetch and cache.
+   *  Keyed by branch name so multiple worktrees on the same branch share
+   *  the cache, and a branch switch in a worktree naturally misses. */
+  private async cachedFetchPR(branch: string, cwd: string): Promise<PRResult | null> {
+    const cached = this.prCache.get(branch)
+    if (cached && Date.now() < cached.expires) return cached.result
+    const result = await this.fetchPRForBranch(branch, cwd)
+    this.prCache.set(branch, { result, expires: Date.now() + PR_LOOKUP_TTL })
+    return result
+  }
+
   private async fetchPRForBranch(branch: string, cwd: string): Promise<PRResult | null> {
     // Strategy 1: bare `gh pr view` — resolves via the branch's tracking ref.
     // Works for fork PRs checked out with `gh pr checkout` (tracking ref = refs/pull/N/head).
@@ -232,7 +295,7 @@ export class PRStatusPoller {
       if (branch) args.push(branch)
       args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
 
-      const { stdout } = await execWithShellEnv("gh", args, { cwd, timeout: 15_000 })
+      const { stdout } = await this.shell("gh", args, { cwd, timeout: 15_000 })
       return parsePRResult(stdout)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -244,11 +307,11 @@ export class PRStatusPoller {
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */
   private async ghPRListBySHA(cwd: string): Promise<PRResult | null> {
     try {
-      const { stdout: sha } = await execWithShellEnv("git", ["rev-parse", "HEAD"], { cwd, timeout: 5_000 })
+      const { stdout: sha } = await this.shell("git", ["rev-parse", "HEAD"], { cwd, timeout: 5_000 })
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         [
           "pr",
@@ -290,7 +353,7 @@ export class PRStatusPoller {
     items: PRCheck[]
   }> {
     try {
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
         { cwd, timeout: 15_000 },
@@ -328,7 +391,7 @@ export class PRStatusPoller {
     if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
       return this.cachedRepo
     }
-    const { stdout } = await execWithShellEnv("gh", ["repo", "view", "--json", "owner,name"], {
+    const { stdout } = await this.shell("gh", ["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
@@ -368,7 +431,7 @@ export class PRStatusPoller {
         }
       }`
 
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         [
           "api",
@@ -483,4 +546,23 @@ function formatCheckDuration(startedAt?: string, completedAt?: string): string |
   if (!startedAt || !completedAt) return undefined
   const secs = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000)
   return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m ${secs % 60}s`
+}
+
+/** Run async thunks with bounded concurrency, returning settled results. */
+async function settled<T>(thunks: (() => Promise<T>)[], concurrency: number): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = new Array(thunks.length)
+  let idx = 0
+  async function run(): Promise<void> {
+    while (idx < thunks.length) {
+      const i = idx++
+      const fn = thunks[i]!
+      try {
+        results[i] = { status: "fulfilled", value: await fn() }
+      } catch (reason) {
+        results[i] = { status: "rejected", reason }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, thunks.length) }, () => run()))
+  return results
 }

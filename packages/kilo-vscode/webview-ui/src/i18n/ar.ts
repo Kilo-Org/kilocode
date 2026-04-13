@@ -934,6 +934,11 @@ export const dict = {
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.retrying": "...إعادة المحاولة (المحاولة {{ attempt }})… {{ message }}",
   "session.status.working": "...جارٍ العمل",
+  "session.status.offline": "انقطع الاتصال بالشبكة — جارٍ إعادة الاتصال...",
+
+  "ui.sessionTurn.cancel": "إلغاء",
+  "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
+  "ui.sessionTurn.status.consideringNextSteps": "...جارٍ التفكير في الخطوات التالية",
 
   "dialog.model.noProviders": "لا يوجد موفرون",
 
@@ -942,6 +947,7 @@ export const dict = {
   "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
+  "context.usage.olderSessions": "{{count}} جلسات أقدم",
   "context.stats.thisSession": "هذه الجلسة",
 
   "time.justNow": "الآن",
@@ -1052,6 +1058,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
+  "settings.experimental.remote.title": "التحكم Remote",
+  "settings.experimental.remote.description":
+    "قم بتمكين التحكم Remote في الجلسات عبر Kilo Cloud. سيؤثر هذا أيضًا على واجهات سطر الأوامر (CLIs) على هذا الجهاز.",
+  "settings.experimental.remote.current": "الحالة الحالية:",
+  "settings.experimental.remote.startup": "التفعيل التلقائي عند بدء التشغيل:",
+  "settings.experimental.remote.active": "نشط",
+  "settings.experimental.remote.inactive": "غير نشط",
+  "settings.experimental.remote.hint": "استخدم /remote في الدردشة للتبديل",
   "settings.experimental.toolToggles": "مفاتيح الأدوات",
   "settings.agentBehaviour.defaultAgent.title": "الوكيل الافتراضي",
   "settings.agentBehaviour.defaultAgent.description": "الوكيل المستخدم عند عدم التحديد",
@@ -1113,6 +1127,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "هذا وضع مضمن. لا يمكن تغيير تعريفه الأساسي، ولكن يمكنك تكوين التجاوزات أدناه.",
   "settings.agentBehaviour.editMode.promptOverride": "تجاوز موجه مخصص لهذا الوضع المدمج",
+  "settings.agentBehaviour.badge.subagent": "وكيل فرعي",
+  "settings.agentBehaviour.permissions.title": "الأذونات المحسوبة",
+  "settings.agentBehaviour.permissions.count": "{{count}} قواعد",
+  "settings.agentBehaviour.permissions.effective": "الفعال (حرف بدل):",
+  "settings.agentBehaviour.permissions.col.tool": "الأداة",
+  "settings.agentBehaviour.permissions.col.pattern": "النمط",
+  "settings.agentBehaviour.permissions.col.action": "الإجراء",
+  "settings.agentBehaviour.permissions.copy": "نسخ الأذونات كـ JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "يتم تقييم القواعد بالترتيب — القاعدة المطابقة الأخيرة هي التي تُطبق. هذه هي مجموعة القواعد المحلولة من خلفية CLI.",
   "settings.agentBehaviour.removeMode.title": "إزالة الوضع",
   "settings.agentBehaviour.removeMode.confirm":
     'هل تريد إزالة الوضع "{{name}}"؟ سيؤدي هذا إلى تعطيل الوضع عن طريق تحديث الإعدادات.',
@@ -1330,4 +1354,5 @@ export const dict = {
   "notifications.action.next": "التالي",
   "notifications.action.close": "إغلاق",
   "notifications.action.tryModel": "جرّب {{model}}",
+  "notifications.action.tryModelGeneric": "جرّب النموذج",
 }

@@ -1,17 +1,18 @@
 import path from "path"
 import os from "os"
 import fs from "fs/promises"
-import { StringDecoder } from "string_decoder" // kilocode_change - fix UTF-8 multi-byte split
+import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloSession } from "@/kilocode/session" // kilocode_change
 import z from "zod"
-import { Filesystem } from "../util/filesystem"
-import { Identifier } from "../id/id"
+import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
 import { Log } from "../util/log"
 import { SessionRevert } from "./revert"
 import { Session } from "."
 import { Agent } from "../agent/agent"
 import { Provider } from "../provider/provider"
-import { type Tool as AITool, tool, jsonSchema, type ToolCallOptions, asSchema } from "ai"
+import { ModelID, ProviderID } from "../provider/schema"
+import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { SessionCompaction } from "./compaction"
 import { Instance } from "../project/instance"
 import { Bus } from "../bus"
@@ -19,11 +20,10 @@ import { ProviderTransform } from "../provider/transform"
 import { SystemPrompt } from "./system"
 import { InstructionPrompt } from "./instruction"
 import { Plugin } from "../plugin"
-import PROMPT_PLAN from "../session/prompt/plan.txt"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
-import { defer } from "../util/defer"
 import { ToolRegistry } from "../tool/registry"
+import { Runner } from "@/effect/runner"
 import { MCP } from "../mcp"
 import { LSP } from "../lsp"
 import { ReadTool } from "../tool/read"
@@ -32,22 +32,24 @@ import { Flag } from "../flag/flag"
 import { ulid } from "ulid"
 import { spawn } from "child_process"
 import { Command } from "../command"
-import { $, fileURLToPath, pathToFileURL } from "bun"
+import { pathToFileURL, fileURLToPath } from "url"
 import { ConfigMarkdown } from "../config/markdown"
 import { SessionSummary } from "./summary"
 import { NamedError } from "@opencode-ai/util/error"
-import { fn } from "@/util/fn"
 import { SessionProcessor } from "./processor"
 import { TaskTool } from "@/tool/task"
 import { Tool } from "@/tool/tool"
-import { PermissionNext } from "@/permission/next"
+import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
-import { iife } from "@/util/iife"
 import { Shell } from "@/shell/shell"
-import { Truncate } from "@/tool/truncation"
-import { PlanFollowup } from "@/kilocode/plan-followup" // kilocode_change
-import { environmentDetails } from "@/kilocode/editor-context" // kilocode_change
+import { AppFileSystem } from "@/filesystem"
+import { Truncate } from "@/tool/truncate"
+import { decodeDataUrl } from "@/util/data-url"
+import { Process } from "@/util/process"
+import { Cause, Effect, Exit, Layer, Option, Scope, ServiceMap } from "effect"
+import { InstanceState } from "@/effect/instance-state"
+import { makeRuntime } from "@/effect/run-service"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -63,54 +65,1713 @@ IMPORTANT:
 const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
 
 export namespace SessionPrompt {
-  // kilocode_change start - share follow-up trigger logic with tests
-  export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
-    if (input.abort.aborted) return false
-    if (!["cli", "vscode"].includes(Flag.KILO_CLIENT)) return false
-    const lastUserIdx = input.messages.findLastIndex((m) => m.info.role === "user")
-    return input.messages
-      .slice(lastUserIdx + 1)
-      .some((msg) =>
-        msg.parts.some((p) => p.type === "tool" && p.tool === "plan_exit" && p.state.status === "completed"),
-      )
-  }
-  // kilocode_change end
+  // kilocode_change
+  export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup
 
   const log = Log.create({ service: "session.prompt" })
 
-  const state = Instance.state(
-    () => {
-      const data: Record<
-        string,
-        {
-          abort: AbortController
-          callbacks: {
-            resolve(input: MessageV2.WithParts): void
-            reject(reason?: any): void
-          }[]
-        }
-      > = {}
-      return data
-    },
-    async (current) => {
-      for (const item of Object.values(current)) {
-        item.abort.abort()
+  export interface Interface {
+    readonly assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError>
+    readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
+    readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts>
+    readonly loop: (input: z.infer<typeof LoopInput>) => Effect.Effect<MessageV2.WithParts>
+    readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts>
+    readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts>
+    readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
+  }
+
+  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionPrompt") {}
+
+  export const layer = Layer.effect(
+    Service,
+    Effect.gen(function* () {
+      const bus = yield* Bus.Service
+      const status = yield* SessionStatus.Service
+      const sessions = yield* Session.Service
+      const agents = yield* Agent.Service
+      const processor = yield* SessionProcessor.Service
+      const compaction = yield* SessionCompaction.Service
+      const plugin = yield* Plugin.Service
+      const commands = yield* Command.Service
+      const permission = yield* Permission.Service
+      const fsys = yield* AppFileSystem.Service
+      const mcp = yield* MCP.Service
+      const lsp = yield* LSP.Service
+      const filetime = yield* FileTime.Service
+      const registry = yield* ToolRegistry.Service
+      const truncate = yield* Truncate.Service
+      const scope = yield* Scope.Scope
+
+      const cache = yield* InstanceState.make(
+        Effect.fn("SessionPrompt.state")(function* () {
+          const runners = new Map<string, Runner<MessageV2.WithParts>>()
+          yield* Effect.addFinalizer(
+            Effect.fnUntraced(function* () {
+              yield* Effect.forEach(runners.values(), (r) => r.cancel, { concurrency: "unbounded", discard: true })
+              runners.clear()
+            }),
+          )
+          return { runners }
+        }),
+      )
+
+      const getRunner = (runners: Map<string, Runner<MessageV2.WithParts>>, sessionID: SessionID) => {
+        const existing = runners.get(sessionID)
+        if (existing) return existing
+        const runner = Runner.make<MessageV2.WithParts>(scope, {
+          onIdle: Effect.gen(function* () {
+            runners.delete(sessionID)
+            yield* status.set(sessionID, { type: "idle" })
+          }),
+          onBusy: status.set(sessionID, { type: "busy" }),
+          onInterrupt: lastAssistant(sessionID),
+          busy: () => {
+            throw new Session.BusyError(sessionID)
+          },
+        })
+        runners.set(sessionID, runner)
+        return runner
       }
-    },
+
+      const assertNotBusy: (sessionID: SessionID) => Effect.Effect<void, Session.BusyError> = Effect.fn(
+        "SessionPrompt.assertNotBusy",
+      )(function* (sessionID: SessionID) {
+        const s = yield* InstanceState.get(cache)
+        const runner = s.runners.get(sessionID)
+        if (runner?.busy) throw new Session.BusyError(sessionID)
+      })
+
+      const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
+        log.info("cancel", { sessionID })
+        const s = yield* InstanceState.get(cache)
+        const runner = s.runners.get(sessionID)
+        if (!runner || !runner.busy) {
+          yield* status.set(sessionID, { type: "idle" })
+          return
+        }
+        yield* runner.cancel
+      })
+
+      const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
+        const parts: PromptInput["parts"] = [{ type: "text", text: template }]
+        const files = ConfigMarkdown.files(template)
+        const seen = new Set<string>()
+        yield* Effect.forEach(
+          files,
+          Effect.fnUntraced(function* (match) {
+            const name = match[1]
+            if (seen.has(name)) return
+            seen.add(name)
+            const filepath = name.startsWith("~/")
+              ? path.join(os.homedir(), name.slice(2))
+              : path.resolve(Instance.worktree, name)
+
+            const info = yield* fsys.stat(filepath).pipe(Effect.option)
+            if (Option.isNone(info)) {
+              const found = yield* agents.get(name)
+              if (found) parts.push({ type: "agent", name: found.name })
+              return
+            }
+            const stat = info.value
+            parts.push({
+              type: "file",
+              url: pathToFileURL(filepath).href,
+              filename: name,
+              mime: stat.type === "Directory" ? "application/x-directory" : "text/plain",
+            })
+          }),
+          { concurrency: "unbounded", discard: true },
+        )
+        return parts
+      })
+
+      const title = Effect.fn("SessionPrompt.ensureTitle")(function* (input: {
+        session: Session.Info
+        history: MessageV2.WithParts[]
+        providerID: ProviderID
+        modelID: ModelID
+      }) {
+        if (input.session.parentID) return
+        if (!Session.isDefaultTitle(input.session.title)) return
+
+        const real = (m: MessageV2.WithParts) =>
+          m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
+        const idx = input.history.findIndex(real)
+        if (idx === -1) return
+        if (input.history.filter(real).length !== 1) return
+
+        const context = input.history.slice(0, idx + 1)
+        const firstUser = context[idx]
+        if (!firstUser || firstUser.info.role !== "user") return
+        const firstInfo = firstUser.info
+
+        const subtasks = firstUser.parts.filter((p): p is MessageV2.SubtaskPart => p.type === "subtask")
+        const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
+
+        const ag = yield* agents.get("title")
+        if (!ag) return
+        const text = yield* Effect.promise(async (signal) => {
+          const mdl = ag.model
+            ? await Provider.getModel(ag.model.providerID, ag.model.modelID)
+            : ((await Provider.getSmallModel(input.providerID)) ??
+              (await Provider.getModel(input.providerID, input.modelID)))
+          const msgs = onlySubtasks
+            ? [{ role: "user" as const, content: subtasks.map((p) => p.prompt).join("\n") }]
+            : await MessageV2.toModelMessages(context, mdl)
+          const result = await LLM.stream({
+            agent: ag,
+            user: firstInfo,
+            system: [],
+            small: true,
+            tools: {},
+            model: mdl,
+            abort: signal,
+            sessionID: input.session.id,
+            retries: 2,
+            messages: [{ role: "user", content: "Generate a title for this conversation:\n" }, ...msgs],
+          })
+          return result.text
+        })
+        const cleaned = text
+          .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
+          .split("\n")
+          .map((line) => line.trim())
+          .find((line) => line.length > 0)
+        if (!cleaned) return
+        const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
+        yield* sessions
+          .setTitle({ sessionID: input.session.id, title: t })
+          .pipe(
+            Effect.catchCause((cause) =>
+              Effect.sync(() => log.error("failed to generate title", { error: Cause.squash(cause) })),
+            ),
+          )
+      })
+
+      const insertReminders = Effect.fn("SessionPrompt.insertReminders")(function* (input: {
+        messages: MessageV2.WithParts[]
+        agent: Agent.Info
+        session: Session.Info
+      }) {
+        const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
+        if (!userMessage) return input.messages
+
+        if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
+          // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
+          yield* Effect.promise(() =>
+            KiloSessionPrompt.insertPlanReminders({ agent: input.agent, session: input.session, userMessage }),
+          )
+          const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
+          // kilocode_change - renamed from "build" to "code"
+          if (wasPlan && input.agent.name === "code") {
+            // kilocode_change end
+            userMessage.parts.push({
+              id: PartID.ascending(),
+              messageID: userMessage.info.id,
+              sessionID: userMessage.info.sessionID,
+              type: "text",
+              text: CODE_SWITCH,
+              synthetic: true,
+            })
+          }
+          return input.messages
+        }
+
+        const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
+        if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
+          const plan = Session.plan(input.session)
+          if (!(yield* fsys.existsSafe(plan))) return input.messages
+          const part = yield* sessions.updatePart({
+            id: PartID.ascending(),
+            messageID: userMessage.info.id,
+            sessionID: userMessage.info.sessionID,
+            type: "text",
+            text:
+              CODE_SWITCH + "\n\n" + `A plan file exists at ${plan}. You should execute on the plan defined within it`, // kilocode_change - renamed from BUILD_SWITCH to CODE_SWITCH
+            synthetic: true,
+          })
+          userMessage.parts.push(part)
+          return input.messages
+        }
+
+        if (input.agent.name !== "plan" || assistantMessage?.info.agent === "plan") return input.messages
+
+        const plan = Session.plan(input.session)
+        const exists = yield* fsys.existsSafe(plan)
+        if (!exists) yield* fsys.ensureDir(path.dirname(plan)).pipe(Effect.catch(Effect.die))
+        const part = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: userMessage.info.id,
+          sessionID: userMessage.info.sessionID,
+          type: "text",
+          text: `<system-reminder>
+Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
+
+## Plan File Info:
+${exists ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.` : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`}
+You should build your plan incrementally by writing to or editing this file. NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
+
+## Plan Workflow
+
+### Phase 1: Initial Understanding
+Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
+
+1. Focus on understanding the user's request and the code associated with their request
+
+2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
+   - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
+   - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
+   - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
+   - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
+
+3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
+
+### Phase 2: Design
+Goal: Design an implementation approach.
+
+Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
+
+You can launch up to 1 agent(s) in parallel.
+
+**Guidelines:**
+- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
+- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
+
+Examples of when to use multiple agents:
+- The task touches multiple parts of the codebase
+- It's a large refactor or architectural change
+- There are many edge cases to consider
+- You'd benefit from exploring different approaches
+
+Example perspectives by task type:
+- New feature: simplicity vs performance vs maintainability
+- Bug fix: root cause vs workaround vs prevention
+- Refactoring: minimal change vs clean architecture
+
+In the agent prompt:
+- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
+- Describe requirements and constraints
+- Request a detailed implementation plan
+
+### Phase 3: Review
+Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
+1. Read the critical files identified by agents to deepen your understanding
+2. Ensure that the plans align with the user's original request
+3. Use question tool to clarify any remaining questions with the user
+
+### Phase 4: Final Plan
+Goal: Write your final plan to the plan file (the only file you can edit).
+- Include only your recommended approach, not all alternatives
+- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
+- Include the paths of critical files to be modified
+- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
+
+### Phase 5: Call plan_exit tool
+At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
+This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
+
+**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
+
+NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
+</system-reminder>`,
+          synthetic: true,
+        })
+        userMessage.parts.push(part)
+        return input.messages
+      })
+
+      const resolveTools = Effect.fn("SessionPrompt.resolveTools")(function* (input: {
+        agent: Agent.Info
+        model: Provider.Model
+        session: Session.Info
+        tools?: Record<string, boolean>
+        processor: Pick<SessionProcessor.Handle, "message" | "partFromToolCall">
+        bypassAgentCheck: boolean
+        messages: MessageV2.WithParts[]
+      }) {
+        using _ = log.time("resolveTools")
+        const tools: Record<string, AITool> = {}
+
+        const context = (args: any, options: ToolExecutionOptions): Tool.Context => ({
+          sessionID: input.session.id,
+          abort: options.abortSignal!,
+          messageID: input.processor.message.id,
+          callID: options.toolCallId,
+          extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
+          agent: input.agent.name,
+          messages: input.messages,
+          metadata: (val) =>
+            Effect.runPromise(
+              Effect.gen(function* () {
+                const match = input.processor.partFromToolCall(options.toolCallId)
+                if (!match || match.state.status !== "running") return
+                yield* sessions.updatePart({
+                  ...match,
+                  state: {
+                    title: val.title,
+                    metadata: val.metadata,
+                    status: "running",
+                    input: args,
+                    time: { start: Date.now() },
+                  },
+                })
+              }),
+            ),
+          ask: (req) =>
+            Effect.runPromise(
+              permission.ask({
+                ...req,
+                sessionID: input.session.id,
+                tool: { messageID: input.processor.message.id, callID: options.toolCallId },
+                ruleset: Permission.merge(input.agent.permission, input.session.permission ?? []),
+              }),
+            ),
+        })
+
+        for (const item of yield* registry.tools(
+          { modelID: ModelID.make(input.model.api.id), providerID: input.model.providerID },
+          input.agent,
+        )) {
+          const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
+          tools[item.id] = tool({
+            id: item.id as any,
+            description: item.description,
+            inputSchema: jsonSchema(schema as any),
+            execute(args, options) {
+              return Effect.runPromise(
+                Effect.gen(function* () {
+                  const ctx = context(args, options)
+                  yield* plugin.trigger(
+                    "tool.execute.before",
+                    { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
+                    { args },
+                  )
+                  const result = yield* Effect.promise(() => item.execute(args, ctx))
+                  const output = {
+                    ...result,
+                    attachments: result.attachments?.map((attachment) => ({
+                      ...attachment,
+                      id: PartID.ascending(),
+                      sessionID: ctx.sessionID,
+                      messageID: input.processor.message.id,
+                    })),
+                  }
+                  yield* plugin.trigger(
+                    "tool.execute.after",
+                    { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
+                    output,
+                  )
+                  return output
+                }),
+              )
+            },
+          })
+        }
+
+        for (const [key, item] of Object.entries(yield* mcp.tools())) {
+          const execute = item.execute
+          if (!execute) continue
+
+          const schema = yield* Effect.promise(() => Promise.resolve(asSchema(item.inputSchema).jsonSchema))
+          const transformed = ProviderTransform.schema(input.model, schema)
+          item.inputSchema = jsonSchema(transformed)
+          item.execute = (args, opts) =>
+            Effect.runPromise(
+              Effect.gen(function* () {
+                const ctx = context(args, opts)
+                yield* plugin.trigger(
+                  "tool.execute.before",
+                  { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
+                  { args },
+                )
+                yield* Effect.promise(() => ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] }))
+                const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.promise(() =>
+                  execute(args, opts),
+                )
+                yield* plugin.trigger(
+                  "tool.execute.after",
+                  { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId, args },
+                  result,
+                )
+
+                const textParts: string[] = []
+                const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
+                for (const contentItem of result.content) {
+                  if (contentItem.type === "text") textParts.push(contentItem.text)
+                  else if (contentItem.type === "image") {
+                    attachments.push({
+                      type: "file",
+                      mime: contentItem.mimeType,
+                      url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
+                    })
+                  } else if (contentItem.type === "resource") {
+                    const { resource } = contentItem
+                    if (resource.text) textParts.push(resource.text)
+                    if (resource.blob) {
+                      attachments.push({
+                        type: "file",
+                        mime: resource.mimeType ?? "application/octet-stream",
+                        url: `data:${resource.mimeType ?? "application/octet-stream"};base64,${resource.blob}`,
+                        filename: resource.uri,
+                      })
+                    }
+                  }
+                }
+
+                const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
+                const metadata = {
+                  ...(result.metadata ?? {}),
+                  truncated: truncated.truncated,
+                  ...(truncated.truncated && { outputPath: truncated.outputPath }),
+                }
+
+                return {
+                  title: "",
+                  metadata,
+                  output: truncated.content,
+                  attachments: attachments.map((attachment) => ({
+                    ...attachment,
+                    id: PartID.ascending(),
+                    sessionID: ctx.sessionID,
+                    messageID: input.processor.message.id,
+                  })),
+                  content: result.content,
+                }
+              }),
+            )
+          tools[key] = item
+        }
+
+        return tools
+      })
+
+      const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
+        task: MessageV2.SubtaskPart
+        model: Provider.Model
+        lastUser: MessageV2.User
+        sessionID: SessionID
+        session: Session.Info
+        msgs: MessageV2.WithParts[]
+      }) {
+        const { task, model, lastUser, sessionID, session, msgs } = input
+        const taskTool = yield* Effect.promise(() => TaskTool.init())
+        const taskModel = task.model ? yield* getModel(task.model.providerID, task.model.modelID, sessionID) : model
+        const assistantMessage: MessageV2.Assistant = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: lastUser.id,
+          sessionID,
+          mode: task.agent,
+          agent: task.agent,
+          variant: lastUser.variant,
+          path: { cwd: Instance.directory, root: Instance.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: taskModel.id,
+          providerID: taskModel.providerID,
+          time: { created: Date.now() },
+        })
+        let part: MessageV2.ToolPart = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: assistantMessage.id,
+          sessionID: assistantMessage.sessionID,
+          type: "tool",
+          callID: ulid(),
+          tool: TaskTool.id,
+          state: {
+            status: "running",
+            input: {
+              prompt: task.prompt,
+              description: task.description,
+              subagent_type: task.agent,
+              command: task.command,
+            },
+            time: { start: Date.now() },
+          },
+        })
+        const taskArgs = {
+          prompt: task.prompt,
+          description: task.description,
+          subagent_type: task.agent,
+          command: task.command,
+        }
+        yield* plugin.trigger("tool.execute.before", { tool: "task", sessionID, callID: part.id }, { args: taskArgs })
+
+        const taskAgent = yield* agents.get(task.agent)
+        if (!taskAgent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${task.agent}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+          throw error
+        }
+
+        let error: Error | undefined
+        const result = yield* Effect.promise((signal) =>
+          taskTool
+            .execute(taskArgs, {
+              agent: task.agent,
+              messageID: assistantMessage.id,
+              sessionID,
+              abort: signal,
+              callID: part.callID,
+              extra: { bypassAgentCheck: true },
+              messages: msgs,
+              metadata(val: { title?: string; metadata?: Record<string, any> }) {
+                return Effect.runPromise(
+                  Effect.gen(function* () {
+                    part = yield* sessions.updatePart({
+                      ...part,
+                      type: "tool",
+                      state: { ...part.state, ...val },
+                    } satisfies MessageV2.ToolPart)
+                  }),
+                )
+              },
+              ask(req: any) {
+                return Effect.runPromise(
+                  permission.ask({
+                    ...req,
+                    sessionID,
+                    ruleset: Permission.merge(taskAgent.permission, session.permission ?? []),
+                  }),
+                )
+              },
+            })
+            .catch((e) => {
+              error = e instanceof Error ? e : new Error(String(e))
+              log.error("subtask execution failed", { error, agent: task.agent, description: task.description })
+              return undefined
+            }),
+        ).pipe(
+          Effect.onInterrupt(() =>
+            Effect.gen(function* () {
+              assistantMessage.finish = "tool-calls"
+              assistantMessage.time.completed = Date.now()
+              yield* sessions.updateMessage(assistantMessage)
+              if (part.state.status === "running") {
+                yield* sessions.updatePart({
+                  ...part,
+                  state: {
+                    status: "error",
+                    error: "Cancelled",
+                    time: { start: part.state.time.start, end: Date.now() },
+                    metadata: part.state.metadata,
+                    input: part.state.input,
+                  },
+                } satisfies MessageV2.ToolPart)
+              }
+            }),
+          ),
+        )
+
+        const attachments = result?.attachments?.map((attachment) => ({
+          ...attachment,
+          id: PartID.ascending(),
+          sessionID,
+          messageID: assistantMessage.id,
+        }))
+
+        yield* plugin.trigger(
+          "tool.execute.after",
+          { tool: "task", sessionID, callID: part.id, args: taskArgs },
+          result,
+        )
+
+        assistantMessage.finish = "tool-calls"
+        assistantMessage.time.completed = Date.now()
+        yield* sessions.updateMessage(assistantMessage)
+
+        if (result && part.state.status === "running") {
+          yield* sessions.updatePart({
+            ...part,
+            state: {
+              status: "completed",
+              input: part.state.input,
+              title: result.title,
+              metadata: result.metadata,
+              output: result.output,
+              attachments,
+              time: { ...part.state.time, end: Date.now() },
+            },
+          } satisfies MessageV2.ToolPart)
+        }
+
+        if (!result) {
+          yield* sessions.updatePart({
+            ...part,
+            state: {
+              status: "error",
+              error: error ? `Tool execution failed: ${error.message}` : "Tool execution failed",
+              time: {
+                start: part.state.status === "running" ? part.state.time.start : Date.now(),
+                end: Date.now(),
+              },
+              metadata: part.state.status === "pending" ? undefined : part.state.metadata,
+              input: part.state.input,
+            },
+          } satisfies MessageV2.ToolPart)
+        }
+
+        if (!task.command) return
+
+        const summaryUserMsg: MessageV2.User = {
+          id: MessageID.ascending(),
+          sessionID,
+          role: "user",
+          time: { created: Date.now() },
+          agent: lastUser.agent,
+          model: lastUser.model,
+          editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
+        }
+        yield* sessions.updateMessage(summaryUserMsg)
+        yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: summaryUserMsg.id,
+          sessionID,
+          type: "text",
+          text: "Summarize the task tool output above and continue with your task.",
+          synthetic: true,
+        } satisfies MessageV2.TextPart)
+      })
+
+      const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput, signal: AbortSignal) {
+        const session = yield* sessions.get(input.sessionID)
+        if (session.revert) {
+          yield* Effect.promise(() => SessionRevert.cleanup(session))
+        }
+        const agent = yield* agents.get(input.agent)
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
+        const userMsg: MessageV2.User = {
+          id: MessageID.ascending(),
+          sessionID: input.sessionID,
+          time: { created: Date.now() },
+          role: "user",
+          agent: input.agent,
+          model: { providerID: model.providerID, modelID: model.modelID },
+        }
+        yield* sessions.updateMessage(userMsg)
+        const userPart: MessageV2.Part = {
+          type: "text",
+          id: PartID.ascending(),
+          messageID: userMsg.id,
+          sessionID: input.sessionID,
+          text: "The following tool was executed by the user",
+          synthetic: true,
+        }
+        yield* sessions.updatePart(userPart)
+
+        const msg: MessageV2.Assistant = {
+          id: MessageID.ascending(),
+          sessionID: input.sessionID,
+          parentID: userMsg.id,
+          mode: input.agent,
+          agent: input.agent,
+          cost: 0,
+          path: { cwd: Instance.directory, root: Instance.worktree },
+          time: { created: Date.now() },
+          role: "assistant",
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: model.modelID,
+          providerID: model.providerID,
+        }
+        yield* sessions.updateMessage(msg)
+        const part: MessageV2.ToolPart = {
+          type: "tool",
+          id: PartID.ascending(),
+          messageID: msg.id,
+          sessionID: input.sessionID,
+          tool: "bash",
+          callID: ulid(),
+          state: {
+            status: "running",
+            time: { start: Date.now() },
+            input: { command: input.command },
+          },
+        }
+        yield* sessions.updatePart(part)
+
+        const sh = Shell.preferred()
+        const shellName = (
+          process.platform === "win32" ? path.win32.basename(sh, ".exe") : path.basename(sh)
+        ).toLowerCase()
+        const invocations: Record<string, { args: string[] }> = {
+          nu: { args: ["-c", input.command] },
+          fish: { args: ["-c", input.command] },
+          zsh: {
+            args: [
+              "-c",
+              "-l",
+              `
+                [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
+                [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
+                eval ${JSON.stringify(input.command)}
+              `,
+            ],
+          },
+          bash: {
+            args: [
+              "-c",
+              "-l",
+              `
+                shopt -s expand_aliases
+                [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
+                eval ${JSON.stringify(input.command)}
+              `,
+            ],
+          },
+          cmd: { args: ["/c", input.command] },
+          powershell: { args: ["-NoProfile", "-Command", input.command] },
+          pwsh: { args: ["-NoProfile", "-Command", input.command] },
+          "": { args: ["-c", `${input.command}`] },
+        }
+
+        const args = (invocations[shellName] ?? invocations[""]).args
+        const cwd = Instance.directory
+        const shellEnv = yield* plugin.trigger(
+          "shell.env",
+          { cwd, sessionID: input.sessionID, callID: part.callID },
+          { env: {} },
+        )
+        const proc = yield* Effect.sync(() =>
+          spawn(sh, args, {
+            cwd,
+            detached: process.platform !== "win32",
+            windowsHide: process.platform === "win32",
+            stdio: ["ignore", "pipe", "pipe"],
+            env: {
+              ...process.env,
+              ...shellEnv.env,
+              TERM: "dumb",
+            },
+          }),
+        )
+
+        let output = ""
+        // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
+        const decoders = KiloSessionPrompt.createShellDecoders()
+        const write = () => {
+          if (part.state.status !== "running") return
+          part.state.metadata = { output, description: "" }
+          void Effect.runFork(sessions.updatePart(part))
+        }
+
+        proc.stdout?.on("data", (chunk: Buffer) => {
+          output += decoders.write("stdout", chunk)
+          write()
+        })
+        proc.stderr?.on("data", (chunk: Buffer) => {
+          output += decoders.write("stderr", chunk)
+          write()
+        })
+        // kilocode_change end
+
+        let aborted = false
+        let exited = false
+        let finished = false
+        const kill = Effect.promise(() => Shell.killTree(proc, { exited: () => exited }))
+
+        const abortHandler = () => {
+          if (aborted) return
+          aborted = true
+          void Effect.runFork(kill)
+        }
+
+        const finish = Effect.uninterruptible(
+          Effect.gen(function* () {
+            if (finished) return
+            finished = true
+            output += decoders.flush() // kilocode_change - flush any trailing buffered bytes
+            if (aborted) {
+              output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+            }
+            if (!msg.time.completed) {
+              msg.time.completed = Date.now()
+              yield* sessions.updateMessage(msg)
+            }
+            if (part.state.status === "running") {
+              part.state = {
+                status: "completed",
+                time: { ...part.state.time, end: Date.now() },
+                input: part.state.input,
+                title: "",
+                metadata: { output, description: "" },
+                output,
+              }
+              yield* sessions.updatePart(part)
+            }
+          }),
+        )
+
+        const exit = yield* Effect.promise(() => {
+          signal.addEventListener("abort", abortHandler, { once: true })
+          if (signal.aborted) abortHandler()
+          return new Promise<void>((resolve) => {
+            const close = () => {
+              exited = true
+              proc.off("close", close)
+              resolve()
+            }
+            proc.once("close", close)
+          })
+        }).pipe(
+          Effect.onInterrupt(() => Effect.sync(abortHandler)),
+          Effect.ensuring(Effect.sync(() => signal.removeEventListener("abort", abortHandler))),
+          Effect.ensuring(finish),
+          Effect.exit,
+        )
+
+        if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
+          return yield* Effect.failCause(exit.cause)
+        }
+
+        return { info: msg, parts: [part] }
+      })
+
+      const getModel = (providerID: ProviderID, modelID: ModelID, sessionID: SessionID) =>
+        Effect.promise(() =>
+          Provider.getModel(providerID, modelID).catch((e) => {
+            if (Provider.ModelNotFoundError.isInstance(e)) {
+              const hint = e.data.suggestions?.length ? ` Did you mean: ${e.data.suggestions.join(", ")}?` : ""
+              Bus.publish(Session.Event.Error, {
+                sessionID,
+                error: new NamedError.Unknown({
+                  message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
+                }).toObject(),
+              })
+            }
+            throw e
+          }),
+        )
+
+      const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
+        const agentName = input.agent || (yield* agents.defaultAgent())
+        const ag = yield* agents.get(agentName)
+        if (!ag) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+
+        const model = input.model ?? ag.model ?? (yield* lastModel(input.sessionID))
+        const full =
+          !input.variant && ag.variant
+            ? yield* Effect.promise(() => Provider.getModel(model.providerID, model.modelID).catch(() => undefined))
+            : undefined
+        const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+
+        const info: MessageV2.Info = {
+          id: input.messageID ?? MessageID.ascending(),
+          role: "user",
+          sessionID: input.sessionID,
+          time: { created: Date.now() },
+          tools: input.tools,
+          agent: ag.name,
+          model,
+          system: input.system,
+          format: input.format,
+          variant,
+          editorContext: input.editorContext, // kilocode_change
+        }
+
+        yield* Effect.addFinalizer(() => Effect.sync(() => InstructionPrompt.clear(info.id)))
+
+        type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
+        const assign = (part: Draft<MessageV2.Part>): MessageV2.Part => ({
+          ...part,
+          id: part.id ? PartID.make(part.id) : PartID.ascending(),
+        })
+
+        const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<MessageV2.Part>[]> = Effect.fn(
+          "SessionPrompt.resolveUserPart",
+        )(function* (part) {
+          if (part.type === "file") {
+            if (part.source?.type === "resource") {
+              const { clientName, uri } = part.source
+              log.info("mcp resource", { clientName, uri, mime: part.mime })
+              const pieces: Draft<MessageV2.Part>[] = [
+                {
+                  messageID: info.id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  synthetic: true,
+                  text: `Reading MCP resource: ${part.filename} (${uri})`,
+                },
+              ]
+              const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
+              if (Exit.isSuccess(exit)) {
+                const content = exit.value
+                if (!content) throw new Error(`Resource not found: ${clientName}/${uri}`)
+                const items = Array.isArray(content.contents) ? content.contents : [content.contents]
+                for (const c of items) {
+                  if ("text" in c && c.text) {
+                    pieces.push({
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: c.text,
+                    })
+                  } else if ("blob" in c && c.blob) {
+                    const mime = "mimeType" in c ? c.mimeType : part.mime
+                    pieces.push({
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: `[Binary content: ${mime}]`,
+                    })
+                  }
+                }
+                pieces.push({ ...part, messageID: info.id, sessionID: input.sessionID })
+              } else {
+                const error = Cause.squash(exit.cause)
+                log.error("failed to read MCP resource", { error, clientName, uri })
+                const message = error instanceof Error ? error.message : String(error)
+                pieces.push({
+                  messageID: info.id,
+                  sessionID: input.sessionID,
+                  type: "text",
+                  synthetic: true,
+                  text: `Failed to read MCP resource ${part.filename}: ${message}`,
+                })
+              }
+              return pieces
+            }
+            const url = new URL(part.url)
+            switch (url.protocol) {
+              case "data:":
+                if (part.mime === "text/plain") {
+                  return [
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: `Called the Read tool with the following input: ${JSON.stringify({ filePath: part.filename })}`,
+                    },
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: decodeDataUrl(part.url),
+                    },
+                    { ...part, messageID: info.id, sessionID: input.sessionID },
+                  ]
+                }
+                break
+              case "file:": {
+                log.info("file", { mime: part.mime })
+                const filepath = fileURLToPath(part.url)
+                if (yield* fsys.isDir(filepath)) part.mime = "application/x-directory"
+
+                if (part.mime === "text/plain") {
+                  let offset: number | undefined
+                  let limit: number | undefined
+                  const range = { start: url.searchParams.get("start"), end: url.searchParams.get("end") }
+                  if (range.start != null) {
+                    const filePathURI = part.url.split("?")[0]
+                    let start = parseInt(range.start)
+                    let end = range.end ? parseInt(range.end) : undefined
+                    if (start === end) {
+                      const symbols = yield* lsp
+                        .documentSymbol(filePathURI)
+                        .pipe(Effect.catch(() => Effect.succeed([])))
+                      for (const symbol of symbols) {
+                        let r: LSP.Range | undefined
+                        if ("range" in symbol) r = symbol.range
+                        else if ("location" in symbol) r = symbol.location.range
+                        if (r?.start?.line && r?.start?.line === start) {
+                          start = r.start.line
+                          end = r?.end?.line ?? start
+                          break
+                        }
+                      }
+                    }
+                    offset = Math.max(start, 1)
+                    if (end) limit = end - (offset - 1)
+                  }
+                  const args = { filePath: filepath, offset, limit }
+                  const pieces: Draft<MessageV2.Part>[] = [
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
+                    },
+                  ]
+                  const read = yield* Effect.promise(() => ReadTool.init()).pipe(
+                    Effect.flatMap((t) =>
+                      Effect.promise(() => Provider.getModel(info.model.providerID, info.model.modelID)).pipe(
+                        Effect.flatMap((mdl) =>
+                          Effect.promise(() =>
+                            t.execute(args, {
+                              sessionID: input.sessionID,
+                              abort: new AbortController().signal,
+                              agent: input.agent!,
+                              messageID: info.id,
+                              extra: { bypassCwdCheck: true, model: mdl },
+                              messages: [],
+                              metadata: async () => {},
+                              ask: async () => {},
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Effect.exit,
+                  )
+                  if (Exit.isSuccess(read)) {
+                    const result = read.value
+                    pieces.push({
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: result.output,
+                    })
+                    if (result.attachments?.length) {
+                      pieces.push(
+                        ...result.attachments.map((a) => ({
+                          ...a,
+                          synthetic: true,
+                          filename: a.filename ?? part.filename,
+                          messageID: info.id,
+                          sessionID: input.sessionID,
+                        })),
+                      )
+                    } else {
+                      pieces.push({ ...part, messageID: info.id, sessionID: input.sessionID })
+                    }
+                  } else {
+                    const error = Cause.squash(read.cause)
+                    log.error("failed to read file", { error })
+                    const message = error instanceof Error ? error.message : String(error)
+                    yield* bus.publish(Session.Event.Error, {
+                      sessionID: input.sessionID,
+                      error: new NamedError.Unknown({ message }).toObject(),
+                    })
+                    pieces.push({
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                    })
+                  }
+                  return pieces
+                }
+
+                if (part.mime === "application/x-directory") {
+                  const args = { filePath: filepath }
+                  const result = yield* Effect.promise(() => ReadTool.init()).pipe(
+                    Effect.flatMap((t) =>
+                      Effect.promise(() =>
+                        t.execute(args, {
+                          sessionID: input.sessionID,
+                          abort: new AbortController().signal,
+                          agent: input.agent!,
+                          messageID: info.id,
+                          extra: { bypassCwdCheck: true },
+                          messages: [],
+                          metadata: async () => {},
+                          ask: async () => {},
+                        }),
+                      ),
+                    ),
+                  )
+                  return [
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
+                    },
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text: result.output,
+                    },
+                    { ...part, messageID: info.id, sessionID: input.sessionID },
+                  ]
+                }
+
+                yield* filetime.read(input.sessionID, filepath)
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
+                  },
+                  {
+                    id: part.id,
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "file",
+                    url:
+                      `data:${part.mime};base64,` +
+                      Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
+                    mime: part.mime,
+                    filename: part.filename!,
+                    source: part.source,
+                  },
+                ]
+              }
+            }
+          }
+
+          if (part.type === "agent") {
+            const perm = Permission.evaluate("task", part.name, ag.permission)
+            const hint = perm.action === "deny" ? " . Invoked by user; guaranteed to exist." : ""
+            return [
+              { ...part, messageID: info.id, sessionID: input.sessionID },
+              {
+                messageID: info.id,
+                sessionID: input.sessionID,
+                type: "text",
+                synthetic: true,
+                text:
+                  " Use the above message and context to generate a prompt and call the task tool with subagent: " +
+                  part.name +
+                  hint,
+              },
+            ]
+          }
+
+          return [{ ...part, messageID: info.id, sessionID: input.sessionID }]
+        })
+
+        const parts = yield* Effect.forEach(input.parts, resolvePart, { concurrency: "unbounded" }).pipe(
+          Effect.map((x) => x.flat().map(assign)),
+        )
+
+        yield* plugin.trigger(
+          "chat.message",
+          {
+            sessionID: input.sessionID,
+            agent: input.agent,
+            model: input.model,
+            messageID: input.messageID,
+            variant: input.variant,
+          },
+          { message: info, parts },
+        )
+
+        const parsed = MessageV2.Info.safeParse(info)
+        if (!parsed.success) {
+          log.error("invalid user message before save", {
+            sessionID: input.sessionID,
+            messageID: info.id,
+            agent: info.agent,
+            model: info.model,
+            issues: parsed.error.issues,
+          })
+        }
+        parts.forEach((part, index) => {
+          const p = MessageV2.Part.safeParse(part)
+          if (p.success) return
+          log.error("invalid user part before save", {
+            sessionID: input.sessionID,
+            messageID: info.id,
+            partID: part.id,
+            partType: part.type,
+            index,
+            issues: p.error.issues,
+            part,
+          })
+        })
+
+        yield* sessions.updateMessage(info)
+        for (const part of parts) yield* sessions.updatePart(part)
+
+        return { info, parts }
+      }, Effect.scoped)
+
+      const prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.prompt")(
+        function* (input: PromptInput) {
+          const session = yield* sessions.get(input.sessionID)
+          yield* Effect.promise(() => SessionRevert.cleanup(session))
+          const message = yield* createUserMessage(input)
+          yield* sessions.touch(input.sessionID)
+
+          const permissions: Permission.Ruleset = []
+          for (const [t, enabled] of Object.entries(input.tools ?? {})) {
+            permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
+          }
+          if (permissions.length > 0) {
+            session.permission = permissions
+            yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
+          }
+
+          if (input.noReply === true) return message
+          return yield* loop({ sessionID: input.sessionID })
+        },
+      )
+
+      const lastAssistant = (sessionID: SessionID) =>
+        Effect.promise(async () => {
+          let latest: MessageV2.WithParts | undefined
+          for await (const item of MessageV2.stream(sessionID)) {
+            latest ??= item
+            if (item.info.role !== "user") return item
+          }
+          if (latest) return latest
+          throw new Error("Impossible")
+        })
+
+      // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
+      const closeReasons = new Map<string, KiloSession.CloseReason>()
+
+      const runLoop: (sessionID: SessionID) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.run")(
+        function* (sessionID: SessionID) {
+          // kilocode_change — cache environment details per turn (prompt caching)
+          const envCache: KiloSessionPrompt.EnvCache = {}
+          closeReasons.delete(sessionID) // kilocode_change
+          let structured: unknown | undefined
+          let step = 0
+          const session = yield* sessions.get(sessionID)
+
+          while (true) {
+            yield* status.set(sessionID, { type: "busy" })
+            log.info("loop", { step, sessionID })
+
+            let msgs = yield* Effect.promise(() => MessageV2.filterCompacted(MessageV2.stream(sessionID)))
+
+            let lastUser: MessageV2.User | undefined
+            let lastAssistant: MessageV2.Assistant | undefined
+            let lastFinished: MessageV2.Assistant | undefined
+            let tasks: (MessageV2.CompactionPart | MessageV2.SubtaskPart)[] = []
+            for (let i = msgs.length - 1; i >= 0; i--) {
+              const msg = msgs[i]
+              if (!lastUser && msg.info.role === "user") lastUser = msg.info
+              if (!lastAssistant && msg.info.role === "assistant") lastAssistant = msg.info
+              if (!lastFinished && msg.info.role === "assistant" && msg.info.finish) lastFinished = msg.info
+              if (lastUser && lastFinished) break
+              const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
+              if (task && !lastFinished) tasks.push(...task)
+            }
+
+            if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
+            if (
+              lastAssistant?.finish &&
+              !["tool-calls"].includes(lastAssistant.finish) &&
+              lastUser.id < lastAssistant.id
+            ) {
+              // kilocode_change start - ask follow-up when plan_exit tool was called
+              const action = yield* Effect.promise((signal) =>
+                KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal }),
+              )
+              if (action === "continue") continue
+              // kilocode_change end
+              log.info("exiting loop", { sessionID })
+              break
+            }
+
+            step++
+            if (step === 1)
+              yield* title({
+                session,
+                modelID: lastUser.model.modelID,
+                providerID: lastUser.model.providerID,
+                history: msgs,
+              }).pipe(Effect.ignore, Effect.forkIn(scope))
+
+            const model = yield* getModel(lastUser.model.providerID, lastUser.model.modelID, sessionID)
+            const task = tasks.pop()
+
+            if (task?.type === "subtask") {
+              yield* handleSubtask({ task, model, lastUser, sessionID, session, msgs })
+              continue
+            }
+
+            if (task?.type === "compaction") {
+              const result = yield* compaction.process({
+                messages: msgs,
+                parentID: lastUser.id,
+                sessionID,
+                auto: task.auto,
+                overflow: task.overflow,
+              })
+              if (result === "stop") break
+              continue
+            }
+
+            if (
+              lastFinished &&
+              lastFinished.summary !== true &&
+              (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model }))
+            ) {
+              yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
+              continue
+            }
+
+            const agent = yield* agents.get(lastUser.agent)
+            if (!agent) {
+              const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+              const error = new NamedError.Unknown({ message: `Agent not found: "${lastUser.agent}".${hint}` })
+              yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+              throw error
+            }
+            const maxSteps = agent.steps ?? Infinity
+            const isLastStep = step >= maxSteps
+            msgs = yield* insertReminders({ messages: msgs, agent, session })
+
+            const msg: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              parentID: lastUser.id,
+              role: "assistant",
+              mode: agent.name,
+              agent: agent.name,
+              variant: lastUser.variant,
+              path: { cwd: Instance.directory, root: Instance.worktree },
+              cost: 0,
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: model.id,
+              providerID: model.providerID,
+              time: { created: Date.now() },
+              sessionID,
+            }
+            yield* sessions.updateMessage(msg)
+            const handle = yield* processor.create({
+              assistantMessage: msg,
+              sessionID,
+              model,
+            })
+
+            const outcome: "break" | "continue" = yield* Effect.onExit(
+              Effect.gen(function* () {
+                const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
+                const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
+
+                const tools = yield* resolveTools({
+                  agent,
+                  session,
+                  model,
+                  tools: lastUser.tools,
+                  processor: handle,
+                  bypassAgentCheck,
+                  messages: msgs,
+                })
+
+                if (lastUser.format?.type === "json_schema") {
+                  tools["StructuredOutput"] = createStructuredOutputTool({
+                    schema: lastUser.format.schema,
+                    onSuccess(output) {
+                      structured = output
+                    },
+                  })
+                }
+
+                if (step === 1) SessionSummary.summarize({ sessionID, messageID: lastUser.id })
+
+                if (step > 1 && lastFinished) {
+                  for (const m of msgs) {
+                    if (m.info.role !== "user" || m.info.id <= lastFinished.id) continue
+                    for (const p of m.parts) {
+                      if (p.type !== "text" || p.ignored || p.synthetic) continue
+                      if (!p.text.trim()) continue
+                      p.text = [
+                        "<system-reminder>",
+                        "The user sent the following message:",
+                        p.text,
+                        "",
+                        "Please address this message and continue with your tasks.",
+                        "</system-reminder>",
+                      ].join("\n")
+                    }
+                  }
+                }
+
+                yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
+
+                // kilocode_change — ephemerally inject dynamic editor context into last user message
+                KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
+
+                const [skills, env, instructions, modelMsgs] = yield* Effect.promise(() =>
+                  Promise.all([
+                    SystemPrompt.skills(agent),
+                    SystemPrompt.environment(model, lastUser.editorContext), // kilocode_change
+                    InstructionPrompt.system(),
+                    MessageV2.toModelMessages(msgs, model),
+                  ]),
+                )
+                const system = [...env, ...(skills ? [skills] : []), ...instructions]
+                const format = lastUser.format ?? { type: "text" as const }
+                if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
+                const result = yield* handle.process({
+                  user: lastUser,
+                  agent,
+                  permission: session.permission,
+                  sessionID,
+                  system,
+                  messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS }] : [])],
+                  tools,
+                  model,
+                  toolChoice: format.type === "json_schema" ? "required" : undefined,
+                })
+
+                if (structured !== undefined) {
+                  handle.message.structured = structured
+                  handle.message.finish = handle.message.finish ?? "stop"
+                  yield* sessions.updateMessage(handle.message)
+                  return "break" as const
+                }
+
+                const finished = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
+                if (finished && !handle.message.error) {
+                  if (format.type === "json_schema") {
+                    handle.message.error = new MessageV2.StructuredOutputError({
+                      message: "Model did not produce structured output",
+                      retries: 0,
+                    }).toObject()
+                    yield* sessions.updateMessage(handle.message)
+                    return "break" as const
+                  }
+                }
+
+                // kilocode_change start
+                if (result === "stop") {
+                  if (handle.message.error) closeReasons.set(sessionID, "error")
+                  return "break" as const
+                }
+                // kilocode_change end
+                if (result === "compact") {
+                  yield* compaction.create({
+                    sessionID,
+                    agent: lastUser.agent,
+                    model: lastUser.model,
+                    auto: true,
+                    overflow: !handle.message.finish,
+                  })
+                }
+                return "continue" as const
+              }),
+              Effect.fnUntraced(function* (exit) {
+                if (Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)) yield* handle.abort()
+                InstructionPrompt.clear(handle.message.id)
+              }),
+            )
+            if (outcome === "break") break
+            continue
+          }
+
+          yield* compaction.prune({ sessionID }).pipe(Effect.ignore, Effect.forkIn(scope))
+          return yield* lastAssistant(sessionID)
+        },
+      )
+
+      const loop: (input: z.infer<typeof LoopInput>) => Effect.Effect<MessageV2.WithParts> = Effect.fn(
+        "SessionPrompt.loop",
+      )(function* (input: z.infer<typeof LoopInput>) {
+        const s = yield* InstanceState.get(cache)
+        const runner = getRunner(s.runners, input.sessionID)
+        // kilocode_change start
+        yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
+        return yield* Effect.onExit(
+          runner.ensureRunning(runLoop(input.sessionID)),
+          Effect.fnUntraced(function* (exit) {
+            const explicit = closeReasons.get(input.sessionID)
+            closeReasons.delete(input.sessionID)
+            const reason: KiloSession.CloseReason = explicit
+              ? explicit
+              : Exit.isFailure(exit)
+                ? Cause.hasInterruptsOnly(exit.cause)
+                  ? "interrupted"
+                  : "error"
+                : "completed"
+            yield* bus.publish(KiloSession.Event.TurnClose, { sessionID: input.sessionID, reason })
+          }),
+        )
+        // kilocode_change end
+      })
+
+      const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
+        function* (input: ShellInput) {
+          const s = yield* InstanceState.get(cache)
+          const runner = getRunner(s.runners, input.sessionID)
+          return yield* runner.startShell((signal) => shellImpl(input, signal))
+        },
+      )
+
+      const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
+        log.info("command", input)
+        const cmd = yield* commands.get(input.command)
+        if (!cmd) {
+          const available = (yield* commands.list()).map((c) => c.name)
+          const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const agentName = cmd.agent ?? input.agent ?? (yield* agents.defaultAgent())
+
+        const raw = input.arguments.match(argsRegex) ?? []
+        const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
+        const templateCommand = yield* Effect.promise(async () => cmd.template)
+
+        const placeholders = templateCommand.match(placeholderRegex) ?? []
+        let last = 0
+        for (const item of placeholders) {
+          const value = Number(item.slice(1))
+          if (value > last) last = value
+        }
+
+        const withArgs = templateCommand.replaceAll(placeholderRegex, (_, index) => {
+          const position = Number(index)
+          const argIndex = position - 1
+          if (argIndex >= args.length) return ""
+          if (position === last) return args.slice(argIndex).join(" ")
+          return args[argIndex]
+        })
+        const usesArgumentsPlaceholder = templateCommand.includes("$ARGUMENTS")
+        let template = withArgs.replaceAll("$ARGUMENTS", input.arguments)
+
+        if (placeholders.length === 0 && !usesArgumentsPlaceholder && input.arguments.trim()) {
+          template = template + "\n\n" + input.arguments
+        }
+
+        const shellMatches = ConfigMarkdown.shell(template)
+        if (shellMatches.length > 0) {
+          const sh = Shell.preferred()
+          const results = yield* Effect.promise(() =>
+            Promise.all(
+              shellMatches.map(async ([, cmd]) => (await Process.text([cmd], { shell: sh, nothrow: true })).text),
+            ),
+          )
+          let index = 0
+          template = template.replace(bashRegex, () => results[index++])
+        }
+        template = template.trim()
+
+        const taskModel = yield* Effect.gen(function* () {
+          if (cmd.model) return Provider.parseModel(cmd.model)
+          if (cmd.agent) {
+            const cmdAgent = yield* agents.get(cmd.agent)
+            if (cmdAgent?.model) return cmdAgent.model
+          }
+          if (input.model) return Provider.parseModel(input.model)
+          return yield* lastModel(input.sessionID)
+        })
+
+        yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
+
+        const agent = yield* agents.get(agentName)
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+
+        const templateParts = yield* resolvePromptParts(template)
+        const isSubtask = (agent.mode === "subagent" && cmd.subtask !== false) || cmd.subtask === true
+        const parts = isSubtask
+          ? [
+              {
+                type: "subtask" as const,
+                agent: agent.name,
+                description: cmd.description ?? "",
+                command: input.command,
+                model: { providerID: taskModel.providerID, modelID: taskModel.modelID },
+                prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
+              },
+            ]
+          : [...templateParts, ...(input.parts ?? [])]
+
+        const userAgent = isSubtask ? (input.agent ?? (yield* agents.defaultAgent())) : agentName
+        const userModel = isSubtask
+          ? input.model
+            ? Provider.parseModel(input.model)
+            : yield* lastModel(input.sessionID)
+          : taskModel
+
+        yield* plugin.trigger(
+          "command.execute.before",
+          { command: input.command, sessionID: input.sessionID, arguments: input.arguments },
+          { parts },
+        )
+
+        const result = yield* prompt({
+          sessionID: input.sessionID,
+          messageID: input.messageID,
+          model: userModel,
+          agent: userAgent,
+          parts,
+          variant: input.variant,
+        })
+        yield* bus.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
+      })
+
+      return Service.of({
+        assertNotBusy,
+        cancel,
+        prompt,
+        loop,
+        shell,
+        command,
+        resolvePromptParts,
+      })
+    }),
   )
 
-  export function assertNotBusy(sessionID: string) {
-    const match = state()[sessionID]
-    if (match) throw new Session.BusyError(sessionID)
+  const defaultLayer = Layer.unwrap(
+    Effect.sync(() =>
+      layer.pipe(
+        Layer.provide(SessionStatus.layer),
+        Layer.provide(SessionCompaction.defaultLayer),
+        Layer.provide(SessionProcessor.defaultLayer),
+        Layer.provide(Command.defaultLayer),
+        Layer.provide(Permission.layer),
+        Layer.provide(MCP.defaultLayer),
+        Layer.provide(LSP.defaultLayer),
+        Layer.provide(FileTime.defaultLayer),
+        Layer.provide(ToolRegistry.defaultLayer),
+        Layer.provide(Truncate.layer),
+        Layer.provide(AppFileSystem.defaultLayer),
+        Layer.provide(Plugin.defaultLayer),
+        Layer.provide(Session.defaultLayer),
+        Layer.provide(Agent.defaultLayer),
+        Layer.provide(Bus.layer),
+      ),
+    ),
+  )
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+
+  export async function assertNotBusy(sessionID: SessionID) {
+    return runPromise((svc) => svc.assertNotBusy(SessionID.zod.parse(sessionID)))
   }
 
   export const PromptInput = z.object({
-    sessionID: Identifier.schema("session"),
-    messageID: Identifier.schema("message").optional(),
+    sessionID: SessionID.zod,
+    messageID: MessageID.zod.optional(),
     model: z
       .object({
-        providerID: z.string(),
-        modelID: z.string(),
+        providerID: ProviderID.zod,
+        modelID: ModelID.zod,
       })
       .optional(),
     agent: z.string().optional(),
@@ -181,838 +1842,78 @@ export namespace SessionPrompt {
   })
   export type PromptInput = z.infer<typeof PromptInput>
 
-  export const prompt = fn(PromptInput, async (input) => {
-    const session = await Session.get(input.sessionID)
-    await SessionRevert.cleanup(session)
-
-    const message = await createUserMessage(input)
-    await Session.touch(input.sessionID)
-
-    // this is backwards compatibility for allowing `tools` to be specified when
-    // prompting
-    const permissions: PermissionNext.Ruleset = []
-    for (const [tool, enabled] of Object.entries(input.tools ?? {})) {
-      permissions.push({
-        permission: tool,
-        action: enabled ? "allow" : "deny",
-        pattern: "*",
-      })
-    }
-    if (permissions.length > 0) {
-      session.permission = permissions
-      await Session.setPermission({ sessionID: session.id, permission: permissions })
-    }
-
-    if (input.noReply === true) {
-      return message
-    }
-
-    return loop({ sessionID: input.sessionID })
-  })
-
-  export async function resolvePromptParts(template: string): Promise<PromptInput["parts"]> {
-    const parts: PromptInput["parts"] = [
-      {
-        type: "text",
-        text: template,
-      },
-    ]
-    const files = ConfigMarkdown.files(template)
-    const seen = new Set<string>()
-    await Promise.all(
-      files.map(async (match) => {
-        const name = match[1]
-        if (seen.has(name)) return
-        seen.add(name)
-        const filepath = name.startsWith("~/")
-          ? path.join(os.homedir(), name.slice(2))
-          : path.resolve(Instance.worktree, name)
-
-        const stats = await fs.stat(filepath).catch(() => undefined)
-        if (!stats) {
-          const agent = await Agent.get(name)
-          if (agent) {
-            parts.push({
-              type: "agent",
-              name: agent.name,
-            })
-          }
-          return
-        }
-
-        if (stats.isDirectory()) {
-          parts.push({
-            type: "file",
-            url: pathToFileURL(filepath).href,
-            filename: name,
-            mime: "application/x-directory",
-          })
-          return
-        }
-
-        parts.push({
-          type: "file",
-          url: pathToFileURL(filepath).href,
-          filename: name,
-          mime: "text/plain",
-        })
-      }),
-    )
-    return parts
+  export async function prompt(input: PromptInput) {
+    return runPromise((svc) => svc.prompt(PromptInput.parse(input)))
   }
 
-  function start(sessionID: string) {
-    const s = state()
-    if (s[sessionID]) return
-    const controller = new AbortController()
-    s[sessionID] = {
-      abort: controller,
-      callbacks: [],
-    }
-    return controller.signal
+  export async function resolvePromptParts(template: string) {
+    return runPromise((svc) => svc.resolvePromptParts(z.string().parse(template)))
   }
 
-  function resume(sessionID: string) {
-    const s = state()
-    if (!s[sessionID]) return
-
-    return s[sessionID].abort.signal
-  }
-
-  export function cancel(sessionID: string) {
-    log.info("cancel", { sessionID })
-    const s = state()
-    const match = s[sessionID]
-    if (!match) {
-      SessionStatus.set(sessionID, { type: "idle" })
-      return
-    }
-    match.abort.abort()
-    delete s[sessionID]
-    SessionStatus.set(sessionID, { type: "idle" })
-    return
+  export async function cancel(sessionID: SessionID) {
+    return runPromise((svc) => svc.cancel(SessionID.zod.parse(sessionID)))
   }
 
   export const LoopInput = z.object({
-    sessionID: Identifier.schema("session"),
-    resume_existing: z.boolean().optional(),
-  })
-  export const loop = fn(LoopInput, async (input) => {
-    const { sessionID, resume_existing } = input
-
-    const abort = resume_existing ? resume(sessionID) : start(sessionID)
-    if (!abort) {
-      return new Promise<MessageV2.WithParts>((resolve, reject) => {
-        const callbacks = state()[sessionID].callbacks
-        callbacks.push({ resolve, reject })
-      })
-    }
-
-    // kilocode_change start
-    void Bus.publish(Session.Event.TurnOpen, { sessionID })
-    let closeReason: Session.CloseReason = "completed"
-    let finished = false
-    using _ = defer(() => cancel(sessionID))
-    await using _close = defer(async () => {
-      if (!finished) closeReason = abort.aborted ? "interrupted" : "error"
-      await Bus.publish(Session.Event.TurnClose, { sessionID, reason: closeReason })
-    })
-    // kilocode_change end
-
-    // Structured output state
-    // Note: On session resumption, state is reset but outputFormat is preserved
-    // on the user message and will be retrieved from lastUser below
-    let structuredOutput: unknown | undefined
-
-    // kilocode_change — cache environment details per turn so the last user
-    // message stays byte-identical across tool-loop steps (prompt caching).
-    // Keyed by user message ID so it recomputes when a new user message arrives.
-    let envBlock: string | undefined
-    let envUser: string | undefined
-
-    let step = 0
-    const session = await Session.get(sessionID)
-    while (true) {
-      SessionStatus.set(sessionID, { type: "busy" })
-      log.info("loop", { step, sessionID })
-      // kilocode_change start
-      if (abort.aborted) {
-        closeReason = "interrupted"
-        break
-      }
-      // kilocode_change end
-      let msgs = await MessageV2.filterCompacted(MessageV2.stream(sessionID))
-
-      let lastUser: MessageV2.User | undefined
-      let lastAssistant: MessageV2.Assistant | undefined
-      let lastFinished: MessageV2.Assistant | undefined
-      let tasks: (MessageV2.CompactionPart | MessageV2.SubtaskPart)[] = []
-      for (let i = msgs.length - 1; i >= 0; i--) {
-        const msg = msgs[i]
-        if (!lastUser && msg.info.role === "user") lastUser = msg.info as MessageV2.User
-        if (!lastAssistant && msg.info.role === "assistant") lastAssistant = msg.info as MessageV2.Assistant
-        if (!lastFinished && msg.info.role === "assistant" && msg.info.finish)
-          lastFinished = msg.info as MessageV2.Assistant
-        if (lastUser && lastFinished) break
-        const task = msg.parts.filter((part) => part.type === "compaction" || part.type === "subtask")
-        if (task && !lastFinished) {
-          tasks.push(...task)
-        }
-      }
-
-      if (!lastUser) throw new Error("No user message found in stream. This should never happen.")
-      if (
-        lastAssistant?.finish &&
-        !["tool-calls", "unknown"].includes(lastAssistant.finish) &&
-        lastUser.id < lastAssistant.id
-      ) {
-        // kilocode_change start - ask follow-up when plan_exit tool was called
-        if (shouldAskPlanFollowup({ messages: msgs, abort })) {
-          const action = await PlanFollowup.ask({ sessionID, messages: msgs, abort })
-          if (action === "continue") continue
-        }
-        // kilocode_change end
-        log.info("exiting loop", { sessionID })
-        break
-      }
-
-      step++
-      if (step === 1)
-        ensureTitle({
-          session,
-          modelID: lastUser.model.modelID,
-          providerID: lastUser.model.providerID,
-          history: msgs,
-        })
-
-      const model = await Provider.getModel(lastUser.model.providerID, lastUser.model.modelID).catch((e) => {
-        if (Provider.ModelNotFoundError.isInstance(e)) {
-          const hint = e.data.suggestions?.length ? ` Did you mean: ${e.data.suggestions.join(", ")}?` : ""
-          Bus.publish(Session.Event.Error, {
-            sessionID,
-            error: new NamedError.Unknown({
-              message: `Model not found: ${e.data.providerID}/${e.data.modelID}.${hint}`,
-            }).toObject(),
-          })
-        }
-        throw e
-      })
-      const task = tasks.pop()
-
-      // pending subtask
-      // TODO: centralize "invoke tool" logic
-      if (task?.type === "subtask") {
-        const taskTool = await TaskTool.init()
-        const taskModel = task.model ? await Provider.getModel(task.model.providerID, task.model.modelID) : model
-        const assistantMessage = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          role: "assistant",
-          parentID: lastUser.id,
-          sessionID,
-          mode: task.agent,
-          agent: task.agent,
-          variant: lastUser.variant,
-          path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
-          },
-          cost: 0,
-          tokens: {
-            input: 0,
-            output: 0,
-            reasoning: 0,
-            cache: { read: 0, write: 0 },
-          },
-          modelID: taskModel.id,
-          providerID: taskModel.providerID,
-          time: {
-            created: Date.now(),
-          },
-        })) as MessageV2.Assistant
-        let part = (await Session.updatePart({
-          id: Identifier.ascending("part"),
-          messageID: assistantMessage.id,
-          sessionID: assistantMessage.sessionID,
-          type: "tool",
-          callID: ulid(),
-          tool: TaskTool.id,
-          state: {
-            status: "running",
-            input: {
-              prompt: task.prompt,
-              description: task.description,
-              subagent_type: task.agent,
-              command: task.command,
-            },
-            time: {
-              start: Date.now(),
-            },
-          },
-        })) as MessageV2.ToolPart
-        const taskArgs = {
-          prompt: task.prompt,
-          description: task.description,
-          subagent_type: task.agent,
-          command: task.command,
-        }
-        await Plugin.trigger(
-          "tool.execute.before",
-          {
-            tool: "task",
-            sessionID,
-            callID: part.id,
-          },
-          { args: taskArgs },
-        )
-        let executionError: Error | undefined
-        const taskAgent = await Agent.get(task.agent)
-        const taskCtx: Tool.Context = {
-          agent: task.agent,
-          messageID: assistantMessage.id,
-          sessionID: sessionID,
-          abort,
-          callID: part.callID,
-          extra: { bypassAgentCheck: true },
-          messages: msgs,
-          async metadata(input) {
-            await Session.updatePart({
-              ...part,
-              type: "tool",
-              state: {
-                ...part.state,
-                ...input,
-              },
-            } satisfies MessageV2.ToolPart)
-          },
-          async ask(req) {
-            await PermissionNext.ask({
-              ...req,
-              sessionID: sessionID,
-              ruleset: PermissionNext.merge(taskAgent.permission, session.permission ?? []),
-            })
-          },
-        }
-        const result = await taskTool.execute(taskArgs, taskCtx).catch((error) => {
-          executionError = error
-          log.error("subtask execution failed", { error, agent: task.agent, description: task.description })
-          return undefined
-        })
-        const attachments = result?.attachments?.map((attachment) => ({
-          ...attachment,
-          id: Identifier.ascending("part"),
-          sessionID,
-          messageID: assistantMessage.id,
-        }))
-        await Plugin.trigger(
-          "tool.execute.after",
-          {
-            tool: "task",
-            sessionID,
-            callID: part.id,
-            args: taskArgs,
-          },
-          result,
-        )
-        assistantMessage.finish = "tool-calls"
-        assistantMessage.time.completed = Date.now()
-        await Session.updateMessage(assistantMessage)
-        if (result && part.state.status === "running") {
-          await Session.updatePart({
-            ...part,
-            state: {
-              status: "completed",
-              input: part.state.input,
-              title: result.title,
-              metadata: result.metadata,
-              output: result.output,
-              attachments,
-              time: {
-                ...part.state.time,
-                end: Date.now(),
-              },
-            },
-          } satisfies MessageV2.ToolPart)
-        }
-        if (!result) {
-          await Session.updatePart({
-            ...part,
-            state: {
-              status: "error",
-              error: executionError ? `Tool execution failed: ${executionError.message}` : "Tool execution failed",
-              time: {
-                start: part.state.status === "running" ? part.state.time.start : Date.now(),
-                end: Date.now(),
-              },
-              metadata: part.metadata,
-              input: part.state.input,
-            },
-          } satisfies MessageV2.ToolPart)
-        }
-
-        if (task.command) {
-          // Add synthetic user message to prevent certain reasoning models from erroring
-          // If we create assistant messages w/ out user ones following mid loop thinking signatures
-          // will be missing and it can cause errors for models like gemini for example
-          const summaryUserMsg: MessageV2.User = {
-            id: Identifier.ascending("message"),
-            sessionID,
-            role: "user",
-            time: {
-              created: Date.now(),
-            },
-            agent: lastUser.agent,
-            model: lastUser.model,
-            editorContext: lastUser.editorContext, // kilocode_change — preserve editor context
-          }
-          await Session.updateMessage(summaryUserMsg)
-          await Session.updatePart({
-            id: Identifier.ascending("part"),
-            messageID: summaryUserMsg.id,
-            sessionID,
-            type: "text",
-            text: "Summarize the task tool output above and continue with your task.",
-            synthetic: true,
-          } satisfies MessageV2.TextPart)
-        }
-
-        continue
-      }
-
-      // pending compaction
-      if (task?.type === "compaction") {
-        const result = await SessionCompaction.process({
-          messages: msgs,
-          parentID: lastUser.id,
-          abort,
-          sessionID,
-          auto: task.auto,
-          overflow: task.overflow,
-        })
-        if (result === "stop") break
-        continue
-      }
-
-      // context overflow, needs compaction
-      if (
-        lastFinished &&
-        lastFinished.summary !== true &&
-        (await SessionCompaction.isOverflow({ tokens: lastFinished.tokens, model }))
-      ) {
-        await SessionCompaction.create({
-          sessionID,
-          agent: lastUser.agent,
-          model: lastUser.model,
-          auto: true,
-        })
-        continue
-      }
-
-      // normal processing
-      const agent = await Agent.get(lastUser.agent)
-      const maxSteps = agent.steps ?? Infinity
-      const isLastStep = step >= maxSteps
-      msgs = await insertReminders({
-        messages: msgs,
-        agent,
-        session,
-      })
-
-      const processor = SessionProcessor.create({
-        assistantMessage: (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          parentID: lastUser.id,
-          role: "assistant",
-          mode: agent.name,
-          agent: agent.name,
-          variant: lastUser.variant,
-          path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
-          },
-          cost: 0,
-          tokens: {
-            input: 0,
-            output: 0,
-            reasoning: 0,
-            cache: { read: 0, write: 0 },
-          },
-          modelID: model.id,
-          providerID: model.providerID,
-          time: {
-            created: Date.now(),
-          },
-          sessionID,
-        })) as MessageV2.Assistant,
-        sessionID: sessionID,
-        model,
-        abort,
-      })
-      using _ = defer(() => InstructionPrompt.clear(processor.message.id))
-
-      // Check if user explicitly invoked an agent via @ in this turn
-      const lastUserMsg = msgs.findLast((m) => m.info.role === "user")
-      const bypassAgentCheck = lastUserMsg?.parts.some((p) => p.type === "agent") ?? false
-
-      const tools = await resolveTools({
-        agent,
-        session,
-        model,
-        tools: lastUser.tools,
-        processor,
-        bypassAgentCheck,
-        messages: msgs,
-      })
-
-      // Inject StructuredOutput tool if JSON schema mode enabled
-      if (lastUser.format?.type === "json_schema") {
-        tools["StructuredOutput"] = createStructuredOutputTool({
-          schema: lastUser.format.schema,
-          onSuccess(output) {
-            structuredOutput = output
-          },
-        })
-      }
-
-      if (step === 1) {
-        SessionSummary.summarize({
-          sessionID: sessionID,
-          messageID: lastUser.id,
-        })
-      }
-
-      // Ephemerally wrap queued user messages with a reminder to stay on track
-      if (step > 1 && lastFinished) {
-        for (const msg of msgs) {
-          if (msg.info.role !== "user" || msg.info.id <= lastFinished.id) continue
-          for (const part of msg.parts) {
-            if (part.type !== "text" || part.ignored || part.synthetic) continue
-            if (!part.text.trim()) continue
-            part.text = [
-              "<system-reminder>",
-              "The user sent the following message:",
-              part.text,
-              "",
-              "Please address this message and continue with your tasks.",
-              "</system-reminder>",
-            ].join("\n")
-          }
-        }
-      }
-
-      await Plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-
-      // kilocode_change start — ephemerally inject dynamic editor context into last user message
-      if (envUser !== lastUser.id) {
-        envBlock = environmentDetails(lastUser.editorContext)
-        envUser = lastUser.id
-      }
-      if (envBlock) {
-        const idx = msgs.findLastIndex((m) => m.info.role === "user")
-        if (idx !== -1)
-          msgs[idx] = {
-            ...msgs[idx],
-            parts: [
-              ...msgs[idx].parts,
-              {
-                id: Identifier.ascending("part"),
-                sessionID,
-                messageID: msgs[idx].info.id,
-                type: "text",
-                text: envBlock,
-              } satisfies MessageV2.TextPart,
-            ],
-          }
-      }
-      // kilocode_change end
-
-      // Build system prompt, adding structured output instruction if needed
-      const system = [
-        ...(await SystemPrompt.environment(model, lastUser.editorContext)),
-        ...(await InstructionPrompt.system()),
-      ] // kilocode_change
-      const format = lastUser.format ?? { type: "text" }
-      if (format.type === "json_schema") {
-        system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
-      }
-
-      const result = await processor.process({
-        user: lastUser,
-        agent,
-        abort,
-        sessionID,
-        system,
-        messages: [
-          ...MessageV2.toModelMessages(msgs, model),
-          ...(isLastStep
-            ? [
-                {
-                  role: "assistant" as const,
-                  content: MAX_STEPS,
-                },
-              ]
-            : []),
-        ],
-        tools,
-        model,
-        toolChoice: format.type === "json_schema" ? "required" : undefined,
-      })
-
-      // If structured output was captured, save it and exit immediately
-      // This takes priority because the StructuredOutput tool was called successfully
-      if (structuredOutput !== undefined) {
-        processor.message.structured = structuredOutput
-        processor.message.finish = processor.message.finish ?? "stop"
-        await Session.updateMessage(processor.message)
-        break
-      }
-
-      // Check if model finished (finish reason is not "tool-calls" or "unknown")
-      const modelFinished = processor.message.finish && !["tool-calls", "unknown"].includes(processor.message.finish)
-
-      if (modelFinished && !processor.message.error) {
-        if (format.type === "json_schema") {
-          // Model stopped without calling StructuredOutput tool
-          processor.message.error = new MessageV2.StructuredOutputError({
-            message: "Model did not produce structured output",
-            retries: 0,
-          }).toObject()
-          await Session.updateMessage(processor.message)
-          break
-        }
-      }
-
-      // kilocode_change start
-      if (result === "stop") {
-        if (abort.aborted || processor.message.error?.name === "MessageAbortedError") closeReason = "interrupted"
-        else if (processor.message.error) closeReason = "error"
-        break
-      }
-      // kilocode_change end
-      if (result === "compact") {
-        await SessionCompaction.create({
-          sessionID,
-          agent: lastUser.agent,
-          model: lastUser.model,
-          auto: true,
-          overflow: !processor.message.finish,
-        })
-      }
-      continue
-    }
-    SessionCompaction.prune({ sessionID })
-    // kilocode_change start
-    finished = true
-    // Return the stored interrupted assistant turn before surfacing AbortError.
-    for await (const item of MessageV2.stream(sessionID)) {
-      if (item.info.role === "user") continue
-      const queued = state()[sessionID]?.callbacks ?? []
-      for (const q of queued) {
-        q.resolve(item)
-      }
-      return item
-    }
-    if (abort.aborted) abort.throwIfAborted()
-    // kilocode_change end
-    throw new Error("Impossible")
+    sessionID: SessionID.zod,
   })
 
-  async function lastModel(sessionID: string) {
-    for await (const item of MessageV2.stream(sessionID)) {
-      if (item.info.role === "user" && item.info.model) return item.info.model
-    }
-    return Provider.defaultModel()
+  export async function loop(input: z.infer<typeof LoopInput>) {
+    return runPromise((svc) => svc.loop(LoopInput.parse(input)))
   }
 
-  /** @internal Exported for testing */
-  export async function resolveTools(input: {
-    agent: Agent.Info
-    model: Provider.Model
-    session: Session.Info
-    tools?: Record<string, boolean>
-    processor: SessionProcessor.Info
-    bypassAgentCheck: boolean
-    messages: MessageV2.WithParts[]
-  }) {
-    using _ = log.time("resolveTools")
-    const tools: Record<string, AITool> = {}
-
-    const context = (args: any, options: ToolCallOptions): Tool.Context => ({
-      sessionID: input.session.id,
-      abort: options.abortSignal!,
-      messageID: input.processor.message.id,
-      callID: options.toolCallId,
-      extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck },
-      agent: input.agent.name,
-      messages: input.messages,
-      metadata: async (val: { title?: string; metadata?: any }) => {
-        const match = input.processor.partFromToolCall(options.toolCallId)
-        if (match && match.state.status === "running") {
-          await Session.updatePart({
-            ...match,
-            state: {
-              title: val.title,
-              metadata: val.metadata,
-              status: "running",
-              input: args,
-              time: {
-                start: Date.now(),
-              },
-            },
-          })
-        }
-      },
-      async ask(req) {
-        await PermissionNext.ask({
-          ...req,
-          sessionID: input.session.id,
-          tool: { messageID: input.processor.message.id, callID: options.toolCallId },
-          ruleset: PermissionNext.merge(input.agent.permission, input.session.permission ?? []),
-        })
-      },
-    })
-
-    for (const item of await ToolRegistry.tools(
-      { modelID: input.model.api.id, providerID: input.model.providerID },
-      input.agent,
-    )) {
-      const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
-      tools[item.id] = tool({
-        id: item.id as any,
-        description: item.description,
-        inputSchema: jsonSchema(schema as any),
-        async execute(args, options) {
-          const ctx = context(args, options)
-          await Plugin.trigger(
-            "tool.execute.before",
-            {
-              tool: item.id,
-              sessionID: ctx.sessionID,
-              callID: ctx.callID,
-            },
-            {
-              args,
-            },
-          )
-          const result = await item.execute(args, ctx)
-          const output = {
-            ...result,
-            attachments: result.attachments?.map((attachment) => ({
-              ...attachment,
-              id: Identifier.ascending("part"),
-              sessionID: ctx.sessionID,
-              messageID: input.processor.message.id,
-            })),
-          }
-          await Plugin.trigger(
-            "tool.execute.after",
-            {
-              tool: item.id,
-              sessionID: ctx.sessionID,
-              callID: ctx.callID,
-              args,
-            },
-            output,
-          )
-          return output
-        },
+  export const ShellInput = z.object({
+    sessionID: SessionID.zod,
+    agent: z.string(),
+    model: z
+      .object({
+        providerID: ProviderID.zod,
+        modelID: ModelID.zod,
       })
-    }
+      .optional(),
+    command: z.string(),
+  })
+  export type ShellInput = z.infer<typeof ShellInput>
 
-    for (const [key, item] of Object.entries(await MCP.tools())) {
-      const execute = item.execute
-      if (!execute) continue
-
-      const transformed = ProviderTransform.schema(input.model, asSchema(item.inputSchema).jsonSchema)
-      item.inputSchema = jsonSchema(transformed)
-      // Wrap execute to add plugin hooks and format output
-      item.execute = async (args, opts) => {
-        const ctx = context(args, opts)
-
-        await Plugin.trigger(
-          "tool.execute.before",
-          {
-            tool: key,
-            sessionID: ctx.sessionID,
-            callID: opts.toolCallId,
-          },
-          {
-            args,
-          },
-        )
-
-        await ctx.ask({
-          permission: key,
-          metadata: {},
-          patterns: ["*"],
-          always: ["*"],
-        })
-
-        const result = await execute(args, opts)
-
-        await Plugin.trigger(
-          "tool.execute.after",
-          {
-            tool: key,
-            sessionID: ctx.sessionID,
-            callID: opts.toolCallId,
-            args,
-          },
-          result,
-        )
-
-        const textParts: string[] = []
-        const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
-
-        for (const contentItem of result.content) {
-          if (contentItem.type === "text") {
-            textParts.push(contentItem.text)
-          } else if (contentItem.type === "image") {
-            attachments.push({
-              type: "file",
-              mime: contentItem.mimeType,
-              url: `data:${contentItem.mimeType};base64,${contentItem.data}`,
-            })
-          } else if (contentItem.type === "resource") {
-            const { resource } = contentItem
-            if (resource.text) {
-              textParts.push(resource.text)
-            }
-            if (resource.blob) {
-              attachments.push({
-                type: "file",
-                mime: resource.mimeType ?? "application/octet-stream",
-                url: `data:${resource.mimeType ?? "application/octet-stream"};base64,${resource.blob}`,
-                filename: resource.uri,
-              })
-            }
-          }
-        }
-
-        const truncated = await Truncate.output(textParts.join("\n\n"), {}, input.agent)
-        const metadata = {
-          ...(result.metadata ?? {}),
-          truncated: truncated.truncated,
-          ...(truncated.truncated && { outputPath: truncated.outputPath }),
-        }
-
-        return {
-          title: "",
-          metadata,
-          output: truncated.content,
-          attachments: attachments.map((attachment) => ({
-            ...attachment,
-            id: Identifier.ascending("part"),
-            sessionID: ctx.sessionID,
-            messageID: input.processor.message.id,
-          })),
-          content: result.content, // directly return content to preserve ordering when outputting to model
-        }
-      }
-      tools[key] = item
-    }
-
-    return tools
+  export async function shell(input: ShellInput) {
+    return runPromise((svc) => svc.shell(ShellInput.parse(input)))
   }
+
+  export const CommandInput = z.object({
+    messageID: MessageID.zod.optional(),
+    sessionID: SessionID.zod,
+    agent: z.string().optional(),
+    model: z.string().optional(),
+    arguments: z.string(),
+    command: z.string(),
+    variant: z.string().optional(),
+    parts: z
+      .array(
+        z.discriminatedUnion("type", [
+          MessageV2.FilePart.omit({
+            messageID: true,
+            sessionID: true,
+          }).partial({
+            id: true,
+          }),
+        ]),
+      )
+      .optional(),
+  })
+  export type CommandInput = z.infer<typeof CommandInput>
+
+  export async function command(input: CommandInput) {
+    return runPromise((svc) => svc.command(CommandInput.parse(input)))
+  }
+
+  const lastModel = Effect.fnUntraced(function* (sessionID: SessionID) {
+    return yield* Effect.promise(async () => {
+      for await (const item of MessageV2.stream(sessionID)) {
+        if (item.info.role === "user" && item.info.model) return item.info.model
+      }
+      return Provider.defaultModel()
+    })
+  })
 
   /** @internal Exported for testing */
   export function createStructuredOutputTool(input: {
@@ -1035,1039 +1936,17 @@ export namespace SessionPrompt {
           metadata: { valid: true },
         }
       },
-      toModelOutput(result) {
+      toModelOutput({ output }) {
         return {
           type: "text",
-          value: result.output,
+          value: output.output,
         }
       },
     })
   }
-
-  async function createUserMessage(input: PromptInput) {
-    const agent = await Agent.get(input.agent ?? (await Agent.defaultAgent()))
-
-    const model = input.model ?? agent.model ?? (await lastModel(input.sessionID))
-    const full =
-      !input.variant && agent.variant
-        ? await Provider.getModel(model.providerID, model.modelID).catch(() => undefined)
-        : undefined
-    const variant = input.variant ?? (agent.variant && full?.variants?.[agent.variant] ? agent.variant : undefined)
-
-    const info: MessageV2.Info = {
-      id: input.messageID ?? Identifier.ascending("message"),
-      role: "user",
-      sessionID: input.sessionID,
-      time: {
-        created: Date.now(),
-      },
-      tools: input.tools,
-      agent: agent.name,
-      model,
-      system: input.system,
-      format: input.format,
-      variant,
-      editorContext: input.editorContext, // kilocode_change
-    }
-    using _ = defer(() => InstructionPrompt.clear(info.id))
-
-    type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
-    const assign = (part: Draft<MessageV2.Part>): MessageV2.Part => ({
-      ...part,
-      id: part.id ?? Identifier.ascending("part"),
-    })
-
-    const parts = await Promise.all(
-      input.parts.map(async (part): Promise<Draft<MessageV2.Part>[]> => {
-        if (part.type === "file") {
-          // before checking the protocol we check if this is an mcp resource because it needs special handling
-          if (part.source?.type === "resource") {
-            const { clientName, uri } = part.source
-            log.info("mcp resource", { clientName, uri, mime: part.mime })
-
-            const pieces: Draft<MessageV2.Part>[] = [
-              {
-                messageID: info.id,
-                sessionID: input.sessionID,
-                type: "text",
-                synthetic: true,
-                text: `Reading MCP resource: ${part.filename} (${uri})`,
-              },
-            ]
-
-            try {
-              const resourceContent = await MCP.readResource(clientName, uri)
-              if (!resourceContent) {
-                throw new Error(`Resource not found: ${clientName}/${uri}`)
-              }
-
-              // Handle different content types
-              const contents = Array.isArray(resourceContent.contents)
-                ? resourceContent.contents
-                : [resourceContent.contents]
-
-              for (const content of contents) {
-                if ("text" in content && content.text) {
-                  pieces.push({
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: content.text as string,
-                  })
-                } else if ("blob" in content && content.blob) {
-                  // Handle binary content if needed
-                  const mimeType = "mimeType" in content ? content.mimeType : part.mime
-                  pieces.push({
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: `[Binary content: ${mimeType}]`,
-                  })
-                }
-              }
-
-              pieces.push({
-                ...part,
-                messageID: info.id,
-                sessionID: input.sessionID,
-              })
-            } catch (error: unknown) {
-              log.error("failed to read MCP resource", { error, clientName, uri })
-              const message = error instanceof Error ? error.message : String(error)
-              pieces.push({
-                messageID: info.id,
-                sessionID: input.sessionID,
-                type: "text",
-                synthetic: true,
-                text: `Failed to read MCP resource ${part.filename}: ${message}`,
-              })
-            }
-
-            return pieces
-          }
-          const url = new URL(part.url)
-          switch (url.protocol) {
-            case "data:":
-              if (part.mime === "text/plain") {
-                return [
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify({ filePath: part.filename })}`,
-                  },
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: Buffer.from(part.url, "base64url").toString(),
-                  },
-                  {
-                    ...part,
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                  },
-                ]
-              }
-              break
-            case "file:":
-              log.info("file", { mime: part.mime })
-              // have to normalize, symbol search returns absolute paths
-              // Decode the pathname since URL constructor doesn't automatically decode it
-              const filepath = fileURLToPath(part.url)
-              const s = Filesystem.stat(filepath)
-
-              if (s?.isDirectory()) {
-                part.mime = "application/x-directory"
-              }
-
-              if (part.mime === "text/plain") {
-                let offset: number | undefined = undefined
-                let limit: number | undefined = undefined
-                const range = {
-                  start: url.searchParams.get("start"),
-                  end: url.searchParams.get("end"),
-                }
-                if (range.start != null) {
-                  const filePathURI = part.url.split("?")[0]
-                  let start = parseInt(range.start)
-                  let end = range.end ? parseInt(range.end) : undefined
-                  // some LSP servers (eg, gopls) don't give full range in
-                  // workspace/symbol searches, so we'll try to find the
-                  // symbol in the document to get the full range
-                  if (start === end) {
-                    const symbols = await LSP.documentSymbol(filePathURI).catch(() => [])
-                    for (const symbol of symbols) {
-                      let range: LSP.Range | undefined
-                      if ("range" in symbol) {
-                        range = symbol.range
-                      } else if ("location" in symbol) {
-                        range = symbol.location.range
-                      }
-                      if (range?.start?.line && range?.start?.line === start) {
-                        start = range.start.line
-                        end = range?.end?.line ?? start
-                        break
-                      }
-                    }
-                  }
-                  offset = Math.max(start, 1)
-                  if (end) {
-                    limit = end - (offset - 1)
-                  }
-                }
-                const args = { filePath: filepath, offset, limit }
-
-                const pieces: Draft<MessageV2.Part>[] = [
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
-                  },
-                ]
-
-                await ReadTool.init()
-                  .then(async (t) => {
-                    const model = await Provider.getModel(info.model.providerID, info.model.modelID)
-                    const readCtx: Tool.Context = {
-                      sessionID: input.sessionID,
-                      abort: new AbortController().signal,
-                      agent: input.agent!,
-                      messageID: info.id,
-                      extra: { bypassCwdCheck: true, model },
-                      messages: [],
-                      metadata: async () => {},
-                      ask: async () => {},
-                    }
-                    const result = await t.execute(args, readCtx)
-                    pieces.push({
-                      messageID: info.id,
-                      sessionID: input.sessionID,
-                      type: "text",
-                      synthetic: true,
-                      text: result.output,
-                    })
-                    if (result.attachments?.length) {
-                      pieces.push(
-                        ...result.attachments.map((attachment) => ({
-                          ...attachment,
-                          synthetic: true,
-                          filename: attachment.filename ?? part.filename,
-                          messageID: info.id,
-                          sessionID: input.sessionID,
-                        })),
-                      )
-                    } else {
-                      pieces.push({
-                        ...part,
-                        messageID: info.id,
-                        sessionID: input.sessionID,
-                      })
-                    }
-                  })
-                  .catch((error) => {
-                    log.error("failed to read file", { error })
-                    const message = error instanceof Error ? error.message : error.toString()
-                    Bus.publish(Session.Event.Error, {
-                      sessionID: input.sessionID,
-                      error: new NamedError.Unknown({
-                        message,
-                      }).toObject(),
-                    })
-                    pieces.push({
-                      messageID: info.id,
-                      sessionID: input.sessionID,
-                      type: "text",
-                      synthetic: true,
-                      text: `Read tool failed to read ${filepath} with the following error: ${message}`,
-                    })
-                  })
-
-                return pieces
-              }
-
-              if (part.mime === "application/x-directory") {
-                const args = { filePath: filepath }
-                const listCtx: Tool.Context = {
-                  sessionID: input.sessionID,
-                  abort: new AbortController().signal,
-                  agent: input.agent!,
-                  messageID: info.id,
-                  extra: { bypassCwdCheck: true },
-                  messages: [],
-                  metadata: async () => {},
-                  ask: async () => {},
-                }
-                const result = await ReadTool.init().then((t) => t.execute(args, listCtx))
-                return [
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: `Called the Read tool with the following input: ${JSON.stringify(args)}`,
-                  },
-                  {
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                    type: "text",
-                    synthetic: true,
-                    text: result.output,
-                  },
-                  {
-                    ...part,
-                    messageID: info.id,
-                    sessionID: input.sessionID,
-                  },
-                ]
-              }
-
-              FileTime.read(input.sessionID, filepath)
-              return [
-                {
-                  messageID: info.id,
-                  sessionID: input.sessionID,
-                  type: "text",
-                  text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
-                  synthetic: true,
-                },
-                {
-                  id: part.id,
-                  messageID: info.id,
-                  sessionID: input.sessionID,
-                  type: "file",
-                  url: `data:${part.mime};base64,` + (await Filesystem.readBytes(filepath)).toString("base64"),
-                  mime: part.mime,
-                  filename: part.filename!,
-                  source: part.source,
-                },
-              ]
-          }
-        }
-
-        if (part.type === "agent") {
-          // Check if this agent would be denied by task permission
-          const perm = PermissionNext.evaluate("task", part.name, agent.permission)
-          const hint = perm.action === "deny" ? " . Invoked by user; guaranteed to exist." : ""
-          return [
-            {
-              ...part,
-              messageID: info.id,
-              sessionID: input.sessionID,
-            },
-            {
-              messageID: info.id,
-              sessionID: input.sessionID,
-              type: "text",
-              synthetic: true,
-              // An extra space is added here. Otherwise the 'Use' gets appended
-              // to user's last word; making a combined word
-              text:
-                " Use the above message and context to generate a prompt and call the task tool with subagent: " +
-                part.name +
-                hint,
-            },
-          ]
-        }
-
-        return [
-          {
-            ...part,
-            messageID: info.id,
-            sessionID: input.sessionID,
-          },
-        ]
-      }),
-    ).then((x) => x.flat().map(assign))
-
-    await Plugin.trigger(
-      "chat.message",
-      {
-        sessionID: input.sessionID,
-        agent: input.agent,
-        model: input.model,
-        messageID: input.messageID,
-        variant: input.variant,
-      },
-      {
-        message: info,
-        parts,
-      },
-    )
-
-    await Session.updateMessage(info)
-    for (const part of parts) {
-      await Session.updatePart(part)
-    }
-
-    return {
-      info,
-      parts,
-    }
-  }
-
-  async function insertReminders(input: { messages: MessageV2.WithParts[]; agent: Agent.Info; session: Session.Info }) {
-    const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
-    if (!userMessage) return input.messages
-
-    // Original logic when experimental plan mode is disabled
-    if (!Flag.KILO_EXPERIMENTAL_PLAN_MODE) {
-      // kilocode_change start - inject plan file path so agent writes to .kilo/plans/
-      if (input.agent.name === "plan") {
-        const plan = Session.plan(input.session)
-        const exists = await Filesystem.exists(plan)
-        if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
-        const info = exists
-          ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.`
-          : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`
-        userMessage.parts.push({
-          id: Identifier.ascending("part"),
-          messageID: userMessage.info.id,
-          sessionID: userMessage.info.sessionID,
-          type: "text",
-          text: PROMPT_PLAN + `\n\n## Plan File\n${info}\nThis is the ONLY file you are allowed to write to or edit.`,
-          synthetic: true,
-        })
-      }
-      // kilocode_change end
-      const wasPlan = input.messages.some((msg) => msg.info.role === "assistant" && msg.info.agent === "plan")
-      // kilocode_change start - renamed from "build" to "code"
-      if (wasPlan && input.agent.name === "code") {
-        // kilocode_change end
-        userMessage.parts.push({
-          id: Identifier.ascending("part"),
-          messageID: userMessage.info.id,
-          sessionID: userMessage.info.sessionID,
-          type: "text",
-          text: CODE_SWITCH,
-          synthetic: true,
-        })
-      }
-      return input.messages
-    }
-
-    // New plan mode logic when flag is enabled
-    const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
-
-    // Switching from plan mode to build mode
-    if (input.agent.name !== "plan" && assistantMessage?.info.agent === "plan") {
-      const plan = Session.plan(input.session)
-      const exists = await Filesystem.exists(plan)
-      if (exists) {
-        const part = await Session.updatePart({
-          id: Identifier.ascending("part"),
-          messageID: userMessage.info.id,
-          sessionID: userMessage.info.sessionID,
-          type: "text",
-          text:
-            CODE_SWITCH + "\n\n" + `A plan file exists at ${plan}. You should execute on the plan defined within it`,
-          synthetic: true,
-        })
-        userMessage.parts.push(part)
-      }
-      return input.messages
-    }
-
-    // Entering plan mode
-    if (input.agent.name === "plan" && assistantMessage?.info.agent !== "plan") {
-      const plan = Session.plan(input.session)
-      const exists = await Filesystem.exists(plan)
-      if (!exists) await fs.mkdir(path.dirname(plan), { recursive: true })
-      const part = await Session.updatePart({
-        id: Identifier.ascending("part"),
-        messageID: userMessage.info.id,
-        sessionID: userMessage.info.sessionID,
-        type: "text",
-        text: `<system-reminder>
-Plan mode is active. The user indicated that they do not want you to execute yet -- you MUST NOT make any edits (with the exception of the plan file mentioned below), run any non-readonly tools (including changing configs or making commits), or otherwise make any changes to the system. This supersedes any other instructions you have received.
-
-## Plan File Info:
-${exists ? `A plan file already exists at ${plan}. You can read it and make incremental edits using the edit tool.` : `No plan file exists yet. You should create your plan at ${plan} using the write tool.`}
-You should build your plan incrementally by writing to or editing this file. NOTE that this is the only file you are allowed to edit - other than this you are only allowed to take READ-ONLY actions.
-
-## Plan Workflow
-
-### Phase 1: Initial Understanding
-Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
-
-1. Focus on understanding the user's request and the code associated with their request
-
-2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
-   - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
-   - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
-   - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
-   - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
-
-3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
-
-### Phase 2: Design
-Goal: Design an implementation approach.
-
-Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
-
-You can launch up to 1 agent(s) in parallel.
-
-**Guidelines:**
-- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
-- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
-
-Examples of when to use multiple agents:
-- The task touches multiple parts of the codebase
-- It's a large refactor or architectural change
-- There are many edge cases to consider
-- You'd benefit from exploring different approaches
-
-Example perspectives by task type:
-- New feature: simplicity vs performance vs maintainability
-- Bug fix: root cause vs workaround vs prevention
-- Refactoring: minimal change vs clean architecture
-
-In the agent prompt:
-- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
-- Describe requirements and constraints
-- Request a detailed implementation plan
-
-### Phase 3: Review
-Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
-1. Read the critical files identified by agents to deepen your understanding
-2. Ensure that the plans align with the user's original request
-3. Use question tool to clarify any remaining questions with the user
-
-### Phase 4: Final Plan
-Goal: Write your final plan to the plan file (the only file you can edit).
-- Include only your recommended approach, not all alternatives
-- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
-- Include the paths of critical files to be modified
-- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
-
-### Phase 5: Call plan_exit tool
-At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
-This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
-
-**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
-
-NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
-</system-reminder>`,
-        synthetic: true,
-      })
-      userMessage.parts.push(part)
-      return input.messages
-    }
-    return input.messages
-  }
-
-  export const ShellInput = z.object({
-    sessionID: Identifier.schema("session"),
-    agent: z.string(),
-    model: z
-      .object({
-        providerID: z.string(),
-        modelID: z.string(),
-      })
-      .optional(),
-    command: z.string(),
-  })
-  export type ShellInput = z.infer<typeof ShellInput>
-  export async function shell(input: ShellInput) {
-    const abort = start(input.sessionID)
-    if (!abort) {
-      throw new Session.BusyError(input.sessionID)
-    }
-
-    using _ = defer(() => {
-      // If no queued callbacks, cancel (the default)
-      const callbacks = state()[input.sessionID]?.callbacks ?? []
-      if (callbacks.length === 0) {
-        cancel(input.sessionID)
-      } else {
-        // Otherwise, trigger the session loop to process queued items
-        loop({ sessionID: input.sessionID, resume_existing: true }).catch((error) => {
-          log.error("session loop failed to resume after shell command", { sessionID: input.sessionID, error })
-        })
-      }
-    })
-
-    const session = await Session.get(input.sessionID)
-    if (session.revert) {
-      await SessionRevert.cleanup(session)
-    }
-    const agent = await Agent.get(input.agent)
-    const model = input.model ?? agent.model ?? (await lastModel(input.sessionID))
-    const userMsg: MessageV2.User = {
-      id: Identifier.ascending("message"),
-      sessionID: input.sessionID,
-      time: {
-        created: Date.now(),
-      },
-      role: "user",
-      agent: input.agent,
-      model: {
-        providerID: model.providerID,
-        modelID: model.modelID,
-      },
-    }
-    await Session.updateMessage(userMsg)
-    const userPart: MessageV2.Part = {
-      type: "text",
-      id: Identifier.ascending("part"),
-      messageID: userMsg.id,
-      sessionID: input.sessionID,
-      text: "The following tool was executed by the user",
-      synthetic: true,
-    }
-    await Session.updatePart(userPart)
-
-    const msg: MessageV2.Assistant = {
-      id: Identifier.ascending("message"),
-      sessionID: input.sessionID,
-      parentID: userMsg.id,
-      mode: input.agent,
-      agent: input.agent,
-      cost: 0,
-      path: {
-        cwd: Instance.directory,
-        root: Instance.worktree,
-      },
-      time: {
-        created: Date.now(),
-      },
-      role: "assistant",
-      tokens: {
-        input: 0,
-        output: 0,
-        reasoning: 0,
-        cache: { read: 0, write: 0 },
-      },
-      modelID: model.modelID,
-      providerID: model.providerID,
-    }
-    await Session.updateMessage(msg)
-    const part: MessageV2.Part = {
-      type: "tool",
-      id: Identifier.ascending("part"),
-      messageID: msg.id,
-      sessionID: input.sessionID,
-      tool: "bash",
-      callID: ulid(),
-      state: {
-        status: "running",
-        time: {
-          start: Date.now(),
-        },
-        input: {
-          command: input.command,
-        },
-      },
-    }
-    await Session.updatePart(part)
-    const shell = Shell.preferred()
-    const shellName = (
-      process.platform === "win32" ? path.win32.basename(shell, ".exe") : path.basename(shell)
-    ).toLowerCase()
-
-    const invocations: Record<string, { args: string[] }> = {
-      nu: {
-        args: ["-c", input.command],
-      },
-      fish: {
-        args: ["-c", input.command],
-      },
-      zsh: {
-        args: [
-          "-c",
-          "-l",
-          `
-            [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
-            [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
-            eval ${JSON.stringify(input.command)}
-          `,
-        ],
-      },
-      bash: {
-        args: [
-          "-c",
-          "-l",
-          `
-            shopt -s expand_aliases
-            [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
-            eval ${JSON.stringify(input.command)}
-          `,
-        ],
-      },
-      // Windows cmd
-      cmd: {
-        args: ["/c", input.command],
-      },
-      // Windows PowerShell
-      powershell: {
-        args: ["-NoProfile", "-Command", input.command],
-      },
-      pwsh: {
-        args: ["-NoProfile", "-Command", input.command],
-      },
-      // Fallback: any shell that doesn't match those above
-      //  - No -l, for max compatibility
-      "": {
-        args: ["-c", `${input.command}`],
-      },
-    }
-
-    const matchingInvocation = invocations[shellName] ?? invocations[""]
-    const args = matchingInvocation?.args
-
-    const cwd = Instance.directory
-    const shellEnv = await Plugin.trigger(
-      "shell.env",
-      { cwd, sessionID: input.sessionID, callID: part.callID },
-      { env: {} },
-    )
-    const proc = spawn(shell, args, {
-      cwd,
-      detached: process.platform !== "win32",
-      stdio: ["ignore", "pipe", "pipe"],
-      env: {
-        ...process.env,
-        ...shellEnv.env,
-        TERM: "dumb",
-      },
-      windowsHide: true, // kilocode_change - prevent CMD window flash on Windows
-    })
-
-    let output = ""
-    // kilocode_change start - use StringDecoder to handle multi-byte UTF-8 characters split across chunks
-    // separate decoder per stream so partial bytes from one pipe don't corrupt the other
-    const stdoutDecoder = new StringDecoder("utf8")
-    const stderrDecoder = new StringDecoder("utf8")
-
-    proc.stdout?.on("data", (chunk) => {
-      output += stdoutDecoder.write(chunk)
-      if (part.state.status === "running") {
-        part.state.metadata = {
-          output: output,
-          description: "",
-        }
-        Session.updatePart(part)
-      }
-    })
-
-    proc.stderr?.on("data", (chunk) => {
-      output += stderrDecoder.write(chunk)
-      if (part.state.status === "running") {
-        part.state.metadata = {
-          output: output,
-          description: "",
-        }
-        Session.updatePart(part)
-      }
-    })
-    // kilocode_change end
-
-    let aborted = false
-    let exited = false
-
-    const kill = () => Shell.killTree(proc, { exited: () => exited })
-
-    if (abort.aborted) {
-      aborted = true
-      await kill()
-    }
-
-    const abortHandler = () => {
-      aborted = true
-      void kill()
-    }
-
-    abort.addEventListener("abort", abortHandler, { once: true })
-
-    await new Promise<void>((resolve) => {
-      proc.on("close", () => {
-        exited = true
-        abort.removeEventListener("abort", abortHandler)
-        resolve()
-      })
-    })
-
-    // kilocode_change - flush any trailing buffered bytes from decoders
-    output += stdoutDecoder.end()
-    output += stderrDecoder.end()
-
-    if (aborted) {
-      output += "\n\n" + ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
-    }
-    msg.time.completed = Date.now()
-    await Session.updateMessage(msg)
-    if (part.state.status === "running") {
-      part.state = {
-        status: "completed",
-        time: {
-          ...part.state.time,
-          end: Date.now(),
-        },
-        input: part.state.input,
-        title: "",
-        metadata: {
-          output,
-          description: "",
-        },
-        output,
-      }
-      await Session.updatePart(part)
-    }
-    return { info: msg, parts: [part] }
-  }
-
-  export const CommandInput = z.object({
-    messageID: Identifier.schema("message").optional(),
-    sessionID: Identifier.schema("session"),
-    agent: z.string().optional(),
-    model: z.string().optional(),
-    arguments: z.string(),
-    command: z.string(),
-    variant: z.string().optional(),
-    parts: z
-      .array(
-        z.discriminatedUnion("type", [
-          MessageV2.FilePart.omit({
-            messageID: true,
-            sessionID: true,
-          }).partial({
-            id: true,
-          }),
-        ]),
-      )
-      .optional(),
-  })
-  export type CommandInput = z.infer<typeof CommandInput>
   const bashRegex = /!`([^`]+)`/g
   // Match [Image N] as single token, quoted strings, or non-space sequences
   const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
   const placeholderRegex = /\$(\d+)/g
   const quoteTrimRegex = /^["']|["']$/g
-  /**
-   * Regular expression to match @ file references in text
-   * Matches @ followed by file paths, excluding commas, periods at end of sentences, and backticks
-   * Does not match when preceded by word characters or backticks (to avoid email addresses and quoted references)
-   */
-
-  export async function command(input: CommandInput) {
-    log.info("command", input)
-    const command = await Command.get(input.command)
-    const agentName = command.agent ?? input.agent ?? (await Agent.defaultAgent())
-
-    const raw = input.arguments.match(argsRegex) ?? []
-    const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
-
-    const templateCommand = await command.template
-
-    const placeholders = templateCommand.match(placeholderRegex) ?? []
-    let last = 0
-    for (const item of placeholders) {
-      const value = Number(item.slice(1))
-      if (value > last) last = value
-    }
-
-    // Let the final placeholder swallow any extra arguments so prompts read naturally
-    const withArgs = templateCommand.replaceAll(placeholderRegex, (_, index) => {
-      const position = Number(index)
-      const argIndex = position - 1
-      if (argIndex >= args.length) return ""
-      if (position === last) return args.slice(argIndex).join(" ")
-      return args[argIndex]
-    })
-    const usesArgumentsPlaceholder = templateCommand.includes("$ARGUMENTS")
-    let template = withArgs.replaceAll("$ARGUMENTS", input.arguments)
-
-    // If command doesn't explicitly handle arguments (no $N or $ARGUMENTS placeholders)
-    // but user provided arguments, append them to the template
-    if (placeholders.length === 0 && !usesArgumentsPlaceholder && input.arguments.trim()) {
-      template = template + "\n\n" + input.arguments
-    }
-
-    const shell = ConfigMarkdown.shell(template)
-    if (shell.length > 0) {
-      const results = await Promise.all(
-        shell.map(async ([, cmd]) => {
-          try {
-            return await $`${{ raw: cmd }}`.quiet().nothrow().text()
-          } catch (error) {
-            return `Error executing command: ${error instanceof Error ? error.message : String(error)}`
-          }
-        }),
-      )
-      let index = 0
-      template = template.replace(bashRegex, () => results[index++])
-    }
-    template = template.trim()
-
-    const taskModel = await (async () => {
-      if (command.model) {
-        return Provider.parseModel(command.model)
-      }
-      if (command.agent) {
-        const cmdAgent = await Agent.get(command.agent)
-        if (cmdAgent?.model) {
-          return cmdAgent.model
-        }
-      }
-      if (input.model) return Provider.parseModel(input.model)
-      return await lastModel(input.sessionID)
-    })()
-
-    try {
-      await Provider.getModel(taskModel.providerID, taskModel.modelID)
-    } catch (e) {
-      if (Provider.ModelNotFoundError.isInstance(e)) {
-        const { providerID, modelID, suggestions } = e.data
-        const hint = suggestions?.length ? ` Did you mean: ${suggestions.join(", ")}?` : ""
-        Bus.publish(Session.Event.Error, {
-          sessionID: input.sessionID,
-          error: new NamedError.Unknown({ message: `Model not found: ${providerID}/${modelID}.${hint}` }).toObject(),
-        })
-      }
-      throw e
-    }
-    const agent = await Agent.get(agentName)
-    if (!agent) {
-      const available = await Agent.list().then((agents) => agents.filter((a) => !a.hidden).map((a) => a.name))
-      const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-      const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-      Bus.publish(Session.Event.Error, {
-        sessionID: input.sessionID,
-        error: error.toObject(),
-      })
-      throw error
-    }
-
-    const templateParts = await resolvePromptParts(template)
-    const isSubtask = (agent.mode === "subagent" && command.subtask !== false) || command.subtask === true
-    const parts = isSubtask
-      ? [
-          {
-            type: "subtask" as const,
-            agent: agent.name,
-            description: command.description ?? "",
-            command: input.command,
-            model: {
-              providerID: taskModel.providerID,
-              modelID: taskModel.modelID,
-            },
-            // TODO: how can we make task tool accept a more complex input?
-            prompt: templateParts.find((y) => y.type === "text")?.text ?? "",
-          },
-        ]
-      : [...templateParts, ...(input.parts ?? [])]
-
-    const userAgent = isSubtask ? (input.agent ?? (await Agent.defaultAgent())) : agentName
-    const userModel = isSubtask
-      ? input.model
-        ? Provider.parseModel(input.model)
-        : await lastModel(input.sessionID)
-      : taskModel
-
-    await Plugin.trigger(
-      "command.execute.before",
-      {
-        command: input.command,
-        sessionID: input.sessionID,
-        arguments: input.arguments,
-      },
-      { parts },
-    )
-
-    const result = (await prompt({
-      sessionID: input.sessionID,
-      messageID: input.messageID,
-      model: userModel,
-      agent: userAgent,
-      parts,
-      variant: input.variant,
-    })) as MessageV2.WithParts
-
-    Bus.publish(Command.Event.Executed, {
-      name: input.command,
-      sessionID: input.sessionID,
-      arguments: input.arguments,
-      messageID: result.info.id,
-    })
-
-    return result
-  }
-
-  async function ensureTitle(input: {
-    session: Session.Info
-    history: MessageV2.WithParts[]
-    providerID: string
-    modelID: string
-  }) {
-    if (input.session.parentID) return
-    if (!Session.isDefaultTitle(input.session.title)) return
-
-    // Find first non-synthetic user message
-    const firstRealUserIdx = input.history.findIndex(
-      (m) => m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic),
-    )
-    if (firstRealUserIdx === -1) return
-
-    const isFirst =
-      input.history.filter((m) => m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic))
-        .length === 1
-    if (!isFirst) return
-
-    // Gather all messages up to and including the first real user message for context
-    // This includes any shell/subtask executions that preceded the user's first prompt
-    const contextMessages = input.history.slice(0, firstRealUserIdx + 1)
-    const firstRealUser = contextMessages[firstRealUserIdx]
-
-    // For subtask-only messages (from command invocations), extract the prompt directly
-    // since toModelMessage converts subtask parts to generic "The following tool was executed by the user"
-    const subtaskParts = firstRealUser.parts.filter((p) => p.type === "subtask") as MessageV2.SubtaskPart[]
-    const hasOnlySubtaskParts = subtaskParts.length > 0 && firstRealUser.parts.every((p) => p.type === "subtask")
-
-    const agent = await Agent.get("title")
-    if (!agent) return
-    const model = await iife(async () => {
-      if (agent.model) return await Provider.getModel(agent.model.providerID, agent.model.modelID)
-      return (
-        (await Provider.getSmallModel(input.providerID)) ?? (await Provider.getModel(input.providerID, input.modelID))
-      )
-    })
-    const result = await LLM.stream({
-      agent,
-      user: firstRealUser.info as MessageV2.User,
-      system: [],
-      small: true,
-      tools: {},
-      model,
-      abort: new AbortController().signal,
-      sessionID: `title-${input.session.id}`, // kilocode_change - separate taskID to prevent small-model leak (#6552)
-      retries: 2,
-      messages: [
-        {
-          role: "user",
-          content: "Generate a title for this conversation:\n",
-        },
-        ...(hasOnlySubtaskParts
-          ? [{ role: "user" as const, content: subtaskParts.map((p) => p.prompt).join("\n") }]
-          : MessageV2.toModelMessages(contextMessages, model)),
-      ],
-    })
-    const text = await result.text.catch((err) => log.error("failed to generate title", { error: err }))
-    if (text) {
-      const cleaned = text
-        .replace(/<think>[\s\S]*?<\/think>\s*/g, "")
-        .split("\n")
-        .map((line) => line.trim())
-        .find((line) => line.length > 0)
-      if (!cleaned) return
-
-      const title = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
-      return Session.setTitle({ sessionID: input.session.id, title })
-    }
-  }
 }

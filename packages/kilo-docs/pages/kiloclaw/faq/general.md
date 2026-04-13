@@ -28,7 +28,7 @@ Updates are managed by the KiloClaw platform team to ensure stability. When a ne
 
 ## How do I migrate my OpenClaw?
 
-Whether you're migrating from another OpenClaw provider to KiloClaw, moving between KiloClaw instances (e.g., individual to org or vice versa), or leaving KiloClaw for another OpenClaw provider, you should plan to migrate your workspace, memory, and context so your new Claw retains the same knowledge as before. 
+Whether you're migrating from another OpenClaw provider to KiloClaw, moving between KiloClaw instances (e.g., individual to org or vice versa), or leaving KiloClaw for another OpenClaw provider, you should plan to migrate your workspace, memory, and context so your new Claw retains the same knowledge as before.
 
 You should plan to reconfigure integrations in the new instance as these are often tied to the instance and will break if you attempt migration.
 

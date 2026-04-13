@@ -1,6 +1,11 @@
 <idea-plugin>
     <dependencies>
         <module name="intellij.platform.backend"/>
+        <module name="intellij.platform.kernel.backend"/>
         <module name="kilo.jetbrains.shared"/>
     </dependencies>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.rpc.KiloProjectRpcApiProvider"/>
+    </extensions>
 </idea-plugin>

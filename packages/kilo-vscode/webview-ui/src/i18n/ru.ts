@@ -947,6 +947,11 @@ export const dict = {
   "session.status.retry": "Повторная попытка…",
   "session.status.retrying": "Повторная попытка ({{ attempt }})… {{ message }}",
   "session.status.working": "Работаю…",
+  "session.status.offline": "Сеть отключена — переподключение...",
+
+  "ui.sessionTurn.cancel": "Отмена",
+  "ui.sessionTurn.status.thinking": "Думаю...",
+  "ui.sessionTurn.status.consideringNextSteps": "Продумываю следующие шаги...",
 
   "dialog.model.noProviders": "Нет провайдеров",
 
@@ -955,6 +960,7 @@ export const dict = {
   "prompt.placeholder.default": "Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
 
   "context.usage.sessionCost": "Стоимость сессии",
+  "context.usage.olderSessions": "{{count}} предыдущих сессий",
   "context.stats.thisSession": "Эта сессия",
 
   "time.justNow": "только что",
@@ -1068,6 +1074,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Продолжить цикл агента при отказе в разрешении",
   "settings.experimental.mcpTimeout.title": "Таймаут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Таймаут запросов MCP-сервера в миллисекундах",
+  "settings.experimental.remote.title": "Управление Remote",
+  "settings.experimental.remote.description":
+    "Включите управление Remote сеансами через Kilo Cloud. Это также повлияет на CLI на этом компьютере.",
+  "settings.experimental.remote.current": "Текущее состояние:",
+  "settings.experimental.remote.startup": "Автоматически включать при запуске:",
+  "settings.experimental.remote.active": "Активно",
+  "settings.experimental.remote.inactive": "Неактивно",
+  "settings.experimental.remote.hint": "Используйте /remote в чате для переключения",
   "settings.experimental.toolToggles": "Переключатели инструментов",
   "settings.agentBehaviour.defaultAgent.title": "Агент по умолчанию",
   "settings.agentBehaviour.defaultAgent.description": "Агент при отсутствии указания",
@@ -1132,6 +1146,16 @@ export const dict = {
     "Это встроенный режим. Его базовое определение нельзя изменить, но вы можете настроить переопределения ниже.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Пользовательское переопределение промпта для этого встроенного режима",
+  "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.permissions.title": "Вычисленные разрешения",
+  "settings.agentBehaviour.permissions.count": "{{count}} правил",
+  "settings.agentBehaviour.permissions.effective": "Действующие (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Инструмент",
+  "settings.agentBehaviour.permissions.col.pattern": "Шаблон",
+  "settings.agentBehaviour.permissions.col.action": "Действие",
+  "settings.agentBehaviour.permissions.copy": "Скопировать разрешения как JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Правила оцениваются по порядку — побеждает последнее совпавшее правило. Это разрешенный набор правил из бэкенда CLI.",
   "settings.agentBehaviour.removeMode.title": "Удалить режим",
   "settings.agentBehaviour.removeMode.confirm":
     'Удалить режим "{{name}}"? Это отключит режим, обновив вашу конфигурацию.',
@@ -1353,4 +1377,5 @@ export const dict = {
   "notifications.action.next": "Далее",
   "notifications.action.close": "Закрыть",
   "notifications.action.tryModel": "Попробовать {{model}}",
+  "notifications.action.tryModelGeneric": "Попробовать модель",
 }
