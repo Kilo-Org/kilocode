@@ -46,6 +46,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Tilføj kreditter",
 
   "ui.sessionTurn.status.delegating": "Delegerer arbejde",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planlægger næste trin",
   "ui.sessionTurn.status.gatheringContext": "Udforsker",
   "ui.sessionTurn.status.gatheredContext": "Udforsket",
@@ -59,7 +61,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Overvejer næste skridt",
 
   "ui.messagePart.questions.dismissed": "Spørgsmål afvist",
-  "ui.messagePart.compaction": "Historik komprimeret",
+  "ui.messagePart.compaction": "Session komprimeret",
   "ui.messagePart.context.read.one": "{{count}} læsning",
   "ui.messagePart.context.read.other": "{{count}} læsninger",
   "ui.messagePart.context.search.one": "{{count}} søgning",
@@ -125,6 +127,8 @@ export const dict = {
   "ui.message.collapse": "Skjul besked",
   "ui.message.copy": "Kopier",
   "ui.message.copyMessage": "Kopier besked",
+  "ui.message.forkMessage": "Forgren til ny session",
+  "ui.message.revertMessage": "Nulstil til dette punkt",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopieret!",
   "ui.message.revert": "Revert to here",
@@ -143,4 +147,16 @@ export const dict = {
   "ui.question.multiHint": "Vælg alle der gælder",
   "ui.question.singleHint": "Vælg ét svar",
   "ui.question.custom.placeholder": "Skriv dit svar...",
+
+  "ui.fileSearch.placeholder": "Find",
+  "ui.fileSearch.previousMatch": "Forrige match",
+  "ui.fileSearch.nextMatch": "Næste match",
+  "ui.fileSearch.close": "Luk søgning",
+  "ui.tool.task": "Opgave",
+  "ui.tool.skill": "Færdighed",
+  "ui.basicTool.called": "Kaldte `{{tool}}`",
+  "ui.toolErrorCard.failed": "Fejlede",
+  "ui.toolErrorCard.copyError": "Kopier fejl",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 }

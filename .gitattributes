@@ -18,3 +18,7 @@ packages/kilo-vscode/tests/**/*.png filter=lfs diff=lfs merge=lfs -text
 **/i18n/parity.test.ts linguist-generated=false
 packages/kilo-i18n/src/*.ts linguist-generated=true
 packages/kilo-i18n/src/en.ts linguist-generated=false
+
+# Auto-generated CLI reference docs
+packages/kilo-docs/markdoc/partials/cli-commands-table.md linguist-generated=true
+packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md linguist-generated=true

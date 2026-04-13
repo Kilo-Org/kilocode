@@ -53,6 +53,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Поповнити кредити",
 
   "ui.sessionTurn.status.delegating": "Делегування роботи",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Планування наступних кроків",
   "ui.sessionTurn.status.gatheringContext": "Дослідження",
   "ui.sessionTurn.status.gatheredContext": "Досліджено",
@@ -94,6 +96,16 @@ export const dict = {
   "ui.imagePreview.alt": "Попередній перегляд зображення",
   "ui.scrollView.ariaLabel": "вміст з прокруткою",
 
+  "ui.fileSearch.placeholder": "Знайти",
+  "ui.fileSearch.previousMatch": "Попередній збіг",
+  "ui.fileSearch.nextMatch": "Наступний збіг",
+  "ui.fileSearch.close": "Закрити пошук",
+
+  "ui.basicTool.called": "Викликано `{{tool}}`",
+
+  "ui.toolErrorCard.failed": "Помилка",
+  "ui.toolErrorCard.copyError": "Скопіювати помилку",
+
   "ui.tool.read": "Читати",
   "ui.tool.loaded": "Завантажено",
   "ui.tool.list": "Список",
@@ -107,6 +119,8 @@ export const dict = {
   "ui.tool.todos": "Завдання",
   "ui.tool.todos.read": "Читати завдання",
   "ui.tool.questions": "Питання",
+  "ui.tool.task": "Завдання",
+  "ui.tool.skill": "Навичка",
   "ui.tool.agent": "{{type}} Агент",
   "ui.tool.agent.default": "Агент",
 
@@ -134,10 +148,14 @@ export const dict = {
   "ui.message.copyMessage": "Копіювати повідомлення",
   "ui.message.copyResponse": "Копіювати відповідь",
   "ui.message.copied": "Скопійовано",
+  "ui.message.forkMessage": "Fork to new session",
+  "ui.message.revertMessage": "Revert message",
   "ui.message.revert": "Повернутися до цього місця",
   "ui.message.interrupted": "Перервано",
   "ui.message.queued": "В черзі",
   "ui.message.attachment.alt": "вкладення",
+  "ui.message.duration.seconds": "{{count}}с",
+  "ui.message.duration.minutesSeconds": "{{minutes}}хв {{seconds}}с",
 
   "ui.patch.action.deleted": "Видалено",
   "ui.patch.action.created": "Створено",

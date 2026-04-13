@@ -74,6 +74,7 @@ const serverEnv = {
   KILO_E2E_MESSAGE: "Seeded for UI e2e",
   KILO_E2E_MODEL: "kilo/kilo-auto/frontier", // kilocode_change
   KILO_CLIENT: "app",
+  KILO_STRICT_CONFIG_DEPS: "true",
 } satisfies Record<string, string>
 
 const runnerEnv = {

@@ -20,6 +20,17 @@ export const dict = {
   "agentManager.worktree.copyPath": "Копіювати шлях",
   "agentManager.worktree.openInVscode": "Відкрити у VS Code",
   "agentManager.worktree.rename": "Перейменувати",
+  "agentManager.worktree.moveToSection": "Перемістити до розділу",
+  "agentManager.worktree.newSection": "Новий розділь",
+  "agentManager.worktree.ungrouped": "Без групи",
+  "agentManager.section.rename": "Перейменувати розділ",
+  "agentManager.section.setColor": "Встановити колір",
+  "agentManager.section.delete": "Видалити розділ",
+  "agentManager.section.defaultColor": "За замовчуванням",
+  "agentManager.section.defaultName": "Новий розділ",
+  "agentManager.section.moveUp": "Перемістити вгору",
+  "agentManager.section.moveDown": "Перемістити вниз",
+  "agentManager.section.count": "{{count}}",
 
   "agentManager.hoverCard.branch": "ГІЛКА",
   "agentManager.hoverCard.base": "База",
@@ -50,6 +61,8 @@ export const dict = {
     "Відкрийте папку, що містить git-репозиторій, щоб використовувати робочі дерева.",
   "agentManager.setup.error.lfs_missing":
     "Цей репозиторій використовує Git LFS, але git-lfs не знайдено. Будь ласка, встановіть Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "У цьому репозиторії ще немає коммітів. Створіть початковий комміт перед використанням worktrees.",
   "agentManager.shortcuts.title": "Клавіатурні скорочення",
   "agentManager.shortcuts.category.sidebar": "Бічна панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",
@@ -105,6 +118,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Показати або приховати diff",
   "agentManager.diff.openFile": "Відкрити файл",
+  "agentManager.diff.revertFile": "Скасувати зміни файлу",
+  "agentManager.diff.revertSuccess": "Файл відновлено",
+  "agentManager.diff.revertError": "Не вдалося відновити",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.button": "Застосувати локально",

@@ -949,6 +949,7 @@ export function Part(props: MessagePartProps) {
 export interface ToolProps {
   input: Record<string, any>
   metadata: Record<string, any>
+  partMetadata?: Record<string, any>
   tool: string
   partID?: string
   callID?: string
@@ -1060,7 +1061,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   const input = () => part.state?.input ?? emptyInput
   // @ts-expect-error
-  const partMetadata = () => part.state?.metadata ?? emptyMetadata
+  const meta = () => part.state?.metadata ?? emptyMetadata
+  const top = () => part.metadata ?? emptyMetadata
 
   const render = createMemo(() => ToolRegistry.render(part.tool) ?? McpTool)
 
@@ -1122,7 +1124,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               tool={part.tool}
               partID={part.id}
               callID={part.callID}
-              metadata={partMetadata()}
+              metadata={meta()}
+              partMetadata={top()}
               // @ts-expect-error
               output={part.state.output}
               status={part.state.status}
@@ -1155,6 +1158,7 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 
 PART_MAPPING["text"] = function TextPartDisplay(props) {
   const data = useData()
+  const i18n = useI18n()
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
@@ -1165,6 +1169,21 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     if (props.showAssistantCopyPartID !== part().id) return
     return props.turnDiffSummary
   })
+
+  const showCopy = createMemo(() => {
+    if (props.message.role !== "assistant") return false
+    if (props.showAssistantCopyPartID === null) return false
+    return props.showAssistantCopyPartID === part().id
+  })
+  const [copied, setCopied] = createSignal(false)
+
+  const handleCopy = async () => {
+    const content = displayText()
+    if (!content) return
+    await navigator.clipboard.writeText(content)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   const handleMarkdownClick = (e: MouseEvent) => {
     if (!data.openFile) return
@@ -1200,6 +1219,24 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} onClick={handleMarkdownClick} />
         </div>
+        <Show when={showCopy()}>
+          <div data-slot="assistant-copy-wrapper">
+            <Tooltip
+              value={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              placement="right"
+              gutter={4}
+            >
+              <IconButton
+                icon={copied() ? "check" : "copy"}
+                size="normal"
+                variant="ghost"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={handleCopy}
+                aria-label={copied() ? i18n.t("ui.message.copied") : i18n.t("ui.message.copyResponse")}
+              />
+            </Tooltip>
+          </div>
+        </Show>
         <Show when={summary()}>
           {(render) => (
             <GrowBox animate={!!props.animate} fade gap={4} class="w-full min-w-0">
@@ -1220,6 +1257,9 @@ const streamed = new Set<string>()
 // Tracks parts that have already been auto-collapsed once, so component
 // recreation (from store updates while other parts stream) won't collapse again.
 const autocollapsed = new Set<string>()
+// Tracks parts that the user has explicitly opened, so auto-collapse won't
+// override the user's intent when reasoning finishes or a tool call starts.
+const userOpened = new Set<string>()
 
 // Overrides upstream flat markdown render with streaming reasoning block + auto-collapse.
 // Also filters encrypted reasoning data from OpenRouter that appears as [REDACTED].
@@ -1249,14 +1289,24 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   // Streaming → open. Just finished (was streaming, now done) → open briefly
   // then collapse. Historical → collapsed from the start.
-  const [open, setOpen] = createSignal(!done() || was)
+  // Restore user's explicit open preference across component recreations.
+  const [open, setOpen] = createSignal(!done() || was || userOpened.has(id))
+
+  // Propagate user intent to the module-level set so it survives component
+  // recreations (e.g. when a tool call arrives while reading reasoning).
+  const track = (value: boolean) => {
+    if (value) userOpened.add(id)
+    else userOpened.delete(id)
+    setOpen(value)
+  }
 
   // Auto-collapse once when reasoning finishes (streaming → done transition).
   // Collapses immediately so the grid transition runs in sync with the
   // streaming-height removal. Module-level Set prevents re-triggering on
-  // component recreation or when the user manually reopens.
+  // component recreation. Skipped entirely if the user has explicitly opened
+  // the block, so reading is not interrupted by a subsequent tool call.
   createEffect(() => {
-    if (done() && open() && !autocollapsed.has(id)) {
+    if (done() && open() && !autocollapsed.has(id) && !userOpened.has(id)) {
       autocollapsed.add(id)
       setOpen(false)
     }
@@ -1264,13 +1314,32 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
 
   onCleanup(() => {
     if (done()) streamed.delete(id)
+    // userOpened is intentionally NOT deleted here. The component recreates
+    // frequently while other parts stream (same as autocollapsed), so removing
+    // the entry on unmount would discard the user's explicit preference and
+    // re-collapse the block on the next remount.
   })
 
-  // Auto-scroll the content container while streaming
+  // Auto-scroll the content container while streaming.
+  // Use a plain mutable flag rather than checking dist inside the reactive
+  // effect: by the time the effect runs the DOM has already grown, so reading
+  // scrollHeight post-update incorrectly reports the user as scrolled away
+  // whenever a streaming chunk is > 10px tall.
   let ref: HTMLDivElement | undefined
+  let scrolled = false
+
+  const onScroll = (e: Event) => {
+    const el = e.currentTarget as HTMLDivElement
+    if (el.scrollHeight - el.clientHeight - el.scrollTop < 10) scrolled = false
+  }
+
+  const onWheel = (e: WheelEvent) => {
+    if (e.deltaY < 0) scrolled = true
+  }
+
   createEffect(() => {
     display()
-    if (!done() && ref) {
+    if (!done() && ref && !scrolled) {
       ref.scrollTop = ref.scrollHeight
     }
   })
@@ -1278,7 +1347,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
   return (
     <Show when={display()}>
       <div data-component="reasoning-part" data-streaming={!done() ? "" : undefined}>
-        <Collapsible open={open()} onOpenChange={setOpen} class="tool-collapsible">
+        <Collapsible open={open()} onOpenChange={track} class="tool-collapsible">
           <Collapsible.Trigger>
             <div data-slot="reasoning-header">
               <Icon name="brain" size="small" />
@@ -1287,7 +1356,7 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
             <Collapsible.Arrow />
           </Collapsible.Trigger>
           <Collapsible.Content>
-            <div data-slot="reasoning-content" ref={ref}>
+            <div data-slot="reasoning-content" ref={ref} onScroll={onScroll} onWheel={onWheel}>
               <Markdown text={display()} cacheKey={id} />
             </div>
           </Collapsible.Content>

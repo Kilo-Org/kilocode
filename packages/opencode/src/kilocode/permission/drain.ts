@@ -1,54 +1,52 @@
 import { Bus } from "@/bus"
-import { Wildcard } from "@/util/wildcard"
-import type { PermissionNext } from "@/permission/next"
+import { Deferred, Effect } from "effect"
+import { Permission } from "@/permission"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
+
+interface PendingEntry {
+  info: Permission.Request
+  ruleset: Permission.Ruleset
+  deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
+}
 
 /**
  * Auto-resolve pending permissions now fully covered by approved or denied rules.
  * When the user approves/denies a rule on subagent A, sibling subagent B's
  * pending permission for the same pattern resolves or rejects automatically.
  */
-export async function drainCovered(
-  pending: Record<
-    string,
-    {
-      info: PermissionNext.Request
-      ruleset: PermissionNext.Ruleset
-      resolve: () => void
-      reject: (e: any) => void
-    }
-  >,
-  approved: PermissionNext.Ruleset,
-  evaluate: typeof PermissionNext.evaluate,
-  events: typeof PermissionNext.Event,
-  DeniedError: typeof PermissionNext.DeniedError,
+export function drainCovered(
+  pending: Map<string, PendingEntry>,
+  approved: Permission.Ruleset,
+  _Denied: typeof Permission.DeniedError,
   exclude?: string,
-) {
-  for (const [id, entry] of Object.entries(pending)) {
-    if (id === exclude) continue
-    // Never auto-resolve config file edit permissions
-    if (ConfigProtection.isRequest(entry.info)) continue
-    const actions = entry.info.patterns.map((pattern) =>
-      evaluate(entry.info.permission, pattern, entry.ruleset, approved),
-    )
-    const denied = actions.some((r) => r.action === "deny")
-    const allowed = !denied && actions.every((r) => r.action === "allow")
-    if (!denied && !allowed) continue
-    delete pending[id]
-    if (denied) {
-      Bus.publish(events.Replied, {
-        sessionID: entry.info.sessionID,
-        requestID: entry.info.id,
-        reply: "reject",
-      })
-      entry.reject(new DeniedError(approved.filter((r) => Wildcard.match(entry.info.permission, r.permission))))
-    } else {
-      Bus.publish(events.Replied, {
-        sessionID: entry.info.sessionID,
-        requestID: entry.info.id,
-        reply: "always",
-      })
-      entry.resolve()
+): Effect.Effect<void> {
+  return Effect.gen(function* () {
+    for (const [id, entry] of pending) {
+      if (id === exclude) continue
+      // Never auto-resolve config file edit permissions
+      if (ConfigProtection.isRequest(entry.info)) continue
+      const actions = entry.info.patterns.map((pattern: string) =>
+        Permission.evaluate(entry.info.permission, pattern, entry.ruleset, approved),
+      )
+      const denied = actions.some((r: Permission.Rule) => r.action === "deny")
+      const allowed = !denied && actions.every((r: Permission.Rule) => r.action === "allow")
+      if (!denied && !allowed) continue
+      pending.delete(id)
+      if (denied) {
+        void Bus.publish(Permission.Event.Replied, {
+          sessionID: entry.info.sessionID,
+          requestID: entry.info.id,
+          reply: "reject",
+        })
+        yield* Deferred.fail(entry.deferred, new Permission.RejectedError())
+      } else {
+        void Bus.publish(Permission.Event.Replied, {
+          sessionID: entry.info.sessionID,
+          requestID: entry.info.id,
+          reply: "always",
+        })
+        yield* Deferred.succeed(entry.deferred, undefined)
+      }
     }
-  }
+  })
 }

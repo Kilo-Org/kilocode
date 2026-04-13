@@ -39,9 +39,11 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  childID,
 } from "./session-utils"
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
+import { resolveSessionAgent } from "./session-agent"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -133,6 +135,7 @@ interface SessionContextValue {
 
   // Agent/mode selection (per-session)
   agents: Accessor<AgentInfo[]>
+  allAgents: Accessor<AgentInfo[]>
   removeMode: (name: string) => void
   removeMcp: (name: string) => void
 
@@ -254,6 +257,7 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Agents (modes) loaded from the CLI backend
   const [agents, setAgents] = createSignal<AgentInfo[]>([])
+  const [allAgents, setAllAgents] = createSignal<AgentInfo[]>([])
   const [defaultAgent, setDefaultAgent] = createSignal("code")
 
   // Skills loaded from the CLI backend
@@ -342,6 +346,8 @@ export const SessionProvider: ParentComponent = (props) => {
     return pendingAgentSelection() ?? defaultAgent()
   })
 
+  const agentNames = createMemo(() => new Set(agents().map((agent) => agent.name)))
+
   /** Per-mode model from config (e.g. config.agent.code.model). */
   function getModeModel(agentName: string): ModelSelection | null {
     return parseModelString(config().agent?.[agentName]?.model)
@@ -411,6 +417,10 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function selectModel(providerID: string, modelID: string) {
     applyModel(selectedAgentName(), { providerID, modelID })
+    const sid = currentSessionID()
+    if (sid) {
+      setStore("messages", sid, (msgs = []) => msgs.filter((m) => !m.error))
+    }
   }
 
   /** The config/default model for the current mode (what settings says). */
@@ -461,6 +471,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
     setAgents(message.agents)
+    setAllAgents(message.allAgents ?? message.agents)
     setDefaultAgent(message.defaultAgent)
 
     const names = new Set(message.agents.map((a) => a.name))
@@ -480,25 +491,22 @@ export const SessionProvider: ParentComponent = (props) => {
         }
       }),
     )
+
+    // Rescan already-loaded message history so sessions whose messagesLoaded
+    // arrived before agentsLoaded (and therefore got no agent selection) are
+    // backfilled now that we know the valid agent names.
+    batch(() => {
+      for (const [sid, msgs] of Object.entries(store.messages)) {
+        if (store.agentSelections[sid]) continue
+        const agent = resolveSessionAgent(msgs, names)
+        if (agent) setStore("agentSelections", sid, agent)
+      }
+    })
   })
 
-  // Request agents in case the initial push was missed.
-  // Retry a few times because the extension's httpClient may
-  // not be ready yet when the first request arrives.
-  let agentRetries = 0
-  const agentMaxRetries = 5
-  const agentRetryMs = 500
-
+  // Request agents immediately; if the extension's httpClient is not yet ready,
+  // extensionDataReady will fire once initialization completes and we retry once.
   vscode.postMessage({ type: "requestAgents" })
-
-  const agentRetryTimer = setInterval(() => {
-    agentRetries++
-    if (agents().length > 0 || agentRetries >= agentMaxRetries) {
-      clearInterval(agentRetryTimer)
-      return
-    }
-    vscode.postMessage({ type: "requestAgents" })
-  }, agentRetryMs)
 
   // Skills loaded from the CLI backend
   const unsubSkills = vscode.onMessage((message: ExtensionMessage) => {
@@ -516,6 +524,24 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "removeSkill", location })
   }
 
+  // Handle permission events immediately (not in onMount) so we never miss
+  // the first permission request that may arrive before the DOM mounts.
+  // This matches the pattern already used for agentsLoaded and skillsLoaded.
+  const unsubPermissions = vscode.onMessage((message: ExtensionMessage) => {
+    switch (message.type) {
+      case "permissionRequest":
+        handlePermissionRequest(message.permission)
+        break
+      case "permissionResolved":
+        handlePermissionResolved(message.permissionID)
+        break
+      case "permissionError":
+        handlePermissionError(message.permissionID)
+        break
+    }
+  })
+  onCleanup(unsubPermissions)
+
   // MCP status loaded from CLI backend
   const unsubMcpStatus = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "mcpStatusLoaded") {
@@ -524,24 +550,28 @@ export const SessionProvider: ParentComponent = (props) => {
     }
   })
 
-  // Request MCP status on init with retry (same pattern as agents)
-  let mcpRetries = 0
+  // Request MCP status immediately; retry once on extensionDataReady if still missing.
   vscode.postMessage({ type: "requestMcpStatus" })
-  const mcpRetryTimer = setInterval(() => {
-    mcpRetries++
-    if (Object.keys(mcpStatus()).length > 0 || mcpRetries >= 5) {
-      clearInterval(mcpRetryTimer)
-      return
-    }
-    vscode.postMessage({ type: "requestMcpStatus" })
-  }, 500)
+
+  const fallback = setTimeout(() => {
+    if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
+    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
+  }, 3000)
+
+  const unsubReady = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "extensionDataReady") return
+    unsubReady()
+    clearTimeout(fallback)
+    if (agents().length === 0) vscode.postMessage({ type: "requestAgents" })
+    if (Object.keys(mcpStatus()).length === 0) vscode.postMessage({ type: "requestMcpStatus" })
+  })
 
   onCleanup(() => {
     unsubAgents()
     unsubSkills()
     unsubMcpStatus()
-    clearInterval(agentRetryTimer)
-    clearInterval(mcpRetryTimer)
+    unsubReady()
+    clearTimeout(fallback)
   })
 
   // Variant (thinking effort) selection — keyed by "providerID/modelID"
@@ -632,18 +662,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
         case "sessionStatus":
           handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
-          break
-
-        case "permissionRequest":
-          handlePermissionRequest(message.permission)
-          break
-
-        case "permissionResolved":
-          handlePermissionResolved(message.permissionID)
-          break
-
-        case "permissionError":
-          handlePermissionError(message.permissionID)
           break
 
         case "todoUpdated":
@@ -801,6 +819,11 @@ export const SessionProvider: ParentComponent = (props) => {
           setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
         }
       }
+
+      const agent = resolveSessionAgent(messages, agentNames())
+      if (agent) {
+        setStore("agentSelections", sessionID, agent)
+      }
     })
   }
 
@@ -834,6 +857,14 @@ export const SessionProvider: ParentComponent = (props) => {
       }
       return [...msgs, message]
     })
+
+    // Sync mode picker from any message role (user or assistant).
+    // agentNames() already excludes subagent/hidden agents, so subtask
+    // assistant messages (e.g. "task" agent) are silently ignored.
+    const agent = message.agent?.trim()
+    if (agent && agentNames().has(agent)) {
+      setStore("agentSelections", message.sessionID, agent)
+    }
 
     if (message.parts && message.parts.length > 0) {
       setStore("parts", message.id, message.parts)
@@ -896,7 +927,9 @@ export const SessionProvider: ParentComponent = (props) => {
     const info: SessionStatusInfo =
       newStatus === "retry"
         ? { type: "retry", attempt: attempt ?? 0, message: message ?? "", next: next ?? 0 }
-        : { type: newStatus }
+        : newStatus === "offline"
+          ? { type: "offline", message: message ?? "" }
+          : { type: newStatus }
     setStatusMap(sessionID, info)
     // Track busy start time
     if (prev.type === "idle" && newStatus !== "idle") {
@@ -1014,7 +1047,15 @@ export const SessionProvider: ParentComponent = (props) => {
         if (!parts) continue
         for (const p of parts) {
           if (p.type !== "tool") continue
-          const child = (p as { state?: { metadata?: { sessionId?: string } } }).state?.metadata?.sessionId
+          // Webview ToolState omits runtime metadata; task parts still carry it from the backend.
+          const child = childID(
+            p as {
+              type: string
+              tool?: string
+              metadata?: { sessionId?: string }
+              state?: { metadata?: { sessionId?: string } }
+            },
+          )
           if (child && !family.has(child)) {
             family.add(child)
             queue.push(child)
@@ -1715,12 +1756,23 @@ export const SessionProvider: ParentComponent = (props) => {
   const statusText = createMemo<string | undefined>(() => {
     if (status() === "idle") return undefined
     const fallback = language.t("ui.sessionTurn.status.consideringNextSteps")
+    const id = currentSessionID()
     const msgs = messages()
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role !== "assistant") continue
       const parts = getParts(msgs[i].id)
       if (parts.length === 0) break
-      return computeStatus(parts[parts.length - 1], language.t) ?? fallback
+      const raw = computeStatus(parts[parts.length - 1], language.t) ?? fallback
+      // When delegating to a subagent and that subagent is blocked on a prompt,
+      // replace the generic "Delegating work" label with a more informative one
+      // so the user understands why nothing appears to be happening.
+      if (raw === language.t("ui.sessionTurn.status.delegating")) {
+        const scoped = scopedPermissions(id)
+        if (scoped.length > 0) return language.t("ui.sessionTurn.status.delegatingWaitingPermission")
+        const scopedQ = scopedQuestions(id)
+        if (scopedQ.length > 0) return language.t("ui.sessionTurn.status.delegatingWaitingQuestion")
+      }
+      return raw
     }
     return fallback
   })
@@ -1767,6 +1819,7 @@ export const SessionProvider: ParentComponent = (props) => {
     costBreakdown,
     contextUsage,
     agents,
+    allAgents,
     skills,
     refreshSkills,
     removeSkill,

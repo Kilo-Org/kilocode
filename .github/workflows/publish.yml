@@ -1,5 +1,5 @@
 name: publish
-run-name: "${{ format('release {0}', inputs.bump) }}"
+run-name: "${{ format('{0} {1}', inputs.pre_release && 'pre-release' || 'release', inputs.bump) }}"
 
 on:
   # push:
@@ -22,6 +22,11 @@ on:
         description: "Override version (optional)"
         required: false
         type: string
+      pre_release:
+        description: "Publish as pre-release (VS Code marketplace + npm rc channel)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inputs.bump }}
 
@@ -53,6 +58,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           KILO_BUMP: ${{ inputs.bump }}
           KILO_VERSION: ${{ inputs.version }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     outputs:
@@ -78,6 +84,7 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
@@ -117,6 +124,7 @@ jobs:
         env:
           CLI_DIST_DIR: ../../packages/opencode/dist
           KILO_VERSION: ${{ needs.build-cli.outputs.version }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
 
       - uses: actions/upload-artifact@v4
@@ -394,6 +402,7 @@ jobs:
         env:
           KILO_VERSION: ${{ needs.version.outputs.version }}
           KILO_RELEASE: ${{ needs.version.outputs.release }}
+          KILO_PRE_RELEASE: ${{ inputs.pre_release }}
           GH_REPO: ${{ github.repository }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
           GITHUB_TOKEN: ${{ steps.committer.outputs.token }}

@@ -1,34 +1,49 @@
-import { describe, expect, mock, spyOn, test } from "bun:test"
-
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        queue() {},
-        flush: async () => undefined,
-      }
-    },
-  },
-}))
-
+import { NodeFileSystem } from "@effect/platform-node"
+import { describe, expect } from "bun:test"
+import { Effect, Layer, ServiceMap } from "effect"
+import * as Stream from "effect/Stream"
+import path from "path"
+import { Agent as AgentSvc } from "../../src/agent/agent"
+import { Bus } from "../../src/bus"
+import { Config } from "../../src/config/config"
+import { Permission } from "../../src/permission"
+import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import type { LLM as LLMType } from "../../src/session/llm"
-import type { MessageV2 } from "../../src/session/message-v2"
+import { ModelID, ProviderID } from "../../src/provider/schema"
+import { Session } from "../../src/session"
+import { LLM } from "../../src/session/llm"
+import { MessageV2 } from "../../src/session/message-v2"
+import { SessionProcessor } from "../../src/session/processor"
+import { MessageID, PartID, SessionID } from "../../src/session/schema"
+import { SessionStatus } from "../../src/session/status"
+import { Snapshot } from "../../src/snapshot"
 import { Log } from "../../src/util/log"
-import { tmpdir } from "../fixture/fixture"
+import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
+import { provideTmpdirInstance } from "../fixture/fixture"
+import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
+const ref = {
+  providerID: ProviderID.make("test"),
+  modelID: ModelID.make("test-model"),
+}
+
+type Script = Stream.Stream<LLM.Event, unknown>
+
+class TestLLM extends ServiceMap.Service<
+  TestLLM,
+  {
+    readonly reply: (...items: LLM.Event[]) => Effect.Effect<void>
+  }
+>()("@test/EmptyToolCallsLLM") {}
+
 function model(): Provider.Model {
   return {
-    id: "gpt-4",
-    providerID: "openai",
-    name: "GPT-4",
-    limit: {
-      context: 128000,
-      input: 0,
-      output: 4096,
-    },
+    id: "test-model",
+    providerID: "test",
+    name: "Test",
+    limit: { context: 128000, output: 4096 },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
     capabilities: {
       toolcall: true,
@@ -38,192 +53,206 @@ function model(): Provider.Model {
       input: { text: true, image: false, audio: false, video: false },
       output: { text: true, image: false, audio: false, video: false },
     },
-    api: { id: "openai", url: "https://api.openai.com/v1", npm: "@ai-sdk/openai" },
+    api: { npm: "@ai-sdk/openai" },
     options: {},
-    headers: {},
   } as Provider.Model
 }
 
-function stream(events: Array<Record<string, unknown>>): any {
+function usage() {
   return {
-    fullStream: (async function* () {
-      for (const e of events) yield e
-    })(),
+    inputTokens: 100,
+    outputTokens: 41,
+    totalTokens: 141,
   }
 }
 
+const llm = Layer.unwrap(
+  Effect.gen(function* () {
+    const queue: Script[] = []
+    const push = (item: Script) => {
+      queue.push(item)
+      return Effect.void
+    }
+    const reply = (...items: LLM.Event[]) => push(Stream.make(...items))
+    return Layer.mergeAll(
+      Layer.succeed(
+        LLM.Service,
+        LLM.Service.of({
+          stream: () => {
+            const item = queue.shift() ?? Stream.empty
+            return item
+          },
+        }),
+      ),
+      Layer.succeed(TestLLM, TestLLM.of({ reply })),
+    )
+  }),
+)
+
+const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
+const deps = Layer.mergeAll(
+  Session.defaultLayer,
+  Snapshot.defaultLayer,
+  AgentSvc.defaultLayer,
+  Permission.layer,
+  Plugin.defaultLayer,
+  Config.defaultLayer,
+  status,
+  llm,
+).pipe(Layer.provideMerge(infra))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
+
+const it = testEffect(env)
+
 describe("session processor empty tool-calls", () => {
-  test("converts finish to stop when model returns tool-calls with no tools", async () => {
-    const { Instance } = await import("../../src/project/instance")
-    const { LLM } = await import("../../src/session/llm")
-    const { Identifier } = await import("../../src/id/id")
-    const { MessageV2 } = await import("../../src/session/message-v2")
+  it.effect("converts finish to stop when model returns tool-calls with no tools", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
 
-    await using tmp = await tmpdir({ git: true })
-
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const { Session } = await import("../../src/session")
-        const { SessionProcessor } = await import("../../src/session/processor")
-        const m = model()
-        const session = await Session.create({})
-        const user = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          role: "user",
-          sessionID: session.id,
-          time: { created: Date.now() },
-          agent: "code",
-          model: { providerID: m.providerID, modelID: m.id },
-          tools: {},
-        })) as MessageV2.User
-        const assistant = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          parentID: user.id,
-          role: "assistant",
-          mode: "code",
-          agent: "code",
-          path: { cwd: Instance.directory, root: Instance.worktree },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: m.id,
-          providerID: m.providerID,
-          time: { created: Date.now() },
-          sessionID: session.id,
-        })) as MessageV2.Assistant
-
-        // Stream with finish_reason "tool-calls" but zero tool events
-        const llm = spyOn(LLM, "stream").mockResolvedValueOnce(
-          stream([
+          yield* test.reply(
             { type: "start" },
-            { type: "start-step" },
+            {
+              type: "start-step",
+            } as LLM.Event,
             {
               type: "finish-step",
               finishReason: "tool-calls",
-              usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
+              usage: usage(),
               providerMetadata: undefined,
-            },
-            { type: "finish" },
-          ]),
-        )
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
 
-        const processor = SessionProcessor.create({
-          assistantMessage: assistant,
-          sessionID: session.id,
-          model: m,
-          abort: AbortSignal.any([]),
-        })
-        const inp: LLMType.StreamInput = {
-          user,
-          sessionID: session.id,
-          model: m,
-          agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-          system: [],
-          abort: AbortSignal.any([]),
-          messages: [],
-          tools: {},
-        }
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
 
-        try {
-          const result = await processor.process(inp)
-          // The processor must convert "tool-calls" → "stop" when no tools were emitted
-          expect(processor.message.finish).toBe("stop")
-          // Verify no tool parts exist on the message
-          const parts = await MessageV2.parts(assistant.id)
-          const tools = parts.filter((p: any) => p.type === "tool")
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          yield* handle.process(input)
+          expect(handle.message.finish).toBe("stop")
+          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(0)
-        } finally {
-          llm.mockRestore()
-        }
-      },
-    })
-  })
+        }),
+      { git: true },
+    ),
+  )
 
-  test("preserves tool-calls finish when tool parts exist", async () => {
-    const { Instance } = await import("../../src/project/instance")
-    const { LLM } = await import("../../src/session/llm")
-    const { Identifier } = await import("../../src/id/id")
-    const { MessageV2 } = await import("../../src/session/message-v2")
+  it.effect("preserves tool-calls finish when tool parts exist", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
 
-    await using tmp = await tmpdir({ git: true })
-
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const { Session } = await import("../../src/session")
-        const { SessionProcessor } = await import("../../src/session/processor")
-        const m = model()
-        const session = await Session.create({})
-        const user = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          role: "user",
-          sessionID: session.id,
-          time: { created: Date.now() },
-          agent: "code",
-          model: { providerID: m.providerID, modelID: m.id },
-          tools: {},
-        })) as MessageV2.User
-        const assistant = (await Session.updateMessage({
-          id: Identifier.ascending("message"),
-          parentID: user.id,
-          role: "assistant",
-          mode: "code",
-          agent: "code",
-          path: { cwd: Instance.directory, root: Instance.worktree },
-          cost: 0,
-          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-          modelID: m.id,
-          providerID: m.providerID,
-          time: { created: Date.now() },
-          sessionID: session.id,
-        })) as MessageV2.Assistant
-
-        // Stream with finish_reason "tool-calls" AND a tool-input-start event
-        const llm = spyOn(LLM, "stream").mockResolvedValueOnce(
-          stream([
+          yield* test.reply(
             { type: "start" },
-            { type: "start-step" },
-            { type: "tool-input-start", id: "call_1", toolName: "test_tool" },
+            {
+              type: "start-step",
+            } as LLM.Event,
+            { type: "tool-input-start", id: "call_1", toolName: "test_tool" } as LLM.Event,
             {
               type: "finish-step",
               finishReason: "tool-calls",
-              usage: { inputTokens: 100, completionTokens: 41, totalTokens: 141 },
+              usage: usage(),
               providerMetadata: undefined,
-            },
-            { type: "finish" },
-          ]),
-        )
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
 
-        const processor = SessionProcessor.create({
-          assistantMessage: assistant,
-          sessionID: session.id,
-          model: m,
-          abort: AbortSignal.any([]),
-        })
-        const inp: LLMType.StreamInput = {
-          user,
-          sessionID: session.id,
-          model: m,
-          agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-          system: [],
-          abort: AbortSignal.any([]),
-          messages: [],
-          tools: {},
-        }
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
 
-        try {
-          const result = await processor.process(inp)
-          // finish must remain "tool-calls" because a tool part WAS created
-          expect(processor.message.finish).toBe("tool-calls")
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(handle.message.finish).toBe("tool-calls")
           expect(result).toBe("continue")
-          // Verify the tool part exists
-          const parts = await MessageV2.parts(assistant.id)
-          const tools = parts.filter((p: any) => p.type === "tool")
+          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(1)
-        } finally {
-          llm.mockRestore()
-        }
-      },
-    })
-  })
+        }),
+      { git: true },
+    ),
+  )
 })

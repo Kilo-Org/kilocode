@@ -26,6 +26,27 @@ export interface Worktree {
   groupId?: string
   /** User-provided display name for the worktree. */
   label?: string
+  /** Cached PR number for instant badge display on reload. */
+  prNumber?: number
+  /** Cached PR URL for instant badge display on reload. */
+  prUrl?: string
+  /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
+  prState?: string
+  /** Original branch created with the worktree, used for cleanup on deletion.
+   *  Set automatically when `branch` is updated via live sync. */
+  originalBranch?: string
+  /** Section this worktree belongs to, or undefined for ungrouped. */
+  sectionId?: string
+}
+
+export interface Section {
+  id: string
+  name: string
+  /** Color label (e.g. "Red", "Blue") mapped to VS Code theme CSS vars at render time, or null for default. */
+  color: string | null
+  /** Position among top-level sidebar children (sections and ungrouped worktrees). */
+  order: number
+  collapsed: boolean
 }
 
 /**
@@ -46,6 +67,7 @@ export interface ManagedSession {
 interface StateFile {
   worktrees: Record<string, Omit<Worktree, "id">>
   sessions: Record<string, Omit<ManagedSession, "id">>
+  sections?: Record<string, Omit<Section, "id">>
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
   sessionsCollapsed?: boolean
@@ -67,6 +89,7 @@ export class WorktreeStateManager {
   private readonly file: string
   private worktrees = new Map<string, Worktree>()
   private sessions = new Map<string, ManagedSession>()
+  private sections = new Map<string, Section>()
   private tabOrder: Record<string, string[]> = {}
   private worktreeOrder: string[] = []
   private collapsed = false
@@ -156,11 +179,22 @@ export class WorktreeStateManager {
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
     this.worktrees.set(id, wt)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
       `Added worktree ${id}: ${params.branch}${params.label ? ` (label=${params.label})` : ""}${params.groupId ? ` (group=${params.groupId})` : ""}`,
     )
     void this.save()
     return wt
+  }
+
+  updateWorktreeBranch(id: string, branch: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branch === branch) return false
+    if (!wt.originalBranch) wt.originalBranch = wt.branch
+    this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
+    wt.branch = branch
+    void this.save()
+    return true
   }
 
   updateWorktreeLabel(id: string, label: string): void {
@@ -171,27 +205,35 @@ export class WorktreeStateManager {
     void this.save()
   }
 
+  updateWorktreePR(id: string, prNumber?: number, prUrl?: string, prState?: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt) return
+    if (wt.prNumber === prNumber && wt.prUrl === prUrl && wt.prState === prState) return
+    wt.prNumber = prNumber
+    wt.prUrl = prUrl
+    wt.prState = prState
+    void this.save()
+  }
+
   removeWorktree(id: string): ManagedSession[] {
     const removed = this.worktrees.delete(id)
     if (!removed) return []
 
-    // Dissociate all sessions from this worktree (set worktreeId to null)
+    // Collect and remove all sessions belonging to this worktree
     const orphaned: ManagedSession[] = []
     for (const s of this.sessions.values()) {
       if (s.worktreeId === id) {
-        s.worktreeId = null
-        orphaned.push(s)
+        orphaned.push({ ...s })
+        this.sessions.delete(s.id)
       }
     }
 
     // Clean up tab order for this worktree
     delete this.tabOrder[id]
 
-    // Remove from worktree order
-    const idx = this.worktreeOrder.indexOf(id)
-    if (idx !== -1) this.worktreeOrder.splice(idx, 1)
+    this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
 
-    this.log(`Removed worktree ${id}, orphaned ${orphaned.length} sessions`)
+    this.log(`Removed worktree ${id}, removed ${orphaned.length} sessions`)
     void this.save()
     return orphaned
   }
@@ -204,12 +246,12 @@ export class WorktreeStateManager {
     return session
   }
 
-  /** Move an existing session to a worktree (promotion). */
-  moveSession(sessionId: string, worktreeId: string): void {
+  /** Move an existing session to a worktree (or back to local when null). */
+  moveSession(sessionId: string, worktreeId: string | null): void {
     const session = this.sessions.get(sessionId)
     if (!session) return
     session.worktreeId = worktreeId
-    this.log(`Moved session ${sessionId} to worktree ${worktreeId}`)
+    this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
   }
 
@@ -255,7 +297,160 @@ export class WorktreeStateManager {
   }
 
   setWorktreeOrder(order: string[]): void {
-    this.worktreeOrder = order
+    this.setNormalizedWorktreeOrder(order)
+    void this.save()
+  }
+
+  private setNormalizedWorktreeOrder(order: string[]): boolean {
+    const valid = new Set<string>()
+    for (const sec of this.sections.values()) valid.add(sec.id)
+    for (const wt of this.worktrees.values()) valid.add(wt.id)
+
+    const result: string[] = []
+    const seen = new Set<string>()
+    const add = (id: string) => {
+      if (!valid.has(id) || seen.has(id)) return
+      result.push(id)
+      seen.add(id)
+    }
+
+    for (const id of order) add(id)
+    for (const sec of [...this.sections.values()].sort((a, b) => a.order - b.order)) add(sec.id)
+    for (const wt of this.worktrees.values()) add(wt.id)
+
+    const changed =
+      result.length !== this.worktreeOrder.length || result.some((id, idx) => id !== this.worktreeOrder[idx])
+    this.worktreeOrder = result
+    return this.syncSectionOrder() || changed
+  }
+
+  private syncSectionOrder(): boolean {
+    const top = this.worktreeOrder.filter((id) => {
+      if (this.sections.has(id)) return true
+      const wt = this.worktrees.get(id)
+      return !!wt && !wt.sectionId
+    })
+    const index = new Map(top.map((id, idx) => [id, idx] as const))
+    const changes = [...this.sections.values()].map((sec) => {
+      const order = index.get(sec.id)
+      if (order === undefined || sec.order === order) return false
+      sec.order = order
+      return true
+    })
+    return changes.some(Boolean)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sections
+  // ---------------------------------------------------------------------------
+
+  getSections(): Section[] {
+    return [...this.sections.values()].sort((a, b) => a.order - b.order)
+  }
+
+  getSection(id: string): Section | undefined {
+    return this.sections.get(id)
+  }
+
+  addSection(name: string, color: string | null, worktreeIds?: string[]): Section {
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    const id = generateId("sec")
+    const order = this.worktreeOrder.filter((item) => {
+      if (this.sections.has(item)) return true
+      const wt = this.worktrees.get(item)
+      return !!wt && !wt.sectionId
+    }).length
+    const sec: Section = { id, name, color, order, collapsed: false }
+    this.sections.set(id, sec)
+    this.worktreeOrder.push(id)
+    if (worktreeIds) {
+      for (const wtId of worktreeIds) {
+        const wt = this.worktrees.get(wtId)
+        if (wt) wt.sectionId = id
+      }
+    }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    this.log(`Added section ${id}: "${name}"`)
+    void this.save()
+    return sec
+  }
+
+  renameSection(id: string, name: string): void {
+    const sec = this.sections.get(id)
+    if (!sec || !name) return
+    sec.name = name
+    this.log(`Renamed section ${id} to "${name}"`)
+    void this.save()
+  }
+
+  setSectionColor(id: string, color: string | null): void {
+    const sec = this.sections.get(id)
+    if (!sec) return
+    sec.color = color
+    void this.save()
+  }
+
+  toggleSection(id: string): void {
+    const sec = this.sections.get(id)
+    if (!sec) return
+    sec.collapsed = !sec.collapsed
+    void this.save()
+  }
+
+  deleteSection(id: string): void {
+    if (!this.sections.delete(id)) return
+    // Ungroup all worktrees in this section — do NOT delete them
+    for (const wt of this.worktrees.values()) {
+      if (wt.sectionId === id) wt.sectionId = undefined
+    }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder.filter((item) => item !== id))
+    this.log(`Deleted section ${id}, ungrouped its worktrees`)
+    void this.save()
+  }
+
+  moveSection(id: string, dir: -1 | 1): void {
+    const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
+    const top = this.worktreeOrder.filter((item) => {
+      if (this.sections.has(item)) return true
+      const wt = this.worktrees.get(item)
+      return !!wt && !wt.sectionId
+    })
+    const idx = top.indexOf(id)
+    const next = idx + dir
+    if (idx === -1 || next < 0 || next >= top.length) {
+      if (repaired) void this.save()
+      return
+    }
+    const target = top[next]!
+    const result = [...this.worktreeOrder]
+    const fi = result.indexOf(id)
+    if (fi === -1 || result.indexOf(target) === -1) {
+      if (repaired) void this.save()
+      return
+    }
+    result.splice(fi, 1)
+    const insertAt = result.indexOf(target) + (dir === 1 ? 1 : 0)
+    result.splice(insertAt, 0, id)
+    this.setNormalizedWorktreeOrder(result)
+    void this.save()
+  }
+
+  moveToSection(worktreeIds: string[], sectionId: string | null): void {
+    // Expand to include all multi-version siblings (same groupId)
+    const expanded = new Set(worktreeIds)
+    for (const wtId of worktreeIds) {
+      const wt = this.worktrees.get(wtId)
+      if (!wt?.groupId) continue
+      for (const sibling of this.worktrees.values()) {
+        if (sibling.groupId === wt.groupId) expanded.add(sibling.id)
+      }
+    }
+    for (const wtId of expanded) {
+      const wt = this.worktrees.get(wtId)
+      if (!wt) continue
+      wt.sectionId = sectionId ?? undefined
+    }
+    this.setNormalizedWorktreeOrder(this.worktreeOrder)
     void this.save()
   }
 
@@ -314,6 +509,7 @@ export class WorktreeStateManager {
       const data = JSON.parse(content) as StateFile
       this.worktrees.clear()
       this.sessions.clear()
+      this.sections.clear()
       this.tabOrder = {}
       this.worktreeOrder = []
       this.reviewDiffStyle = "unified"
@@ -326,8 +522,17 @@ export class WorktreeStateManager {
           }) ?? wt.path
         this.worktrees.set(id, { id, ...wt, path: fixed })
       }
+      let pruned = 0
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
+        // Skip orphaned sessions (null worktreeId or referencing a deleted worktree)
+        if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+          pruned++
+          continue
+        }
         this.sessions.set(id, { id, ...s })
+      }
+      for (const [id, sec] of Object.entries(data.sections ?? {})) {
+        this.sections.set(id, { id, ...sec })
       }
       if (data.tabOrder) {
         this.tabOrder = data.tabOrder
@@ -335,12 +540,17 @@ export class WorktreeStateManager {
       if (data.worktreeOrder) {
         this.worktreeOrder = data.worktreeOrder
       }
+      const repaired = this.setNormalizedWorktreeOrder(this.worktreeOrder)
       this.collapsed = data.sessionsCollapsed ?? false
       if (data.reviewDiffStyle === "split") {
         this.reviewDiffStyle = "split"
       }
       this.defaultBase = data.defaultBaseBranch
       this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
+      if (pruned > 0 || repaired) {
+        if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
+        void this.save()
+      }
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code
       if (code !== "ENOENT") {
@@ -350,7 +560,7 @@ export class WorktreeStateManager {
     return migration
   }
 
-  /** Remove worktrees whose directories no longer exist on disk. */
+  /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
   async validate(root: string): Promise<void> {
     let changed = false
     for (const wt of [...this.worktrees.values()]) {
@@ -361,7 +571,17 @@ export class WorktreeStateManager {
         changed = true
       }
     }
-    if (changed) await this.save()
+    // Prune orphaned sessions (worktreeId is null or references a deleted worktree)
+    for (const s of [...this.sessions.values()]) {
+      if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+        this.sessions.delete(s.id)
+        changed = true
+      }
+    }
+    if (changed) {
+      this.log(`Pruned orphaned sessions during validation`)
+      await this.save()
+    }
   }
 
   /** Wait for any in-flight save to complete without triggering a new one. */
@@ -403,6 +623,13 @@ export class WorktreeStateManager {
     for (const [id, s] of this.sessions) {
       const { id: _, ...rest } = s
       data.sessions[id] = rest
+    }
+    if (this.sections.size > 0) {
+      data.sections = {}
+      for (const [id, sec] of this.sections) {
+        const { id: _, ...rest } = sec
+        data.sections[id] = rest
+      }
     }
     if (Object.keys(this.tabOrder).length > 0) {
       data.tabOrder = this.tabOrder

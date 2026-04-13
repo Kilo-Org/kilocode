@@ -26,8 +26,9 @@ export namespace ProviderTransform {
     switch (npm) {
       case "@ai-sdk/github-copilot":
         return "copilot"
-      case "@ai-sdk/openai":
       case "@ai-sdk/azure":
+        return "azure"
+      case "@ai-sdk/openai":
         return "openai"
       case "@ai-sdk/amazon-bedrock":
         return "bedrock"
@@ -35,6 +36,7 @@ export namespace ProviderTransform {
       case "@ai-sdk/google-vertex/anthropic":
         return "anthropic"
       case "@ai-sdk/google-vertex":
+        return "vertex"
       case "@ai-sdk/google":
         return "google"
       case "@ai-sdk/gateway":
@@ -53,7 +55,11 @@ export namespace ProviderTransform {
   ): ModelMessage[] {
     // Anthropic rejects messages with empty content - filter out empty string messages
     // and remove empty text/reasoning parts from array content
-    if (model.api.npm === "@ai-sdk/anthropic") {
+    // kilocode_change start - only filter for Claude models on Bedrock, not all Bedrock models
+    const bedrock = model.api.npm === "@ai-sdk/amazon-bedrock"
+    const claude = model.api.id.includes("anthropic") || model.api.id.includes("claude") || model.id.includes("claude")
+    if (model.api.npm === "@ai-sdk/anthropic" || (bedrock && claude)) {
+      // kilocode_change end
       msgs = msgs
         .map((msg) => {
           if (typeof msg.content === "string") {
@@ -74,17 +80,29 @@ export namespace ProviderTransform {
     }
 
     if (model.api.id.includes("claude")) {
+      const scrub = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, "_")
       return msgs.map((msg) => {
-        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
-          msg.content = msg.content.map((part) => {
-            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
-              return {
-                ...part,
-                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+        if (msg.role === "assistant" && Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: msg.content.map((part) => {
+              if (part.type === "tool-call" || part.type === "tool-result") {
+                return { ...part, toolCallId: scrub(part.toolCallId) }
               }
-            }
-            return part
-          })
+              return part
+            }),
+          }
+        }
+        if (msg.role === "tool" && Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: msg.content.map((part) => {
+              if (part.type === "tool-result") {
+                return { ...part, toolCallId: scrub(part.toolCallId) }
+              }
+              return part
+            }),
+          }
         }
         return msg
       })
@@ -95,29 +113,33 @@ export namespace ProviderTransform {
       model.api.id.toLowerCase().includes("mistral") ||
       model.api.id.toLocaleLowerCase().includes("devstral")
     ) {
+      const scrub = (id: string) => {
+        return id
+          .replace(/[^a-zA-Z0-9]/g, "") // Remove non-alphanumeric characters
+          .substring(0, 9) // Take first 9 characters
+          .padEnd(9, "0") // Pad with zeros if less than 9 characters
+      }
       const result: ModelMessage[] = []
       for (let i = 0; i < msgs.length; i++) {
         const msg = msgs[i]
         const nextMsg = msgs[i + 1]
 
-        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+        if (msg.role === "assistant" && Array.isArray(msg.content)) {
           msg.content = msg.content.map((part) => {
-            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
-              // Mistral requires alphanumeric tool call IDs with exactly 9 characters
-              const normalizedId = part.toolCallId
-                .replace(/[^a-zA-Z0-9]/g, "") // Remove non-alphanumeric characters
-                .substring(0, 9) // Take first 9 characters
-                .padEnd(9, "0") // Pad with zeros if less than 9 characters
-
-              return {
-                ...part,
-                toolCallId: normalizedId,
-              }
+            if (part.type === "tool-call" || part.type === "tool-result") {
+              return { ...part, toolCallId: scrub(part.toolCallId) }
             }
             return part
           })
         }
-
+        if (msg.role === "tool" && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if (part.type === "tool-result") {
+              return { ...part, toolCallId: scrub(part.toolCallId) }
+            }
+            return part
+          })
+        }
         result.push(msg)
 
         // Fix message sequence: tool messages cannot be followed by user messages
@@ -197,12 +219,20 @@ export namespace ProviderTransform {
     }
 
     for (const msg of unique([...system, ...final])) {
-      const useMessageLevelOptions = model.providerID === "anthropic" || model.providerID.includes("bedrock")
+      const useMessageLevelOptions =
+        model.providerID === "anthropic" ||
+        model.providerID.includes("bedrock") ||
+        model.api.npm === "@ai-sdk/amazon-bedrock"
       const shouldUseContentOptions = !useMessageLevelOptions && Array.isArray(msg.content) && msg.content.length > 0
 
       if (shouldUseContentOptions) {
         const lastContent = msg.content[msg.content.length - 1]
-        if (lastContent && typeof lastContent === "object") {
+        if (
+          lastContent &&
+          typeof lastContent === "object" &&
+          lastContent.type !== "tool-approval-request" &&
+          lastContent.type !== "tool-approval-response"
+        ) {
           lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
           continue
         }
@@ -261,6 +291,7 @@ export namespace ProviderTransform {
       const encryptedDataSet = new Set<string>()
       const textSet = new Set<string>()
       for (const part of msg.content) {
+        if (!("providerOptions" in part)) continue // kilocode_change - ToolApprovalRequest lacks providerOptions
         const openrouterProviderOptions = part.providerOptions?.openrouter as
           | {
               reasoning_details?: { data?: string; text?: string; signature?: string }[]
@@ -330,7 +361,12 @@ export namespace ProviderTransform {
         return {
           ...msg,
           providerOptions: remap(msg.providerOptions),
-          content: msg.content.map((part) => ({ ...part, providerOptions: remap(part.providerOptions) })),
+          content: msg.content.map((part) => {
+            if (part.type === "tool-approval-request" || part.type === "tool-approval-response") {
+              return { ...part }
+            }
+            return { ...part, providerOptions: remap(part.providerOptions) }
+          }),
         } as typeof msg
       })
     }
@@ -395,9 +431,9 @@ export namespace ProviderTransform {
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
-      id.includes("glm") ||
+      // id.includes("glm") || // kilocode_change
       id.includes("mistral") ||
-      id.includes("kimi") ||
+      // id.includes("kimi") || // kilocode_change
       // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
       id.includes("k2p5")
     )
@@ -422,6 +458,14 @@ export namespace ProviderTransform {
     switch (model.api.npm) {
       case "@kilocode/kilo-gateway": // kilocode_change
       case "@openrouter/ai-sdk-provider":
+        // kilocode_change start
+        if (id.includes("glm") || id.includes("kimi") || id.includes("qwen")) {
+          return {
+            instant: { reasoning: { enabled: false } },
+            thinking: { reasoning: { enabled: true } },
+          }
+        }
+        // kilocode_change end
         if (
           !model.id.includes("gpt") &&
           !model.id.includes("gemini-3") &&
@@ -721,9 +765,21 @@ export namespace ProviderTransform {
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/perplexity
         return {}
 
-      case "@mymediset/sap-ai-provider":
       case "@jerome-benoit/sap-ai-provider-v2":
         if (model.api.id.includes("anthropic")) {
+          if (isAnthropicAdaptive) {
+            return Object.fromEntries(
+              adaptiveEfforts.map((effort) => [
+                effort,
+                {
+                  thinking: {
+                    type: "adaptive",
+                  },
+                  effort,
+                },
+              ]),
+            )
+          }
           return {
             high: {
               thinking: {
@@ -739,7 +795,26 @@ export namespace ProviderTransform {
             },
           }
         }
-        return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+        if (model.api.id.includes("gemini") && id.includes("2.5")) {
+          return {
+            high: {
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingBudget: 16000,
+              },
+            },
+            max: {
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingBudget: 24576,
+              },
+            },
+          }
+        }
+        if (model.api.id.includes("gpt") || /\bo[1-9]/.test(model.api.id)) {
+          return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+        }
+        return {}
     }
     return {}
   }
@@ -789,11 +864,13 @@ export namespace ProviderTransform {
     }
 
     if (input.model.api.npm === "@ai-sdk/google" || input.model.api.npm === "@ai-sdk/google-vertex") {
-      result["thinkingConfig"] = {
-        includeThoughts: true,
-      }
-      if (input.model.api.id.includes("gemini-3")) {
-        result["thinkingConfig"]["thinkingLevel"] = "high"
+      if (input.model.capabilities.reasoning) {
+        result["thinkingConfig"] = {
+          includeThoughts: true,
+        }
+        if (input.model.api.id.includes("gemini-3")) {
+          result["thinkingConfig"]["thinkingLevel"] = "high"
+        }
       }
     }
 

@@ -948,6 +948,11 @@ export const dict = {
   "session.status.retry": "Reintentando…",
   "session.status.retrying": "Reintentando (intento {{ attempt }})… {{ message }}",
   "session.status.working": "Trabajando…",
+  "session.status.offline": "Red desconectada — reconectando...",
+
+  "ui.sessionTurn.cancel": "Cancelar",
+  "ui.sessionTurn.status.thinking": "Pensando...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considerando siguientes pasos...",
 
   "dialog.model.noProviders": "Sin proveedores",
 
@@ -956,6 +961,7 @@ export const dict = {
   "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",
+  "context.usage.olderSessions": "{{count}} sesiones anteriores",
   "context.stats.thisSession": "Esta sesión",
 
   "time.justNow": "justo ahora",
@@ -1073,6 +1079,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continuar el bucle del agente cuando se deniega un permiso",
   "settings.experimental.mcpTimeout.title": "Tiempo de espera MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tiempo de espera para solicitudes del servidor MCP en milisegundos",
+  "settings.experimental.remote.title": "Control Remote",
+  "settings.experimental.remote.description":
+    "Habilite el control Remote de las sesiones a través de Kilo Cloud. Esto también afectará a las CLI de este equipo.",
+  "settings.experimental.remote.current": "Estado actual:",
+  "settings.experimental.remote.startup": "Activar automáticamente al inicio:",
+  "settings.experimental.remote.active": "Activo",
+  "settings.experimental.remote.inactive": "Inactivo",
+  "settings.experimental.remote.hint": "Usa /remote en el chat para alternar",
   "settings.experimental.toolToggles": "Interruptores de herramientas",
   "settings.agentBehaviour.defaultAgent.title": "Agente predeterminado",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar cuando no se especifica ninguno",
@@ -1137,6 +1151,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Este es un modo integrado. Su definición base no se puede cambiar, pero puedes configurar sobreescrituras a continuación.",
   "settings.agentBehaviour.editMode.promptOverride": "Anulación de prompt personalizado para este modo integrado",
+  "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.permissions.title": "Permisos calculados",
+  "settings.agentBehaviour.permissions.count": "{{count}} reglas",
+  "settings.agentBehaviour.permissions.effective": "Efectivo (comodín):",
+  "settings.agentBehaviour.permissions.col.tool": "Herramienta",
+  "settings.agentBehaviour.permissions.col.pattern": "Patrón",
+  "settings.agentBehaviour.permissions.col.action": "Acción",
+  "settings.agentBehaviour.permissions.copy": "Copiar permisos como JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Las reglas se evalúan en orden — gana la última regla coincidente. Este es el conjunto de reglas resuelto desde el backend de la CLI.",
   "settings.agentBehaviour.removeMode.title": "Eliminar modo",
   "settings.agentBehaviour.removeMode.confirm":
     '¿Eliminar el modo "{{name}}"? Esto desactivará el modo actualizando su configuración.',
@@ -1279,6 +1303,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Un núcleo pequeño y eficiente en todos los productos Kilo. Una experiencia familiar sin importar cómo elijas trabajar.",
   "migration.whatsNew.blogLink": "Leer el anuncio completo",
+  "migration.whatsNew.docsLink": "Novedades y preguntas frecuentes",
   "migration.whatsNew.continue": "Continuar",
 
   // Screen 2 — Migrate Settings
@@ -1361,4 +1386,5 @@ export const dict = {
   "notifications.action.next": "Siguiente",
   "notifications.action.close": "Cerrar",
   "notifications.action.tryModel": "Probar {{model}}",
+  "notifications.action.tryModelGeneric": "Probar modelo",
 }

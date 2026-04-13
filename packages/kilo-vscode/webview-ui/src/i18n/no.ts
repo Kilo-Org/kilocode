@@ -944,6 +944,11 @@ export const dict = {
   "session.status.retry": "Prøver på nytt…",
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
+  "session.status.offline": "Nettverk frakoblet — kobler til på nytt...",
+
+  "ui.sessionTurn.cancel": "Avbryt",
+  "ui.sessionTurn.status.thinking": "Tenker...",
+  "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
 
@@ -952,6 +957,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
+  "context.usage.olderSessions": "{{count}} eldre sesjoner",
   "context.stats.thisSession": "Denne sesjonen",
 
   "time.justNow": "akkurat nå",
@@ -1065,6 +1071,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
+  "settings.experimental.remote.title": "Remote-kontroll",
+  "settings.experimental.remote.description":
+    "Aktiver Remote-kontroll av økter via Kilo Cloud. Dette vil også påvirke CLI-er på denne maskinen.",
+  "settings.experimental.remote.current": "Nåværende status:",
+  "settings.experimental.remote.startup": "Aktiver automatisk ved oppstart:",
+  "settings.experimental.remote.active": "Aktiv",
+  "settings.experimental.remote.inactive": "Inaktiv",
+  "settings.experimental.remote.hint": "Bruk /remote i chatten for å veksle",
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
@@ -1126,6 +1140,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
+  "settings.agentBehaviour.permissions.count": "{{count}} regler",
+  "settings.agentBehaviour.permissions.effective": "Gjeldende (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Verktøy",
+  "settings.agentBehaviour.permissions.col.pattern": "Mønster",
+  "settings.agentBehaviour.permissions.col.action": "Handling",
+  "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
   "settings.agentBehaviour.removeMode.title": "Fjern modus",
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
@@ -1263,6 +1287,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
   "migration.whatsNew.blogLink": "Les hele kunngjøringen",
+  "migration.whatsNew.docsLink": "Nyheter og ofte stilte spørsmål",
   "migration.whatsNew.continue": "Fortsett",
 
   // Screen 2 — Migrate Settings
@@ -1343,4 +1368,5 @@ export const dict = {
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
+  "notifications.action.tryModelGeneric": "Prøv modell",
 } satisfies Partial<Record<Keys, string>>

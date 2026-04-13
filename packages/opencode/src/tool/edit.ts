@@ -12,6 +12,7 @@ import DESCRIPTION from "./edit.txt"
 import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Bus } from "../bus"
+import { Format } from "../format"
 import { FileTime } from "../file/time"
 import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
@@ -20,6 +21,27 @@ import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
+const MAX_DIFF_CONTENT = 500_000 // kilocode_change
+
+// kilocode_change start
+export function buildFileDiff(file: string, before: string, after: string): Snapshot.FileDiff {
+  const tooLarge = before.length > MAX_DIFF_CONTENT || after.length > MAX_DIFF_CONTENT
+  const fd: Snapshot.FileDiff = {
+    file,
+    before: tooLarge ? "" : before,
+    after: tooLarge ? "" : after,
+    additions: 0,
+    deletions: 0,
+  }
+  if (!tooLarge) {
+    for (const change of diffLines(before, after)) {
+      if (change.added) fd.additions += change.count || 0
+      if (change.removed) fd.deletions += change.count || 0
+    }
+  }
+  return fd
+}
+// kilocode_change end
 
 function normalizeLineEndings(text: string): string {
   return text.replaceAll("\r\n", "\n")
@@ -57,11 +79,14 @@ export const EditTool = Tool.define("edit", {
     let diff = ""
     let contentOld = ""
     let contentNew = ""
+    let cachedFilediff: Snapshot.FileDiff | undefined // kilocode_change
     await FileTime.withLock(filePath, async () => {
       if (params.oldString === "") {
         const existed = await Filesystem.exists(filePath)
+        if (existed) contentOld = await Filesystem.readText(filePath) // kilocode_change
         contentNew = params.newString
         diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
+        cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
         await ctx.ask({
           permission: "edit",
           patterns: [path.relative(Instance.worktree, filePath)],
@@ -69,17 +94,17 @@ export const EditTool = Tool.define("edit", {
           metadata: {
             filepath: filePath,
             diff,
+            filediff: cachedFilediff, // kilocode_change
           },
         })
         await Filesystem.write(filePath, params.newString)
-        await Bus.publish(File.Event.Edited, {
-          file: filePath,
-        })
+        await Format.file(filePath)
+        Bus.publish(File.Event.Edited, { file: filePath })
         await Bus.publish(FileWatcher.Event.Updated, {
           file: filePath,
           event: existed ? "change" : "add",
         })
-        FileTime.read(ctx.sessionID, filePath)
+        await FileTime.read(ctx.sessionID, filePath)
         return
       }
 
@@ -98,6 +123,7 @@ export const EditTool = Tool.define("edit", {
       diff = trimDiff(
         createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
       )
+      cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
       await ctx.ask({
         permission: "edit",
         patterns: [path.relative(Instance.worktree, filePath)],
@@ -105,13 +131,13 @@ export const EditTool = Tool.define("edit", {
         metadata: {
           filepath: filePath,
           diff,
+          filediff: cachedFilediff, // kilocode_change
         },
       })
 
       await Filesystem.write(filePath, contentNew)
-      await Bus.publish(File.Event.Edited, {
-        file: filePath,
-      })
+      await Format.file(filePath)
+      Bus.publish(File.Event.Edited, { file: filePath })
       await Bus.publish(FileWatcher.Event.Updated, {
         file: filePath,
         event: "change",
@@ -120,25 +146,15 @@ export const EditTool = Tool.define("edit", {
       diff = trimDiff(
         createTwoFilesPatch(filePath, filePath, normalizeLineEndings(contentOld), normalizeLineEndings(contentNew)),
       )
-      FileTime.read(ctx.sessionID, filePath)
+      await FileTime.read(ctx.sessionID, filePath)
     })
 
-    const filediff: Snapshot.FileDiff = {
-      file: filePath,
-      before: contentOld,
-      after: contentNew,
-      additions: 0,
-      deletions: 0,
-    }
-    for (const change of diffLines(contentOld, contentNew)) {
-      if (change.added) filediff.additions += change.count || 0
-      if (change.removed) filediff.deletions += change.count || 0
-    }
+    const filediff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
 
     ctx.metadata({
       metadata: {
         diff,
-        filediff,
+        filediff, // kilocode_change
         diagnostics: {},
       },
     })
@@ -160,7 +176,7 @@ export const EditTool = Tool.define("edit", {
       metadata: {
         diagnostics: filterDiagnostics(diagnostics, [normalizedFilePath]), // kilocode_change
         diff,
-        filediff,
+        filediff, // kilocode_change
       },
       title: `${path.relative(Instance.worktree, filePath)}`,
       output,

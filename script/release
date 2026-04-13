@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
 BUMP_TYPE=${1:-patch}
+PRE_RELEASE=${2:-false}
 
-gh workflow run publish.yml -f bump="$BUMP_TYPE"
+gh workflow run publish.yml -f bump="$BUMP_TYPE" -f pre_release="$PRE_RELEASE"

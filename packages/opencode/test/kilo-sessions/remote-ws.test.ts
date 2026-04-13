@@ -94,7 +94,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [{ id: "s1", status: "active", title: "Test" }],
+      getSessions: async () => ({ sessions: [{ id: "s1", status: "active", title: "Test" }] }),
       log: nolog(),
       heartbeat: 100,
     })
@@ -116,7 +116,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
     })
@@ -149,7 +149,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
     })
@@ -175,7 +175,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
     })
@@ -198,7 +198,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
       onClose: (code) => codes.push(code),
@@ -223,7 +223,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: cap.log,
       heartbeat: 60_000,
       onMessage: (msg) => received.push(msg),
@@ -263,7 +263,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [{ id: "s1", status: "active", title: "Test" }],
+      getSessions: async () => ({ sessions: [{ id: "s1", status: "active", title: "Test" }] }),
       log: nolog(),
       heartbeat: 100,
     })
@@ -292,7 +292,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
       timeout: 200,
@@ -319,7 +319,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
       timeout: 300,
@@ -347,7 +347,7 @@ describe("RemoteWS", () => {
     conn = RemoteWS.connect({
       url: server.url,
       getToken: async () => "tok",
-      getSessions: () => [],
+      getSessions: async () => ({ sessions: [] }),
       log: nolog(),
       heartbeat: 60_000,
       timeout: 100,

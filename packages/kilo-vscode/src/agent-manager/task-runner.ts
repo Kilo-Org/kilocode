@@ -28,7 +28,16 @@ export async function executeVscodeTask(config: SetupTaskConfig): Promise<number
     showReuseMessage: false,
   }
 
-  const execution = await vscode.tasks.executeTask(task)
+  let execution: vscode.TaskExecution
+  try {
+    execution = await vscode.tasks.executeTask(task)
+  } catch {
+    // Task type may not be registered in certain VS Code environments
+    // (e.g. remote, codespaces, or if package.json contribution is not loaded yet).
+    // Return undefined so SetupScriptRunner treats it as a non-fatal skip
+    // rather than VS Code surfacing its own error notification.
+    return undefined
+  }
 
   return new Promise((resolve, reject) => {
     let done = false

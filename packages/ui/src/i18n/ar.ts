@@ -47,6 +47,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "إضافة رصيد",
 
   "ui.sessionTurn.status.delegating": "تفويض العمل",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "تخطيط الخطوات التالية",
   "ui.sessionTurn.status.gatheringContext": "استكشاف",
   "ui.sessionTurn.status.gatheredContext": "تم الاستكشاف",
@@ -60,7 +62,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "النظر في الخطوات التالية",
 
   "ui.messagePart.questions.dismissed": "تم رفض الأسئلة",
-  "ui.messagePart.compaction": "تم ضغط السجل",
+  "ui.messagePart.compaction": "تم ضغط الجلسة",
   "ui.messagePart.context.read.one": "{{count}} قراءة",
   "ui.messagePart.context.read.other": "{{count}} قراءات",
   "ui.messagePart.context.search.one": "{{count}} بحث",
@@ -126,6 +128,8 @@ export const dict = {
   "ui.message.collapse": "طي الرسالة",
   "ui.message.copy": "نسخ",
   "ui.message.copyMessage": "نسخ الرسالة",
+  "ui.message.forkMessage": "تشعب إلى جلسة جديدة",
+  "ui.message.revertMessage": "إعادة التعيين إلى هذه النقطة",
   "ui.message.copyResponse": "نسخ الرد",
   "ui.message.copied": "تم النسخ!",
   "ui.message.revert": "Revert to here",
@@ -144,4 +148,16 @@ export const dict = {
   "ui.question.multiHint": "حدد كل ما ينطبق",
   "ui.question.singleHint": "حدد إجابة واحدة",
   "ui.question.custom.placeholder": "اكتب إجابتك...",
+
+  "ui.fileSearch.placeholder": "بحث",
+  "ui.fileSearch.previousMatch": "المطابقة السابقة",
+  "ui.fileSearch.nextMatch": "المطابقة التالية",
+  "ui.fileSearch.close": "إغلاق البحث",
+  "ui.tool.task": "مهمة",
+  "ui.tool.skill": "مهارة",
+  "ui.basicTool.called": "تم استدعاء `{{tool}}`",
+  "ui.toolErrorCard.failed": "فشل",
+  "ui.toolErrorCard.copyError": "نسخ الخطأ",
+  "ui.message.duration.seconds": "{{count}}ث",
+  "ui.message.duration.minutesSeconds": "{{minutes}}د {{seconds}}ث",
 }

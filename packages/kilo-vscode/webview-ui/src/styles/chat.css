@@ -1072,6 +1072,66 @@
   }
 }
 
+/* Remote Settings */
+[data-component="remote-settings"] {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="remote-settings-header"] {
+  margin-bottom: 4px;
+
+  [data-slot="settings-row-label-title"] {
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  [data-slot="settings-row-label-subtitle"] {
+    font-size: 12px;
+    color: var(--text-weak-base, var(--vscode-descriptionForeground));
+  }
+}
+
+[data-slot="remote-settings-row"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+[data-slot="remote-settings-label"] {
+  font-size: 12px;
+  color: var(--text-weak);
+  white-space: nowrap;
+}
+
+[data-slot="remote-settings-block"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+[data-slot="remote-settings-status"] {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-weak);
+}
+
+[data-slot="remote-settings-status"][data-active="true"] {
+  color: var(--vscode-testing-iconPassed, #5cb85c);
+}
+
+[data-slot="remote-settings-hint"] {
+  font-size: 11px;
+  color: var(--text-weak);
+  opacity: 0.7;
+  font-style: italic;
+}
+
 .prompt-input-hint-actions {
   display: flex;
   gap: 4px;
@@ -1996,6 +2056,101 @@
     word-break: break-all;
   }
 
+  [data-slot="permission-diff"] {
+    margin: 8px 0;
+    border: 1px solid var(--border-weak-base);
+    border-radius: 4px;
+    overflow: hidden;
+    --diffs-light-bg: var(--vscode-editor-background, #1e1e1e);
+    --diffs-dark-bg: var(--vscode-editor-background, #1e1e1e);
+    --syntax-diff-add: #2ea043;
+    --syntax-diff-delete: #da3633;
+    --diffs-bg-deletion-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 82%,
+      var(--syntax-diff-delete, #da3633)
+    );
+    --diffs-bg-deletion-number-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 72%,
+      var(--syntax-diff-delete, #da3633)
+    );
+    --diffs-bg-addition-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 82%,
+      var(--syntax-diff-add, #2ea043)
+    );
+    --diffs-bg-addition-number-override: color-mix(
+      in lab,
+      var(--vscode-editor-background, #1e1e1e) 72%,
+      var(--syntax-diff-add, #2ea043)
+    );
+  }
+
+  [data-slot="permission-diff-header"] {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 12px;
+    background: var(--surface-base, var(--vscode-editorWidget-background));
+    border-bottom: 1px solid var(--border-weak-base);
+  }
+
+  [data-slot="permission-diff-file-info"] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="permission-diff-icon"] {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  [data-slot="permission-diff-filename"] {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-family: var(--vscode-editor-font-family, monospace);
+    color: var(--text-base, var(--vscode-foreground));
+    min-width: 0;
+    flex: 1;
+  }
+
+  [data-slot="permission-diff-directory"] {
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: rtl;
+    text-align: left;
+  }
+
+  [data-slot="permission-diff-name"] {
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  [data-slot="permission-diff-actions"] {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  [data-slot="permission-diff-content"] {
+    max-height: 300px;
+    overflow: auto;
+  }
+
   [data-slot="permission-rules"] {
     margin: 0;
     max-height: 160px;
@@ -2657,7 +2812,7 @@ body.vscode-light
    ============================================ */
 
 [data-component="question-dock"] {
-  margin: 8px;
+  margin: 6px 8px;
   background-color: var(--surface-base);
   border-radius: 8px;
   overflow: hidden;
@@ -2667,8 +2822,8 @@ body.vscode-light
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    padding: 10px 10px 6px 14px;
+    gap: 6px;
+    padding: 6px 8px 4px 12px;
     cursor: pointer;
   }
 
@@ -2682,7 +2837,7 @@ body.vscode-light
 
   [data-slot="question-header-title"] {
     font-family: var(--font-family-sans);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-weak);
@@ -2691,7 +2846,7 @@ body.vscode-light
   /* Shown only when collapsed — truncated question preview */
   [data-slot="question-collapsed-preview"] {
     font-family: var(--font-family-sans);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
@@ -2770,34 +2925,34 @@ body.vscode-light
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     padding-bottom: 2px;
   }
 
   /* ── Body content ── */
   [data-slot="question-text"] {
     font-family: var(--font-family-sans);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
-    padding: 0 14px;
+    padding: 0 12px;
   }
 
   [data-slot="question-hint"] {
     font-family: var(--font-family-sans);
-    font-size: 13px;
+    font-size: 11px;
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-large);
     color: var(--text-weak);
-    padding: 0 14px;
+    padding: 0 12px;
   }
 
   [data-slot="question-options"] {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 4px 4px;
+    gap: 1px;
+    padding: 2px 4px;
     max-height: 40vh;
     overflow-y: auto;
     scrollbar-width: none;
@@ -2810,8 +2965,8 @@ body.vscode-light
   [data-slot="question-option"] {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    padding: 8px 10px;
+    gap: 8px;
+    padding: 5px 8px;
     background-color: transparent;
     border: none;
     border-radius: 6px;
@@ -2840,9 +2995,9 @@ body.vscode-light
   }
 
   [data-slot="question-option-box"] {
-    width: 16px;
-    height: 16px;
-    padding: 2px;
+    width: 14px;
+    height: 14px;
+    padding: 1px;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-base);
     display: inline-flex;
@@ -2903,7 +3058,7 @@ body.vscode-light
 
   [data-slot="option-label"] {
     font-family: var(--font-family-sans);
-    font-size: 14px;
+    font-size: 12px;
     font-weight: var(--font-weight-medium);
     line-height: var(--line-height-large);
     color: var(--text-strong);
@@ -2911,7 +3066,7 @@ body.vscode-light
 
   [data-slot="option-description"] {
     font-family: var(--font-family-sans);
-    font-size: 14px;
+    font-size: 11px;
     font-weight: var(--font-weight-regular);
     line-height: var(--line-height-large);
     color: var(--text-base);
@@ -2926,7 +3081,7 @@ body.vscode-light
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
+    padding: 4px 8px;
     margin: 0 4px;
     background-color: var(--surface-raised-stronger-non-alpha);
     border: none;
@@ -2941,7 +3096,7 @@ body.vscode-light
     border: none;
     outline: none;
     font-family: var(--font-family-sans);
-    font-size: var(--font-size-base);
+    font-size: 12px;
     color: var(--text-base);
     line-height: var(--line-height-large);
 
@@ -2996,7 +3151,7 @@ body.vscode-light
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 10px 10px;
+    padding: 4px 8px 6px;
   }
 
   [data-slot="question-footer-actions"] {
@@ -3253,4 +3408,190 @@ body.vscode-high-contrast-light {
     outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
     outline-offset: -1px;
   }
+}
+
+/* ============================================
+   Task Timeline
+   ============================================ */
+
+.task-timeline-outer {
+  width: 100%;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.task-timeline {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  touch-action: pan-x;
+  scrollbar-width: none; /* Firefox */
+}
+
+.task-timeline::-webkit-scrollbar {
+  display: none;
+}
+
+.task-timeline-bar {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 1px;
+  overflow: hidden;
+}
+
+.task-timeline-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.15s;
+}
+
+.task-timeline-bar:hover .task-timeline-bar-fill {
+  opacity: 0.7;
+}
+
+/* Fade-in animation for new bars */
+.task-timeline-bar-fill--new {
+  animation: timeline-fade-in 0.3s ease-out;
+}
+
+/* Active (latest) bar pulse when session is busy */
+.task-timeline-bar-fill--active {
+  animation: timeline-pulse 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes timeline-fade-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes timeline-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================
+   Context Progress Bar
+   ============================================ */
+
+.context-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-progress-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.context-progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+}
+
+.context-progress-used {
+  height: 100%;
+  background: var(--vscode-foreground);
+  transition:
+    width 0.3s ease-out,
+    background 0.3s ease-out;
+}
+
+.context-progress-used--hot {
+  background: color-mix(in srgb, var(--vscode-errorForeground) 60%, rgba(128, 0, 0, 1));
+}
+
+.context-progress-reserved {
+  height: 100%;
+  background: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  transition: width 0.3s ease-out;
+}
+
+.context-progress-available {
+  height: 100%;
+}
+
+/* ============================================
+   Task Header Graph Section
+   ============================================ */
+
+[data-component="task-header-graph"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="task-header-graph-row"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+/* Token breakdown in expanded state */
+.task-header-tokens {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.task-header-tokens-label {
+  font-weight: 600;
+}
+
+.task-header-tokens-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Expand toggle */
+[data-slot="task-header-expand"] {
+  all: unset;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  color: var(--vscode-descriptionForeground);
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+[data-slot="task-header-expand"]:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground);
 }

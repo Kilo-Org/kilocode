@@ -130,7 +130,10 @@
 
 /* Blog link */
 .migration-wizard__blog-link {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   margin-top: 16px;
 }
 

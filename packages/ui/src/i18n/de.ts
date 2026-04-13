@@ -52,6 +52,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Guthaben aufladen",
 
   "ui.sessionTurn.status.delegating": "Arbeit delegieren",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Nächste Schritte planen",
   "ui.sessionTurn.status.gatheringContext": "Erkunden",
   "ui.sessionTurn.status.gatheredContext": "Erkundet",
@@ -65,7 +67,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Nächste Schritte erwägen",
 
   "ui.messagePart.questions.dismissed": "Fragen verworfen",
-  "ui.messagePart.compaction": "Verlauf komprimiert",
+  "ui.messagePart.compaction": "Sitzung komprimiert",
   "ui.messagePart.context.read.one": "{{count}} Lesevorgang",
   "ui.messagePart.context.read.other": "{{count}} Lesevorgänge",
   "ui.messagePart.context.search.one": "{{count}} Suche",
@@ -131,6 +133,8 @@ export const dict = {
   "ui.message.collapse": "Nachricht reduzieren",
   "ui.message.copy": "Kopieren",
   "ui.message.copyMessage": "Nachricht kopieren",
+  "ui.message.forkMessage": "In neue Sitzung abzweigen",
+  "ui.message.revertMessage": "Auf diesen Punkt zurücksetzen",
   "ui.message.copyResponse": "Antwort kopieren",
   "ui.message.copied": "Kopiert!",
   "ui.message.revert": "Revert to here",
@@ -149,4 +153,16 @@ export const dict = {
   "ui.question.multiHint": "Alle zutreffenden auswählen",
   "ui.question.singleHint": "Eine Antwort auswählen",
   "ui.question.custom.placeholder": "Geben Sie Ihre Antwort ein...",
+
+  "ui.fileSearch.placeholder": "Suchen",
+  "ui.fileSearch.previousMatch": "Vorheriges Ergebnis",
+  "ui.fileSearch.nextMatch": "Nächstes Ergebnis",
+  "ui.fileSearch.close": "Suche schließen",
+  "ui.tool.task": "Aufgabe",
+  "ui.tool.skill": "Fähigkeit",
+  "ui.basicTool.called": "`{{tool}}` aufgerufen",
+  "ui.toolErrorCard.failed": "Fehlgeschlagen",
+  "ui.toolErrorCard.copyError": "Fehler kopieren",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 } satisfies Partial<Record<Keys, string>>

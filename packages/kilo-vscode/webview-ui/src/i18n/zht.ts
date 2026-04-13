@@ -929,6 +929,11 @@ export const dict = {
   "session.status.retry": "正在重試…",
   "session.status.retrying": "正在重試（第 {{ attempt }} 次）… {{ message }}",
   "session.status.working": "處理中…",
+  "session.status.offline": "網路已斷線 — 正在重新連線...",
+
+  "ui.sessionTurn.cancel": "取消",
+  "ui.sessionTurn.status.thinking": "思考中...",
+  "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步...",
 
   "dialog.model.noProviders": "沒有供應商",
 
@@ -937,6 +942,7 @@ export const dict = {
   "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
+  "context.usage.olderSessions": "{{count}} 個較早的工作階段",
   "context.stats.thisSession": "此工作階段",
 
   "time.justNow": "剛剛",
@@ -1046,6 +1052,13 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "權限被拒絕時繼續 Agent 迴圈",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
+  "settings.experimental.remote.title": "Remote 控制",
+  "settings.experimental.remote.description": "透過 Kilo Cloud 啟用工作階段的 Remote 控制。這也會影響此電腦上的 CLI。",
+  "settings.experimental.remote.current": "目前狀態：",
+  "settings.experimental.remote.startup": "啟動時自動啟用：",
+  "settings.experimental.remote.active": "已啟用",
+  "settings.experimental.remote.inactive": "已停用",
+  "settings.experimental.remote.hint": "在聊天中使用 /remote 來切換",
   "settings.experimental.toolToggles": "工具開關",
   "settings.agentBehaviour.defaultAgent.title": "預設 Agent",
   "settings.agentBehaviour.defaultAgent.description": "未指定時使用的 Agent",
@@ -1104,6 +1117,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.back": "返回列表",
   "settings.agentBehaviour.editMode.native": "這是一個內建模式。它的基礎定義無法更改，但您可以在下方設定覆寫項。",
   "settings.agentBehaviour.editMode.promptOverride": "此內建模式的自訂提示覆寫",
+  "settings.agentBehaviour.badge.subagent": "子代理",
+  "settings.agentBehaviour.permissions.title": "已計算的權限",
+  "settings.agentBehaviour.permissions.count": "{{count}} 條規則",
+  "settings.agentBehaviour.permissions.effective": "生效（萬用字元）：",
+  "settings.agentBehaviour.permissions.col.tool": "工具",
+  "settings.agentBehaviour.permissions.col.pattern": "模式",
+  "settings.agentBehaviour.permissions.col.action": "動作",
+  "settings.agentBehaviour.permissions.copy": "複製權限為 JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "規則會按順序評估 — 最後符合的規則為準。這是來自 CLI 後端的已解析規則集。",
   "settings.agentBehaviour.removeMode.title": "移除模式",
   "settings.agentBehaviour.removeMode.confirm": '要移除模式 "{{name}}" 嗎？這將透過更新設定來停用該模式。',
   "settings.agentBehaviour.removeMode.button": "移除",
@@ -1226,6 +1249,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "所有 Kilo 產品共享一個小巧高效的核心。無論你選擇哪種方式工作，都能獲得熟悉的體驗。",
   "migration.whatsNew.blogLink": "閱讀完整公告",
+  "migration.whatsNew.docsLink": "新功能與常見問題",
   "migration.whatsNew.continue": "繼續",
 
   // Screen 2 — Migrate Settings
@@ -1306,4 +1330,5 @@ export const dict = {
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",
+  "notifications.action.tryModelGeneric": "嘗試模型",
 } satisfies Partial<Record<Keys, string>>

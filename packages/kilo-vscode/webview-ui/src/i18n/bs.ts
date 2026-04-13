@@ -947,6 +947,11 @@ export const dict = {
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
+  "session.status.offline": "Mreža prekinuta — ponovno povezivanje...",
+
+  "ui.sessionTurn.cancel": "Otkaži",
+  "ui.sessionTurn.status.thinking": "Razmišljam...",
+  "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
 
   "dialog.model.noProviders": "Nema pružatelja",
 
@@ -955,6 +960,7 @@ export const dict = {
   "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
+  "context.usage.olderSessions": "{{count}} starijih sesija",
   "context.stats.thisSession": "Ova sesija",
 
   "time.justNow": "upravo sada",
@@ -1068,6 +1074,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
+  "settings.experimental.remote.title": "Remote kontrola",
+  "settings.experimental.remote.description":
+    "Omogućite Remote kontrolu sesija putem Kilo Cloud. Ovo će također utjecati na CLI-jeve na ovoj mašini.",
+  "settings.experimental.remote.current": "Trenutno stanje:",
+  "settings.experimental.remote.startup": "Automatsko uključivanje pri pokretanju:",
+  "settings.experimental.remote.active": "Aktivno",
+  "settings.experimental.remote.inactive": "Neaktivno",
+  "settings.experimental.remote.hint": "Koristite /remote u chatu za prebacivanje",
   "settings.experimental.toolToggles": "Prekidači alata",
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
@@ -1130,6 +1144,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
+  "settings.agentBehaviour.permissions.count": "{{count}} pravila",
+  "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Alat",
+  "settings.agentBehaviour.permissions.col.pattern": "Uzorak",
+  "settings.agentBehaviour.permissions.col.action": "Akcija",
+  "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
@@ -1272,6 +1296,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Jedno malo, efikasno jezgro kroz sve Kilo proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
   "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
+  "migration.whatsNew.docsLink": "Novosti i često postavljana pitanja",
   "migration.whatsNew.continue": "Nastavi",
 
   // Screen 2 — Migrate Settings
@@ -1354,4 +1379,5 @@ export const dict = {
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
+  "notifications.action.tryModelGeneric": "Probaj model",
 }
