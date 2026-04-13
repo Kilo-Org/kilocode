@@ -6,13 +6,53 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage } from "../../types/messages"
-import type { SpeechSettings, VoicePreset, PronunciationEntry } from "../../types/voice"
+import type { SpeechSettings, SpeechVoice, VoicePreset, PronunciationEntry } from "../../types/voice"
 import { DEFAULT_SPEECH_SETTINGS } from "../../types/voice"
-import { AZURE_VOICES, AZURE_LOCALES, LOCALE_NAMES, DEFAULT_VOICE_ID, type AzureVoice } from "../../data/azure-voices"
+import { SpeechProviderRegistry } from "../../data/speech-providers"
 import { speak, stop as stopSpeech, ensureAudioReady, setVolume } from "../../utils/speech-playback"
 import SettingsRow from "./SettingsRow"
 
 // ─── Helpers ──────────────────────────────────────────────
+
+function resolveApiKey(pid: string, s: SpeechSettings): string {
+	const ss = s as Record<string, Record<string, string>>
+	if (pid === "azure") return s.azure?.apiKey ?? ""
+	if (pid === "google") return ss.google?.apiKey ?? ""
+	if (pid === "openai") return ss.openai?.apiKey ?? ""
+	if (pid === "elevenlabs") return ss.elevenlabs?.apiKey ?? ""
+	if (pid === "polly") return ss.polly?.accessKeyId ?? ""
+	return ""
+}
+
+function resolveRegion(pid: string, s: SpeechSettings): string {
+	if (pid === "azure") return s.azure?.region ?? "westus"
+	if (pid === "polly") return (s as Record<string, Record<string, string>>).polly?.region ?? "us-east-1"
+	return ""
+}
+
+type StatusSetter = (v: "unknown" | "checking" | "valid" | "invalid") => void
+type ErrorSetter = (v: string) => void
+
+async function runTestConnection(
+	p: ReturnType<typeof SpeechProviderRegistry.get>,
+	key: string,
+	region: string,
+	setStatus: StatusSetter,
+	setError: ErrorSetter,
+): Promise<void> {
+	if (!p?.testConnection) return
+	if (!key) return
+	setStatus("checking")
+	setError("")
+	try {
+		const ok = await p.testConnection(key, region || undefined)
+		setStatus(ok ? "valid" : "invalid")
+		if (!ok) setError("Connection test failed")
+	} catch (err: unknown) {
+		setStatus("invalid")
+		setError(err instanceof Error ? err.message : "Unknown error")
+	}
+}
 
 const INTERACTION_MODES = [
 	{ value: "assist", label: "Assist -- speak important responses" },
@@ -72,6 +112,85 @@ const sectionHeaderStyle = (clickable: boolean) => ({
 	"font-size": "13px",
 })
 
+// ─── Provider Config Sub-Components ─────────────────────
+
+interface ApiKeyRowProps {
+	title: string
+	description: string
+	value: string
+	checking: boolean
+	onInput: (v: string) => void
+	onTest: () => void
+}
+
+const ApiKeyRow: Component<ApiKeyRowProps> = (props) => (
+	<SettingsRow title={props.title} description={props.description}>
+		<div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
+			<input type="password" value={props.value} onInput={(e) => props.onInput(e.currentTarget.value)} placeholder="Enter API key..." style={{ ...inputStyle, flex: "1" }} />
+			<Button variant="secondary" size="small" onClick={props.onTest} disabled={props.checking}>{props.checking ? "..." : "Test"}</Button>
+		</div>
+	</SettingsRow>
+)
+
+interface ProviderConfigProps {
+	pid: string
+	settings: SpeechSettings
+	keyStatus: "unknown" | "checking" | "valid" | "invalid"
+	onUpdateAzure: (key: string, value: unknown) => void
+	onUpdateProvider: (pid: string, key: string, value: unknown) => void
+	onTestConnection: () => void
+}
+
+const PROVIDER_CONFIG_RENDERERS: Record<string, (props: ProviderConfigProps) => ReturnType<Component>> = {
+	browser: () => (
+		<div style={{ padding: "4px 8px", "margin-bottom": "8px", "font-size": "12px", color: "var(--vscode-descriptionForeground)", background: "var(--vscode-textBlockQuote-background)", "border-radius": "4px" }}>
+			No setup required — works offline using your browser's built-in speech engine.
+		</div>
+	),
+	azure: (props) => (
+		<>
+			<ApiKeyRow title="Azure API Key" description="Your Azure Cognitive Services Speech API key" value={props.settings.azure?.apiKey ?? ""} checking={props.keyStatus === "checking"} onInput={(v) => props.onUpdateAzure("apiKey", v)} onTest={props.onTestConnection} />
+			<SettingsRow title="Azure Region" description="The region of your Azure Speech resource (e.g. westus, eastus, uksouth)">
+				<input type="text" value={props.settings.azure?.region ?? "westus"} onInput={(e) => props.onUpdateAzure("region", e.currentTarget.value)} placeholder="westus" style={inputStyle} />
+			</SettingsRow>
+		</>
+	),
+	google: (props) => {
+		const ss = props.settings as Record<string, Record<string, string>>
+		return <ApiKeyRow title="Google Cloud API Key" description="Your Google Cloud TTS API key" value={ss.google?.apiKey ?? ""} checking={props.keyStatus === "checking"} onInput={(v) => props.onUpdateProvider("google", "apiKey", v)} onTest={props.onTestConnection} />
+	},
+	openai: (props) => {
+		const ss = props.settings as Record<string, Record<string, string>>
+		return <ApiKeyRow title="OpenAI API Key" description="Your OpenAI API key for text-to-speech" value={ss.openai?.apiKey ?? ""} checking={props.keyStatus === "checking"} onInput={(v) => props.onUpdateProvider("openai", "apiKey", v)} onTest={props.onTestConnection} />
+	},
+	elevenlabs: (props) => {
+		const ss = props.settings as Record<string, Record<string, string>>
+		return <ApiKeyRow title="ElevenLabs API Key" description="Your ElevenLabs API key" value={ss.elevenlabs?.apiKey ?? ""} checking={props.keyStatus === "checking"} onInput={(v) => props.onUpdateProvider("elevenlabs", "apiKey", v)} onTest={props.onTestConnection} />
+	},
+	polly: (props) => {
+		const ss = props.settings as Record<string, Record<string, string>>
+		return (
+			<>
+				<SettingsRow title="AWS Access Key ID" description="Your AWS access key ID for Amazon Polly">
+					<input type="password" value={ss.polly?.accessKeyId ?? ""} onInput={(e) => props.onUpdateProvider("polly", "accessKeyId", e.currentTarget.value)} placeholder="Enter access key..." style={inputStyle} />
+				</SettingsRow>
+				<SettingsRow title="AWS Secret Access Key" description="Your AWS secret access key">
+					<input type="password" value={ss.polly?.secretAccessKey ?? ""} onInput={(e) => props.onUpdateProvider("polly", "secretAccessKey", e.currentTarget.value)} placeholder="Enter secret key..." style={inputStyle} />
+				</SettingsRow>
+				<SettingsRow title="AWS Region" description="AWS region for Amazon Polly (e.g. us-east-1)">
+					<input type="text" value={ss.polly?.region ?? "us-east-1"} onInput={(e) => props.onUpdateProvider("polly", "region", e.currentTarget.value)} placeholder="us-east-1" style={inputStyle} />
+				</SettingsRow>
+			</>
+		)
+	},
+}
+
+const ProviderConfigSection: Component<ProviderConfigProps> = (props) => {
+	const renderer = PROVIDER_CONFIG_RENDERERS[props.pid]
+	if (!renderer) return null
+	return renderer(props)
+}
+
 // ─── Component ────────────────────────────────────────────
 
 const SpeechTab: Component = () => {
@@ -81,27 +200,36 @@ const SpeechTab: Component = () => {
 	const [settings, setSettings] = createSignal<SpeechSettings>({ ...DEFAULT_SPEECH_SETTINGS })
 	const [connectionOpen, setConnectionOpen] = createSignal(true)
 	const [tuningOpen, setTuningOpen] = createSignal(false)
-	const [azureKeyStatus, setAzureKeyStatus] = createSignal<"unknown" | "checking" | "valid" | "invalid">("unknown")
-	const [azureKeyError, setAzureKeyError] = createSignal("")
+	const [keyStatus, setKeyStatus] = createSignal<"unknown" | "checking" | "valid" | "invalid">("unknown")
+	const [keyError, setKeyError] = createSignal("")
 	const [searchQuery, setSearchQuery] = createSignal("")
 	const [localeFilter, setLocaleFilter] = createSignal("all")
-	const [selectedVoice, setSelectedVoice] = createSignal<AzureVoice | null>(null)
+	const [selectedVoice, setSelectedVoice] = createSignal<SpeechVoice | null>(null)
 	const [previewText, setPreviewText] = createSignal("Hello! I'm your AI coding assistant. How can I help you today?")
 	const [previewing, setPreviewing] = createSignal(false)
 	const [newWord, setNewWord] = createSignal("")
 	const [newPronunciation, setNewPronunciation] = createSignal("")
 	const [presetName, setPresetName] = createSignal("")
 
+	// --- Provider ---
+	const [providerId, setProviderId] = createSignal(settings().provider ?? "browser")
+	const provider = createMemo(() => SpeechProviderRegistry.get(providerId()))
+
 	// --- Message handler ---
 	const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
 		if (message.type === "speechSettingsLoaded") {
 			setSettings(message.settings)
-			const voice = AZURE_VOICES.find((v) => v.id === message.settings.azure.voiceId)
-			if (voice) setSelectedVoice(voice)
+			setProviderId(message.settings.provider ?? "browser")
+			const p = SpeechProviderRegistry.get(message.settings.provider ?? "browser")
+			if (p) {
+				const voices = p.getVoices()
+				const match = voices.find((v) => v.id === message.settings.azure.voiceId)
+				if (match) setSelectedVoice(match)
+			}
 		}
 		if (message.type === "azureKeyValidationResult") {
-			setAzureKeyStatus(message.valid ? "valid" : "invalid")
-			if (message.error) setAzureKeyError(message.error)
+			setKeyStatus(message.valid ? "valid" : "invalid")
+			if (message.error) setKeyError(message.error)
 		}
 	})
 
@@ -146,23 +274,34 @@ const SpeechTab: Component = () => {
 		save(`favorites.${key}`, value)
 	}
 
+	const updateProviderConfig = (pid: string, key: string, value: unknown) => {
+		setSettings((prev) => ({
+			...prev,
+			[pid]: { ...(prev as Record<string, Record<string, unknown>>)[pid], [key]: value },
+		}))
+		save(`${pid}.${key}`, value)
+	}
+
+	const getApiKey = () => resolveApiKey(providerId(), settings())
+	const getRegion = () => resolveRegion(providerId(), settings())
+
 	// --- Computed ---
+	const providerVoices = createMemo(() => provider()?.getVoices() ?? [])
+
+	const availableLocales = createMemo(() => {
+		const locales = new Set(providerVoices().map((v) => v.locale))
+		return [...locales].sort()
+	})
+
 	const filteredVoices = createMemo(() => {
-		let voices = AZURE_VOICES
+		const voices = providerVoices()
 		const q = searchQuery().toLowerCase()
-		if (q) {
-			voices = voices.filter(
-				(v) =>
-					v.name.toLowerCase().includes(q) ||
-					v.id.toLowerCase().includes(q) ||
-					v.description.toLowerCase().includes(q),
-			)
-		}
 		const loc = localeFilter()
-		if (loc !== "all") {
-			voices = voices.filter((v) => v.locale === loc)
-		}
-		return voices
+		return voices.filter((v) => {
+			if (q && !v.name.toLowerCase().includes(q) && !v.id.toLowerCase().includes(q) && !v.description.toLowerCase().includes(q)) return false
+			if (loc !== "all" && v.locale !== loc) return false
+			return true
+		})
 	})
 
 	const currentVoiceStyles = createMemo(() => {
@@ -172,25 +311,25 @@ const SpeechTab: Component = () => {
 	const isStarred = (voiceId: string) => settings().favorites.starredVoices.includes(voiceId)
 
 	// --- Actions ---
-	const validateKey = () => {
-		const s = settings()
-		if (!s.azure.apiKey || !s.azure.region) return
-		setAzureKeyStatus("checking")
-		setAzureKeyError("")
-		vscode.postMessage({
-			type: "validateAzureKey",
-			apiKey: s.azure.apiKey,
-			region: s.azure.region,
-		})
+	const testConnection = () => runTestConnection(provider(), getApiKey(), getRegion(), setKeyStatus, setKeyError)
+
+	const handleProviderChange = (pid: string) => {
+		setProviderId(pid)
+		updateField("provider", pid)
+		setKeyStatus("unknown")
+		setKeyError("")
+		setSearchQuery("")
+		setLocaleFilter("all")
+		setSelectedVoice(null)
 	}
 
-	const selectVoice = (voice: AzureVoice) => {
+	const selectVoice = (voice: SpeechVoice) => {
 		setSelectedVoice(voice)
 		updateAzure("voiceId", voice.id)
 		setTuningOpen(true)
 		// Reset style if new voice doesn't support current style
 		const s = settings()
-		if (s.tuning.style !== "default" && !voice.styles.includes(s.tuning.style)) {
+		if (s.tuning.style !== "default" && !(voice.styles ?? []).includes(s.tuning.style)) {
 			updateTuning("style", "default")
 		}
 	}
@@ -212,14 +351,16 @@ const SpeechTab: Component = () => {
 	}
 
 	const handlePreview = async (voiceId?: string) => {
-		const s = settings()
-		if (!s.azure.apiKey || !s.azure.region) return
+		const p = provider()
+		if (!p) return
+		if (p.requiresApiKey && !getApiKey()) return
 		setPreviewing(true)
 		ensureAudioReady()
 		try {
-			await speak(previewText(), {
-				region: s.azure.region,
-				apiKey: s.azure.apiKey,
+			const s = settings()
+			await speak(previewText(), p, {
+				region: getRegion() || undefined,
+				apiKey: getApiKey(),
 				voiceId: voiceId ?? s.azure.voiceId,
 				pitch: s.tuning.pitch,
 				rate: s.tuning.rate,
@@ -231,7 +372,7 @@ const SpeechTab: Component = () => {
 				audioFormat: s.tuning.audioFormat,
 				globalVolume: s.volume,
 			})
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error("[Speech] Preview failed:", err)
 		} finally {
 			setPreviewing(false)
@@ -278,7 +419,7 @@ const SpeechTab: Component = () => {
 
 	const loadPreset = (preset: VoicePreset) => {
 		updateAzure("voiceId", preset.voiceId)
-		const voice = AZURE_VOICES.find((v) => v.id === preset.voiceId)
+		const voice = providerVoices().find((v) => v.id === preset.voiceId)
 		if (voice) setSelectedVoice(voice)
 		updateTuning("pitch", preset.pitch)
 		updateTuning("rate", preset.rate)
@@ -312,62 +453,64 @@ const SpeechTab: Component = () => {
 					<span style={{ display: "flex", "align-items": "center", gap: "8px" }}>
 						{connectionOpen() ? "▾" : "▸"} Connection & Global Settings
 					</span>
-					<span
-						style={{
-							width: "8px",
-							height: "8px",
-							"border-radius": "50%",
-							background:
-								azureKeyStatus() === "valid"
-									? "var(--vscode-testing-iconPassed)"
-									: azureKeyStatus() === "invalid"
-										? "var(--vscode-testing-iconFailed)"
-										: "var(--vscode-panel-border)",
-						}}
-						title={azureKeyStatus() === "valid" ? "Connected" : azureKeyStatus() === "invalid" ? azureKeyError() : "Not validated"}
-					/>
+					<Show when={provider()?.requiresApiKey}>
+						<span
+							style={{
+								width: "8px",
+								height: "8px",
+								"border-radius": "50%",
+								background:
+									keyStatus() === "valid"
+										? "var(--vscode-testing-iconPassed)"
+										: keyStatus() === "invalid"
+											? "var(--vscode-testing-iconFailed)"
+											: "var(--vscode-panel-border)",
+							}}
+							title={keyStatus() === "valid" ? "Connected" : keyStatus() === "invalid" ? keyError() : "Not validated"}
+						/>
+					</Show>
 				</div>
 				<Show when={connectionOpen()}>
 					<div style={{ padding: "0 12px 12px" }}>
-						{/* API Key */}
+						{/* Provider Selector */}
 						<SettingsRow
-							title="Azure API Key"
-							description="Your Azure Cognitive Services Speech API key"
+							title="Speech Provider"
+							description="Choose a text-to-speech engine"
 						>
-							<div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
-								<input
-									type="password"
-									value={settings().azure.apiKey}
-									onInput={(e) => updateAzure("apiKey", e.currentTarget.value)}
-									onBlur={validateKey}
-									placeholder="Enter API key..."
-									style={{ ...inputStyle, flex: "1" }}
-								/>
-								<Button
-									variant="secondary"
-									size="small"
-									onClick={validateKey}
-									disabled={azureKeyStatus() === "checking"}
-								>
-									{azureKeyStatus() === "checking" ? "..." : "Test"}
-								</Button>
-							</div>
+							<select
+								value={providerId()}
+								onChange={(e) => handleProviderChange(e.currentTarget.value)}
+								style={inputStyle}
+							>
+								<optgroup label="No Setup Required">
+									<For each={SpeechProviderRegistry.listByTier("free")}>
+										{(p) => <option value={p.id}>{p.name}</option>}
+									</For>
+								</optgroup>
+								<optgroup label="Free Tier Available">
+									<For each={SpeechProviderRegistry.listByTier("freeTier")}>
+										{(p) => <option value={p.id}>{p.name}</option>}
+									</For>
+								</optgroup>
+							</select>
 						</SettingsRow>
 
-						{/* Region */}
-						<SettingsRow
-							title="Azure Region"
-							description="The region of your Azure Speech resource (e.g. westus, eastus, uksouth)"
-						>
-							<input
-								type="text"
-								value={settings().azure.region}
-								onInput={(e) => updateAzure("region", e.currentTarget.value)}
-								onBlur={validateKey}
-								placeholder="westus"
-								style={inputStyle}
-							/>
-						</SettingsRow>
+						{/* Provider info line */}
+						<Show when={provider()}>
+							<div style={{ "font-size": "11px", color: "var(--vscode-descriptionForeground)", "margin-bottom": "8px", padding: "0 4px" }}>
+								{provider()!.description} — Free: {provider()!.freeAllowance}
+							</div>
+						</Show>
+
+						{/* Provider-specific config */}
+						<ProviderConfigSection
+							pid={providerId()}
+							settings={settings()}
+							keyStatus={keyStatus()}
+							onUpdateAzure={updateAzure}
+							onUpdateProvider={updateProviderConfig}
+							onTestConnection={testConnection}
+						/>
 
 						{/* Enable Speech */}
 						<SettingsRow
@@ -508,7 +651,7 @@ const SpeechTab: Component = () => {
 						<div style={{ display: "flex", "flex-wrap": "wrap", gap: "4px", "margin-bottom": "8px" }}>
 							<For each={settings().favorites.starredVoices}>
 								{(voiceId) => {
-									const voice = AZURE_VOICES.find((v) => v.id === voiceId)
+									const voice = providerVoices().find((v) => v.id === voiceId)
 									return (
 										<span
 											style={chipStyle(settings().azure.voiceId === voiceId)}
@@ -553,9 +696,9 @@ const SpeechTab: Component = () => {
 							}}
 						>
 							<option value="all">All Locales</option>
-							<For each={AZURE_LOCALES}>
+							<For each={availableLocales()}>
 								{(loc) => (
-									<option value={loc}>{LOCALE_NAMES[loc] ?? loc}</option>
+									<option value={loc}>{loc}</option>
 								)}
 							</For>
 						</select>
@@ -647,8 +790,8 @@ const SpeechTab: Component = () => {
 											}}
 										>
 											{voice.description}
-											<Show when={voice.styles.length > 0}>
-												{" "}· Styles: {voice.styles.join(", ")}
+											<Show when={(voice.styles ?? []).length > 0}>
+												{" "}· Styles: {(voice.styles ?? []).join(", ")}
 											</Show>
 										</div>
 									</div>
@@ -660,7 +803,7 @@ const SpeechTab: Component = () => {
 											e.stopPropagation()
 											handlePreview(voice.id)
 										}}
-										disabled={previewing() || !settings().azure.apiKey}
+										disabled={previewing() || (provider()?.requiresApiKey === true && !getApiKey())}
 									>
 										{previewing() ? "..." : "▶"}
 									</Button>
@@ -765,7 +908,7 @@ const SpeechTab: Component = () => {
 						</SettingsRow>
 
 						{/* Style Chips */}
-						<Show when={currentVoiceStyles().length > 0}>
+						<Show when={provider()?.capabilities.styles && currentVoiceStyles().length > 0}>
 							<SettingsRow
 								title="Speaking Style"
 								description="Emotional tone applied to the voice (available styles depend on the selected voice)"
@@ -792,7 +935,7 @@ const SpeechTab: Component = () => {
 						</Show>
 
 						{/* Style Intensity */}
-						<Show when={settings().tuning.style !== "default" && currentVoiceStyles().length > 0}>
+						<Show when={provider()?.capabilities.styles && settings().tuning.style !== "default" && currentVoiceStyles().length > 0}>
 							<SettingsRow
 								title={`Style Intensity: ${settings().tuning.styleDegree.toFixed(1)}x`}
 								description="How strongly the speaking style is applied (0.5x to 2.0x)"
@@ -841,25 +984,28 @@ const SpeechTab: Component = () => {
 						</SettingsRow>
 
 						{/* Emphasis */}
-						<SettingsRow
-							title="Emphasis"
-							description="Controls how strongly words are stressed in speech"
-						>
-							<Select
-								options={EMPHASIS_OPTIONS}
-								current={EMPHASIS_OPTIONS.find((o) => o.value === settings().tuning.emphasis)}
-								value={(o) => o.value}
-								label={(o) => o.label}
-								onSelect={(o) => {
-									if (o) updateTuning("emphasis", o.value)
-								}}
-								variant="secondary"
-								size="small"
-								triggerVariant="settings"
-							/>
-						</SettingsRow>
+						<Show when={provider()?.capabilities.emphasis}>
+							<SettingsRow
+								title="Emphasis"
+								description="Controls how strongly words are stressed in speech"
+							>
+								<Select
+									options={EMPHASIS_OPTIONS}
+									current={EMPHASIS_OPTIONS.find((o) => o.value === settings().tuning.emphasis)}
+									value={(o) => o.value}
+									label={(o) => o.label}
+									onSelect={(o) => {
+										if (o) updateTuning("emphasis", o.value)
+									}}
+									variant="secondary"
+									size="small"
+									triggerVariant="settings"
+								/>
+							</SettingsRow>
+						</Show>
 
 						{/* Custom Pronunciations */}
+						<Show when={provider()?.capabilities.pronunciations}>
 						<SettingsRow
 							title="Custom Pronunciations"
 							description="Override how technical terms or names are spoken"
@@ -907,8 +1053,10 @@ const SpeechTab: Component = () => {
 								</div>
 							</div>
 						</SettingsRow>
+						</Show>
 
 						{/* Audio Quality */}
+						<Show when={(provider()?.capabilities.audioFormats ?? []).length > 0}>
 						<SettingsRow
 							title="Audio Quality"
 							description="Higher quality sounds better but uses more bandwidth and API quota"
@@ -926,6 +1074,7 @@ const SpeechTab: Component = () => {
 								triggerVariant="settings"
 							/>
 						</SettingsRow>
+						</Show>
 
 						{/* Preview with tuning */}
 						<div style={{ display: "flex", gap: "8px", "margin-top": "8px" }}>
@@ -933,7 +1082,7 @@ const SpeechTab: Component = () => {
 								variant="secondary"
 								size="small"
 								onClick={() => handlePreview()}
-								disabled={previewing() || !settings().azure.apiKey}
+								disabled={previewing() || (provider()?.requiresApiKey === true && !getApiKey())}
 							>
 								{previewing() ? "Playing..." : "▶ Play Preview"}
 							</Button>
@@ -992,7 +1141,7 @@ const SpeechTab: Component = () => {
 												<span style={{ flex: "1", "font-size": "12px" }}>
 													{preset.name}
 													<span style={{ color: "var(--vscode-descriptionForeground)", "margin-left": "6px" }}>
-														{AZURE_VOICES.find((v) => v.id === preset.voiceId)?.name ?? preset.voiceId}
+														{providerVoices().find((v) => v.id === preset.voiceId)?.name ?? preset.voiceId}
 													</span>
 												</span>
 												<Button variant="secondary" size="small" onClick={() => loadPreset(preset)}>

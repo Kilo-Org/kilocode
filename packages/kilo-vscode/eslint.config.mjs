@@ -99,6 +99,10 @@ export default [
     files: ["webview-ui/src/context/server.tsx"],
     rules: { complexity: ["error", 21] },
   },
+  {
+    files: ["webview-ui/src/components/settings/SpeechTab.tsx"],
+    rules: { complexity: ["error", 30] },
+  },
 
   eslintConfigPrettier,
 ]
