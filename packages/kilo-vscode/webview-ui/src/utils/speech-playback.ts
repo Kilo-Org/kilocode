@@ -1,10 +1,10 @@
-import { synthesizeAzure, type AzureTTSOptions } from "./tts-azure"
+import type { SpeechProvider, SynthesisOptions } from "../types/voice"
 
 // --- Web Audio API state ---
 let _playbackContext: AudioContext | null = null
 let _activeSourceNode: AudioBufferSourceNode | null = null
 let _activeGainNode: GainNode | null = null
-let _abortController: AbortController | null = null
+let _activeProvider: SpeechProvider | null = null
 
 export function ensureAudioReady(): void {
 	if (!_playbackContext) _playbackContext = new AudioContext()
@@ -16,21 +16,37 @@ export function getPlaybackContext(): AudioContext {
 	return _playbackContext
 }
 
-export async function speak(text: string, opts: AzureTTSOptions & { globalVolume: number }): Promise<void> {
+export async function speak(
+	text: string,
+	provider: SpeechProvider,
+	opts: SynthesisOptions & { globalVolume: number },
+): Promise<void> {
 	stop()
 	ensureAudioReady()
 
-	_abortController = new AbortController()
-	const cacheKey = SynthesisCache.hash(text, opts.voiceId, opts.style ?? "default", opts.pitch ?? 0, opts.rate ?? 1.0)
-	let blob = SynthesisCache.get(cacheKey)
+	_activeProvider = provider
 
-	if (!blob) {
-		blob = await synthesizeAzure(text, opts, _abortController.signal)
-		SynthesisCache.set(cacheKey, blob)
+	const cacheKey = SynthesisCache.hash(provider.id, text, opts.voiceId, opts.style ?? "default", opts.pitch ?? 0, opts.rate ?? 1.0)
+	const cached = SynthesisCache.get(cacheKey)
+
+	if (cached) {
+		const volume = opts.volume ?? opts.globalVolume
+		await playBlobInternal(cached, volume / 100)
+		return
 	}
 
+	const result = await provider.synthesize(text, opts)
+
+	// Browser provider returns void (playback happened internally)
+	if (!result) {
+		_activeProvider = null
+		return
+	}
+
+	// API providers return a Blob — play via Web Audio
+	SynthesisCache.set(cacheKey, result)
 	const volume = opts.volume ?? opts.globalVolume
-	await playBlobInternal(blob, volume / 100)
+	await playBlobInternal(result, volume / 100)
 }
 
 export async function playBlobInternal(blob: Blob, volume: number): Promise<void> {
@@ -51,6 +67,7 @@ export async function playBlobInternal(blob: Blob, volume: number): Promise<void
 		source.onended = () => {
 			_activeSourceNode = null
 			_activeGainNode = null
+			_activeProvider = null
 			resolve()
 		}
 		source.start(0)
@@ -58,11 +75,14 @@ export async function playBlobInternal(blob: Blob, volume: number): Promise<void
 }
 
 export function stop(): void {
-	_abortController?.abort()
-	_abortController = null
+	// Stop provider-level playback (e.g. Browser's speechSynthesis.cancel)
+	_activeProvider?.stop()
+	_activeProvider = null
+
+	// Stop Web Audio source node (API providers)
 	try {
 		_activeSourceNode?.stop()
-	} catch {}
+	} catch { /* already stopped */ }
 	_activeSourceNode = null
 	_activeGainNode = null
 }
