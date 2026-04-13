@@ -325,6 +325,21 @@
         "vite-plugin-solid": "2.11.10",
       },
     },
+    "packages/openclaw-security-advisor": {
+      "name": "@kilocode/openclaw-security-advisor",
+      "version": "7.2.1",
+      "dependencies": {
+        "@kilocode/kilo-gateway": "workspace:*",
+        "@kilocode/plugin": "workspace:*",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/node22": "catalog:",
+        "@types/node": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/opencode": {
       "name": "@kilocode/cli",
       "version": "7.2.1",
@@ -1227,6 +1242,8 @@
     "@kilocode/kilo-telemetry": ["@kilocode/kilo-telemetry@workspace:packages/kilo-telemetry"],
 
     "@kilocode/kilo-ui": ["@kilocode/kilo-ui@workspace:packages/kilo-ui"],
+
+    "@kilocode/openclaw-security-advisor": ["@kilocode/openclaw-security-advisor@workspace:packages/openclaw-security-advisor"],
 
     "@kilocode/plugin": ["@kilocode/plugin@workspace:packages/plugin"],
 
