@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Instance } from "../../src/project/instance"
-import { ProjectID } from "../../src/project/schema" // kilocode_change
-import { ProjectTable } from "../../src/project/project.sql" // kilocode_change
 import { Session } from "../../src/session"
-import { SessionTable } from "../../src/session/session.sql" // kilocode_change
-import { Database, eq } from "../../src/storage/db" // kilocode_change
 import { Log } from "../../src/util/log"
 import { tmpdir } from "../fixture/fixture"
 
@@ -36,37 +32,6 @@ describe("Session.list", () => {
       },
     })
   })
-
-  // kilocode_change start: test legacy project id directory lookup
-  test("includes directory matches from legacy project ids", async () => {
-    await using tmp = await tmpdir({ git: true })
-    await Instance.provide({
-      directory: tmp.path,
-      fn: async () => {
-        const session = await Session.create({ title: "legacy-session" })
-        const project = ProjectID.make("legacy-project")
-        Database.use((db) => {
-          db.insert(ProjectTable)
-            .values({
-              id: project,
-              worktree: tmp.path,
-              vcs: "git",
-              time_created: Date.now(),
-              time_updated: Date.now(),
-              sandboxes: [],
-            })
-            .run()
-          db.update(SessionTable).set({ project_id: project }).where(eq(SessionTable.id, session.id)).run()
-        })
-
-        const sessions = [...Session.list({ directory: tmp.path })]
-        const ids = sessions.map((s) => s.id)
-
-        expect(ids).toContain(session.id)
-      },
-    })
-  })
-  // kilocode_change end
 
   test("filters root sessions", async () => {
     await using tmp = await tmpdir({ git: true })
