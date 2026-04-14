@@ -10,6 +10,7 @@ import z from "zod"
 
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
+import { Instance } from "@/project/instance" // kilocode_change
 
 export namespace ProviderAuth {
   export const Method = z
@@ -263,6 +264,7 @@ export namespace ProviderAuth {
     }
     Telemetry.trackAuthSuccess(input.providerID)
     ModelCache.clear(input.providerID)
+    await Instance.disposeAll()
     // kilocode_change end
   }
 }
