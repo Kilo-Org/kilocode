@@ -10,6 +10,7 @@ import type {
   TextPartInput,
   FilePartInput,
   Config,
+  McpStatus,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
@@ -142,6 +143,11 @@ const mapAgent = (a: Agent) => ({
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
+  /**
+   * When several webviews subscribe to SSE, the same `mcp.browser.open.failed` is delivered
+   * to each provider — dedupe so we only call openExternal once per URL in a short window.
+   */
+  private static lastMcpBrowserOpen: { url: string; at: number } | null = null
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null
@@ -802,6 +808,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "disconnectMcp":
           this.handleDisconnectMcp(message.name).catch((e) =>
             console.error("[Kilo New] handleDisconnectMcp failed:", e),
+          )
+          break
+        case "authenticateMcp":
+          this.handleAuthenticateMcp(message.name).catch((e) =>
+            console.error("[Kilo New] handleAuthenticateMcp failed:", e),
           )
           break
 
@@ -1974,6 +1985,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  private openMcpOAuthUrlOnce(url: string): void {
+    const now = Date.now()
+    const last = KiloProvider.lastMcpBrowserOpen
+    if (last && last.url === url && now - last.at < 4000) return
+    KiloProvider.lastMcpBrowserOpen = { url, at: now }
+    void vscode.env.openExternal(vscode.Uri.parse(url))
+  }
+
+  private async handleAuthenticateMcp(name: string): Promise<void> {
+    if (!this.client) return
+    try {
+      const directory = this.getWorkspaceDirectory()
+      const { data, error } = await this.client.mcp.auth.authenticate({ name, directory })
+      if (error) {
+        vscode.window.showErrorMessage(`MCP sign-in failed: ${getErrorMessage(error)}`)
+        return
+      }
+      const status = data as McpStatus | undefined
+      if (status?.status === "failed") {
+        vscode.window.showErrorMessage(status.error || "MCP OAuth failed")
+      } else if (status?.status === "needs_client_registration") {
+        vscode.window.showErrorMessage(status.error || "MCP server requires client registration in config")
+      }
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to authenticate MCP:", name, error)
+      vscode.window.showErrorMessage(getErrorMessage(error) || "MCP sign-in failed")
+    } finally {
+      await this.fetchAndSendMcpStatus()
+    }
+  }
+
   /**
    * Remove a marketplace item from a single scope and invalidate CLI caches.
    */
@@ -2976,6 +3018,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     if (event.type === "permission.replied") {
       this.permissionDirectories.delete(event.properties.requestID)
+    }
+
+    if (event.type === "mcp.browser.open.failed") {
+      this.openMcpOAuthUrlOnce(event.properties.url)
+      return
     }
 
     if (event.type === "message.updated") {
