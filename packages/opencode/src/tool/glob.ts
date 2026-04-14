@@ -19,18 +19,18 @@ export const GlobTool = Tool.define("glob", {
       ),
   }),
   async execute(params, ctx) {
+    let search = params.path ?? Instance.directory
+    search = path.isAbsolute(search) ? search : path.resolve(Instance.directory, search)
+
     await ctx.ask({
       permission: "glob",
       patterns: [params.pattern],
       always: ["*"],
       metadata: {
         pattern: params.pattern,
-        path: params.path,
+        path: search,
       },
     })
-
-    let search = params.path ?? Instance.directory
-    search = path.isAbsolute(search) ? search : path.resolve(Instance.directory, search)
     await assertExternalDirectory(ctx, search, { kind: "directory" })
 
     const limit = 100
@@ -71,6 +71,7 @@ export const GlobTool = Tool.define("glob", {
       metadata: {
         count: files.length,
         truncated,
+        path: search,
       },
       output: output.join("\n"),
     }

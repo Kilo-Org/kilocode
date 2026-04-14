@@ -76,10 +76,10 @@ function fallback(part: ToolPart) {
   })
 }
 
-function glob(info: ToolProps<typeof GlobTool>) {
-  const root = info.input.path ?? ""
+function glob(info: ToolProps<typeof GlobTool>, attached?: boolean) {
+  const root = info.metadata.path ?? info.input.path ?? ""
   const title = `Glob "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
+  const suffix = root ? `in ${normalizePath(root, attached)}` : ""
   const num = info.metadata.count
   const description =
     num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
@@ -90,10 +90,10 @@ function glob(info: ToolProps<typeof GlobTool>) {
   })
 }
 
-function grep(info: ToolProps<typeof GrepTool>) {
+function grep(info: ToolProps<typeof GrepTool>, attached?: boolean) {
   const root = info.metadata.path ?? info.input.path ?? ""
   const title = `Grep "${info.input.pattern}"`
-  const suffix = root ? `in ${normalizePath(root)}` : ""
+  const suffix = root ? `in ${normalizePath(root, attached)}` : ""
   const num = info.metadata.matches
   const description =
     num === undefined ? suffix : `${suffix}${suffix ? " · " : ""}${num} ${num === 1 ? "match" : "matches"}`
@@ -104,16 +104,16 @@ function grep(info: ToolProps<typeof GrepTool>) {
   })
 }
 
-function list(info: ToolProps<typeof ListTool>) {
-  const dir = info.input.path ? normalizePath(info.input.path) : ""
+function list(info: ToolProps<typeof ListTool>, attached?: boolean) {
+  const dir = info.input.path ? normalizePath(info.input.path, attached) : ""
   inline({
     icon: "→",
     title: dir ? `List ${dir}` : "List",
   })
 }
 
-function read(info: ToolProps<typeof ReadTool>) {
-  const file = normalizePath(info.input.filePath)
+function read(info: ToolProps<typeof ReadTool>, attached?: boolean) {
+  const file = normalizePath(info.input.filePath, attached)
   const pairs = Object.entries(info.input).filter(([key, value]) => {
     if (key === "filePath") return false
     return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
@@ -126,11 +126,11 @@ function read(info: ToolProps<typeof ReadTool>) {
   })
 }
 
-function write(info: ToolProps<typeof WriteTool>) {
+function write(info: ToolProps<typeof WriteTool>, attached?: boolean) {
   block(
     {
       icon: "←",
-      title: `Write ${normalizePath(info.input.filePath)}`,
+      title: `Write ${normalizePath(info.input.filePath, attached)}`,
     },
     info.part.state.status === "completed" ? info.part.state.output : undefined,
   )
@@ -143,8 +143,8 @@ function webfetch(info: ToolProps<typeof WebFetchTool>) {
   })
 }
 
-function edit(info: ToolProps<typeof EditTool>) {
-  const title = normalizePath(info.input.filePath)
+function edit(info: ToolProps<typeof EditTool>, attached?: boolean) {
+  const title = normalizePath(info.input.filePath, attached)
   const diff = info.metadata.diff
   block(
     {
@@ -214,10 +214,13 @@ function todo(info: ToolProps<typeof TodoWriteTool>) {
   )
 }
 
-function normalizePath(input?: string) {
+function normalizePath(input?: string, attached?: boolean) {
   if (!input) return ""
-  if (path.isAbsolute(input)) return path.relative(process.cwd(), input) || "."
-  return input
+  if (attached) return input
+  if (!path.isAbsolute(input)) return input
+  const relative = path.relative(process.cwd(), input)
+  if (relative.startsWith("..")) return input
+  return relative || "."
 }
 
 export const RunCommand = cmd({
@@ -436,16 +439,17 @@ export const RunCommand = cmd({
     }
 
     async function execute(sdk: KiloClient) {
+      const attached = !!args.attach
       function tool(part: ToolPart) {
         try {
           if (part.tool === "bash") return bash(props<typeof BashTool>(part))
-          if (part.tool === "glob") return glob(props<typeof GlobTool>(part))
-          if (part.tool === "grep") return grep(props<typeof GrepTool>(part))
-          if (part.tool === "list") return list(props<typeof ListTool>(part))
-          if (part.tool === "read") return read(props<typeof ReadTool>(part))
-          if (part.tool === "write") return write(props<typeof WriteTool>(part))
+          if (part.tool === "glob") return glob(props<typeof GlobTool>(part), attached)
+          if (part.tool === "grep") return grep(props<typeof GrepTool>(part), attached)
+          if (part.tool === "list") return list(props<typeof ListTool>(part), attached)
+          if (part.tool === "read") return read(props<typeof ReadTool>(part), attached)
+          if (part.tool === "write") return write(props<typeof WriteTool>(part), attached)
           if (part.tool === "webfetch") return webfetch(props<typeof WebFetchTool>(part))
-          if (part.tool === "edit") return edit(props<typeof EditTool>(part))
+          if (part.tool === "edit") return edit(props<typeof EditTool>(part), attached)
           if (part.tool === "codesearch") return codesearch(props<typeof CodeSearchTool>(part))
           if (part.tool === "websearch") return websearch(props<typeof WebSearchTool>(part))
           if (part.tool === "task") return task(props<typeof TaskTool>(part))
