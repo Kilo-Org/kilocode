@@ -118,7 +118,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
           <Show when={isEmpty() && props.readonly}>
             <div class="message-list-empty">
-              <p class="kilo-about-text">Initializing...</p>
+              <p class="kilo-about-text">{language.t("session.messages.initializing")}</p>
             </div>
           </Show>
           <Show when={isEmpty() && !props.readonly}>
