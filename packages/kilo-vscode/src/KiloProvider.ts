@@ -44,7 +44,8 @@ import { getBusySessionCount, seedSessionStatuses } from "./session-status"
 import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
-import { parseMessageFiles } from "./kilo-provider/message-files"
+import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
+import { getTerminalContents } from "./services/terminal/context"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
@@ -116,7 +117,10 @@ const mapAgent = (a: Agent) => ({
   color: a.color,
   deprecated: a.deprecated,
   permission: a.permission,
+  model: a.model,
 })
+
+const remoteMessages = new Set(["toggleRemote", "setRemoteEnabled", "requestRemoteStatus"])
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
@@ -548,6 +552,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
+      if (remoteMessages.has(message.type)) {
+        const remote = message as {
+          type: "toggleRemote" | "setRemoteEnabled" | "requestRemoteStatus"
+          enabled?: boolean
+        }
+        this.remoteService
+          ?.handleMessage(remote.type, remote.enabled)
+          .then((s) => {
+            if (s) this.sendRemoteStatus()
+          })
+          .catch((err) => console.error("[Kilo New] remote message failed:", err))
+        return
+      }
+
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -823,6 +841,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         }
+        case "requestTerminalContext": {
+          try {
+            const output = await getTerminalContents(-1)
+            this.postMessage({
+              type: "terminalContextResult",
+              requestId: message.requestId,
+              content: output.content,
+              truncated: output.truncated,
+            })
+          } catch (error) {
+            console.error("[Kilo New] Failed to capture terminal context:", error)
+            this.postMessage({
+              type: "terminalContextError",
+              requestId: message.requestId,
+              error: getErrorMessage(error) || "Failed to capture terminal output",
+            })
+          }
+          break
+        }
         case "chatCompletionAccepted":
           this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
           break
@@ -831,16 +868,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "renameSession":
           await this.handleRenameSession(message.sessionID, message.title)
-          break
-        case "toggleRemote":
-        case "setRemoteEnabled":
-        case "requestRemoteStatus":
-          this.remoteService
-            ?.handleMessage(message.type, message.enabled)
-            .then((s) => {
-              if (s) this.sendRemoteStatus()
-            })
-            .catch((err) => console.error("[Kilo New] remote message failed:", err))
           break
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
@@ -2383,7 +2410,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
-    files?: Array<{ mime: string; url: string }>,
+    files?: MessageFile[],
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2405,7 +2432,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
-          parts.push({ type: "file", mime: f.mime, url: f.url })
+          parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
       parts.push({ type: "text", text })
@@ -2459,7 +2486,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     modelID?: string,
     agent?: string,
     variant?: string,
-    files?: Array<{ mime: string; url: string }>,
+    files?: MessageFile[],
   ): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2482,7 +2509,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.connectionService.recordMessageSessionId(messageID, resolved!.sid)
       }
 
-      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+      const parts = files?.map((f) => ({
+        type: "file" as const,
+        mime: f.mime,
+        url: f.url,
+        filename: f.filename,
+        source: f.source,
+      }))
 
       const sid = resolved!.sid
       const dir = resolved!.dir

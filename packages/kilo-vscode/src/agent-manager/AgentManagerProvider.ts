@@ -326,6 +326,11 @@ export class AgentManagerProvider implements Disposable {
       return msg
     }
 
+    if (m.type === "requestTerminalContext") {
+      if (m.sessionID) this.terminalManager.showExisting(m.sessionID)
+      return msg
+    }
+
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
       this.connectionService.registerFocused("agent-manager", m.sessionID)

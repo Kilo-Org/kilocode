@@ -8,6 +8,7 @@
 import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocode/sdk/v2/client"
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
+import type { MessageFile } from "../message-files"
 
 export interface CloudSessionContext {
   readonly client: KiloClient | null
@@ -115,7 +116,7 @@ export async function handleImportAndSend(
   modelID?: string,
   agent?: string,
   variant?: string,
-  files?: Array<{ mime: string; url: string }>,
+  files?: MessageFile[],
   command?: string,
   commandArgs?: string,
 ): Promise<void> {
@@ -177,7 +178,13 @@ export async function handleImportAndSend(
       }
 
       if (command) {
-        const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
+        const parts = files?.map((f) => ({
+          type: "file" as const,
+          mime: f.mime,
+          url: f.url,
+          filename: f.filename,
+          source: f.source,
+        }))
         await client.session.command(
           {
             sessionID: session.id,
@@ -198,7 +205,7 @@ export async function handleImportAndSend(
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
-          parts.push({ type: "file", mime: f.mime, url: f.url })
+          parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
       parts.push({ type: "text", text })
