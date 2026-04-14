@@ -10,6 +10,8 @@ import { lazy } from "../../util/lazy"
 // devilcode_change start
 import { fetchDefaultModel } from "@devilcode/kilo-gateway"
 import { Auth } from "../../auth"
+import { TeamConfig } from "../../devilcode/team/config"
+import { TEAM_PRESETS, TeamPreset } from "../../devilcode/team/presets"
 // devilcode_change end
 
 const log = Log.create({ service: "server" })
@@ -60,6 +62,59 @@ export const ConfigRoutes = lazy(() =>
         const config = c.req.valid("json")
         await Config.update(config)
         return c.json(config)
+      },
+    )
+    .post(
+      "/team/validate",
+      describeRoute({
+        summary: "Validate team config",
+        description: "Validate a team configuration payload without persisting it.",
+        operationId: "config.team.validate",
+        responses: {
+          200: {
+            description: "Validation status",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    valid: z.boolean(),
+                    errors: z.array(z.string()),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      validator("json", z.unknown()),
+      async (c) => {
+        const payload = c.req.valid("json")
+        const result = TeamConfig.safeParse(payload)
+        return c.json({
+          valid: result.success,
+          errors: result.success ? [] : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+        })
+      },
+    )
+    .get(
+      "/team/presets",
+      describeRoute({
+        summary: "List team presets",
+        description: "Return built-in team presets for Team Composer.",
+        operationId: "config.team.presets",
+        responses: {
+          200: {
+            description: "Team presets",
+            content: {
+              "application/json": {
+                schema: resolver(TeamPreset.array()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        return c.json(TEAM_PRESETS)
       },
     )
     // kilocode_change start

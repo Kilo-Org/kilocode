@@ -22,10 +22,21 @@ export const TeamRouting = z.object({
 })
 export type TeamRouting = z.infer<typeof TeamRouting>
 
+export const ReactionRule = z.object({
+  trigger: z.enum(["ci-failed", "review-requested", "approved-and-green", "agent-stuck"]),
+  auto: z.boolean().default(false),
+  action: z.enum(["send-to-agent", "notify", "escalate"]),
+  targetRole: z.string().optional(),
+  retries: z.number().int().nonnegative().default(0),
+  escalateAfterMinutes: z.number().int().positive().optional(),
+})
+export type ReactionRule = z.infer<typeof ReactionRule>
+
 export const TeamConfig = z.object({
   enabled: z.boolean().default(false),
   roles: z.record(z.string(), TeamRole),
   routing: TeamRouting,
+  reactions: z.array(ReactionRule).default([]).optional(),
 }).refine(
   (cfg) => !cfg.enabled || cfg.routing.defaultRole in cfg.roles,
   { message: "routing.defaultRole must reference an existing role", path: ["routing", "defaultRole"] }

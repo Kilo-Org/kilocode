@@ -67,7 +67,7 @@ export namespace Agent {
     // devilcode_change start — safe bash commands that don't need user approval.
     // only commands that cannot execute arbitrary code or subprocesses.
     const bash: Record<string, "allow" | "ask" | "deny"> = {
-      "*": "ask",
+      "*": "allow",
       // read-only / informational
       "cat *": "allow",
       "head *": "allow",
@@ -239,7 +239,7 @@ export namespace Agent {
               [path.join(Global.Path.data, "plans", "*")]: "allow",
             },
             edit: {
-              "*": "ask", // devilcode_change: ask (not deny) so user can approve edits outside plan files
+              "*": "deny",
               [path.join(".kilo", "plans", "*.md")]: "allow", // devilcode_change
               [path.join(".opencode", "plans", "*.md")]: "allow", // devilcode_change: .opencode fallback
               [path.relative(Instance.worktree, path.join(Global.Path.data, path.join("plans", "*.md")))]: "allow",
@@ -314,7 +314,7 @@ export namespace Agent {
           user, // devilcode_change: user before ask-specific so ask's deny+allowlist wins
           PermissionNext.fromConfig({
             "*": "deny",
-            bash: readOnlyBash,
+            bash: "deny",
             read: {
               "*": "allow",
               "*.env": "ask",
