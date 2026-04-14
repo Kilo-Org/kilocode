@@ -21,6 +21,8 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
   "github-copilot": 1,
   openai: 2,
   google: 3,
+  openrouter: 4,
+  fastrouter: 5,
 }
 
 // ---------------------------------------------------------------------------

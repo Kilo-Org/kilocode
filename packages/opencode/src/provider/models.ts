@@ -253,6 +253,29 @@ export namespace ModelsDev {
       }
     }
 
+    // kilocode_change start
+    const frAllowed = (!enabled || enabled.has("fastrouter")) && !disabled.has("fastrouter")
+    if (frAllowed) {
+      const priorFr = providers["fastrouter"]
+      const snapshotModels = priorFr?.models && Object.keys(priorFr.models).length > 0 ? priorFr.models : {}
+      let frModels = await ModelCache.fetch("fastrouter").catch(() => ({}))
+      if (Object.keys(frModels).length === 0) {
+        frModels = await ModelCache.refresh("fastrouter").catch(() => ({}))
+      }
+      const frModelsFinal = Object.keys(frModels).length > 0 ? frModels : snapshotModels
+      providers["fastrouter"] = {
+        id: "fastrouter",
+        name: "FastRouter",
+        env: ["FASTROUTER_API_KEY"],
+        api: "https://go.fastrouter.ai/api/v1/",
+        npm: "@openrouter/ai-sdk-provider",
+        models: frModelsFinal,
+      }
+    } else if (providers["fastrouter"]) {
+      delete providers["fastrouter"]
+    }
+    // kilocode_change end
+
     return providers
     // kilocode_change end
   }

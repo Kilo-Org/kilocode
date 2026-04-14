@@ -111,6 +111,24 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         options: {},
       }),
 
+    fastrouter: Effect.fnUntraced(function* (input: any) {
+      const env = Env.all()
+      const apiKey = yield* Effect.gen(function* () {
+        const envKey = input.env.map((e: string) => env[e]).find(Boolean)
+        if (envKey) return envKey
+        const auth = yield* dep.auth(input.id)
+        if (auth?.type === "api") return auth.key
+        return (yield* dep.config()).provider?.["fastrouter"]?.options?.apiKey
+      })
+      return {
+        autoload: !!apiKey && Object.keys(input.models).length > 0,
+        options: {
+          ...(apiKey ? { apiKey } : {}),
+          headers: DEFAULT_HEADERS,
+        },
+      }
+    }),
+
     kilo: Effect.fnUntraced(function* (input: any) {
       const env = Env.all()
       const hasKey = yield* Effect.gen(function* () {
@@ -182,6 +200,7 @@ export function patchCustomLoaderResult(providerID: string, result: { options?: 
       break
     }
     case "openrouter":
+    case "fastrouter":
     case "vercel":
     case "zenmux":
       result.options.headers = { ...result.options.headers, ...DEFAULT_HEADERS }

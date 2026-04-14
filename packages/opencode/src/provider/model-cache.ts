@@ -168,6 +168,9 @@ export namespace ModelCache {
     if (providerID === "apertis") {
       return fetchApertisModels(options)
     }
+    if (providerID === "fastrouter") {
+      return fetchFastRouterModels()
+    }
     // kilocode_change end
 
     // Other providers not implemented yet
@@ -223,6 +226,52 @@ export namespace ModelCache {
       }
     }
 
+    return models
+  }
+
+  async function fetchFastRouterModels(): Promise<Record<string, any>> {
+    const resp = await globalThis
+      .fetch("https://go.fastrouter.ai/api/v1/models", {
+        signal: AbortSignal.timeout(10 * 1000),
+      })
+      .catch((err) => {
+        log.error("fastrouter models fetch failed", { err })
+        return undefined
+      })
+    if (!resp) return {}
+    if (!resp.ok) {
+      log.error("fastrouter models fetch failed", { status: resp.status })
+      return {}
+    }
+    const data = await resp.json()
+    const models: Record<string, any> = {}
+    for (const m of data.data ?? []) {
+      if (!m.id) continue
+      const modality: string = m.architecture?.modality ?? "text->text"
+      const [rawInput = "text", rawOutput = "text"] = modality.split("->")
+      const allowed = ["text", "image", "audio", "video", "pdf"]
+      const inputs = rawInput.split("+").filter((p: string) => allowed.includes(p))
+      const outputs = rawOutput.split("+").filter((p: string) => allowed.includes(p))
+      models[m.id] = {
+        id: m.id,
+        name: m.name || m.id,
+        release_date: "",
+        attachment: inputs.includes("image"),
+        reasoning: false,
+        temperature: true,
+        tool_call: true,
+        cost: {
+          input: parseFloat(m.pricing?.prompt || "0") * 1_000_000,
+          output: parseFloat(m.pricing?.completion || "0") * 1_000_000,
+        },
+        limit: {
+          context: m.context_length || 128_000,
+          output: m.max_completion_tokens || 16_384,
+        },
+        modalities: { input: inputs, output: outputs },
+        options: {},
+      }
+    }
     return models
   }
   // kilocode_change end

@@ -967,14 +967,18 @@ export namespace ProviderTransform {
       }
       return { thinkingConfig: { thinkingBudget: 0 } }
     }
-    if (model.providerID === "openrouter" || model.api.npm === "@kilocode/kilo-gateway") {
-      // kilocode_change - add Kilo Gateway support
+    // kilocode_change start
+    if (
+      model.providerID === "openrouter" ||
+      model.providerID === "fastrouter" ||
+      model.api.npm === "@kilocode/kilo-gateway"
+    ) {
       if (model.api.id.includes("google")) {
         return { reasoning: { enabled: false } }
       }
-      // Other models use reasoningEffort (AI SDK format)
       return { reasoningEffort: "minimal" }
     }
+    // kilocode_change end
 
     if (model.providerID === "venice") {
       return { veniceParameters: { disableThinking: true } }
