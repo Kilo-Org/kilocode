@@ -534,6 +534,16 @@ interface LoadMessagesIn {
   sessionID: string
 }
 
+interface FileSourceIn {
+  type: "file"
+  path: string
+  text: {
+    value: string
+    start: number
+    end: number
+  }
+}
+
 interface SendMessageIn {
   type: "sendMessage"
   text: string
@@ -544,7 +554,7 @@ interface SendMessageIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
 }
 
 interface SendCommandIn {
@@ -558,7 +568,13 @@ interface SendCommandIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
+}
+
+interface RequestTerminalContextIn {
+  type: "requestTerminalContext"
+  requestId: string
+  sessionID?: string
 }
 
 interface ClearSessionIn {
@@ -673,6 +689,7 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn
   | ContinueInWorktreeIn

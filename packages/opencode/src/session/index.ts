@@ -25,7 +25,6 @@ import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
 import { SessionID, MessageID, PartID } from "./schema"
-import { Filesystem } from "../util/filesystem" // kilocode_change: normalize directory for Windows drive-letter casing
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 
 import type { Provider } from "@/provider/provider"
@@ -294,7 +293,7 @@ export namespace Session {
     const tokens = {
       total,
       input: adjustedInputTokens,
-      output: outputTokens,
+      output: outputTokens - reasoningTokens,
       reasoning: reasoningTokens,
       cache: {
         write: cacheWriteInputTokens,
@@ -637,15 +636,10 @@ export namespace Session {
       })
 
       const messages = Effect.fn("Session.messages")(function* (input: { sessionID: SessionID; limit?: number }) {
-        return yield* Effect.promise(async () => {
-          const result = [] as MessageV2.WithParts[]
-          for await (const msg of MessageV2.stream(input.sessionID)) {
-            if (input.limit && result.length >= input.limit) break
-            result.push(msg)
-          }
-          result.reverse()
-          return result
-        })
+        if (input.limit) {
+          return MessageV2.page({ sessionID: input.sessionID, limit: input.limit }).items
+        }
+        return Array.from(MessageV2.stream(input.sessionID)).reverse()
       })
 
       const removeMessage = Effect.fn("Session.removeMessage")(function* (input: {
@@ -795,15 +789,10 @@ export namespace Session {
     limit?: number
   }) {
     const project = Instance.project
-    const conditions = [eq(SessionTable.project_id, project.id)]
+    const conditions = KiloSession.filters({ projectID: project.id, directory: input?.directory }) // kilocode_change
 
     if (input?.workspaceID) {
       conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
-    }
-    if (input?.directory) {
-      // kilocode_change start: vscode uri.fsPath gives lowercase drive letter on Windows; resolve() canonicalises to match stored path
-      conditions.push(eq(SessionTable.directory, Filesystem.resolve(input.directory)))
-      // kilocode_change end
     }
     if (input?.roots) {
       conditions.push(isNull(SessionTable.parent_id))

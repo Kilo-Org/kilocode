@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "การเปลี่ยนแปลงเซสชัน",
+  "ui.sessionReview.title.git": "การเปลี่ยนแปลง Git",
+  "ui.sessionReview.title.branch": "การเปลี่ยนแปลงสาขา",
   "ui.sessionReview.title.lastTurn": "การเปลี่ยนแปลงของเทิร์นล่าสุด",
   "ui.sessionReview.diffStyle.unified": "แบบรวม",
   "ui.sessionReview.diffStyle.split": "แบบแยก",
@@ -38,6 +40,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ซ่อนขั้นตอน",
   "ui.sessionTurn.summary.response": "การตอบสนอง",
   "ui.sessionTurn.diff.showMore": "แสดงการเปลี่ยนแปลงเพิ่มเติม ({{count}})",
+  "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",
+  "ui.sessionTurn.diffs.showAll": "แสดงทั้งหมด",
+  "ui.sessionTurn.diffs.showLess": "แสดงน้อยลง",
+  "ui.sessionTurn.diffs.more": "อีก +{{count}} ไฟล์",
 
   "ui.sessionTurn.retry.retrying": "กำลังลองใหม่",
   "ui.sessionTurn.retry.inSeconds": "ใน {{seconds}}วิ",

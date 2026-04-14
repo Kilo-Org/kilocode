@@ -245,11 +245,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
   }
 
-  // Auto-focus first option when dock appears, tab changes, or editing ends
+  // Keep keyboard navigation when the webview already has focus, but do not
+  // steal focus from the editor, terminal, or other VS Code surfaces.
   createEffect(() => {
     void store.tab
     if (store.collapsed || store.editing || confirm()) return
     requestAnimationFrame(() => {
+      if (!document.hasFocus()) return
       const btn = root?.querySelector<HTMLButtonElement>("button[data-slot='question-option']:not(:disabled)")
       btn?.focus()
     })
@@ -376,7 +378,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
                 <Show when={store.editing}>
                   <form data-slot="custom-input-form" onSubmit={handleCustomSubmit}>
                     <input
-                      ref={(el) => setTimeout(() => el.focus(), 0)}
+                      ref={(el) => {
+                        setTimeout(() => {
+                          if (!document.hasFocus()) return
+                          el.focus()
+                        }, 0)
+                      }}
                       type="text"
                       data-slot="custom-input"
                       placeholder={language.t("ui.question.custom.placeholder")}

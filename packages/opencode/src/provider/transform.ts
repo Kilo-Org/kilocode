@@ -1027,6 +1027,12 @@ export namespace ProviderTransform {
     // kilocode_change end
 
     const key = sdkKey(model.api.npm) ?? model.providerID
+    // @ai-sdk/azure delegates to OpenAIChatLanguageModel which reads from
+    // providerOptions["openai"], but OpenAIResponsesLanguageModel checks
+    // "azure" first. Pass both so model options work on either code path.
+    if (model.api.npm === "@ai-sdk/azure") {
+      return { openai: options, azure: options }
+    }
     return { [key]: options }
   }
 

@@ -175,7 +175,6 @@ Options:
   -m, --model     model to use in the format of provider/model  [string]
       --agent     agent to use  [string]
       --format    format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
-      --auto      auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
   -f, --file      file(s) to attach to message  [array]
       --title     title for the session (uses truncated prompt if no value provided)  [string]
       --attach    attach to a running opencode server (e.g., http://localhost:4096)  [string]
@@ -183,6 +182,7 @@ Options:
       --dir       directory to run in, path on remote server if attaching  [string]
       --port      port for the local server (defaults to random port if no value provided)  [number]
       --variant   model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
+      --auto      auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
       --thinking  show thinking blocks  [boolean] [default: false]
 ```
 

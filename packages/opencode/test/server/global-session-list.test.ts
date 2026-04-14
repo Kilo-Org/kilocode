@@ -1,27 +1,22 @@
 // kilocode_change - new file
 import { $ } from "bun"
-import { afterEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import path from "path"
 import { Instance } from "../../src/project/instance"
 import { Project } from "../../src/project/project"
 import { Log } from "../../src/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
+import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        handle() {},
-        dispose() {},
-      }
-    },
-  },
-}))
+beforeEach(() => {
+  spyOn(RemoteSender, "create").mockReturnValue({ handle() {}, dispose() {} })
+})
 
 Log.init({ print: false })
 
 afterEach(async () => {
+  mock.restore()
   await resetDatabase()
 })
 
@@ -116,16 +111,21 @@ describe("Session.listGlobal", () => {
 
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
-      await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
+
+      // Create worktree session first so it computes its own project ID via rev-list
+      const branch = await Instance.provide({
+        directory: worktree,
+        fn: async () => Session.create({ title: "worktree-session" }),
+      })
+
+      // Now write a stale project ID to .git/kilo — this overrides the root's cached ID
+      await Bun.write(path.join(first.path, ".git", "kilo"), "stale-project-id")
 
       const root = await Instance.provide({
         directory: first.path,
         fn: async () => Session.create({ title: "root-session" }),
       })
-      const branch = await Instance.provide({
-        directory: worktree,
-        fn: async () => Session.create({ title: "worktree-session" }),
-      })
+      await Bun.file(path.join(first.path, ".git", "kilo")).delete()
       const other = await Instance.provide({
         directory: second.path,
         fn: async () => Session.create({ title: "other-session" }),

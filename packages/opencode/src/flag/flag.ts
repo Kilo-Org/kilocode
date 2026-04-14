@@ -12,6 +12,7 @@ function falsy(key: string) {
 
 export namespace Flag {
   export const KILO_AUTO_SHARE = truthy("KILO_AUTO_SHARE")
+  export const KILO_AUTO_HEAP_SNAPSHOT = truthy("KILO_AUTO_HEAP_SNAPSHOT")
   export const KILO_GIT_BASH_PATH = process.env["KILO_GIT_BASH_PATH"]
   export const KILO_CONFIG = process.env["KILO_CONFIG"]
   export declare const KILO_PURE: boolean
@@ -30,6 +31,7 @@ export namespace Flag {
   export const KILO_ENABLE_EXPERIMENTAL_MODELS = truthy("KILO_ENABLE_EXPERIMENTAL_MODELS")
   export const KILO_DISABLE_AUTOCOMPACT = truthy("KILO_DISABLE_AUTOCOMPACT")
   export const KILO_DISABLE_MODELS_FETCH = truthy("KILO_DISABLE_MODELS_FETCH")
+  export const KILO_DISABLE_MOUSE = truthy("KILO_DISABLE_MOUSE")
   export const KILO_DISABLE_CLAUDE_CODE = truthy("KILO_DISABLE_CLAUDE_CODE")
   export const KILO_DISABLE_CLAUDE_CODE_PROMPT =
     KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT")
@@ -86,8 +88,22 @@ export namespace Flag {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
   }
 
-  export const KILO_SESSION_RETRY_LIMIT = number("KILO_SESSION_RETRY_LIMIT")
+  export declare const KILO_SESSION_RETRY_LIMIT: number | undefined // kilocode_change — dynamic getter below
 }
+
+// kilocode_change start — Dynamic getter for KILO_SESSION_RETRY_LIMIT
+// Must be evaluated at access time so tests can set the env var at runtime
+Object.defineProperty(Flag, "KILO_SESSION_RETRY_LIMIT", {
+  get() {
+    const value = process.env["KILO_SESSION_RETRY_LIMIT"]
+    if (!value) return undefined
+    const parsed = Number(value)
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
+  },
+  enumerable: true,
+  configurable: false,
+})
+// kilocode_change end
 
 // Dynamic getter for KILO_DISABLE_PROJECT_CONFIG
 // This must be evaluated at access time, not module load time,

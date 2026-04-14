@@ -206,10 +206,9 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
   const seen = new Set(sessions.map((s) => s.id))
   for (const batch of extra) {
     for (const s of batch) {
-      if (!seen.has(s.id) && (!projectID || s.projectID === projectID)) {
-        sessions.push(s)
-        seen.add(s.id)
-      }
+      if (seen.has(s.id)) continue
+      sessions.push(s)
+      seen.add(s.id)
     }
   }
 
@@ -218,7 +217,7 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
     sessions: sessions.map((s) => sessionToWebview(s)),
   })
 
-  return sessions[0]?.projectID
+  return projectID
 }
 
 /**

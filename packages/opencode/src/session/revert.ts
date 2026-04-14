@@ -37,6 +37,7 @@ export namespace SessionRevert {
       const snap = yield* Snapshot.Service
       const storage = yield* Storage.Service
       const bus = yield* Bus.Service
+      const summary = yield* SessionSummary.Service
 
       const revert = Effect.fn("SessionRevert.revert")(function* (input: RevertInput) {
         yield* Effect.promise(() => SessionPrompt.assertNotBusy(input.sessionID))
@@ -71,14 +72,16 @@ export namespace SessionRevert {
         if (!rev) return session
 
         rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
+        if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
+
         // kilocode_change start - compute diffs BEFORE reverting files so the diff
         // reflects changes being undone (files on disk still have AI modifications)
         const range = all.filter((msg) => msg.info.id >= rev!.messageID)
-        const diffs = yield* Effect.promise(() => SessionSummary.computeDiff({ messages: range }))
+        const diffs = yield* summary.computeDiff({ messages: range })
         // kilocode_change end
+
         yield* snap.revert(patches)
         if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot as string)
-
         yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
         yield* bus.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
         // kilocode_change start - strip full file contents before persisting to DB
@@ -166,6 +169,7 @@ export namespace SessionRevert {
         Layer.provide(Snapshot.defaultLayer),
         Layer.provide(Storage.defaultLayer),
         Layer.provide(Bus.layer),
+        Layer.provide(SessionSummary.defaultLayer),
       ),
     ),
   )

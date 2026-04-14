@@ -48,6 +48,7 @@ interface GitStatsPollerOptions {
   intervalMs?: number
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
+  hiddenIntervalMs?: number
 }
 
 export class GitStatsPoller {
@@ -62,12 +63,25 @@ export class GitStatsPoller {
     { files: number; additions: number; deletions: number; ahead: number; behind: number }
   > = {}
   private readonly intervalMs: number
+  private readonly hiddenIntervalMs: number
   private readonly git: GitOps
   private skipWorktreeIds = new Set<string>()
+  private visible = true
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
+    this.hiddenIntervalMs = options.hiddenIntervalMs ?? 60000
     this.git = options.git
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) return
+    this.visible = visible
+    if (this.active && this.timer) {
+      clearTimeout(this.timer)
+      this.timer = undefined
+      this.schedule(this.visible ? this.intervalMs : this.hiddenIntervalMs)
+    }
   }
 
   skipWorktree(id: string): void {
@@ -81,7 +95,8 @@ export class GitStatsPoller {
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
-      this.start()
+      this.active = true
+      void this.poll()
       return
     }
     this.stop()
@@ -100,10 +115,8 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
-  private start(): void {
-    this.stop()
-    this.active = true
-    void this.poll()
+  private currentInterval(): number {
+    return this.visible ? this.intervalMs : this.hiddenIntervalMs
   }
 
   private schedule(delay: number): void {
@@ -119,7 +132,7 @@ export class GitStatsPoller {
     this.busy = true
     return this.fetch().finally(() => {
       this.busy = false
-      this.schedule(this.intervalMs)
+      this.schedule(this.currentInterval())
     })
   }
 

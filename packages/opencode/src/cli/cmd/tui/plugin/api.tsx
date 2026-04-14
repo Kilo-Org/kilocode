@@ -1,5 +1,5 @@
 import type { ParsedKey } from "@opentui/core"
-import type { TuiDialogSelectOption, TuiPluginApi, TuiRouteDefinition } from "@kilocode/plugin/tui"
+import type { TuiDialogSelectOption, TuiPluginApi, TuiRouteDefinition, TuiSlotProps } from "@kilocode/plugin/tui"
 import type { useCommandDialog } from "@tui/component/dialog-command"
 import type { useKeybind } from "@tui/context/keybind"
 import type { useRoute } from "@tui/context/route"
@@ -15,6 +15,7 @@ import { DialogConfirm } from "../ui/dialog-confirm"
 import { DialogPrompt } from "../ui/dialog-prompt"
 import { DialogSelect, type DialogSelectOption as SelectOption } from "../ui/dialog-select"
 import { Prompt } from "../component/prompt"
+import { Slot as HostSlot } from "./slots"
 import type { useToast } from "../ui/toast"
 import { Installation } from "@/installation"
 import { createKiloClient, type KiloClient } from "@kilocode/sdk/v2"
@@ -248,6 +249,9 @@ export function createTuiApi(input: Input): TuiHostPluginApi {
       trigger(value) {
         input.command.trigger(value)
       },
+      show() {
+        input.command.show()
+      },
     },
     route: {
       register(list) {
@@ -292,14 +296,20 @@ export function createTuiApi(input: Input): TuiHostPluginApi {
           />
         )
       },
+      Slot<Name extends string>(props: TuiSlotProps<Name>) {
+        return <HostSlot {...props} />
+      },
       Prompt(props) {
         return (
           <Prompt
+            sessionID={props.sessionID}
             workspaceID={props.workspaceID}
             visible={props.visible}
             disabled={props.disabled}
             onSubmit={props.onSubmit}
+            ref={props.ref}
             hint={props.hint}
+            right={props.right}
             showPlaceholder={props.showPlaceholder}
             placeholders={props.placeholders}
           />

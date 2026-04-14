@@ -67,6 +67,9 @@ export class GitOps {
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
   private readonly controller = new AbortController()
   private readonly semaphore: Semaphore | undefined
+  private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
+  private static readonly CACHE_TTL_MS = 60000
+  private static readonly MAX_CACHE_SIZE = 100
 
   get disposed(): boolean {
     return this.controller.signal.aborted
@@ -87,6 +90,30 @@ export class GitOps {
     if (!this.controller.signal.aborted) {
       this.controller.abort()
     }
+    this.resolutionCache.clear()
+  }
+
+  private getCached(key: string): string | undefined {
+    const entry = this.resolutionCache.get(key)
+    if (entry && entry.expires > Date.now()) {
+      return entry.value
+    }
+    return undefined
+  }
+
+  private setCached(key: string, value: string): void {
+    if (this.resolutionCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [k, v] of this.resolutionCache) {
+        if (v.expires < oldestExpiry) {
+          oldestExpiry = v.expires
+          oldestKey = k
+        }
+      }
+      if (oldestKey) this.resolutionCache.delete(oldestKey)
+    }
+    this.resolutionCache.set(key, { value, expires: Date.now() + GitOps.CACHE_TTL_MS })
   }
 
   private raw(args: string[], cwd: string): Promise<string> {
@@ -122,38 +149,68 @@ export class GitOps {
    * 3. Falls back to `origin`
    */
   async resolveRemote(cwd: string, branch?: string): Promise<string> {
+    const cacheKey = `remote:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached) return cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
       () => "",
     )
-    if (upstream.includes("/")) return upstream.split("/")[0]
+    if (upstream.includes("/")) {
+      const result = upstream.split("/")[0]
+      this.setCached(cacheKey, result)
+      return result
+    }
 
     const name = branch || (await this.raw(["branch", "--show-current"], cwd).catch(() => ""))
     if (name) {
       const configured = await this.raw(["config", `branch.${name}.remote`], cwd).catch(() => "")
-      if (configured) return configured
+      if (configured) {
+        this.setCached(cacheKey, configured)
+        return configured
+      }
     }
 
-    return "origin"
+    const result = "origin"
+    this.setCached(cacheKey, result)
+    return result
   }
 
   /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    const cacheKey = `tracking:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    if (upstream) return upstream
+    if (upstream) {
+      this.setCached(cacheKey, upstream)
+      return upstream
+    }
 
     const remote = await this.resolveRemote(cwd, branch)
     const ref = `${remote}/${branch}`
     const resolved = await this.raw(["rev-parse", "--verify", ref], cwd).catch(() => "")
-    if (resolved) return ref
+    if (resolved) {
+      this.setCached(cacheKey, ref)
+      return ref
+    }
 
+    this.setCached(cacheKey, "")
     return undefined
   }
 
   /** Resolve the repo's default branch via <remote>/HEAD. */
   async resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
     const remote = await this.resolveRemote(cwd, branch)
+    const cacheKey = `default-branch:${cwd}:${remote}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached
+
     const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
-    return head || undefined
+    const result = head || undefined
+    this.setCached(cacheKey, result ?? "")
+    return result
   }
 
   async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
