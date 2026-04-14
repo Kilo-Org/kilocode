@@ -1,10 +1,21 @@
 {
   "id": "openclaw-security-advisor",
   "name": "OpenClaw Security Advisor",
-  "description": "Run a security checkup of your OpenClaw instance and get an expert analysis report from KiloClaw.",
+  "description": "Run a security checkup of your OpenClaw instance and get an expert analysis report from KiloCode.",
+  "commandAliases": [
+    { "name": "security-checkup", "kind": "runtime-slash" }
+  ],
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
-    "properties": {}
+    "properties": {
+      "authToken": {
+        "description": "KiloCode auth token. Set automatically via device auth on first use — stored as a SecretRef."
+      },
+      "apiBaseUrl": {
+        "type": "string",
+        "description": "KiloCode API base URL. Defaults to https://api.kilo.ai. Override for dev or self-hosted environments."
+      }
+    }
   }
 }
