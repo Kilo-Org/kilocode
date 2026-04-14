@@ -352,6 +352,15 @@ export class WorktreeStateManager {
     return this.sections.get(id)
   }
 
+  /** Return IDs of worktrees assigned to the given section. */
+  getWorktreesInSection(id: string): string[] {
+    const result: string[] = []
+    for (const wt of this.worktrees.values()) {
+      if (wt.sectionId === id) result.push(wt.id)
+    }
+    return result
+  }
+
   addSection(name: string, color: string | null, worktreeIds?: string[]): Section {
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     const id = generateId("sec")

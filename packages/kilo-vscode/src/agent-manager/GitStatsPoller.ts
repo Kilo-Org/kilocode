@@ -84,12 +84,14 @@ export class GitStatsPoller {
     }
   }
 
-  skipWorktree(id: string): void {
-    this.skipWorktreeIds.add(id)
+  /** Replace the entire skip set with the given IDs. */
+  syncSkips(ids: Set<string>): void {
+    this.skipWorktreeIds = ids
   }
 
-  unskipWorktree(id: string): void {
-    this.skipWorktreeIds.delete(id)
+  /** Pre-emptively exclude a single worktree (e.g. before deletion). */
+  skipWorktree(id: string): void {
+    this.skipWorktreeIds.add(id)
   }
 
   setEnabled(enabled: boolean): void {
