@@ -258,15 +258,20 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
 
             if (permission === "grep") {
               const pattern = typeof data.pattern === "string" ? data.pattern : ""
+              const raw = props.request.metadata?.path ?? data.path
+              const dir = typeof raw === "string" ? raw : ""
               return {
                 icon: "✱",
-                title: `Grep "${pattern}"`,
+                title: `Grep "${pattern}"` + (dir ? ` in ${normalizePath(dir)}` : ""),
                 body: (
-                  <Show when={pattern}>
-                    <box paddingLeft={1}>
+                  <box paddingLeft={1} gap={1}>
+                    <Show when={pattern}>
                       <text fg={theme.textMuted}>{"Pattern: " + pattern}</text>
-                    </box>
-                  </Show>
+                    </Show>
+                    <Show when={dir}>
+                      <text fg={theme.textMuted}>{"Path: " + normalizePath(dir)}</text>
+                    </Show>
+                  </box>
                 ),
               }
             }

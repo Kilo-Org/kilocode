@@ -43,9 +43,16 @@ export const PermissionDock: Component<{
     const cmd = props.request.args?.command
     return typeof cmd === "string" ? cmd : undefined
   }
-  const description = createMemo(() =>
-    command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
-  )
+  const description = createMemo(() => {
+    if (command()) return null
+    const path = props.request.args?.path
+    return describePatterns(
+      props.request.toolName,
+      props.request.patterns,
+      language.t,
+      typeof path === "string" ? path : undefined,
+    )
+  })
 
   const filediff = () => {
     if (props.request.toolName !== "edit" && props.request.toolName !== "write") return null

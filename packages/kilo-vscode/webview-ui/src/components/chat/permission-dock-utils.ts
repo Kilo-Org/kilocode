@@ -63,12 +63,17 @@ export function describePatterns(
   tool: string,
   patterns: string[],
   t: (key: string) => string,
+  path?: string,
 ): PatternDescription | null {
   const filtered = patterns.filter((p) => p !== "*")
   if (filtered.length === 0) return null
 
   const key = TOOL_LABEL_KEYS[tool]
   const label = key ? t(key) : tool
-  if (filtered.length === 1) return { kind: "single", text: `${label} ${filtered[0]}` }
-  return { kind: "multi", title: `${label}:`, paths: filtered }
+  if (filtered.length === 1) {
+    let text = `${label} ${filtered[0]}`
+    if (path) text += ` in ${path}`
+    return { kind: "single", text }
+  }
+  return { kind: "multi", title: path ? `${label} in ${path}:` : `${label}:`, paths: filtered }
 }

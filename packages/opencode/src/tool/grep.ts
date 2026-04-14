@@ -24,19 +24,19 @@ export const GrepTool = Tool.define("grep", {
       throw new Error("pattern is required")
     }
 
+    let searchPath = params.path ?? Instance.directory
+    searchPath = path.isAbsolute(searchPath) ? searchPath : path.resolve(Instance.directory, searchPath)
+
     await ctx.ask({
       permission: "grep",
       patterns: [params.pattern],
       always: ["*"],
       metadata: {
         pattern: params.pattern,
-        path: params.path,
+        path: searchPath,
         include: params.include,
       },
     })
-
-    let searchPath = params.path ?? Instance.directory
-    searchPath = path.isAbsolute(searchPath) ? searchPath : path.resolve(Instance.directory, searchPath)
     await assertExternalDirectory(ctx, searchPath, { kind: "directory" })
 
     const rgPath = await Ripgrep.filepath()
@@ -66,7 +66,7 @@ export const GrepTool = Tool.define("grep", {
     if (exitCode === 1 || (exitCode === 2 && !output.trim())) {
       return {
         title: params.pattern,
-        metadata: { matches: 0, truncated: false },
+        metadata: { matches: 0, truncated: false, path: searchPath },
         output: "No files found",
       }
     }
@@ -110,7 +110,7 @@ export const GrepTool = Tool.define("grep", {
     if (finalMatches.length === 0) {
       return {
         title: params.pattern,
-        metadata: { matches: 0, truncated: false },
+        metadata: { matches: 0, truncated: false, path: searchPath },
         output: "No files found",
       }
     }
@@ -149,6 +149,7 @@ export const GrepTool = Tool.define("grep", {
       metadata: {
         matches: totalMatches,
         truncated,
+        path: searchPath,
       },
       output: outputLines.join("\n"),
     }

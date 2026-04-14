@@ -1985,9 +1985,10 @@ function Read(props: ToolProps<typeof ReadTool>) {
 }
 
 function Grep(props: ToolProps<typeof GrepTool>) {
+  const path = createMemo(() => props.metadata.path ?? props.input.path)
   return (
     <InlineTool icon="✱" pending="Searching content..." complete={props.input.pattern} part={props.part}>
-      Grep "{props.input.pattern}" <Show when={props.input.path}>in {normalizePath(props.input.path)} </Show>
+      Grep "{props.input.pattern}" <Show when={path()}>in {normalizePath(path())} </Show>
       <Show when={props.metadata.matches}>
         ({props.metadata.matches} {props.metadata.matches === 1 ? "match" : "matches"})
       </Show>

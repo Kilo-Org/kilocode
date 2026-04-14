@@ -1666,6 +1666,7 @@ ToolRegistry.register({
     if (props.input.pattern) args.push("pattern=" + props.input.pattern)
     if (props.input.include) args.push("include=" + props.input.include)
     const pending = createMemo(() => busy(props.status))
+    const path = createMemo(() => props.metadata.path ?? props.input.path)
     return (
       <BasicTool
         {...props}
@@ -1674,7 +1675,7 @@ ToolRegistry.register({
           <ToolTriggerRow
             title={i18n.t("ui.tool.grep")}
             pending={pending()}
-            subtitle={getDirectory(props.input.path)}
+            subtitle={getDirectory(path())}
             args={args}
             animate={props.reveal}
           />
