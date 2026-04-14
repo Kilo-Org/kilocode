@@ -2,6 +2,7 @@ import { Log } from "../util/log"
 import path from "path"
 import { pathToFileURL } from "url"
 import os from "os"
+import { Process } from "../util/process"
 import z from "zod"
 import { ModelsDev } from "../provider/models"
 import { mergeDeep, pipe, unique } from "remeda"
@@ -25,7 +26,6 @@ import { KilocodeConfig } from "../kilocode/config/config"
 // kilocode_change end
 import { Instance, type InstanceContext } from "../project/instance"
 import { LSPServer } from "../lsp/server"
-import { BunProc } from "@/bun"
 import { Installation } from "@/installation"
 import { ConfigMarkdown } from "./markdown"
 import { constants, existsSync } from "fs"
@@ -33,20 +33,18 @@ import { Bus } from "@/bus"
 import { GlobalBus } from "@/bus/global"
 import { Event } from "../server/event"
 import { Glob } from "../util/glob"
-import { PackageRegistry } from "@/bun/registry"
-import { online, proxied } from "@/util/network"
 import { iife } from "@/util/iife"
 import { Account } from "@/account"
 import { isRecord } from "@/util/record"
 import { ConfigPaths } from "./paths"
 import { Filesystem } from "@/util/filesystem"
-import { Process } from "@/util/process"
 import { AppFileSystem } from "@/filesystem"
 import { InstanceState } from "@/effect/instance-state"
 import { makeRuntime } from "@/effect/run-service"
 import { Duration, Effect, Layer, Option, ServiceMap } from "effect"
 import { Flock } from "@/util/flock"
 import { isPathPluginSpec, parsePluginSpecifier, resolvePathPluginTarget } from "@/plugin/shared"
+import { Npm } from "@/npm"
 
 export namespace Config {
   const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
@@ -55,6 +53,12 @@ export namespace Config {
 
   export type PluginOptions = z.infer<typeof PluginOptions>
   export type PluginSpec = z.infer<typeof PluginSpec>
+  export type PluginScope = "global" | "local"
+  export type PluginOrigin = {
+    spec: PluginSpec
+    source: string
+    scope: PluginScope
+  }
 
   const log = Log.create({ service: "config" })
 
@@ -88,12 +92,62 @@ export namespace Config {
 
   const managedDir = managedConfigDir()
 
+  const MANAGED_PLIST_DOMAIN = "ai.opencode.managed"
+
+  // Keys injected by macOS/MDM into the managed plist that are not OpenCode config
+  const PLIST_META = new Set([
+    "PayloadDisplayName",
+    "PayloadIdentifier",
+    "PayloadType",
+    "PayloadUUID",
+    "PayloadVersion",
+    "_manualProfile",
+  ])
+
+  /**
+   * Parse raw JSON (from plutil conversion of a managed plist) into OpenCode config.
+   * Strips MDM metadata keys before parsing through the config schema.
+   * Pure function — no OS interaction, safe to unit test directly.
+   */
+  export function parseManagedPlist(json: string, source: string): Info {
+    const raw = JSON.parse(json)
+    for (const key of Object.keys(raw)) {
+      if (PLIST_META.has(key)) delete raw[key]
+    }
+    return parseConfig(JSON.stringify(raw), source)
+  }
+
+  /**
+   * Read macOS managed preferences deployed via .mobileconfig / MDM (Jamf, Kandji, etc).
+   * MDM-installed profiles write to /Library/Managed Preferences/ which is only writable by root.
+   * User-scoped plists are checked first, then machine-scoped.
+   */
+  async function readManagedPreferences(): Promise<Info> {
+    if (process.platform !== "darwin") return {}
+
+    const domain = MANAGED_PLIST_DOMAIN
+    const user = os.userInfo().username
+    const paths = [
+      path.join("/Library/Managed Preferences", user, `${domain}.plist`),
+      path.join("/Library/Managed Preferences", `${domain}.plist`),
+    ]
+
+    for (const plist of paths) {
+      if (!existsSync(plist)) continue
+      log.info("reading macOS managed preferences", { path: plist })
+      const result = await Process.run(["plutil", "-convert", "json", "-o", "-", plist], { nothrow: true })
+      if (result.code !== 0) {
+        log.warn("failed to convert managed preferences plist", { path: plist })
+        continue
+      }
+      return parseManagedPlist(result.stdout.toString(), `mobileconfig:${plist}`)
+    }
+    return {}
+  }
+
   // Custom merge function that concatenates array fields instead of replacing them
   function mergeConfigConcatArrays(target: Info, source: Info): Info {
     const merged = mergeDeep(target, source)
-    if (target.plugin && source.plugin) {
-      merged.plugin = Array.from(new Set([...target.plugin, ...source.plugin]))
-    }
     if (target.instructions && source.instructions) {
       merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
     }
@@ -106,8 +160,7 @@ export namespace Config {
   }
 
   export async function installDependencies(dir: string, input?: InstallInput) {
-    if (!(await needsInstall(dir))) return
-
+    if (!(await isWritable(dir))) return
     await using _ = await Flock.acquire(`config-install:${Filesystem.resolve(dir)}`, {
       signal: input?.signal,
       onWait: (tick) =>
@@ -118,13 +171,10 @@ export namespace Config {
           waited: tick.waited,
         }),
     })
-
     input?.signal?.throwIfAborted()
-    if (!(await needsInstall(dir))) return
 
     const pkg = path.join(dir, "package.json")
     const target = Installation.isLocal() ? "*" : Installation.VERSION
-
     const json = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => ({
       dependencies: {},
     }))
@@ -142,49 +192,15 @@ export namespace Config {
         ["node_modules", "package.json", "package-lock.json", "bun.lock", ".gitignore"].join("\n"),
       )
     }
-
-    // Bun can race cache writes on Windows when installs run in parallel across dirs.
-    // Serialize installs globally on win32, but keep parallel installs on other platforms.
-    await using __ =
-      process.platform === "win32"
-        ? await Flock.acquire("config-install:bun", {
-            signal: input?.signal,
-          })
-        : undefined
-
-    await BunProc.run(
-      [
-        "install",
-        // TODO: get rid of this case (see: https://github.com/oven-sh/bun/issues/19936)
-        ...(proxied() || process.env.CI ? ["--no-cache"] : []),
-      ],
-      {
-        cwd: dir,
-        abort: input?.signal,
-      },
-    ).catch((err) => {
-      if (err instanceof Process.RunFailedError) {
-        const detail = {
-          dir,
-          cmd: err.cmd,
-          code: err.code,
-          stdout: err.stdout.toString(),
-          stderr: err.stderr.toString(),
-        }
-        if (Flag.KILO_STRICT_CONFIG_DEPS) {
-          log.error("failed to install dependencies", detail)
-          throw err
-        }
-        log.warn("failed to install dependencies", detail)
-        return
-      }
-
+    // kilocode_change start
+    await Npm.install(dir).catch((err) => {
       if (Flag.KILO_STRICT_CONFIG_DEPS) {
         log.error("failed to install dependencies", { dir, error: err })
         throw err
       }
       log.warn("failed to install dependencies", { dir, error: err })
     })
+    // kilocode_change end
   }
 
   async function isWritable(dir: string) {
@@ -194,43 +210,6 @@ export namespace Config {
     } catch {
       return false
     }
-  }
-
-  export async function needsInstall(dir: string) {
-    // Some config dirs may be read-only.
-    // Installing deps there will fail; skip installation in that case.
-    const writable = await isWritable(dir)
-    if (!writable) {
-      log.debug("config dir is not writable, skipping dependency install", { dir })
-      return false
-    }
-
-    const mod = path.join(dir, "node_modules", "@kilocode", "plugin") // kilocode_change
-    if (!existsSync(mod)) return true
-
-    const pkg = path.join(dir, "package.json")
-    const pkgExists = await Filesystem.exists(pkg)
-    if (!pkgExists) return true
-
-    const parsed = await Filesystem.readJson<{ dependencies?: Record<string, string> }>(pkg).catch(() => null)
-    const dependencies = parsed?.dependencies ?? {}
-    const depVersion = dependencies["@kilocode/plugin"]
-    if (!depVersion) return true
-
-    const targetVersion = Installation.isLocal() ? "latest" : Installation.VERSION
-    if (targetVersion === "latest") {
-      if (!online()) return false
-      const stale = await PackageRegistry.isOutdated("@kilocode/plugin", depVersion, dir)
-      if (!stale) return false
-      log.info("Cached version is outdated, proceeding with install", {
-        pkg: "@kilocode/plugin",
-        cachedVersion: depVersion,
-      })
-      return true
-    }
-    // kilocode_change end
-    if (depVersion === targetVersion) return false
-    return true
   }
 
   function rel(item: string, patterns: string[]) {
@@ -455,31 +434,19 @@ export namespace Config {
     return resolved
   }
 
-  /**
-   * Deduplicates plugins by name, with later entries (higher priority) winning.
-   * Priority order (highest to lowest):
-   * 1. Local plugin/ directory
-   * 2. Local opencode.json
-   * 3. Global plugin/ directory
-   * 4. Global opencode.json
-   *
-   * Since plugins are added in low-to-high priority order,
-   * we reverse, deduplicate (keeping first occurrence), then restore order.
-   */
-  export function deduplicatePlugins(plugins: PluginSpec[]): PluginSpec[] {
-    const seenNames = new Set<string>()
-    const uniqueSpecifiers: PluginSpec[] = []
+  export function deduplicatePluginOrigins(plugins: PluginOrigin[]): PluginOrigin[] {
+    const seen = new Set<string>()
+    const list: PluginOrigin[] = []
 
-    for (const specifier of plugins.toReversed()) {
-      const spec = pluginSpecifier(specifier)
+    for (const plugin of plugins.toReversed()) {
+      const spec = pluginSpecifier(plugin.spec)
       const name = spec.startsWith("file://") ? spec : parsePluginSpecifier(spec).pkg
-      if (!seenNames.has(name)) {
-        seenNames.add(name)
-        uniqueSpecifiers.push(specifier)
-      }
+      if (seen.has(name)) continue
+      seen.add(name)
+      list.push(plugin)
     }
 
-    return uniqueSpecifiers.toReversed()
+    return list.toReversed()
   }
 
   export const McpLocal = z
@@ -1172,7 +1139,9 @@ export namespace Config {
       ref: "Config",
     })
 
-  export type Info = z.output<typeof Info>
+  export type Info = z.output<typeof Info> & {
+    plugin_origins?: PluginOrigin[]
+  }
 
   type State = {
     config: Info
@@ -1242,6 +1211,11 @@ export namespace Config {
       if (value === undefined) return result
       return patchJsonc(result, value, [...path, key])
     }, input)
+  }
+
+  function writable(info: Info) {
+    const { plugin_origins, ...next } = info
+    return next
   }
 
   function parseConfig(text: string, filepath: string): Info {
@@ -1434,6 +1408,28 @@ export namespace Config {
           }
           warnings.push(...orgModes.warnings)
           // kilocode_change end
+          const scope = (source: string): PluginScope => {
+            if (source.startsWith("http://") || source.startsWith("https://")) return "global"
+            if (source === "KILO_CONFIG_CONTENT") return "local"
+            if (Instance.containsPath(source)) return "local"
+            return "global"
+          }
+
+          const track = (source: string, list: PluginSpec[] | undefined, kind?: PluginScope) => {
+            if (!list?.length) return
+            const hit = kind ?? scope(source)
+            const plugins = deduplicatePluginOrigins([
+              ...(result.plugin_origins ?? []),
+              ...list.map((spec) => ({ spec, source, scope: hit })),
+            ])
+            result.plugin = plugins.map((item) => item.spec)
+            result.plugin_origins = plugins
+          }
+
+          const merge = (source: string, next: Info, kind?: PluginScope) => {
+            result = mergeConfigConcatArrays(result, next)
+            track(source, next.plugin, kind)
+          }
 
           for (const [key, value] of Object.entries(auth)) {
             if (value.type === "wellknown") {
@@ -1442,8 +1438,8 @@ export namespace Config {
               const source = `${url}/.well-known/opencode`
               process.env[value.key] = value.token
               log.debug("fetching remote config", { url: source })
-              result = mergeConfigConcatArrays(
-                result,
+              merge(
+                source,
                 yield* Effect.tryPromise({
                   try: async () => {
                     const response = await fetch(source)
@@ -1479,29 +1475,23 @@ export namespace Config {
                     return Effect.succeed({} as Info)
                   }),
                 ),
+                "global",
               )
-              // kilocode_change end
             }
           }
 
-          // kilocode_change start
-          result = mergeConfigConcatArrays(
-            result,
-            yield* getGlobal().pipe(
-              Effect.catchDefect((err: unknown) => {
-                caughtWarning(warnings, "global config", err)
-                return Effect.succeed({} as Info)
-              }),
-            ),
+          const global = yield* getGlobal().pipe(
+            Effect.catchDefect((err: unknown) => {
+              caughtWarning(warnings, "global config", err)
+              return Effect.succeed({} as Info)
+            }),
           )
-          // kilocode_change end
+          merge(Global.Path.config, global, "global")
 
           if (Flag.KILO_CONFIG) {
-            // kilocode_change start
-            result = mergeConfigConcatArrays(
-              result,
+            merge(
+              Flag.KILO_CONFIG,
               yield* loadFile(Flag.KILO_CONFIG).pipe(
-                Effect.tap(() => Effect.sync(() => log.debug("loaded custom config", { path: Flag.KILO_CONFIG }))),
                 Effect.catchDefect((err: unknown) => {
                   caughtWarning(warnings, Flag.KILO_CONFIG!, err)
                   return Effect.succeed({} as Info)
@@ -1509,6 +1499,7 @@ export namespace Config {
               ),
             )
             // kilocode_change end
+            log.debug("loaded custom config", { path: Flag.KILO_CONFIG })
           }
 
           if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
@@ -1517,8 +1508,8 @@ export namespace Config {
               for (const file of yield* Effect.promise(() =>
                 ConfigPaths.projectFiles(name, ctx.directory, ctx.worktree),
               )) {
-                result = mergeConfigConcatArrays(
-                  result,
+                merge(
+                  file,
                   yield* loadFile(file).pipe(
                     Effect.catchDefect((err: unknown) => {
                       caughtWarning(warnings, file, err)
@@ -1548,8 +1539,8 @@ export namespace Config {
             if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
               for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
                 log.debug(`loading config from ${path.join(dir, file)}`)
-                result = mergeConfigConcatArrays(
-                  result,
+                merge(
+                  path.join(dir, file),
                   yield* loadFile(path.join(dir, file)).pipe(
                     Effect.catchDefect((err: unknown) => {
                       caughtWarning(warnings, path.join(dir, file), err)
@@ -1565,35 +1556,27 @@ export namespace Config {
             // kilocode_change end
 
             const dep = iife(async () => {
-              const stale = await needsInstall(dir)
-              if (stale) await installDependencies(dir)
+              await installDependencies(dir)
             })
             void dep.catch((err) => {
               log.warn("background dependency install failed", { dir, error: err })
             })
             deps.push(dep)
 
-            // kilocode_change start
-            yield* Effect.promise(async () => {
-              try {
-                result.command = mergeDeep(result.command ?? {}, await loadCommand(dir, warnings))
-                result.agent = mergeDeep(result.agent ?? {}, await loadAgent(dir, warnings))
-                result.agent = mergeDeep(result.agent, await loadMode(dir, warnings))
-                result.plugin!.push(...(await loadPlugin(dir)))
-              } catch (err: unknown) {
-                log.error("failed to load config directory", { dir, err })
-              }
-            })
-            // kilocode_change end
+            result.command = mergeDeep(result.command ?? {}, yield* Effect.promise(() => loadCommand(dir, warnings)))
+            result.agent = mergeDeep(result.agent, yield* Effect.promise(() => loadAgent(dir, warnings)))
+            result.agent = mergeDeep(result.agent, yield* Effect.promise(() => loadMode(dir, warnings)))
+            const list = yield* Effect.promise(() => loadPlugin(dir))
+            track(dir, list)
           }
 
           if (process.env.KILO_CONFIG_CONTENT) {
-            result = mergeConfigConcatArrays(
-              result,
+            // kilocode_change start
+            merge(
+              "KILO_CONFIG_CONTENT",
               yield* loadConfig(process.env.KILO_CONFIG_CONTENT, {
                 dir: ctx.directory,
                 source: "KILO_CONFIG_CONTENT",
-              // kilocode_change start
               }).pipe(
                 Effect.tap(() => Effect.sync(() => log.debug("loaded custom config from KILO_CONFIG_CONTENT"))),
                 Effect.catchDefect((err: unknown) => {
@@ -1620,13 +1603,12 @@ export namespace Config {
 
               const config = Option.getOrUndefined(configOpt)
               if (config) {
-                result = mergeConfigConcatArrays(
-                  result,
-                  yield* loadConfig(JSON.stringify(config), {
-                    dir: path.dirname(`${active.url}/api/config`),
-                    source: `${active.url}/api/config`,
-                  }),
-                )
+                const source = `${active.url}/api/config`
+                const next = yield* loadConfig(JSON.stringify(config), {
+                  dir: path.dirname(source),
+                  source,
+                })
+                merge(source, next, "global")
               }
             }).pipe(
               Effect.catch((err) => {
@@ -1645,6 +1627,9 @@ export namespace Config {
             }
           }
           // kilocode_change end
+
+          // macOS managed preferences (.mobileconfig deployed via MDM) override everything
+          result = mergeConfigConcatArrays(result, yield* Effect.promise(() => readManagedPreferences()))
 
           for (const [name, mode] of Object.entries(result.mode ?? {})) {
             result.agent = mergeDeep(result.agent ?? {}, {
@@ -1685,8 +1670,6 @@ export namespace Config {
             result.compaction = { ...result.compaction, prune: false }
           }
 
-          result.plugin = deduplicatePlugins(result.plugin ?? [])
-
           return {
             config: result,
             directories,
@@ -1724,7 +1707,10 @@ export namespace Config {
           const file = path.join(dir, "config.json")
           const existing = yield* loadFile(file)
           yield* fs
-            .writeFileString(file, JSON.stringify(KilocodeConfig.mergeConfig(existing, config), null, 2))
+            .writeFileString(
+              file,
+              JSON.stringify(KilocodeConfig.mergeConfig(writable(existing), writable(config)), null, 2),
+            )
             .pipe(Effect.orDie) // kilocode_change
           yield* Effect.promise(() => Instance.dispose())
         })
@@ -1755,15 +1741,16 @@ export namespace Config {
           // kilocode_change end
           const file = globalConfigFile()
           const before = (yield* readConfigFile(file)) ?? "{}"
+          const input = writable(config)
 
           let next: Info
           if (!file.endsWith(".jsonc")) {
             const existing = parseConfig(before, file)
-            const merged = KilocodeConfig.mergeConfig(existing, config) // kilocode_change
+            const merged = KilocodeConfig.mergeConfig(writable(existing), writable(config)) // kilocode_change
             yield* fs.writeFileString(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
             next = merged
           } else {
-            const updated = patchJsonc(before, config)
+            const updated = patchJsonc(before, input)
             next = parseConfig(updated, file)
             yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
           }

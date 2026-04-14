@@ -13,6 +13,7 @@ import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
+import type { RunStatus } from "./run/manager"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -126,6 +127,9 @@ interface StateMessage {
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
   defaultBaseBranch?: string
+  runStatuses?: RunStatus[]
+  runScriptConfigured?: boolean
+  runScriptPath?: string
 }
 
 interface ErrorOutMessage {
@@ -249,6 +253,10 @@ interface ActionOutMessage {
   action: string
 }
 
+interface RunStatusMessage extends RunStatus {
+  type: "agentManager.runStatus"
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeStatsMessage
@@ -274,6 +282,7 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | PRStatusOutMessage
   | ActionOutMessage
+  | RunStatusMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -329,6 +338,20 @@ interface ForgetSessionIn {
 
 interface ConfigureSetupScriptIn {
   type: "agentManager.configureSetupScript"
+}
+
+interface ConfigureRunScriptIn {
+  type: "agentManager.configureRunScript"
+}
+
+interface RunScriptIn {
+  type: "agentManager.runScript"
+  worktreeId: string
+}
+
+interface StopRunScriptIn {
+  type: "agentManager.stopRunScript"
+  worktreeId: string
 }
 
 interface ShowTerminalIn {
@@ -612,6 +635,9 @@ export type AgentManagerInMessage =
   | ForgetSessionIn
   | ForkSessionIn
   | ConfigureSetupScriptIn
+  | ConfigureRunScriptIn
+  | RunScriptIn
+  | StopRunScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
   | OpenWorktreeIn

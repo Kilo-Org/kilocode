@@ -39,6 +39,7 @@ const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
+const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -185,7 +186,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   // -- onMessage dispatches all expected message types -----------------------
 
   it("provider routing handles all documented agentManager.* message types", () => {
-    const text = provider()
+    const text = provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -196,6 +197,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.persistSession",
       "agentManager.forgetSession",
       "agentManager.configureSetupScript",
+      "agentManager.configureRunScript",
+      "agentManager.runScript",
+      "agentManager.stopRunScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
       "agentManager.showExistingLocalTerminal",
@@ -556,6 +560,9 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
+  },
+  "run/task.ts": {
+    note: "vscode adapter for Agent Manager run scripts",
   },
 }
 

@@ -35,32 +35,32 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
 
+{% callout type="info" %}
+The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
+{% /callout %}
+
 #### How PRs are detected
 
-The extension uses the GitHub CLI (`gh`) to automatically discover PRs for each worktree branch. Three strategies are tried in order:
+The extension uses `gh` to automatically discover PRs for each worktree branch. Three strategies are tried in order:
 
 1. **Branch tracking ref** — `gh pr view` resolves via the branch's tracking ref (works for fork PRs checked out with `gh pr checkout`)
 2. **Branch name** — `gh pr view <branch>` matches same-repo branches pushed to origin
 3. **HEAD commit SHA** — `gh pr list --search "<sha>"` as a last resort, matching PRs whose head ref points to the exact same commit
 
-You can also import a PR directly by pasting a GitHub PR URL in the new worktree dialog — the branch is checked out and the badge appears automatically.
-
-{% callout type="info" %}
-The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
-{% /callout %}
+You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
 
 #### Badge colors
 
 The badge color reflects the most important signal, evaluated in priority order:
 
-| State             | Color            | Condition                                   |
-| ----------------- | ---------------- | ------------------------------------------- |
-| Draft             | Gray             | PR is in draft state                        |
-| Merged            | Purple           | PR has been merged                          |
-| Closed            | Red              | PR was closed without merging               |
-| Checks failing    | Red              | Any CI check has failed                     |
-| Changes requested | Yellow           | A reviewer requested changes                |
-| Checks pending    | Yellow (pulsing) | CI checks are still running                 |
+| State | Color | Condition |
+| --- | --- | --- |
+| Draft | Gray | PR is in draft state |
+| Merged | Purple | PR has been merged |
+| Closed | Red | PR was closed without merging |
+| Checks failing | Red | Any CI check has failed |
+| Changes requested | Yellow | A reviewer requested changes |
+| Checks pending | Yellow (pulsing) | CI checks are still running |
 | Open (default) | Green | PR is open, no failing or pending checks, no blocking review |
 
 When checks are pending on an open PR, the badge pulses to indicate activity.

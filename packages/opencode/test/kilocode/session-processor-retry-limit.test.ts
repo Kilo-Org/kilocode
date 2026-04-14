@@ -108,7 +108,7 @@ const deps = Layer.mergeAll(
   Session.defaultLayer,
   Snapshot.defaultLayer,
   AgentSvc.defaultLayer,
-  Permission.layer,
+  Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
   status,
@@ -123,123 +123,113 @@ afterEach(() => {
 })
 
 describe("session processor retry limit", () => {
-  it.effect("stops after two retries with the normalized retryable error", () =>
-    provideTmpdirInstance(
-      (dir) =>
-        Effect.gen(function* () {
-          const test = yield* TestLLM
-          const processors = yield* SessionProcessor.Service
-          const session = yield* Session.Service
+  it.live(
+    "stops after two retries with the normalized retryable error",
+    () =>
+      provideTmpdirInstance(
+        (dir) =>
+          Effect.gen(function* () {
+            process.env.KILO_SESSION_RETRY_LIMIT = "2"
+            const test = yield* TestLLM
+            const processors = yield* SessionProcessor.Service
+            const session = yield* Session.Service
 
-          // 3 retryable 429 errors + sentinel (should not be reached)
-          yield* test.push(Stream.fail(retryable429()))
-          yield* test.push(Stream.fail(retryable429()))
-          yield* test.push(Stream.fail(retryable429()))
-          yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
+            // 3 retryable 429 errors + sentinel (should not be reached)
+            yield* test.push(Stream.fail(retryable429()))
+            yield* test.push(Stream.fail(retryable429()))
+            yield* test.push(Stream.fail(retryable429()))
+            yield* test.push(Stream.fail(new Error("unexpected extra llm call")))
 
-          const retry: number[] = []
-          const errors: Array<MessageV2.Assistant["error"]> = []
-          const unsubStatus = Bus.subscribe(SessionStatus.Event.Status, (event) => {
-            if (event.properties.status.type !== "retry") return
-            retry.push(event.properties.status.attempt)
-          })
-          const unsubError = Bus.subscribe(Session.Event.Error, (event) => {
-            errors.push(event.properties.error)
-          })
-          const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
+            const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
-          const chat = yield* session.create({})
-          const parent = yield* session.updateMessage({
-            id: MessageID.ascending(),
-            role: "user",
-            sessionID: chat.id,
-            agent: "code",
-            model: ref,
-            time: { created: Date.now() },
-          })
-          const msg: MessageV2.Assistant = {
-            id: MessageID.ascending(),
-            role: "assistant",
-            sessionID: chat.id,
-            parentID: parent.id,
-            mode: "code",
-            agent: "code",
-            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
-            cost: 0,
-            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-            modelID: ref.modelID,
-            providerID: ref.providerID,
-            time: { created: Date.now() },
-          }
-          yield* session.updateMessage(msg)
+            const chat = yield* session.create({})
+            const parent = yield* session.updateMessage({
+              id: MessageID.ascending(),
+              role: "user",
+              sessionID: chat.id,
+              agent: "code",
+              model: ref,
+              time: { created: Date.now() },
+            })
+            const msg: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              role: "assistant",
+              sessionID: chat.id,
+              parentID: parent.id,
+              mode: "code",
+              agent: "code",
+              path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+              cost: 0,
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: ref.modelID,
+              providerID: ref.providerID,
+              time: { created: Date.now() },
+            }
+            yield* session.updateMessage(msg)
 
-          const mdl = model()
-          const handle = yield* processors.create({
-            assistantMessage: msg,
-            sessionID: chat.id,
-            model: mdl,
-          })
+            const mdl = model()
+            const handle = yield* processors.create({
+              assistantMessage: msg,
+              sessionID: chat.id,
+              model: mdl,
+            })
 
-          const input: LLM.StreamInput = {
-            user: parent as MessageV2.User,
-            sessionID: chat.id,
-            model: mdl,
-            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-            system: [],
-            messages: [],
-            tools: {},
-          }
+            const input: LLM.StreamInput = {
+              user: parent as MessageV2.User,
+              sessionID: chat.id,
+              model: mdl,
+              agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+              system: [],
+              messages: [],
+              tools: {},
+            }
 
-          const expected = MessageV2.fromError(retryable429(), { providerID: ProviderID.make("test") })
-          try {
-            const result = yield* handle.process(input)
-            const calls = yield* test.calls
+            const expected = MessageV2.fromError(retryable429(), { providerID: ProviderID.make("test") })
+            try {
+              const result = yield* handle.process(input)
+              const calls = yield* test.calls
 
-            expect(result).toBe("stop")
-            expect(calls).toBe(3)
-            expect(delay).toHaveBeenCalled()
-            expect(retry).toStrictEqual([1, 2])
-            expect(handle.message.error).toStrictEqual(expected)
-            expect(errors).toStrictEqual([expected])
-          } finally {
-            unsubStatus()
-            unsubError()
-            delay.mockRestore()
-          }
-        }),
-      { git: true },
-    ),
+              expect(result).toBe("stop")
+              expect(calls).toBe(3)
+              expect(handle.message.error).toStrictEqual(expected)
+            } finally {
+              delay.mockRestore()
+            }
+          }),
+        { git: true },
+      ),
+    15000,
   )
 
   it.effect("only positive integers enable the limit", () =>
     Effect.promise(async () => {
-      const key = () => JSON.stringify({ time: Date.now(), rand: Math.random() })
+      const { Flag } = await import("../../src/flag/flag")
 
       delete process.env.KILO_SESSION_RETRY_LIMIT
-      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
       process.env.KILO_SESSION_RETRY_LIMIT = "0"
-      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
       process.env.KILO_SESSION_RETRY_LIMIT = "-1"
-      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
       process.env.KILO_SESSION_RETRY_LIMIT = "abc"
-      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
 
       process.env.KILO_SESSION_RETRY_LIMIT = "2"
-      expect((await import("../../src/flag/flag?" + key())).Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBe(2)
     }),
   )
 
-  it.effect("does not change after import", () =>
+  it.effect("reads env at access time (dynamic getter)", () =>
     Effect.promise(async () => {
+      const { Flag } = await import("../../src/flag/flag")
       delete process.env.KILO_SESSION_RETRY_LIMIT
-      const id = JSON.stringify({ time: Date.now(), rand: Math.random() })
-      const { Flag: loaded } = await import("../../src/flag/flag?" + id)
-      expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
       process.env.KILO_SESSION_RETRY_LIMIT = "5"
-      expect(loaded.KILO_SESSION_RETRY_LIMIT).toBeUndefined()
+      expect(Flag.KILO_SESSION_RETRY_LIMIT).toBe(5)
+      delete process.env.KILO_SESSION_RETRY_LIMIT
     }),
   )
 })

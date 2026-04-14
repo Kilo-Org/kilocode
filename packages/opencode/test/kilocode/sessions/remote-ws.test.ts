@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { RemoteWS } from "../../src/kilo-sessions/remote-ws"
+import { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
 import type { ServerWebSocket } from "bun"
 
 function nolog() {

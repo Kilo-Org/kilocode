@@ -368,6 +368,20 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         pkg.scripts.extension = ourScripts.extension
         changes.push(`scripts.extension: preserved Kilo's extension script`)
       }
+      if (relativePath === "package.json" && ourScripts?.changeset && pkg.scripts?.changeset !== ourScripts.changeset) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts.changeset = ourScripts.changeset
+        changes.push(`scripts.changeset: preserved Kilo's changeset script`)
+      }
+      if (
+        relativePath === "package.json" &&
+        ourScripts?.["changeset:version"] &&
+        pkg.scripts?.["changeset:version"] !== ourScripts["changeset:version"]
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts["changeset:version"] = ourScripts["changeset:version"]
+        changes.push(`scripts.changeset:version: preserved Kilo's changeset:version script`)
+      }
 
       // Merge catalog with "newest wins" strategy
       if (ourWorkspaces?.catalog || theirWorkspaces?.catalog) {

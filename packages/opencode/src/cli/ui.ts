@@ -4,6 +4,15 @@ import { NamedError } from "@opencode-ai/util/error"
 import { logo as glyphs } from "./logo"
 
 export namespace UI {
+  const wordmark = [
+    // kilocode_change start
+    `██ ▄█▀ ██ ██     ▄████▄   ▄█████ ██     ██ `,
+    `████   ██ ██     ██~~██   ██~~~~ ██     ██ `,
+    `██ ▀█▄ ██ ██████ ▀████▀   ▀█████ ██████ ██ `,
+    `~~  ~~ ~~ ~~~~~~  ~~~~     ~~~~~ ~~~~~~ ~~ `,
+    // kilocode_change end
+  ]
+
   export const CancelledError = NamedError.create("UICancelledError", z.void())
 
   export const Style = {
@@ -42,6 +51,16 @@ export namespace UI {
 
   // kilocode_change start
   export function logo(pad?: string) {
+    if (!process.stdout.isTTY && !process.stderr.isTTY) {
+      const result = []
+      for (const row of wordmark) {
+        if (pad) result.push(pad)
+        result.push(row)
+        result.push(EOL)
+      }
+      return result.join("").trimEnd()
+    }
+
     const result: string[] = []
     const reset = "\x1b[0m"
     const left = {

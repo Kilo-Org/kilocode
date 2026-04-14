@@ -332,6 +332,21 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventSessionTurnOpen = {
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    reason: "completed" | "error" | "interrupted"
+  }
+}
+
 export type SessionStatus =
   | {
       type: "idle"
@@ -395,21 +410,6 @@ export type EventCommandExecuted = {
     sessionID: string
     arguments: string
     messageID: string
-  }
-}
-
-export type EventSessionTurnOpen = {
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -1075,14 +1075,14 @@ export type Event =
   | EventQuestionReplied
   | EventQuestionRejected
   | EventTodoUpdated
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventCommandExecuted
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
   | EventVcsBranchUpdated
@@ -2141,6 +2141,7 @@ export type Path = {
 
 export type VcsInfo = {
   branch?: string
+  default_branch?: string
 }
 
 export type Command = {
@@ -4099,6 +4100,7 @@ export type SessionCommandResponse = SessionCommandResponses[keyof SessionComman
 
 export type SessionShellData = {
   body?: {
+    messageID?: string
     agent: string
     model?: {
       providerID: string
@@ -5411,6 +5413,26 @@ export type VcsGetResponses = {
 }
 
 export type VcsGetResponse = VcsGetResponses[keyof VcsGetResponses]
+
+export type VcsDiffData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    mode: "git" | "branch"
+  }
+  url: "/vcs/diff"
+}
+
+export type VcsDiffResponses = {
+  /**
+   * VCS diff
+   */
+  200: Array<FileDiff>
+}
+
+export type VcsDiffResponse = VcsDiffResponses[keyof VcsDiffResponses]
 
 export type CommandListData = {
   body?: never

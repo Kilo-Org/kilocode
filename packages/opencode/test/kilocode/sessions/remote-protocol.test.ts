@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
+import { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
 
 describe("RemoteProtocol", () => {
   // --- Outbound (CLI → DO) ---

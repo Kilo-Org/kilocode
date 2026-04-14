@@ -32,6 +32,7 @@ export namespace LLM {
   export type StreamInput = {
     user: MessageV2.User
     sessionID: string
+    parentSessionID?: string
     model: Provider.Model
     agent: Agent.Info
     permission?: Permission.Ruleset
@@ -318,9 +319,12 @@ export namespace LLM {
               "x-kilo-request": input.user.id,
               "x-kilo-client": Flag.KILO_CLIENT,
             }
-          : input.model.providerID !== "anthropic"
-            ? DEFAULT_HEADERS // kilocode_change
-            : undefined),
+          : {
+              "x-session-affinity": input.sessionID,
+              ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
+              "User-Agent": `opencode/${Installation.VERSION}`,
+              ...(input.model.providerID !== "anthropic" ? DEFAULT_HEADERS : undefined), // kilocode_change
+            }),
         ...(isKilo && input.agent.name ? { "x-kilocode-mode": input.agent.name.toLowerCase() } : {}),
         // kilocode_change start - add project ID, machine ID, and task ID headers for kilo provider
         ...(isKilo && kiloProjectId ? { [HEADER_PROJECTID]: kiloProjectId } : {}),
