@@ -6,113 +6,185 @@
   <a href="https://www.reddit.com/r/kilocode/"><img src="https://raster.shields.io/badge/Join%20r%2Fkilocode-D84315?style=flat&logo=reddit&logoColor=white" alt="Reddit" height="20"></a>
 </p>
 
-# 🚀 Kilo
+# Kilo Code — Multi-Provider Speech Synthesis
+
+> **This fork adds a full Speech tab to Kilo Code** — hear AI responses spoken aloud with 6 text-to-speech providers, all with free tiers. Works out of the box with zero setup using the built-in Browser provider.
+
+<p align="center">
+  <a href="https://github.com/Kilo-Org/kilocode/pull/8839"><img src="https://img.shields.io/badge/PR_%238839-Open-green?style=flat&logo=github" alt="PR #8839" height="20"></a>
+  <a href="https://github.com/AiDave71/kilocode/tree/feat/azure-voice-studio"><img src="https://img.shields.io/badge/Branch-feat%2Fazure--voice--studio-blue?style=flat&logo=git" alt="Feature Branch" height="20"></a>
+</p>
+
+---
+
+## Speech Feature Highlights
+
+**Works immediately — no API keys, no accounts, no cost.** The Browser provider uses your system's built-in speech engine. Want premium neural voices? Add an API key for any of the 5 cloud providers — all have generous free tiers.
+
+### Provider Selector
+
+Choose from 6 providers, organized by setup requirement:
+
+<p align="center">
+  <img src="docs/images/speech/provider-dropdown.png" alt="Speech provider dropdown showing 6 providers in two groups: No Setup Required and Free Tier Available" width="800">
+</p>
+
+| Provider | Free Tier | Voices | Setup |
+|----------|-----------|--------|-------|
+| **Browser (Web Speech API)** | Unlimited, offline | System voices | None |
+| **Azure Cognitive Services** | 500K chars/month | 125+ neural voices | API key |
+| **Google Cloud TTS** | 4M chars/month | 21 Neural2 + Studio | API key |
+| **OpenAI TTS** | $5 free credit | 10 voices | API key |
+| **ElevenLabs** | 10K chars/month | 10 expressive voices | API key |
+| **Amazon Polly** | 5M chars/month (12 mo) | 20 voices, 7 locales | Access key |
+
+### Full Settings View — Azure Configured
+
+The complete Speech tab with Azure connected, auto-speak enabled, and voice browser showing 99 neural voices:
+
+<p align="center">
+  <img src="docs/images/speech/speech-settings-azure.png" alt="Full Speech settings panel with Azure configured, showing API key, region, toggles, and voice browser" width="800">
+</p>
+
+### Browser Provider — Free & Offline
+
+Zero-setup speech using your operating system's built-in voices. Works offline, no account needed:
+
+<p align="center">
+  <img src="docs/images/speech/browser-provider-free.png" alt="Browser provider selected showing free offline speech with system voices and interaction mode dropdown" width="800">
+</p>
+
+### Voice Browser & Fine-Tuning
+
+Browse voices by locale, preview them, set favorites, and fine-tune pitch, rate, emphasis, and custom pronunciations:
+
+<p align="center">
+  <img src="docs/images/speech/voice-browser-fine-tuning.png" alt="Voice browser with 99 voices listed and fine-tuning controls for pitch, rate, emphasis, and pronunciations" width="800">
+</p>
+
+<details>
+<summary><strong>More Screenshots</strong></summary>
+
+#### Azure Voice List with Favorites
+
+<p align="center">
+  <img src="docs/images/speech/azure-voice-list.png" alt="Azure voice list with Maisie favorited, showing voice descriptions and play buttons" width="800">
+</p>
+
+#### Voice Fine-Tuning Detail
+
+<p align="center">
+  <img src="docs/images/speech/voice-fine-tuning-detail.png" alt="Detailed voice fine-tuning showing pitch, rate, sentence pause, paragraph break, emphasis, pronunciations, and save as preset" width="800">
+</p>
+
+</details>
+
+---
+
+## Key Capabilities
+
+- **Auto-Speak** — AI responses are spoken automatically when they finish
+- **Stop on Typing** — Speech interrupts instantly when you start typing
+- **Interaction Modes** — Assist (important responses only), Conversation (all replies), or Minimal (on request)
+- **Sentiment Detection** — Voice pitch and rate shift to match emotional tone
+- **Multi-Voice Dialogue** — Each AI agent speaks in a distinct voice
+- **Voice Favorites & Presets** — Star voices you like, save full configurations as presets
+- **25-Rule Text Filter** — Strips markdown, code blocks, URLs, and formatting before speaking
+- **LRU Synthesis Cache** — Repeated phrases play instantly from a 32-entry cache
+- **SSML Support** — Full SSML, styles, emphasis, and pronunciation controls (provider-dependent)
+
+## Architecture
+
+```
+SpeechProvider (interface)
+    |
+    +-- BrowserProvider      (Web Speech API, offline)
+    +-- AzureProvider        (wraps existing tts-azure.ts)
+    +-- GoogleProvider       (REST, base64 audio response)
+    +-- OpenAIProvider       (REST, Bearer auth)
+    +-- ElevenLabsProvider   (REST, xi-api-key header)
+    +-- PollyProvider        (REST, AWS auth)
+    |
+SpeechProviderRegistry      (register / get / list / listByTier)
+    |
+speech-playback.ts          (provider-agnostic play/stop/cache)
+    |
+SpeechTab.tsx               (Settings UI, Solid.js)
+```
+
+- **Provider Interface** — `getVoices()`, `synthesize()`, `stop()`, `testConnection()`
+- **Capability Gating** — UI controls appear/hide based on `provider.capabilities`
+- **CSP Whitelisted** — All provider endpoints added to webview `connect-src`
+- **95 Unit Tests** — Registry, browser provider, azure provider, text filter + sentiment
+
+## Try It
+
+### Quick Install (VSIX)
+
+```bash
+# Download the VSIX from this fork's releases, then:
+code --install-extension kilo-code-7.2.5.vsix
+```
+
+### Build From Source
+
+```bash
+git clone https://github.com/AiDave71/kilocode.git
+cd kilocode
+bun install
+cd packages/kilo-vscode
+node esbuild.js        # builds 5 bundles
+npx @vscode/vsce package --no-dependencies
+code --install-extension kilo-code-7.2.5.vsix
+```
+
+### First Run
+
+1. Open Kilo Code Settings
+2. Click the **Speech** tab in the sidebar
+3. It defaults to **Browser (Web Speech API)** — works immediately
+4. Enable Speech, click a play button next to any voice to preview
+5. Optional: select a cloud provider and enter an API key for neural voices
+
+## Contributing
+
+This feature is submitted as [PR #8839](https://github.com/Kilo-Org/kilocode/pull/8839) to the upstream Kilo Code repository. Feedback, testing, and reviews are welcome!
+
+- **Branch:** [`feat/azure-voice-studio`](https://github.com/AiDave71/kilocode/tree/feat/azure-voice-studio)
+- **Tests:** `bun test` in `packages/kilo-vscode` — 95 tests across 4 files
+- **Lint:** 0 errors across 14 speech-related files
+- **Build:** 5 esbuild bundles, 0 errors
+
+---
+
+<details>
+<summary><strong>Original Kilo Code README</strong></summary>
+
+## About Kilo Code
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
 > [#1 coding agent on OpenRouter](https://openrouter.ai/apps/category/coding). 1.5M+ Kilo Coders. 25T+ tokens processed
 
-- ✨ Generate code from natural language
-- ✅ Checks its own work
-- 🧪 Run terminal commands
-- 🌐 Automate the browser
-- ⚡ Inline autocomplete suggestions
-- 🤖 Latest AI models
-- 🎁 API keys optional
-- 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 500+ models like Gemini 3.1 Pro, Claude 4.6 Sonnet & Opus, and GPT-5.4
+- Generate code from natural language
+- Checks its own work
+- Run terminal commands
+- Automate the browser
+- Inline autocomplete suggestions
+- Latest AI models
+- API keys optional
 
-## Quick Links
+### Quick Links
 
 - [VS Code Marketplace](https://kilo.ai/vscode-marketplace?utm_source=Readme) (download)
 - Install CLI: `npm install -g @kilocode/cli`
 - [Official Kilo.ai Home page](https://kilo.ai) (learn more)
 
-## Key Features
+### License
 
-- **Code Generation:** Kilo can generate code using natural language.
-- **Inline Autocomplete:** Get intelligent code completions as you type, powered by AI.
-- **Task Automation:** Kilo can automate repetitive coding tasks to save time.
-- **Automated Refactoring:** Kilo can refactor and improve existing code efficiently.
-- **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
-- **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
-
-## Get Started in Visual Studio Code
-
-1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
-2. Create your account to access 500+ cutting-edge AI models including Gemini 3.1 Pro, Claude 4.6 Sonnet & Opus, and GPT-5.4 – with transparent pricing that matches provider rates exactly.
-3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo in action:
-
-<a href="https://youtu.be/pqGfYXgrhig"><img src="https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg" alt="Watch the video" width="640" height="360"></a>
-
-## Get Started with the CLI
-
-```bash
-# npm
-npm install -g @kilocode/cli
-
-# Or run directly with npx
-npx @kilocode/cli
-```
-
-Then run `kilo` in any project directory to start.
-
-<!-- kilocode_change start -->
-
-### npm Install Note: Hidden `.kilo` File
-
-On some systems and npm versions, installing `@kilocode/cli` can create a hidden `.kilo` file near the installed `kilo` command (for example in a global npm bin directory). This file is an npm-generated launcher helper, not project data.
-
-- Why it exists: npm may create helper artifacts while wiring CLI executables.
-- Size caveat: size can vary by platform, npm version, and install mode (symlink vs copied launcher), so a strict fixed size is not guaranteed.
-- Safety: it is safe to leave in place. Do not edit it manually. Use your package manager's uninstall (`npm uninstall -g @kilocode/cli`) to remove install artifacts cleanly.
-<!-- kilocode_change end -->
-
-### Install from GitHub Releases (Optional)
-
-Download the latest binary or source code from the [Releases page](https://github.com/Kilo-Org/kilocode/releases), use this quick guide:
-
-- `kilo-<os>-<arch>.zip` is the CLI binary for your OS and CPU architecture on Windows and macOS. (`kilo-linux-<arch>.tar.gz` for Linux)
-- `darwin` means macOS.
-- `x64` is standard 64-bit Intel/AMD CPUs.
-- `x64-baseline` is a compatibility build for older x64 CPUs(do not support AVX Instruction).
-- `arm64` is ARM-based Linux/MacOS.
-- `musl` is statically linked Linux build for Alpine/minimal Docker without glibc. Alpine/minimal Docker users should prefer the matching \*-musl asset.
-- `kilo-vscode-*.vsix` is the VS Code extension package and not the CLI binary.
-- `Source code` releases are for building from source, not normal installation.
-
-For most users:
-
-- **Windows (most PCs):** `kilo-windows-x64.zip`
-- **macOS Apple Silicon:** `kilo-darwin-arm64.zip`
-- **macOS Intel:** `kilo-darwin-x64.zip`
-- **Linux x64:** `kilo-linux-x64.tar.gz`
-- **Linux on ARM:** `kilo-linux-arm64.tar.gz`
-
-### Autonomous Mode (CI/CD)
-
-Use the `--auto` flag with `kilo run` to enable fully autonomous operation without user interaction. This is ideal for CI/CD pipelines and automated workflows:
-
-```bash
-kilo run --auto "run tests and fix any failures"
-```
-
-**Important:** The `--auto` flag disables all permission prompts and allows the agent to execute any action without confirmation. Only use this in trusted environments like CI/CD pipelines.
-
-## Contributing
-
-We welcome contributions from developers, writers, and enthusiasts!
-To get started, please read our [Contributing Guide](/CONTRIBUTING.md). It includes details on setting up your environment, coding standards, types of contribution and how to submit pull requests.
-
-See [RELEASING.md](RELEASING.md) for the release process.
-
-## Code of Conduct
-
-Our community is built on respect, inclusivity, and collaboration. Please review our [Code of Conduct](/CODE_OF_CONDUCT.md) to understand the expectations for all contributors and community members.
-
-## License
-
-This project is licensed under the MIT License.
-You’re free to use, modify, and distribute this code, including for commercial purposes as long as you include proper attribution and license notices. See [License](/LICENSE).
+This project is licensed under the MIT License. See [License](/LICENSE).
 
 ### Where did Kilo CLI come from?
 
 Kilo CLI is a fork of [OpenCode](https://github.com/anomalyco/opencode), enhanced to work within the Kilo agentic engineering platform.
+
+</details>
