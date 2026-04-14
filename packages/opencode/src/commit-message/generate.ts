@@ -1,6 +1,7 @@
 import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
+import { Instruction } from "@/session/instruction"
 import { Log } from "@/util/log"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
@@ -149,6 +150,16 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
+  // Load user-configured instructions (AGENTS.md, instructions in kilo.jsonc, etc.)
+  let userInstructions: string[] = []
+  try {
+    userInstructions = await Instruction.system()
+  } catch (err) {
+    log.warn("failed to load user instructions, proceeding without them", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+
   try {
     const stream = await LLM.stream({
       agent,
@@ -176,7 +187,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
       ],
       abort: controller.signal,
       sessionID: "commit-message",
-      system: [],
+      system: userInstructions,
       retries: 3,
     })
 

@@ -10,6 +10,7 @@ const realLog = await import("@/util/log")
 const realProvider = await import("@/provider/provider")
 const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
+const realInstruction = await import("@/session/instruction")
 
 let mockGitContext: GitContext = {
   branch: "main",
@@ -56,6 +57,16 @@ mock.module("@/agent/agent", () => ({
   Agent: {},
 }))
 
+let mockInstructions: string[] = []
+
+mock.module("@/session/instruction", () => ({
+  ...realInstruction,
+  Instruction: {
+    ...realInstruction.Instruction,
+    system: async () => mockInstructions,
+  },
+}))
+
 mock.module("@/util/log", () => ({
   ...realLog,
   Log: {
@@ -79,6 +90,7 @@ describe("commit-message.generate", () => {
       files: [{ status: "modified" as const, path: "src/index.ts", diff: "+console.log('hello')" }],
     }
     mockStreamText = "feat(src): add hello world logging"
+    mockInstructions = []
   })
 
   describe("prompt construction", () => {
