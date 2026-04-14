@@ -1,6 +1,18 @@
-import { resolveFetch } from "openclaw/plugin-sdk/fetch-runtime";
+import { resolveFetch } from "openclaw/plugin-sdk/fetch-runtime"; // eslint-disable-line import/no-unresolved
 
 const API_VERSION = "2026-04-01";
+
+/**
+ * Thrown when the KiloCode API rejects our request with 401. Callers
+ * use `instanceof` (not substring matching on error messages) to decide
+ * whether to clear a stale token and re-run device auth.
+ */
+export class AuthExpiredError extends Error {
+  constructor(message = "KiloCode authentication is invalid or expired.") {
+    super(message);
+    this.name = "AuthExpiredError";
+  }
+}
 
 export interface SubmitAuditPayload {
   audit: {
@@ -73,9 +85,7 @@ export async function submitAudit(
     }
 
     if (resp.status === 401) {
-      throw new Error(
-        "Authentication failed. Your KiloCode API key may be invalid or expired."
-      );
+      throw new AuthExpiredError();
     }
     if (resp.status === 429) {
       throw new Error("Rate limit exceeded. Try again later.");

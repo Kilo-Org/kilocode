@@ -1,0 +1,9 @@
+node_modules/
+dist/
+
+# Explicitly un-ignore src/auth/token-store.ts. Contributors often have
+# a global gitignore rule like `*token*` to prevent accidentally
+# committing credential files, which would otherwise hide our
+# legitimate source file. This exception keeps the file visible to git
+# regardless of the developer's global ignore rules.
+!src/auth/token-store.ts

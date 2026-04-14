@@ -1,7 +1,18 @@
 // @ts-ignore: openclaw peer dep provided by the gateway at runtime
 import { resolveFetch } from "openclaw/plugin-sdk/fetch-runtime"; // eslint-disable-line import/no-unresolved
+import type { PluginLogger } from "./token-store.js";
 
-const POLL_TIMEOUT_MS = 10 * 60 * 1_000; // 10 minutes
+/**
+ * How long a single poll call is willing to block the tool handler. We
+ * keep this well under any reasonable LLM/gateway tool-execution budget.
+ * The happy path (user approved in their browser before calling back to
+ * the plugin) typically resolves in one poll interval (3s); the rest of
+ * this window is grace for slow approvals. If we hit the deadline
+ * without a terminal state from the server, we return "timeout" and the
+ * caller keeps the pending code in place so a subsequent invocation can
+ * keep polling.
+ */
+const POLL_TIMEOUT_MS = 30 * 1_000;
 const POLL_INTERVAL_MS = 3_000;
 
 type DeviceAuthInitResponse = {
@@ -23,11 +34,23 @@ export type DeviceAuthStartResult = {
   expiresIn: number;
 };
 
+/**
+ * Poll result kinds:
+ * - approved: server returned approval + token. Ready to run the checkup.
+ * - denied:   user explicitly denied in the browser. Clear pending code.
+ * - expired:  server-reported 410 Gone or server-reported expired status.
+ *             The device-auth code itself is dead. Clear pending code.
+ * - timeout:  we hit our local POLL_TIMEOUT_MS deadline while the server
+ *             was still returning pending. The code may still be valid
+ *             server-side; caller should NOT clear pending code so the
+ *             next invocation can keep polling.
+ */
 export type DeviceAuthPollResult =
   | { kind: "approved"; token: string }
   | { kind: "pending" }
   | { kind: "denied" }
-  | { kind: "expired" };
+  | { kind: "expired" }
+  | { kind: "timeout" };
 
 /**
  * Create a device auth request and return the code + URL for the user to visit.
@@ -52,12 +75,16 @@ export async function startDeviceAuth(apiBase: string): Promise<DeviceAuthStartR
 }
 
 /**
- * Poll a device auth code until it resolves (approved/denied/expired) or times out.
- * Returns immediately once a terminal state is reached.
+ * Poll a device auth code until it resolves (approved/denied/expired),
+ * or until the local POLL_TIMEOUT_MS deadline is hit (returns "timeout").
+ * Server-reported 410 Gone returns "expired". Transient network errors
+ * during polling are logged at debug level and the loop continues until
+ * the deadline.
  */
 export async function pollDeviceAuth(
   apiBase: string,
   code: string,
+  logger?: PluginLogger,
 ): Promise<DeviceAuthPollResult> {
   const fetchFn: typeof fetch = resolveFetch() ?? globalThis.fetch;
   const pollUrl = `${apiBase}/api/device-auth/codes/${code}`;
@@ -76,12 +103,15 @@ export async function pollDeviceAuth(
         if (data.status === "denied") return { kind: "denied" };
         if (data.status === "expired") return { kind: "expired" };
       }
-    } catch {
-      // transient network error, keep polling
+    } catch (err) {
+      // Transient network error. Log at debug level so it's visible
+      // when investigating real failures but not noisy on the happy path.
+      const message = err instanceof Error ? err.message : String(err);
+      logger?.debug?.(`security-advisor: poll transient error: ${message}`);
     }
   }
 
-  return { kind: "expired" };
+  return { kind: "timeout" };
 }
 
 function sleep(ms: number): Promise<void> {

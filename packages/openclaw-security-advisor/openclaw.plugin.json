@@ -8,9 +8,28 @@
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
+    "$defs": {
+      "secretRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["env", "file", "exec"]
+          },
+          "provider": { "type": "string" },
+          "id": { "type": "string" }
+        },
+        "required": ["source", "provider", "id"]
+      }
+    },
     "properties": {
       "authToken": {
-        "description": "KiloCode auth token. Set automatically via device auth on first use, stored as a SecretRef."
+        "description": "KiloCode auth token. Accepts either a plain string or a SecretRef pointing at an env, file, or exec provider. The plugin writes a SecretRef automatically on first use via device auth; advanced users can replace it with a plain string or a different provider reference.",
+        "anyOf": [
+          { "type": "string", "minLength": 1 },
+          { "$ref": "#/$defs/secretRef" }
+        ]
       },
       "apiBaseUrl": {
         "type": "string",

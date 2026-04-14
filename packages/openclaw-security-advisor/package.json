@@ -4,6 +4,7 @@
   "type": "module",
   "license": "MIT",
   "description": "Security analysis plugin for OpenClaw instances, powered by KiloClaw",
+  "private": true,
   "main": "index.ts",
   "openclaw": {
     "extensions": ["./index.ts"],
