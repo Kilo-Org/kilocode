@@ -5,7 +5,6 @@ import { NamedError } from "@opencode-ai/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { LSP } from "../lsp"
 import { Snapshot } from "@/snapshot"
-import { fn } from "@/util/fn"
 import { SyncEvent } from "../sync"
 import { Database, NotFoundError, and, desc, eq, inArray, lt, or } from "@/storage/db"
 import { MessageTable, PartTable, SessionTable } from "./session.sql"
@@ -15,28 +14,8 @@ import { errorMessage } from "@/util/error"
 import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
+import { Effect } from "effect"
 import { SessionNetwork } from "./network" // kilocode_change
-
-/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
-interface FetchDecompressionError extends Error {
-  code: "ZlibError"
-  errno: number
-  path: string
-}
-
-/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
-interface FetchDecompressionError extends Error {
-  code: "ZlibError"
-  errno: number
-  path: string
-}
-
-/** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
-interface FetchDecompressionError extends Error {
-  code: "ZlibError"
-  errno: number
-  path: string
-}
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
 interface FetchDecompressionError extends Error {
@@ -393,10 +372,10 @@ export namespace MessageV2 {
     model: z.object({
       providerID: ProviderID.zod,
       modelID: ModelID.zod,
+      variant: z.string().optional(),
     }),
     system: z.string().optional(),
     tools: z.record(z.string(), z.boolean()).optional(),
-    variant: z.string().optional(),
     // kilocode_change start
     editorContext: z
       .object({
@@ -581,21 +560,18 @@ export namespace MessageV2 {
 
   export function stripMessageMetadata(info: Info): Info {
     // kilocode_change - exported for testing
-    // Strip summary.diffs before/after from user messages (can be 20+ MB)
+    // Strip oversized summary.diffs patches from user messages to limit SSE payload.
+    // Small patches are preserved so the UI can render inline diffs.
     if (info.role !== "user") return info
     const user = info as User
     if (!user.summary?.diffs?.length) return info
-    const has = user.summary.diffs.some((d: Snapshot.FileDiff) => d.before || d.after)
-    if (!has) return info
+    const oversized = (d: Snapshot.FileDiff) => d.patch && Buffer.byteLength(d.patch) > Snapshot.MAX_DIFF_SIZE
+    if (!user.summary.diffs.some(oversized)) return info
     return {
       ...user,
       summary: {
         ...user.summary,
-        diffs: user.summary.diffs.map(({ before, after, ...rest }: Snapshot.FileDiff) => ({
-          ...rest,
-          before: "",
-          after: "",
-        })),
+        diffs: user.summary.diffs.map((d: Snapshot.FileDiff) => (oversized(d) ? { ...d, patch: "" } : d)),
       },
     } as Info
   }
@@ -639,7 +615,7 @@ export namespace MessageV2 {
       and(eq(MessageTable.time_created, row.time), lt(MessageTable.id, row.id)),
     )
 
-  async function hydrate(rows: (typeof MessageTable.$inferSelect)[]) {
+  function hydrate(rows: (typeof MessageTable.$inferSelect)[]) {
     const ids = rows.map((row) => row.id)
     const partByMessage = new Map<string, MessageV2.Part[]>()
     if (ids.length > 0) {
@@ -665,11 +641,11 @@ export namespace MessageV2 {
     }))
   }
 
-  export async function toModelMessages(
+  export const toModelMessagesEffect = Effect.fnUntraced(function* (
     input: WithParts[],
     model: Provider.Model,
     options?: { stripMedia?: boolean },
-  ): Promise<ModelMessage[]> {
+  ) {
     const result: UIMessage[] = []
     const toolNames = new Set<string>()
     // Track media from tool results that need to be injected as user messages
@@ -892,64 +868,67 @@ export namespace MessageV2 {
 
     const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
-    return await convertToModelMessages(
-      result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
-      {
-        //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
-        tools,
-      },
+    return yield* Effect.promise(() =>
+      convertToModelMessages(
+        result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
+        {
+          //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
+          tools,
+        },
+      ),
     )
+  })
+
+  export function toModelMessages(
+    input: WithParts[],
+    model: Provider.Model,
+    options?: { stripMedia?: boolean },
+  ): Promise<ModelMessage[]> {
+    return Effect.runPromise(toModelMessagesEffect(input, model, options))
   }
 
-  export const page = fn(
-    z.object({
-      sessionID: SessionID.zod,
-      limit: z.number().int().positive(),
-      before: z.string().optional(),
-    }),
-    async (input) => {
-      const before = input.before ? cursor.decode(input.before) : undefined
-      const where = before
-        ? and(eq(MessageTable.session_id, input.sessionID), older(before))
-        : eq(MessageTable.session_id, input.sessionID)
-      const rows = Database.use((db) =>
-        db
-          .select()
-          .from(MessageTable)
-          .where(where)
-          .orderBy(desc(MessageTable.time_created), desc(MessageTable.id))
-          .limit(input.limit + 1)
-          .all(),
+  export function page(input: { sessionID: SessionID; limit: number; before?: string }) {
+    const before = input.before ? cursor.decode(input.before) : undefined
+    const where = before
+      ? and(eq(MessageTable.session_id, input.sessionID), older(before))
+      : eq(MessageTable.session_id, input.sessionID)
+    const rows = Database.use((db) =>
+      db
+        .select()
+        .from(MessageTable)
+        .where(where)
+        .orderBy(desc(MessageTable.time_created), desc(MessageTable.id))
+        .limit(input.limit + 1)
+        .all(),
+    )
+    if (rows.length === 0) {
+      const row = Database.use((db) =>
+        db.select({ id: SessionTable.id }).from(SessionTable).where(eq(SessionTable.id, input.sessionID)).get(),
       )
-      if (rows.length === 0) {
-        const row = Database.use((db) =>
-          db.select({ id: SessionTable.id }).from(SessionTable).where(eq(SessionTable.id, input.sessionID)).get(),
-        )
-        if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
-        return {
-          items: [] as MessageV2.WithParts[],
-          more: false,
-        }
-      }
-
-      const more = rows.length > input.limit
-      const page = more ? rows.slice(0, input.limit) : rows
-      const items = await hydrate(page)
-      items.reverse()
-      const tail = page.at(-1)
+      if (!row) throw new NotFoundError({ message: `Session not found: ${input.sessionID}` })
       return {
-        items,
-        more,
-        cursor: more && tail ? cursor.encode({ id: tail.id, time: tail.time_created }) : undefined,
+        items: [] as MessageV2.WithParts[],
+        more: false,
       }
-    },
-  )
+    }
 
-  export const stream = fn(SessionID.zod, async function* (sessionID) {
+    const more = rows.length > input.limit
+    const slice = more ? rows.slice(0, input.limit) : rows
+    const items = hydrate(slice)
+    items.reverse()
+    const tail = slice.at(-1)
+    return {
+      items,
+      more,
+      cursor: more && tail ? cursor.encode({ id: tail.id, time: tail.time_created }) : undefined,
+    }
+  }
+
+  export function* stream(sessionID: SessionID) {
     const size = 50
     let before: string | undefined
     while (true) {
-      const next = await page({ sessionID, limit: size, before })
+      const next = page({ sessionID, limit: size, before })
       if (next.items.length === 0) break
       for (let i = next.items.length - 1; i >= 0; i--) {
         yield next.items[i]
@@ -957,9 +936,9 @@ export namespace MessageV2 {
       if (!next.more || !next.cursor) break
       before = next.cursor
     }
-  })
+  }
 
-  export const parts = fn(MessageID.zod, async (message_id) => {
+  export function parts(message_id: MessageID) {
     const rows = Database.use((db) =>
       db.select().from(PartTable).where(eq(PartTable.message_id, message_id)).orderBy(PartTable.id).all(),
     )
@@ -974,33 +953,27 @@ export namespace MessageV2 {
         } as MessageV2.Part),
       // kilocode_change end
     )
-  })
+  }
 
-  export const get = fn(
-    z.object({
-      sessionID: SessionID.zod,
-      messageID: MessageID.zod,
-    }),
-    async (input): Promise<WithParts> => {
-      const row = Database.use((db) =>
-        db
-          .select()
-          .from(MessageTable)
-          .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
-          .get(),
-      )
-      if (!row) throw new NotFoundError({ message: `Message not found: ${input.messageID}` })
-      return {
-        info: info(row),
-        parts: await parts(input.messageID),
-      }
-    },
-  )
+  export function get(input: { sessionID: SessionID; messageID: MessageID }): WithParts {
+    const row = Database.use((db) =>
+      db
+        .select()
+        .from(MessageTable)
+        .where(and(eq(MessageTable.id, input.messageID), eq(MessageTable.session_id, input.sessionID)))
+        .get(),
+    )
+    if (!row) throw new NotFoundError({ message: `Message not found: ${input.messageID}` })
+    return {
+      info: info(row),
+      parts: parts(input.messageID),
+    }
+  }
 
-  export async function filterCompacted(stream: AsyncIterable<MessageV2.WithParts>) {
+  export function filterCompacted(msgs: Iterable<MessageV2.WithParts>) {
     const result = [] as MessageV2.WithParts[]
     const completed = new Set<string>()
-    for await (const msg of stream) {
+    for (const msg of msgs) {
       result.push(msg)
       if (
         msg.info.role === "user" &&
@@ -1014,6 +987,10 @@ export namespace MessageV2 {
     result.reverse()
     return result
   }
+
+  export const filterCompactedEffect = Effect.fnUntraced(function* (sessionID: SessionID) {
+    return filterCompacted(stream(sessionID))
+  })
 
   export function fromError(
     e: unknown,

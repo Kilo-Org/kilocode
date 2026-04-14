@@ -143,7 +143,7 @@ const unsafeCSS = `
   }
 
   &[data-interactive-line-numbers] [data-column-number] {
-    cursor: default !important;
+    cursor: pointer !important;
   }
 
   &[data-interactive-lines] [data-line] {

@@ -1,6 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloClient, SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
@@ -48,6 +48,7 @@ interface GitStatsPollerOptions {
   intervalMs?: number
   /** Shared concurrency gate for child process spawning. */
   semaphore?: Semaphore
+  hiddenIntervalMs?: number
 }
 
 export class GitStatsPoller {
@@ -62,12 +63,25 @@ export class GitStatsPoller {
     { files: number; additions: number; deletions: number; ahead: number; behind: number }
   > = {}
   private readonly intervalMs: number
+  private readonly hiddenIntervalMs: number
   private readonly git: GitOps
   private skipWorktreeIds = new Set<string>()
+  private visible = true
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
+    this.hiddenIntervalMs = options.hiddenIntervalMs ?? 60000
     this.git = options.git
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) return
+    this.visible = visible
+    if (this.active && this.timer) {
+      clearTimeout(this.timer)
+      this.timer = undefined
+      this.schedule(this.visible ? this.intervalMs : this.hiddenIntervalMs)
+    }
   }
 
   skipWorktree(id: string): void {
@@ -81,7 +95,8 @@ export class GitStatsPoller {
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
-      this.start()
+      this.active = true
+      void this.poll()
       return
     }
     this.stop()
@@ -100,10 +115,8 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
-  private start(): void {
-    this.stop()
-    this.active = true
-    void this.poll()
+  private currentInterval(): number {
+    return this.visible ? this.intervalMs : this.hiddenIntervalMs
   }
 
   private schedule(delay: number): void {
@@ -119,7 +132,7 @@ export class GitStatsPoller {
     this.busy = true
     return this.fetch().finally(() => {
       this.busy = false
-      this.schedule(this.intervalMs)
+      this.schedule(this.currentInterval())
     })
   }
 
@@ -172,8 +185,8 @@ export class GitStatsPoller {
             const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([diff(wt.path, base), this.git.aheadBehind(wt.path, base)])
             const files = diffs.length
-            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
+            const additions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.deletions, 0)
             return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
@@ -275,8 +288,8 @@ export class GitStatsPoller {
             this.git.aheadBehind(root, base),
           ])
           files = diffs.length
-          additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
-          deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
+          additions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.additions, 0)
+          deletions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.deletions, 0)
           ahead = ab.ahead
           behind = ab.behind
         } else {

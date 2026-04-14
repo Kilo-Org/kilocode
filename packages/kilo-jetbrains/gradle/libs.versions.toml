@@ -4,16 +4,16 @@ intellij-gradle-plugin = "2.10.5"
 intellij-rpc-plugin = "2.1.20-0.1"
 kotlin-jvm-plugin = "2.1.20"
 kotlin-serialization-plugin = "2.1.20"
-kotlin-serialization = "1.7.3"
+kotlin-serialization = "1.8.1"
 okhttp = "4.12.0"
-moshi = "1.15.1"
-openapi-generator = "7.12.0"
+openapi-generator = "7.21.0"
 
 [libraries]
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp" }
-moshi = { module = "com.squareup.moshi:moshi", version.ref = "moshi" }
-moshi-kotlin = { module = "com.squareup.moshi:moshi-kotlin", version.ref = "moshi" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlin-serialization" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.10.2" }
 
 [plugins]
 intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "intellij-gradle-plugin" }

@@ -3016,10 +3016,11 @@ const AgentManagerContent: Component = () => {
                       onClose={() => setSidePanel(null)}
                       onExpand={selection() !== null ? openReviewTab : undefined}
                       onRequestDiff={requestDiffFile}
-                      onOpenFile={(file) => {
+                      onOpenFile={(file, line) => {
                         const id = currentDiffSessionId()
-                        if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
-                        else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
+                        if (id)
+                          vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                        else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                       }}
                       onRevertFile={revertCtl.revert}
                       revertingFiles={revertCtl.reverting()}
@@ -3044,10 +3045,10 @@ const AgentManagerContent: Component = () => {
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
                 onRequestDiff={requestDiffFile}
-                onOpenFile={(file) => {
+                onOpenFile={(file, line) => {
                   const id = currentDiffSessionId()
-                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
-                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
+                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                 }}
                 onRevertFile={revertCtl.revert}
                 revertingFiles={revertCtl.reverting()}

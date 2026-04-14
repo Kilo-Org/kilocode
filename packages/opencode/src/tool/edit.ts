@@ -26,20 +26,20 @@ const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 // kilocode_change start
 export function buildFileDiff(file: string, before: string, after: string): Snapshot.FileDiff {
   const tooLarge = before.length > MAX_DIFF_CONTENT || after.length > MAX_DIFF_CONTENT
-  const fd: Snapshot.FileDiff = {
-    file,
-    before: tooLarge ? "" : before,
-    after: tooLarge ? "" : after,
-    additions: 0,
-    deletions: 0,
-  }
+  let additions = 0
+  let deletions = 0
   if (!tooLarge) {
     for (const change of diffLines(before, after)) {
-      if (change.added) fd.additions += change.count || 0
-      if (change.removed) fd.deletions += change.count || 0
+      if (change.added) additions += change.count || 0
+      if (change.removed) deletions += change.count || 0
     }
   }
-  return fd
+  return {
+    file,
+    patch: tooLarge ? "" : createTwoFilesPatch(file, file, before, after),
+    additions,
+    deletions,
+  }
 }
 // kilocode_change end
 
@@ -149,7 +149,16 @@ export const EditTool = Tool.define("edit", {
       await FileTime.read(ctx.sessionID, filePath)
     })
 
-    const filediff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+    const filediff: Snapshot.FileDiff = {
+      file: filePath,
+      patch: diff,
+      additions: 0,
+      deletions: 0,
+    }
+    for (const change of diffLines(contentOld, contentNew)) {
+      if (change.added) filediff.additions += change.count || 0
+      if (change.removed) filediff.deletions += change.count || 0
+    }
 
     ctx.metadata({
       metadata: {

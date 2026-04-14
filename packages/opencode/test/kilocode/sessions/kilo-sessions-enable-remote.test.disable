@@ -1,0 +1,181 @@
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { tmpdir } from "../../fixture/fixture"
+import { Auth } from "../../../src/auth"
+import { Vcs } from "../../../src/project/vcs"
+import { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import { clearInFlightCache } from "../../../src/kilo-sessions/inflight-cache"
+import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
+import { Instance } from "../../../src/project/instance"
+import { Bus } from "../../../src/bus"
+
+const state = {
+  connects: 0,
+  closes: 0,
+  disposes: 0,
+  userStatus: 200,
+  gate: Promise.resolve(),
+  userError: false,
+}
+
+describe("KiloSessions.enableRemote", () => {
+  beforeEach(() => {
+    state.connects = 0
+    state.closes = 0
+    state.disposes = 0
+    state.userStatus = 200
+    state.gate = Promise.resolve()
+    state.userError = false
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+
+    spyOn(Auth, "get").mockResolvedValue({ type: "api", key: "tok" } as any)
+    spyOn(Vcs, "branch").mockResolvedValue("main")
+    spyOn(RemoteWS, "connect").mockImplementation(
+      () =>
+        ({
+          connectionId: `conn-${++state.connects}`,
+          send() {},
+          close() {
+            state.closes += 1
+          },
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {
+            state.disposes += 1
+          },
+        }) as RemoteSender.Sender,
+    )
+
+    // Clear inflight caches so each test gets fresh Auth.get / authValid calls
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    globalThis.fetch = mock(async (input) => {
+      await state.gate
+      if (String(input).endsWith("/api/user")) {
+        if (state.userError) throw new Error("network down")
+        return new Response(null, { status: state.userStatus })
+      }
+      return new Response(null, { status: 200 })
+    }) as unknown as typeof fetch
+  })
+
+  afterEach(() => {
+    // Stub Bus.publish so disableRemote's fire-and-forget publish doesn't reject
+    // outside an Instance context (it needs InstanceState which requires ALS).
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    KiloSessions.disableRemote()
+    pub.mockRestore()
+    mock.restore()
+  })
+
+  test("concurrent enableRemote shares one connection", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await Promise.all([KiloSessions.enableRemote(), KiloSessions.enableRemote(), KiloSessions.enableRemote()])
+        expect(state.connects).toBe(1)
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
+      },
+    })
+  })
+
+  test("enableRemote fails when token is invalid", async () => {
+    state.userStatus = 401
+    await using tmp = await tmpdir({ git: true })
+
+    KiloSessions.disableRemote()
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await expect(KiloSessions.enableRemote()).rejects.toThrow(
+          "Unable to enable remote: invalid or expired Kilo credentials. Run `kilo auth login`.",
+        )
+        expect(state.connects).toBe(0)
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+      },
+    })
+  })
+
+  test("disableRemote cancels in-flight enableRemote", async () => {
+    let release = () => {}
+    state.gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    await using tmp = await tmpdir({ git: true })
+
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const pending = KiloSessions.enableRemote()
+        KiloSessions.disableRemote()
+        release()
+        await pending
+        expect(state.connects).toBe(1)
+        expect(state.disposes).toBe(1)
+        expect(state.closes).toBe(1)
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+      },
+    })
+  })
+
+  test("transient auth check failure is retryable and does not connect", async () => {
+    state.userError = true
+    await using tmp = await tmpdir({ git: true })
+
+    KiloSessions.disableRemote()
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        await expect(KiloSessions.enableRemote()).rejects.toThrow(
+          "Unable to enable remote: failed to verify Kilo credentials.",
+        )
+        expect(state.connects).toBe(0)
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: false, connected: false })
+      },
+    })
+  })
+
+  test("disable then re-enable replaces stale pending connection", async () => {
+    let release = () => {}
+    state.gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    await using tmp = await tmpdir({ git: true })
+
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const first = KiloSessions.enableRemote()
+        KiloSessions.disableRemote()
+        const second = KiloSessions.enableRemote()
+        release()
+        await Promise.all([first, second])
+        expect(state.connects).toBe(2)
+        expect(state.disposes).toBe(1)
+        expect(state.closes).toBe(1)
+        expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
+      },
+    })
+  })
+})

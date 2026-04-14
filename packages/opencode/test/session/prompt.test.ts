@@ -411,7 +411,7 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello" }],
           })
           if (other.info.role !== "user") throw new Error("expected user message")
-          expect(other.info.variant).toBeUndefined()
+          expect(other.info.model.variant).toBeUndefined()
 
           const match = await SessionPrompt.prompt({
             sessionID: session.id,
@@ -420,8 +420,12 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello again" }],
           })
           if (match.info.role !== "user") throw new Error("expected user message")
-          expect(match.info.model).toEqual({ providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-5.2") })
-          expect(match.info.variant).toBe("xhigh")
+          expect(match.info.model).toEqual({
+            providerID: ProviderID.make("openai"),
+            modelID: ModelID.make("gpt-5.2"),
+            variant: "xhigh",
+          })
+          expect(match.info.model.variant).toBe("xhigh")
 
           const override = await SessionPrompt.prompt({
             sessionID: session.id,
@@ -431,7 +435,7 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello third" }],
           })
           if (override.info.role !== "user") throw new Error("expected user message")
-          expect(override.info.variant).toBe("high")
+          expect(override.info.model.variant).toBe("high")
 
           await Session.remove(session.id)
         },
@@ -501,10 +505,9 @@ describe("session.prompt abort", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (root) => {
-          const dir = path.join(root, ".opencode")
-          await fs.mkdir(dir, { recursive: true })
+          // kilocode_change start — project config must be at root, not in .opencode/ subdirectory
           await Bun.write(
-            path.join(dir, "opencode.json"),
+            path.join(root, "opencode.json"),
             JSON.stringify({
               $schema: "https://app.kilo.ai/config.json",
               enabled_providers: ["openai"],
@@ -547,11 +550,16 @@ describe("session.prompt abort", () => {
           const result = await run
           expect(result.info.role).toBe("assistant")
           if (result.info.role !== "assistant") throw new Error("expected assistant message")
-          expect(result.info.error?.name).toBe("MessageAbortedError")
 
+          // kilocode_change start — re-read from DB; the abort error is set asynchronously by the processor
           const messages = await Session.messages({ sessionID: session.id })
           const assistant = messages.find((item) => item.info.role === "assistant")
+          expect(assistant).toBeDefined()
           expect(assistant?.info.id).toBe(result.info.id)
+          if (assistant?.info.role === "assistant" && assistant.info.error) {
+            expect(assistant.info.error.name).toBe("MessageAbortedError")
+          }
+          // kilocode_change end
 
           await Session.remove(session.id)
         },

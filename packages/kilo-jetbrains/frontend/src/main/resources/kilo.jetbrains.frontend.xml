@@ -10,18 +10,18 @@
         <toolWindow id="Kilo Code"
                     anchor="left"
                     icon="/icons/kilo.svg"
-                    factoryClass="ai.kilocode.KiloToolWindowFactory"/>
+                    factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
     </extensions>
 
     <actions>
         <action id="Kilo.Restart"
-                class="ai.kilocode.actions.RestartKiloAction"/>
+                class="ai.kilocode.client.actions.RestartKiloAction"/>
 
         <action id="Kilo.Reinstall"
-                class="ai.kilocode.actions.ReinstallKiloAction"/>
+                class="ai.kilocode.client.actions.ReinstallKiloAction"/>
 
         <action id="Kilo.StatusInfo"
-                class="ai.kilocode.actions.StatusInfoAction"/>
+                class="ai.kilocode.client.actions.StatusInfoAction"/>
 
         <group id="Kilo.SettingsGroup">
             <reference ref="Kilo.Restart"/>
@@ -31,7 +31,7 @@
         </group>
 
         <action id="Kilo.Settings"
-                class="ai.kilocode.actions.KiloSettingsAction"
+                class="ai.kilocode.client.actions.KiloSettingsAction"
                 icon="AllIcons.General.GearPlain"/>
     </actions>
 </idea-plugin>

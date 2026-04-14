@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
-import { Database, eq, and, gte, isNull, desc, like, inArray, lt } from "@/storage/db"
+import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
 import { ProjectID } from "@/project/schema"
@@ -77,6 +77,15 @@ export namespace KiloSession {
         .map((item) => item.id),
     )
     return ids.length ? ids : [id]
+  }
+
+  export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
+    const dir = input.directory ? Filesystem.resolve(input.directory) : undefined
+    if (!dir) return [eq(SessionTable.project_id, input.projectID)]
+    return [
+      or(eq(SessionTable.project_id, input.projectID), eq(SessionTable.directory, dir)),
+      eq(SessionTable.directory, dir),
+    ].filter((item): item is SQL => item !== undefined)
   }
 
   // ---------------------------------------------------------------------------

@@ -1,8 +1,10 @@
 import { test, expect } from "bun:test"
+import { mkdir } from "fs/promises"
 import path from "path"
 
 import { tmpdir } from "../fixture/fixture"
 import { Instance } from "../../src/project/instance"
+import { Plugin } from "../../src/plugin/index"
 import { Provider } from "../../src/provider/provider"
 import { ProviderID, ModelID } from "../../src/provider/schema"
 import { Env } from "../../src/env"
@@ -2279,6 +2281,97 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
         invoked_by: "test",
         project: "opencode",
       })
+    },
+  })
+})
+
+test("plugin config providers persist after instance dispose", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const root = path.join(dir, ".opencode", "plugin")
+      await mkdir(root, { recursive: true })
+      await Bun.write(
+        path.join(root, "demo-provider.ts"),
+        [
+          "export default {",
+          '  id: "demo.plugin-provider",',
+          "  server: async () => ({",
+          "    async config(cfg) {",
+          "      cfg.provider ??= {}",
+          "      cfg.provider.demo = {",
+          '        name: "Demo Provider",',
+          '        npm: "@ai-sdk/openai-compatible",',
+          '        api: "https://example.com/v1",',
+          "        models: {",
+          "          chat: {",
+          '            name: "Demo Chat",',
+          "            tool_call: true,",
+          "            limit: { context: 128000, output: 4096 },",
+          "          },",
+          "        },",
+          "      }",
+          "    },",
+          "  }),",
+          "}",
+          "",
+        ].join("\n"),
+      )
+    },
+  })
+
+  const first = await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await Plugin.init()
+      return Provider.list()
+    },
+  })
+  expect(first[ProviderID.make("demo")]).toBeDefined()
+  expect(first[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
+
+  await Instance.disposeAll()
+
+  const second = await Instance.provide({
+    directory: tmp.path,
+    fn: async () => Provider.list(),
+  })
+  expect(second[ProviderID.make("demo")]).toBeDefined()
+  expect(second[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
+})
+
+test("plugin config enabled and disabled providers are honored", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const root = path.join(dir, ".opencode", "plugin")
+      await mkdir(root, { recursive: true })
+      await Bun.write(
+        path.join(root, "provider-filter.ts"),
+        [
+          "export default {",
+          '  id: "demo.provider-filter",',
+          "  server: async () => ({",
+          "    async config(cfg) {",
+          '      cfg.enabled_providers = ["anthropic", "openai"]',
+          '      cfg.disabled_providers = ["openai"]',
+          "    },",
+          "  }),",
+          "}",
+          "",
+        ].join("\n"),
+      )
+    },
+  })
+
+  await Instance.provide({
+    directory: tmp.path,
+    init: async () => {
+      Env.set("ANTHROPIC_API_KEY", "test-anthropic-key")
+      Env.set("OPENAI_API_KEY", "test-openai-key")
+    },
+    fn: async () => {
+      const providers = await Provider.list()
+      expect(providers[ProviderID.anthropic]).toBeDefined()
+      expect(providers[ProviderID.openai]).toBeUndefined()
     },
   })
 })

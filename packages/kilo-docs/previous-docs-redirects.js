@@ -825,4 +825,14 @@ module.exports = [
     basePath: false,
     permanent: true,
   },
+
+  // ============================================
+  // KILOCLAW
+  // ============================================
+  {
+    source: "/docs/kiloclaw/suggested-configuration",
+    destination: "/docs/kiloclaw/end-to-end",
+    basePath: false,
+    permanent: true,
+  },
 ]

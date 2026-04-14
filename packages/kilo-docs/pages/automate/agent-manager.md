@@ -53,15 +53,15 @@ You can also import a PR directly from the advanced new worktree dialog: open th
 
 The badge color reflects the most important signal, evaluated in priority order:
 
-| State | Color | Condition |
-| --- | --- | --- |
-| Draft | Gray | PR is in draft state |
-| Merged | Purple | PR has been merged |
-| Closed | Red | PR was closed without merging |
-| Checks failing | Red | Any CI check has failed |
-| Changes requested | Yellow | A reviewer requested changes |
-| Checks pending | Yellow (pulsing) | CI checks are still running |
-| Open (default) | Green | PR is open, no failing or pending checks, no blocking review |
+| State             | Color            | Condition                                                    |
+| ----------------- | ---------------- | ------------------------------------------------------------ |
+| Draft             | Gray             | PR is in draft state                                         |
+| Merged            | Purple           | PR has been merged                                           |
+| Closed            | Red              | PR was closed without merging                                |
+| Checks failing    | Red              | Any CI check has failed                                      |
+| Changes requested | Yellow           | A reviewer requested changes                                 |
+| Checks pending    | Yellow (pulsing) | CI checks are still running                                  |
+| Open (default)    | Green            | PR is open, no failing or pending checks, no blocking review |
 
 When checks are pending on an open PR, the badge pulses to indicate activity.
 

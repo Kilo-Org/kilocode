@@ -13,109 +13,92 @@ import { DialogModel } from "./dialog-model"
 import { useKeyboard } from "@opentui/solid"
 import { Clipboard } from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
-import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method" // kilocode_change
+import { CONSOLE_MANAGED_ICON, isConsoleManagedProvider } from "@tui/util/provider-origin"
+import * as KiloProvider from "@/kilocode/cli/cmd/tui/component/dialog-provider" // kilocode_change
 
-const PROVIDER_PRIORITY: Record<string, number> = {
-  kilo: -1, // kilocode_change - Kilo Gateway at top
-  // kilocode_change - removed opencode from popular providers
-  anthropic: 0,
-  "github-copilot": 1,
-  openai: 2,
-  google: 3,
-}
+const PROVIDER_PRIORITY: Record<string, number> = KiloProvider.PROVIDER_PRIORITY // kilocode_change
 
 export function createDialogProviderOptions() {
   const sync = useSync()
   const dialog = useDialog()
   const sdk = useSDK()
   const toast = useToast()
+  const { theme } = useTheme()
   const options = createMemo(() => {
     return pipe(
       sync.data.provider_next.all,
       sortBy((x) => PROVIDER_PRIORITY[x.id] ?? 99),
-      map((provider) => ({
-        title: provider.name,
-        value: provider.id,
-        description: {
-          kilo: "(Recommended)", // kilocode_change
-          anthropic: "(Claude Max or API key)",
-          openai: "(ChatGPT Plus/Pro or API key)",
-          // "opencode-go": "(Low cost)", // kilocode_change
-        }[provider.id],
-        category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
-        async onSelect() {
-          const methods = sync.data.provider_auth[provider.id] ?? [
-            {
-              type: "api",
-              label: "API key",
-            },
-          ]
-          let index: number | null = 0
-          if (methods.length > 1) {
-            index = await new Promise<number | null>((resolve) => {
-              dialog.replace(
-                () => (
-                  <DialogSelect
-                    title="Select auth method"
-                    options={methods.map((x, index) => ({
-                      title: x.label,
-                      value: index,
-                    }))}
-                    onSelect={(option) => resolve(option.value)}
-                  />
-                ),
-                () => resolve(null),
-              )
-            })
-          }
-          if (index == null) return
-          const method = methods[index]
-          if (method.type === "oauth") {
-            let inputs: Record<string, string> | undefined
-            if (method.prompts?.length) {
-              const value = await PromptsMethod({
-                dialog,
-                prompts: method.prompts,
-              })
-              if (!value) return
-              inputs = value
-            }
+      map((provider) => {
+        const consoleManaged = isConsoleManagedProvider(sync.data.console_state.consoleManagedProviders, provider.id)
+        const connected = sync.data.provider_next.connected.includes(provider.id)
 
-            const result = await sdk.client.provider.oauth.authorize({
-              providerID: provider.id,
-              method: index,
-              inputs,
-            })
-            if (result.error) {
-              toast.show({
-                variant: "error",
-                message: JSON.stringify(result.error),
+        return {
+          title: provider.name,
+          value: provider.id,
+          description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
+          footer: consoleManaged ? sync.data.console_state.activeOrgName : undefined,
+          category: provider.id in PROVIDER_PRIORITY ? "Popular" : "Other",
+          gutter: consoleManaged ? (
+            <text fg={theme.textMuted}>{CONSOLE_MANAGED_ICON}</text>
+          ) : connected ? (
+            <text fg={theme.success}>✓</text>
+          ) : undefined,
+          async onSelect() {
+            if (consoleManaged) return
+
+            const methods = sync.data.provider_auth[provider.id] ?? [
+              {
+                type: "api",
+                label: "API key",
+              },
+            ]
+            let index: number | null = 0
+            if (methods.length > 1) {
+              index = await new Promise<number | null>((resolve) => {
+                dialog.replace(
+                  () => (
+                    <DialogSelect
+                      title="Select auth method"
+                      options={methods.map((x, index) => ({
+                        title: x.label,
+                        value: index,
+                      }))}
+                      onSelect={(option) => resolve(option.value)}
+                    />
+                  ),
+                  () => resolve(null),
+                )
               })
-              dialog.clear()
-              return
             }
-            if (result.data?.method === "code") {
-              dialog.replace(() => (
-                <CodeMethod providerID={provider.id} title={method.label} index={index} authorization={result.data!} />
-              ))
-            }
-            if (result.data?.method === "auto") {
-              // kilocode_change start - Use custom handler for Kilo Gateway
-              if (provider.id === "kilo") {
+            if (index == null) return
+            const method = methods[index]
+            if (method.type === "oauth") {
+              let inputs: Record<string, string> | undefined
+              if (method.prompts?.length) {
+                const value = await PromptsMethod({
+                  dialog,
+                  prompts: method.prompts,
+                })
+                if (!value) return
+                inputs = value
+              }
+
+              const result = await sdk.client.provider.oauth.authorize({
+                providerID: provider.id,
+                method: index,
+                inputs,
+              })
+              if (result.error) {
+                toast.show({
+                  variant: "error",
+                  message: JSON.stringify(result.error),
+                })
+                dialog.clear()
+                return
+              }
+              if (result.data?.method === "code") {
                 dialog.replace(() => (
-                  <KiloAutoMethod
-                    providerID={provider.id}
-                    title={method.label}
-                    index={index}
-                    authorization={result.data!}
-                    useSDK={useSDK}
-                    useTheme={useTheme}
-                    DialogModel={DialogModel}
-                  />
-                ))
-              } else {
-                dialog.replace(() => (
-                  <AutoMethod
+                  <CodeMethod
                     providerID={provider.id}
                     title={method.label}
                     index={index}
@@ -123,14 +106,46 @@ export function createDialogProviderOptions() {
                   />
                 ))
               }
-              // kilocode_change end
+              if (result.data?.method === "auto") {
+                // kilocode_change start
+                const kilo = KiloProvider.renderAutoMethod({
+                  providerID: provider.id,
+                  title: method.label,
+                  index,
+                  authorization: result.data!,
+                  useSDK,
+                  useTheme,
+                  DialogModel,
+                })
+                if (kilo) {
+                  dialog.replace(kilo)
+                } else {
+                  // kilocode_change end
+                  dialog.replace(() => (
+                    <AutoMethod
+                      providerID={provider.id}
+                      title={method.label}
+                      index={index}
+                      authorization={result.data!}
+                    />
+                  ))
+                } // kilocode_change
+              }
             }
-          }
-          if (method.type === "api") {
-            return dialog.replace(() => <ApiMethod providerID={provider.id} title={method.label} />)
-          }
-        },
-      })),
+            if (method.type === "api") {
+              let metadata: Record<string, string> | undefined
+              if (method.prompts?.length) {
+                const value = await PromptsMethod({ dialog, prompts: method.prompts })
+                if (!value) return
+                metadata = value
+              }
+              return dialog.replace(() => (
+                <ApiMethod providerID={provider.id} title={method.label} metadata={metadata} />
+              ))
+            }
+          },
+        }
+      }),
     )
   })
   return options
@@ -246,6 +261,7 @@ function CodeMethod(props: CodeMethodProps) {
 interface ApiMethodProps {
   providerID: string
   title: string
+  metadata?: Record<string, string>
 }
 function ApiMethod(props: ApiMethodProps) {
   const dialog = useDialog()
@@ -257,23 +273,7 @@ function ApiMethod(props: ApiMethodProps) {
     <DialogPrompt
       title={props.title}
       placeholder="API key"
-      description={
-        {
-          kilo: (
-            <box gap={1}>
-              {/* kilocode_change start */}
-              <text fg={theme.textMuted}>
-                Kilo Gateway gives you access to all the best coding models at the cheapest prices with a single API
-                key.
-              </text>
-              <text fg={theme.text}>
-                Go to <span style={{ fg: theme.primary }}>https://kilo.ai/gateway</span> to get a key
-              </text>
-              {/* kilocode_change end */}
-            </box>
-          ),
-        }[props.providerID] ?? undefined
-      }
+      description={KiloProvider.renderApiDescription(props.providerID, theme)} // kilocode_change
       onConfirm={async (value) => {
         if (!value) return
         await sdk.client.auth.set({
@@ -281,6 +281,7 @@ function ApiMethod(props: ApiMethodProps) {
           auth: {
             type: "api",
             key: value,
+            ...(props.metadata ? { metadata: props.metadata } : {}),
           },
         })
         await sdk.client.instance.dispose()

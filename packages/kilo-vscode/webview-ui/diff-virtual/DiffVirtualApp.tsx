@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, Show } from "solid-js"
+import { createMemo, createSignal, onCleanup, Show } from "solid-js"
 import type { Component } from "solid-js"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -10,6 +10,7 @@ import { File } from "@kilocode/kilo-ui/file"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { RadioGroup } from "@kilocode/kilo-ui/radio-group"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
+import { normalize, text } from "@kilocode/kilo-ui/session-diff"
 import { LanguageProvider, useLanguage } from "../src/context/language"
 import { ServerProvider, useServer } from "../src/context/server"
 import { VSCodeProvider } from "../src/context/vscode"
@@ -18,8 +19,9 @@ type DiffStyle = "unified" | "split"
 
 interface DiffVirtualFile {
   file: string
-  before: string
-  after: string
+  patch?: string
+  before?: string
+  after?: string
   additions: number
   deletions: number
 }
@@ -49,6 +51,17 @@ const DiffVirtualContent: Component = () => {
     if (!f.includes("/")) return null
     return f.split("/").slice(0, -1).join("/")
   }
+
+  const resolved = createMemo(() => {
+    const d = diff()
+    if (!d) return { before: "", after: "" }
+    if (d.before !== undefined || d.after !== undefined) return { before: d.before ?? "", after: d.after ?? "" }
+    if (d.patch) {
+      const view = normalize(d as { file: string; patch: string; additions: number; deletions: number })
+      return { before: text(view, "deletions"), after: text(view, "additions") }
+    }
+    return { before: "", after: "" }
+  })
 
   return (
     <div class="am-review-layout">
@@ -82,8 +95,8 @@ const DiffVirtualContent: Component = () => {
             </div>
             <div class="am-review-diff" style={{ width: "100%" }}>
               <Diff
-                before={{ name: d().file, contents: d().before }}
-                after={{ name: d().file, contents: d().after }}
+                before={{ name: d().file, contents: resolved().before }}
+                after={{ name: d().file, contents: resolved().after }}
                 diffStyle={style()}
               />
             </div>

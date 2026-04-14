@@ -1,7 +1,15 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test"
 import type { GitContext } from "../types"
 
-// Mock dependencies before importing the module under test
+// Mock dependencies before importing the module under test.
+// IMPORTANT: Bun's mock.module() is process-wide and permanent. To avoid
+// breaking other test files, we spread real exports and only override what
+// this test needs.
+
+const realLog = await import("@/util/log")
+const realProvider = await import("@/provider/provider")
+const realLLM = await import("@/session/llm")
+const realAgent = await import("@/agent/agent")
 
 let mockGitContext: GitContext = {
   branch: "main",
@@ -16,7 +24,9 @@ mock.module("../git-context", () => ({
 let mockStreamText = "feat(src): add hello world logging"
 
 mock.module("@/provider/provider", () => ({
+  ...realProvider,
   Provider: {
+    ...realProvider.Provider,
     defaultModel: async () => ({ providerID: "test", modelID: "test-model" }),
     getSmallModel: async () => ({
       providerID: "test",
@@ -26,20 +36,30 @@ mock.module("@/provider/provider", () => ({
   },
 }))
 
+// kilocode_change start — upstream switched from stream.text to stream.textStream
 mock.module("@/session/llm", () => ({
+  ...realLLM,
   LLM: {
+    ...realLLM.LLM,
     stream: async () => ({
+      textStream: (async function* () {
+        yield mockStreamText
+      })(),
       text: Promise.resolve(mockStreamText),
     }),
   },
 }))
+// kilocode_change end
 
 mock.module("@/agent/agent", () => ({
+  ...realAgent,
   Agent: {},
 }))
 
 mock.module("@/util/log", () => ({
+  ...realLog,
   Log: {
+    ...realLog.Log,
     create: () => ({
       info: () => {},
       error: () => {},

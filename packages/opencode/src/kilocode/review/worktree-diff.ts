@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { $ } from "bun"
+import { createTwoFilesPatch } from "diff"
 import fs from "node:fs/promises"
 import path from "node:path"
 import z from "zod"
@@ -9,6 +10,8 @@ import { Log } from "@/util/log"
 
 export namespace WorktreeDiff {
   export const Item = Snapshot.FileDiff.extend({
+    before: z.string(),
+    after: z.string(),
     tracked: z.boolean(),
     generatedLike: z.boolean(),
     summarized: z.boolean(),
@@ -242,6 +245,7 @@ export namespace WorktreeDiff {
     const additions = meta.status === "added" && meta.additions === 0 && !meta.tracked ? lines(after) : meta.additions
     return {
       file: meta.file,
+      patch: createTwoFilesPatch(meta.file, meta.file, before, after),
       before,
       after,
       additions,
@@ -257,6 +261,7 @@ export namespace WorktreeDiff {
   function summarize(meta: Meta): Item {
     return {
       file: meta.file,
+      patch: "",
       before: "",
       after: "",
       additions: meta.additions,

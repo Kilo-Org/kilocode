@@ -44,6 +44,8 @@ interface MessageListProps {
   onShowHistory?: () => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
+  /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
+  readonly?: boolean
 }
 
 export const MessageList: Component<MessageListProps> = (props) => {
@@ -114,7 +116,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
               <span>{language.t("session.messages.loading")}</span>
             </div>
           </Show>
-          <Show when={isEmpty()}>
+          <Show when={isEmpty() && props.readonly}>
+            <div class="message-list-empty">
+              <p class="kilo-about-text">{language.t("session.messages.initializing")}</p>
+            </div>
+          </Show>
+          <Show when={isEmpty() && !props.readonly}>
             <div class="message-list-empty">
               <KiloLogo />
               <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>

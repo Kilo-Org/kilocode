@@ -2,6 +2,7 @@ import { useRenderer } from "@opentui/solid"
 import { createSimpleContext } from "./helper"
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { win32FlushInputBuffer } from "../win32"
+import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
 type Exit = ((reason?: unknown) => Promise<void>) & {
   message: {
     set: (value?: string) => () => void
@@ -38,6 +39,7 @@ export const { use: useExit, provider: ExitProvider } = createSimpleContext({
           renderer.setTerminalTitle("")
           renderer.destroy()
           win32FlushInputBuffer()
+          resetTerminalState() // kilocode_change
           if (reason) {
             const formatted = FormatError(reason) ?? FormatUnknownError(reason)
             if (formatted) {

@@ -140,15 +140,12 @@ export namespace SessionSummary {
           const file = unquoteGitPath(item.file)
 
           // kilocode_change start — scrub oversized diffs from stored session_diff
-          const oversized =
-            Buffer.byteLength(item.before) > Snapshot.MAX_DIFF_SIZE ||
-            Buffer.byteLength(item.after) > Snapshot.MAX_DIFF_SIZE
+          const oversized = Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
           if (file === item.file && !oversized) return item
           return {
             ...item,
             file,
-            before: oversized ? "" : item.before,
-            after: oversized ? "" : item.after,
+            patch: oversized ? "" : item.patch,
           }
           // kilocode_change end
         })
@@ -184,9 +181,5 @@ export namespace SessionSummary {
 
   export async function diff(input: z.infer<typeof DiffInput>) {
     return runPromise((svc) => svc.diff(input))
-  }
-
-  export async function computeDiff(input: { messages: MessageV2.WithParts[] }) {
-    return runPromise((svc) => svc.computeDiff(input))
   }
 }

@@ -40,7 +40,7 @@ interface FullScreenDiffViewProps {
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
   onRequestDiff?: (file: string) => void
-  onOpenFile?: (relativePath: string) => void
+  onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   onClose: () => void
@@ -596,6 +596,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 renderAnnotation={buildAnnotation}
                                 enableGutterUtility={true}
                                 onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                onLineNumberClick={(event) => {
+                                  if (event.annotationSide === "deletions") return
+                                  props.onOpenFile?.(diff.file, event.lineNumber)
+                                }}
                               />
                             </Show>
                           </Show>

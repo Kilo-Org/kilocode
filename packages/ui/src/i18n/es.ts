@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Cambios de la sesión",
+  "ui.sessionReview.title.git": "Cambios de Git",
+  "ui.sessionReview.title.branch": "Cambios de rama",
   "ui.sessionReview.title.lastTurn": "Cambios del último turno",
   "ui.sessionReview.diffStyle.unified": "Unificado",
   "ui.sessionReview.diffStyle.split": "Dividido",
@@ -37,6 +39,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Ocultar pasos",
   "ui.sessionTurn.summary.response": "Respuesta",
   "ui.sessionTurn.diff.showMore": "Mostrar más cambios ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Modificado",
+  "ui.sessionTurn.diffs.showAll": "Mostrar todo",
+  "ui.sessionTurn.diffs.showLess": "Mostrar menos",
+  "ui.sessionTurn.diffs.more": "+{{count}} archivos más",
 
   "ui.sessionTurn.retry.retrying": "reintentando",
   "ui.sessionTurn.retry.inSeconds": "en {{seconds}}s",

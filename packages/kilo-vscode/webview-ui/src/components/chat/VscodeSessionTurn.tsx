@@ -18,14 +18,15 @@ import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"
 import { useData } from "@kilocode/kilo-ui/context/data"
-import { useDiffComponent } from "@kilocode/kilo-ui/context/diff"
+import { useFileComponent } from "@kilocode/kilo-ui/context/file"
+import { normalize } from "@kilocode/kilo-ui/session-diff"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { AssistantMessage } from "./AssistantMessage"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Message as SDKMessage,
   Part as SDKPart,
-  FileDiff,
+  SnapshotFileDiff,
 } from "@kilocode/sdk/v2"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { useServer } from "../../context/server"
@@ -53,14 +54,14 @@ interface VscodeSessionTurnProps {
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
-  const diffComponent = useDiffComponent()
+  const fileComponent = useFileComponent()
   const server = useServer()
   const session = useSession()
   const language = useLanguage()
 
   const emptyMessages: SDKMessage[] = []
   const emptyParts: SDKPart[] = []
-  const emptyDiffs: FileDiff[] = []
+  const emptyDiffs: SnapshotFileDiff[] = []
 
   const allMessages = createMemo(() => {
     const msgs = data.store.message?.[props.sessionID]
@@ -109,8 +110,8 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
     const rawDiffs = (message() as unknown as { summary?: { diffs?: unknown[] } } | undefined)?.summary?.diffs
     if (!rawDiffs?.length) return emptyDiffs
     const seen = new Set<string>()
-    return (rawDiffs as FileDiff[])
-      .reduceRight<FileDiff[]>((result, diff) => {
+    return (rawDiffs as SnapshotFileDiff[])
+      .reduceRight<SnapshotFileDiff[]>((result, diff) => {
         if (seen.has(diff.file)) return result
         seen.add(diff.file)
         result.push(diff)
@@ -196,7 +197,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                 <Collapsible.Trigger>
                   <div data-component="session-turn-diffs-trigger">
                     <div data-slot="session-turn-diffs-title">
-                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>
+                      <span data-slot="session-turn-diffs-label">{i18n.t("ui.sessionReview.change.modified")}</span>{" "}
                       <span data-slot="session-turn-diffs-count">
                         {diffs().length} {i18n.t(diffs().length === 1 ? "ui.common.file.one" : "ui.common.file.other")}
                       </span>
@@ -265,9 +266,9 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                   <Show when={visible()}>
                                     <div data-slot="session-turn-diff-view" data-scrollable>
                                       <Dynamic
-                                        component={diffComponent}
-                                        before={{ name: diff.file, contents: diff.before }}
-                                        after={{ name: diff.file, contents: diff.after }}
+                                        component={fileComponent}
+                                        mode="diff"
+                                        fileDiff={normalize(diff).fileDiff}
                                       />
                                     </div>
                                   </Show>

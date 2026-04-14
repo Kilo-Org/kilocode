@@ -8,6 +8,7 @@
 
   [data-slot="basic-tool-tool-info"] {
     font-size: 12px;
+    text-align: start;
   }
 
   [data-slot="basic-tool-tool-info-structured"] {

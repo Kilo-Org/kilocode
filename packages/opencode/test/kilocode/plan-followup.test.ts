@@ -76,8 +76,7 @@ async function seed(input: {
       created: Date.now(),
     },
     agent: "plan",
-    model,
-    variant: input.variant,
+    model: input.variant ? { ...model, variant: input.variant } : model,
   })
   await Session.updatePart({
     id: PartID.ascending(),
@@ -289,8 +288,7 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual(saved)
-      expect(user.info.variant).toBe(configVar)
+      expect(user.info.model).toEqual({ ...saved, variant: configVar })
 
       const part = user.parts.find((item) => item.type === "text")
       expect(part?.type).toBe("text")
@@ -457,8 +455,7 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") throw new Error("expected seeded user message")
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual(saved)
-      expect(user.info.variant).toBe(configVar)
+      expect(user.info.model).toEqual({ ...saved, variant: configVar })
 
       const part = user.parts.find((item) => item.type === "text")
       expect(part?.type).toBe("text")
@@ -604,8 +601,7 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual(saved)
-      expect(user.info.variant).toBe(savedVar)
+      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
     }))
 
   test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
@@ -655,8 +651,7 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual(config)
-      expect(user.info.variant).toBe(configVar)
+      expect(user.info.model).toEqual({ ...config, variant: configVar })
     }))
 
   test("ask - falls back to planning model when no saved or configured code model exists", () =>
@@ -691,8 +686,7 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual(model)
-      expect(user.info.variant).toBe(planVar)
+      expect(user.info.model).toEqual({ ...model, variant: planVar })
     }))
 
   test("ask - new session omits handover section when LLM returns empty", () =>

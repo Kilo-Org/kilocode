@@ -4,6 +4,7 @@ import {
   syncMentionedPaths,
   buildTextAfterMentionSelect,
   buildFileAttachments,
+  buildMentionResults,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -26,6 +27,28 @@ describe("AT_PATTERN", () => {
 
   it("matches empty @", () => {
     expect(AT_PATTERN.test("@")).toBe(true)
+  })
+})
+
+describe("buildMentionResults", () => {
+  it("includes terminal for empty mention query", () => {
+    const result = buildMentionResults("", [])
+    expect(result[0]).toEqual({
+      type: "terminal",
+      value: "terminal",
+      label: "Terminal",
+      description: "Active terminal output",
+    })
+  })
+
+  it("includes terminal for matching prefix", () => {
+    const result = buildMentionResults("term", ["src/terminal.ts"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file"])
+  })
+
+  it("omits terminal for unrelated query", () => {
+    const result = buildMentionResults("src", ["src/index.ts"])
+    expect(result.map((item) => item.type)).toEqual(["file"])
   })
 })
 

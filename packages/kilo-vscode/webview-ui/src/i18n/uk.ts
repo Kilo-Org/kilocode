@@ -940,6 +940,8 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code — це асистент з кодування на базі ШІ. Попросіть його розробити функцію, виправити помилку або пояснити вашу кодову базу.",
   "session.messages.scrollToBottom": "Прокрутити до низу",
+  "session.messages.initializing": "Ініціалізація...",
+  "session.messages.taskStarting": "Запуск...",
   "session.status.writingResponse": "Пишу відповідь...",
   "session.status.retry": "Повторна спроба…",
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
