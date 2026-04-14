@@ -308,6 +308,23 @@ export function Markdown(
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
     }
+
+    // kilocode_change start: avoid morphdom's expensive tree matching on first
+    // paint for completed historical markdown. Large session switches mount many
+    // stable markdown blocks, and the trace showed morphdom + Parse HTML as the
+    // dominant webview cost.
+    if (!local.streaming && container.childNodes.length === 0) {
+      container.innerHTML = content
+      decorate(container, labels)
+      if (!copyCleanup)
+        copyCleanup = setupCodeCopy(container, () => ({
+          copy: i18n.t("ui.message.copy"),
+          copied: i18n.t("ui.message.copied"),
+        }))
+      return
+    }
+    // kilocode_change end
+
     const temp = document.createElement("div")
     temp.innerHTML = content
     decorate(temp, labels)

@@ -1531,6 +1531,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="bullet-list"
+        defer
         trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
       >
         <Show when={props.output}>
@@ -1551,6 +1552,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
+        defer
         trigger={{
           title: i18n.t("ui.tool.glob"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1578,6 +1580,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
+        defer
         trigger={{
           title: i18n.t("ui.tool.grep"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1772,6 +1775,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
+        defer
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">

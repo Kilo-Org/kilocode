@@ -532,6 +532,9 @@ interface PreviewImageIn {
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
+  mode?: "replace" | "prepend" | "focus"
+  before?: string
+  limit?: number
 }
 
 interface FileSourceIn {

@@ -875,6 +875,7 @@
     "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
+    "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",
     "yaml": "2.8.3",
     "zod": "^3.24.2"
