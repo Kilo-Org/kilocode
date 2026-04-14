@@ -1,0 +1,68 @@
+/* Settings save bar */
+.settings-save-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border-weak-base);
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition:
+    max-height 0.2s ease,
+    opacity 0.2s ease,
+    padding 0.2s ease;
+}
+
+.settings-save-bar--visible {
+  max-height: 52px;
+  opacity: 1;
+  padding: 8px 16px;
+}
+
+.settings-save-bar-label {
+  font-size: 12px;
+  color: var(--foreground-secondary);
+  margin-right: auto;
+}
+
+[data-slot="settings-row"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  [data-slot="settings-row-label"] {
+    flex: 1 1 0%;
+    min-width: 150px;
+
+    [data-slot="settings-row-label-title"] {
+      font-weight: 500;
+      min-height: 16px;
+      margin-bottom: 4px;
+    }
+
+    [data-slot="settings-row-label-subtitle"] {
+      font-size: 12px;
+      min-height: 14px;
+      color: var(--text-weak-base, var(--vscode-descriptionForeground));
+    }
+  }
+
+  [data-slot="settings-row-input"] {
+    flex: 0 0 auto;
+    max-width: 160px;
+
+    & > * {
+      max-width: 100%;
+    }
+  }
+}
+
+/* Wider inputs inside cards with data-variant="wide-input" (e.g. edit mode config) */
+[data-variant="wide-input"] [data-slot="settings-row-input"] {
+  flex: 1 1 0%;
+  max-width: none;
+}

@@ -11,6 +11,8 @@ import z from "zod"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
 import { Flag } from "../flag/flag"
+import { CHANNEL } from "../installation/meta"
+import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
 
@@ -139,10 +141,11 @@ export namespace Database {
   }
 
   export function effect(fn: () => any | Promise<any>) {
+    const bound = InstanceState.bind(fn)
     try {
-      ctx.use().effects.push(fn)
+      ctx.use().effects.push(bound)
     } catch {
-      fn()
+      bound()
     }
   }
 
@@ -159,12 +162,8 @@ export namespace Database {
     } catch (err) {
       if (err instanceof Context.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
-        const result = Client().transaction(
-          (tx: TxOrDb) => {
-            return ctx.provide({ tx, effects }, () => callback(tx))
-          },
-          { behavior: options?.behavior },
-        )
+        const txCallback = InstanceState.bind((tx: TxOrDb) => ctx.provide({ tx, effects }, () => callback(tx)))
+        const result = Client().transaction(txCallback, { behavior: options?.behavior })
         for (const effect of effects) effect()
         return result as NotPromise<T>
       }

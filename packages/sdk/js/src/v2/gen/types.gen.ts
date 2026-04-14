@@ -4,20 +4,6 @@ export type ClientOptions = {
   baseUrl: `${string}://${string}` | (string & {})
 }
 
-export type EventInstallationUpdated = {
-  type: "installation.updated"
-  properties: {
-    version: string
-  }
-}
-
-export type EventInstallationUpdateAvailable = {
-  type: "installation.update-available"
-  properties: {
-    version: string
-  }
-}
-
 export type Project = {
   id: string
   worktree: string
@@ -45,6 +31,20 @@ export type Project = {
 export type EventProjectUpdated = {
   type: "project.updated"
   properties: Project
+}
+
+export type EventInstallationUpdated = {
+  type: "installation.updated"
+  properties: {
+    version: string
+  }
+}
+
+export type EventInstallationUpdateAvailable = {
+  type: "installation.update-available"
+  properties: {
+    version: string
+  }
 }
 
 export type EventServerInstanceDisposed = {
@@ -332,6 +332,21 @@ export type EventTodoUpdated = {
   }
 }
 
+export type EventSessionTurnOpen = {
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    reason: "completed" | "error" | "interrupted"
+  }
+}
+
 export type SessionStatus =
   | {
       type: "idle"
@@ -395,21 +410,6 @@ export type EventCommandExecuted = {
     sessionID: string
     arguments: string
     messageID: string
-  }
-}
-
-export type EventSessionTurnOpen = {
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -1049,9 +1049,9 @@ export type EventSessionDeleted = {
 }
 
 export type Event =
+  | EventProjectUpdated
   | EventInstallationUpdated
   | EventInstallationUpdateAvailable
-  | EventProjectUpdated
   | EventServerInstanceDisposed
   | EventServerConnected
   | EventGlobalDisposed
@@ -1075,14 +1075,14 @@ export type Event =
   | EventQuestionReplied
   | EventQuestionRejected
   | EventTodoUpdated
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
   | EventSessionStatus
   | EventSessionIdle
   | EventSessionCompacted
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventCommandExecuted
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
   | EventVcsBranchUpdated

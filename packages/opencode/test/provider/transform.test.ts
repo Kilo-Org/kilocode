@@ -1557,6 +1557,35 @@ describe("ProviderTransform.message - providerOptions key remapping", () => {
     expect(result[0].providerOptions?.openai).toBeUndefined()
   })
 
+  test("azure cognitive services remaps providerID to 'azure' key", () => {
+    const model = createModel("azure-cognitive-services", "@ai-sdk/azure")
+    const msgs = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Hello",
+            providerOptions: {
+              "azure-cognitive-services": { part: true },
+            },
+          },
+        ],
+        providerOptions: {
+          "azure-cognitive-services": { someOption: "value" },
+        },
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+    const part = result[0].content[0] as any
+
+    expect(result[0].providerOptions?.azure).toEqual({ someOption: "value" })
+    expect(result[0].providerOptions?.["azure-cognitive-services"]).toBeUndefined()
+    expect(part.providerOptions?.azure).toEqual({ part: true })
+    expect(part.providerOptions?.["azure-cognitive-services"]).toBeUndefined()
+  })
+
   test("copilot remaps providerID to 'copilot' key", () => {
     const model = createModel("github-copilot", "@ai-sdk/github-copilot")
     const msgs = [
@@ -1721,6 +1750,58 @@ describe("ProviderTransform.message - cache control on gateway", () => {
         url: "https://api.anthropic.com",
         npm: "@ai-sdk/anthropic",
       },
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions).toEqual({
+      anthropic: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      openrouter: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      bedrock: {
+        cachePoint: {
+          type: "default",
+        },
+      },
+      openaiCompatible: {
+        cache_control: {
+          type: "ephemeral",
+        },
+      },
+      copilot: {
+        copilot_cache_control: {
+          type: "ephemeral",
+        },
+      },
+    })
+  })
+
+  test("google-vertex-anthropic applies cache control", () => {
+    const model = createModel({
+      providerID: "google-vertex-anthropic",
+      api: {
+        id: "google-vertex-anthropic",
+        url: "https://us-central1-aiplatform.googleapis.com",
+        npm: "@ai-sdk/google-vertex/anthropic",
+      },
+      id: "claude-sonnet-4@20250514",
     })
     const msgs = [
       {
@@ -2320,6 +2401,30 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
     })
   })
+
+  // kilocode_change start
+  describe("@ai-sdk/azure", () => {
+    test("gpt-5.4 includes xhigh", () => {
+      const model = createMockModel({
+        id: "gpt-5.4",
+        release_date: "2026-03-05",
+        providerID: "azure",
+        api: {
+          id: "gpt-5.4",
+          url: "https://resource.openai.azure.com/openai",
+          npm: "@ai-sdk/azure",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+      expect(result.xhigh).toEqual({
+        reasoningEffort: "xhigh",
+        reasoningSummary: "auto",
+        include: ["reasoning.encrypted_content"],
+      })
+    })
+  })
+  // kilocode_change end
 
   describe("@ai-sdk/cerebras", () => {
     test("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {

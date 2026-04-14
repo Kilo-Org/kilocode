@@ -19,6 +19,9 @@ import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { executeVscodeTask } from "./task-runner"
+import { startVscodeRunTask } from "./run/task"
+import { RunController } from "./run/controller"
+import { handleRunMessage } from "./run/message"
 import { forkSession } from "./fork-session"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
@@ -49,6 +52,7 @@ export class AgentManagerProvider implements Disposable {
   private setupScript: SetupScriptService | undefined
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
+  private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
   private prBridge!: PRStatusBridge
@@ -71,6 +75,16 @@ export class AgentManagerProvider implements Disposable {
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
     )
+    this.run = new RunController({
+      root: () => this.getRoot(),
+      state: () => this.getStateManager(),
+      open: (file) => this.host.openDocument(file),
+      start: startVscodeRunTask,
+      post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
+      error: (message) => this.postToWebview({ type: "error", message }),
+      log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
+      refresh: () => this.pushState(),
+    })
     this.importer = new WorktreeImporter({
       manager: () => this.getWorktreeManager(),
       state: () => this.getStateManager(),
@@ -354,6 +368,7 @@ export class AgentManagerProvider implements Disposable {
       void this.configureSetupScript()
       return null
     }
+    if (handleRunMessage(this.run, m)) return null
     if (m.type === "agentManager.showTerminal") {
       this.terminalManager.showTerminal(m.sessionId, this.state)
       return null
@@ -766,6 +781,7 @@ export class AgentManagerProvider implements Disposable {
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
+    this.run.remove(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1230,6 +1246,7 @@ export class AgentManagerProvider implements Disposable {
     if (!state) return
     const worktrees = state.getWorktrees()
     const staleWorktreeIds = this.staleWorktreesForState(worktrees)
+    const run = this.run.state()
     this.postToWebview({
       type: "agentManager.state",
       worktrees,
@@ -1242,6 +1259,7 @@ export class AgentManagerProvider implements Disposable {
       reviewDiffStyle: state.getReviewDiffStyle(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
+      ...run,
     })
 
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
@@ -1258,6 +1276,8 @@ export class AgentManagerProvider implements Disposable {
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
       isGitRepo: false,
+      runStatuses: [],
+      runScriptConfigured: false,
     })
   }
 
@@ -1436,6 +1456,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.stop()
     this.gitOps.dispose()
     this.prBridge.poller.stop()
+    this.run.dispose()
     this.terminalManager.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()

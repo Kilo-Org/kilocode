@@ -90,7 +90,7 @@ function bumpVersion(current: string, type: string) {
 // kilocode_change end
 
 const VERSION = await (async () => {
-  if (env.KILO_VERSION) return env.KILO_VERSION // kilocode_change
+  if (env.KILO_VERSION) return env.KILO_VERSION
   if (IS_PREVIEW) {
     // kilocode_change start - rc releases use plain semver required by VS Code Marketplace
     if (env.KILO_BUMP && env.KILO_PRE_RELEASE === "true") {

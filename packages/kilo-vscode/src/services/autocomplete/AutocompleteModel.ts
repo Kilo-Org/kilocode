@@ -54,12 +54,7 @@ export class AutocompleteModel {
       throw new Error("Connection service is not available")
     }
 
-    const state = this.connectionService.getConnectionState()
-    if (state !== "connected") {
-      throw new Error(`CLI backend is not connected (state: ${state})`)
-    }
-
-    const client = this.connectionService.getClient()
+    const client = await this.connectionService.getClientAsync()
 
     let cost = 0
     let inputTokens = 0
@@ -146,13 +141,13 @@ export class AutocompleteModel {
    * Returns false on any error (not connected, fetch failed, etc.).
    */
   public async hasBalance(): Promise<boolean> {
-    if (!this.connectionService || this.connectionService.getConnectionState() !== "connected") {
+    if (!this.connectionService) return false
+    try {
+      const client = await this.connectionService.getClientAsync()
+      const result = await client.kilo.profile().catch(() => null)
+      return (result?.data?.balance?.balance ?? 0) > 0
+    } catch {
       return false
     }
-    const result = await this.connectionService
-      .getClient()
-      .kilo.profile()
-      .catch(() => null)
-    return (result?.data?.balance?.balance ?? 0) > 0
   }
 }

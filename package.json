@@ -16,7 +16,9 @@
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
     "test": "echo 'do not run tests from root' && exit 1",
-    "extension": "bun --cwd packages/kilo-vscode script/launch.ts"
+    "extension": "bun --cwd packages/kilo-vscode script/launch.ts",
+    "changeset": "bunx changeset",
+    "changeset:version": "bunx changeset version && bun install --lockfile-only"
   },
   "workspaces": {
     "packages": [
@@ -72,6 +74,8 @@
   },
   "devDependencies": {
     "@actions/artifact": "5.0.1",
+    "@changesets/changelog-github": "^0.5.1",
+    "@changesets/cli": "^2.27.10",
     "@tsconfig/bun": "catalog:",
     "@types/mime-types": "3.0.1",
     "@typescript/native-preview": "catalog:",
@@ -130,6 +134,6 @@
     "@ai-sdk/provider-utils@4.0.21": "patches/@ai-sdk%2Fprovider-utils@4.0.21.patch",
     "@ai-sdk/anthropic@3.0.64": "patches/@ai-sdk%2Fanthropic@3.0.64.patch"
   },
-  "version": "7.2.4",
+  "version": "7.2.5",
   "peerDependencies": {}
 }

@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../cli-backend/connection-service"
 import { getErrorMessage } from "../../kilo-provider-utils"
 
@@ -53,20 +52,16 @@ export function registerCommitMessageService(
         return
       }
 
-      let client: KiloClient | undefined
-      try {
-        client = connectionService.getClient()
-      } catch (err) {
-        console.error("[Kilo New] Failed to get client:", err)
-        vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
-        return
-      }
-      if (!client) {
-        vscode.window.showErrorMessage("Kilo backend is not connected. Please wait for the connection to establish.")
-        return
-      }
-
       const path = repository.rootUri.fsPath
+
+      let client
+      try {
+        client = await connectionService.getClientAsync(path)
+      } catch (err) {
+        console.error("[Kilo New] Failed to connect to Kilo backend:", err)
+        vscode.window.showErrorMessage("Failed to connect to Kilo backend. Please try again.")
+        return
+      }
 
       const previousMessage = lastWorkspacePath === path ? lastGeneratedMessage : undefined
 

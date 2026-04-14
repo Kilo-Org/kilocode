@@ -46,9 +46,14 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
+      # kilocode_change start - install deps for changeset changelog generation
+      - name: Install dependencies
+        run: bun install
+
       - name: Install Kilo
         if: inputs.bump || inputs.version
         run: bun i -g @kilocode/cli
+      # kilocode_change end
 
       - id: version
         run: |

@@ -9,12 +9,7 @@ import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
 import { Flag } from "../flag/flag"
 import { Log } from "../util/log"
-
-// kilocode_change - renamed build-time globals
-declare global {
-  const KILO_VERSION: string
-  const KILO_CHANNEL: string
-}
+import { CHANNEL as channel, VERSION as version } from "./meta"
 
 import semver from "semver"
 
@@ -61,8 +56,8 @@ export namespace Installation {
     })
   export type Info = z.infer<typeof Info>
 
-  export const VERSION = typeof KILO_VERSION === "string" ? KILO_VERSION : "local"
-  export const CHANNEL = typeof KILO_CHANNEL === "string" ? KILO_CHANNEL : "local"
+  export const VERSION = version
+  export const CHANNEL = channel
   export const USER_AGENT = `kilo/${CHANNEL}/${VERSION}/${Flag.KILO_CLIENT}` // kilocode_change
 
   export function isPreview() {

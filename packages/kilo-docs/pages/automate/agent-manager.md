@@ -33,14 +33,54 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 ### PR Status Badges
 
-Worktree items in the sidebar display a **PR status badge** when the branch has an associated pull request:
+Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
 
-- **Open** — badge indicating the PR is open (its color can also reflect review and check status)
-- **Merged** — purple badge indicating the PR has been merged
-- **Closed** — red badge indicating the PR was closed without merging
-- **Draft** — gray badge indicating the PR is in draft state
+{% callout type="info" %}
+The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
+{% /callout %}
 
-The badge appears on the right side of each worktree item and updates automatically via polling. If the worktree's branch doesn't have a PR yet, no badge is shown.
+#### How PRs are detected
+
+The extension uses `gh` to automatically discover PRs for each worktree branch. Three strategies are tried in order:
+
+1. **Branch tracking ref** — `gh pr view` resolves via the branch's tracking ref (works for fork PRs checked out with `gh pr checkout`)
+2. **Branch name** — `gh pr view <branch>` matches same-repo branches pushed to origin
+3. **HEAD commit SHA** — `gh pr list --search "<sha>"` as a last resort, matching PRs whose head ref points to the exact same commit
+
+You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
+
+#### Badge colors
+
+The badge color reflects the most important signal, evaluated in priority order:
+
+| State | Color | Condition |
+| --- | --- | --- |
+| Draft | Gray | PR is in draft state |
+| Merged | Purple | PR has been merged |
+| Closed | Red | PR was closed without merging |
+| Checks failing | Red | Any CI check has failed |
+| Changes requested | Yellow | A reviewer requested changes |
+| Checks pending | Yellow (pulsing) | CI checks are still running |
+| Open (default) | Green | PR is open, no failing or pending checks, no blocking review |
+
+When checks are pending on an open PR, the badge pulses to indicate activity.
+
+#### Badge icon
+
+The badge shows a **checkmark** icon when the PR review status is "Approved", and a **branch** icon in all other cases.
+
+#### Hover card details
+
+Hovering over a worktree item shows a card with additional PR details:
+
+- **PR number** with a link icon to open it in the browser
+- **State** — Open, Draft, Merged, or Closed
+- **Review** — Approved, Changes Requested, or Pending (when a review exists)
+- **Checks** — how many checks passed out of the total (e.g. `8/10 passed`)
+
+#### Automatic updates
+
+PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
 ### Creating a New Worktree Session
 

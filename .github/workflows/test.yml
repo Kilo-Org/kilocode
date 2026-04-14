@@ -107,6 +107,7 @@ jobs:
           KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
           KILO_DISABLE_SHARE: "true"
           KILO_DISABLE_SESSION_INGEST: "true"
+          KILO_E2E_REQUIRE_PAID: "true"
           # kilocode_change end
         timeout-minutes: 30
 
