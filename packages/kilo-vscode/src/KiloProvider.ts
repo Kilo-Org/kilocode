@@ -10,7 +10,6 @@ import type {
   TextPartInput,
   FilePartInput,
   Config,
-  McpStatus,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, ServerStartupError } from "./services/cli-backend"
 import type { EditorContext, IndexingStatus } from "./services/cli-backend/types"
@@ -67,6 +66,12 @@ import {
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
+import {
+  authenticateMcpServer,
+  connectMcpServer,
+  disconnectMcpServer,
+  openMcpOAuthUrlOnce,
+} from "./kilo-provider/mcp-oauth"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -143,11 +148,6 @@ const mapAgent = (a: Agent) => ({
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
-  /**
-   * When several webviews subscribe to SSE, the same `mcp.browser.open.failed` is delivered
-   * to each provider — dedupe so we only call openExternal once per URL in a short window.
-   */
-  private static lastMcpBrowserOpen: { url: string; at: number } | null = null
 
   private webview: vscode.Webview | null = null
   private currentSession: Session | null = null
@@ -582,6 +582,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.webviewMessageDisposable?.dispose()
     this.autocompleteConfigDisposable?.dispose()
     this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
+    // eslint-disable-next-line complexity -- exhaustive webview protocol switch
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       const intercepted = await interceptMessage(message, {
         workspaceDir: (sid) => this.getWorkspaceDirectory(sid ?? this.currentSession?.id),
@@ -802,19 +803,33 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestMcpStatus":
           this.fetchAndSendMcpStatus().catch((e) => console.error("[Kilo New] fetchAndSendMcpStatus failed:", e))
           break
-        case "connectMcp":
-          this.handleConnectMcp(message.name).catch((e) => console.error("[Kilo New] handleConnectMcp failed:", e))
+        case "connectMcp": {
+          const c1 = this.client
+          if (c1) {
+            void connectMcpServer(c1, message.name, this.getWorkspaceDirectory(), () => this.fetchAndSendMcpStatus()).catch(
+              (e) => console.error("[Kilo New] connectMcpServer failed:", e),
+            )
+          }
           break
-        case "disconnectMcp":
-          this.handleDisconnectMcp(message.name).catch((e) =>
-            console.error("[Kilo New] handleDisconnectMcp failed:", e),
-          )
+        }
+        case "disconnectMcp": {
+          const c2 = this.client
+          if (c2) {
+            void disconnectMcpServer(c2, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] disconnectMcpServer failed:", e))
+          }
           break
-        case "authenticateMcp":
-          this.handleAuthenticateMcp(message.name).catch((e) =>
-            console.error("[Kilo New] handleAuthenticateMcp failed:", e),
-          )
+        }
+        case "authenticateMcp": {
+          const c = this.client
+          if (c) {
+            void authenticateMcpServer(c, message.name, this.getWorkspaceDirectory(), () =>
+              this.fetchAndSendMcpStatus(),
+            ).catch((e) => console.error("[Kilo New] authenticateMcpServer failed:", e))
+          }
           break
+        }
 
         case "questionReply":
           this.noteFollowup(message.answers, message.sessionID)
@@ -1961,61 +1976,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleConnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.connect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to connect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
-  private async handleDisconnectMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      await this.client.mcp.disconnect({ name, directory })
-      await this.fetchAndSendMcpStatus()
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to disconnect MCP:", name, error)
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
-  private openMcpOAuthUrlOnce(url: string): void {
-    const now = Date.now()
-    const last = KiloProvider.lastMcpBrowserOpen
-    if (last && last.url === url && now - last.at < 4000) return
-    KiloProvider.lastMcpBrowserOpen = { url, at: now }
-    void vscode.env.openExternal(vscode.Uri.parse(url))
-  }
-
-  private async handleAuthenticateMcp(name: string): Promise<void> {
-    if (!this.client) return
-    try {
-      const directory = this.getWorkspaceDirectory()
-      const { data, error } = await this.client.mcp.auth.authenticate({ name, directory })
-      if (error) {
-        vscode.window.showErrorMessage(`MCP sign-in failed: ${getErrorMessage(error)}`)
-        return
-      }
-      const status = data as McpStatus | undefined
-      if (status?.status === "failed") {
-        vscode.window.showErrorMessage(status.error || "MCP OAuth failed")
-      } else if (status?.status === "needs_client_registration") {
-        vscode.window.showErrorMessage(status.error || "MCP server requires client registration in config")
-      }
-    } catch (error) {
-      console.error("[Kilo New] KiloProvider: Failed to authenticate MCP:", name, error)
-      vscode.window.showErrorMessage(getErrorMessage(error) || "MCP sign-in failed")
-    } finally {
-      await this.fetchAndSendMcpStatus()
-    }
-  }
-
   /**
    * Remove a marketplace item from a single scope and invalidate CLI caches.
    */
@@ -3021,7 +2981,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     if (event.type === "mcp.browser.open.failed") {
-      this.openMcpOAuthUrlOnce(event.properties.url)
+      openMcpOAuthUrlOnce(event.properties.url)
       return
     }
 
