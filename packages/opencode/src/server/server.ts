@@ -132,7 +132,7 @@ export namespace Server {
           const providerID = c.req.valid("param").providerID
           const info = c.req.valid("json")
           await Auth.set(providerID, info)
-          KiloServer.authChanged(providerID) // kilocode_change
+          await KiloServer.authChanged(providerID) // kilocode_change
           return c.json(true)
         },
       )
@@ -163,7 +163,7 @@ export namespace Server {
         async (c) => {
           const providerID = c.req.valid("param").providerID
           await Auth.remove(providerID)
-          KiloServer.authChanged(providerID) // kilocode_change
+          await KiloServer.authChanged(providerID) // kilocode_change
           return c.json(true)
         },
       )
