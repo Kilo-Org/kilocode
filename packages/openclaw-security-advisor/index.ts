@@ -1,4 +1,4 @@
-// @ts-ignore — openclaw peer dep provided by the gateway at runtime
+// @ts-ignore: openclaw peer dep provided by the gateway at runtime
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry"; // eslint-disable-line import/no-unresolved
 import { submitAudit } from "./src/client.js";
 import { runAudit, getPublicIp, detectPlatform } from "./src/audit.js";
@@ -15,6 +15,9 @@ import {
 const AUTH_EXPIRED = Symbol("auth-expired");
 type CheckupResult = string | typeof AUTH_EXPIRED;
 
+// Must match `package.json#version` exactly. The server validates this as
+// a semver string and persists it to `security_advisor_scans.plugin_version`
+// on every submission. Bump both together when releasing a new plugin version.
 const PLUGIN_VERSION = "0.1.0";
 const DEFAULT_API_BASE = "https://api.kilo.ai";
 
@@ -47,8 +50,8 @@ function toolResult(content: string) {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function runSecurityAdvisorFlow(api: any, apiBase: string): Promise<string> {
-  // Path A: KiloClaw — KILOCODE_API_KEY env var injected at VM boot.
-  // If this token is expired we can't auto-recover (env vars are set
+  // Path A: KiloClaw. KILOCODE_API_KEY env var injected at VM boot.
+  // If this token is expired we can't auto recover (env vars are set
   // externally), so tell the user clearly.
   const envToken = resolveEnvToken();
   if (envToken) {
@@ -62,7 +65,7 @@ async function runSecurityAdvisorFlow(api: any, apiBase: string): Promise<string
     return result;
   }
 
-  // Path B: returning self-hosted user — read token directly from secrets
+  // Path B: returning self-hosted user. Read token directly from secrets
   // file. If the saved token is expired, clear it and fall through to the
   // device auth path below so the user gets a fresh connect prompt in
   // this same response (instead of being told to "try again" and looping
@@ -77,8 +80,8 @@ async function runSecurityAdvisorFlow(api: any, apiBase: string): Promise<string
     // fall through to Path C1 (device auth initiation)
   }
 
-  // Path C2: pending code exists from a previous call — user completed
-  // the browser flow, now poll and finalize
+  // Path C2: pending code exists from a previous call. User completed
+  // the browser flow, now poll and finalize.
   const pending = readPendingCode();
   if (pending) {
     const pollResult = await pollDeviceAuth(apiBase, pending);
@@ -86,21 +89,21 @@ async function runSecurityAdvisorFlow(api: any, apiBase: string): Promise<string
     if (pollResult.kind === "approved") {
       clearPendingCode();
 
-      // Run the checkup with the freshly-approved token BEFORE persisting
-      // it. The token-write triggers a config write which causes a gateway
-      // restart; if we ran the checkup after that, the user would see a
-      // "connected, run me again" stub and have to invoke a third time.
-      // Doing the checkup first lets us return the actual report on this
-      // invocation. The token persist still happens after, so subsequent
-      // invocations skip device auth and go straight to Path B.
+      // Run the checkup with the freshly approved token BEFORE persisting
+      // it. Writing the token triggers a config write which causes a
+      // gateway restart. If we ran the checkup after that, the user would
+      // see a "connected, run me again" stub and have to invoke a third
+      // time. Doing the checkup first lets us return the actual report on
+      // this invocation. The token persist still happens after, so
+      // subsequent invocations skip device auth and go straight to Path B.
       const checkupResult = await doCheckup(apiBase, pollResult.token);
 
       try {
         await writeStoredToken(api, pollResult.token);
       } catch (err) {
-        // Don't fail the user-facing response — they already have their
-        // report (or error) from doCheckup. Worst case: token isn't saved
-        // and they re-do device auth next time.
+        // Don't fail the response shown to the user. They already have
+        // their report (or error) from doCheckup. Worst case: token isn't
+        // saved and they redo device auth next time.
         const message = err instanceof Error ? err.message : String(err);
         api.logger.warn?.(`security-advisor: failed to persist auth token: ${message}`);
       }
@@ -126,15 +129,14 @@ async function runSecurityAdvisorFlow(api: any, apiBase: string): Promise<string
     return "Authentication code expired. Run the security checkup again to get a fresh code.";
   }
 
-  // Path C1: new self-hosted user — initiate device auth
+  // Path C1: new self-hosted user. Initiate device auth.
   const authStart = await startDeviceAuth(apiBase);
   writePendingCode(authStart.code);
   const minutes = Math.round(authStart.expiresIn / 60);
 
   return (
     `## Connect to KiloCode\n\n` +
-    `To run a security checkup, connect your KiloCode account.\n` +
-    `**Free — no credit card required.**\n\n` +
+    `To run a security checkup, connect your KiloCode account.\n\n` +
     `**1. Open this URL in your browser:**\n` +
     `${authStart.verificationUrl}\n\n` +
     `**2. Enter this code:** \`${authStart.code}\`\n\n` +
@@ -175,14 +177,16 @@ async function doCheckup(apiBase: string, token: string): Promise<CheckupResult>
 export default definePluginEntry({
   id: "openclaw-security-advisor",
   name: "OpenClaw Security Advisor",
+  description:
+    "Run a security checkup of your OpenClaw instance and get an expert analysis report from KiloCode.",
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   register(api: any) {
     const pluginConfig = (api.pluginConfig ?? null) as Record<string, unknown> | null;
 
-    // Entry point 1: tool for natural-language invocation via the LLM.
+    // Entry point 1: tool for natural language invocation via the LLM.
     // Works on capable models (GPT-4o, Claude Sonnet). Small summarizing
     // models (e.g. gpt-4.1-nano) may paraphrase the report instead of
-    // displaying it verbatim — for those models, the slash command path
+    // displaying it verbatim. For those models, the slash command path
     // below is deterministic.
     api.registerTool({
       name: "kilocode_security_advisor",
@@ -195,9 +199,9 @@ export default definePluginEntry({
         "This tool runs the local audit AND submits it to KiloCode cloud for " +
         "expert analysis, returning a richer explained report with prioritized " +
         "recommendations and remediation guidance. " +
-        "DO NOT run `openclaw security audit` via bash for these requests — this " +
+        "DO NOT run `openclaw security audit` via bash for these requests. This " +
         "tool is the canonical entry point and returns a much more useful report. " +
-        "IMPORTANT: Display the returned report exactly as-is without rewriting, " +
+        "IMPORTANT: Display the returned report exactly as is without rewriting, " +
         "summarizing, or reformatting.",
       parameters: {},
       async execute() {
@@ -207,10 +211,11 @@ export default definePluginEntry({
       },
     });
 
-    // Entry point 2: slash command for deterministic, LLM-bypassing
-    // invocation. When the user types /security-checkup (command-only
-    // message), the OpenClaw chat runtime takes the fast path and renders
-    // the returned markdown directly — no agent loop, no summarization.
+    // Entry point 2: slash command for deterministic invocation that
+    // bypasses the LLM. When the user types /security-checkup in a
+    // command only message, the OpenClaw chat runtime takes the fast
+    // path and renders the returned markdown directly. No agent loop,
+    // no summarization.
     api.registerCommand({
       name: "security-checkup",
       description:

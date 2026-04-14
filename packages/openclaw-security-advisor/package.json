@@ -14,8 +14,13 @@
   "files": [
     "index.ts",
     "src",
-    "openclaw.plugin.json"
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
   ],
+  "scripts": {
+    "typecheck": "tsgo --noEmit"
+  },
   "peerDependencies": {
     "openclaw": ">=2026.3.24"
   },

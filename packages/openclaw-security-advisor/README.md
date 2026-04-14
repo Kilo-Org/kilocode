@@ -7,7 +7,7 @@ KiloCode cloud.
 The plugin takes the output of `openclaw security audit`, sends it to
 the KiloCode Security Advisor API for analysis, and returns a detailed
 markdown report with findings, risks, prioritized recommendations, and
-concrete remediation guidance — displayed directly in your chat.
+concrete remediation guidance, displayed directly in your chat.
 
 ---
 
@@ -20,8 +20,7 @@ openclaw gateway restart
 ```
 
 That's it. On first use, the plugin will walk you through a one-time
-device auth flow to connect your KiloCode account (free — no credit
-card required).
+device auth flow to connect your KiloCode account.
 
 ---
 
@@ -55,18 +54,18 @@ You can also just ask the agent:
 The agent will call the `kilocode_security_advisor` tool and the report
 will appear in chat.
 
-**Heads up:** natural-language invocation goes through your configured
+**Heads up:** natural language invocation goes through your configured
 language model, which may rewrite or summarize the report before
 showing it to you. This works well on capable models (GPT-4o, Claude
 Sonnet, Gemini Pro) but small summarizing models (e.g. GPT-4.1-nano,
 Haiku) will often paraphrase the report down to a few sentences. **If
 you're running a small or summarizing model, use the
-`/security-checkup` slash command instead** — it renders the full
+`/security-checkup` slash command instead.** It renders the full
 report regardless of which model is configured.
 
 ---
 
-## First-run authentication
+## First run authentication
 
 The first time you run the checkup, you'll be prompted to connect your
 KiloCode account:
@@ -75,7 +74,6 @@ KiloCode account:
 ## Connect to KiloCode
 
 To run a security checkup, connect your KiloCode account.
-Free — no credit card required.
 
 1. Open this URL in your browser:
    https://app.kilo.ai/device-auth?code=XXXX-XXXX
@@ -88,17 +86,17 @@ Once you've approved the connection, run the security checkup again.
 ```
 
 Open the URL, sign in (or create a free account), and approve the
-connection. Then run `/security-checkup` again — the plugin will pick
+connection. Then run `/security-checkup` again. The plugin will pick
 up the approval, persist your auth token, run the checkup, and return
 the report in the same response.
 
 > **Note:** after the token is saved, OpenClaw briefly reloads to apply
 > the new credential. You'll see a short connection blip in the chat
-> UI — this is expected and only happens on first auth. Subsequent
+> UI. This is expected and only happens on first auth. Subsequent
 > checkups run instantly without any reload.
 
-For every run after the first, no auth prompt appears — the saved
-token is reused automatically.
+For every run after the first, no auth prompt appears. The saved token
+is reused automatically.
 
 ---
 
@@ -107,7 +105,7 @@ token is reused automatically.
 The plugin sends the following to the KiloCode Security Advisor API:
 
 - The JSON output of `openclaw security audit` (local config audit
-  results — no secrets, no file contents, just finding IDs and
+  results, with no secrets, no file contents, just finding IDs and
   summaries)
 - Your OpenClaw version and plugin version
 - The public IP address of your instance (used for optional remote
@@ -129,7 +127,7 @@ HTTPS.
 
 The plugin reads its config from `openclaw.json` under
 `plugins.entries.openclaw-security-advisor.config`. In most cases, you
-won't need to set anything — the defaults work out of the box.
+won't need to set anything. The defaults work out of the box.
 
 | Field         | Default                | Purpose                                                                 |
 |---------------|------------------------|-------------------------------------------------------------------------|
@@ -147,10 +145,10 @@ openclaw config set plugins.entries.openclaw-security-advisor.config.apiBaseUrl 
 The plugin also respects these environment variables, useful for
 non-interactive setups (CI, containerized deployments):
 
-- `KILOCODE_API_KEY` — if set, the plugin uses this as the auth token
-  and skips the device auth flow entirely. Intended for pre-provisioned
-  environments where an operator injects the key at boot.
-- `KILO_API_URL` or `KILOCODE_API_BASE_URL` — override the API base URL
+- `KILOCODE_API_KEY`: if set, the plugin uses this as the auth token
+  and skips the device auth flow entirely. Intended for environments
+  where an operator has already injected the key at boot.
+- `KILO_API_URL` or `KILOCODE_API_BASE_URL`: override the API base URL
   without touching the plugin config.
 
 Plugin config takes precedence over env vars; env vars take precedence
@@ -161,14 +159,14 @@ over the default.
 ## Troubleshooting
 
 **"Your KiloCode authentication has expired"**
-The plugin automatically clears expired tokens and re-runs the device
+The plugin automatically clears expired tokens and reruns the device
 auth flow on the next invocation. Just run `/security-checkup` again.
 
 **"Security analysis failed: Rate limit exceeded"**
-The KiloCode API rate-limits security checkups per account. Wait a
+The KiloCode API rate limits security checkups per account. Wait a
 little and try again.
 
-**Natural-language invocation paraphrases the report**
+**Natural language invocation paraphrases the report**
 This is a limitation of small summarizing language models, not the
 plugin. Use `/security-checkup` (the slash command) to bypass the model
 entirely and render the full report.
@@ -182,7 +180,7 @@ openclaw config set commands.plugins true
 openclaw gateway restart
 ```
 
-The plugin itself works without this setting — it's only needed if you
+The plugin itself works without this setting. It's only needed if you
 want the `/plugins list` chat command to show installed plugins.
 
 **The gateway restarts after device auth**

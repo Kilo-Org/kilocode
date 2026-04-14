@@ -31,7 +31,7 @@ type PluginApi = {
 export async function writeStoredToken(api: PluginApi, token: string): Promise<void> {
   const filePath = secretFilePath();
 
-  // 1. Write token to secrets file (mode 600 — owner read/write only)
+  // 1. Write token to secrets file (mode 600, owner read/write only)
   await mkdir(join(homedir(), ".openclaw", "secrets"), { recursive: true });
   await writeFile(filePath, token, { mode: 0o600 });
 
@@ -88,7 +88,7 @@ function patchConfig(cfg: unknown, filePath: string): unknown {
 
 /**
  * Read the token directly from the secrets file.
- * Reliable at any point — no dependency on OpenClaw's SecretRef resolution timing.
+ * Reliable at any point. No dependency on OpenClaw's SecretRef resolution timing.
  */
 export async function readTokenFromFile(): Promise<string | null> {
   try {
@@ -105,16 +105,16 @@ export async function readTokenFromFile(): Promise<string | null> {
  * token (expired/revoked) so the next flow invocation falls through to
  * device auth instead of endlessly retrying a dead token.
  *
- * The openclaw.json config still points at the (now-missing) SecretRef,
- * but since the plugin reads tokens via readTokenFromFile() directly —
- * not via api.pluginConfig.authToken — a missing file is equivalent to
+ * The openclaw.json config still points at the (now missing) SecretRef,
+ * but since the plugin reads tokens via readTokenFromFile() directly
+ * (not via api.pluginConfig.authToken), a missing file is equivalent to
  * "no token" and Path C1 (device auth) kicks in naturally.
  */
 export async function clearStoredToken(): Promise<void> {
   try {
     await unlink(secretFilePath());
   } catch {
-    // File already missing — that's the target state, no-op.
+    // File already missing. That's the target state, no-op.
   }
 }
 

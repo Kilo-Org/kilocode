@@ -49,7 +49,7 @@ export async function submitAudit(
   token: string,
   payload: SubmitAuditPayload
 ): Promise<AnalyzeResponse> {
-  const fetchFn = resolveFetch();
+  const fetchFn: typeof fetch = resolveFetch() ?? globalThis.fetch;
 
   const resp = await fetchFn(`${apiBase}/api/security-advisor/analyze`, {
     method: "POST",
@@ -66,7 +66,7 @@ export async function submitAudit(
   if (!resp.ok) {
     let errorMessage: string | undefined;
     try {
-      const body = await resp.json();
+      const body = (await resp.json()) as { error?: { message?: string } };
       errorMessage = body?.error?.message;
     } catch {
       // not JSON
@@ -74,7 +74,7 @@ export async function submitAudit(
 
     if (resp.status === 401) {
       throw new Error(
-        "Authentication failed. Your KiloClaw API key may be invalid or expired."
+        "Authentication failed. Your KiloCode API key may be invalid or expired."
       );
     }
     if (resp.status === 429) {

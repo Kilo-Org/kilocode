@@ -1,4 +1,4 @@
-// @ts-ignore — openclaw peer dep provided by the gateway at runtime
+// @ts-ignore: openclaw peer dep provided by the gateway at runtime
 import { resolveFetch } from "openclaw/plugin-sdk/fetch-runtime"; // eslint-disable-line import/no-unresolved
 
 const POLL_TIMEOUT_MS = 10 * 60 * 1_000; // 10 minutes
@@ -34,7 +34,7 @@ export type DeviceAuthPollResult =
  * Call this once, show the result to the user, then poll with pollDeviceAuth().
  */
 export async function startDeviceAuth(apiBase: string): Promise<DeviceAuthStartResult> {
-  const fetchFn: typeof fetch = resolveFetch();
+  const fetchFn: typeof fetch = resolveFetch() ?? globalThis.fetch;
   const resp = await fetchFn(`${apiBase}/api/device-auth/codes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -59,7 +59,7 @@ export async function pollDeviceAuth(
   apiBase: string,
   code: string,
 ): Promise<DeviceAuthPollResult> {
-  const fetchFn: typeof fetch = resolveFetch();
+  const fetchFn: typeof fetch = resolveFetch() ?? globalThis.fetch;
   const pollUrl = `${apiBase}/api/device-auth/codes/${code}`;
   const deadline = Date.now() + POLL_TIMEOUT_MS;
 
@@ -77,7 +77,7 @@ export async function pollDeviceAuth(
         if (data.status === "expired") return { kind: "expired" };
       }
     } catch {
-      // transient network error — keep polling
+      // transient network error, keep polling
     }
   }
 

@@ -2,7 +2,10 @@ import { runPluginCommandWithTimeout } from "openclaw/plugin-sdk/run-command";
 import type { SubmitAuditPayload } from "./client.js";
 
 /**
- * Run `openclaw security audit --deep --json` using the SDK's command runner.
+ * Run `openclaw security audit --json` using the SDK's command runner.
+ * The `--deep` flag is intentionally NOT passed: in dev (Cloudflare tunnel)
+ * the deep self-probe loops back through the tunnel and hangs. Once the
+ * upstream fix lands (force localhost for self-probes) we can add it back.
  */
 export async function runAudit(): Promise<
   { ok: true; audit: SubmitAuditPayload["audit"] } | { ok: false; error: string }
@@ -25,13 +28,13 @@ export async function runAudit(): Promise<
   } catch {
     return {
       ok: false,
-      error: "Security audit returned invalid JSON. Try running 'openclaw security audit --deep --json' manually.",
+      error: "Security audit returned invalid JSON. Try running 'openclaw security audit --json' manually.",
     };
   }
 }
 
 /**
- * Get the public IP of this instance. Best effort — returns undefined on failure.
+ * Get the public IP of this instance. Best effort; returns undefined on failure.
  */
 export async function getPublicIp(): Promise<string | undefined> {
   const result = await runPluginCommandWithTimeout({

@@ -10,7 +10,7 @@
     "additionalProperties": false,
     "properties": {
       "authToken": {
-        "description": "KiloCode auth token. Set automatically via device auth on first use — stored as a SecretRef."
+        "description": "KiloCode auth token. Set automatically via device auth on first use, stored as a SecretRef."
       },
       "apiBaseUrl": {
         "type": "string",
