@@ -18,7 +18,14 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 
 ### @-Mention Autocomplete
 
-Type `@` in the chat input followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. This is the quickest way to reference a specific file.
+Type `@` in the chat input to get autocomplete suggestions. You can mention:
+
+| Mention      | Description                                 | Example         |
+| ------------ | ------------------------------------------- | --------------- |
+| **File**     | Attach a file's contents to your message    | `@src/utils.ts` |
+| **Terminal** | Include your active VS Code terminal output | `@terminal`     |
+
+Selecting a suggestion inserts the mention and highlights it in the input. File contents and terminal output are attached as context when you send the message.
 
 ### Automatic Editor Context
 
