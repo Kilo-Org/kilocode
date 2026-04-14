@@ -303,6 +303,13 @@ async function launch() {
     args.push("--wait")
   }
 
+  // Strip Electron/VS Code env vars so the spawned instance doesn't attach
+  // to the current Electron process (e.g. when launched from a VS Code task).
+  const env = { ...process.env }
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
+  }
+
   console.log(`[launch] Starting VS Code (${mode} mode)`)
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
@@ -311,18 +318,11 @@ async function launch() {
   if (blocking) {
     const result = Bun.spawnSync([app, ...args], {
       cwd: workspace,
-      env: process.env,
+      env,
       stdio: ["ignore", "inherit", "inherit"],
     })
     console.log(`[launch] VS Code exited (code ${result.exitCode})`)
     return
-  }
-
-  // Strip Electron/VS Code env vars so the spawned instance doesn't attach
-  // to the current Electron process (e.g. when launched from a VS Code task).
-  const env = { ...process.env }
-  for (const key of Object.keys(env)) {
-    if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
   }
 
   const child = spawn(app, args, {
