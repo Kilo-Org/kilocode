@@ -394,6 +394,41 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
 }
 
+export type TeamEffortLevel = "max" | "xhigh" | "high" | "medium" | "low" | "default"
+
+export interface TeamRoleConfig {
+  displayName: string
+  provider: string
+  model: string
+  effort: TeamEffortLevel
+  tier: number
+  canDelegate: string[]
+  maxConcurrent: number
+  capabilities: string[]
+}
+
+export interface TeamRoutingConfig {
+  strategy: "hierarchical" | "flat"
+  defaultRole: string
+  escalationEnabled: boolean
+}
+
+export interface TeamReactionRuleConfig {
+  trigger: "ci-failed" | "review-requested" | "approved-and-green" | "agent-stuck"
+  auto: boolean
+  action: "send-to-agent" | "notify" | "escalate"
+  targetRole?: string
+  retries: number
+  escalateAfterMinutes?: number
+}
+
+export interface TeamConfig {
+  enabled: boolean
+  roles: Record<string, TeamRoleConfig>
+  routing: TeamRoutingConfig
+  reactions?: TeamReactionRuleConfig[]
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -417,6 +452,7 @@ export interface Config {
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
+  team?: TeamConfig
 }
 
 // ============================================

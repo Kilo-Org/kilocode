@@ -17,6 +17,7 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
+import TeamTab from "./TeamTab"
 
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
@@ -137,6 +138,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
+          <Tabs.Trigger value="team">
+            <Icon name="brain" />
+            <span class="label">{language.t("settings.team.title")}</span>
+          </Tabs.Trigger>
 
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
@@ -191,6 +196,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="context">
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
+        </Tabs.Content>
+        <Tabs.Content value="team">
+          <h3>{language.t("settings.team.title")}</h3>
+          <TeamTab />
         </Tabs.Content>
 
         <Tabs.Content value="experimental">
