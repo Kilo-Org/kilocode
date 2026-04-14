@@ -120,8 +120,6 @@ const mapAgent = (a: Agent) => ({
   model: a.model,
 })
 
-const remoteMessages = new Set(["toggleRemote", "setRemoteEnabled", "requestRemoteStatus"])
-
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
@@ -552,20 +550,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      if (remoteMessages.has(message.type)) {
-        const remote = message as {
-          type: "toggleRemote" | "setRemoteEnabled" | "requestRemoteStatus"
-          enabled?: boolean
-        }
-        this.remoteService
-          ?.handleMessage(remote.type, remote.enabled)
-          .then((s) => {
-            if (s) this.sendRemoteStatus()
-          })
-          .catch((err) => console.error("[Kilo New] remote message failed:", err))
-        return
-      }
-
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -841,27 +825,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         }
-        case "requestTerminalContext": {
-          try {
-            const output = await getTerminalContents(-1)
-            this.postMessage({
-              type: "terminalContextResult",
-              requestId: message.requestId,
-              content: output.content,
-              truncated: output.truncated,
-            })
-          } catch (error) {
-            console.error("[Kilo New] Failed to capture terminal context:", error)
-            this.postMessage({
-              type: "terminalContextError",
-              requestId: message.requestId,
-              error: getErrorMessage(error) || "Failed to capture terminal output",
-            })
-          }
+        case "requestTerminalContext":
+          void this.handleTerminalContext(message.requestId)
           break
-        }
         case "chatCompletionAccepted":
           this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
+          break
+        case "toggleRemote":
+        case "setRemoteEnabled":
+        case "requestRemoteStatus":
+          this.remoteService
+            ?.handleMessage(message.type, message.enabled)
+            .then((s) => {
+              if (s) this.sendRemoteStatus()
+            })
+            .catch((err) => console.error("[Kilo New] remote message failed:", err))
           break
         case "deleteSession":
           await this.handleDeleteSession(message.sessionID)
@@ -1502,6 +1480,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
+  }
+
+  private async handleTerminalContext(requestId: string): Promise<void> {
+    try {
+      const output = await getTerminalContents(-1)
+      this.postMessage({
+        type: "terminalContextResult",
+        requestId,
+        content: output.content,
+        truncated: output.truncated,
+      })
+    } catch (error) {
+      console.error("[Kilo New] Failed to capture terminal context:", error)
+      this.postMessage({
+        type: "terminalContextError",
+        requestId,
+        error: getErrorMessage(error) || "Failed to capture terminal output",
+      })
+    }
   }
 
   /**
