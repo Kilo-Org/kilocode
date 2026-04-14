@@ -114,6 +114,28 @@ async function runFlowSafe(api: PluginApi, apiBase: string): Promise<string> {
  * registration API expects.
  */
 async function runSecurityAdvisorFlow(api: PluginApi, apiBase: string): Promise<string> {
+  // Path 0: user explicit config. If `plugins.entries.openclaw-security-advisor.config.authToken`
+  // is set (as a plain string directly, or as a SecretRef resolved by
+  // OpenClaw before we see it), honor it. This is the path for users
+  // who want to configure the plugin manually in openclaw.json without
+  // going through device auth, and it respects the schema contract
+  // documented in openclaw.plugin.json + README. Explicit user config
+  // wins over everything else.
+  const configToken = api.pluginConfig?.authToken;
+  if (typeof configToken === "string" && configToken.length > 0) {
+    try {
+      return await doCheckup(apiBase, configToken);
+    } catch (err) {
+      if (err instanceof AuthExpiredError) {
+        return (
+          "The `authToken` configured for this plugin in your openclaw.json is invalid or expired. " +
+          "Update `plugins.entries.openclaw-security-advisor.config.authToken` with a fresh KiloCode API key and try again."
+        );
+      }
+      throw err;
+    }
+  }
+
   // Path A: KiloClaw. KILOCODE_API_KEY env var injected at VM boot.
   // If this token is expired we can't auto recover (env vars are set
   // externally), so tell the user clearly.

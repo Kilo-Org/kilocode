@@ -4,6 +4,7 @@
   "type": "module",
   "license": "MIT",
   "description": "Security analysis plugin for OpenClaw instances, powered by KiloClaw",
+  "//": "private: true is intentional. We mirror @kilocode/cli's publish strategy: the source package.json is marked private as a safety net against accidental `npm publish`, and a future build+publish script (modeled on packages/opencode/script/publish.ts) will write a cleaned dist/package.json WITHOUT this flag and publish from there. Do NOT remove this without also adding the build+publish pipeline.",
   "private": true,
   "main": "index.ts",
   "openclaw": {
