@@ -1,5 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
-import { tmpdir } from "../fixture/fixture"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
+import { tmpdir } from "../../fixture/fixture"
+import { Auth } from "../../../src/auth"
+import { Vcs } from "../../../src/project/vcs"
+import { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import { clearInFlightCache } from "../../../src/kilo-sessions/inflight-cache"
+import { KiloSessions } from "../../../src/kilo-sessions/kilo-sessions"
+import { Instance } from "../../../src/project/instance"
+import { Bus } from "../../../src/bus"
 
 const state = {
   connects: 0,
@@ -9,54 +17,6 @@ const state = {
   gate: Promise.resolve(),
   userError: false,
 }
-
-mock.module("../../src/auth", () => ({
-  OAUTH_DUMMY_KEY: "opencode-oauth-dummy-key",
-  Auth: {
-    get: async () => ({ type: "api", key: "tok" }),
-  },
-}))
-
-mock.module("../../src/project/vcs", () => ({
-  Vcs: {
-    branch: async () => "main",
-  },
-}))
-
-mock.module("simple-git", () => ({
-  default: () => ({
-    remote: async () => "origin\thttps://example.com/repo.git (fetch)",
-  }),
-}))
-
-mock.module("../../src/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create: () => ({
-      handle() {},
-      dispose() {
-        state.disposes += 1
-      },
-    }),
-  },
-}))
-
-mock.module("../../src/kilo-sessions/remote-ws", () => ({
-  RemoteWS: {
-    connect: () => {
-      state.connects += 1
-      return {
-        connectionId: `conn-${state.connects}`,
-        send() {},
-        close() {
-          state.closes += 1
-        },
-        get connected() {
-          return true
-        },
-      }
-    },
-  },
-}))
 
 describe("KiloSessions.enableRemote", () => {
   beforeEach(() => {
@@ -68,6 +28,36 @@ describe("KiloSessions.enableRemote", () => {
     state.userError = false
     process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
     delete process.env["KILO_SESSION_INGEST_URL"]
+
+    spyOn(Auth, "get").mockResolvedValue({ type: "api", key: "tok" } as any)
+    spyOn(Vcs, "branch").mockResolvedValue("main")
+    spyOn(RemoteWS, "connect").mockImplementation(
+      () =>
+        ({
+          connectionId: `conn-${++state.connects}`,
+          send() {},
+          close() {
+            state.closes += 1
+          },
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {
+            state.disposes += 1
+          },
+        }) as RemoteSender.Sender,
+    )
+
+    // Clear inflight caches so each test gets fresh Auth.get / authValid calls
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
     globalThis.fetch = mock(async (input) => {
       await state.gate
       if (String(input).endsWith("/api/user")) {
@@ -78,19 +68,21 @@ describe("KiloSessions.enableRemote", () => {
     }) as unknown as typeof fetch
   })
 
-  afterEach(async () => {
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
+  afterEach(() => {
+    // Stub Bus.publish so disableRemote's fire-and-forget publish doesn't reject
+    // outside an Instance context (it needs InstanceState which requires ALS).
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
     KiloSessions.disableRemote()
+    pub.mockRestore()
+    mock.restore()
   })
 
   test("concurrent enableRemote shares one connection", async () => {
     await using tmp = await tmpdir({ git: true })
-    const { Instance } = await import("../../src/project/instance")
 
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
         await Promise.all([KiloSessions.enableRemote(), KiloSessions.enableRemote(), KiloSessions.enableRemote()])
         expect(state.connects).toBe(1)
         expect(KiloSessions.remoteStatus()).toEqual({ enabled: true, connected: true })
@@ -101,13 +93,9 @@ describe("KiloSessions.enableRemote", () => {
   test("enableRemote fails when token is invalid", async () => {
     state.userStatus = 401
     await using tmp = await tmpdir({ git: true })
-    const { Instance } = await import("../../src/project/instance")
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-    const key = "kilo-sessions:token-valid:tok"
-    const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
     KiloSessions.disableRemote()
-    clearInFlightCache(key)
+    clearInFlightCache("kilo-sessions:token-valid:tok")
 
     await Instance.provide({
       directory: tmp.path,
@@ -128,15 +116,12 @@ describe("KiloSessions.enableRemote", () => {
     })
 
     await using tmp = await tmpdir({ git: true })
-    const { Instance } = await import("../../src/project/instance")
-    const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
         const pending = KiloSessions.enableRemote()
         KiloSessions.disableRemote()
         release()
@@ -152,9 +137,6 @@ describe("KiloSessions.enableRemote", () => {
   test("transient auth check failure is retryable and does not connect", async () => {
     state.userError = true
     await using tmp = await tmpdir({ git: true })
-    const { Instance } = await import("../../src/project/instance")
-    const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
-    const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
     KiloSessions.disableRemote()
     clearInFlightCache("kilo-sessions:token-valid:tok")
@@ -178,15 +160,12 @@ describe("KiloSessions.enableRemote", () => {
     })
 
     await using tmp = await tmpdir({ git: true })
-    const { Instance } = await import("../../src/project/instance")
-    const { clearInFlightCache } = await import("../../src/kilo-sessions/inflight-cache")
 
     clearInFlightCache("kilo-sessions:token-valid:tok")
 
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const { KiloSessions } = await import("../../src/kilo-sessions/kilo-sessions")
         const first = KiloSessions.enableRemote()
         KiloSessions.disableRemote()
         const second = KiloSessions.enableRemote()

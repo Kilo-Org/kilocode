@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach } from "bun:test"
-import { IngestQueue } from "../../src/kilo-sessions/ingest-queue"
+import { IngestQueue } from "../../../src/kilo-sessions/ingest-queue"
 
 function scheduler(now: () => number) {
   const tasks = new Map<number, { at: number; fn: () => void }>()

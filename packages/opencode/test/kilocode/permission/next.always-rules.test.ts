@@ -1,10 +1,21 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, afterAll } from "bun:test"
+import fs from "fs/promises"
+import path from "path"
 import { Permission } from "../../../src/permission"
 import { PermissionID } from "../../../src/permission/schema"
 import { SessionID } from "../../../src/session/schema"
 import { Instance } from "../../../src/project/instance"
-import { NotFoundError } from "../../../src/storage/db"
+import { Config } from "../../../src/config/config"
+import { Global } from "../../../src/global"
 import { tmpdir } from "../../fixture/fixture"
+
+afterAll(async () => {
+  const dir = Global.Path.config
+  for (const file of ["kilo.jsonc", "kilo.json", "config.json", "opencode.json", "opencode.jsonc"]) {
+    await fs.rm(path.join(dir, file), { force: true }).catch(() => {})
+  }
+  await Config.invalidate(true)
+})
 
 describe("saveAlwaysRules", () => {
   test("approved rules auto-allow future requests", async () => {
@@ -78,17 +89,18 @@ describe("saveAlwaysRules", () => {
     })
   })
 
-  test("throws for unknown request ID", async () => {
+  test("silently skips unknown request ID", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
+        // saveAlwaysRules silently returns when the request ID is not in the pending map
         await expect(
           Permission.saveAlwaysRules({
             requestID: PermissionID.make("permission_nonexistent"),
             approvedAlways: ["npm install"],
           }),
-        ).rejects.toBeInstanceOf(NotFoundError)
+        ).resolves.toBeUndefined()
       },
     })
   })
@@ -542,7 +554,7 @@ describe("saveAlwaysRules", () => {
         // Subagent B should auto-reject because "git log --oneline -10" matches denied "git log *"
         await Permission.reply({ requestID: PermissionID.make("permission_a5"), reply: "once" })
         await expect(askA).resolves.toBeUndefined()
-        await expect(askB).rejects.toBeInstanceOf(Permission.DeniedError)
+        await expect(askB).rejects.toBeInstanceOf(Permission.RejectedError)
       },
     })
   })

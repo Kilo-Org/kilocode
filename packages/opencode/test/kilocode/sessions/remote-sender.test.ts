@@ -1,15 +1,11 @@
 import { describe, expect, test } from "bun:test"
-// kilocode_change start
 import { afterEach, mock, spyOn } from "bun:test"
-// kilocode_change end
-import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
-import type { RemoteWS } from "../../src/kilo-sessions/remote-ws"
-import type { RemoteProtocol } from "../../src/kilo-sessions/remote-protocol"
-// kilocode_change start
-import { SessionPrompt } from "../../src/session/prompt"
-import { Question } from "../../src/question"
-import { Permission } from "../../src/permission"
-// kilocode_change end
+import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
+import { SessionPrompt } from "../../../src/session/prompt"
+import { Question } from "../../../src/question"
+import { Permission } from "../../../src/permission"
 
 function fakeConn() {
   const sent: any[] = []

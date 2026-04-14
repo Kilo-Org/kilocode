@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { afterEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import path from "path"
 import { Config } from "../../src/config/config"
@@ -7,21 +7,16 @@ import { Instance } from "../../src/project/instance"
 import { Log } from "../../src/util/log"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
+import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        handle() {},
-        dispose() {},
-      }
-    },
-  },
-}))
+beforeEach(() => {
+  spyOn(RemoteSender, "create").mockReturnValue({ handle() {}, dispose() {} })
+})
 
 Log.init({ print: false })
 
 afterEach(async () => {
+  mock.restore()
   await resetDatabase()
 })
 
@@ -33,7 +28,6 @@ describe("experimental.session.list", () => {
 
     try {
       await $`git worktree add ${worktree} -b test-branch-${Date.now()}`.cwd(first.path).quiet()
-      await Bun.write(path.join(first.path, ".git", "opencode"), "stale-project-id")
 
       const share = Config.get
       Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
@@ -41,6 +35,16 @@ describe("experimental.session.list", () => {
       try {
         const { Server } = await import("../../src/server/server")
         const { Session } = await import("../../src/session/index")
+
+        // Create worktree session first so it computes its own project ID via rev-list
+        const branch = await Instance.provide({
+          directory: worktree,
+          fn: async () => Session.create({ title: "worktree-session" }),
+        })
+
+        // Now write a stale project ID to .git/kilo — this overrides the root's cached ID
+        await Bun.write(path.join(first.path, ".git", "kilo"), "stale-project-id")
+
         const root = await Instance.provide({
           directory: first.path,
           fn: async () => ({
@@ -51,11 +55,7 @@ describe("experimental.session.list", () => {
             session: await Session.create({ title: "root-session" }),
           }),
         })
-
-        const branch = await Instance.provide({
-          directory: worktree,
-          fn: async () => Session.create({ title: "worktree-session" }),
-        })
+        await Bun.file(path.join(first.path, ".git", "kilo")).delete()
 
         await Instance.provide({
           directory: second.path,

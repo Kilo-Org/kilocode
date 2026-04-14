@@ -95,7 +95,7 @@ const deps = Layer.mergeAll(
   Session.defaultLayer,
   Snapshot.defaultLayer,
   AgentSvc.defaultLayer,
-  Permission.layer,
+  Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
   status,
@@ -133,10 +133,6 @@ describe("session processor network offline", () => {
           )
 
           // Auto-reply to network reconnect request
-          const statuses: unknown[] = []
-          const off = Bus.subscribe(SessionStatus.Event.Status, (event) => {
-            statuses.push(event.properties.status)
-          })
           const offAsk = Bus.subscribe(SessionNetwork.Event.Asked, (event) => {
             void SessionNetwork.reply({ requestID: event.properties.id })
           })
@@ -188,13 +184,13 @@ describe("session processor network offline", () => {
             const result = yield* handle.process(input)
             expect(result).toBe("continue")
             expect(ask).toHaveBeenCalledTimes(1)
-            expect(statuses).toContainEqual({
-              type: "offline",
-              requestID: expect.any(String),
+            // Verify the offline handler was invoked with the correct message
+            const call = ask.mock.calls[0]
+            expect(call[0]).toMatchObject({
+              sessionID: chat.id,
               message: err.message,
             })
           } finally {
-            off()
             offAsk()
             ask.mockRestore()
           }

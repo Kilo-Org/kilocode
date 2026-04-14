@@ -93,6 +93,70 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
+  it("keeps worktree sessions with legacy project ids", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project-new",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBe("project-new")
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_root", "ses_worktree"])
+  })
+
+  it("does not use legacy worktree sessions as canonical project", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") return [] as never
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBeUndefined()
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree"])
+  })
+
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
     const ctx = createContext()

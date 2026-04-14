@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test"
-import { clearInFlightCache, withInFlightCache } from "../../src/kilo-sessions/inflight-cache"
+import { clearInFlightCache, withInFlightCache } from "../../../src/kilo-sessions/inflight-cache"
 
 function deferred<T>() {
   const state = {

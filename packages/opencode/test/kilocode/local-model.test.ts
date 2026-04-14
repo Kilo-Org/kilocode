@@ -62,14 +62,22 @@ let mockArgs: { model?: string } = {}
 let toastMessages: Array<{ variant: string; message: string }> = []
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
-// Only mock TUI context modules that are specific to the CLI layer and not
-// used by other test files. Do NOT mock widely-used modules like @/global,
-// @/provider/provider, or @opentui/core — they persist process-wide in Bun
-// and would break other test files.
+// Bun's mock.module() is process-wide and permanent — it replaces the module
+// for ALL test files in the same runner process. To avoid breaking other tests
+// that import these modules, we spread the real exports and only override the
+// specific hooks this test needs.
+
+const realHelper = await import("@tui/context/helper")
+const realSync = await import("@tui/context/sync")
+const realTheme = await import("@tui/context/theme")
+const realArgs = await import("@tui/context/args")
+const realSdk = await import("@tui/context/sdk")
+const realToast = await import("@tui/ui/toast")
 
 let capturedInit: (() => any) | undefined
 
 mock.module("@tui/context/helper", () => ({
+  ...realHelper,
   createSimpleContext: (input: { name: string; init: () => any }) => {
     capturedInit = input.init
     return { use: () => {}, provider: () => {} }
@@ -77,6 +85,7 @@ mock.module("@tui/context/helper", () => ({
 }))
 
 mock.module("@tui/context/sync", () => ({
+  ...realSync,
   useSync: () => ({
     data: {
       provider: mockProviders,
@@ -89,6 +98,7 @@ mock.module("@tui/context/sync", () => ({
 }))
 
 mock.module("@tui/context/theme", () => ({
+  ...realTheme,
   useTheme: () => ({
     theme: {
       primary: { buffer: new Float32Array(4) },
@@ -103,10 +113,12 @@ mock.module("@tui/context/theme", () => ({
 }))
 
 mock.module("@tui/context/args", () => ({
+  ...realArgs,
   useArgs: () => mockArgs,
 }))
 
 mock.module("@tui/context/sdk", () => ({
+  ...realSdk,
   useSDK: () => ({
     client: {
       mcp: {
@@ -123,6 +135,7 @@ const toastMock = {
   },
 }
 mock.module("@tui/ui/toast", () => ({
+  ...realToast,
   useToast: () => toastMock,
 }))
 

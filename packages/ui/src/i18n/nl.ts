@@ -1,5 +1,7 @@
 export const dict: Record<string, string> = {
   "ui.sessionReview.title": "Sessiewijzigingen",
+  "ui.sessionReview.title.git": "Git-wijzigingen",
+  "ui.sessionReview.title.branch": "Branch-wijzigingen",
   "ui.sessionReview.title.lastTurn": "Wijzigingen laatste beurt",
   "ui.sessionReview.diffStyle.unified": "Gecombineerd",
   "ui.sessionReview.diffStyle.split": "Gesplitst",
@@ -38,6 +40,10 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.steps.hide": "Stappen verbergen",
   "ui.sessionTurn.summary.response": "Antwoord",
   "ui.sessionTurn.diff.showMore": "Toon meer wijzigingen ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Gewijzigd",
+  "ui.sessionTurn.diffs.showAll": "Alles tonen",
+  "ui.sessionTurn.diffs.showLess": "Minder tonen",
+  "ui.sessionTurn.diffs.more": "+{{count}} extra bestanden",
 
   "ui.sessionTurn.retry.retrying": "opnieuw proberen",
   "ui.sessionTurn.retry.inSeconds": "over {{seconds}}s",
