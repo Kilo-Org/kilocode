@@ -172,6 +172,47 @@ A common workflow is letting the agent work, then switching to the terminal to r
 
 Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
 
+## Run Script
+
+The run button lets you start your project (dev server, build, tests, etc.) directly from the Agent Manager toolbar without switching to a terminal. It executes a shell script you define once, and runs it in the context of whichever worktree is currently selected.
+
+### Setting up a run script
+
+Create a file at `.kilo/run-script` in your project root:
+
+```sh
+#!/bin/sh
+npm run dev
+```
+
+That's it. The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
+
+{% callout type="tip" %}
+If no run script exists yet, clicking the run button opens a template file for you to fill in.
+{% /callout %}
+
+### Supported script formats
+
+| Platform      | Filename (checked in order)                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
+| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
+
+### Environment variables
+
+Two extra variables are injected into the script's environment:
+
+| Variable        | Value                                                                 |
+| --------------- | --------------------------------------------------------------------- |
+| `WORKTREE_PATH` | Working directory of the selected worktree (or repo root for "local") |
+| `REPO_PATH`     | Repository root                                                       |
+
+### Using the run button
+
+- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a dedicated VS Code task panel.
+- **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
+- **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
+
 ## Session State and Persistence
 
 Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktrees, and their order are restored on reload.
@@ -191,6 +232,7 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 | `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
 | `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
 | `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
+| `Cmd+E`                  | `Ctrl+E`                  | Run / stop run script                            |
 | `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
 | `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
 
