@@ -509,6 +509,65 @@ export type EventSessionIdle = {
   }
 }
 
+export type SuggestionAction = {
+  /**
+   * Button or option label (1-5 words)
+   */
+  label: string
+  /**
+   * Brief explanation of what this action does
+   */
+  description?: string
+  /**
+   * Synthetic user prompt to inject when this action is accepted
+   */
+  prompt: string
+}
+
+export type SuggestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Suggestion text shown to the user
+   */
+  text: string
+  /**
+   * Available actions the user can take
+   */
+  actions: Array<SuggestionAction>
+  /**
+   * Whether this suggestion blocks prompt input (default: true)
+   */
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+export type EventSuggestionShown = {
+  type: "suggestion.shown"
+  properties: SuggestionRequest
+}
+
+export type EventSuggestionAccepted = {
+  type: "suggestion.accepted"
+  properties: {
+    sessionID: string
+    requestID: string
+    index: number
+    action: SuggestionAction
+  }
+}
+
+export type EventSuggestionDismissed = {
+  type: "suggestion.dismissed"
+  properties: {
+    sessionID: string
+    requestID: string
+  }
+}
+
 export type EventSessionCompacted = {
   type: "session.compacted"
   properties: {
@@ -979,65 +1038,6 @@ export type EventMessagePartRemoved = {
   }
 }
 
-export type SuggestionAction = {
-  /**
-   * Button or option label (1-5 words)
-   */
-  label: string
-  /**
-   * Brief explanation of what this action does
-   */
-  description?: string
-  /**
-   * Synthetic user prompt to inject when this action is accepted
-   */
-  prompt: string
-}
-
-export type SuggestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Suggestion text shown to the user
-   */
-  text: string
-  /**
-   * Available actions the user can take
-   */
-  actions: Array<SuggestionAction>
-  /**
-   * Whether this suggestion blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
-
-export type EventSuggestionShown = {
-  type: "suggestion.shown"
-  properties: SuggestionRequest
-}
-
-export type EventSuggestionAccepted = {
-  type: "suggestion.accepted"
-  properties: {
-    sessionID: string
-    requestID: string
-    index: number
-    action: SuggestionAction
-  }
-}
-
-export type EventSuggestionDismissed = {
-  type: "suggestion.dismissed"
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
-
 export type PermissionAction = "allow" | "deny" | "ask"
 
 export type PermissionRule = {
@@ -1120,9 +1120,6 @@ export type Event =
   | EventGlobalConfigUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
-  | EventSuggestionShown
-  | EventSuggestionAccepted
-  | EventSuggestionDismissed
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -1150,6 +1147,9 @@ export type Event =
   | EventTodoUpdated
   | EventSessionStatus
   | EventSessionIdle
+  | EventSuggestionShown
+  | EventSuggestionAccepted
+  | EventSuggestionDismissed
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorkspaceReady
@@ -4611,98 +4611,6 @@ export type QuestionRejectResponses = {
 
 export type QuestionRejectResponse = QuestionRejectResponses[keyof QuestionRejectResponses]
 
-export type SuggestionListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/suggestion"
-}
-
-export type SuggestionListResponses = {
-  /**
-   * List of pending suggestions
-   */
-  200: Array<SuggestionRequest>
-}
-
-export type SuggestionListResponse = SuggestionListResponses[keyof SuggestionListResponses]
-
-export type SuggestionAcceptData = {
-  body?: {
-    /**
-     * Zero-based action index to accept
-     */
-    index: number
-  }
-  path: {
-    requestID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/suggestion/{requestID}/accept"
-}
-
-export type SuggestionAcceptErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SuggestionAcceptError = SuggestionAcceptErrors[keyof SuggestionAcceptErrors]
-
-export type SuggestionAcceptResponses = {
-  /**
-   * Suggestion accepted successfully
-   */
-  200: boolean
-}
-
-export type SuggestionAcceptResponse = SuggestionAcceptResponses[keyof SuggestionAcceptResponses]
-
-export type SuggestionDismissData = {
-  body?: never
-  path: {
-    requestID: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/suggestion/{requestID}/dismiss"
-}
-
-export type SuggestionDismissErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type SuggestionDismissError = SuggestionDismissErrors[keyof SuggestionDismissErrors]
-
-export type SuggestionDismissResponses = {
-  /**
-   * Suggestion dismissed successfully
-   */
-  200: boolean
-}
-
-export type SuggestionDismissResponse = SuggestionDismissResponses[keyof SuggestionDismissResponses]
-
 export type ProviderListData = {
   body?: never
   path?: never
@@ -5839,6 +5747,98 @@ export type NetworkRejectResponses = {
 }
 
 export type NetworkRejectResponse = NetworkRejectResponses[keyof NetworkRejectResponses]
+
+export type SuggestionListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/suggestion"
+}
+
+export type SuggestionListResponses = {
+  /**
+   * List of pending suggestions
+   */
+  200: Array<SuggestionRequest>
+}
+
+export type SuggestionListResponse = SuggestionListResponses[keyof SuggestionListResponses]
+
+export type SuggestionAcceptData = {
+  body?: {
+    /**
+     * Zero-based action index to accept
+     */
+    index: number
+  }
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/suggestion/{requestID}/accept"
+}
+
+export type SuggestionAcceptErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SuggestionAcceptError = SuggestionAcceptErrors[keyof SuggestionAcceptErrors]
+
+export type SuggestionAcceptResponses = {
+  /**
+   * Suggestion accepted successfully
+   */
+  200: boolean
+}
+
+export type SuggestionAcceptResponse = SuggestionAcceptResponses[keyof SuggestionAcceptResponses]
+
+export type SuggestionDismissData = {
+  body?: never
+  path: {
+    requestID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/suggestion/{requestID}/dismiss"
+}
+
+export type SuggestionDismissErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type SuggestionDismissError = SuggestionDismissErrors[keyof SuggestionDismissErrors]
+
+export type SuggestionDismissResponses = {
+  /**
+   * Suggestion dismissed successfully
+   */
+  200: boolean
+}
+
+export type SuggestionDismissResponse = SuggestionDismissResponses[keyof SuggestionDismissResponses]
 
 export type TelemetryCaptureData = {
   body?: {
