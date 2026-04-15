@@ -1181,7 +1181,7 @@ export namespace Provider {
                 headers: mergeDeep(existingModel?.headers ?? {}, model.headers ?? {}),
                 family: model.family ?? existingModel?.family ?? "",
                 release_date: model.release_date ?? existingModel?.release_date ?? "",
-                variants: {},
+                // variants: {}, // kilocode_change, moved into patchKiloConfigModel
                 ...patchKiloConfigModel(model, existingModel), // kilocode_change
               }
               const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})

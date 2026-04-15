@@ -1372,28 +1372,18 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeDiff") {
         const ev = msg as AgentManagerWorktreeDiffMessage
+        let staleFiles: Set<string> | undefined
         setDiffDatas((prev) => {
           const existing = prev[ev.sessionId]
-          const next = existing ? mergeWorktreeDiffs(existing, ev.diffs) : ev.diffs
-          if (existing && existing.length === next.length) {
-            const same = existing.every((old, i) => {
-              const item = next[i]!
-              return (
-                old.file === item.file &&
-                old.before === item.before &&
-                old.after === item.after &&
-                old.status === item.status &&
-                old.tracked === item.tracked &&
-                old.generatedLike === item.generatedLike &&
-                old.summarized === item.summarized &&
-                old.additions === item.additions &&
-                old.deletions === item.deletions
-              )
-            })
-            if (same) return prev
-          }
+          const merged = existing
+            ? mergeWorktreeDiffs(existing, ev.diffs)
+            : { diffs: ev.diffs, stale: new Set<string>() }
+          staleFiles = merged.stale
+          const next = merged.diffs
+          if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
           return { ...prev, [ev.sessionId]: next }
         })
+        if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
       }
 
       if (msg.type === "agentManager.worktreeDiffFile") {
@@ -1638,6 +1628,15 @@ const AgentManagerContent: Component = () => {
     if (diffFileLoading()[sessionId]?.[file]) return
     setDiffFilePending(sessionId, file, true)
     vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  }
+
+  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
+    const loading = diffFileLoading()[sessionId] ?? {}
+    for (const file of files) {
+      if (loading[file]) continue
+      setDiffFilePending(sessionId, file, true)
+      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+    }
   }
 
   const diffFileLoadingForCurrent = createMemo(() => {

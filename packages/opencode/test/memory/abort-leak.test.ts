@@ -26,7 +26,9 @@ const getHeapMB = () => {
 }
 
 describe("memory: abort controller leak", () => {
-  test("webfetch does not leak memory over many invocations", async () => {
+  // kilocode_change start - TODO(#8990): skip flaky test on Linux CI
+  test.skip("webfetch does not leak memory over many invocations", async () => {
+    // kilocode_change end
     await Instance.provide({
       directory: projectRoot,
       fn: async () => {

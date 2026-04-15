@@ -14,6 +14,7 @@ import { ProviderID, ModelID } from "@/provider/schema"
 import z from "zod"
 import { Effect } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { mapValues, omit, pickBy } from "remeda"
 
 // Re-export for consumers that previously imported from provider.ts
 export { Prompt, AiSdkProvider }
@@ -66,6 +67,12 @@ export function patchConfigModel(cfg: any, existing: any) {
     prompt: cfg.prompt ?? existing?.prompt,
     isFree: cfg.isFree ?? existing?.isFree,
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
+    variants: cfg.variants
+      ? mapValues(
+          pickBy(cfg.variants, (v) => !v.disabled),
+          (v) => omit(v, ["disabled"]),
+        )
+      : {},
   }
 }
 

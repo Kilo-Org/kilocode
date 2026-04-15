@@ -193,6 +193,10 @@ export class AgentManagerProvider implements Disposable {
       this.statsPoller.setVisible(visible)
     })
 
+    ctx.sessions.onFollowupAdopted((session, directory) => {
+      this.adoptFollowupInWorktree(session, directory)
+    })
+
     this.stateReady = this.initializeState()
     void this.sendRepoInfo()
     this.sendKeybindings()
@@ -1199,6 +1203,24 @@ export class AgentManagerProvider implements Disposable {
     // was tracked. The CLI backend may have emitted permission.asked between
     // session.create() returning and this registration completing.
     this.panel.sessions.recoverPendingPrompts()
+  }
+
+  /** Route a plan follow-up session to its worktree instead of LOCAL. */
+  private adoptFollowupInWorktree(session: Session, directory: string): void {
+    const state = this.getStateManager()
+    if (!state) return
+    const worktree = state.findWorktreeByPath(directory)
+    if (!worktree) return
+
+    state.addSession(session.id, worktree.id)
+    this.registerWorktreeSession(session.id, directory)
+    this.pushState()
+    this.postToWebview({
+      type: "agentManager.sessionAdded",
+      sessionId: session.id,
+      worktreeId: worktree.id,
+    })
+    this.log(`Adopted follow-up session ${session.id} into worktree ${worktree.id}`)
   }
 
   private onWorktreePresence(result: WorktreePresenceResult): void {

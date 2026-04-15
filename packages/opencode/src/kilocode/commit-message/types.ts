@@ -5,6 +5,8 @@ export interface CommitMessageRequest {
   selectedFiles?: string[]
   /** Previously generated message — when set, the LLM is asked to produce a different one */
   previousMessage?: string
+  /** Optional custom system prompt — overrides the default conventional commits prompt */
+  prompt?: string
 }
 
 export interface CommitMessageResponse {

@@ -137,7 +137,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     hidden: true,
     options: {},
     permission: [],
-    prompt: SYSTEM_PROMPT,
+    prompt: request.prompt || SYSTEM_PROMPT,
     temperature: 0.3,
   }
 

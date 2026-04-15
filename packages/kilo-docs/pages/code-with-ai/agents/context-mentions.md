@@ -27,6 +27,21 @@ Type `@` in the chat input to get autocomplete suggestions. You can mention:
 
 Selecting a suggestion inserts the mention and highlights it in the input. File contents and terminal output are attached as context when you send the message.
 
+### Drag and Drop
+
+You can also add file mentions by dragging and dropping:
+
+| Source                         | How                                                                                       | Result                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Explorer / Editor tabs**     | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input        | Inserts an `@/relative/path` mention |
+| **Multiple files**             | Drag several files at once                                                                | Inserts space-separated `@` mentions |
+| **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat                          | Inserts an `@file` mention           |
+| **Images**                     | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image                   |
+
+{% callout type="info" %}
+VS Code requires holding **Shift** when dragging files from outside the editor (e.g. Finder or Windows Explorer) into a webview. This applies to image drops — file drops from within VS Code (Explorer, editor tabs) work without Shift.
+{% /callout %}
+
 ### Automatic Editor Context
 
 The extension automatically includes context from your editor with each message — your currently focused file and all open editor tabs. You don't need to mention these explicitly.

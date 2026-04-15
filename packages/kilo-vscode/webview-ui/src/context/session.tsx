@@ -721,7 +721,7 @@ export const SessionProvider: ParentComponent = (props) => {
           break
 
         case "sessionsLoaded":
-          handleSessionsLoaded(message.sessions)
+          handleSessionsLoaded(message.sessions, message.preserveSessionIds)
           break
 
         case "sessionUpdated":
@@ -1186,12 +1186,24 @@ export const SessionProvider: ParentComponent = (props) => {
     setStore("todos", sessionID, items)
   }
 
-  function handleSessionsLoaded(loaded: SessionInfo[]) {
-    // Additive merge only — multiple loadSessions calls (workspace + worktree
-    // directories) can race, and a response without worktree sessions must not
-    // delete sessions that arrived from a different response. Explicit session
-    // removal is handled by the sessionDeleted event.
+  function handleSessionsLoaded(loaded: SessionInfo[], preserve?: string[]) {
+    const kept = preserve?.length ? new Set(preserve) : undefined
     batch(() => {
+      // Reconcile: remove sessions not in the loaded list to prevent stale
+      // entries from other projects accumulating in the store.
+      // Sessions whose worktree directories failed to list are preserved —
+      // their absence is transient, not a real deletion.
+      const ids = new Set(loaded.map((s) => s.id))
+      setStore(
+        "sessions",
+        produce((sessions) => {
+          for (const id of Object.keys(sessions)) {
+            if (id.startsWith("cloud:")) continue
+            if (kept?.has(id)) continue
+            if (!ids.has(id)) delete sessions[id]
+          }
+        }),
+      )
       for (const s of loaded) {
         setStore("sessions", s.id, s)
       }

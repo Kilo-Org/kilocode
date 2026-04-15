@@ -473,7 +473,7 @@ export const ExperimentalRoutes = lazy(() =>
         const sessions: Session.GlobalInfo[] = []
         for await (const session of Session.listGlobal({
           projectID, // kilocode_change
-          directory: query.directory,
+          directory: query.worktrees ? undefined : query.directory, // kilocode_change - ignore SDK-injected directory when listing across worktrees
           directories, // kilocode_change
           roots: query.roots,
           start: query.start,

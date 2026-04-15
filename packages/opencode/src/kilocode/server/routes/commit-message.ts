@@ -2,8 +2,9 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { generateCommitMessage } from "../../commit-message"
-import { lazy } from "../../util/lazy"
-import { errors } from "../error"
+import { Config } from "../../../config/config"
+import { lazy } from "../../../util/lazy"
+import { errors } from "../../../server/error"
 
 export const CommitMessageRoutes = lazy(() =>
   new Hono().post(
@@ -37,7 +38,9 @@ export const CommitMessageRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const result = await generateCommitMessage(body)
+      const config = await Config.get()
+      const prompt = config.commit_message?.prompt || undefined
+      const result = await generateCommitMessage({ ...body, prompt })
       return c.json({ message: result.message })
     },
   ),

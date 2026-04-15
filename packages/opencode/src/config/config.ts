@@ -1162,6 +1162,7 @@ export namespace Config {
           url: z.string().optional().describe("Enterprise URL"),
         })
         .optional(),
+      commit_message: KilocodeConfig.CommitMessageSchema, // kilocode_change
       compaction: z
         .object({
           auto: z.boolean().optional().describe("Enable automatic compaction when context is full (default: true)"),

@@ -89,4 +89,68 @@ describe("experimental.session.list", () => {
       await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
     }
   })
+
+  test("worktrees=true ignores SDK-injected directory query param", async () => {
+    await using first = await tmpdir({ git: true })
+    await using second = await tmpdir({ git: true })
+    const worktree = path.join(first.path, "..", path.basename(first.path) + "-worktree")
+
+    try {
+      await $`git worktree add ${worktree} -b test-branch-sdk-${Date.now()}`.cwd(first.path).quiet()
+
+      const share = Config.get
+      Config.get = async () => ({ share: "manual" }) as Awaited<ReturnType<typeof Config.get>>
+
+      try {
+        const { Server } = await import("../../src/server/server")
+        const { Session } = await import("../../src/session/index")
+
+        const branch = await Instance.provide({
+          directory: worktree,
+          fn: async () => Session.create({ title: "worktree-session" }),
+        })
+
+        const root = await Instance.provide({
+          directory: first.path,
+          fn: async () => ({
+            app: Server.Default().app,
+            project: await Server.Default().app.request("/project/current", {
+              headers: { "x-kilo-directory": first.path },
+            }),
+            session: await Session.create({ title: "root-session" }),
+          }),
+        })
+
+        await Instance.provide({
+          directory: second.path,
+          fn: async () => Session.create({ title: "other-project-session" }),
+        })
+
+        const app = root.app
+        const project = await root.project.json()
+
+        // Include directory in query params — mimics what the SDK rewrite interceptor does.
+        // Without the server fix, this would restrict results to only first.path sessions.
+        const response = await app.request(
+          `/experimental/session?projectID=${encodeURIComponent(project.id)}&roots=true&worktrees=true&directory=${encodeURIComponent(first.path)}`,
+          {
+            headers: { "x-kilo-directory": first.path },
+          },
+        )
+
+        expect(response.status).toBe(200)
+        const body = await response.json()
+        const ids = body.map((item: { id: string }) => item.id)
+
+        // Both root and worktree sessions must be returned despite directory= in query
+        expect(ids).toContain(root.session.id)
+        expect(ids).toContain(branch.id)
+        expect(body.some((item: { title: string }) => item.title === "other-project-session")).toBe(false)
+      } finally {
+        Config.get = share
+      }
+    } finally {
+      await $`git worktree remove ${worktree}`.cwd(first.path).quiet().nothrow()
+    }
+  })
 })

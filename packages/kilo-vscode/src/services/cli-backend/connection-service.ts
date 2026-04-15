@@ -212,6 +212,17 @@ export class KiloConnectionService {
   }
 
   /**
+   * Remove all messageID → sessionID entries for a given session.
+   * Called when a session is deleted or otherwise pruned so the map
+   * does not grow unbounded over the extension lifetime.
+   */
+  pruneSession(sessionId: string): void {
+    for (const [mid, sid] of this.messageSessionIdsByMessageId) {
+      if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
+    }
+  }
+
+  /**
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */

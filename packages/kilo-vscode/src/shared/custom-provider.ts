@@ -10,6 +10,15 @@ export const EnvSchema = z
   .string()
   .trim()
   .regex(/^[A-Z_][A-Z0-9_]*$/, INVALID_ENV)
+
+const VariantConfigSchema = z.object({
+  enable_thinking: z.boolean().optional(),
+  thinking: z.object({ type: z.enum(["enabled", "disabled"]) }).optional(),
+  reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high"]).optional(),
+})
+
+export type VariantConfig = z.infer<typeof VariantConfigSchema>
+
 export const CustomProviderConfigSchema = z
   .object({
     npm: z.string().optional(),
@@ -33,6 +42,8 @@ export const CustomProviderConfigSchema = z
         z
           .object({
             name: z.string().trim().min(1).max(200),
+            reasoning: z.boolean().optional(),
+            variants: z.record(z.string().trim().min(1), VariantConfigSchema).optional(),
           })
           .strict(),
       )
@@ -48,7 +59,7 @@ export type SanitizedProviderConfig = {
     baseURL: string
     headers?: Record<string, string>
   }
-  models: Record<string, { name: string }>
+  models: Record<string, { name: string; reasoning?: true; variants?: Record<string, VariantConfig> }>
 }
 
 export type CustomProviderAuthChange = { mode: "preserve" } | { mode: "clear" } | { mode: "set"; key: string }
@@ -114,7 +125,14 @@ export function normalizeCustomProviderConfig(
       ...(headers && Object.keys(headers).length > 0 ? { headers } : {}),
     },
     models: Object.fromEntries(
-      Object.entries(config.models).map(([id, model]) => [id.trim(), { name: model.name.trim() }]),
+      Object.entries(config.models).map(([id, model]) => [
+        id.trim(),
+        {
+          name: model.name.trim(),
+          ...(model.reasoning ? { reasoning: true as const } : {}),
+          ...(model.variants && Object.keys(model.variants).length > 0 ? { variants: model.variants } : {}),
+        },
+      ]),
     ),
   }
 }

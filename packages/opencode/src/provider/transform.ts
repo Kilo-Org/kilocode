@@ -371,7 +371,11 @@ export namespace ProviderTransform {
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
     // kilocode_change start
-    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+    if (
+      ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
+      model.variants &&
+      Object.keys(model.variants).length > 0
+    ) {
       return model.variants
     }
     // kilocode_change end

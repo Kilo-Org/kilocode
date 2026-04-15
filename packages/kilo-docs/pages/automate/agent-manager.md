@@ -156,6 +156,7 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Select files and click **Apply to Main Branch** to merge changes
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
+- **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
 ## Terminals
 
@@ -171,6 +172,47 @@ A common workflow is letting the agent work, then switching to the terminal to r
 ## Setup Scripts
 
 Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+
+## Run Script
+
+The run button lets you start your project (dev server, build, tests, etc.) directly from the Agent Manager toolbar without switching to a terminal. It executes a shell script you define once, and runs it in the context of whichever worktree is currently selected.
+
+### Setting up a run script
+
+Create a script file in `.kilo/` using the appropriate filename for your platform:
+
+| Platform      | Filename (checked in order)                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
+| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
+
+For example, on macOS / Linux create `.kilo/run-script`:
+
+```sh
+#!/bin/sh
+npm run dev
+```
+
+The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
+
+{% callout type="tip" %}
+If no run script exists yet, clicking the run button opens a template file for you to fill in.
+{% /callout %}
+
+### Environment variables
+
+Two extra variables are injected into the script's environment:
+
+| Variable        | Value                                                                 |
+| --------------- | --------------------------------------------------------------------- |
+| `WORKTREE_PATH` | Working directory of the selected worktree (or repo root for "local") |
+| `REPO_PATH`     | Repository root                                                       |
+
+### Using the run button
+
+- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a dedicated VS Code task panel.
+- **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
+- **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
 
 ## Session State and Persistence
 
@@ -191,6 +233,7 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 | `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
 | `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
 | `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
+| `Cmd+E`                  | `Ctrl+E`                  | Run / stop run script                            |
 | `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
 | `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
 

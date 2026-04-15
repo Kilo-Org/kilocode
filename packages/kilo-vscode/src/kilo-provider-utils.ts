@@ -195,10 +195,12 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
   const sessions = await list(ctx.workspaceDirectory)
   const projectID = sessions[0]?.projectID
   const worktreeDirs = new Set(ctx.sessionDirectories.values())
+  const failed = new Set<string>()
   const extra = await Promise.all(
     [...worktreeDirs].map((dir) =>
       list(dir).catch((err: unknown) => {
         console.error(`[Kilo] Failed to list sessions for ${dir}:`, err)
+        failed.add(dir)
         return [] as Session[]
       }),
     ),
@@ -212,9 +214,19 @@ export async function loadSessions(ctx: SessionRefreshContext): Promise<string |
     }
   }
 
+  // Sessions whose worktree directories failed to list — the webview must
+  // not delete these during reconciliation since the absence is transient.
+  const preserve: string[] = []
+  if (failed.size) {
+    for (const [sid, dir] of ctx.sessionDirectories) {
+      if (failed.has(dir)) preserve.push(sid)
+    }
+  }
+
   ctx.postMessage({
     type: "sessionsLoaded",
     sessions: sessions.map((s) => sessionToWebview(s)),
+    ...(preserve.length ? { preserveSessionIds: preserve } : {}),
   })
 
   return projectID

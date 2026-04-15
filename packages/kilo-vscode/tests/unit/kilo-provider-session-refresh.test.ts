@@ -157,6 +157,86 @@ describe("KiloProvider pending session refresh", () => {
     expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree"])
   })
 
+  it("preserves session ids when worktree directory listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([
+        ["ses_wt1", "/worktree1"],
+        ["ses_wt2", "/worktree2"],
+      ]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        if (dir === "/worktree1") throw new Error("backend not ready")
+        return [
+          {
+            id: "ses_wt2",
+            projectID: "project",
+            title: "wt2",
+            directory: "/worktree2",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt2"])
+    expect(msg.preserveSessionIds).toEqual(["ses_wt1"])
+  })
+
+  it("omits preserveSessionIds when all directories succeed", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_wt",
+            projectID: "project",
+            title: "wt",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt"])
+    expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
   it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
     const { calls, fn } = createListSessions()
     const ctx = createContext()
