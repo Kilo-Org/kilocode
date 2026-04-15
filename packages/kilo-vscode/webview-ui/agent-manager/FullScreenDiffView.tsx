@@ -40,7 +40,7 @@ interface FullScreenDiffViewProps {
   diffStyle: DiffStyle
   onDiffStyleChange: (style: DiffStyle) => void
   onRequestDiff?: (file: string) => void
-  onOpenFile?: (relativePath: string) => void
+  onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   onClose: () => void
@@ -507,7 +507,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 <FileIcon node={{ path: diff.file, type: "file" }} />
                                 <div data-slot="session-review-file-name-container">
                                   <Show when={diff.file.includes("/")}>
-                                    <span data-slot="session-review-directory">{`\u202A${getDirectory(diff.file)}\u202C`}</span>
+                                    <span data-slot="session-review-directory">{`\u2066${getDirectory(diff.file)}\u2069`}</span>
                                   </Show>
                                   <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
                                   <Show when={fileCommentCount() > 0}>
@@ -596,6 +596,10 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 renderAnnotation={buildAnnotation}
                                 enableGutterUtility={true}
                                 onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                                onLineNumberClick={(event) => {
+                                  if (event.annotationSide === "deletions") return
+                                  props.onOpenFile?.(diff.file, event.lineNumber)
+                                }}
                               />
                             </Show>
                           </Show>

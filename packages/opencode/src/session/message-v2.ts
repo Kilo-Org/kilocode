@@ -372,10 +372,10 @@ export namespace MessageV2 {
     model: z.object({
       providerID: ProviderID.zod,
       modelID: ModelID.zod,
+      variant: z.string().optional(),
     }),
     system: z.string().optional(),
     tools: z.record(z.string(), z.boolean()).optional(),
-    variant: z.string().optional(),
     // kilocode_change start
     editorContext: z
       .object({
@@ -560,21 +560,18 @@ export namespace MessageV2 {
 
   export function stripMessageMetadata(info: Info): Info {
     // kilocode_change - exported for testing
-    // Strip summary.diffs before/after from user messages (can be 20+ MB)
+    // Strip oversized summary.diffs patches from user messages to limit SSE payload.
+    // Small patches are preserved so the UI can render inline diffs.
     if (info.role !== "user") return info
     const user = info as User
     if (!user.summary?.diffs?.length) return info
-    const has = user.summary.diffs.some((d: Snapshot.FileDiff) => d.before || d.after)
-    if (!has) return info
+    const oversized = (d: Snapshot.FileDiff) => d.patch && Buffer.byteLength(d.patch) > Snapshot.MAX_DIFF_SIZE
+    if (!user.summary.diffs.some(oversized)) return info
     return {
       ...user,
       summary: {
         ...user.summary,
-        diffs: user.summary.diffs.map(({ before, after, ...rest }: Snapshot.FileDiff) => ({
-          ...rest,
-          before: "",
-          after: "",
-        })),
+        diffs: user.summary.diffs.map((d: Snapshot.FileDiff) => (oversized(d) ? { ...d, patch: "" } : d)),
       },
     } as Info
   }
@@ -642,6 +639,12 @@ export namespace MessageV2 {
       info: info(row),
       parts: partByMessage.get(row.id) ?? [],
     }))
+  }
+
+  function providerMeta(metadata: Record<string, any> | undefined) {
+    if (!metadata) return undefined
+    const { providerExecuted: _, ...rest } = metadata
+    return Object.keys(rest).length > 0 ? rest : undefined
   }
 
   export const toModelMessagesEffect = Effect.fnUntraced(function* (
@@ -812,18 +815,34 @@ export namespace MessageV2 {
                 toolCallId: part.callID,
                 input: part.state.input,
                 output,
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
+                ...(part.metadata?.providerExecuted ? { providerExecuted: true } : {}),
+                ...(differentModel ? {} : { callProviderMetadata: providerMeta(part.metadata) }),
               })
             }
-            if (part.state.status === "error")
-              assistantMessage.parts.push({
-                type: ("tool-" + part.tool) as `tool-${string}`,
-                state: "output-error",
-                toolCallId: part.callID,
-                input: part.state.input,
-                errorText: part.state.error,
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
-              })
+            if (part.state.status === "error") {
+              const output = part.state.metadata?.interrupted === true ? part.state.metadata.output : undefined
+              if (typeof output === "string") {
+                assistantMessage.parts.push({
+                  type: ("tool-" + part.tool) as `tool-${string}`,
+                  state: "output-available",
+                  toolCallId: part.callID,
+                  input: part.state.input,
+                  output,
+                  ...(part.metadata?.providerExecuted ? { providerExecuted: true } : {}),
+                  ...(differentModel ? {} : { callProviderMetadata: providerMeta(part.metadata) }),
+                })
+              } else {
+                assistantMessage.parts.push({
+                  type: ("tool-" + part.tool) as `tool-${string}`,
+                  state: "output-error",
+                  toolCallId: part.callID,
+                  input: part.state.input,
+                  errorText: part.state.error,
+                  ...(part.metadata?.providerExecuted ? { providerExecuted: true } : {}),
+                  ...(differentModel ? {} : { callProviderMetadata: providerMeta(part.metadata) }),
+                })
+              }
+            }
             // Handle pending/running tool calls to prevent dangling tool_use blocks
             // Anthropic/Claude APIs require every tool_use to have a corresponding tool_result
             if (part.state.status === "pending" || part.state.status === "running")
@@ -833,7 +852,8 @@ export namespace MessageV2 {
                 toolCallId: part.callID,
                 input: part.state.input,
                 errorText: "[Tool execution was interrupted]",
-                ...(differentModel ? {} : { callProviderMetadata: part.metadata }),
+                ...(part.metadata?.providerExecuted ? { providerExecuted: true } : {}),
+                ...(differentModel ? {} : { callProviderMetadata: providerMeta(part.metadata) }),
               })
           }
           if (part.type === "reasoning") {

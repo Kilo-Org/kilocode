@@ -1133,7 +1133,7 @@ export class Console extends HeyApiClient {
   /**
    * Switch active Console org
    *
-   * Persist a new active Console account/org selection for the current local OpenCode state.
+   * Persist a new active Console account/org selection for the current local Kilo state.
    */
   public switchOrg<ThrowOnError extends boolean = false>(
     parameters?: {

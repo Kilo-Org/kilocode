@@ -3,8 +3,9 @@ import { Log } from "../../../src/util/log"
 
 Log.init({ print: false })
 
-const { DEFAULT_THEMES, allThemes, addTheme, hasTheme, resolveTheme } =
-  await import("../../../src/cli/cmd/tui/context/theme")
+const { DEFAULT_THEMES, allThemes, addTheme, hasTheme, resolveTheme } = await import(
+  "../../../src/cli/cmd/tui/context/theme"
+)
 
 test("addTheme writes into module theme store", () => {
   const name = `plugin-theme-${Date.now()}`

@@ -411,7 +411,7 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello" }],
           })
           if (other.info.role !== "user") throw new Error("expected user message")
-          expect(other.info.variant).toBeUndefined()
+          expect(other.info.model.variant).toBeUndefined()
 
           const match = await SessionPrompt.prompt({
             sessionID: session.id,
@@ -420,8 +420,12 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello again" }],
           })
           if (match.info.role !== "user") throw new Error("expected user message")
-          expect(match.info.model).toEqual({ providerID: ProviderID.make("openai"), modelID: ModelID.make("gpt-5.2") })
-          expect(match.info.variant).toBe("xhigh")
+          expect(match.info.model).toEqual({
+            providerID: ProviderID.make("openai"),
+            modelID: ModelID.make("gpt-5.2"),
+            variant: "xhigh",
+          })
+          expect(match.info.model.variant).toBe("xhigh")
 
           const override = await SessionPrompt.prompt({
             sessionID: session.id,
@@ -431,7 +435,7 @@ describe("session.prompt agent variant", () => {
             parts: [{ type: "text", text: "hello third" }],
           })
           if (override.info.role !== "user") throw new Error("expected user message")
-          expect(override.info.variant).toBe("high")
+          expect(override.info.model.variant).toBe("high")
 
           await Session.remove(session.id)
         },

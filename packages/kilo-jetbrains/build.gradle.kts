@@ -52,9 +52,13 @@ intellijPlatform {
 }
 
 tasks.named<JavaExec>("runIde") {
+    dependsOn(":backend:processResources")
     jvmArgumentProviders += CommandLineArgumentProvider {
         listOf("-Dnosplash=true")
     }
 }
 
+tasks.named<Delete>("clean") {
+    delete(layout.buildDirectory)
+}
 

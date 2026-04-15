@@ -12,6 +12,7 @@
     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
     "dev:storybook": "bun --cwd packages/storybook storybook",
     "typecheck": "bun turbo typecheck",
+    "postinstall": "bun run --cwd packages/opencode fix-node-pty",
     "prepare": "husky",
     "random": "echo 'Random script'",
     "hello": "echo 'Hello World!'",
@@ -46,7 +47,7 @@
       "drizzle-kit": "1.0.0-beta.19-d95b7a4",
       "drizzle-orm": "1.0.0-beta.19-d95b7a4",
       "effect": "4.0.0-beta.43",
-      "ai": "6.0.138",
+      "ai": "6.0.149",
       "cross-spawn": "7.0.6",
       "hono": "4.12.12",
       "hono-openapi": "1.1.2",
@@ -69,7 +70,8 @@
       "@solidjs/router": "0.15.4",
       "@solidjs/start": "https://pkg.pr.new/@solidjs/start@dfb2020",
       "solid-js": "1.9.12",
-      "vite-plugin-solid": "2.11.10"
+      "vite-plugin-solid": "2.11.10",
+      "@lydell/node-pty": "1.2.0-beta.10"
     }
   },
   "devDependencies": {
@@ -91,6 +93,7 @@
     "@kilocode/plugin": "workspace:*",
     "@opencode-ai/script": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "heap-snapshot-toolkit": "1.1.3",
     "typescript": "catalog:",
     "@morphllm/morphsdk": "0.2.141"
   },
@@ -105,6 +108,7 @@
   },
   "trustedDependencies": [
     "esbuild",
+    "node-pty",
     "protobufjs",
     "tree-sitter",
     "tree-sitter-bash",
@@ -130,10 +134,8 @@
   },
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
-    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
-    "@ai-sdk/provider-utils@4.0.21": "patches/@ai-sdk%2Fprovider-utils@4.0.21.patch",
-    "@ai-sdk/anthropic@3.0.64": "patches/@ai-sdk%2Fanthropic@3.0.64.patch"
+    "solid-js@1.9.10": "patches/solid-js@1.9.10.patch"
   },
-  "version": "7.2.5",
+  "version": "7.2.6",
   "peerDependencies": {}
 }

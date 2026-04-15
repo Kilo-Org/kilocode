@@ -144,10 +144,10 @@ Key concepts:
 
 Agents operate in a hierarchy:
 
-| Agent    | Role                                                                                       |
-| -------- | ------------------------------------------------------------------------------------------ |
+| Agent    | Role                                                                                        |
+| -------- | ------------------------------------------------------------------------------------------- |
 | Mayor    | Persistent conversational coordinator — decomposes tasks and delegates to worker agents     |
-| Polecat  | Worker agent — clones repo worktrees, writes code, commits, pushes, and creates PRs        |
+| Polecat  | Worker agent — clones repo worktrees, writes code, commits, pushes, and creates PRs         |
 | Refinery | Code review agent — reviews polecat branches, runs quality gates, merges or requests rework |
 | Triage   | Ephemeral agent that resolves ambiguous situations detected by automated patrol checks      |
 
@@ -255,9 +255,9 @@ The project uses:
 
 ## Repositories
 
-| Repository                                                | Contents                                                                                                             |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                   |
+| Repository                                                | Contents                                                                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | CLI engine, VS Code extension, SDK, gateway client, telemetry, docs, UI components                                             |
 | Cloud (private)                                           | Web dashboard, Cloud Agent, Kilo Bot, KiloClaw, Gas Town, code review, auto triage, billing, and supporting Cloudflare Workers |
 
 ## Further Reading

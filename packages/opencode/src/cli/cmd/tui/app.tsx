@@ -1,7 +1,7 @@
 import { render, TimeToFirstDraw, useKeyboard, useRenderer, useTerminalDimensions } from "@opentui/solid"
 import { Clipboard } from "@tui/util/clipboard"
 import { Selection } from "@tui/util/selection"
-import { createCliRenderer, MouseButton, type CliRendererConfig } from "@opentui/core"
+import { createCliRenderer, MouseButton, TextAttributes, type CliRendererConfig } from "@opentui/core" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
   Switch,
@@ -16,12 +16,12 @@ import {
   on,
   onCleanup,
 } from "solid-js"
-import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
+import { win32DisableProcessedInput, win32FlushInputBuffer, win32InstallCtrlCGuard } from "./win32" // kilocode_change
 import { Flag } from "@/flag/flag"
 import semver from "semver"
 import { DialogProvider, useDialog } from "@tui/ui/dialog"
 import { DialogProvider as DialogProviderList } from "@tui/component/dialog-provider"
-import { ErrorComponent } from "@tui/component/error-component"
+import { Installation } from "@/installation" // kilocode_change
 import { PluginRouteMissing } from "@tui/component/plugin-route-missing"
 import { SDKProvider, useSDK } from "@tui/context/sdk"
 import { StartupLoading } from "@tui/component/startup-loading"
@@ -63,6 +63,7 @@ import { TuiConfigProvider, useTuiConfig } from "./context/tui-config"
 import { TuiConfig } from "@/config/tui"
 import { createTuiApi, TuiPluginRuntime, type RouteMap } from "./plugin"
 import { FormatError, FormatUnknownError } from "@/cli/error"
+import { resetTerminalState } from "@tui/util/terminal" // kilocode_change
 
 async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
   // can't set raw mode if not a TTY
@@ -197,14 +198,19 @@ export function tui(input: {
       await TuiPluginRuntime.dispose()
     }
 
+    // kilocode_change - safety net: ensure mouse tracking is disabled regardless of exit path
+    process.on("exit", resetTerminalState) // kilocode_change
+
     const renderer = await createCliRenderer(rendererConfig(input.config))
 
     await render(() => {
       return (
         <ErrorBoundary
+          // kilocode_change start
           fallback={(error, reset) => (
             <ErrorComponent error={error} reset={reset} onBeforeExit={onBeforeExit} onExit={onExit} mode={mode} />
           )}
+          // kilocode_change end
         >
           <ArgsProvider {...input.args}>
             <ExitProvider onBeforeExit={onBeforeExit} onExit={onExit}>
@@ -291,9 +297,6 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     theme: themeState,
     toast,
     renderer,
-  })
-  onCleanup(() => {
-    api.dispose()
   })
   const [ready, setReady] = createSignal(false)
   TuiPluginRuntime.init(api)
@@ -614,6 +617,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     {
       title: "Switch model variant",
       value: "variant.list",
+      keybind: "variant_list",
       category: "Agent",
       hidden: local.model.variant.list().length === 0,
       slash: {
@@ -687,7 +691,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
     },
     {
-      title: "Toggle Theme Mode",
+      title: "Toggle theme mode",
       value: "theme.switch_mode",
       onSelect: (dialog) => {
         setMode(mode() === "dark" ? "light" : "dark")
@@ -696,7 +700,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
     },
     {
-      title: locked() ? "Unlock Theme Mode" : "Lock Theme Mode",
+      title: locked() ? "Unlock theme mode" : "Lock theme mode",
       value: "theme.mode.lock",
       onSelect: (dialog) => {
         if (locked()) unlock()
@@ -965,7 +969,124 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       </Show>
       {plugin()}
       <TuiPluginRuntime.Slot name="app" />
+      {/* kilocode_change start */}
       <StartupLoading ready={ready} />
     </box>
   )
 }
+// kilocode_change end
+
+// kilocode_change start — guard against missing renderer context in ErrorBoundary fallback
+function tryUseRenderer() {
+  try {
+    return useRenderer()
+  } catch {
+    return undefined
+  }
+}
+
+function tryUseTerminalDimensions() {
+  try {
+    return useTerminalDimensions()
+  } catch {
+    return undefined
+  }
+}
+// kilocode_change end
+
+// kilocode_change start — inlined ErrorComponent with safe renderer/keyboard guards
+function ErrorComponent(props: {
+  error: Error
+  reset: () => void
+  onBeforeExit?: () => Promise<void>
+  onExit: () => Promise<void>
+  mode?: "dark" | "light"
+}) {
+  const term = tryUseTerminalDimensions()
+  const renderer = tryUseRenderer()
+
+  const height = () => term?.().height ?? process.stdout.rows ?? 24
+
+  const handleExit = async () => {
+    await props.onBeforeExit?.()
+    renderer?.setTerminalTitle("")
+    renderer?.destroy()
+    win32FlushInputBuffer()
+    // kilocode_change - reset terminal state to disable mouse tracking on exit
+    resetTerminalState()
+    await props.onExit()
+  }
+
+  try {
+    useKeyboard((evt) => {
+      if (evt.ctrl && evt.name === "c") {
+        handleExit()
+      }
+    })
+  } catch {
+    // Keyboard handler unavailable — renderer context may be missing.
+    // Ctrl+C will still work via the default signal handler.
+  }
+
+  const [copied, setCopied] = createSignal(false)
+
+  const issueURL = new URL("https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml")
+
+  // Choose safe fallback colors per mode since theme context may not be available
+  const isLight = props.mode === "light"
+  const colors = {
+    bg: isLight ? "#ffffff" : "#0a0a0a",
+    text: isLight ? "#1a1a1a" : "#eeeeee",
+    muted: isLight ? "#8a8a8a" : "#808080",
+    primary: isLight ? "#3b7dd8" : "#fab283",
+  }
+
+  if (props.error.message) {
+    issueURL.searchParams.set("title", `opentui: fatal: ${props.error.message}`)
+  }
+
+  if (props.error.stack) {
+    issueURL.searchParams.set(
+      "description",
+      "```\n" + props.error.stack.substring(0, 6000 - issueURL.toString().length) + "...\n```",
+    )
+  }
+
+  issueURL.searchParams.set("opencode-version", Installation.VERSION)
+
+  const copyIssueURL = () => {
+    Clipboard.copy(issueURL.toString()).then(() => {
+      setCopied(true)
+    })
+  }
+
+  return (
+    <box flexDirection="column" gap={1} backgroundColor={colors.bg}>
+      <box flexDirection="row" gap={1} alignItems="center">
+        <text attributes={TextAttributes.BOLD} fg={colors.text}>
+          Please report an issue.
+        </text>
+        <box onMouseUp={copyIssueURL} backgroundColor={colors.primary} padding={1}>
+          <text attributes={TextAttributes.BOLD} fg={colors.bg}>
+            Copy issue URL (exception info pre-filled)
+          </text>
+        </box>
+        {copied() && <text fg={colors.muted}>Successfully copied</text>}
+      </box>
+      <box flexDirection="row" gap={2} alignItems="center">
+        <text fg={colors.text}>A fatal error occurred!</text>
+        <box onMouseUp={props.reset} backgroundColor={colors.primary} padding={1}>
+          <text fg={colors.bg}>Reset TUI</text>
+        </box>
+        <box onMouseUp={handleExit} backgroundColor={colors.primary} padding={1}>
+          <text fg={colors.bg}>Exit</text>
+        </box>
+      </box>
+      <scrollbox height={Math.floor(height() * 0.7)}>
+        <text fg={colors.muted}>{props.error.stack}</text>
+      </scrollbox>
+      <text fg={colors.text}>{props.error.message}</text>
+    </box>
+  )
+}
+// kilocode_change end

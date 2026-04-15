@@ -22,6 +22,7 @@ import { Log } from "../../util/log" // kilocode_change
 import { WorkspaceRoutes } from "./workspace"
 import { Filesystem } from "../../util/filesystem" // kilocode_change
 import path from "path" // kilocode_change
+import { Agent } from "@/agent/agent"
 
 const ConsoleOrgOption = z.object({
   accountID: z.string(),
@@ -188,7 +189,11 @@ export const ExperimentalRoutes = lazy(() =>
       ),
       async (c) => {
         const { provider, model } = c.req.valid("query")
-        const tools = await ToolRegistry.tools({ providerID: ProviderID.make(provider), modelID: ModelID.make(model) })
+        const tools = await ToolRegistry.tools({
+          providerID: ProviderID.make(provider),
+          modelID: ModelID.make(model),
+          agent: await Agent.get(await Agent.defaultAgent()),
+        })
         return c.json(
           tools.map((t) => ({
             id: t.id,

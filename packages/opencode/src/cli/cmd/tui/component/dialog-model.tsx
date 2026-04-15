@@ -8,7 +8,6 @@ import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { DialogVariant } from "./dialog-variant"
 import { useKeybind } from "../context/keybind"
 import * as fuzzysort from "fuzzysort"
-import { consoleManagedProviderLabel } from "@tui/util/provider-origin"
 
 export function useConnected() {
   const sync = useSync()
@@ -59,11 +58,7 @@ export function DialogModel(props: { providerID?: string }) {
             key: item,
             value: { providerID: provider.id, modelID: model.id },
             title: model.name ?? item.modelID,
-            description: consoleManagedProviderLabel(
-              sync.data.console_state.consoleManagedProviders,
-              provider.id,
-              provider.name,
-            ),
+            description: provider.name,
             category,
             disabled: provider.id === "opencode" && model.id.includes("-nano"),
             footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
@@ -105,11 +100,7 @@ export function DialogModel(props: { providerID?: string }) {
             category: connected()
               ? provider.id === "kilo" && info.recommendedIndex !== undefined
                 ? "Recommended"
-                : consoleManagedProviderLabel(
-                    sync.data.console_state.consoleManagedProviders,
-                    provider.id,
-                    provider.name,
-                  )
+                : provider.name
               : undefined,
             // kilocode_change end
             disabled: provider.id === "opencode" && model.includes("-nano"),
@@ -168,7 +159,7 @@ export function DialogModel(props: { providerID?: string }) {
   const title = createMemo(() => {
     const value = provider()
     if (!value) return "Select model"
-    return consoleManagedProviderLabel(sync.data.console_state.consoleManagedProviders, value.id, value.name)
+    return value.name
   })
 
   function onSelect(providerID: string, modelID: string) {

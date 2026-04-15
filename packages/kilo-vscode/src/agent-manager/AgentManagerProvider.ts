@@ -789,6 +789,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
+    // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.run.remove(worktreeId)
@@ -1251,6 +1252,18 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
+  /** Sync the poller's skip set with currently collapsed sections. */
+  private syncPollerSkips(): void {
+    const state = this.state
+    if (!state) return
+    const skipped = new Set<string>()
+    for (const sec of state.getSections()) {
+      if (!sec.collapsed) continue
+      for (const id of state.getWorktreesInSection(sec.id)) skipped.add(id)
+    }
+    this.statsPoller.syncSkips(skipped)
+  }
+
   private pushState(): void {
     const state = this.state
     if (!state) return
@@ -1272,6 +1285,9 @@ export class AgentManagerProvider implements Disposable {
       ...run,
     })
 
+    // Sync skip set before enabling the poller so the first poll cycle
+    // already excludes worktrees in collapsed sections.
+    this.syncPollerSkips()
     this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
     this.prBridge.poller.setEnabled(worktrees.length > 0)
   }

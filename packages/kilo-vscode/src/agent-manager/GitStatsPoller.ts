@@ -1,6 +1,6 @@
 import * as fs from "fs"
 import * as path from "path"
-import type { KiloClient, FileDiff } from "@kilocode/sdk/v2/client"
+import type { KiloClient, SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
@@ -84,12 +84,14 @@ export class GitStatsPoller {
     }
   }
 
-  skipWorktree(id: string): void {
-    this.skipWorktreeIds.add(id)
+  /** Replace the entire skip set with the given IDs. */
+  syncSkips(ids: Set<string>): void {
+    this.skipWorktreeIds = ids
   }
 
-  unskipWorktree(id: string): void {
-    this.skipWorktreeIds.delete(id)
+  /** Pre-emptively exclude a single worktree (e.g. before deletion). */
+  skipWorktree(id: string): void {
+    this.skipWorktreeIds.add(id)
   }
 
   setEnabled(enabled: boolean): void {
@@ -185,8 +187,8 @@ export class GitStatsPoller {
             const base = remoteRef(wt)
             const [{ data: diffs }, ab] = await Promise.all([diff(wt.path, base), this.git.aheadBehind(wt.path, base)])
             const files = diffs.length
-            const additions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.additions, 0)
-            const deletions = diffs.reduce((sum: number, diff: FileDiff) => sum + diff.deletions, 0)
+            const additions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.additions, 0)
+            const deletions = diffs.reduce((sum: number, diff: SnapshotFileDiff) => sum + diff.deletions, 0)
             return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
@@ -288,8 +290,8 @@ export class GitStatsPoller {
             this.git.aheadBehind(root, base),
           ])
           files = diffs.length
-          additions = diffs.reduce((sum: number, d: FileDiff) => sum + d.additions, 0)
-          deletions = diffs.reduce((sum: number, d: FileDiff) => sum + d.deletions, 0)
+          additions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.additions, 0)
+          deletions = diffs.reduce((sum: number, d: SnapshotFileDiff) => sum + d.deletions, 0)
           ahead = ab.ahead
           behind = ab.behind
         } else {

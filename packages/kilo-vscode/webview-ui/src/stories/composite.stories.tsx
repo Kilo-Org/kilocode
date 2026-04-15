@@ -11,10 +11,12 @@ import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
+import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
 import { ChatView } from "../components/chat/ChatView"
 import { Part } from "@kilocode/kilo-ui/message-part"
 import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
+import { ServerContext } from "../context/server"
 import type { PermissionRequest, QuestionRequest } from "../types/messages"
 
 // Register VS Code tool overrides (bash expanded by default, etc.)
@@ -973,6 +975,75 @@ export const McpToolExpanded: Story = {
         <div data-component="tool-part-wrapper" data-part-type="tool">
           <Part part={mcpCompleted} message={baseAssistantMessage as any} defaultOpen />
         </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 19. Diff summary — "Modified N files" collapsed header
+// ---------------------------------------------------------------------------
+
+const USER_MSG_ID = "user-msg-diff-001"
+
+const mockDiffs = [
+  { file: "src/components/App.tsx", before: "", after: "", additions: 12, deletions: 3, status: "modified" as const },
+  { file: "src/utils/helpers.ts", before: "", after: "", additions: 5, deletions: 8, status: "modified" as const },
+  { file: "src/styles/main.css", before: "", after: "", additions: 20, deletions: 0, status: "added" as const },
+]
+
+export const DiffSummaryCollapsed: Story = {
+  name: "Diff Summary — Modified N files (collapsed)",
+  render: () => {
+    const data = {
+      ...defaultMockData,
+      message: {
+        [SESSION_ID]: [
+          {
+            id: USER_MSG_ID,
+            sessionID: SESSION_ID,
+            role: "user",
+            time: { created: now - 10000 },
+            summary: { diffs: mockDiffs },
+          },
+          { ...baseAssistantMessage, parentID: USER_MSG_ID },
+        ],
+      },
+      part: {
+        [USER_MSG_ID]: [
+          { id: "part-user-text", sessionID: SESSION_ID, messageID: USER_MSG_ID, type: "text", text: "Fix the bug" },
+        ],
+        [ASST_MSG_ID]: [textPart],
+      },
+    }
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => data.message[SESSION_ID],
+    }
+    const server = {
+      connectionState: () => "connected" as const,
+      serverInfo: () => undefined,
+      extensionVersion: () => "1.0.0",
+      errorMessage: () => undefined,
+      errorDetails: () => undefined,
+      isConnected: () => true,
+      profileData: () => null,
+      deviceAuth: () => ({ status: "idle" as const }),
+      startLogin: () => {},
+      vscodeLanguage: () => "en",
+      languageOverride: () => undefined,
+      workspaceDirectory: () => "/project",
+      gitInstalled: () => true,
+    }
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID} status="idle" noPadding>
+        <ServerContext.Provider value={server as any}>
+          <SessionContext.Provider value={session as any}>
+            <div style={{ width: "380px", padding: "12px" }}>
+              <VscodeSessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} />
+            </div>
+          </SessionContext.Provider>
+        </ServerContext.Provider>
       </StoryProviders>
     )
   },

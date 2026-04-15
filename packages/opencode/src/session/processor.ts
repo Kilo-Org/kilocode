@@ -1,4 +1,4 @@
-import { Cause, Effect, Layer, ServiceMap } from "effect"
+import { Cause, Deferred, Effect, Layer, ServiceMap } from "effect"
 import * as Stream from "effect/Stream"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
@@ -19,6 +19,8 @@ import { SessionSummary } from "./summary"
 import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { errorMessage } from "@/util/error"
+import { isRecord } from "@/util/record"
 
 export namespace SessionProcessor {
   const DOOM_LOOP_THRESHOLD = 3
@@ -30,8 +32,19 @@ export namespace SessionProcessor {
 
   export interface Handle {
     readonly message: MessageV2.Assistant
-    readonly partFromToolCall: (toolCallID: string) => MessageV2.ToolPart | undefined
-    readonly abort: () => Effect.Effect<void>
+    readonly updateToolCall: (
+      toolCallID: string,
+      update: (part: MessageV2.ToolPart) => MessageV2.ToolPart,
+    ) => Effect.Effect<MessageV2.ToolPart | undefined>
+    readonly completeToolCall: (
+      toolCallID: string,
+      output: {
+        title: string
+        metadata: Record<string, any>
+        output: string
+        attachments?: MessageV2.FilePart[]
+      },
+    ) => Effect.Effect<void>
     readonly process: (streamInput: LLM.StreamInput) => Effect.Effect<Result>
   }
 
@@ -45,8 +58,15 @@ export namespace SessionProcessor {
     readonly create: (input: Input) => Effect.Effect<Handle>
   }
 
+  type ToolCall = {
+    partID: MessageV2.ToolPart["id"]
+    messageID: MessageV2.ToolPart["messageID"]
+    sessionID: MessageV2.ToolPart["sessionID"]
+    done: Deferred.Deferred<void>
+  }
+
   interface ProcessorContext extends Input {
-    toolcalls: Record<string, MessageV2.ToolPart>
+    toolcalls: Record<string, ToolCall>
     shouldBreak: boolean
     snapshot: string | undefined
     blocked: boolean
@@ -112,6 +132,88 @@ export namespace SessionProcessor {
             aborted,
           })
 
+        const settleToolCall = Effect.fn("SessionProcessor.settleToolCall")(function* (toolCallID: string) {
+          const done = ctx.toolcalls[toolCallID]?.done
+          delete ctx.toolcalls[toolCallID]
+          if (done) yield* Deferred.succeed(done, undefined).pipe(Effect.ignore)
+        })
+
+        const readToolCall = Effect.fn("SessionProcessor.readToolCall")(function* (toolCallID: string) {
+          const call = ctx.toolcalls[toolCallID]
+          if (!call) return
+          const part = yield* session.getPart({
+            partID: call.partID,
+            messageID: call.messageID,
+            sessionID: call.sessionID,
+          })
+          if (!part || part.type !== "tool") {
+            delete ctx.toolcalls[toolCallID]
+            return
+          }
+          return { call, part }
+        })
+
+        const updateToolCall = Effect.fn("SessionProcessor.updateToolCall")(function* (
+          toolCallID: string,
+          update: (part: MessageV2.ToolPart) => MessageV2.ToolPart,
+        ) {
+          const match = yield* readToolCall(toolCallID)
+          if (!match) return
+          const part = yield* session.updatePart(update(match.part))
+          ctx.toolcalls[toolCallID] = {
+            ...match.call,
+            partID: part.id,
+            messageID: part.messageID,
+            sessionID: part.sessionID,
+          }
+          return part
+        })
+
+        const completeToolCall = Effect.fn("SessionProcessor.completeToolCall")(function* (
+          toolCallID: string,
+          output: {
+            title: string
+            metadata: Record<string, any>
+            output: string
+            attachments?: MessageV2.FilePart[]
+          },
+        ) {
+          const match = yield* readToolCall(toolCallID)
+          if (!match || match.part.state.status !== "running") return
+          yield* session.updatePart({
+            ...match.part,
+            state: {
+              status: "completed",
+              input: match.part.state.input,
+              output: output.output,
+              metadata: output.metadata,
+              title: output.title,
+              time: { start: match.part.state.time.start, end: Date.now() },
+              attachments: output.attachments,
+            },
+          })
+          yield* settleToolCall(toolCallID)
+        })
+
+        const failToolCall = Effect.fn("SessionProcessor.failToolCall")(function* (toolCallID: string, error: unknown) {
+          const match = yield* readToolCall(toolCallID)
+          if (!match || match.part.state.status !== "running") return false
+          yield* session.updatePart({
+            ...match.part,
+            state: {
+              status: "error",
+              input: match.part.state.input,
+              error: errorMessage(error),
+              time: { start: match.part.state.time.start, end: Date.now() },
+            },
+          })
+          if (error instanceof Permission.RejectedError || error instanceof Question.RejectedError) {
+            ctx.blocked = ctx.shouldBreak
+          }
+          yield* settleToolCall(toolCallID)
+          return true
+        })
+
         const handleEvent = Effect.fn("SessionProcessor.handleEvent")(function* (value: StreamEvent) {
           switch (value.type) {
             case "start":
@@ -158,15 +260,22 @@ export namespace SessionProcessor {
               if (ctx.assistantMessage.summary) {
                 throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
               }
-              ctx.toolcalls[value.id] = yield* session.updatePart({
-                id: ctx.toolcalls[value.id]?.id ?? PartID.ascending(),
+              const part = yield* session.updatePart({
+                id: ctx.toolcalls[value.id]?.partID ?? PartID.ascending(),
                 messageID: ctx.assistantMessage.id,
                 sessionID: ctx.assistantMessage.sessionID,
                 type: "tool",
                 tool: value.toolName,
                 callID: value.id,
                 state: { status: "pending", input: {}, raw: "" },
+                metadata: value.providerExecuted ? { providerExecuted: true } : undefined,
               } satisfies MessageV2.ToolPart)
+              ctx.toolcalls[value.id] = {
+                done: yield* Deferred.make<void>(),
+                partID: part.id,
+                messageID: part.messageID,
+                sessionID: part.sessionID,
+              }
               return
 
             case "tool-input-delta":
@@ -180,12 +289,12 @@ export namespace SessionProcessor {
                 throw new Error(`Tool call not allowed while generating summary: ${value.toolName}`)
               }
               // kilocode_change start — create tool part if tool-input-start was never emitted
-              if (!ctx.toolcalls[value.toolCallId] && !value.providerExecuted) {
+              if (!ctx.toolcalls[value.toolCallId]) {
                 log.warn("tool-call without prior tool-input-start", {
                   toolCallId: value.toolCallId,
                   toolName: value.toolName,
                 })
-                ctx.toolcalls[value.toolCallId] = (yield* session.updatePart({
+                const part = yield* session.updatePart({
                   id: PartID.ascending(),
                   messageID: ctx.assistantMessage.id,
                   sessionID: ctx.assistantMessage.sessionID,
@@ -193,17 +302,28 @@ export namespace SessionProcessor {
                   tool: value.toolName,
                   callID: value.toolCallId,
                   state: { status: "pending", input: {}, raw: "" },
-                })) as MessageV2.ToolPart
+                } satisfies MessageV2.ToolPart)
+                ctx.toolcalls[value.toolCallId] = {
+                  done: yield* Deferred.make<void>(),
+                  partID: part.id,
+                  messageID: part.messageID,
+                  sessionID: part.sessionID,
+                }
               }
               // kilocode_change end
-              const match = ctx.toolcalls[value.toolCallId]
-              if (!match) return
-              ctx.toolcalls[value.toolCallId] = yield* session.updatePart({
+              yield* updateToolCall(value.toolCallId, (match) => ({
                 ...match,
                 tool: value.toolName,
-                state: { status: "running", input: value.input, time: { start: Date.now() } },
-                metadata: value.providerMetadata,
-              } satisfies MessageV2.ToolPart)
+                state: {
+                  ...match.state,
+                  status: "running",
+                  input: value.input,
+                  time: { start: Date.now() },
+                },
+                metadata: match.metadata?.providerExecuted
+                  ? { ...value.providerMetadata, providerExecuted: true }
+                  : value.providerMetadata,
+              }))
 
               const parts = MessageV2.parts(ctx.assistantMessage.id)
               const recentParts = parts.slice(-DOOM_LOOP_THRESHOLD)
@@ -234,40 +354,12 @@ export namespace SessionProcessor {
             }
 
             case "tool-result": {
-              const match = ctx.toolcalls[value.toolCallId]
-              if (!match || match.state.status !== "running") return
-              yield* session.updatePart({
-                ...match,
-                state: {
-                  status: "completed",
-                  input: value.input ?? match.state.input,
-                  output: value.output.output,
-                  metadata: value.output.metadata,
-                  title: value.output.title,
-                  time: { start: match.state.time.start, end: Date.now() },
-                  attachments: value.output.attachments,
-                },
-              })
-              delete ctx.toolcalls[value.toolCallId]
+              yield* completeToolCall(value.toolCallId, value.output)
               return
             }
 
             case "tool-error": {
-              const match = ctx.toolcalls[value.toolCallId]
-              if (!match || match.state.status !== "running") return
-              yield* session.updatePart({
-                ...match,
-                state: {
-                  status: "error",
-                  input: value.input ?? match.state.input,
-                  error: value.error instanceof Error ? value.error.message : String(value.error),
-                  time: { start: match.state.time.start, end: Date.now() },
-                },
-              })
-              if (value.error instanceof Permission.RejectedError || value.error instanceof Question.RejectedError) {
-                ctx.blocked = ctx.shouldBreak
-              }
-              delete ctx.toolcalls[value.toolCallId]
+              yield* failToolCall(value.toolCallId, value.error)
               return
             }
 
@@ -380,7 +472,10 @@ export namespace SessionProcessor {
                 },
                 { text: ctx.currentText.text },
               )).text
-              ctx.currentText.time = { start: Date.now(), end: Date.now() }
+              {
+                const end = Date.now()
+                ctx.currentText.time = { start: ctx.currentText.time?.start ?? end, end }
+              }
               if (value.providerMetadata) ctx.currentText.metadata = value.providerMetadata
               yield* session.updatePart(ctx.currentText)
               ctx.currentText = undefined
@@ -427,20 +522,31 @@ export namespace SessionProcessor {
           }
           ctx.reasoningMap = {}
 
-          const parts = MessageV2.parts(ctx.assistantMessage.id)
-          for (const part of parts) {
-            if (part.type !== "tool" || part.state.status === "completed" || part.state.status === "error") continue
+          yield* Effect.forEach(
+            Object.values(ctx.toolcalls),
+            (call) => Deferred.await(call.done).pipe(Effect.timeout("250 millis"), Effect.ignore),
+            { concurrency: "unbounded" },
+          )
+
+          for (const toolCallID of Object.keys(ctx.toolcalls)) {
+            const match = yield* readToolCall(toolCallID)
+            if (!match) continue
+            const part = match.part
+            const end = Date.now()
+            const metadata = "metadata" in part.state && isRecord(part.state.metadata) ? part.state.metadata : {}
             yield* session.updatePart({
               ...part,
               state: {
                 ...part.state,
                 status: "error",
                 error: "Tool execution aborted",
-                time: { start: Date.now(), end: Date.now() },
+                metadata: { ...metadata, interrupted: true },
+                time: { start: "time" in part.state ? part.state.time.start : end, end },
               },
             })
           }
-          KiloSessionProcessor.guardEmptyToolCalls(ctx.assistantMessage, parts) // kilocode_change
+          ctx.toolcalls = {}
+          KiloSessionProcessor.guardEmptyToolCalls(ctx.assistantMessage, MessageV2.parts(ctx.assistantMessage.id)) // kilocode_change
           ctx.assistantMessage.time.completed = Date.now()
           yield* session.updateMessage(ctx.assistantMessage)
         })
@@ -461,19 +567,6 @@ export namespace SessionProcessor {
           yield* status.set(ctx.sessionID, { type: "idle" })
         })
 
-        const abort = Effect.fn("SessionProcessor.abort")(() =>
-          Effect.gen(function* () {
-            if (!ctx.assistantMessage.error) {
-              yield* halt(new DOMException("Aborted", "AbortError"))
-            }
-            if (!ctx.assistantMessage.time.completed) {
-              yield* cleanup()
-              return
-            }
-            yield* session.updateMessage(ctx.assistantMessage)
-          }),
-        )
-
         const process = Effect.fn("SessionProcessor.process")(function* (streamInput: LLM.StreamInput) {
           log.info("process")
           ctx.needsCompaction = false
@@ -492,11 +585,14 @@ export namespace SessionProcessor {
               )
             }).pipe(
               Effect.onInterrupt(() =>
-                Effect.sync(() => {
+                Effect.gen(function* () {
                   aborted = true
-                  ac.abort()
+                  ac.abort() // kilocode_change — also abort offline handler
+                  if (!ctx.assistantMessage.error) {
+                    yield* halt(new DOMException("Aborted", "AbortError"))
+                  }
                 }),
-              ), // kilocode_change — also abort offline handler
+              ),
               Effect.catchCauseIf(
                 (cause) => !Cause.hasInterruptsOnly(cause),
                 (cause) => Effect.fail(Cause.squash(cause)),
@@ -520,23 +616,18 @@ export namespace SessionProcessor {
               Effect.ensuring(cleanup()),
             )
 
-            if (aborted && !ctx.assistantMessage.error) {
-              yield* abort()
-            }
             if (ctx.needsCompaction) return "compact"
-            if (ctx.blocked || ctx.assistantMessage.error || aborted) return "stop"
+            if (ctx.blocked || ctx.assistantMessage.error) return "stop"
             return "continue"
-          }).pipe(Effect.onInterrupt(() => abort().pipe(Effect.asVoid)))
+          })
         })
 
         return {
           get message() {
             return ctx.assistantMessage
           },
-          partFromToolCall(toolCallID: string) {
-            return ctx.toolcalls[toolCallID]
-          },
-          abort,
+          updateToolCall,
+          completeToolCall,
           process,
         } satisfies Handle
       })

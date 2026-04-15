@@ -85,11 +85,13 @@ export namespace Todo {
   export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
   const { runPromise } = makeRuntime(Service, defaultLayer)
 
-  export async function update(input: { sessionID: SessionID; todos: Info[] }) {
-    return runPromise((svc) => svc.update(input))
-  }
-
   export async function get(sessionID: SessionID) {
     return runPromise((svc) => svc.get(sessionID))
   }
+
+  // kilocode_change start
+  export async function update(input: { sessionID: SessionID; todos: Info[] }) {
+    return runPromise((svc) => svc.update(input))
+  }
+  // kilocode_change end
 }

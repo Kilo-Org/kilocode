@@ -936,6 +936,8 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code er en AI-kodningsassistent. Bed den om at bygge funktioner, rette fejl eller forklare din kodebase.",
   "session.messages.scrollToBottom": "Rul til bunden",
+  "session.messages.initializing": "Initialiserer...",
+  "session.messages.taskStarting": "Starter...",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver igen…",
   "session.status.retrying": "Prøver igen (forsøg {{ attempt }})… {{ message }}",

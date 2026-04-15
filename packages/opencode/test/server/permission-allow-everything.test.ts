@@ -14,7 +14,7 @@ describe("permission.allowEverything endpoint", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const app = Server.Default()
+        const app = Server.Default().app
         const session = await Session.create({
           permission: [{ permission: "*", pattern: "*", action: "allow" }],
         })

@@ -169,6 +169,7 @@ export interface CloudSessionInfo {
 // Permission request
 export interface PermissionFileDiff {
   file: string
+  patch?: string
   before?: string
   after?: string
   additions: number

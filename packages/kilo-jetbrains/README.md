@@ -54,15 +54,17 @@ The built plugin archive is at `build/distributions/kilo.jetbrains-<version>.zip
 
 ## Run the plugin
 
-After building, use the `runIde` Gradle task (available in the Gradle tool window or via the "Run JetBrains Plugin" run configuration) to launch a sandboxed IntelliJ instance with the plugin installed.
+Use the `runIde` Gradle task (available in the Gradle tool window or via the "Run JetBrains Plugin" run configuration) to launch a sandboxed IntelliJ instance with the plugin installed.
 
-Note: `runIde` does not build CLI binaries -- run `bun run build` at least once before using it. Subsequent Kotlin/Gradle changes can be iterated with `runIde` directly.
+On a fresh worktree, `runIde` now checks `backend/build/generated/cli/cli/` first. If the local-platform CLI binary is missing, it runs the standard single-binary generation flow and copies the result into the backend resources automatically.
+
+That bootstrap is local-development only. Production packaging still requires running `bun run build:production` so all platform binaries are present.
 
 ---
 
 ## Run Gradle directly
 
-You can run `./gradlew buildPlugin` directly if CLI binaries are already in `backend/build/generated/cli/`. Gradle will fail with a clear error if they are missing.
+You can run `./gradlew buildPlugin` directly for local development. Gradle will auto-generate the current-platform CLI binary if `backend/build/generated/cli/` is missing.
 
 For production verification:
 

@@ -935,6 +935,8 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code는 AI 코딩 어시스턴트입니다. 기능 구축, 버그 수정 또는 코드베이스 설명을 요청하세요.",
   "session.messages.scrollToBottom": "하단으로 스크롤",
+  "session.messages.initializing": "초기화 중...",
+  "session.messages.taskStarting": "시작 중...",
   "session.status.writingResponse": "응답 작성 중...",
   "session.status.retry": "재시도 중…",
   "session.status.retrying": "재시도 중 ({{ attempt }}번째 시도)… {{ message }}",

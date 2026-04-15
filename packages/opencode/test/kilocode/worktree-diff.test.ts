@@ -1,6 +1,7 @@
 import { test, expect, describe } from "bun:test"
 import { $ } from "bun"
 import { tmpdir } from "../fixture/fixture"
+import { WorktreeDiff } from "../../src/kilocode/review/worktree-diff"
 import path from "path"
 
 /**
@@ -143,6 +144,19 @@ describe("worktree diff git commands", () => {
     const allFiles = [...trackedFiles, ...untrackedFiles]
     expect(allFiles).toContain("existing.txt")
     expect(allFiles).toContain("new-file.py")
+  })
+
+  test("worktree detail does not include unused patch content", async () => {
+    await using tmp = await setupRepo()
+    const dir = tmp.path
+
+    await Bun.write(path.join(dir, "existing.txt"), "hello\nmodified\n")
+
+    const detail = await WorktreeDiff.detail({ dir, base: "HEAD", file: "existing.txt" })
+
+    expect(detail?.patch).toBe("")
+    expect(detail?.before).toBe("hello\n")
+    expect(detail?.after).toBe("hello\nmodified\n")
   })
 
   test("worktree scenario: branch with no new commits, only untracked files", async () => {

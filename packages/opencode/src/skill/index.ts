@@ -148,6 +148,16 @@ export namespace Skill {
     directory: string,
     worktree: string,
   ) {
+    // kilocode_change start - seed built-in skills before discovery so user skills can override
+    for (const skill of BUILTIN_SKILLS) {
+      state.skills[skill.name] = {
+        name: skill.name,
+        description: skill.description,
+        location: BUILTIN_LOCATION,
+        content: skill.content,
+      }
+    }
+    // kilocode_change end
     if (!Flag.KILO_DISABLE_EXTERNAL_SKILLS) {
       for (const dir of EXTERNAL_DIRS) {
         const root = path.join(Global.Path.home, dir)
@@ -244,22 +254,28 @@ export namespace Skill {
 
   export function fmt(list: Info[], opts: { verbose: boolean }) {
     if (list.length === 0) return "No skills are currently available."
-
     if (opts.verbose) {
       return [
         "<available_skills>",
-        ...list.flatMap((skill) => [
-          "  <skill>",
-          `    <name>${skill.name}</name>`,
-          `    <description>${skill.description}</description>`,
-          `    <location>${pathToFileURL(skill.location).href}</location>`,
-          "  </skill>",
-        ]),
+        ...list
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .flatMap((skill) => [
+            "  <skill>",
+            `    <name>${skill.name}</name>`,
+            `    <description>${skill.description}</description>`,
+            `    <location>${pathToFileURL(skill.location).href}</location>`,
+            "  </skill>",
+          ]),
         "</available_skills>",
       ].join("\n")
     }
 
-    return ["## Available Skills", ...list.map((skill) => `- **${skill.name}**: ${skill.description}`)].join("\n")
+    return [
+      "## Available Skills",
+      ...list
+        .toSorted((a, b) => a.name.localeCompare(b.name))
+        .map((skill) => `- **${skill.name}**: ${skill.description}`),
+    ].join("\n")
   }
 
   const { runPromise } = makeRuntime(Service, defaultLayer)

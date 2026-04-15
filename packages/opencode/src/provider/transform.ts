@@ -282,55 +282,9 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) {
-        continue
-      }
-      const encryptedDataSet = new Set<string>()
-      const textSet = new Set<string>()
-      for (const part of msg.content) {
-        if (!("providerOptions" in part)) continue // kilocode_change - ToolApprovalRequest lacks providerOptions
-        const openrouterProviderOptions = part.providerOptions?.openrouter as
-          | {
-              reasoning_details?: { data?: string; text?: string; signature?: string }[]
-            }
-          | undefined
-        if (!openrouterProviderOptions || !openrouterProviderOptions.reasoning_details) {
-          continue
-        }
-        openrouterProviderOptions.reasoning_details = openrouterProviderOptions.reasoning_details.filter((rd) => {
-          if (rd.data) {
-            if (!encryptedDataSet.has(rd.data)) {
-              encryptedDataSet.add(rd.data)
-              return true
-            }
-            return false
-          }
-          if (rd.text) {
-            if ((model.family === "claude" || model.id.includes("claude")) && !rd.signature) return false
-            if (!textSet.has(rd.text)) {
-              textSet.add(rd.text)
-              return true
-            }
-            return false
-          }
-          return true
-        })
-      }
-    }
-  }
-
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
-
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
-    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@openrouter/ai-sdk-provider") {
-      fixDuplicateReasoning(msgs, model)
-    }
 
     if (
       (model.providerID === "anthropic" ||
@@ -436,7 +390,9 @@ export namespace ProviderTransform {
       id.includes("mistral") ||
       // id.includes("kimi") || // kilocode_change
       // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
-      id.includes("k2p5")
+      id.includes("k2p5") ||
+      id.includes("qwen") ||
+      id.includes("big-pickle")
     )
       return {}
 
@@ -542,9 +498,7 @@ export namespace ProviderTransform {
           return {}
         }
         if (model.id.includes("claude")) {
-          return {
-            thinking: { thinking_budget: 4000 },
-          }
+          return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
         }
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))

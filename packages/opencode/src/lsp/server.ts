@@ -111,7 +111,17 @@ export namespace LSPServer {
       if (!tsserver) return
       const bin = await Npm.which("typescript-language-server")
       if (!bin) return
-      const proc = spawn(bin, ["--stdio"], {
+
+      const args = ["--stdio", "--tsserver-log-verbosity", "off", "--tsserver-path", tsserver]
+
+      if (
+        !(await pathExists(path.join(root, "tsconfig.json"))) &&
+        !(await pathExists(path.join(root, "jsconfig.json")))
+      ) {
+        args.push("--ignore-node-modules")
+      }
+
+      const proc = spawn(bin, args, {
         cwd: root,
         env: {
           ...process.env,
@@ -859,7 +869,7 @@ export namespace LSPServer {
 
   export const Clangd: Info = {
     id: "clangd",
-    root: NearestRoot(["compile_commands.json", "compile_flags.txt", ".clangd", "CMakeLists.txt", "Makefile"]),
+    root: NearestRoot(["compile_commands.json", "compile_flags.txt", ".clangd"]),
     extensions: [".c", ".cpp", ".cc", ".cxx", ".c++", ".h", ".hpp", ".hh", ".hxx", ".h++"],
     async spawn(root) {
       const args = ["--background-index", "--clang-tidy"]

@@ -484,8 +484,6 @@ export type TuiPluginApi = {
   state: TuiState
   theme: TuiTheme
   client: KiloClient
-  scopedClient: (workspaceID?: string) => KiloClient
-  workspace: TuiWorkspace
   event: TuiEventBus
   renderer: CliRenderer
   slots: TuiSlots

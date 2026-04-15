@@ -86,5 +86,6 @@ export function createKiloClient(config?: Config & { directory?: string; experim
       workspace: config?.experimental_workspaceID,
     }),
   )
-  return new KiloClient({ client })
+  const result = new KiloClient({ client })
+  return result
 }

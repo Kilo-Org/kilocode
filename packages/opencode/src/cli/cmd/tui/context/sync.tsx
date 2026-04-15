@@ -294,11 +294,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
 
         case "session.diff":
-          setStore(
-            "session_diff",
-            event.properties.sessionID,
-            event.properties.diff.map(({ before: _, after: __, ...rest }) => rest),
-          )
+          setStore("session_diff", event.properties.sessionID, event.properties.diff)
           break
 
         // kilocode_change start
@@ -635,7 +631,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
               }
-              draft.session_diff[sessionID] = (diff.data ?? []).map(({ before: _, after: __, ...rest }) => rest)
+              draft.session_diff[sessionID] = diff.data ?? []
             }),
           )
           fullSyncedSessions.add(sessionID)

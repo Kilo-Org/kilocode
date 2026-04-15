@@ -180,7 +180,7 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
-  it.effect("preserves tool-calls finish when tool parts exist", () =>
+  it.live("preserves tool-calls finish when tool parts exist", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
