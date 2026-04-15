@@ -128,7 +128,23 @@ function isLockFile(filepath: string): boolean {
   return LOCK_FILES.has(name)
 }
 
+// kilocode_change start — test seams to avoid process-wide mock.module pollution
+type GitRunner = (args: string[], cwd: string) => string
+type ContextOverride = (path: string, selected?: string[]) => Promise<GitContext>
+
+let runner: GitRunner | undefined
+let override: ContextOverride | undefined
+
+export function setGitRunnerForTest(fn: GitRunner | undefined) {
+  runner = fn
+}
+export function setGitContextForTest(fn: ContextOverride | undefined) {
+  override = fn
+}
+// kilocode_change end
+
 function git(args: string[], cwd: string): string {
+  if (runner) return runner(args, cwd) // kilocode_change
   const result = Bun.spawnSync(["git", ...args], {
     cwd,
     stdout: "pipe",
@@ -178,6 +194,7 @@ function isUntracked(code: string): boolean {
 }
 
 export async function getGitContext(repoPath: string, selectedFiles?: string[]): Promise<GitContext> {
+  if (override) return override(repoPath, selectedFiles) // kilocode_change
   const branch = git(["branch", "--show-current"], repoPath) || "HEAD"
   const log = git(["log", "--oneline", "-5"], repoPath)
   const recentCommits = log ? log.split("\n") : []

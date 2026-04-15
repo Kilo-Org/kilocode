@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, beforeEach } from "bun:test"
+import { describe, expect, test, mock, beforeEach, afterEach } from "bun:test"
 import type { GitContext } from "../types"
 
 // Mock dependencies before importing the module under test.
@@ -16,10 +16,6 @@ let mockGitContext: GitContext = {
   recentCommits: ["abc1234 initial commit"],
   files: [{ status: "modified" as const, path: "src/index.ts", diff: "+console.log('hello')" }],
 }
-
-mock.module("../git-context", () => ({
-  getGitContext: async () => mockGitContext,
-}))
 
 let mockStreamText = "feat(src): add hello world logging"
 
@@ -70,8 +66,11 @@ mock.module("@/util/log", () => ({
 }))
 
 import { generateCommitMessage } from "../generate"
+import { setGitContextForTest } from "../git-context"
 
 describe("commit-message.generate", () => {
+  afterEach(() => setGitContextForTest(undefined))
+
   beforeEach(() => {
     mockGitContext = {
       branch: "main",
@@ -79,6 +78,7 @@ describe("commit-message.generate", () => {
       files: [{ status: "modified" as const, path: "src/index.ts", diff: "+console.log('hello')" }],
     }
     mockStreamText = "feat(src): add hello world logging"
+    setGitContextForTest(async () => mockGitContext)
   })
 
   describe("prompt construction", () => {
