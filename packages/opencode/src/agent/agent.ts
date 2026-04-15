@@ -15,8 +15,9 @@ import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
-import { Global } from "@/global"
-import path from "path"
+import { Global } from "@/global" // kilocode_change
+import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
+import path from "path" // kilocode_change
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
 import { Effect, ServiceMap, Layer } from "effect"
@@ -84,7 +85,14 @@ export namespace Agent {
         Effect.fn("Agent.state")(function* (ctx) {
           const cfg = yield* config.get()
           const skillDirs = yield* skill.dirs()
-          const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
+          // kilocode_change start - include global config dirs so agents can read them without prompting
+          const whitelistedDirs = [
+            Truncate.GLOB,
+            ...skillDirs.map((dir) => path.join(dir, "*")),
+            path.join(Global.Path.config, "*"),
+            ...KilocodePaths.globalDirs().map((dir) => path.join(dir, "*")),
+          ]
+          // kilocode_change end
 
           const baseDefaults = Permission.fromConfig({
             // kilocode_change: renamed from defaults

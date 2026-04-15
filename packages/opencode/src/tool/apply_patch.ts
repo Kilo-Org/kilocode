@@ -14,6 +14,7 @@ import { Filesystem } from "../util/filesystem"
 import DESCRIPTION from "./apply_patch.txt"
 import { File } from "../file"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import { Format } from "../format"
 
 const PatchParams = z.object({
@@ -271,6 +272,10 @@ export const ApplyPatchTool = Tool.define("apply_patch", {
     const changedPaths = fileChanges
       .filter((c) => c.type !== "delete")
       .map((c) => Filesystem.normalizePath(c.movePath ?? c.filePath))
+    for (const changed of fileChanges) {
+      if (changed.type === "delete") continue
+      output += await ConfigValidation.check(changed.movePath ?? changed.filePath)
+    }
     // kilocode_change end
 
     return {

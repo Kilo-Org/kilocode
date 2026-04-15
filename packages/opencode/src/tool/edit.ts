@@ -19,6 +19,7 @@ import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
@@ -180,6 +181,7 @@ export const EditTool = Tool.define("edit", {
         errors.length > MAX_DIAGNOSTICS_PER_FILE ? `\n... and ${errors.length - MAX_DIAGNOSTICS_PER_FILE} more` : ""
       output += `\n\nLSP errors detected in this file, please fix:\n<diagnostics file="${filePath}">\n${limited.map(LSP.Diagnostic.pretty).join("\n")}${suffix}\n</diagnostics>`
     }
+    output += await ConfigValidation.check(filePath) // kilocode_change
 
     return {
       metadata: {
