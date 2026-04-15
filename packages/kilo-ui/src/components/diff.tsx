@@ -234,6 +234,8 @@ export function Diff<T>(props: DiffProps<T>) {
       observer = undefined
       requestAnimationFrame(() => {
         if (token !== renderToken) return
+        // Clear the height pin now that Pierre has rendered new content.
+        container.style.minHeight = ""
         setSelectedLines(lastSelection)
         local.onRendered?.()
       })
@@ -273,6 +275,7 @@ export function Diff<T>(props: DiffProps<T>) {
 
     const root = getRoot()
     if (typeof MutationObserver === "undefined") {
+      container.style.minHeight = ""
       if (!root || !isReady(root)) return
       setSelectedLines(lastSelection)
       local.onRendered?.()
@@ -570,6 +573,13 @@ export function Diff<T>(props: DiffProps<T>) {
       if (!large()) return sampledChecksum(contents, contents.length)
       return sampledChecksum(contents)
     }
+
+    // Preserve container height during re-render to prevent scroll jumps.
+    // When Pierre tears down the DOM (innerHTML = ""), the container collapses
+    // to 0 height, causing layout shifts that reset the scroll position of
+    // any ancestor scroller. Pinning min-height prevents the collapse.
+    const height = container.offsetHeight
+    if (height > 0) container.style.minHeight = `${height}px`
 
     instance?.cleanUp()
     instance = virtualizer
