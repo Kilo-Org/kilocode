@@ -199,6 +199,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private slimEditMetadata = true
 
   private pendingFollowup: Followup | null = null
+  private followupListeners: Array<(session: Session, directory: string) => void> = []
   /** Worktree diff stats poller for the sidebar badge — reuses GitStatsPoller (local stats only) */
   private statsPoller: GitStatsPoller | null = null
   private statsGitOps: GitOps | null = null
@@ -478,6 +479,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   public refreshSessions(): void {
     void this.handleLoadSessions()
+  }
+
+  /** Register a listener invoked when a plan follow-up session is adopted. */
+  public onFollowupAdopted(cb: (session: Session, directory: string) => void): void {
+    this.followupListeners.push(cb)
   }
 
   /** Recover permission/question prompts after sessions and directories are tracked. */
@@ -3219,6 +3225,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     this.pendingFollowup = null
     this.trackDirectory(session.id, session.directory)
+    for (const cb of this.followupListeners) cb(session, session.directory)
     this.registerSession(session)
     void this.handleLoadMessages(session.id)
     return true
