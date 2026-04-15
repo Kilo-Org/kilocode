@@ -82,6 +82,7 @@ export const EventRoutes = () =>
             try {
               await stream.writeSSE({ data })
             } catch {
+              log.info("event write failed, cleaning up dead stream")
               stop()
               return
             }

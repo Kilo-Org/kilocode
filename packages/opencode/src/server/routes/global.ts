@@ -68,6 +68,7 @@ async function streamEvents(c: Context, subscribe: (q: AsyncQueue<string | null>
         try {
           await stream.writeSSE({ data })
         } catch {
+          log.info("global event write failed, cleaning up dead stream")
           stop()
           return
         }
