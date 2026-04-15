@@ -844,9 +844,10 @@ it.live(
   3_000,
 )
 
+// kilocode_change start - skip flaky test, tracked in #8990
 it.live.skip(
-  // kilocode_change - flaky on CI, tracked in #8990
   "prompt submitted during an active run is included in the next LLM input",
+  // kilocode_change end
   () =>
     provideTmpdirServer(
       Effect.fnUntraced(function* ({ llm }) {
