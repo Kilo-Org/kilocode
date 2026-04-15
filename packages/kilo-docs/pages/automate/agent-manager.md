@@ -178,25 +178,25 @@ The run button lets you start your project (dev server, build, tests, etc.) dire
 
 ### Setting up a run script
 
-Create a file at `.kilo/run-script` in your project root:
+Create a script file in `.kilo/` using the appropriate filename for your platform:
+
+| Platform      | Filename (checked in order)                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
+| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
+
+For example, on macOS / Linux create `.kilo/run-script`:
 
 ```sh
 #!/bin/sh
 npm run dev
 ```
 
-That's it. The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
+The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
 
 {% callout type="tip" %}
 If no run script exists yet, clicking the run button opens a template file for you to fill in.
 {% /callout %}
-
-### Supported script formats
-
-| Platform      | Filename (checked in order)                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
-| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
 
 ### Environment variables
 
