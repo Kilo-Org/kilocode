@@ -15,7 +15,7 @@ const CommitMessageTab: Component = () => {
   const toggle = (checked: boolean) => {
     setExpanded(checked)
     if (!checked) {
-      updateConfig({ commit_message: { prompt: undefined } })
+      updateConfig({ commit_message: { prompt: "" } })
     }
   }
 
@@ -46,7 +46,7 @@ const CommitMessageTab: Component = () => {
                 placeholder={language.t("settings.commitMessage.prompt.placeholder")}
                 multiline
                 onChange={(val) => {
-                  updateConfig({ commit_message: { prompt: val || undefined } })
+                  updateConfig({ commit_message: { prompt: val } })
                 }}
               />
             </div>

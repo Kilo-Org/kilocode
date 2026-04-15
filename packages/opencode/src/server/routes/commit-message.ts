@@ -41,8 +41,8 @@ export const CommitMessageRoutes = lazy(() =>
       // kilocode_change start — read custom prompt from config
       const config = await Config.get()
       const prompt = config.commit_message?.prompt || undefined
-      // kilocode_change end
       const result = await generateCommitMessage({ ...body, prompt })
+      // kilocode_change end
       return c.json({ message: result.message })
     },
   ),
