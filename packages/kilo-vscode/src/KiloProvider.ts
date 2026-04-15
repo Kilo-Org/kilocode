@@ -1519,6 +1519,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.trackedSessionIds.delete(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
+      this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
       }
