@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
 import { generateCommitMessage } from "../../commit-message"
+import { Config } from "../../config/config" // kilocode_change
 import { lazy } from "../../util/lazy"
 import { errors } from "../error"
 
@@ -37,7 +38,11 @@ export const CommitMessageRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const result = await generateCommitMessage(body)
+      // kilocode_change start — read custom prompt from config
+      const config = await Config.get()
+      const prompt = config.commit_message?.prompt || undefined
+      // kilocode_change end
+      const result = await generateCommitMessage({ ...body, prompt })
       return c.json({ message: result.message })
     },
   ),

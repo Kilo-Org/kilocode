@@ -40,14 +40,16 @@ const CommitMessageTab: Component = () => {
             <div data-slot="settings-row-label-subtitle" style={{ "margin-bottom": "8px" }}>
               {language.t("settings.commitMessage.prompt.description")}
             </div>
-            <TextField
-              value={config().commit_message?.prompt ?? ""}
-              placeholder={language.t("settings.commitMessage.prompt.placeholder")}
-              multiline
-              onChange={(val) => {
-                updateConfig({ commit_message: { prompt: val || undefined } })
-              }}
-            />
+            <div style={{ "max-height": "300px", overflow: "auto" }}>
+              <TextField
+                value={config().commit_message?.prompt ?? ""}
+                placeholder={language.t("settings.commitMessage.prompt.placeholder")}
+                multiline
+                onChange={(val) => {
+                  updateConfig({ commit_message: { prompt: val || undefined } })
+                }}
+              />
+            </div>
           </div>
         </Show>
       </Card>

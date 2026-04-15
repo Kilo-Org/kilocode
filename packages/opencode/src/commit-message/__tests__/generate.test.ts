@@ -56,16 +56,6 @@ mock.module("@/agent/agent", () => ({
   Agent: {},
 }))
 
-// kilocode_change start — mock Config.get() for custom commit message prompt
-let mockConfig: Record<string, unknown> = {}
-
-mock.module("@/config/config", () => ({
-  Config: {
-    get: async () => mockConfig,
-  },
-}))
-// kilocode_change end
-
 mock.module("@/util/log", () => ({
   ...realLog,
   Log: {
@@ -89,7 +79,6 @@ describe("commit-message.generate", () => {
       files: [{ status: "modified" as const, path: "src/index.ts", diff: "+console.log('hello')" }],
     }
     mockStreamText = "feat(src): add hello world logging"
-    mockConfig = {} // kilocode_change
   })
 
   describe("prompt construction", () => {
@@ -192,16 +181,14 @@ describe("commit-message.generate", () => {
   })
 
   // kilocode_change start
-  describe("custom prompt from config", () => {
-    test("uses default prompt when no custom prompt configured", async () => {
-      mockConfig = {}
+  describe("custom prompt", () => {
+    test("uses default prompt when no custom prompt provided", async () => {
       const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBeTruthy()
     })
 
-    test("uses custom prompt when configured", async () => {
-      mockConfig = { commit_message: { prompt: "Write a haiku commit message." } }
-      const result = await generateCommitMessage({ path: "/repo" })
+    test("uses custom prompt when provided", async () => {
+      const result = await generateCommitMessage({ path: "/repo", prompt: "Write a haiku commit message." })
       expect(result.message).toBeTruthy()
     })
   })
