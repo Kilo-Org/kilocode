@@ -997,12 +997,8 @@ const AgentManagerContent: Component = () => {
     if (fallback && !isPending(fallback.id)) {
       setActivePendingId(undefined)
       session.selectSession(fallback.id)
-    } else if (fallback && isPending(fallback.id)) {
-      setActivePendingId(fallback.id)
-      session.clearCurrentSession()
-      vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     } else {
-      setActivePendingId(undefined)
+      setActivePendingId(fallback && isPending(fallback.id) ? fallback.id : undefined)
       session.clearCurrentSession()
       vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     }
@@ -1879,9 +1875,7 @@ const AgentManagerContent: Component = () => {
     if (pending) {
       setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
       setActivePendingId(undefined)
-    } else {
-      setLocalSessionIDs((prev) => [...prev, sid])
-    }
+    } else setLocalSessionIDs((prev) => [...prev, sid])
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
@@ -1907,14 +1901,12 @@ const AgentManagerContent: Component = () => {
       const tabs = activeTabs()
       const idx = tabs.findIndex((s) => s.id === sessionId)
       const next = tabs[idx + 1] ?? tabs[idx - 1]
-      if (next) {
-        if (isPending(next.id)) {
-          setActivePendingId(next.id)
-          session.clearCurrentSession()
-        } else {
-          setActivePendingId(undefined)
-          session.selectSession(next.id)
-        }
+      if (next && isPending(next.id)) {
+        setActivePendingId(next.id)
+        session.clearCurrentSession()
+      } else if (next) {
+        setActivePendingId(undefined)
+        session.selectSession(next.id)
       } else {
         setActivePendingId(undefined)
         session.clearCurrentSession()
@@ -1922,9 +1914,7 @@ const AgentManagerContent: Component = () => {
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
-      if (!pending) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
-      }
+      if (!pending) vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
     } else {
       vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
@@ -2912,6 +2902,19 @@ const AgentManagerContent: Component = () => {
           <HistoryView
             onSelectSession={(id) => {
               setHistory(false)
+              if (localSessionIDs().includes(id)) {
+                session.selectSession(id)
+                setSelection(LOCAL)
+                return
+              }
+              if (worktreeSessionIds().has(id)) {
+                const ms = managedSessions().find((s) => s.id === id)
+                if (ms?.worktreeId) {
+                  selectWorktree(ms.worktreeId)
+                  session.selectSession(id)
+                  return
+                }
+              }
               openLocally(id)
             }}
             onBack={() => setHistory(false)}
