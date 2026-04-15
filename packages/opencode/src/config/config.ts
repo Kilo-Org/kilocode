@@ -1162,6 +1162,19 @@ export namespace Config {
           url: z.string().optional().describe("Enterprise URL"),
         })
         .optional(),
+      // kilocode_change start
+      commit_message: z
+        .object({
+          prompt: z
+            .string()
+            .optional()
+            .describe(
+              "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+            ),
+        })
+        .optional()
+        .describe("Configuration for AI-generated commit messages"),
+      // kilocode_change end
       compaction: z
         .object({
           auto: z.boolean().optional().describe("Enable automatic compaction when context is full (default: true)"),

@@ -2,6 +2,7 @@ import { Provider } from "@/provider/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
 import { Log } from "@/util/log"
+import { Config } from "@/config/config" // kilocode_change
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 
@@ -131,13 +132,18 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     (await Provider.getSmallModel(defaultModel.providerID)) ??
     (await Provider.getModel(defaultModel.providerID, defaultModel.modelID))
 
+  // kilocode_change start — support custom commit message prompt from config
+  const config = await Config.get()
+  const prompt = config.commit_message?.prompt || SYSTEM_PROMPT
+  // kilocode_change end
+
   const agent: Agent.Info = {
     name: "commit-message",
     mode: "primary",
     hidden: true,
     options: {},
     permission: [],
-    prompt: SYSTEM_PROMPT,
+    prompt,
     temperature: 0.3,
   }
 
