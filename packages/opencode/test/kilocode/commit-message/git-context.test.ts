@@ -180,7 +180,7 @@ mock.module("../git-context", () => {
   return { getGitContext }
 })
 
-import { getGitContext } from "../git-context"
+import { getGitContext } from "../../../src/kilocode/commit-message/git-context"
 
 describe("commit-message.git-context", () => {
   beforeEach(() => {

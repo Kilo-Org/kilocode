@@ -23,6 +23,21 @@ import { IgnoreMigrator } from "../ignore-migrator"
 export namespace KilocodeConfig {
   const log = Log.create({ service: "kilocode.config" })
 
+  // ── Config schema extensions ─────────────────────────────────────────
+
+  /** Schema for AI-generated commit message configuration. */
+  export const CommitMessageSchema = z
+    .object({
+      prompt: z
+        .string()
+        .optional()
+        .describe(
+          "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+        ),
+    })
+    .optional()
+    .describe("Configuration for AI-generated commit messages")
+
   // ── Config file constants ────────────────────────────────────────────
 
   /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */

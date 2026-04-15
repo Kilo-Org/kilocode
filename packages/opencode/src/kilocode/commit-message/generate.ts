@@ -137,7 +137,7 @@ export async function generateCommitMessage(request: CommitMessageRequest): Prom
     hidden: true,
     options: {},
     permission: [],
-    prompt: request.prompt || SYSTEM_PROMPT, // kilocode_change
+    prompt: request.prompt || SYSTEM_PROMPT,
     temperature: 0.3,
   }
 

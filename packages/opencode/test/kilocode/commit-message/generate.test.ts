@@ -17,7 +17,7 @@ let mockGitContext: GitContext = {
   files: [{ status: "modified" as const, path: "src/index.ts", diff: "+console.log('hello')" }],
 }
 
-mock.module("../git-context", () => ({
+mock.module("../../../src/kilocode/commit-message/git-context", () => ({
   getGitContext: async () => mockGitContext,
 }))
 
@@ -36,7 +36,6 @@ mock.module("@/provider/provider", () => ({
   },
 }))
 
-// kilocode_change start — upstream switched from stream.text to stream.textStream
 mock.module("@/session/llm", () => ({
   ...realLLM,
   LLM: {
@@ -49,7 +48,6 @@ mock.module("@/session/llm", () => ({
     }),
   },
 }))
-// kilocode_change end
 
 mock.module("@/agent/agent", () => ({
   ...realAgent,
@@ -69,7 +67,7 @@ mock.module("@/util/log", () => ({
   },
 }))
 
-import { generateCommitMessage } from "../generate"
+import { generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
 
 describe("commit-message.generate", () => {
   beforeEach(() => {
@@ -180,7 +178,6 @@ describe("commit-message.generate", () => {
     })
   })
 
-  // kilocode_change start
   describe("custom prompt", () => {
     test("uses default prompt when no custom prompt provided", async () => {
       const result = await generateCommitMessage({ path: "/repo" })
@@ -192,5 +189,4 @@ describe("commit-message.generate", () => {
       expect(result.message).toBeTruthy()
     })
   })
-  // kilocode_change end
 })
