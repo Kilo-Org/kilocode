@@ -1143,6 +1143,11 @@ button.am-section-toggle:hover .am-section-label {
   touch-action: none;
 }
 
+.am-tab-sortable > [data-component="tooltip-trigger"],
+.am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
+  height: 100%;
+}
+
 .am-tab-dragging {
   opacity: 0.25;
 }
