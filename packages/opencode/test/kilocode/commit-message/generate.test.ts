@@ -1,8 +1,5 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test"
-import { $ } from "bun"
-import * as fs from "fs/promises"
-import path from "path"
-import { tmpdir } from "../../fixture/fixture"
+import type { GitContext } from "@/kilocode/commit-message/types"
 
 // Mock dependencies before importing the module under test.
 // IMPORTANT: Bun's mock.module() is process-wide and permanent. To avoid
@@ -13,24 +10,32 @@ const realLog = await import("@/util/log")
 const realProvider = await import("@/provider/provider")
 const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
+const realGitContext = await import("@/kilocode/commit-message/git-context")
 
 let mockStreamText = "feat(src): add hello world logging"
 
-async function change(dir: string, files: Record<string, string> = { "src/index.ts": "console.log('hello')\n" }) {
-  for (const [file, text] of Object.entries(files)) {
-    const target = path.join(dir, file)
-    await fs.mkdir(path.dirname(target), { recursive: true })
-    await Bun.write(target, text)
-    await $`git add ${file}`.cwd(dir).quiet()
-  }
+const defaultGitContext: GitContext = {
+  branch: "main",
+  recentCommits: ["abc1234 initial commit"],
+  files: [
+    {
+      status: "modified",
+      path: "src/index.ts",
+      diff: "+console.log('hello')",
+    },
+  ],
 }
 
-async function generated(text = mockStreamText) {
-  mockStreamText = text
-  await using tmp = await tmpdir({ git: true })
-  await change(tmp.path)
-  return generateCommitMessage({ path: tmp.path })
-}
+let mockGitContext: GitContext = { ...defaultGitContext }
+let captured: { path: string; selected?: string[] } = { path: "" }
+
+mock.module("@/kilocode/commit-message/git-context", () => ({
+  ...realGitContext,
+  getGitContext: async (repoPath: string, selectedFiles?: string[]) => {
+    captured = { path: repoPath, selected: selectedFiles }
+    return mockGitContext
+  },
+}))
 
 mock.module("@/provider/provider", () => ({
   ...realProvider,
@@ -81,70 +86,80 @@ import { generateCommitMessage } from "../../../src/kilocode/commit-message/gene
 describe("commit-message.generate", () => {
   beforeEach(() => {
     mockStreamText = "feat(src): add hello world logging"
+    mockGitContext = { ...defaultGitContext }
+    captured = { path: "" }
   })
 
   describe("prompt construction", () => {
     test("passes path to getGitContext", async () => {
-      await using tmp = await tmpdir({ git: true })
-      await change(tmp.path)
-      const result = await generateCommitMessage({ path: tmp.path })
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBeTruthy()
+      expect(captured.path).toBe("/repo")
     })
 
     test("generates message from git context with multiple files", async () => {
       mockStreamText = "feat(api): add api module"
-      await using tmp = await tmpdir({ git: true })
-      await change(tmp.path, {
-        "src/api.ts": "export function api() {}\n",
-        "src/index.ts": "import { api } from './api'\n",
-      })
-
-      const result = await generateCommitMessage({ path: tmp.path })
+      mockGitContext = {
+        branch: "main",
+        recentCommits: ["abc1234 initial commit"],
+        files: [
+          { status: "added", path: "src/api.ts", diff: "+export function api() {}" },
+          { status: "modified", path: "src/index.ts", diff: "+import { api } from './api'" },
+        ],
+      }
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("feat(api): add api module")
     })
   })
 
   describe("response cleaning", () => {
     test("strips code block markers from response", async () => {
-      const result = await generated("```\nfeat: add feature\n```")
+      mockStreamText = "```\nfeat: add feature\n```"
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("feat: add feature")
     })
 
     test("strips code block markers with language tag", async () => {
-      const result = await generated("```text\nfix(auth): resolve token refresh\n```")
+      mockStreamText = "```text\nfix(auth): resolve token refresh\n```"
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("fix(auth): resolve token refresh")
     })
 
     test("strips surrounding double quotes", async () => {
-      const result = await generated('"feat: add new feature"')
+      mockStreamText = '"feat: add new feature"'
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("feat: add new feature")
     })
 
     test("strips surrounding single quotes", async () => {
-      const result = await generated("'fix: resolve bug'")
+      mockStreamText = "'fix: resolve bug'"
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("fix: resolve bug")
     })
 
     test("strips whitespace around the message", async () => {
-      const result = await generated("  \n  chore: update deps  \n  ")
+      mockStreamText = "  \n  chore: update deps  \n  "
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("chore: update deps")
     })
 
     test("strips code blocks AND quotes together", async () => {
-      const result = await generated('```\n"refactor: simplify logic"\n```')
+      mockStreamText = '```\n"refactor: simplify logic"\n```'
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("refactor: simplify logic")
     })
 
     test("returns clean message when no markers present", async () => {
-      const result = await generated("docs: update readme")
+      mockStreamText = "docs: update readme"
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBe("docs: update readme")
     })
   })
 
   describe("error on no changes", () => {
     test("throws when no git changes are found", async () => {
-      await using tmp = await tmpdir({ git: true })
-      await expect(generateCommitMessage({ path: tmp.path })).rejects.toThrow(
+      mockGitContext = { branch: "main", recentCommits: [], files: [] }
+      await expect(generateCommitMessage({ path: "/repo" })).rejects.toThrow(
         "No changes found to generate a commit message for",
       )
     })
@@ -152,29 +167,24 @@ describe("commit-message.generate", () => {
 
   describe("selectedFiles pass-through", () => {
     test("passes selectedFiles to getGitContext", async () => {
-      await using tmp = await tmpdir({ git: true })
-      await change(tmp.path, {
-        "src/a.ts": "export const a = 1\n",
-        "src/b.ts": "export const b = 1\n",
-      })
       const result = await generateCommitMessage({
-        path: tmp.path,
+        path: "/repo",
         selectedFiles: ["src/a.ts"],
       })
       expect(result.message).toBeTruthy()
+      expect(captured.path).toBe("/repo")
+      expect(captured.selected).toEqual(["src/a.ts"])
     })
   })
 
   describe("custom prompt", () => {
     test("uses default prompt when no custom prompt provided", async () => {
-      const result = await generated()
+      const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBeTruthy()
     })
 
     test("uses custom prompt when provided", async () => {
-      await using tmp = await tmpdir({ git: true })
-      await change(tmp.path)
-      const result = await generateCommitMessage({ path: tmp.path, prompt: "Write a haiku commit message." })
+      const result = await generateCommitMessage({ path: "/repo", prompt: "Write a haiku commit message." })
       expect(result.message).toBeTruthy()
     })
   })

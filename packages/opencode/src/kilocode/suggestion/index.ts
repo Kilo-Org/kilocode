@@ -174,6 +174,20 @@ export namespace Suggestion {
     }
   }
 
+  export async function dismissAll(sessionID: string): Promise<void> {
+    const s = await state()
+    for (const [id, entry] of Object.entries(s.pending)) {
+      if (entry.info.sessionID !== sessionID) continue
+      delete s.pending[id]
+      log.info("dismissed", { requestID: id })
+      Bus.publish(Event.Dismissed, {
+        sessionID: entry.info.sessionID,
+        requestID: entry.info.id,
+      })
+      entry.reject(new DismissedError())
+    }
+  }
+
   export async function list() {
     return state().then((state) => Object.values(state.pending).map((item) => item.info))
   }
