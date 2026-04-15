@@ -202,10 +202,4 @@ export namespace Command {
   export async function list() {
     return runPromise((svc) => svc.list())
   }
-
-  // kilocode_change start
-  export async function get(name: string) {
-    return runPromise((svc) => svc.get(name))
-  }
-  // kilocode_change end
 }

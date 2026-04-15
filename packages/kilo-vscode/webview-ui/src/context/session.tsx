@@ -22,7 +22,6 @@ import type {
   SessionStatusInfo,
   PermissionRequest,
   QuestionRequest,
-  SuggestionRequest,
   TodoItem,
   ModelSelection,
   ContextUsage,
@@ -114,14 +113,10 @@ interface SessionContextValue {
   // Pending question requests (unscoped — all tracked sessions)
   questions: Accessor<QuestionRequest[]>
   questionErrors: Accessor<Set<string>>
-  suggestions: Accessor<SuggestionRequest[]>
-  suggestionErrors: Accessor<Set<string>>
-  respondingSuggestions: Accessor<Set<string>>
 
   // Scoped permissions/questions — filtered to a session's family (self + subagents)
   scopedPermissions: (sessionID: string | undefined) => PermissionRequest[]
   scopedQuestions: (sessionID: string | undefined) => QuestionRequest[]
-  scopedSuggestions: (sessionID: string | undefined) => SuggestionRequest[]
 
   // Model selection (global, extension-lifetime)
   selected: Accessor<ModelSelection | null>
@@ -196,8 +191,6 @@ interface SessionContextValue {
   ) => void
   replyToQuestion: (requestID: string, answers: string[][]) => void
   rejectQuestion: (requestID: string) => void
-  acceptSuggestion: (requestID: string, index: number) => void
-  dismissSuggestion: (requestID: string) => void
   createSession: () => void
   clearCurrentSession: () => void
   loadSessions: () => void
@@ -257,9 +250,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
   // Tracks question IDs that failed so the UI can reset sending state
   const [questionErrors, setQuestionErrors] = createSignal<Set<string>>(new Set())
-  const [suggestions, setSuggestions] = createSignal<SuggestionRequest[]>([])
-  const [suggestionErrors, setSuggestionErrors] = createSignal<Set<string>>(new Set())
-  const [respondingSuggestions, setRespondingSuggestions] = createSignal<Set<string>>(new Set())
 
   // Tracks whether the user has explicitly set a model override per agent (to
   // prevent the default-sync effect from overwriting it).
@@ -653,9 +643,6 @@ export const SessionProvider: ParentComponent = (props) => {
   // Handle messages from extension
   onMount(() => {
     const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-      // Route suggestion messages (extracted to stay within complexity limit)
-      routeSuggestionMessage(message)
-
       switch (message.type) {
         case "sessionCreated":
           handleSessionCreated(message.session, message.draftID)
@@ -696,10 +683,7 @@ export const SessionProvider: ParentComponent = (props) => {
         case "clearPendingPrompts":
           setPermissions([])
           setQuestions([])
-          setSuggestions([])
           setRespondingPermissions(new Set<string>())
-          setSuggestionErrors(new Set<string>())
-          setRespondingSuggestions(new Set<string>())
           break
 
         case "sessionsLoaded":
@@ -1016,60 +1000,6 @@ export const SessionProvider: ParentComponent = (props) => {
     setQuestionErrors((prev) => new Set(prev).add(requestID))
   }
 
-  function handleSuggestionRequest(suggestion: SuggestionRequest) {
-    setSuggestions((prev) => {
-      const idx = prev.findIndex((item) => item.id === suggestion.id)
-      if (idx === -1) return [...prev, suggestion]
-      const next = prev.slice()
-      next[idx] = suggestion
-      return next
-    })
-  }
-
-  function handleSuggestionResolved(requestID: string) {
-    setSuggestions((prev) => prev.filter((item) => item.id !== requestID))
-    setRespondingSuggestions((prev) => {
-      if (!prev.has(requestID)) return prev
-      const next = new Set(prev)
-      next.delete(requestID)
-      return next
-    })
-    setSuggestionErrors((prev) => {
-      if (!prev.has(requestID)) return prev
-      const next = new Set(prev)
-      next.delete(requestID)
-      return next
-    })
-  }
-
-  function handleSuggestionError(requestID: string) {
-    setRespondingSuggestions((prev) => {
-      if (!prev.has(requestID)) return prev
-      const next = new Set(prev)
-      next.delete(requestID)
-      return next
-    })
-    setSuggestionErrors((prev) => new Set(prev).add(requestID))
-  }
-
-  /**
-   * Route suggestion-related extension messages.
-   * Extracted from the main message handler to stay within the complexity limit.
-   */
-  function routeSuggestionMessage(message: ExtensionMessage) {
-    switch (message.type) {
-      case "suggestionRequest":
-        handleSuggestionRequest(message.suggestion)
-        break
-      case "suggestionResolved":
-        handleSuggestionResolved(message.requestID)
-        break
-      case "suggestionError":
-        handleSuggestionError(message.requestID)
-        break
-    }
-  }
-
   /**
    * Handle a failed send: remove the optimistic message from the store
    * and show a toast. The PromptInput restores the draft text separately
@@ -1186,12 +1116,6 @@ export const SessionProvider: ParentComponent = (props) => {
     return questions().filter((q) => family.has(q.sessionID))
   }
 
-  function scopedSuggestions(sessionID: string | undefined): SuggestionRequest[] {
-    if (!sessionID) return []
-    const family = sessionFamily(sessionID)
-    return suggestions().filter((item) => family.has(item.sessionID))
-  }
-
   function handleTodoUpdated(sessionID: string, items: TodoItem[]) {
     setStore("todos", sessionID, items)
   }
@@ -1268,24 +1192,6 @@ export const SessionProvider: ParentComponent = (props) => {
         setQuestionErrors((prev) => {
           const next = new Set(prev)
           for (const id of deleted) next.delete(id)
-          if (next.size === prev.size) return prev
-          return next
-        })
-      }
-      const gone = suggestions()
-        .filter((item) => item.sessionID === sessionID)
-        .map((item) => item.id)
-      if (gone.length > 0) {
-        setSuggestions((prev) => prev.filter((item) => item.sessionID !== sessionID))
-        setSuggestionErrors((prev) => {
-          const next = new Set(prev)
-          for (const id of gone) next.delete(id)
-          if (next.size === prev.size) return prev
-          return next
-        })
-        setRespondingSuggestions((prev) => {
-          const next = new Set(prev)
-          for (const id of gone) next.delete(id)
           if (next.size === prev.size) return prev
           return next
         })
@@ -1502,8 +1408,6 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     const sid = currentSessionID()
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
     if (sid) addOptimistic(sid, messageID, text, files)
 
     const agent = selectedAgentName() !== defaultAgent() ? selectedAgentName() : undefined
@@ -1557,8 +1461,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
     const messageID = Identifier.ascending("message")
     const sid = currentSessionID()
-    const suggestion = scopedSuggestions(sid)[0]
-    if (suggestion) dismissSuggestion(suggestion.id)
 
     if (sid) addOptimistic(sid, messageID, `/${command} ${args}`.trim(), files)
 
@@ -1646,15 +1548,6 @@ export const SessionProvider: ParentComponent = (props) => {
     })
   }
 
-  function clearSuggestionError(requestID: string) {
-    setSuggestionErrors((prev) => {
-      if (!prev.has(requestID)) return prev
-      const next = new Set(prev)
-      next.delete(requestID)
-      return next
-    })
-  }
-
   function replyToQuestion(requestID: string, answers: string[][]) {
     clearQuestionError(requestID)
     const question = questions().find((item) => item.id === requestID)
@@ -1675,29 +1568,6 @@ export const SessionProvider: ParentComponent = (props) => {
       type: "questionReject",
       requestID,
       sessionID,
-    })
-  }
-
-  function acceptSuggestion(requestID: string, index: number) {
-    clearSuggestionError(requestID)
-    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionAccept",
-      requestID,
-      sessionID: sid,
-      index,
-    })
-  }
-
-  function dismissSuggestion(requestID: string) {
-    clearSuggestionError(requestID)
-    setRespondingSuggestions((prev) => new Set(prev).add(requestID))
-    const sid = suggestions().find((s) => s.id === requestID)?.sessionID ?? currentSessionID() ?? ""
-    vscode.postMessage({
-      type: "suggestionDismiss",
-      requestID,
-      sessionID: sid,
     })
   }
 
@@ -1945,12 +1815,8 @@ export const SessionProvider: ParentComponent = (props) => {
     respondingPermissions,
     questions,
     questionErrors,
-    suggestions,
-    suggestionErrors,
-    respondingSuggestions,
     scopedPermissions,
     scopedQuestions,
-    scopedSuggestions,
     selected,
     selectModel,
     hasModelOverride,
@@ -2012,8 +1878,6 @@ export const SessionProvider: ParentComponent = (props) => {
     respondToPermission,
     replyToQuestion,
     rejectQuestion,
-    acceptSuggestion,
-    dismissSuggestion,
     createSession,
     clearCurrentSession,
     loadSessions,

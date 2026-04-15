@@ -115,7 +115,6 @@ export async function generateHandover(input: {
 export namespace PlanFollowup {
   const log = Log.create({ service: "plan.followup" })
 
-  export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 

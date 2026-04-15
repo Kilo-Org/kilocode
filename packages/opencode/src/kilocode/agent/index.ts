@@ -231,7 +231,6 @@ export function patchAgents(
         defaults,
         Permission.fromConfig({
           question: "allow",
-          suggest: "allow", // kilocode_change
           plan_exit: "allow",
           bash: readOnlyBash,
           ...kilo.mcpRules,
@@ -290,7 +289,6 @@ export function patchAgents(
       defaults,
       Permission.fromConfig({
         question: "allow",
-        suggest: "allow", // kilocode_change
         plan_enter: "allow",
       }),
       user,
@@ -314,7 +312,6 @@ export function patchAgents(
         glob: "allow",
         list: "allow",
         question: "allow",
-        suggest: "allow", // kilocode_change
         task: "allow",
         todoread: "allow",
         todowrite: "allow",

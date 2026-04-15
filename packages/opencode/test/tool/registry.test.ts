@@ -32,37 +32,6 @@ describe("tool.registry", () => {
   })
   // kilocode_change end
 
-  // kilocode_change start
-  test("suggest is registered for cli and vscode only", async () => {
-    const original = process.env["KILO_CLIENT"]
-    const originalQuestion = process.env["KILO_ENABLE_QUESTION_TOOL"]
-    const originalConfig = process.env["KILO_CONFIG_DIR"]
-    try {
-      for (const client of ["cli", "vscode", "desktop", "app"]) {
-        process.env["KILO_CLIENT"] = client
-        process.env["KILO_ENABLE_QUESTION_TOOL"] = client === "vscode" ? "true" : "false"
-        await using tmp = await tmpdir({ git: true })
-        process.env["KILO_CONFIG_DIR"] = tmp.path
-        await Instance.provide({
-          directory: tmp.path,
-          fn: async () => {
-            const ids = await ToolRegistry.ids()
-            if (client === "cli" || client === "vscode") expect(ids).toContain("suggest")
-            else expect(ids).not.toContain("suggest")
-          },
-        })
-      }
-    } finally {
-      if (original === undefined) delete process.env["KILO_CLIENT"]
-      else process.env["KILO_CLIENT"] = original
-      if (originalQuestion === undefined) delete process.env["KILO_ENABLE_QUESTION_TOOL"]
-      else process.env["KILO_ENABLE_QUESTION_TOOL"] = originalQuestion
-      if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
-      else process.env["KILO_CONFIG_DIR"] = originalConfig
-    }
-  })
-  // kilocode_change end
-
   test("loads tools from .opencode/tool (singular)", async () => {
     await using tmp = await tmpdir({
       init: async (dir) => {

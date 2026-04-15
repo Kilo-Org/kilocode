@@ -5,7 +5,6 @@ import { Instance } from "@/project/instance"
 import { Session } from "@/session"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
-import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Permission } from "@/permission"
 import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
@@ -25,11 +24,6 @@ const PermissionData = z.object({
   message: z.string().optional(),
 })
 
-const SuggestionData = z.object({
-  requestID: z.string(),
-  index: z.number().int().nonnegative(),
-})
-
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
 let _remotePromptInput: ReturnType<typeof SessionPrompt.PromptInput.extend> | undefined
@@ -39,6 +33,7 @@ function getRemotePromptInput() {
   }))
 }
 // kilocode_change end
+
 function normalizeModel(model: string | undefined) {
   if (!model) return undefined
   return {
@@ -119,24 +114,11 @@ export namespace RemoteSender {
       }
     }
 
-    // Replay pending suggestions/questions/permissions so a newly-subscribed web client
+    // Replay pending questions/permissions so a newly-subscribed web client
     // sees state that was asked before it connected — analogous to the Cloud
     // Agent's `connected` event carrying pending question/permission fields.
     async function replay(sessionId: string) {
-      const [suggestions, questions, permissions] = await Promise.all([
-        Suggestion.list(),
-        Question.list(),
-        Permission.list(),
-      ])
-      for (const suggestion of suggestions) {
-        if (suggestion.sessionID !== sessionId) continue
-        options.conn.send({
-          type: "event",
-          sessionId,
-          event: "suggestion.shown",
-          data: suggestion,
-        })
-      }
+      const [questions, permissions] = await Promise.all([Question.list(), Permission.list()])
       for (const q of questions) {
         if (q.sessionID !== sessionId) continue
         options.conn.send({
@@ -305,37 +287,6 @@ export namespace RemoteSender {
         }
         const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
         dispatchQuick(msg, dir, () => Question.reject(QuestionID.make(parsed.data.requestID)))
-        return
-      }
-      if (msg.command === "suggestion_accept") {
-        const parsed = SuggestionData.safeParse(msg.data)
-        if (!parsed.success) {
-          options.conn.send({
-            type: "response",
-            id: msg.id,
-            error: "invalid suggestion_accept data: " + parsed.error.message,
-          })
-          return
-        }
-        const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
-        dispatchQuick(msg, dir, async () => {
-          const ok = await Suggestion.accept(parsed.data)
-          if (!ok) throw new Error("suggestion not found or invalid action index")
-        })
-        return
-      }
-      if (msg.command === "suggestion_dismiss") {
-        const parsed = z.object({ requestID: z.string() }).safeParse(msg.data)
-        if (!parsed.success) {
-          options.conn.send({
-            type: "response",
-            id: msg.id,
-            error: "invalid suggestion_dismiss data: " + parsed.error.message,
-          })
-          return
-        }
-        const dir = msg.sessionId ? directoryFor(msg.sessionId) : Promise.resolve(options.directory)
-        dispatchQuick(msg, dir, () => Suggestion.dismiss(parsed.data.requestID))
         return
       }
       if (msg.command === "permission_respond") {

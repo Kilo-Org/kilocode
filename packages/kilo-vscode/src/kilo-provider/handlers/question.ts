@@ -41,7 +41,6 @@ export async function fetchAndSendPendingQuestions(ctx: QuestionContext): Promis
             id: q.id,
             sessionID: q.sessionID,
             questions: q.questions,
-            blocking: q.blocking,
             tool: q.tool,
           },
         })

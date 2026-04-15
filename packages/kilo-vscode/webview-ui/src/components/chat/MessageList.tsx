@@ -23,9 +23,8 @@ import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
 import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
-import { SuggestBar } from "./SuggestBar"
 import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
-import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
+import type { QuestionRequest } from "../../types/messages"
 
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
@@ -45,8 +44,6 @@ interface MessageListProps {
   onShowHistory?: () => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
-  /** Non-tool suggestion requests to render inline at the bottom of the message list */
-  suggestions?: () => SuggestionRequest[]
   /** When true (subagent viewer), replace the welcome screen with an initializing indicator */
   readonly?: boolean
 }
@@ -176,7 +173,6 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </Show>
             <WorkingIndicator />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
-            <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
           </Show>
         </div>
       </div>

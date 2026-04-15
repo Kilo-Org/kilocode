@@ -85,7 +85,6 @@ import {
   handleQuestionReject,
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
-import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
 
 import {
   buildActionContext,
@@ -507,7 +506,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await Promise.all([
         fetchAndSendPendingPermissions(this.permissionCtx),
         fetchAndSendPendingQuestions(this.questionCtx),
-        fetchAndSendPendingSuggestions(this.questionCtx),
       ])
     }
   }
@@ -561,7 +559,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
-      await routeSuggestionWebviewMessage(this.questionCtx, message)
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")

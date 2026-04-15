@@ -11,11 +11,7 @@ import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import { useDialog } from "../../ui/dialog"
 
 // kilocode_change start
-export function QuestionPrompt(props: {
-  request: QuestionRequest
-  nonBlocking?: boolean
-  inputFocused?: () => boolean
-}) {
+export function QuestionPrompt(props: { request: QuestionRequest }) {
   // kilocode_change end
   const sdk = useSDK()
   const { theme } = useTheme()
@@ -131,10 +127,6 @@ export function QuestionPrompt(props: {
   useKeyboard((evt) => {
     // Skip processing if a dialog (e.g., command palette) is open
     if (dialog.stack.length > 0) return
-
-    // kilocode_change start - avoid intrusive key capture for non-blocking review suggestions
-    if (props.nonBlocking && props.inputFocused?.()) return
-    // kilocode_change end
 
     // When editing custom answer textarea
     if (store.editing && !confirm()) {

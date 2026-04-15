@@ -3,7 +3,6 @@ import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
-import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import z from "zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
@@ -1288,11 +1287,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
 
           if (input.noReply === true) return message
-          // kilocode_change start — dismiss pending suggestions and cancel the session
-          // before starting a new loop to avoid the runner ignoring the new work
-          yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
-          yield* state.cancel(input.sessionID)
-          // kilocode_change end
           return yield* loop({ sessionID: input.sessionID })
         },
       )

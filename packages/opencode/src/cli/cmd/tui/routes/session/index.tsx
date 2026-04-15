@@ -21,7 +21,7 @@ import { Spinner } from "@tui/component/spinner"
 import { selectedForeground, useTheme } from "@tui/context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "@tui/component/prompt"
-import type { AssistantMessage, Part, Provider, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2" // kilocode_change
+import type { AssistantMessage, Part, Provider, ToolPart, UserMessage, TextPart, ReasoningPart } from "@kilocode/sdk/v2" // kilocode_change // kilocode_change
 import { useLocal } from "@tui/context/local"
 import { Locale } from "@/util/locale"
 import type { Tool } from "@/tool/tool"
@@ -69,8 +69,6 @@ import { Filesystem } from "@/util/filesystem"
 import { Global } from "@/global"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
-import { Suggest } from "@/kilocode/suggestion/tui/render" // kilocode_change
-import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt" // kilocode_change
 import { NetworkPrompt } from "./network" // kilocode_change
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
@@ -135,42 +133,18 @@ export function Session() {
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
   // kilocode_change start
-  const suggestions = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.suggestion[x.id] ?? [])
-  })
   const network = createMemo(() => {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.network[x.id] ?? [])
   })
-  const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
-  const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
-  const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
-  const blockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking !== false))
-  const nonBlockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking === false))
-  const suggestion = createMemo(() => blockingSuggestions()[0] ?? nonBlockingSuggestions()[0])
   const visible = createMemo(
-    () =>
-      !session()?.parentID &&
-      permissions().length === 0 &&
-      blockingQuestions().length === 0 &&
-      blockingSuggestions().length === 0 &&
-      network().length === 0,
+    () => !session()?.parentID && permissions().length === 0 && questions().length === 0 && network().length === 0,
   )
   const networkVisible = createMemo(
-    () =>
-      permissions().length === 0 &&
-      blockingQuestions().length === 0 &&
-      blockingSuggestions().length === 0 &&
-      network().length > 0,
+    () => permissions().length === 0 && questions().length === 0 && network().length > 0,
   )
-  const disabled = createMemo(
-    () =>
-      permissions().length > 0 ||
-      blockingQuestions().length > 0 ||
-      blockingSuggestions().length > 0 ||
-      network().length > 0,
-  )
+  const disabled = createMemo(() => permissions().length > 0 || questions().length > 0 || network().length > 0)
+  // kilocode_change end
 
   const pending = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant" && !x.time.completed)?.id
@@ -179,7 +153,6 @@ export function Session() {
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
   })
-  // kilocode_change end
 
   // kilocode_change start - ring terminal bell on task completion
   createEffect(
@@ -214,7 +187,7 @@ export function Session() {
   )
   createEffect(
     on(
-      () => [route.sessionID, suggestions().length + network().length] as const, // kilocode_change
+      () => [route.sessionID, network().length] as const,
       ([id, len], prev) => {
         if (!prev || prev[0] !== id) return
         if (len > prev[1] && bellEnabled()) bell()
@@ -1258,32 +1231,15 @@ export function Session() {
                 <PermissionPrompt request={permissions()[0]} />
               </Show>
               {/* kilocode_change start */}
-              <Show when={permissions().length === 0 && question()} keyed>
-                {(request) => (
-                  <QuestionPrompt
-                    request={request}
-                    nonBlocking={request.blocking === false}
-                    inputFocused={() => prompt?.focused ?? false}
-                  />
-                )}
+              {/* kilocode_change start */}
+              <Show when={permissions().length === 0 && questions().length > 0}>
+                <QuestionPrompt request={questions()[0]} />
               </Show>
-              <Show when={permissions().length === 0 && !question()}>
-                {/* kilocode_change end */}
-                {/* kilocode_change start */}
-                <Show when={suggestion()} keyed>
-                  {(request) => (
-                    <SuggestPrompt
-                      request={request}
-                      nonBlocking={request.blocking === false}
-                      inputFocused={() => prompt?.focused ?? false}
-                    />
-                  )}
-                </Show>
-              </Show>
+              {/* kilocode_change end */}
+              {/* kilocode_change end */}
               <Show when={session()?.parentID}>
                 <SubagentFooter />
               </Show>
-              {/* kilocode_change end */}
               {/* kilocode_change start */}
               <Show when={networkVisible()}>
                 <NetworkPrompt request={network()[0]} />
@@ -1701,11 +1657,6 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "question"}>
           <Question {...toolprops} />
         </Match>
-        {/* kilocode_change start */}
-        <Match when={props.part.tool === "suggest"}>
-          <Suggest {...toolprops} InlineTool={InlineTool} BlockTool={BlockTool} />
-        </Match>
-        {/* kilocode_change end */}
         <Match when={props.part.tool === "skill"}>
           <Skill {...toolprops} />
         </Match>

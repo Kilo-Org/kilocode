@@ -6,7 +6,6 @@ import type { RemoteProtocol } from "../../../src/kilo-sessions/remote-protocol"
 import { SessionPrompt } from "../../../src/session/prompt"
 import { Question } from "../../../src/question"
 import { Permission } from "../../../src/permission"
-import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
 function fakeConn() {
   const sent: any[] = []
@@ -491,51 +490,6 @@ describe("RemoteSender", () => {
     expect(sent[0].error).toContain("boom")
   })
 
-  test("suggestion_accept sends response after work completes", async () => {
-    const { conn, sent } = fakeConn()
-    const accept = spyOn(Suggestion, "accept").mockResolvedValue(true)
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; init?: () => Promise<unknown>; fn: () => R }) => input.fn(),
-    })
-
-    sender.handle({
-      type: "command",
-      id: "req_suggestion_accept",
-      command: "suggestion_accept",
-      data: { requestID: "sug_1", index: 1 },
-    })
-
-    await new Promise((r) => setTimeout(r, 10))
-
-    expect(accept).toHaveBeenCalledWith({ requestID: "sug_1", index: 1 })
-    expect(sent).toContainEqual({ type: "response", id: "req_suggestion_accept", result: {} })
-  })
-
-  test("suggestion_dismiss with invalid data sends error response", () => {
-    const { conn, sent } = fakeConn()
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async () => ({}) as any,
-    })
-
-    sender.handle({
-      type: "command",
-      id: "req_suggestion_dismiss_bad",
-      command: "suggestion_dismiss",
-      data: { nope: true },
-    })
-
-    expect(sent).toHaveLength(1)
-    expect(sent[0].error).toContain("invalid suggestion_dismiss data")
-  })
-
   test("question_reject sends response after work completes", async () => {
     const { conn, sent } = fakeConn()
     let provideCalled = false
@@ -859,7 +813,6 @@ describe("RemoteSender", () => {
     const { conn, sent } = fakeConn()
     const bus = fakeBus()
 
-    spyOn(Suggestion, "list").mockResolvedValue([])
     spyOn(Question, "list").mockResolvedValue([
       { id: "question_1", sessionID: "ses_target", questions: [{ type: "text", text: "Continue?" }] } as any,
       { id: "question_2", sessionID: "ses_other", questions: [{ type: "text", text: "Unrelated?" }] } as any,
@@ -891,7 +844,6 @@ describe("RemoteSender", () => {
     const { conn, sent } = fakeConn()
     const bus = fakeBus()
 
-    spyOn(Suggestion, "list").mockResolvedValue([])
     spyOn(Question, "list").mockResolvedValue([])
     spyOn(Permission, "list").mockResolvedValue([
       {
@@ -944,9 +896,6 @@ describe("RemoteSender", () => {
     const { conn, sent } = fakeConn()
     const bus = fakeBus()
 
-    spyOn(Suggestion, "list").mockResolvedValue([
-      { id: "sug_1", sessionID: "ses_other", text: "Review?", actions: [] } as any,
-    ])
     spyOn(Question, "list").mockResolvedValue([{ id: "question_1", sessionID: "ses_other", questions: [] } as any])
     spyOn(Permission, "list").mockResolvedValue([
       {
@@ -972,53 +921,6 @@ describe("RemoteSender", () => {
 
     const events = sent.filter((m: any) => m.type === "event")
     expect(events).toHaveLength(0)
-  })
-
-  test("subscribe replays pending suggestion for the subscribed session", async () => {
-    const { conn, sent } = fakeConn()
-    const bus = fakeBus()
-
-    spyOn(Suggestion, "list").mockResolvedValue([
-      {
-        id: "sug_1",
-        sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
-      } as any,
-      {
-        id: "sug_2",
-        sessionID: "ses_other",
-        text: "Ignore",
-        actions: [{ label: "Skip", prompt: "skip" }],
-      } as any,
-    ])
-    spyOn(Question, "list").mockResolvedValue([])
-    spyOn(Permission, "list").mockResolvedValue([])
-
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: bus.subscribe,
-      provide: async (input: any) => input.fn(),
-    })
-
-    sender.handle({ type: "subscribe", sessionId: "ses_target" })
-    await new Promise((r) => setTimeout(r, 10))
-
-    const suggestionEvents = sent.filter((m: any) => m.event === "suggestion.shown")
-    expect(suggestionEvents).toHaveLength(1)
-    expect(suggestionEvents[0]).toEqual({
-      type: "event",
-      sessionId: "ses_target",
-      event: "suggestion.shown",
-      data: {
-        id: "sug_1",
-        sessionID: "ses_target",
-        text: "Review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
-      },
-    })
   })
 
   test("system message is handled without error", () => {

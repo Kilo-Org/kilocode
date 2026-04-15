@@ -149,30 +149,6 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(e, noLookup)).toBe("s11")
   })
 
-  it("returns sessionID from suggestion.shown", () => {
-    const e = event({
-      type: "suggestion.shown",
-      properties: { id: "sug_1", sessionID: "s12", text: "Review?", actions: [] },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s12")
-  })
-
-  it("returns sessionID from suggestion.accepted", () => {
-    const e = event({
-      type: "suggestion.accepted",
-      properties: { sessionID: "s13", requestID: "sug_1", index: 0, action: { label: "Start", prompt: "x" } },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s13")
-  })
-
-  it("returns sessionID from suggestion.dismissed", () => {
-    const e = event({
-      type: "suggestion.dismissed",
-      properties: { sessionID: "s14", requestID: "sug_2" },
-    })
-    expect(resolveEventSessionId(e, noLookup)).toBe("s14")
-  })
-
   it("returns undefined for unknown event types (global events)", () => {
     const e = event({ type: "server.connected", properties: {} })
     expect(resolveEventSessionId(e, noLookup)).toBeUndefined()

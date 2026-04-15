@@ -26,9 +26,6 @@ import type {
   EventQuestionAsked,
   EventQuestionReplied,
   EventQuestionRejected,
-  EventSuggestionShown,
-  EventSuggestionAccepted,
-  EventSuggestionDismissed,
   EventSessionCreated,
   EventSessionUpdated,
   EventServerConnected,
@@ -445,43 +442,6 @@ describe("mapSSEEventToWebviewMessage", () => {
     if (msg?.type === "questionResolved") {
       expect(msg.requestID).toBe("req-2")
     }
-  })
-
-  it("maps suggestion.shown to suggestionRequest", () => {
-    const event: EventSuggestionShown = {
-      type: "suggestion.shown",
-      properties: {
-        id: "sug-1",
-        sessionID: "sess-1",
-        text: "Review changes?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
-      },
-    }
-    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
-    expect(msg?.type).toBe("suggestionRequest")
-  })
-
-  it("maps suggestion.accepted to suggestionResolved", () => {
-    const event: EventSuggestionAccepted = {
-      type: "suggestion.accepted",
-      properties: {
-        sessionID: "sess-1",
-        requestID: "sug-1",
-        index: 0,
-        action: { label: "Start", prompt: "/local-review-uncommitted" },
-      },
-    }
-    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
-    expect(msg?.type).toBe("suggestionResolved")
-  })
-
-  it("maps suggestion.dismissed to suggestionResolved", () => {
-    const event: EventSuggestionDismissed = {
-      type: "suggestion.dismissed",
-      properties: { sessionID: "sess-1", requestID: "sug-2" },
-    }
-    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
-    expect(msg?.type).toBe("suggestionResolved")
   })
 
   it("maps session.created to sessionCreated with ISO dates", () => {
