@@ -51,7 +51,7 @@ Instructions here.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills.length).toBe(1)
       const testSkill = skills.find((s) => s.name === "test-skill")
       expect(testSkill).toBeDefined()
@@ -131,7 +131,7 @@ description: Second test skill.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills.length).toBe(2)
       expect(skills.find((s) => s.name === "skill-one")).toBeDefined()
       expect(skills.find((s) => s.name === "skill-two")).toBeDefined()
@@ -157,7 +157,7 @@ Just some content without YAML frontmatter.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills).toEqual([])
     },
   })
@@ -184,7 +184,7 @@ description: A skill in the .claude/skills directory.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills.length).toBe(1)
       const claudeSkill = skills.find((s) => s.name === "claude-skill")
       expect(claudeSkill).toBeDefined()
@@ -204,7 +204,7 @@ test("discovers global skills from ~/.claude/skills/ directory", async () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const skills = await Skill.all()
+        const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change // kilocode_change
         expect(skills.length).toBe(1)
         expect(skills[0].name).toBe("global-test-skill")
         expect(skills[0].description).toBe("A global skill from ~/.claude/skills for testing.")
@@ -222,7 +222,7 @@ test("returns empty array when no skills exist", async () => {
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills).toEqual([])
     },
   })
@@ -249,7 +249,7 @@ description: A skill in the .agents/skills directory.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills.length).toBe(1)
       const agentSkill = skills.find((s) => s.name === "agent-skill")
       expect(agentSkill).toBeDefined()
@@ -283,7 +283,7 @@ This skill is loaded from the global home directory.
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const skills = await Skill.all()
+        const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change // kilocode_change
         expect(skills.length).toBe(1)
         expect(skills[0].name).toBe("global-agent-skill")
         expect(skills[0].description).toBe("A global skill from ~/.agents/skills for testing.")
@@ -327,7 +327,7 @@ description: A skill in the .agents/skills directory.
   await Instance.provide({
     directory: tmp.path,
     fn: async () => {
-      const skills = await Skill.all()
+      const skills = (await Skill.all()).filter((s) => s.location !== Skill.BUILTIN_LOCATION) // kilocode_change
       expect(skills.length).toBe(2)
       expect(skills.find((s) => s.name === "claude-skill")).toBeDefined()
       expect(skills.find((s) => s.name === "agent-skill")).toBeDefined()
