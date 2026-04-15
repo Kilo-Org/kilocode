@@ -78,6 +78,7 @@ import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
+import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
@@ -348,6 +349,7 @@ const AgentManagerContent: Component = () => {
   let diffRaf: number | undefined
   let pendingDiffWidth: number | undefined
 
+  const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
@@ -697,28 +699,23 @@ const AgentManagerContent: Component = () => {
     const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
     if (valid.length !== prev.length) {
       const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      }
+      for (const id of removed) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
       setLocalSessionIDs(valid)
     }
   })
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
-
     setReviewOpenByContext((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-
     setReviewCommentsByContext((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-
     setApplyStates((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -1021,11 +1018,8 @@ const AgentManagerContent: Component = () => {
     const remembered = tabMemory()[worktreeId]
     const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
     const fallback = target ?? sessions[0]
-    if (fallback) {
-      session.selectSession(fallback.id)
-    } else {
-      session.setCurrentSessionID(undefined)
-    }
+    if (fallback) session.selectSession(fallback.id)
+    else session.setCurrentSessionID(undefined)
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
 
@@ -1048,7 +1042,8 @@ const AgentManagerContent: Component = () => {
 
   onMount(() => {
     const handler = (event: MessageEvent) => {
-      const msg = event.data as ExtensionMessage
+      const msg = event.data
+      if (msg?.type === "navigate" && msg.view === "history") return setHistory(true)
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") navigate("up")
       else if (msg.action === "sessionNext") navigate("down")
@@ -1062,9 +1057,7 @@ const AgentManagerContent: Component = () => {
         if (reviewActive()) {
           closeReviewTab()
           setSidePanel("diff")
-        } else {
-          setSidePanel((prev) => (prev === "diff" ? null : "diff"))
-        }
+        } else setSidePanel((prev) => (prev === "diff" ? null : "diff"))
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
@@ -1897,20 +1890,14 @@ const AgentManagerContent: Component = () => {
 
   const handleAddSession = () => {
     const sel = selection()
-    if (sel === LOCAL) {
-      addPendingTab()
-    } else if (sel) {
-      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
-    }
+    if (sel === LOCAL) addPendingTab()
+    else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
 
   const handleForkSession = (sessionId: string) => {
     const sel = selection()
-    if (sel === LOCAL) {
-      vscode.postMessage({ type: "agentManager.forkSession", sessionId })
-    } else if (sel) {
-      vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
-    }
+    if (sel === LOCAL) vscode.postMessage({ type: "agentManager.forkSession", sessionId })
+    else if (sel) vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
   }
 
   const handleCloseTab = (sessionId: string) => {
@@ -2921,7 +2908,16 @@ const AgentManagerContent: Component = () => {
             </Show>
           )
         })()}
-        <Show when={!contextEmpty()}>
+        <Show when={history()}>
+          <HistoryView
+            onSelectSession={(id) => {
+              setHistory(false)
+              openLocally(id)
+            }}
+            onBack={() => setHistory(false)}
+          />
+        </Show>
+        <Show when={!contextEmpty() && !history()}>
           {/* Chat + side diff panel (hidden when review tab is active) */}
           <div
             class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""}`}
@@ -2947,6 +2943,7 @@ const AgentManagerContent: Component = () => {
                   }
                   openLocally(id)
                 }}
+                onShowHistory={() => setHistory(true)}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
                 promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
