@@ -1231,7 +1231,6 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "напр., Згенеруй commit messages іспанською мовою у форматі conventional commits. Поверни ЛИШЕ commit message.",
 
-
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.layout.title": "Макет",
