@@ -845,6 +845,7 @@ it.live(
 )
 
 it.live.skip(
+  // kilocode_change - flaky on CI, tracked in #8990
   "prompt submitted during an active run is included in the next LLM input",
   () =>
     provideTmpdirServer(
