@@ -2903,6 +2903,7 @@ const AgentManagerContent: Component = () => {
             onSelectSession={(id) => {
               setHistory(false)
               if (localSessionIDs().includes(id)) {
+                saveTabMemory()
                 session.selectSession(id)
                 setSelection(LOCAL)
                 return
