@@ -14,6 +14,7 @@ import { ProviderID, ModelID } from "@/provider/schema"
 import z from "zod"
 import { Effect } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
+import { hpcAiOptions } from "./hpc-ai"
 
 // Re-export for consumers that previously imported from provider.ts
 export { Prompt, AiSdkProvider }
@@ -109,6 +110,12 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
           return shouldUseCopilotResponsesApi(modelID) ? sdk.responses(modelID) : sdk.chat(modelID)
         },
         options: {},
+      }),
+
+    "hpc-ai": () =>
+      Effect.succeed({
+        autoload: false,
+        options: hpcAiOptions(),
       }),
 
     kilo: Effect.fnUntraced(function* (input: any) {

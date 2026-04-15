@@ -9,6 +9,7 @@ import { Config } from "../config/config" // kilocode_change
 import { ModelCache } from "./model-cache" // kilocode_change
 import { Auth } from "../auth" // kilocode_change
 import { AI_SDK_PROVIDERS, KILO_OPENROUTER_BASE, PROMPTS } from "@kilocode/kilo-gateway" // kilocode_change
+import { injectHpcAiProvider } from "@/kilocode/provider/hpc-ai" // kilocode_change
 import { Filesystem } from "../util/filesystem"
 import { Flock } from "@/util/flock"
 import { Hash } from "@/util/hash"
@@ -189,6 +190,8 @@ export namespace ModelsDev {
     if (providers["kilo"]) {
       delete providers["kilo"]
     }
+
+    injectHpcAiProvider(providers)
 
     // Inject kilo provider with dynamic model fetching
     // Skip injection entirely when enabled_providers is set and doesn't include "kilo",

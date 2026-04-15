@@ -34,6 +34,7 @@ exclude = [
   '^https?://vercel\.link/',
   # API base URL, returns 404 when fetched directly
   '^https?://api\.apertis\.ai/v1/?$',
+  '^https?://api\.hpc-ai\.com/inference/v1/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
   # Consistently times out in CI
