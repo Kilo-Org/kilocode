@@ -2,6 +2,10 @@
 import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
+import { Session } from "@/session"
+import { MessageID, SessionID } from "@/session/schema"
+import { makeRuntime } from "@/effect/run-service"
+import { fn } from "@/util/fn"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
@@ -286,3 +290,13 @@ export namespace KiloSession {
 
   export const remapChildren = _remapChildren
 }
+
+export const kiloSessionFork = fn(
+  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
+  async (input) => {
+    const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
+    const session = await runPromise((svc) => svc.fork(input))
+    await KiloSession.remapChildren(session.id)
+    return session
+  },
+)

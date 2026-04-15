@@ -25,7 +25,7 @@ import { Snapshot } from "@/snapshot"
 import { ProjectID } from "../project/schema"
 import { WorkspaceID } from "../control-plane/schema"
 import { SessionID, MessageID, PartID } from "./schema"
-import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloSession, kiloSessionFork } from "@/kilocode/session" // kilocode_change
 
 import type { Provider } from "@/provider/provider"
 import { Permission } from "@/permission"
@@ -745,13 +745,7 @@ export namespace Session {
     (input) => runPromise((svc) => svc.create(input)),
   )
 
-  // kilocode_change start - remap child session references after fork to prevent subagent state leaks
-  export const fork = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }), async (input) => {
-    const session = await runPromise((svc) => svc.fork(input))
-    await KiloSession.remapChildren(session.id)
-    return session
-  })
-  // kilocode_change end
+  export const fork = kiloSessionFork // kilocode_change
 
   export const get = fn(SessionID.zod, (id) => runPromise((svc) => svc.get(id)))
   export const share = fn(SessionID.zod, (id) => runPromise((svc) => svc.share(id)))
