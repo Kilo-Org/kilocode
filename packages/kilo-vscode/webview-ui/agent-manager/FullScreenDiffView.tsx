@@ -13,6 +13,7 @@ import { ResizeHandle } from "@kilocode/kilo-ui/resize-handle"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
 import { FileTree } from "./FileTree"
 import { treeOrder } from "./file-tree-utils"
@@ -503,7 +504,15 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                         <StickyAccordionHeader>
                           <Accordion.Trigger>
                             <div data-slot="session-review-trigger-content">
-                              <div data-slot="session-review-file-info">
+                              <div
+                                data-slot="session-review-file-info"
+                                draggable={true}
+                                onDragStart={(e: DragEvent) => {
+                                  e.dataTransfer?.setData(KILO_FILE_PATH_MIME, diff.file)
+                                  e.dataTransfer?.setData("text/plain", diff.file)
+                                  e.stopPropagation()
+                                }}
+                              >
                                 <FileIcon node={{ path: diff.file, type: "file" }} />
                                 <div data-slot="session-review-file-name-container">
                                   <Show when={diff.file.includes("/")}>
