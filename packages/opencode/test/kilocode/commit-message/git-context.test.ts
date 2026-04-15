@@ -16,7 +16,7 @@ function clearGitOutputs() {
 
 // Override the git-context module with a version that uses our mock spawnSync.
 // This avoids conflicts with generate.test.ts which also mocks this module.
-mock.module("../git-context", () => {
+mock.module("../../../src/kilocode/commit-message/git-context", () => {
   function git(args: string[], cwd: string): string {
     const key = args.join(" ")
     return spawnSyncResults[key] ?? ""
