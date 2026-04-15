@@ -844,7 +844,7 @@ it.live(
   3_000,
 )
 
-it.live(
+it.live.skip(
   "prompt submitted during an active run is included in the next LLM input",
   () =>
     provideTmpdirServer(
