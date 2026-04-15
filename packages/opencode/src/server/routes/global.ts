@@ -56,14 +56,26 @@ async function streamEvents(c: Context, subscribe: (q: AsyncQueue<string | null>
 
     stream.onAbort(stop)
 
+    // kilocode_change start
+    // On Windows, stream.onAbort() may never fire after a client disconnects
+    // (delayed TCP RST detection via IOCP). Without this try/catch, the
+    // GlobalBus listener, heartbeat interval, and AsyncQueue stay alive
+    // indefinitely for each dead connection — leaking memory on every
+    // SSE reconnect. Catching write errors lets us clean up eagerly.
     try {
       for await (const data of q) {
         if (data === null) return
-        await stream.writeSSE({ data })
+        try {
+          await stream.writeSSE({ data })
+        } catch {
+          stop()
+          return
+        }
       }
     } finally {
       stop()
     }
+    // kilocode_change end
   })
 }
 
