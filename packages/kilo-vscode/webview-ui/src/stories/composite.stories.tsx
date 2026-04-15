@@ -1040,7 +1040,13 @@ export const DiffSummaryCollapsed: Story = {
         <ServerContext.Provider value={server as any}>
           <SessionContext.Provider value={session as any}>
             <div style={{ width: "380px", padding: "12px" }}>
-              <VscodeSessionTurn sessionID={SESSION_ID} messageID={USER_MSG_ID} />
+              <VscodeSessionTurn
+                turn={{
+                  id: USER_MSG_ID,
+                  user: data.message[SESSION_ID][0] as any,
+                  assistant: [data.message[SESSION_ID][1] as any],
+                }}
+              />
             </div>
           </SessionContext.Provider>
         </ServerContext.Provider>
