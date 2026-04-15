@@ -1,4 +1,5 @@
 // kilocode_change - new file
+import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
 import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
@@ -282,4 +283,6 @@ export namespace KiloSession {
       yield { ...input.fromRow(row), project } as T & { project: ProjectInfo | null }
     }
   }
+
+  export const remapChildren = _remapChildren
 }

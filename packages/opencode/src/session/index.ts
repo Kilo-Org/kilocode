@@ -745,9 +745,13 @@ export namespace Session {
     (input) => runPromise((svc) => svc.create(input)),
   )
 
-  export const fork = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }), (input) =>
-    runPromise((svc) => svc.fork(input)),
-  )
+  // kilocode_change start - remap child session references after fork to prevent subagent state leaks
+  export const fork = fn(z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }), async (input) => {
+    const session = await runPromise((svc) => svc.fork(input))
+    await KiloSession.remapChildren(session.id)
+    return session
+  })
+  // kilocode_change end
 
   export const get = fn(SessionID.zod, (id) => runPromise((svc) => svc.get(id)))
   export const share = fn(SessionID.zod, (id) => runPromise((svc) => svc.share(id)))
