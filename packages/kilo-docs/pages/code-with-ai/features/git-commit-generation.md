@@ -64,6 +64,22 @@ Configuration is handled through the extension's settings or the shared `kilo.js
 Git commit message generation is a **VS Code extension feature**. It is not available in the CLI/TUI.
 {% /callout %}
 
+### Custom Commit Message Prompt
+
+You can override the default system prompt used for commit message generation with the `commit_message.prompt` config field. This lets you tailor generated messages to your project's conventions.
+
+Add this to your `kilo.jsonc` config (global or project-level):
+
+```json
+{
+  "commit_message": {
+    "prompt": "Write commit messages using the Angular commit convention. Always include a scope. Keep the subject line under 72 characters."
+  }
+}
+```
+
+In VS Code, a dedicated **Commit Message** tab in settings provides a toggle to indicate when the default prompt has been overridden, along with a text field to edit the custom prompt directly.
+
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 

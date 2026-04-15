@@ -297,8 +297,8 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 | Scope       | Path                                                                                              |
 | ----------- | ------------------------------------------------------------------------------------------------- |
-| **Global**  | `~/.config/kilo/opencode.json` or `opencode.jsonc` (Windows: config dir may vary; same filenames) |
-| **Project** | `./opencode.json` or `./.opencode/` in project root                                               |
+| **Global**  | `~/.config/kilo/kilo.json` or `kilo.jsonc` (Windows: config dir may vary; same filenames). Legacy `opencode.json` / `opencode.jsonc` files are still read if `kilo.json` is absent. |
+| **Project** | `./opencode.json` or `./.opencode/` in project root                                                                                                                                    |
 
 Project-level configuration takes precedence over global settings.
 

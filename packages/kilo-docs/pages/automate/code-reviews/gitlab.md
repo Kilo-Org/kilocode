@@ -55,6 +55,12 @@ Once configured, the Review Agent automatically runs when:
 | MR closed                | ❌ No           |
 | MR merged                | ❌ No           |
 
+## Fork Merge Requests
+
+Code reviews work with merge requests from forked repositories. When an MR originates from a fork, the Review Agent automatically detects this and fetches the source branch using GitLab's `refs/merge-requests/<iid>/head` ref, so the review runs against the correct code even though the source branch only exists in the fork.
+
+No additional configuration is needed — fork MR reviews work the same as same-repo MRs.
+
 ## What to Expect
 
 When a review triggers:
