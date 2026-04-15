@@ -38,9 +38,10 @@ export async function remapChildren(sid: SessionID): Promise<void> {
     if (remapped.has(ref.child)) continue
     const exists = await Session.get(SessionID.make(ref.child)).catch(() => undefined)
     if (!exists) continue
+    // Session.fork() already calls remapChildren on the forked child,
+    // so nested subagents are handled recursively without an explicit call here.
     const forked = await Session.fork({ sessionID: SessionID.make(ref.child) })
     remapped.set(ref.child, forked.id)
-    await remapChildren(forked.id)
   }
 
   if (remapped.size === 0) return
