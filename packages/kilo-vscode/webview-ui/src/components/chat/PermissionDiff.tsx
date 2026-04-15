@@ -64,7 +64,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
             </svg>
           </div>
           <div data-slot="permission-diff-filename">
-            {directory() && <span data-slot="permission-diff-directory">{directory()}/</span>}
+            {directory() && <span data-slot="permission-diff-directory">{`\u2066${directory()}/\u2069`}</span>}
             <span data-slot="permission-diff-name">{filename()}</span>
           </div>
         </div>

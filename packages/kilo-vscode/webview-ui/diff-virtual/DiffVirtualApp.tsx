@@ -85,7 +85,7 @@ const DiffVirtualContent: Component = () => {
                 <span class="am-review-toolbar-stats">
                   <FileIcon node={{ path: d().file, type: "file" }} />
                   <Show when={directory()}>
-                    <span class="am-review-toolbar-dir">{`\u202A${directory()}/\u202C`}</span>
+                    <span class="am-review-toolbar-dir">{`\u2066${directory()}/\u2069`}</span>
                   </Show>
                   <span class="am-review-toolbar-fname">{filename()}</span>
                   <span class="am-review-toolbar-adds">+{d().additions}</span>

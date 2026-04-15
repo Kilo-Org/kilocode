@@ -246,7 +246,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
                                       <span data-slot="session-turn-diff-path">
                                         <Show when={diff.file.includes("/")}>
                                           <span data-slot="session-turn-diff-directory">
-                                            {`\u202A${getDirectory(diff.file)}\u202C`}
+                                            {`\u2066${getDirectory(diff.file)}\u2069`}
                                           </span>
                                         </Show>
                                         <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>

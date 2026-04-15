@@ -507,7 +507,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
                                 <FileIcon node={{ path: diff.file, type: "file" }} />
                                 <div data-slot="session-review-file-name-container">
                                   <Show when={diff.file.includes("/")}>
-                                    <span data-slot="session-review-directory">{`\u202A${getDirectory(diff.file)}\u202C`}</span>
+                                    <span data-slot="session-review-directory">{`\u2066${getDirectory(diff.file)}\u2069`}</span>
                                   </Show>
                                   <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
                                   <Show when={fileCommentCount() > 0}>
