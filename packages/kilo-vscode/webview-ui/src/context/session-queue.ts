@@ -7,7 +7,7 @@ export function activeUserMessageID(messages: Message[], status: SessionStatusIn
     const msg = messages[i]
     if (msg.role !== "assistant") continue
     if (typeof msg.time?.completed === "number") continue
-    if (msg.finish && msg.finish !== "tool-calls") continue
+    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) continue
     if (!msg.parentID) break
     const parent = messages.find((item) => item.id === msg.parentID)
     if (parent?.role === "user") return parent.id

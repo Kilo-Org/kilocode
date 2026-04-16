@@ -34,4 +34,10 @@ describe("activeUserMessageID", () => {
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
   })
+
+  it("keeps unknown assistants active until cleanup finishes", () => {
+    const messages = [user("message_1"), assistant("message_2", "message_1", { finish: "unknown" }), user("message_3")]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+  })
 })
