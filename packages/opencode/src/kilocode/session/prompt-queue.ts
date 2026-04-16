@@ -15,6 +15,11 @@ export namespace KiloSessionPromptQueue {
   const targets = new Map<SessionID, MessageID>()
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
+  const settle = (promise: Promise<void>) =>
+    promise.then(
+      () => undefined,
+      () => undefined,
+    )
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
@@ -50,12 +55,13 @@ export namespace KiloSessionPromptQueue {
       Effect.sync(() => {
         const previous = tails.get(sessionID) ?? Promise.resolve()
         const done = Promise.withResolvers<void>()
-        const tail = previous.catch(() => {}).then(() => done.promise)
+        // Keep later queued prompts moving; each caller still observes its own failure.
+        const tail = settle(previous).then(() => done.promise)
         tails.set(sessionID, tail)
         return { version: version(sessionID), previous, done, tail } satisfies Slot
       }),
       (slot) =>
-        Effect.promise(() => slot.previous.catch(() => {})).pipe(
+        Effect.promise(() => settle(slot.previous)).pipe(
           Effect.flatMap(() => {
             if (slot.version !== version(sessionID)) return cancelled
             return Effect.acquireUseRelease(
