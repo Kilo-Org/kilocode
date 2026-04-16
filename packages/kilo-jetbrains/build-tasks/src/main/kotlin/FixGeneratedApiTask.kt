@@ -1,6 +1,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
@@ -22,7 +22,7 @@ import java.io.File
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
-    @get:InputDirectory
+    @get:OutputDirectory
     abstract val generated: DirectoryProperty
 
     @TaskAction
@@ -120,7 +120,51 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
         }
 
-        // Fix 6: AnySerializer in Serializer.kt
+        // Fix 6: Lenient JSON — tolerate missing fields and absent nulls so the
+        // generated models survive API responses with optional fields the spec
+        // marks as required. `coerceInputValues` maps type mismatches to
+        // defaults; `explicitNulls = false` allows omitted nullable fields.
+        if (file.name == "Serializer.kt") {
+            if (!text.contains("coerceInputValues")) {
+                text = text.replace(
+                    "ignoreUnknownKeys = true",
+                    "ignoreUnknownKeys = true\n            coerceInputValues = true\n            explicitNulls = false"
+                )
+                changed = true
+            }
+        }
+
+        // Fix 7: Default values for non-nullable primitives in model data classes.
+        // The CLI API may omit fields that the OpenAPI spec marks as required
+        // (e.g. `attachment`, `reasoning` on dynamically added models).
+        // Add Kotlin defaults so kotlinx.serialization doesn't throw
+        // MissingFieldException.
+        if (text.contains("data class") && text.contains("@Serializable")) {
+            // Pattern: `val foo: kotlin.Boolean,` or `val foo: kotlin.Boolean\n`
+            // (without ` = ` before the comma/newline, which would mean a default exists)
+            val primitiveDefaults = listOf(
+                Regex("""(val \w+:\s*kotlin\.Boolean)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = false${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.Int)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.Double)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0.0${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.String)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = \"\"${m.groupValues[2]}"
+                },
+            )
+            for ((pattern, transform) in primitiveDefaults) {
+                if (pattern.containsMatchIn(text)) {
+                    text = pattern.replace(text, transform)
+                    changed = true
+                }
+            }
+        }
+
+        // Fix 8: AnySerializer in Serializer.kt
         if (file.name == "Serializer.kt" && !text.contains("AnySerializer")) {
             text = text.replace(
                 "import kotlinx.serialization.modules.SerializersModuleBuilder",

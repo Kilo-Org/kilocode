@@ -7,5 +7,7 @@
 
     <extensions defaultExtensionNs="com.intellij">
         <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloAppRpcApiProvider"/>
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloProjectRpcApiProvider"/>
+        <platform.rpc.backend.remoteApiProvider implementation="ai.kilocode.backend.rpc.KiloSessionRpcApiProvider"/>
     </extensions>
 </idea-plugin>

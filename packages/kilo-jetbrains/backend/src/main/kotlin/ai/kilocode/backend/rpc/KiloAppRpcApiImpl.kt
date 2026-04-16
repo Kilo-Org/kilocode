@@ -48,7 +48,15 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
                 status = KiloAppStatusDto.LOADING,
                 progress = progress(state.progress),
             )
-            is KiloAppState.Ready -> KiloAppStateDto(KiloAppStatusDto.READY)
+            is KiloAppState.Ready -> KiloAppStateDto(
+                status = KiloAppStatusDto.READY,
+                progress = LoadProgressDto(
+                    config = true,
+                    notifications = true,
+                    profile = if (state.data.profile != null) ProfileStatusDto.LOADED
+                        else ProfileStatusDto.NOT_LOGGED_IN,
+                ),
+            )
             is KiloAppState.Error -> KiloAppStateDto(
                 status = KiloAppStatusDto.ERROR,
                 error = state.message,

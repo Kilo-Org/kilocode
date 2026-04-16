@@ -848,7 +848,7 @@ export function UserMessageDisplay(props: {
                 </span>
               </Show>
               <Show when={props.onRevert}>
-                <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
+                <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
                   <IconButton
                     icon="arrow-left"
                     size="normal"
@@ -858,7 +858,7 @@ export function UserMessageDisplay(props: {
                       event.stopPropagation()
                       props.onRevert?.()
                     }}
-                    aria-label={i18n.t("ui.message.revert")}
+                    aria-label={i18n.t("ui.message.revertMessage")}
                   />
                 </Tooltip>
               </Show>

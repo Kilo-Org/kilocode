@@ -9,6 +9,7 @@ plugins {
     application
     id("java")
     alias(libs.plugins.intellij.platform)
+    alias(libs.plugins.detekt)
 
     alias(libs.plugins.kotlin) apply false
     alias(libs.plugins.kotlin.serialization) apply false
@@ -17,6 +18,19 @@ plugins {
 
 subprojects {
     apply(plugin = "org.jetbrains.intellij.platform.module")
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    detekt {
+        config.setFrom(rootProject.file("detekt.yml"))
+        buildUponDefaultConfig = true
+        source.setFrom("src/main/kotlin")
+    }
+}
+
+detekt {
+    config.setFrom(file("detekt.yml"))
+    buildUponDefaultConfig = true
+    source.setFrom("src/main/kotlin")
 }
 
 allprojects {

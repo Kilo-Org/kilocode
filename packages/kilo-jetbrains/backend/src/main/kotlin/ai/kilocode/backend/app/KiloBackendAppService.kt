@@ -2,6 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.util.IntellijLog
 import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.infrastructure.ClientError
 import ai.kilocode.jetbrains.api.infrastructure.ClientException
@@ -18,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -27,6 +29,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.net.ConnectException
 import java.net.SocketTimeoutException
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -76,14 +79,19 @@ class KiloBackendAppService private constructor(
         cs.launch { reconnect() }
     }, log = log)
 
-    private var router: Job? = null
+    private var watcher: Job? = null
+    private var eventWatcher: Job? = null
     private var loader: Job? = null
+    private val loadLock = Any()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
 
     val events: SharedFlow<SseEvent> get() = connection.events
     val api: DefaultApi? get() = connection.api
+
+    val sessions = KiloBackendSessionManager(cs, log)
+    val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
 
     @Volatile var profile: KiloProfile200Response? = null
         private set
@@ -98,6 +106,7 @@ class KiloBackendAppService private constructor(
         mutex.withLock {
             val current = _appState.value
             if (current is KiloAppState.Ready || current is KiloAppState.Connecting || current is KiloAppState.Loading) return
+            ensureWatcher()
             connection.connect()
         }
     }
@@ -135,8 +144,9 @@ class KiloBackendAppService private constructor(
         }
     }
 
-    init {
-        cs.launch {
+    private fun ensureWatcher() {
+        if (watcher?.isActive == true) return
+        watcher = cs.launch {
             connection.state.collect { next ->
                 when (next) {
                     ConnectionState.Disconnected -> _appState.value = KiloAppState.Disconnected
@@ -159,98 +169,115 @@ class KiloBackendAppService private constructor(
      * On failure of required data, transitions to [KiloAppState.Error].
      */
     private fun load() {
-        loader?.cancel()
-        loader = cs.launch {
-            log.info("Loading global data")
-            val progress = AtomicReference(LoadProgress())
-            _appState.value = KiloAppState.Loading(progress.get())
+        synchronized(loadLock) {
+            loader?.cancel()
+            eventWatcher?.cancel()
+            loader = cs.launch {
+                log.info("Application starting — loading config, profile, notifications")
+                val progress = AtomicReference(LoadProgress())
+                _appState.value = KiloAppState.Loading(progress.get())
 
-            val errors = mutableListOf<LoadError>()
+                val errors = CopyOnWriteArrayList<LoadError>()
+                var cfg: Config? = null
+                var prof: KiloProfile200Response? = null
+                var notifs: List<KiloNotifications200ResponseInner> = emptyList()
 
-            try {
-                coroutineScope {
-                    launch {
-                        try {
+                try {
+                    coroutineScope {
+                        launch {
                             val result = fetchProfile()
-                            progress.updateAndGet { it.copy(profile = result) }
+                            val status = when {
+                                result.error != null -> {
+                                    errors.add(result.error)
+                                    throw LoadFailure(result.error)
+                                }
+                                result.value != null -> {
+                                    prof = result.value
+                                    ProfileResult.LOADED
+                                }
+                                else -> ProfileResult.NOT_LOGGED_IN
+                            }
+                            progress.updateAndGet { it.copy(profile = status) }
                                 .also { _appState.value = KiloAppState.Loading(it) }
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            val err = LoadError(
-                                resource = "profile",
-                                status = (e as? ClientException)?.statusCode
-                                    ?: (e as? ServerException)?.statusCode,
-                                detail = e.message,
-                            )
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
+                        }
+                        launch {
+                            val result = fetchWithRetry("config") { fetchConfig() }
+                            if (result.value != null) {
+                                cfg = result.value
+                                progress.updateAndGet { it.copy(config = true) }
+                                    .also { _appState.value = KiloAppState.Loading(it) }
+                            } else {
+                                val err = result.error!!
+                                errors.add(err)
+                                throw LoadFailure(err)
+                            }
+                        }
+                        launch {
+                            val result = fetchWithRetry("notifications") { fetchNotifications() }
+                            if (result.value != null) {
+                                notifs = result.value
+                                progress.updateAndGet { it.copy(notifications = true) }
+                                    .also { _appState.value = KiloAppState.Loading(it) }
+                            } else {
+                                val err = result.error!!
+                                errors.add(err)
+                                throw LoadFailure(err)
+                            }
                         }
                     }
-                    launch {
-                        val result = fetchWithRetry("config") { fetchConfig() }
-                        if (result.value != null) {
-                            config = result.value
-                            progress.updateAndGet { it.copy(config = true) }
-                                .also { _appState.value = KiloAppState.Loading(it) }
-                        } else {
-                            val err = result.error!!
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
-                    launch {
-                        val result = fetchWithRetry("notifications") { fetchNotifications() }
-                        if (result.value != null) {
-                            notifications = result.value
-                            progress.updateAndGet { it.copy(notifications = true) }
-                                .also { _appState.value = KiloAppState.Loading(it) }
-                        } else {
-                            val err = result.error!!
-                            synchronized(errors) { errors.add(err) }
-                            throw LoadFailure(err)
-                        }
-                    }
-                }
 
-                _appState.value = KiloAppState.Ready(
-                    AppData(
-                        profile = profile,
-                        config = config!!,
-                        notifications = notifications,
+                    ensureActive()
+                    profile = prof
+                    config = cfg
+                    notifications = notifs
+                    sessions.start(connection.api!!, connection.events)
+                    workspaces.start(connection.api!!, connection.events)
+                    _appState.value = KiloAppState.Ready(
+                        AppData(
+                            profile = prof,
+                            config = cfg!!,
+                            notifications = notifs,
+                        )
                     )
-                )
-                log.info("Global data loaded — app is Ready")
-                ensureRouter()
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                log.warn("Global data load failed: ${e.message}")
-                _appState.value = KiloAppState.Error(
-                    message = "Failed to load required data",
-                    errors = synchronized(errors) { errors.toList() },
-                )
+                    log.info("Application started — config, profile, notifications loaded")
+                    startWatchingGlobalSseEvents()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    log.warn("Application start failed: ${e.message}")
+                    _appState.value = KiloAppState.Error(
+                        message = "Failed to load required data",
+                        errors = errors.toList(),
+                    )
+                }
             }
         }
     }
 
-    private suspend fun fetchProfile(): ProfileResult {
-        val client = connection.api ?: return ProfileResult.NOT_LOGGED_IN
+    /**
+     * Fetch the user profile. Returns [FetchResult.ok] with the response
+     * on success, [FetchResult.ok] with `null` when not logged in (401),
+     * or [FetchResult.fail] on other errors. Never throws.
+     */
+    private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
+        val client = connection.api
+            ?: return FetchResult.ok(null)
         return try {
             val response = client.kiloProfile()
-            profile = response
             log.info("Profile: ${response.profile.email}")
-            ProfileResult.LOADED
+            FetchResult.ok(response)
         } catch (e: ClientException) {
             if (e.statusCode == 401) {
                 log.info("Profile: not logged in (401)")
-                return ProfileResult.NOT_LOGGED_IN
+                return FetchResult.ok(null)
             }
             log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
-            throw e
+            logResponseBody("profile", e)
+            FetchResult.fail("profile", e)
         } catch (e: Exception) {
             log.warn("Profile fetch failed: ${e.message}", e)
-            throw e
+            logResponseBody("profile", e)
+            FetchResult.fail("profile", e)
         }
     }
 
@@ -312,21 +339,53 @@ class KiloBackendAppService private constructor(
         return last
     }
 
-    private fun ensureRouter() {
-        if (router?.isActive == true) return
-        router = cs.launch {
-            connection.events.collect { event ->
-                when (event.type) {
-                    "global.config.updated" -> launch {
-                        val result = fetchConfig()
-                        if (result.value != null) {
-                            config = result.value
-                            val current = _appState.value
-                            if (current is KiloAppState.Ready) {
-                                _appState.value = current.copy(
-                                    data = current.data.copy(config = result.value)
-                                )
+    /**
+     * Watch global SSE events to keep app state in sync with the CLI server.
+     *
+     * - `global.config.updated` — the project config changed on disk or via CLI.
+     *   Re-fetches config and updates [KiloAppState.Ready] data in-place.
+     *
+     * - `global.disposed` — the CLI server's global context was torn down
+     *   (e.g. during a restart). Triggers a full reload to re-populate all data.
+     *
+     * - `server.instance.disposed` — a specific server instance was disposed.
+     *   Same effect as `global.disposed` — triggers a full reload so downstream
+     *   project services pick up the new state.
+     *
+     * Idempotent — only one watcher runs at a time.
+     */
+    private fun startWatchingGlobalSseEvents() {
+        synchronized(loadLock) {
+            if (eventWatcher?.isActive == true) return
+            log.info("Started watching global SSE events (config.updated, disposed)")
+            eventWatcher = cs.launch {
+                connection.events.collect { event ->
+                    when (event.type) {
+                        "global.config.updated" -> {
+                            log.info("SSE global.config.updated — reloading config")
+                            launch {
+                                val result = fetchConfig()
+                                if (result.value != null) {
+                                    config = result.value
+                                    val current = _appState.value
+                                    if (current is KiloAppState.Ready) {
+                                        _appState.value = current.copy(
+                                            data = current.data.copy(config = result.value)
+                                        )
+                                    }
+                                    log.info("Config reloaded successfully")
+                                }
                             }
+                        }
+                        "global.disposed" -> {
+                            log.info("SSE global.disposed — triggering full application reload")
+                            val current = _appState.value
+                            if (current is KiloAppState.Ready) load()
+                        }
+                        "server.instance.disposed" -> {
+                            log.info("SSE server.instance.disposed — triggering full application reload")
+                            val current = _appState.value
+                            if (current is KiloAppState.Ready) load()
                         }
                     }
                 }
@@ -335,8 +394,12 @@ class KiloBackendAppService private constructor(
     }
 
     private fun clear() {
-        loader?.cancel()
-        router?.cancel()
+        synchronized(loadLock) {
+            loader?.cancel()
+            eventWatcher?.cancel()
+        }
+        workspaces.stop()
+        sessions.stop()
         profile = null
         config = null
         notifications = emptyList()
@@ -344,6 +407,8 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
+        watcher?.cancel()
+        watcher = null
         clear()
         connection.dispose()
         server.dispose()

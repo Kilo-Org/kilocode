@@ -1,11 +1,12 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.util.IntellijLog
-import ai.kilocode.backend.KiloBackendHttpClients
+import ai.kilocode.backend.util.KiloBackendHttpClients
 import ai.kilocode.backend.util.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -197,6 +198,9 @@ class KiloConnectionService(
                 .readTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
         )
+        // Reset heartbeat timestamp before connecting so the watcher
+        // doesn't fire against a stale timestamp from the old connection.
+        lastEvent.set(System.currentTimeMillis())
         source.set(factory.newEventSource(request, listener))
         log.info("SSE: connecting to port $port")
     }
@@ -301,6 +305,7 @@ class KiloConnectionService(
 
     private fun monitorProcess(proc: Process) = cs.launch(Dispatchers.IO) {
         proc.waitFor()
+        ensureActive()
         server.exited(proc)
         val code = proc.exitValue()
         log.warn("CLI process exited with code $code")

@@ -173,7 +173,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
         </div>
       </Show>
       <div ref={setScrollRef} onScroll={handleScroll} class="message-list" role="log" aria-live="polite">
-        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : undefined}>
+        <div ref={autoScroll.contentRef} class={isEmpty() ? "message-list-content-empty" : "message-list-content"}>
           <Show when={session.loading()}>
             <div class="message-list-loading" role="status">
               <Spinner />
