@@ -189,8 +189,16 @@ async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<
 }
 
 async function readModelJson(): Promise<any> {
-  const text = await fs.readFile(modelJsonPath, "utf-8")
-  return JSON.parse(text)
+  const until = Date.now() + 2000
+  while (true) {
+    try {
+      const text = await fs.readFile(modelJsonPath, "utf-8")
+      return JSON.parse(text)
+    } catch (err) {
+      if (Date.now() >= until) throw err
+      await Bun.sleep(10)
+    }
+  }
 }
 
 async function removeModelJson() {
