@@ -68,11 +68,10 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
   const emptyParts: SDKPart[] = []
   const emptyDiffs: SnapshotFileDiff[] = []
 
-  // Hydrate stashed parts into the reactive store now that the virtualizer
-  // has made this turn visible. Collected for the user message + all
-  // assistant messages in the turn so data.store.part lookups resolve.
-  const ids = [props.turn.user.id, ...props.turn.assistant.map((m) => m.id)]
-  session.hydrateParts(ids)
+  createEffect(() => {
+    const turn = props.turn
+    session.hydrateParts([turn.user.id, ...turn.assistant.map((m) => m.id)])
+  })
 
   const message = createMemo(() => props.turn.user as SDKMessage & { role: "user" })
 

@@ -1800,7 +1800,7 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const getParts = (messageID: string) => {
-    return store.parts[messageID] || []
+    return store.parts[messageID] || stash.get(messageID) || []
   }
 
   function hydrateParts(ids: string[]) {
