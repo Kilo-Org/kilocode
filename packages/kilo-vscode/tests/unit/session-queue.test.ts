@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID } from "../../webview-ui/src/context/session-queue"
+import { activeUserMessageID, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -16,6 +16,41 @@ const assistant = (id: string, parentID: string, opts: Partial<Message> = {}): M
   parentID,
   role: "assistant",
   ...opts,
+})
+
+describe("queuedUserMessageIDs", () => {
+  it("keeps follow-ups queued before the first assistant exists", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_2"])
+  })
+
+  it("keeps follow-ups queued after a pending assistant parent", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+      user("message_3"),
+    ]
+
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3"])
+  })
+
+  it("keeps only later follow-ups queued after a terminal assistant", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { finish: "stop" }),
+      user("message_3"),
+      user("message_4"),
+    ]
+
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_4"])
+  })
+
+  it("returns no queued messages while idle", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
 })
 
 describe("activeUserMessageID", () => {
