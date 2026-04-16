@@ -12,6 +12,9 @@ import DESCRIPTION from "./read.txt"
 import { Instance } from "../project/instance"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
+// kilocode_change start
+import { readDirectoryFiles } from "../kilocode/tool/read-directory"
+// kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
@@ -125,30 +128,7 @@ export const ReadTool = Tool.defineEffect(
         const sliced = items.slice(start, start + limit)
         const truncated = start + sliced.length < items.length
         // kilocode_change start
-        const files = yield* Effect.forEach(
-          sliced.filter((item) => !item.endsWith("/")),
-          Effect.fnUntraced(function* (item) {
-            const child = path.join(filepath, item)
-            const info = yield* fs.stat(child).pipe(Effect.catch(() => Effect.void))
-            if (info?.type !== "File") return
-            const binary = yield* Effect.promise(() => isBinaryFile(child, Number(info.size))).pipe(
-              Effect.catch(() => Effect.succeed(true)),
-            )
-            if (binary) return
-            const file = yield* Effect.promise(() => lines(child, { limit: DEFAULT_READ_LIMIT, offset: 1 })).pipe(
-              Effect.catch(() => Effect.void),
-            )
-            if (!file) return
-            const rel = path.relative(Instance.directory, child).replaceAll("\\", "/")
-            const note = file.cut || file.more ? "\n\n(File truncated)" : ""
-            return {
-              filepath: child,
-              content: `<file_content path="${rel}">\n${file.raw.join("\n")}${note}\n</file_content>`,
-            }
-          }),
-          { concurrency: "unbounded" },
-        )
-        const loaded = files.filter((item): item is { filepath: string; content: string } => item !== undefined)
+        const loaded = yield* readDirectoryFiles(fs, filepath, sliced)
         const content = loaded.map((item) => item.content).join("\n\n")
         // kilocode_change end
 

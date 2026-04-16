@@ -1,7 +1,8 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import { mergeFileSearchItems, mergeFileSearchResults } from "../kilo-provider-utils"
+import { mergeFileSearchResults } from "../kilo-provider-utils"
+import { mergeFileSearchItems } from "./file-search-items"
 
 type Message = {
   query: string

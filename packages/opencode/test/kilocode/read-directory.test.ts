@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
+import { symlink } from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
@@ -71,4 +72,23 @@ describe("kilocode directory reads", () => {
       expect(result.metadata.loaded).toContain(path.join(dir, "folder", "a.txt"))
     }),
   )
+
+  if (process.platform !== "win32") {
+    it.live("skips symlinked top-level files", () =>
+      Effect.gen(function* () {
+        const dir = yield* tmpdirScoped()
+        const outer = yield* tmpdirScoped()
+        yield* put(path.join(dir, "folder", "a.txt"), "alpha")
+        yield* put(path.join(outer, "secret.txt"), "secret")
+        yield* Effect.promise(() => symlink(path.join(outer, "secret.txt"), path.join(dir, "folder", "secret.txt")))
+
+        const result = yield* exec(dir, { filePath: path.join(dir, "folder") })
+
+        expect(result.output).toContain("secret.txt")
+        expect(result.output).not.toContain('<file_content path="folder/secret.txt">')
+        expect(result.output).not.toContain("secret\n</file_content>")
+        expect(result.metadata.loaded).not.toContain(path.join(dir, "folder", "secret.txt"))
+      }),
+    )
+  }
 })

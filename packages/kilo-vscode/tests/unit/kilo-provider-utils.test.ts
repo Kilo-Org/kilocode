@@ -8,10 +8,10 @@ import {
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
-  mergeFileSearchItems,
   mergeFileSearchResults,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
+import { mergeFileSearchItems } from "../../src/kilo-provider/file-search-items"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
 import type {
   Session,
@@ -592,6 +592,18 @@ describe("mergeFileSearchItems", () => {
       { path: "src/latest/", type: "folder" },
     ])
   })
+
+  it("normalizes Windows separators for matching and output", () => {
+    const result = mergeFileSearchItems({
+      query: "kilo-vscode",
+      files: ["packages\\kilo-vscode\\src\\KiloProvider.ts"],
+      folders: ["packages\\kilo-vscode\\"],
+    })
+    expect(result).toEqual([
+      { path: "packages/kilo-vscode/", type: "folder" },
+      { path: "packages/kilo-vscode/src/KiloProvider.ts", type: "file" },
+    ])
+  })
 })
 
 describe("mergeFileSearchResults", () => {
@@ -686,5 +698,15 @@ describe("mergeFileSearchResults", () => {
       active: "src/utils/path.ts",
     })
     expect(result).toEqual(["src/utils/path.ts", "src/index.ts"])
+  })
+
+  it("normalizes backslash paths before filtering and deduping", () => {
+    const result = mergeFileSearchResults({
+      query: "utils/path",
+      backend: ["src\\utils\\path.ts"],
+      open: new Set(["src/utils/path.ts"]),
+      active: "src\\utils\\path.ts",
+    })
+    expect(result).toEqual(["src/utils/path.ts"])
   })
 })
