@@ -131,6 +131,9 @@ describe("session prompt queue", () => {
 
           await Bun.sleep(20)
           expect(calls).toHaveLength(1)
+          const queued = await Session.messages({ sessionID: session.id })
+          expect(queued.filter((msg) => msg.info.role === "user")).toHaveLength(3)
+          expect(queued.filter((msg) => msg.info.role === "assistant")).toHaveLength(1)
 
           release.resolve()
           await first

@@ -1276,31 +1276,29 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         function* (input: PromptInput) {
           const session = yield* sessions.get(input.sessionID)
           yield* Effect.promise(() => SessionRevert.cleanup(session))
-          // kilocode_change start - queue prompt creation with its loop so follow-up prompts stay ordered
-          const create = Effect.gen(function* () {
-            const message = yield* createUserMessage(input)
-            yield* sessions.touch(input.sessionID)
+          // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
+          const message = yield* createUserMessage(input)
+          yield* sessions.touch(input.sessionID)
 
-            const permissions: Permission.Ruleset = []
-            for (const [t, enabled] of Object.entries(input.tools ?? {})) {
-              permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
-            }
-            if (permissions.length > 0) {
-              session.permission = permissions
-              yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
-            }
-            return message
-          })
+          const permissions: Permission.Ruleset = []
+          for (const [t, enabled] of Object.entries(input.tools ?? {})) {
+            permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
+          }
+          if (permissions.length > 0) {
+            session.permission = permissions
+            yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
+          }
 
-          if (input.noReply === true) return yield* create
+          if (input.noReply === true) return message
           return yield* KiloSessionPromptQueue.enqueue(
             input.sessionID,
-            create.pipe(Effect.flatMap(() => loop({ sessionID: input.sessionID }))),
+            message.info.id,
+            loop({ sessionID: input.sessionID }),
             lastAssistant(input.sessionID),
           )
-          // kilocode_change end
         },
       )
+      // kilocode_change end
 
       const lastAssistant = (sessionID: SessionID) =>
         Effect.promise(async () => {
@@ -1336,6 +1334,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             log.info("loop", { step, sessionID })
 
             let msgs = yield* MessageV2.filterCompactedEffect(sessionID)
+            msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
 
             let lastUser: MessageV2.User | undefined
             let lastAssistant: MessageV2.Assistant | undefined
@@ -1367,6 +1366,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               lastAssistant?.finish &&
               !["tool-calls"].includes(lastAssistant.finish) &&
               !hasToolCalls &&
+              lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
               lastUser.id < lastAssistant.id
             ) {
               // kilocode_change start - ask follow-up when plan_exit tool was called
