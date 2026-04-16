@@ -839,10 +839,11 @@
         },
         "kilo-code.new.sounds.agent": {
           "type": "string",
-          "default": "default",
+          "default": "system",
           "enum": [
             "default",
             "none",
+            "system",
             "alert-01",
             "alert-02",
             "alert-03",
@@ -893,10 +894,11 @@
         },
         "kilo-code.new.sounds.permissions": {
           "type": "string",
-          "default": "default",
+          "default": "system",
           "enum": [
             "default",
             "none",
+            "system",
             "alert-01",
             "alert-02",
             "alert-03",
@@ -947,10 +949,11 @@
         },
         "kilo-code.new.sounds.errors": {
           "type": "string",
-          "default": "default",
+          "default": "system",
           "enum": [
             "default",
             "none",
+            "system",
             "alert-01",
             "alert-02",
             "alert-03",

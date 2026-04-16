@@ -160,6 +160,9 @@ const SESSION_SCOPED_PART_EVENTS = new Set(["message.part.updated", "message.par
 const isSessionScopedPartEvent = (type: string) => SESSION_SCOPED_PART_EVENTS.has(type)
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
+  private readonly notificationCooldowns = new Map<string, number>()
+  private readonly COOLDOWN_MS = 700
+
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
 
@@ -969,6 +972,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestNotificationSettings":
           this.sendNotificationSettings()
           break
+        case "testNotification": {
+          const setting = message.settingType as "agent" | "permissions" | "errors"
+          const sounds = vscode.workspace.getConfiguration("kilo-code.new.sounds")
+          const soundSetting = sounds.get<string>(setting, "system")
+          const soundId = resolveSoundId(soundSetting, setting)
+          if (soundId) {
+            void playSound(soundId)
+          }
+          const title =
+            setting === "agent"
+              ? "Test agent notification"
+              : setting === "permissions"
+                ? "Test permissions notification"
+                : "Test errors notification"
+          void sendOsNotification(title, "This is a sample notification to test the sound.")
+          break
+        }
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
@@ -2393,9 +2413,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         notifyAgent: notifications.get<boolean>("agent", true),
         notifyPermissions: notifications.get<boolean>("permissions", true),
         notifyErrors: notifications.get<boolean>("errors", true),
-        soundAgent: sounds.get<string>("agent", "default"),
-        soundPermissions: sounds.get<string>("permissions", "default"),
-        soundErrors: sounds.get<string>("errors", "default"),
+        soundAgent: sounds.get<string>("agent", "system"),
+        soundPermissions: sounds.get<string>("permissions", "system"),
+        soundErrors: sounds.get<string>("errors", "system"),
       },
     })
   }
@@ -2423,13 +2443,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * built-in notification system, which only shows in-app toasts.
    */
   private notifyIfNotFocused(setting: "agent" | "permissions" | "errors", title: string, message?: string): void {
+    const now = Date.now()
+    const last = this.notificationCooldowns.get(setting) ?? 0
+    if (now - last < this.COOLDOWN_MS) return
+    this.notificationCooldowns.set(setting, now)
+
     const config = vscode.workspace.getConfiguration("kilo-code.new.notifications")
     if (!config.get<boolean>(setting, true)) return
     // Only skip notification if we're explicitly focused (not undefined)
     if (this.lastFocusState === true) return
 
     const soundConfig = vscode.workspace.getConfiguration("kilo-code.new.sounds")
-    const soundSetting = soundConfig.get<string>(setting, "default")
+    const soundSetting = soundConfig.get<string>(setting, "system")
     const soundId = resolveSoundId(soundSetting, setting)
     if (soundId) {
       void playSound(soundId)

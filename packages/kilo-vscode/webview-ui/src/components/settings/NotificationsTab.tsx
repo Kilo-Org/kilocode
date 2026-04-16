@@ -1,4 +1,5 @@
 import { Component, createSignal, onCleanup } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -15,6 +16,7 @@ interface SoundOption {
 const SOUND_OPTIONS: SoundOption[] = [
   { value: "default", labelKey: "settings.notifications.sound.default" },
   { value: "none", labelKey: "settings.notifications.sound.none" },
+  { value: "system", labelKey: "settings.notifications.sound.system" },
   { value: "alert-01", labelKey: "sound.option.alert01" },
   { value: "alert-02", labelKey: "sound.option.alert02" },
   { value: "alert-03", labelKey: "sound.option.alert03" },
@@ -69,9 +71,9 @@ const NotificationsTab: Component = () => {
   const [agentNotify, setAgentNotify] = createSignal(true)
   const [permNotify, setPermNotify] = createSignal(true)
   const [errorNotify, setErrorNotify] = createSignal(true)
-  const [agentSound, setAgentSound] = createSignal("default")
-  const [permSound, setPermSound] = createSignal("default")
-  const [errorSound, setErrorSound] = createSignal("default")
+  const [agentSound, setAgentSound] = createSignal("system")
+  const [permSound, setPermSound] = createSignal("system")
+  const [errorSound, setErrorSound] = createSignal("system")
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "notificationSettingsLoaded") {
@@ -91,6 +93,10 @@ const NotificationsTab: Component = () => {
 
   const save = (key: string, value: unknown) => {
     vscode.postMessage({ type: "updateSetting", key, value })
+  }
+
+  const test = (settingType: "agent" | "permissions" | "errors") => {
+    vscode.postMessage({ type: "testNotification", settingType })
   }
 
   return (
@@ -150,62 +156,77 @@ const NotificationsTab: Component = () => {
           title={language.t("settings.notifications.agentSound.title")}
           description={language.t("settings.notifications.agentSound.description")}
         >
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === agentSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setAgentSound(o.value)
-                save("sounds.agent", o.value)
-              }
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+            <Select
+              options={SOUND_OPTIONS}
+              current={SOUND_OPTIONS.find((o) => o.value === agentSound())}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (o) {
+                  setAgentSound(o.value)
+                  save("sounds.agent", o.value)
+                }
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+            <Button variant="ghost" size="small" onClick={() => test("agent")}>
+              {language.t("settings.notifications.testSound")}
+            </Button>
+          </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.notifications.permSound.title")}
           description={language.t("settings.notifications.permSound.description")}
         >
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === permSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setPermSound(o.value)
-                save("sounds.permissions", o.value)
-              }
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+            <Select
+              options={SOUND_OPTIONS}
+              current={SOUND_OPTIONS.find((o) => o.value === permSound())}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (o) {
+                  setPermSound(o.value)
+                  save("sounds.permissions", o.value)
+                }
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+            <Button variant="ghost" size="small" onClick={() => test("permissions")}>
+              {language.t("settings.notifications.testSound")}
+            </Button>
+          </div>
         </SettingsRow>
         <SettingsRow
           title={language.t("settings.notifications.errorSound.title")}
           description={language.t("settings.notifications.errorSound.description")}
           last
         >
-          <Select
-            options={SOUND_OPTIONS}
-            current={SOUND_OPTIONS.find((o) => o.value === errorSound())}
-            value={(o) => o.value}
-            label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => {
-              if (o) {
-                setErrorSound(o.value)
-                save("sounds.errors", o.value)
-              }
-            }}
-            variant="secondary"
-            size="small"
-            triggerVariant="settings"
-          />
+          <div style={{ display: "flex", gap: "8px", "align-items": "center", "flex-wrap": "wrap" }}>
+            <Select
+              options={SOUND_OPTIONS}
+              current={SOUND_OPTIONS.find((o) => o.value === errorSound())}
+              value={(o) => o.value}
+              label={(o) => language.t(o.labelKey)}
+              onSelect={(o) => {
+                if (o) {
+                  setErrorSound(o.value)
+                  save("sounds.errors", o.value)
+                }
+              }}
+              variant="secondary"
+              size="small"
+              triggerVariant="settings"
+            />
+            <Button variant="ghost" size="small" onClick={() => test("errors")}>
+              {language.t("settings.notifications.testSound")}
+            </Button>
+          </div>
         </SettingsRow>
       </Card>
     </div>

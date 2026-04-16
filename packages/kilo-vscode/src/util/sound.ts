@@ -5,6 +5,7 @@ import * as fs from "fs"
 const SOUND_DIR = path.join(__dirname, "../audio-wav")
 
 export type SoundID =
+  | "system"
   | "alert-01"
   | "alert-02"
   | "alert-03"
@@ -52,6 +53,7 @@ export type SoundID =
   | "yup-06"
 
 const SOUND_MAP: Record<SoundID, string> = {
+  system: "",
   "alert-01": "alert-01.wav",
   "alert-02": "alert-02.wav",
   "alert-03": "alert-03.wav",
@@ -110,6 +112,7 @@ export function resolveSoundId(
   settingType: "agent" | "permissions" | "errors",
 ): SoundID | undefined {
   if (!settingValue || settingValue === "none") return undefined
+  if (settingValue === "system") return "system"
 
   if (settingValue === "default") {
     return DEFAULT_SOUNDS[settingType]
@@ -122,59 +125,97 @@ export function resolveSoundId(
   return undefined
 }
 
-export async function playSound(soundId: SoundID): Promise<void> {
+let chain = Promise.resolve()
+let queued = 0
+
+const MAX_QUEUED = 3
+
+async function playSystem(): Promise<void> {
+  switch (process.platform) {
+    case "darwin":
+      await exec("osascript", ["-e", "beep"]).catch((err) => {
+        console.log("[Kilo New] macOS system sound failed:", err)
+      })
+      return
+    case "linux":
+      await exec("canberra-gtk-play", ["-i", "message-new-instant"]).catch(async (err) => {
+        console.log("[Kilo New] canberra-gtk-play failed, trying paplay:", err)
+        await exec("paplay", ["/usr/share/sounds/freedesktop/stereo/message.oga"]).catch((err2) => {
+          console.log("[Kilo New] Linux system sound failed:", err2)
+        })
+      })
+      return
+    case "win32":
+      await exec("powershell", [
+        "-NonInteractive",
+        "-Command",
+        "[System.Media.SystemSounds]::Exclamation.Play()",
+      ]).catch((err) => {
+        console.log("[Kilo New] Windows system sound failed:", err)
+      })
+      return
+  }
+}
+
+async function playFile(soundId: Exclude<SoundID, "system">): Promise<void> {
   const file = SOUND_MAP[soundId]
   if (!file) return
 
   const filePath = path.join(SOUND_DIR, file)
   if (!fs.existsSync(filePath)) return
-
-  // Validate path to prevent control characters that could break command-line parsing
   if (!filePath.match(/^[^\x00-\x1F\x7F]+$/)) return
 
-  const platform = process.platform
-
-  switch (platform) {
+  switch (process.platform) {
     case "darwin":
-      try {
-        await exec("afplay", [filePath])
-      } catch (err) {
+      await exec("afplay", [filePath]).catch(async (err) => {
         console.log("[Kilo New] afplay failed, trying play:", err)
-        try {
-          await exec("play", [filePath])
-        } catch (err2) {
+        await exec("play", [filePath]).catch((err2) => {
           console.log("[Kilo New] Sound playback failed:", err2)
-        }
-      }
-      break
+        })
+      })
+      return
     case "linux":
-      try {
-        await exec("/usr/bin/aplay", ["-f", "CD", filePath])
-      } catch (err) {
+      await exec("/usr/bin/aplay", ["-f", "CD", filePath]).catch(async (err) => {
         console.log("[Kilo New] aplay failed, trying paplay:", err)
-        try {
-          await exec("paplay", [filePath])
-        } catch (err2) {
+        await exec("paplay", [filePath]).catch(async (err2) => {
           console.log("[Kilo New] paplay failed, trying play:", err2)
-          try {
-            await exec("play", [filePath])
-          } catch (err3) {
+          await exec("play", [filePath]).catch((err3) => {
             console.log("[Kilo New] Sound playback failed:", err3)
-          }
-        }
-      }
-      break
-    case "win32":
-      try {
-        const safePath = filePath.replace(/'/g, "''")
-        await exec("powershell", [
-          "-NonInteractive",
-          "-Command",
-          `$path = '${safePath}'; $s = New-Object System.Media.SoundPlayer($path); $s.PlaySync(); $s.Dispose()`,
-        ])
-      } catch (err) {
+          })
+        })
+      })
+      return
+    case "win32": {
+      const safePath = filePath.replace(/'/g, "''")
+      await exec("powershell", [
+        "-NonInteractive",
+        "-Command",
+        `$path = '${safePath}'; $s = New-Object System.Media.SoundPlayer($path); $s.PlaySync(); $s.Dispose()`,
+      ]).catch((err) => {
         console.log("[Kilo New] Windows sound playback failed:", err)
-      }
-      break
+      })
+      return
+    }
   }
+}
+
+export async function playSound(soundId: SoundID): Promise<void> {
+  if (queued >= MAX_QUEUED) return
+
+  const currentChain = chain
+  queued++
+  chain = currentChain
+    .catch(() => {})
+    .then(async () => {
+      if (soundId === "system") {
+        await playSystem()
+        return
+      }
+      await playFile(soundId)
+    })
+    .finally(() => {
+      queued--
+    })
+
+  await chain
 }

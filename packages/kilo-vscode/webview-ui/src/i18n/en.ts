@@ -1218,6 +1218,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Sound to play on errors",
   "settings.notifications.sound.default": "Default",
   "settings.notifications.sound.none": "None",
+  "settings.notifications.sound.system": "System default",
+  "settings.notifications.testSound": "Test notification",
 
   "settings.experimental.share.title": "Share Mode",
   "settings.experimental.share.description": "How session sharing behaves",
