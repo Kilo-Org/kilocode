@@ -379,6 +379,42 @@ export type StreamSchedulerOptions = {
   backgroundMaxMs?: number
 }
 
+// Scheduler tuning — rationale:
+//
+// These defaults balance perceived streaming smoothness against renderer pressure.
+// The scheduler sits between SSE (dozens to hundreds of deltas per second per session)
+// and the webview message loop, which applies updates through Solid `batch()` and
+// triggers DOM / style / layout work on the renderer main thread.
+//
+// - DEFAULT_ACTIVE_MS = 16
+//   One 60Hz animation frame. The focused session should feel indistinguishable
+//   from immediate streaming, so we coalesce within a single paint window but no
+//   longer. Raising this to 32ms visibly stutters live text; lowering below ~8ms
+//   stops coalescing meaningfully because SSE delta arrival is already ~10-20ms
+//   apart at typical model rates.
+//
+// - DEFAULT_BG_BASE_MS = 150
+//   Background (non-focused) sessions don't need frame-perfect updates — the user
+//   can't see their content. 150ms keeps tab-status signals (spinner motion,
+//   token counts via related events) feeling alive while collapsing most
+//   per-token deltas into a single batched emission. Under 100ms the coalescing
+//   win shrinks; over ~250ms users start perceiving lag when switching tabs
+//   mid-stream (though `focus()` also immediately flushes, so this is mostly a
+//   concern for users watching tab-level indicators).
+//
+// - DEFAULT_BG_STEP_MS = 20
+//   Per-extra-background-session backoff beyond the first 2. Each additional
+//   streaming agent adds ~20ms to the background interval so total background
+//   message throughput stays roughly flat as the agent count grows. Without this,
+//   10 concurrent agents would put the same ~7 msg/sec pressure per-session on
+//   the renderer as 1 agent does (~70 msg/sec total background).
+//
+// - DEFAULT_BG_MAX_MS = 400
+//   Ceiling for the adaptive backoff. Even with 20+ agents streaming we never
+//   stall background emissions longer than 400ms, which keeps tab indicators
+//   recognizably "live" and keeps the `drop()`-on-delete path timely. Above
+//   ~500ms the UI starts feeling disconnected; below 300ms the many-agent
+//   backoff stops providing meaningful throttling.
 const DEFAULT_ACTIVE_MS = 16
 const DEFAULT_BG_BASE_MS = 150
 const DEFAULT_BG_STEP_MS = 20
