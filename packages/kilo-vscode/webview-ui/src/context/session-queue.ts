@@ -41,12 +41,7 @@ export function activeUserMessageID(messages: Message[], status: SessionStatusIn
   const id = active(messages)
   if (id) return id
   if (status.type === "idle") return undefined
-
-  for (let i = messages.length - 1; i >= 0; i -= 1) {
-    if (messages[i].role === "user") return messages[i].id
-  }
-
-  return undefined
+  return pending(messages)
 }
 
 export function queuedUserMessageIDs(messages: Message[], status: SessionStatusInfo) {

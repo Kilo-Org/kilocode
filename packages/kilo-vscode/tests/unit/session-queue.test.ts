@@ -54,6 +54,12 @@ describe("queuedUserMessageIDs", () => {
 })
 
 describe("activeUserMessageID", () => {
+  it("uses the first pending user before the first assistant exists", () => {
+    const messages = [user("message_1"), user("message_2")]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
+  })
+
   it("ignores terminal assistant updates without completed timestamps", () => {
     const messages = [user("message_1"), assistant("message_2", "message_1", { finish: "stop" }), user("message_3")]
 
