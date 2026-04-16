@@ -948,12 +948,12 @@ export function Prompt(props: PromptProps) {
                     const text = content.data as string
                     // Normalize line endings
                     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-                    const pastedContent = normalizedText.trim()
-                    const summary = shouldPasteSummary(pastedContent)
+                    const summary = shouldPasteSummary(normalizedText)
                     if (summary.summarize && !sync.data.config.experimental?.disable_paste_summary) {
-                      pasteText(pastedContent, `[Pasted ~${summary.lines} lines]`)
+                      pasteText(normalizedText, `[Pasted ~${summary.lines} lines]`)
                     } else {
-                      pasteText(pastedContent, pastedContent)
+                      // Direct insertion allows user edits to be preserved
+                      input.insertText(normalizedText)
                     }
                     return
                   }
