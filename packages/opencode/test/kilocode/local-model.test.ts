@@ -189,15 +189,8 @@ async function initLocal(options?: { prewrite?: Record<string, any> }): Promise<
 }
 
 async function readModelJson(): Promise<any> {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
-    const text = await fs.readFile(modelJsonPath, "utf-8")
-    try {
-      return JSON.parse(text)
-    } catch (err) {
-      if (attempt === 99) throw err
-      await Bun.sleep(10)
-    }
-  }
+  const text = await fs.readFile(modelJsonPath, "utf-8")
+  return JSON.parse(text)
 }
 
 async function removeModelJson() {

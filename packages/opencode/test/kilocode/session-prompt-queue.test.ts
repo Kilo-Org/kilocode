@@ -231,4 +231,93 @@ describe("session prompt queue", () => {
       server.stop(true)
     }
   })
+
+  test("cancel drops queued prompts and resets internal state", async () => {
+    const ready = Promise.withResolvers<void>()
+    const calls: number[] = []
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+
+        calls.push(Date.now())
+        const body = reply({ text: "first reply", ready: ready.resolve, wait: new Promise(() => {}) })
+        return new Response(body, {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: {
+                alibaba: {
+                  options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` },
+                },
+              },
+              agent: { code: { model: "alibaba/qwen-plus" } },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await Session.create({ title: "Queued cancel regression" })
+          const first = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "first prompt" }],
+          })
+          await ready.promise
+
+          const second = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "second prompt" }],
+          })
+          const third = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "third prompt" }],
+          })
+
+          await Bun.sleep(20)
+          expect(calls).toHaveLength(1)
+
+          await SessionPrompt.cancel(session.id)
+          await Promise.all([first, second, third])
+
+          expect(calls).toHaveLength(1)
+          const msgs = await Session.messages({ sessionID: session.id })
+          const assistants = msgs.filter((msg) => msg.info.role === "assistant")
+          expect(assistants).toHaveLength(1)
+          expect(msgs.filter((msg) => msg.info.role === "user")).toHaveLength(3)
+
+          // Internal state should have no lingering tail/version/target entries after the last release.
+          const ids = await Effect.runPromise(
+            KiloSessionPromptQueue.enqueue(
+              session.id,
+              MessageID.make("message_probe"),
+              Effect.succeed(KiloSessionPromptQueue.scope(session.id, []).map((item) => item.info.id)),
+              Effect.succeed([]),
+            ),
+          )
+          expect(ids).toEqual([])
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
 })

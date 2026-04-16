@@ -76,7 +76,10 @@ export namespace KiloSessionPromptQueue {
       (slot) =>
         Effect.sync(() => {
           slot.done.resolve()
-          if (tails.get(sessionID) === slot.tail) tails.delete(sessionID)
+          if (tails.get(sessionID) !== slot.tail) return
+          tails.delete(sessionID)
+          versions.delete(sessionID)
+          targets.delete(sessionID)
         }),
     )
   }
