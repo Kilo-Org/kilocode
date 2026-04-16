@@ -1,8 +1,13 @@
 import path from "path"
 import { describe, expect, test } from "bun:test"
+import { Effect } from "effect"
+import { KiloSessionPromptQueue } from "../../src/kilocode/session/prompt-queue"
+import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Instance } from "../../src/project/instance"
 import { Session } from "../../src/session"
+import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
+import { MessageID, SessionID } from "../../src/session/schema"
 import { Log } from "../../src/util/log"
 import { tmpdir } from "../fixture/fixture"
 
@@ -55,7 +60,67 @@ function hasText(msg: Awaited<ReturnType<typeof SessionPrompt.prompt>>, text: st
   return msg.parts.some((part) => part.type === "text" && part.text.includes(text))
 }
 
+function user(sessionID: SessionID, id: MessageID): MessageV2.WithParts {
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "user",
+      time: { created: 1 },
+      agent: "code",
+      model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+    },
+    parts: [],
+  }
+}
+
+function assistant(sessionID: SessionID, id: MessageID, parentID: MessageID): MessageV2.WithParts {
+  return {
+    info: {
+      id,
+      sessionID,
+      role: "assistant",
+      time: { created: 1, completed: 2 },
+      parentID,
+      modelID: ModelID.make("model"),
+      providerID: ProviderID.make("test"),
+      mode: "code",
+      agent: "code",
+      path: { cwd: "/tmp", root: "/tmp" },
+      cost: 0,
+      tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+      finish: "stop",
+    },
+    parts: [],
+  }
+}
+
 describe("session prompt queue", () => {
+  test("scopes queued turns without moving prior assistant history", async () => {
+    const sessionID = SessionID.make("session_scope")
+    const one = MessageID.make("message_01")
+    const ans = MessageID.make("message_02")
+    const two = MessageID.make("message_03")
+    const three = MessageID.make("message_04")
+    const messages = [
+      user(sessionID, one),
+      assistant(sessionID, ans, one),
+      user(sessionID, two),
+      user(sessionID, three),
+    ]
+
+    const ids = await Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        two,
+        Effect.sync(() => KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id)),
+        Effect.succeed([]),
+      ),
+    )
+
+    expect(ids).toEqual([one, ans, two])
+  })
+
   test("continues a queued prompt after the active run finishes", async () => {
     const ready = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()

@@ -39,10 +39,7 @@ export namespace KiloSessionPromptQueue {
       if (item.info.role === "assistant") return !hidden.has(item.info.parentID)
       return true
     })
-    const index = visible.findIndex((item) => item.info.role === "user" && item.info.id === target)
-    const hit = index >= 0 ? visible[index] : undefined
-    if (!hit) return visible
-    return [...visible.slice(0, index), ...visible.slice(index + 1), hit]
+    return visible
   }
 
   export function enqueue<A, E>(
