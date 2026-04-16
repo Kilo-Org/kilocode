@@ -2991,17 +2991,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     handleNetworkEvent(event.type as string, event.properties as any, this.client, (s) => this.getWorkspaceDirectory(s))
 
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
-    if (msg) {
-      if (msg.type === "partUpdated") {
-        this.streams.push({
-          ...msg,
-          part: this.slimPart(msg.part),
-        })
-        return
-      }
-      this.streams.flush(sessionID)
-      this.postMessage(msg)
+    if (!msg) return
+    if (msg.type === "partUpdated") {
+      this.streams.push({ ...msg, part: this.slimPart(msg.part) })
+      return
     }
+    this.streams.flush(sessionID)
+    this.postMessage(msg)
   }
 
   /**

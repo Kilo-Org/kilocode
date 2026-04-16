@@ -568,6 +568,79 @@ describe("session stream scheduling", () => {
     expect(sent).toHaveLength(0)
   })
 
+  it("never merges across sessions, messages, or parts", () => {
+    // Identity invariants: model-provider caching and session isolation depend on
+    // sessionID / messageID / partID never being swapped or combined by the scheduler.
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.push({
+      ...update("a", "a", "sess-1"),
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text: "a" },
+    })
+    queue.push({
+      ...update("b", "b", "sess-2"),
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text: "b" },
+    })
+    queue.push({
+      ...update("c", "c", "sess-1"),
+      messageID: "m2",
+      part: { id: "p1", type: "text", messageID: "m2", text: "c" },
+    })
+    queue.push({
+      ...update("d", "d", "sess-1"),
+      messageID: "m1",
+      part: { id: "p2", type: "text", messageID: "m1", text: "d" },
+    })
+    queue.flush()
+    const flat = items(sent)
+    expect(flat).toHaveLength(4)
+    // Each tuple preserved exactly
+    const keys = flat.map((msg) => `${msg.sessionID}:${msg.messageID}:${(msg.part as { id: string }).id}`)
+    expect(new Set(keys).size).toBe(4)
+    expect(keys).toEqual(expect.arrayContaining(["sess-1:m1:p1", "sess-2:m1:p1", "sess-1:m2:p1", "sess-1:m1:p2"]))
+  })
+
+  it("preserves part fields and concatenates deltas in arrival order", () => {
+    // Full-part replacement must keep all incoming fields verbatim; text deltas must
+    // concatenate in arrival order so cumulative text matches what the CLI streamed.
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.push({
+      type: "partUpdated",
+      sessionID: "sess-1",
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text: "hi", extraMetadata: { tokens: 42 } } as unknown as never,
+    })
+    queue.push({
+      type: "partUpdated",
+      sessionID: "sess-1",
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text: "hi world" } as unknown as never,
+      delta: { type: "text-delta", textDelta: " world" },
+    })
+    queue.push({
+      type: "partUpdated",
+      sessionID: "sess-1",
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text: "hi world!" } as unknown as never,
+      delta: { type: "text-delta", textDelta: "!" },
+    })
+    queue.flush()
+    const flat = items(sent)
+    expect(flat).toHaveLength(1)
+    const part = flat[0]!.part as { text: string; extraMetadata?: { tokens: number } }
+    // Initial full-part fields preserved
+    expect(part.extraMetadata?.tokens).toBe(42)
+    // Deltas concatenated in order onto the full part
+    expect(part.text).toBe("hi world!")
+    // When deltas fold into a queued full part, emit as a full-part replacement
+    // (no delta) so the webview does an authoritative replace rather than
+    // appending to whatever state it currently holds.
+    expect(flat[0]!.delta).toBeUndefined()
+  })
+
   it("tracks stats across coalesced and batched emissions", () => {
     const sent: Sent[] = []
     const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
