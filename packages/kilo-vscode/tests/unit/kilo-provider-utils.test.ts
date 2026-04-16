@@ -8,6 +8,7 @@ import {
   isEventFromForeignProject,
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
+  mergeFileSearchItems,
   mergeFileSearchResults,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
@@ -561,6 +562,35 @@ describe("mapCloudSessionMessage", () => {
   it("maps user role correctly", () => {
     const msg = mapCloudSessionMessageToWebviewMessage(makeCloudMessage({ role: "user" }))
     expect(msg.role).toBe("user")
+  })
+})
+
+describe("mergeFileSearchItems", () => {
+  it("puts exact folder matches before file matches", () => {
+    const result = mergeFileSearchItems({
+      query: "script",
+      files: ["script/hooks", "script/release", "script/beta.ts"],
+      folders: ["script/", "script/run-script/"],
+    })
+    expect(result).toEqual([
+      { path: "script/", type: "folder" },
+      { path: "script/hooks", type: "file" },
+      { path: "script/release", type: "file" },
+      { path: "script/beta.ts", type: "file" },
+      { path: "script/run-script/", type: "folder" },
+    ])
+  })
+
+  it("keeps file ordering before non-prefix folder matches", () => {
+    const result = mergeFileSearchItems({
+      query: "test",
+      files: ["src/test.ts"],
+      folders: ["src/latest/"],
+    })
+    expect(result).toEqual([
+      { path: "src/test.ts", type: "file" },
+      { path: "src/latest/", type: "folder" },
+    ])
   })
 })
 

@@ -31,7 +31,6 @@ import {
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
   resolveWorkspaceDirectory,
-  mergeFileSearchResults,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
@@ -45,6 +44,7 @@ import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
+import { handleFileSearch } from "./kilo-provider/file-search"
 import { getTerminalContents } from "./services/terminal/context"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { childID } from "./kilo-provider/task-session"
@@ -811,29 +811,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         }
-        case "requestFileSearch": {
-          const sdkClient = this.client
-          if (sdkClient) {
-            const dir = this.getWorkspaceDirectory(this.currentSession?.id)
-            const openPaths = dir ? await this.getOpenTabPaths(dir) : new Set<string>()
-            void sdkClient.find
-              .files({ query: message.query, directory: dir, type: "file", limit: 50 }, { throwOnError: true })
-              .then(({ data: paths }) => {
-                const uri = vscode.window.activeTextEditor?.document.uri
-                const active =
-                  uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath).replaceAll("\\", "/") : undefined
-                const result = mergeFileSearchResults({ query: message.query, backend: paths, open: openPaths, active })
-                this.postMessage({ type: "fileSearchResult", paths: result, dir, requestId: message.requestId })
-              })
-              .catch((error: unknown) => {
-                console.error("[Kilo New] File search failed:", error)
-                this.postMessage({ type: "fileSearchResult", paths: [], dir, requestId: message.requestId })
-              })
-          } else {
-            this.postMessage({ type: "fileSearchResult", paths: [], dir: "", requestId: message.requestId })
-          }
+        case "requestFileSearch":
+          await handleFileSearch({
+            client: this.client,
+            message,
+            current: this.currentSession?.id,
+            context: this.contextSessionID,
+            dir: (id) => this.getWorkspaceDirectory(id),
+            open: (dir) => this.getOpenTabPaths(dir),
+            post: (msg) => this.postMessage(msg),
+          })
           break
-        }
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break

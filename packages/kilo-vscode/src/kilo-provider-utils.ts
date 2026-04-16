@@ -493,3 +493,38 @@ export function mergeFileSearchResults(input: {
   const seen = new Set(tabs)
   return [...tabs, ...input.backend.filter((p) => !seen.has(p))]
 }
+
+export type FileSearchItem = { path: string; type: "file" | "folder" }
+
+const trim = (p: string) => p.replaceAll("\\", "/").replace(/\/+$/, "")
+
+function base(p: string): string {
+  const clean = trim(p)
+  return clean.split("/").pop() ?? clean
+}
+
+function rank(query: string, p: string): number {
+  const clean = trim(p).toLowerCase()
+  const name = base(p).toLowerCase()
+  if (clean === query || name === query) return 0
+  if (name.startsWith(query) || (query.includes("/") && clean.startsWith(query))) return 1
+  if (name.includes(query)) return 2
+  if (clean.includes(query)) return 3
+  return 4
+}
+
+export function mergeFileSearchItems(input: { query: string; files: string[]; folders: string[] }): FileSearchItem[] {
+  const query = input.query.trim().toLowerCase()
+  const files = input.files.map((p) => ({ path: p, type: "file" as const }))
+  const seen = new Set(input.files.map(trim))
+  const folders = input.folders
+    .filter((p) => !seen.has(trim(p)))
+    .map((p, index) => ({ item: { path: p, type: "folder" as const }, index, rank: query ? rank(query, p) : 4 }))
+
+  if (!query) return [...files, ...folders.map((x) => x.item)]
+
+  const sorted = [...folders].sort((a, b) => a.rank - b.rank || a.index - b.index)
+  const boosted = sorted.filter((x) => x.rank <= 1).map((x) => x.item)
+  const rest = sorted.filter((x) => x.rank > 1).map((x) => x.item)
+  return [...boosted, ...files, ...rest]
+}

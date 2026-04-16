@@ -731,9 +731,15 @@ export interface ChatCompletionResultMessage {
   requestId: string
 }
 
+export interface FileSearchItem {
+  path: string
+  type: "file" | "folder"
+}
+
 export interface FileSearchResultMessage {
   type: "fileSearchResult"
   paths: string[]
+  items?: FileSearchItem[]
   dir: string
   requestId: string
 }
@@ -1838,6 +1844,7 @@ export interface RequestFileSearchMessage {
   type: "requestFileSearch"
   query: string
   requestId: string
+  sessionID?: string
 }
 
 export interface RequestTerminalContextMessage {

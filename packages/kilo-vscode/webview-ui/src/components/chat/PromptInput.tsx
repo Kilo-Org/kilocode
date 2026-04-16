@@ -61,7 +61,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(vscode)
+  const mention = useFileMention(
+    vscode,
+    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+  )
   const terminal = useTerminalContext(vscode)
   const excluded = worktree ? new Set(["sessions"]) : undefined
   const slash = useSlashCommand(vscode, excluded)
@@ -711,7 +714,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">No files or folders found</div>}
           >
             <For each={mention.mentionResults()}>
               {(item, index) => (
@@ -732,8 +735,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     </>
                   ) : (
                     <>
-                      <FileIcon node={{ path: item.value, type: "file" }} class="file-mention-icon" />
-                      <span class="file-mention-name">{fileName(item.value)}</span>
+                      <FileIcon
+                        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+                        class="file-mention-icon"
+                      />
+                      <span class="file-mention-name">
+                        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+                      </span>
                       <span class="file-mention-dir">{dirName(item.value)}</span>
                     </>
                   )}
