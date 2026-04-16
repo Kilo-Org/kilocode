@@ -1273,6 +1273,17 @@ export const dict = {
   "settings.context.prune.description": "Удалить старые выходные данные инструментов при сжатии",
   "settings.context.watcherPatterns": "Шаблоны игнорирования наблюдателя файлов",
   "settings.context.watcherPatterns.description": "Glob-шаблоны для файлов, которые наблюдатель должен игнорировать",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Использовать пользовательский prompt",
+  "settings.commitMessage.override.description":
+    "Переопределить prompt по умолчанию для commit message. Если включено, ваш пользовательский prompt полностью заменяет встроенный prompt для conventional commits.",
+  "settings.commitMessage.prompt.title": "Пользовательский prompt",
+  "settings.commitMessage.prompt.description":
+    "Системный prompt, отправляемый ИИ при генерации commit messages. Это полностью заменяет prompt по умолчанию.",
+  "settings.commitMessage.prompt.placeholder":
+    "напр., Сгенерируй commit messages на испанском языке в формате conventional commits. Верни ТОЛЬКО commit message.",
+
   "settings.display.username.title": "Имя пользователя",
   "settings.display.username.description": "Пользовательское имя в разговорах",
   "settings.display.layout.title": "Макет",

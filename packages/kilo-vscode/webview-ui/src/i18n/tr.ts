@@ -1241,6 +1241,16 @@ export const dict = {
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
   "settings.context.watcherPatterns.description": "İzleyicinin yok sayması gereken dosyalar için glob kalıpları",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Özel prompt Kullan",
+  "settings.commitMessage.override.description":
+    "Varsayılan commit message için olan prompt değerini geçersiz kıl. Etkinleştirildiğinde, özel prompt değeriniz yerleşik conventional commits için olan prompt değerini tamamen değiştirir.",
+  "settings.commitMessage.prompt.title": "Özel prompt",
+  "settings.commitMessage.prompt.description":
+    "commit messages oluşturulurken yapay zekaya gönderilen sistem prompt'u. Bu, varsayılan prompt'un tamamen yerini alır.",
+  "settings.commitMessage.prompt.placeholder":
+    "örn. conventional commits formatını izleyerek İspanyolca commit messages oluştur. SADECE commit message döndür.",
+
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.layout.title": "Düzen",

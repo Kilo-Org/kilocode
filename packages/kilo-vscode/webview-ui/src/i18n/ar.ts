@@ -1249,6 +1249,17 @@ export const dict = {
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
   "settings.context.watcherPatterns.description": "أنماط glob للملفات التي يجب على المراقب تجاهلها",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "استخدام prompt مخصص",
+  "settings.commitMessage.override.description":
+    "تجاوز prompt الـ commit message الافتراضي. عند التفعيل، سيستبدل الـ prompt المخصص الخاص بك الـ prompt المدمج لـ conventional commits بالكامل.",
+  "settings.commitMessage.prompt.title": "prompt مخصص",
+  "settings.commitMessage.prompt.description":
+    "الـ prompt النظامي المرسل إلى الذكاء الاصطناعي عند إنشاء commit messages. هذا يستبدل الـ prompt الافتراضي بالكامل.",
+  "settings.commitMessage.prompt.placeholder":
+    "على سبيل المثال: قم بإنشاء commit messages باللغة الإسبانية باتباع تنسيق conventional commits. أرجع الـ commit message فقط.",
+
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.layout.title": "التخطيط",

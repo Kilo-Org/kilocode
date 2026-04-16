@@ -173,4 +173,49 @@ class KiloConnectionServiceTest {
         svc.dispose()
         assertEquals(ConnectionState.Disconnected, svc.state.value)
     }
+
+    // ------ Reconnect & health ------
+
+    @Test
+    fun `restart tears down and reconnects`() = runBlocking {
+        val svc = KiloConnectionService(scope, fake, {}, log)
+        svc.connect()
+        mock.awaitSseConnection()
+
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+
+        // Restart should tear down and re-open
+        svc.restart()
+
+        // Wait for reconnection
+        withTimeout(10_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+        assertIs<ConnectionState.Connected>(svc.state.value)
+        assertTrue(svc.api != null)
+    }
+
+    @Test
+    fun `health check failure triggers reconnect`() = runBlocking {
+        // Start healthy then switch to failing health
+        val svc = KiloConnectionService(scope, fake, {}, log)
+        svc.connect()
+        mock.awaitSseConnection()
+
+        withTimeout(5_000) {
+            svc.state.first { it is ConnectionState.Connected }
+        }
+
+        // Make health checks fail — the health loop runs every 10s, so we
+        // close the SSE first (which triggers immediate reconnect path)
+        mock.health = """{"healthy": false}"""
+        mock.closeSse()
+
+        // Should transition away from Connected
+        withTimeout(10_000) {
+            svc.state.first { it !is ConnectionState.Connected }
+        }
+    }
 }

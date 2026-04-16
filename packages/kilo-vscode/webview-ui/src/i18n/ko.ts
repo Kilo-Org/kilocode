@@ -1253,6 +1253,17 @@ export const dict = {
   "settings.context.prune.description": "압축 중 이전 도구 출력 제거",
   "settings.context.watcherPatterns": "파일 감시자 무시 패턴",
   "settings.context.watcherPatterns.description": "감시자가 무시해야 할 파일의 글로브 패턴",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "사용자 지정 prompt 사용",
+  "settings.commitMessage.override.description":
+    "기본 commit message의 prompt를 재정의합니다. 활성화되면 사용자 지정 prompt가 기본 제공되는 conventional commits의 prompt를 완전히 대체합니다.",
+  "settings.commitMessage.prompt.title": "사용자 지정 prompt",
+  "settings.commitMessage.prompt.description":
+    "commit messages를 생성할 때 AI로 전송되는 시스템 prompt입니다. 이는 기본 prompt를 완전히 대체합니다.",
+  "settings.commitMessage.prompt.placeholder":
+    "예: 스페인어로 conventional commits 형식을 따라 commit messages를 생성해줘. 오직 commit message만 반환할 것.",
+
   "settings.display.username.title": "사용자 이름",
   "settings.display.username.description": "대화에 표시되는 사용자 정의 사용자 이름",
   "settings.display.layout.title": "레이아웃",

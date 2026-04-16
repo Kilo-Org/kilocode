@@ -246,4 +246,84 @@ class KiloBackendAppServiceTest {
 
         assertEquals("updated", svc.config?.model)
     }
+
+    // ------ Concurrency & lifecycle tests ------
+
+    @Test
+    fun `rapid disposed events produce single valid Ready`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        mock.awaitSseConnection()
+
+        // Fire rapid global.disposed events to trigger concurrent load() calls
+        repeat(5) {
+            mock.pushEvent("global.disposed", """{"type":"global.disposed"}""")
+        }
+
+        // Wait for the app to settle back to Ready
+        withTimeout(15_000) {
+            // Allow transient Loading states, wait for final Ready
+            while (true) {
+                val state = svc.appState.value
+                if (state is KiloAppState.Ready) {
+                    // Verify it's stable
+                    delay(500)
+                    if (svc.appState.value is KiloAppState.Ready) break
+                }
+                delay(100)
+            }
+        }
+
+        assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertNotNull(svc.config)
+    }
+
+    @Test
+    fun `restart lifecycle transitions correctly`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        // Restart should tear down and reconnect
+        svc.restart()
+
+        // Should transition back to Ready after restart
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertIs<KiloAppState.Ready>(svc.appState.value)
+        assertNotNull(svc.config)
+    }
+
+    @Test
+    fun `reconnect after SSE close restores Ready state`() = runBlocking {
+        val svc = create()
+        svc.connect()
+
+        withTimeout(10_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        // Close SSE to trigger reconnect path
+        mock.closeSse()
+
+        // Should eventually recover to Connected/Ready through reconnect
+        // (connection service reconnects SSE if process is alive — but
+        // FakeCliServer returns no process, so it delegates to onReconnect
+        // which calls reconnect() under mutex)
+        withTimeout(15_000) {
+            svc.appState.first { it is KiloAppState.Ready }
+        }
+
+        assertIs<KiloAppState.Ready>(svc.appState.value)
+    }
 }

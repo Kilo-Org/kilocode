@@ -1274,6 +1274,17 @@ export const dict = {
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
   "settings.context.watcherPatterns.description": "Glob uzorci za datoteke koje promatrač treba ignorirati",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Koristi prilagođeni prompt",
+  "settings.commitMessage.override.description":
+    "Nadjačaj podrazumijevani prompt za commit message. Kada je omogućeno, vaš prilagođeni prompt u potpunosti zamjenjuje ugrađeni prompt za conventional commits.",
+  "settings.commitMessage.prompt.title": "Prilagođeni prompt",
+  "settings.commitMessage.prompt.description":
+    "Sistemski prompt koji se šalje AI-u prilikom generisanja commit messages. Ovo u potpunosti zamjenjuje podrazumijevani prompt.",
+  "settings.commitMessage.prompt.placeholder":
+    "npr. Generiši commit messages na španskom jeziku prateći conventional commits format. Vrati SAMO commit message.",
+
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.layout.title": "Raspored",

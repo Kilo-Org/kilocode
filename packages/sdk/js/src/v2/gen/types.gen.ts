@@ -1690,6 +1690,15 @@ export type Config = {
      */
     url?: string
   }
+  /**
+   * Configuration for AI-generated commit messages
+   */
+  commit_message?: {
+    /**
+     * Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.
+     */
+    prompt?: string
+  }
   compaction?: {
     /**
      * Enable automatic compaction when context is full (default: true)

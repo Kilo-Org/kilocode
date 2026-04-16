@@ -1266,6 +1266,16 @@ export const dict = {
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Use Custom Prompt",
+  "settings.commitMessage.override.description":
+    "Override the default commit message prompt. When enabled, your custom prompt fully replaces the built-in conventional commits prompt.",
+  "settings.commitMessage.prompt.title": "Custom Prompt",
+  "settings.commitMessage.prompt.description":
+    "System prompt sent to the AI when generating commit messages. This replaces the default prompt entirely.",
+  "settings.commitMessage.prompt.placeholder":
+    "e.g. Generate commit messages in Spanish following conventional commits format. Return ONLY the commit message.",
+
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
   "settings.display.layout.title": "Layout",

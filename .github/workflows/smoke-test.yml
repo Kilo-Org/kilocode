@@ -1,0 +1,120 @@
+# kilocode_change - new file
+# Standalone smoke test — checks out kilo-bench and runs a small set of
+# Harbor eval tasks against the latest published CLI (or a specific version).
+#
+# Tasks:  hello-world (~$0.01), log-summary-date-ranges (~$0.13)
+# Expected total: < $0.50, < 15 min wall clock
+#
+# Triggers:
+#   - workflow_dispatch: manually from Actions tab (optionally pass a CLI version)
+#   - push to main: automatically after every merge
+#
+# Required secrets:
+#   KILO_API_KEY         — Kilo Gateway key
+#   KILO_ORG_ID          — Kilo org ID
+#   BENCH_GITHUB_TOKEN   — PAT with contents:read on Kilo-Org/kilo-bench (private repo)
+
+name: smoke-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      cli_version:
+        description: "CLI version to test (e.g. 7.0.36). Leave blank for latest npm release."
+        required: false
+        type: string
+
+concurrency:
+  group: smoke-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    name: Smoke Test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
+    steps:
+      - name: Free disk space
+        continue-on-error: true
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost /opt/hostedtoolcache
+          sudo docker image prune --all --force
+
+      - name: Checkout kilo-bench
+        uses: actions/checkout@v4
+        with:
+          repository: Kilo-Org/kilo-bench
+          token: ${{ secrets.BENCH_GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --no-dev
+
+      - name: Validate API key
+        run: |
+          if [[ -z "$KILO_API_KEY" ]]; then
+            echo "::error::KILO_API_KEY secret is not set."
+            exit 1
+          fi
+
+      - name: Resolve CLI version
+        id: cli
+        run: |
+          VERSION="${{ inputs.cli_version }}"
+          if [[ -n "$VERSION" ]]; then
+            URL="https://github.com/Kilo-Org/kilocode/releases/download/v${VERSION}/kilo-linux-x64.tar.gz"
+            echo "cli_url=$URL" >> "$GITHUB_OUTPUT"
+            echo "::notice::Testing CLI v${VERSION} from release: $URL"
+          else
+            echo "cli_url=" >> "$GITHUB_OUTPUT"
+            echo "::notice::Testing latest CLI from npm"
+          fi
+
+      - name: Run smoke test — hello-world
+        env:
+          KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
+          KILO_CLI_GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/run_eval.sh \
+            -m kilo/anthropic/claude-sonnet-4.6 \
+            -d hello-world \
+            --job-name smoke-test-hello-world
+
+      - name: Run smoke test — log-summary-date-ranges
+        env:
+          KILO_CLI_URL: ${{ steps.cli.outputs.cli_url }}
+          KILO_CLI_GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          ./scripts/run_eval.sh \
+            -m kilo/anthropic/claude-sonnet-4.6 \
+            -d terminal-bench-sample \
+            -t "log-summary-date-ranges" \
+            --job-name smoke-test-log-summary
+
+      - name: Validate results
+        run: python3 scripts/validate_smoke_test.py jobs/smoke-test-*/
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-results
+          path: |
+            jobs/smoke-test-*/**/result.json
+            jobs/smoke-test-*/**/trajectory.json
+          retention-days: 30
+          if-no-files-found: warn

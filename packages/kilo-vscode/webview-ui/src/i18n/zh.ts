@@ -1225,6 +1225,17 @@ export const dict = {
   "settings.context.prune.description": "压缩期间移除旧的工具输出",
   "settings.context.watcherPatterns": "文件监视器忽略模式",
   "settings.context.watcherPatterns.description": "监视器应忽略的文件的 glob 模式",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "使用自定义 prompt",
+  "settings.commitMessage.override.description":
+    "覆盖默认的 commit message 的 prompt。启用后，你的自定义 prompt 将完全替换内置的 conventional commits 的 prompt。",
+  "settings.commitMessage.prompt.title": "自定义 prompt",
+  "settings.commitMessage.prompt.description":
+    "在生成 commit messages 时发送给 AI 的系统 prompt。这将完全替换默认的 prompt。",
+  "settings.commitMessage.prompt.placeholder":
+    "例如：按照 conventional commits 格式用西班牙语生成 commit messages。只返回 commit message。",
+
   "settings.display.username.title": "用户名",
   "settings.display.username.description": "对话中显示的自定义用户名",
   "settings.display.layout.title": "布局",

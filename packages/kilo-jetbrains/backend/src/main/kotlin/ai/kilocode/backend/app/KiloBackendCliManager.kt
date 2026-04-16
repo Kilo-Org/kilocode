@@ -2,7 +2,10 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.util.IntellijLog
 import ai.kilocode.backend.util.KiloLog
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.util.SystemInfo
 import com.intellij.util.system.CpuArch
 import kotlinx.coroutines.Dispatchers
@@ -12,6 +15,7 @@ import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
 import java.security.SecureRandom
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -21,7 +25,9 @@ import java.util.concurrent.TimeUnit
  * spawns `kilo serve --port 0`, and exposes the result as [State].
  *
  * Concurrency is handled by the owning [KiloBackendAppService] — all public
- * methods are called under its mutex so no internal synchronization is needed.
+ * methods except [exited] are called under its mutex. [exited] is called from
+ * [KiloConnectionService]'s IO dispatcher and is thread-safe via the stale-ref
+ * guard and volatile [process] field.
  */
 class KiloBackendCliManager(
     private val log: KiloLog = IntellijLog(KiloBackendCliManager::class.java),
@@ -33,6 +39,7 @@ class KiloBackendCliManager(
         private val PORT_REGEX = Regex("""listening on http://[\w.]+:(\d+)""")
     }
 
+    @Volatile
     private var process: Process? = null
     private var hook: Thread? = null
 
@@ -145,6 +152,9 @@ class KiloBackendCliManager(
                 put("KILO_ENABLE_QUESTION_TOOL", "true")
                 put("KILO_PLATFORM", "jetbrains")
                 put("KILO_APP_NAME", "kilo-code")
+                put("KILO_DISABLE_CLAUDE_CODE", "true")
+                put("KILOCODE_FEATURE", "jetbrains-plugin")
+                ideEnv().forEach { (k, v) -> put(k, v) }
             }
 
             val cmd = listOf(cli.absolutePath, "serve", "--port", "0")
@@ -273,6 +283,44 @@ class KiloBackendCliManager(
             else -> throw IllegalStateException("Unsupported architecture: ${CpuArch.CURRENT}")
         }
         return "$os-$arch"
+    }
+
+    /**
+     * Collect IDE-specific env vars for telemetry and gateway attribution.
+     * Catches all exceptions since these are best-effort — missing values
+     * won't prevent the CLI from starting.
+     */
+    private fun ideEnv(): Map<String, String> = buildMap {
+        runCatching {
+            val info = ApplicationInfo.getInstance()
+            val name = info.fullApplicationName
+            val build = info.build.asString()
+            put("KILO_EDITOR_NAME", name)
+            put("KILOCODE_EDITOR_NAME", "$name $build")
+        }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
+
+        runCatching {
+            val version = PluginManagerCore
+                .getPlugin(PluginId.getId("ai.kilocode"))?.version
+            if (version != null) put("KILO_APP_VERSION", version)
+        }.onFailure { log.info("Could not read plugin version: ${it.message}") }
+
+        runCatching {
+            put("KILO_MACHINE_ID", machineId())
+        }.onFailure { log.info("Could not read machine ID: ${it.message}") }
+    }
+
+    /**
+     * Persistent machine ID stored in the IntelliJ system directory.
+     * Generated once and reused across restarts.
+     */
+    private fun machineId(): String {
+        val file = File(PathManager.getSystemPath(), "kilo/machine-id")
+        if (file.exists()) return file.readText().trim()
+        val id = UUID.randomUUID().toString()
+        file.parentFile.mkdirs()
+        file.writeText(id)
+        return id
     }
 
     private fun generatePassword(): String {

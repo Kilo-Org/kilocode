@@ -1265,6 +1265,17 @@ export const dict = {
   "settings.context.prune.description": "圧縮時に古いツール出力を削除",
   "settings.context.watcherPatterns": "ファイルウォッチャー無視パターン",
   "settings.context.watcherPatterns.description": "ウォッチャーが無視すべきファイルのglobパターン",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "カスタム prompt を使用",
+  "settings.commitMessage.override.description":
+    "デフォルトの commit message の prompt を上書きします。有効にすると、カスタム prompt が組み込みの conventional commits の prompt を完全に置き換えます。",
+  "settings.commitMessage.prompt.title": "カスタム prompt",
+  "settings.commitMessage.prompt.description":
+    "commit messages を生成する際に AI に送信されるシステム prompt。これはデフォルトの prompt を完全に置き換えます。",
+  "settings.commitMessage.prompt.placeholder":
+    "例: スペイン語で conventional commits 形式に従って commit messages を生成して。commit message のみを返して。",
+
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.layout.title": "レイアウト",

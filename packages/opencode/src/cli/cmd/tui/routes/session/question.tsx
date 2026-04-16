@@ -10,7 +10,9 @@ import { SplitBorder } from "../../component/border"
 import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import { useDialog } from "../../ui/dialog"
 
+// kilocode_change start
 export function QuestionPrompt(props: { request: QuestionRequest }) {
+  // kilocode_change end
   const sdk = useSDK()
   const { theme } = useTheme()
   const keybind = useKeybind()

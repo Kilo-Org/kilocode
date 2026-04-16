@@ -1274,6 +1274,17 @@ export const dict = {
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",
   "settings.context.watcherPatterns.description": "Wzorce glob dla plików do ignorowania",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Użyj niestandardowego prompt",
+  "settings.commitMessage.override.description":
+    "Zastąp domyślny prompt dla commit message. Po włączeniu, Twój niestandardowy prompt całkowicie zastępuje wbudowany prompt dla conventional commits.",
+  "settings.commitMessage.prompt.title": "Niestandardowy prompt",
+  "settings.commitMessage.prompt.description":
+    "Systemowy prompt wysyłany do AI podczas generowania commit messages. Zastępuje to całkowicie domyślny prompt.",
+  "settings.commitMessage.prompt.placeholder":
+    "np. Generuj commit messages w języku hiszpańskim zgodnie z formatem conventional commits. Zwróć TYLKO commit message.",
+
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.layout.title": "Układ",

@@ -1264,6 +1264,17 @@ export const dict = {
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer, som vagten skal ignorere",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Brug brugerdefineret prompt",
+  "settings.commitMessage.override.description":
+    "Tilsidesæt standard prompt for commit message. Når dette er aktiveret, erstatter din brugerdefinerede prompt fuldstændigt den indbyggede prompt for conventional commits.",
+  "settings.commitMessage.prompt.title": "Brugerdefineret prompt",
+  "settings.commitMessage.prompt.description":
+    "System prompt sendt til AI'en ved generering af commit messages. Dette erstatter fuldstændigt standard prompt.",
+  "settings.commitMessage.prompt.placeholder":
+    "f.eks. Generer commit messages på spansk efter conventional commits formatet. Returner KUN commit message.",
+
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.layout.title": "Layout",

@@ -207,7 +207,9 @@ export namespace SessionProcessor {
               time: { start: match.part.state.time.start, end: Date.now() },
             },
           })
+          // kilocode_change start
           if (error instanceof Permission.RejectedError || error instanceof Question.RejectedError) {
+            // kilocode_change end
             ctx.blocked = ctx.shouldBreak
           }
           yield* settleToolCall(toolCallID)

@@ -12,10 +12,9 @@ import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -41,19 +40,21 @@ class KiloAppService(private val cs: CoroutineScope) {
     var version: String? = null
         private set
 
-    val state: StateFlow<KiloAppStateDto> = flow {
-        durable {
-            KiloAppRpcApi.getInstance()
-                .state()
-                .collect { emit(it) }
-        }
-    }.stateIn(cs, SharingStarted.Eagerly, init)
+    private val _state = MutableStateFlow(init)
+    val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
 
     fun connect() {
         if (!started.compareAndSet(false, true)) return
         cs.launch {
             durable {
                 KiloAppRpcApi.getInstance().connect()
+            }
+        }
+        cs.launch {
+            durable {
+                KiloAppRpcApi.getInstance()
+                    .state()
+                    .collect { _state.value = it }
             }
         }
     }

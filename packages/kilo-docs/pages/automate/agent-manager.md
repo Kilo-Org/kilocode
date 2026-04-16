@@ -156,6 +156,7 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Select files and click **Apply to Main Branch** to merge changes
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
+- **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
 ## Terminals
 

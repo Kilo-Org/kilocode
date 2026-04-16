@@ -1278,6 +1278,17 @@ export const dict = {
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",
   "settings.context.watcherPatterns.description": "Padrões glob para arquivos que o observador deve ignorar",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Usar prompt personalizado",
+  "settings.commitMessage.override.description":
+    "Substituir o prompt padrão de commit message. Quando ativado, o seu prompt personalizado substitui totalmente o prompt integrado de conventional commits.",
+  "settings.commitMessage.prompt.title": "prompt personalizado",
+  "settings.commitMessage.prompt.description":
+    "O prompt de sistema enviado à IA ao gerar commit messages. Isso substitui totalmente o prompt padrão.",
+  "settings.commitMessage.prompt.placeholder":
+    "ex: Gere commit messages em espanhol seguindo o formato conventional commits. Retorne APENAS o commit message.",
+
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
   "settings.display.layout.title": "Layout",

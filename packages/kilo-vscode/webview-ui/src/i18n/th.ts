@@ -1249,6 +1249,17 @@ export const dict = {
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",
   "settings.context.watcherPatterns.description": "รูปแบบ glob สำหรับไฟล์ที่ตัวเฝ้าดูควรละเว้น",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "ใช้ prompt แบบกำหนดเอง",
+  "settings.commitMessage.override.description":
+    "แทนที่ prompt เริ่มต้นของ commit message เมื่อเปิดใช้งาน prompt แบบกำหนดเองของคุณจะแทนที่ prompt เริ่มต้นของ conventional commits ทั้งหมด",
+  "settings.commitMessage.prompt.title": "prompt แบบกำหนดเอง",
+  "settings.commitMessage.prompt.description":
+    "System prompt ที่ส่งไปยัง AI เมื่อสร้าง commit messages สิ่งนี้จะแทนที่ prompt เริ่มต้นทั้งหมด",
+  "settings.commitMessage.prompt.placeholder":
+    "เช่น สร้าง commit messages เป็นภาษาสเปนตามรูปแบบ conventional commits คืนค่าเฉพาะ commit message เท่านั้น",
+
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
   "settings.display.layout.title": "เค้าโครง",

@@ -1243,6 +1243,16 @@ export const dict = {
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
   "settings.context.watcherPatterns.description": "Glob-шаблони для файлів, які спостерігач має ігнорувати",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Використовувати власний prompt",
+  "settings.commitMessage.override.description":
+    "Перевизначити prompt за замовчуванням для commit message. Якщо ввімкнено, ваш власний prompt повністю замінює вбудований prompt для conventional commits.",
+  "settings.commitMessage.prompt.title": "Власний prompt",
+  "settings.commitMessage.prompt.description":
+    "Системний prompt, що надсилається ШІ під час генерації commit messages. Це повністю замінює prompt за замовчуванням.",
+  "settings.commitMessage.prompt.placeholder":
+    "напр., Згенеруй commit messages іспанською мовою у форматі conventional commits. Поверни ЛИШЕ commit message.",
+
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.layout.title": "Макет",

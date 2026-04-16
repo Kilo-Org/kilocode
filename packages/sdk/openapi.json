@@ -14674,6 +14674,16 @@
               }
             }
           },
+          "commit_message": {
+            "description": "Configuration for AI-generated commit messages",
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "description": "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+                "type": "string"
+              }
+            }
+          },
           "compaction": {
             "type": "object",
             "properties": {

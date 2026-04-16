@@ -1290,6 +1290,17 @@ export const dict = {
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
   "settings.context.watcherPatterns.description": "Glob-Muster für Dateien, die der Watcher ignorieren soll",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Benutzerdefinierten prompt verwenden",
+  "settings.commitMessage.override.description":
+    "Den Standard-prompt für die commit message überschreiben. Wenn diese Option aktiviert ist, ersetzt Ihr benutzerdefinierter prompt den integrierten prompt für conventional commits vollständig.",
+  "settings.commitMessage.prompt.title": "Benutzerdefinierter prompt",
+  "settings.commitMessage.prompt.description":
+    "System-prompt, der beim Generieren von commit messages an die KI gesendet wird. Dies ersetzt den Standard-prompt vollständig.",
+  "settings.commitMessage.prompt.placeholder":
+    "z. B. Generiere commit messages auf Spanisch nach dem conventional commits Format. Gib NUR die commit message zurück.",
+
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
   "settings.display.layout.title": "Layout",

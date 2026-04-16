@@ -12,7 +12,7 @@ function clearGitOutputs() {
   }
 }
 
-import { getGitContext, setGitRunnerForTest } from "../git-context"
+import { getGitContext, setGitRunnerForTest } from "@/kilocode/commit-message/git-context"
 
 describe("commit-message.git-context", () => {
   afterEach(() => setGitRunnerForTest(undefined))

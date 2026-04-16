@@ -1248,6 +1248,16 @@ export const dict = {
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
+  "settings.commitMessage.override.description":
+    "Overschrijf de standaard prompt voor de commit message. Indien ingeschakeld, vervangt uw aangepaste prompt de ingebouwde prompt voor conventional commits volledig.",
+  "settings.commitMessage.prompt.title": "Aangepaste prompt",
+  "settings.commitMessage.prompt.description":
+    "Systeem prompt die naar de AI wordt gestuurd bij het genereren van commit messages. Dit vervangt de standaard prompt volledig.",
+  "settings.commitMessage.prompt.placeholder":
+    "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
+
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.layout.title": "Lay-out",

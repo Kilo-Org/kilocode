@@ -1295,6 +1295,17 @@ export const dict = {
   "settings.context.prune.description": "Supprimer les anciennes sorties d'outils pendant la compaction",
   "settings.context.watcherPatterns": "Motifs d'ignorance de l'observateur",
   "settings.context.watcherPatterns.description": "Motifs glob pour les fichiers que l'observateur doit ignorer",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Utiliser un prompt personnalisé",
+  "settings.commitMessage.override.description":
+    "Remplacer le prompt par défaut pour le commit message. Lorsque cette option est activée, votre prompt personnalisé remplace entièrement le prompt intégré pour les conventional commits.",
+  "settings.commitMessage.prompt.title": "prompt personnalisé",
+  "settings.commitMessage.prompt.description":
+    "prompt système envoyé à l'IA lors de la génération des commit messages. Cela remplace entièrement le prompt par défaut.",
+  "settings.commitMessage.prompt.placeholder":
+    "par ex. Générer des commit messages en espagnol en suivant le format conventional commits. Retourner UNIQUEMENT le commit message.",
+
   "settings.display.username.title": "Nom d'utilisateur",
   "settings.display.username.description": "Nom d'utilisateur personnalisé dans les conversations",
   "settings.display.layout.title": "Disposition",
