@@ -60,6 +60,7 @@ describe("session prompt queue", () => {
     const ready = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()
     const calls: number[] = []
+    const replies = ["first reply", "second reply", "third reply"]
     const server = Bun.serve({
       port: 0,
       fetch(req) {
@@ -69,8 +70,8 @@ describe("session prompt queue", () => {
         calls.push(Date.now())
         const body =
           calls.length === 1
-            ? reply({ text: "first reply", ready: ready.resolve, wait: release.promise })
-            : reply({ text: "second reply" })
+            ? reply({ text: replies[0], ready: ready.resolve, wait: release.promise })
+            : reply({ text: replies[calls.length - 1] ?? "extra reply" })
         return new Response(body, {
           status: 200,
           headers: { "Content-Type": "text/event-stream" },
@@ -122,6 +123,11 @@ describe("session prompt queue", () => {
             agent: "code",
             parts: [{ type: "text", text: "second prompt" }],
           })
+          const third = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "third prompt" }],
+          })
 
           await Bun.sleep(20)
           expect(calls).toHaveLength(1)
@@ -129,9 +135,11 @@ describe("session prompt queue", () => {
           release.resolve()
           await first
           const two = await second
+          const three = await third
 
           expect(hasText(two, "second reply")).toBe(true)
-          expect(calls).toHaveLength(2)
+          expect(hasText(three, "third reply")).toBe(true)
+          expect(calls).toHaveLength(3)
 
           const msgs = await Session.messages({ sessionID: session.id })
           const users = msgs.filter((msg) => msg.info.role === "user")
@@ -139,14 +147,16 @@ describe("session prompt queue", () => {
           const text = assistants.flatMap((msg) =>
             msg.parts.filter((part) => part.type === "text").map((part) => part.text),
           )
-          expect(users).toHaveLength(2)
-          expect(assistants).toHaveLength(2)
+          expect(users).toHaveLength(3)
+          expect(assistants).toHaveLength(3)
           expect(text).toContain("first reply")
           expect(text).toContain("second reply")
-          const last = assistants.at(-1)?.info
-          const user = users.at(-1)?.info
-          if (last?.role !== "assistant" || user?.role !== "user") throw new Error("missing final turn")
-          expect(last.parentID).toBe(user.id)
+          expect(text).toContain("third reply")
+          for (const [index, item] of assistants.entries()) {
+            const user = users[index]?.info
+            if (item.info.role !== "assistant" || user?.role !== "user") throw new Error("missing turn")
+            expect(item.info.parentID).toBe(user.id)
+          }
         },
       })
     } finally {

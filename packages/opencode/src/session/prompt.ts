@@ -1276,23 +1276,26 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         function* (input: PromptInput) {
           const session = yield* sessions.get(input.sessionID)
           yield* Effect.promise(() => SessionRevert.cleanup(session))
-          const message = yield* createUserMessage(input)
-          yield* sessions.touch(input.sessionID)
+          // kilocode_change start - queue prompt creation with its loop so follow-up prompts stay ordered
+          const create = Effect.gen(function* () {
+            const message = yield* createUserMessage(input)
+            yield* sessions.touch(input.sessionID)
 
-          const permissions: Permission.Ruleset = []
-          for (const [t, enabled] of Object.entries(input.tools ?? {})) {
-            permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
-          }
-          if (permissions.length > 0) {
-            session.permission = permissions
-            yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
-          }
+            const permissions: Permission.Ruleset = []
+            for (const [t, enabled] of Object.entries(input.tools ?? {})) {
+              permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
+            }
+            if (permissions.length > 0) {
+              session.permission = permissions
+              yield* sessions.setPermission({ sessionID: session.id, permission: permissions })
+            }
+            return message
+          })
 
-          if (input.noReply === true) return message
-          // kilocode_change start - queue prompt-created loops without changing shared runner semantics
+          if (input.noReply === true) return yield* create
           return yield* KiloSessionPromptQueue.enqueue(
             input.sessionID,
-            loop({ sessionID: input.sessionID }),
+            create.pipe(Effect.flatMap(() => loop({ sessionID: input.sessionID }))),
             lastAssistant(input.sessionID),
           )
           // kilocode_change end
