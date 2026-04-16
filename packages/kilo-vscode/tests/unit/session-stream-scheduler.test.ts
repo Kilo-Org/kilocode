@@ -192,18 +192,53 @@ describe("SessionStreamScheduler / focus and lifecycle", () => {
     expect(sent).toHaveLength(0)
   })
 
-  it("drop() on the active session clears focus", () => {
+  it("drop() before an authoritative snapshot prevents queued delta duplication", async () => {
+    // Race: a text-delta is queued while the caller is fetching a messages
+    // snapshot. If the snapshot already reflects the delta (server-authoritative),
+    // emitting the queued delta after messagesLoaded would duplicate streamed text
+    // in the webview. drop() must prevent any further emission of queued work.
     const sent: Sent[] = []
-    const queue = new SessionStreamScheduler((msg) => sent.push(msg))
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
+      activeMs: 5,
+      backgroundBaseMs: 5,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 5,
+    })
+    queue.focus("sess-1")
+    queue.push(update("hello", "hello", "sess-1"))
+    queue.push(update(" world", " world", "sess-1"))
+    // Snapshot arrives; caller discards queued deltas before posting messagesLoaded.
+    queue.drop("sess-1")
+    await sleep(25)
+    // No queued updates should leak out after the drop.
+    expect(sent).toHaveLength(0)
+    queue.dispose()
+  })
+
+  it("drop() on the active session keeps focus intact", async () => {
+    // drop() is used when an authoritative snapshot supersedes buffered deltas
+    // (e.g. messagesLoaded after a fetch). We just focused this session for the
+    // user and need the NEXT pushes to keep using the low-latency active lane.
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg), {
+      activeMs: 5,
+      backgroundBaseMs: 500,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 500,
+    })
     queue.focus("sess-1")
     queue.push(update("a", "a", "sess-1"))
     queue.drop("sess-1")
-    // After dropping the active session, further pushes are treated as background.
-    queue.push(update("b", "b", "sess-2"))
-    queue.flush()
+    // Pending delta discarded; snapshot would now be posted by the caller.
+    // A subsequent push for the same session still lands on the active lane.
+    queue.push(update("b", "b", "sess-1"))
+    await sleep(25)
     const flat = items(sent)
     expect(flat).toHaveLength(1)
     expect(partText(flat[0]!)).toBe("b")
+    expect(queue.stats().active).toBe(1)
+    expect(queue.stats().background).toBe(0)
+    queue.dispose()
   })
 
   it("focus(undefined) clears the active session", () => {

@@ -199,19 +199,20 @@ export class SessionStreamScheduler {
     }
   }
 
-  /** Drop any queued updates for a session (e.g. session deleted or untracked). */
+  /**
+   * Discard any queued updates for a session without emitting them.
+   *
+   * Called when an authoritative snapshot supersedes buffered deltas
+   * (messagesLoaded fetch) or when a session is deleted. Does NOT alter focus
+   * state — callers that also want to clear focus should call `focus(undefined)`
+   * themselves. A pending active-lane timer is left to fire harmlessly
+   * (`take()` returns `[]` for the emptied queue).
+   */
   drop(sessionID: string): void {
     this.queues.delete(sessionID)
     if (this.btimer && !this.hasBackground()) {
       clearTimeout(this.btimer)
       this.btimer = null
-    }
-    if (this.active === sessionID) {
-      this.active = undefined
-      if (this.atimer) {
-        clearTimeout(this.atimer)
-        this.atimer = null
-      }
     }
   }
 
