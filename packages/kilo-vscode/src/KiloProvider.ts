@@ -32,6 +32,7 @@ import {
   resolveContextDirectory,
   resolveWorkspaceDirectory,
   mergeFileSearchResults,
+  PartUpdateQueue,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
@@ -171,6 +172,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
+  private readonly partUpdates = new PartUpdateQueue((msg) => this.postMessage(msg))
   private readonly confirmations = new MessageConfirmation()
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
@@ -277,12 +279,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       return null
     }
   }
-
-  // Edit tool parts carry full file contents in metadata.filediff.before/after.
-  // A session with many edits can produce multi-MB payloads serialized through
-  // postMessage on every session switch. Stripping those strings down to just
-  // file path + addition/deletion counts eliminates the dominant cost.
-  // Logic extracted to kilo-provider/slim-metadata.ts
 
   private slimPart<T>(part: T): T {
     if (!this.slimEditMetadata) return part
@@ -2914,7 +2910,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const sid = event.properties.sessionID
       this.sessionStatusMap.set(sid, event.properties.status.type)
       const msg = mapSSEEventToWebviewMessage(event, sid)
-      if (msg) this.postMessage(msg)
+      if (msg) {
+        this.partUpdates.flush()
+        this.postMessage(msg)
+      }
       return
     }
 
@@ -2992,12 +2991,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (msg) {
       if (msg.type === "partUpdated") {
-        this.postMessage({
+        this.partUpdates.push({
           ...msg,
           part: this.slimPart(msg.part),
         })
         return
       }
+      this.partUpdates.flush()
       this.postMessage(msg)
     }
   }
@@ -3333,6 +3333,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
+    this.partUpdates.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)

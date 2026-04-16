@@ -317,6 +317,94 @@ export type WebviewMessage =
   | { type: "sessionError"; sessionID?: string; error?: unknown }
   | null
 
+type PartUpdate = Extract<NonNullable<WebviewMessage>, { type: "partUpdated" }>
+
+function partField(part: unknown, key: string): unknown {
+  if (!part || typeof part !== "object") return undefined
+  return (part as Record<string, unknown>)[key]
+}
+
+function appendPart(part: unknown, text: string): unknown {
+  if (!part || typeof part !== "object") return part
+  const item = part as Record<string, unknown>
+  if ((item.type !== "text" && item.type !== "reasoning") || typeof item.text !== "string") return part
+  return { ...item, text: item.text + text }
+}
+
+function partUpdateKey(msg: PartUpdate): string | undefined {
+  const id = partField(msg.part, "id")
+  const mid = msg.messageID || partField(msg.part, "messageID")
+  if (typeof id !== "string" || !id) return undefined
+  if (typeof mid !== "string" || !mid) return undefined
+  return `${msg.sessionID}:${mid}:${id}`
+}
+
+function mergePartUpdate(prev: PartUpdate | undefined, msg: PartUpdate): PartUpdate {
+  if (!prev) return msg
+  const text = msg.delta?.textDelta
+  if (!text) return msg.delta ? prev : msg
+  if (!prev.delta) return { ...prev, part: appendPart(prev.part, text) }
+  return {
+    ...prev,
+    part: appendPart(prev.part, text),
+    delta: { type: "text-delta", textDelta: `${prev.delta.textDelta}${text}` },
+  }
+}
+
+const PART_FLUSH_MS = 16
+
+export class PartUpdateQueue {
+  private timer: ReturnType<typeof setTimeout> | null = null
+  private queue = new Map<string, PartUpdate>()
+
+  constructor(private readonly send: (msg: PartUpdate) => void) {}
+
+  push(msg: PartUpdate): void {
+    const key = partUpdateKey(msg)
+    if (!key) {
+      this.flush()
+      this.send(msg)
+      return
+    }
+
+    const prev = this.queue.get(key)
+    if (prev?.delta && !msg.delta) {
+      this.flush()
+    }
+
+    const cur = this.queue.get(key)
+    this.queue.set(key, mergePartUpdate(cur, msg))
+
+    if (this.timer) {
+      return
+    }
+    this.timer = setTimeout(() => this.flush(), PART_FLUSH_MS)
+  }
+
+  flush(): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+      this.timer = null
+    }
+
+    if (this.queue.size === 0) return
+
+    const queue = [...this.queue.values()]
+    this.queue.clear()
+    for (const msg of queue) {
+      this.send(msg)
+    }
+  }
+
+  dispose(): void {
+    if (this.timer) {
+      clearTimeout(this.timer)
+    }
+    this.timer = null
+    this.queue.clear()
+  }
+}
+
 export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | undefined): WebviewMessage {
   switch (event.type) {
     case "message.part.updated": {

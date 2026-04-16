@@ -9,6 +9,7 @@ import {
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
   mergeFileSearchResults,
+  PartUpdateQueue,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -473,6 +474,62 @@ describe("mapSSEEventToWebviewMessage", () => {
   it("returns null for unhandled event types (Like global.disposed)", () => {
     const event: Event = { type: "global.disposed", properties: {} }
     expect(mapSSEEventToWebviewMessage(event, undefined)).toBeNull()
+  })
+})
+
+describe("part update coalescing", () => {
+  type Sent = { part: { text?: string }; delta?: { textDelta?: string }; messageID: string }
+
+  function update(text: string, delta?: string) {
+    const msg = {
+      type: "partUpdated" as const,
+      sessionID: "sess-1",
+      messageID: "m1",
+      part: { id: "p1", type: "text", messageID: "m1", text },
+    }
+    if (delta === undefined) return msg
+    return { ...msg, delta: { type: "text-delta" as const, textDelta: delta } }
+  }
+
+  function flush(...msgs: ReturnType<typeof update>[]) {
+    const sent: Sent[] = []
+    const queue = new PartUpdateQueue((msg) => sent.push(msg as Sent))
+    for (const msg of msgs) {
+      queue.push(msg)
+    }
+    queue.flush()
+    return sent
+  }
+
+  it("merges repeated text deltas", () => {
+    const sent = flush(update("a", "a"), update("b", "b"))
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!.part.text).toBe("ab")
+    expect(sent[0]!.delta?.textDelta).toBe("ab")
+  })
+
+  it("uses part messageID when messageID is blank", () => {
+    const sent = flush({ ...update("a", "a"), messageID: "" }, { ...update("b", "b"), messageID: "" })
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!.part.text).toBe("ab")
+  })
+
+  it("appends deltas onto queued full parts", () => {
+    const sent = flush(update("hello"), update(" world", " world"))
+    expect(sent[0]!.part.text).toBe("hello world")
+    expect(sent[0]!.delta).toBeUndefined()
+  })
+
+  it("keeps the latest full part", () => {
+    const sent = flush(update("old"), update("new"))
+    expect(sent[0]!.part.text).toBe("new")
+  })
+
+  it("flushes deltas before later full updates", () => {
+    const sent = flush(update("a", "a"), update("done"))
+    expect(sent).toHaveLength(2)
+    expect(sent[0]!.part.text).toBe("a")
+    expect(sent[1]!.part.text).toBe("done")
   })
 })
 
