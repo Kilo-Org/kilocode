@@ -97,6 +97,10 @@
   position: absolute;
   bottom: 12px;
   right: 12px;
+  /* Must sit above sticky accordion headers (z-index: 10 from
+     sticky-accordion-header.css), which otherwise paint over the button when
+     Edit/Write/apply_patch cards scroll past. */
+  z-index: 20;
   width: 32px;
   height: 32px;
   border-radius: 50%;
