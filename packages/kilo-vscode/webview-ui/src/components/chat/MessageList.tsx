@@ -141,19 +141,24 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const id = pendingRestore()
     if (!id || session.loading()) return
     turns().length
+    // Double-rAF: the first frame lets the browser paint the new DOM from
+    // the messagesLoaded batch. The second frame restores scroll position
+    // without forcing a synchronous layout reflow mid-paint.
     requestAnimationFrame(() => {
-      if (pendingRestore() !== id) return
-      const el = scrollEl()
-      if (!el) return
-      const pos = positions.get(id)
-      if (pos?.userScrolled) {
-        el.scrollTop = pos.top
-        autoScroll.pause()
-      } else {
-        autoScroll.forceScrollToBottom()
-      }
-      setPendingRestore(undefined)
-      maybeLoadOlder()
+      requestAnimationFrame(() => {
+        if (pendingRestore() !== id) return
+        const el = scrollEl()
+        if (!el) return
+        const pos = positions.get(id)
+        if (pos?.userScrolled) {
+          el.scrollTop = pos.top
+          autoScroll.pause()
+        } else {
+          autoScroll.forceScrollToBottom()
+        }
+        setPendingRestore(undefined)
+        maybeLoadOlder()
+      })
     })
   })
 

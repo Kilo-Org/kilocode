@@ -6,6 +6,7 @@ import { checksum } from "@opencode-ai/util/encode"
 import { ComponentProps, createEffect, createResource, createSignal, onCleanup, splitProps } from "solid-js"
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
+import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
 
 type Entry = {
   hash: string
@@ -309,18 +310,10 @@ export function Markdown(
       copied: i18n.t("ui.message.copied"),
     }
 
-    // kilocode_change start: avoid morphdom's expensive tree matching on first
-    // paint for completed historical markdown. Large session switches mount many
-    // stable markdown blocks, and the trace showed morphdom + Parse HTML as the
-    // dominant webview cost.
-    if (!local.streaming && container.childNodes.length === 0) {
-      container.innerHTML = content
-      decorate(container, labels)
-      if (!copyCleanup)
-        copyCleanup = setupCodeCopy(container, () => ({
-          copy: i18n.t("ui.message.copy"),
-          copied: i18n.t("ui.message.copied"),
-        }))
+    // kilocode_change start
+    const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
+    if (fast.handled) {
+      copyCleanup = fast.copyCleanup
       return
     }
     // kilocode_change end

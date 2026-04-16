@@ -126,6 +126,10 @@ interface SessionContextValue {
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
 
+  // Move stashed parts into the reactive store for the given message IDs.
+  // Called by VscodeSessionTurn when the virtualizer renders a turn.
+  hydrateParts: (messageIDs: string[]) => void
+
   // Todos for current session
   todos: Accessor<TodoItem[]>
 
@@ -263,6 +267,12 @@ export const SessionProvider: ParentComponent = (props) => {
   const [loading, setLoading] = createSignal(false)
   const [loaded, setLoaded] = createSignal<Set<string>>(new Set())
   const [pages, setPages] = createStore<Record<string, MessagePageState>>({})
+
+  // Parts stash: holds parts from messagesLoaded outside the reactive store
+  // until a VscodeSessionTurn is rendered by the virtualizer and calls
+  // hydrateParts(). This avoids writing parts for off-screen messages into
+  // the store, which would trigger expensive DOM work for invisible content.
+  const stash = new Map<string, Part[]>()
 
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
@@ -863,13 +873,20 @@ export const SessionProvider: ParentComponent = (props) => {
 
       const current = store.messages[sessionID] ?? []
       const merged = mode === "prepend" ? mergeMessages(current, messages, mode) : withPending(sessionID, messages)
-      setStore("messages", sessionID, reconcile(merged, { key: "id" }))
+      // "replace" mode (session switch): assign directly — reconcile's O(n)
+      // diff is unnecessary when the entire list is new, and its reactive
+      // proxy creation for each message object dominated the trace (~900ms).
+      // "prepend" mode (older page): reconcile to preserve existing proxies.
+      if (mode === "replace") {
+        setStore("messages", sessionID, merged)
+      } else {
+        setStore("messages", sessionID, reconcile(merged, { key: "id" }))
+      }
 
-      // Also extract parts from messages
+      // Stash parts outside the reactive store — they'll be hydrated on
+      // demand when the virtualizer renders the corresponding turn.
       for (const msg of messages) {
-        if (msg.parts && msg.parts.length > 0) {
-          setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
-        }
+        if (msg.parts && msg.parts.length > 0) stash.set(msg.id, msg.parts)
       }
 
       setPages(sessionID, {
@@ -931,6 +948,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (message.parts && message.parts.length > 0) {
+      stash.delete(message.id)
       setStore("parts", message.id, message.parts)
     }
   }
@@ -950,6 +968,14 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+
+    // If the stash has parts for this message, hydrate them first so the
+    // SSE update merges into the full part list rather than an empty array.
+    const stashed = stash.get(effectiveMessageID)
+    if (stashed) {
+      stash.delete(effectiveMessageID)
+      setStore("parts", effectiveMessageID, stashed)
+    }
 
     setStore(
       "parts",
@@ -1074,6 +1100,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSendMessageFailed(message: SendMessageFailedMessage) {
     if (message.sessionID && message.messageID) {
       pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
+      stash.delete(message.messageID)
       batch(() => {
         setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
         setStore(
@@ -1213,9 +1240,10 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSessionDeleted(sessionID: string) {
     pendingOptimistic.delete(sessionID)
     batch(() => {
-      // Collect message IDs so we can clean up their parts
+      // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
+      for (const id of msgIds) stash.delete(id)
 
       setStore(
         "sessions",
@@ -1775,6 +1803,25 @@ export const SessionProvider: ParentComponent = (props) => {
     return store.parts[messageID] || []
   }
 
+  function hydrateParts(ids: string[]) {
+    const pending: Record<string, Part[]> = {}
+    for (const id of ids) {
+      // Already in the reactive store — skip.
+      if (store.parts[id]) continue
+      const parts = stash.get(id)
+      if (!parts) continue
+      pending[id] = parts
+      stash.delete(id)
+    }
+    if (Object.keys(pending).length === 0) return
+    setStore(
+      "parts",
+      produce((p) => {
+        for (const [id, parts] of Object.entries(pending)) p[id] = parts
+      }),
+    )
+  }
+
   const allMessages = () => store.messages
 
   const allParts = () => store.parts
@@ -1917,6 +1964,7 @@ export const SessionProvider: ParentComponent = (props) => {
     messages,
     userMessages,
     getParts,
+    hydrateParts,
     todos,
     permissions,
     respondingPermissions,
