@@ -125,6 +125,7 @@ export interface Message {
   summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
+  finish?: string
 }
 
 // File diff info (matches Snapshot.FileDiff from CLI backend)
