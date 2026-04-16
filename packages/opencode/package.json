@@ -8,8 +8,8 @@
   "scripts": {
     "prepare": "effect-language-service patch || true",
     "typecheck": "tsgo --noEmit",
-    "test": "bun test --timeout 30000",
-    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
+    "test": "bun run script/test-runner.ts",
+    "test:ci": "bun run script/test-runner.ts --ci",
     "build": "bun run script/build.ts",
     "fix-node-pty": "bun run script/fix-node-pty.ts",
     "upgrade-opentui": "bun run script/upgrade-opentui.ts",

@@ -8,6 +8,11 @@ import ai.kilocode.backend.util.KiloLog
 class TestLog : KiloLog {
     val messages = mutableListOf<String>()
 
+    override fun debug(msg: String) {
+        synchronized(messages) { messages.add("DEBUG: $msg") }
+        println("[test] DEBUG: $msg")
+    }
+
     override fun info(msg: String) {
         synchronized(messages) { messages.add("INFO: $msg") }
         println("[test] INFO: $msg")

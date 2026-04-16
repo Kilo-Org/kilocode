@@ -1,5 +1,6 @@
 package ai.kilocode.backend.app
 
+import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.util.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.SessionStatus
@@ -16,6 +17,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -29,30 +34,13 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * SSE `session.status` events are consumed directly from the events
  * flow passed to [start], keeping the live [statuses] map current.
+ *
+ * All raw JSON parsing is delegated to [KiloCliDataParser].
  */
 class KiloBackendSessionManager(
     private val cs: CoroutineScope,
     private val log: KiloLog,
 ) {
-    companion object {
-        private val FIELD_RE = ConcurrentHashMap<String, Regex>()
-
-        /** Extract a top-level string field from JSON without a full parser. */
-        internal fun extractField(json: String, field: String): String? {
-            val re = FIELD_RE.getOrPut(field) {
-                Regex(""""$field"\s*:\s*"([^"]+)"""")
-            }
-            return re.find(json)?.groupValues?.get(1)
-        }
-
-        /** Extract a string field nested one level deep. */
-        internal fun extractNested(json: String, outer: String, inner: String): String? {
-            val block = Regex(""""$outer"\s*:\s*\{([^}]+)}""")
-                .find(json)?.groupValues?.get(1) ?: return null
-            return extractField("{$block}", inner)
-        }
-    }
-
     /** Per-session directory overrides (sessionId → worktree path). */
     private val directories = ConcurrentHashMap<String, String>()
 
@@ -60,32 +48,34 @@ class KiloBackendSessionManager(
     val statuses: StateFlow<Map<String, SessionStatusDto>> = _statuses.asStateFlow()
 
     private var client: DefaultApi? = null
+    private var http: OkHttpClient? = null
+    private var base: String? = null
     private var watcher: Job? = null
 
-    /**
-     * Activate the session manager with a connected API client and SSE stream.
-     * Called by [KiloBackendAppService] after [KiloAppState.Ready].
-     */
-    fun start(api: DefaultApi, events: SharedFlow<SseEvent>) {
+    fun start(api: DefaultApi, httpClient: OkHttpClient, port: Int, events: SharedFlow<SseEvent>) {
         client = api
+        http = httpClient
+        base = "http://127.0.0.1:$port"
         if (watcher?.isActive == true) return
         watcher = cs.launch {
             events.collect { event ->
                 if (event.type == "session.status") {
-                    handleStatus(event.data)
+                    val pair = KiloCliDataParser.parseSessionStatus(event.data)
+                    if (pair != null) {
+                        _statuses.update { it + pair }
+                    }
                 }
             }
         }
         log.info("Session manager started")
     }
 
-    /**
-     * Deactivate the session manager. Called by [KiloBackendAppService] on disconnect.
-     */
     fun stop() {
         watcher?.cancel()
         watcher = null
         client = null
+        http = null
+        base = null
         _statuses.value = emptyMap()
         log.info("Session manager stopped")
     }
@@ -95,7 +85,6 @@ class KiloBackendSessionManager(
 
     // ------ session CRUD ------
 
-    /** List root sessions for a directory and include current statuses. */
     fun list(dir: String): SessionListDto {
         seed(dir)
         val raw = requireClient().sessionList(directory = dir, roots = true)
@@ -105,16 +94,34 @@ class KiloBackendSessionManager(
         return SessionListDto(mapped, relevant)
     }
 
-    /** Create a new session in the given directory. */
-    fun create(dir: String): SessionDto =
-        dto(requireClient().sessionCreate(directory = dir))
-
     /**
-     * Get a single session by ID.
+     * Create a new session in the given directory.
      *
-     * Uses the session list endpoint and filters by ID since
-     * [DefaultApi] does not expose the single-session GET.
+     * Uses raw HTTP because the generated client sends malformed JSON
+     * for the optional request body (Content-Type set but empty body).
      */
+    fun create(dir: String): SessionDto {
+        val h = http ?: throw IllegalStateException("Session manager not started")
+        val url = base ?: throw IllegalStateException("Session manager not started")
+        val encoded = java.net.URLEncoder.encode(dir, "UTF-8")
+        log.info("Creating session: POST $url/session?directory=$encoded")
+
+        val request = Request.Builder()
+            .url("$url/session?directory=$encoded")
+            .post("{}".toRequestBody("application/json".toMediaType()))
+            .build()
+
+        h.newCall(request).execute().use { response ->
+            val raw = response.body?.string()
+            if (!response.isSuccessful) {
+                log.warn("Session create failed: HTTP ${response.code}, body=$raw")
+                throw RuntimeException("Session create failed: HTTP ${response.code} — $raw")
+            }
+            log.info("Session created: HTTP ${response.code}")
+            return KiloCliDataParser.parseSession(raw!!)
+        }
+    }
+
     fun get(id: String, dir: String): SessionDto {
         val all = requireClient().sessionList(directory = dir)
         val raw = all.firstOrNull { it.id == id }
@@ -122,13 +129,11 @@ class KiloBackendSessionManager(
         return dto(raw)
     }
 
-    /** Delete a session. */
     fun delete(id: String, dir: String) {
         requireClient().sessionDelete(sessionID = id, directory = dir)
         directories.remove(id)
     }
 
-    /** Seed status map from the server for a specific directory. */
     fun seed(dir: String) {
         try {
             val raw = requireClient().sessionStatus(directory = dir)
@@ -149,16 +154,7 @@ class KiloBackendSessionManager(
     fun getDirectory(id: String, fallback: String): String =
         directories[id] ?: fallback
 
-    // ------ SSE event handling ------
-
-    private fun handleStatus(data: String) {
-        val id = extractField(data, "sessionID") ?: return
-        val type = extractNested(data, "status", "type") ?: "idle"
-        val msg = extractNested(data, "status", "message")
-        _statuses.update { it + (id to SessionStatusDto(type, msg)) }
-    }
-
-    // ------ mapping ------
+    // ------ mapping (generated API model → DTO) ------
 
     private fun dto(s: ai.kilocode.jetbrains.api.model.Session) = SessionDto(
         id = s.id,
