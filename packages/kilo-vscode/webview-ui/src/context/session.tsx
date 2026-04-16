@@ -44,6 +44,7 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
+import { activeUserMessageID } from "./session-queue"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -1488,9 +1489,15 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
+    const active = activeUserMessageID(messages(), statusInfo())
+    const users = userMessages()
+    const idx = active ? users.findIndex((msg) => msg.id === active) : -1
+    const queuedMessageIDs = idx >= 0 ? users.slice(idx + 1).map((msg) => msg.id) : []
+
     vscode.postMessage({
       type: "abort",
       sessionID,
+      queuedMessageIDs,
     })
   }
 

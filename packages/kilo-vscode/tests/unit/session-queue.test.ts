@@ -40,4 +40,14 @@ describe("activeUserMessageID", () => {
 
     expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_1")
   })
+
+  it("ignores aborted assistants without completed timestamps", () => {
+    const messages = [
+      user("message_1"),
+      assistant("message_2", "message_1", { error: { name: "MessageAbortedError" } }),
+      user("message_3"),
+    ]
+
+    expect(activeUserMessageID(messages, { type: "busy" })).toBe("message_3")
+  })
 })
