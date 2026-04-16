@@ -2,6 +2,7 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import z from "zod"
 import { SessionID, MessageID, PartID } from "./schema"
@@ -107,6 +108,7 @@ export namespace SessionPrompt {
 
       const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
         log.info("cancel", { sessionID })
+        yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
         yield* state.cancel(sessionID)
       })
 
@@ -1287,7 +1289,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
 
           if (input.noReply === true) return message
-          return yield* loop({ sessionID: input.sessionID })
+          // kilocode_change start - queue prompt-created loops without changing shared runner semantics
+          return yield* KiloSessionPromptQueue.enqueue(
+            input.sessionID,
+            loop({ sessionID: input.sessionID }),
+            lastAssistant(input.sessionID),
+          )
+          // kilocode_change end
         },
       )
 
