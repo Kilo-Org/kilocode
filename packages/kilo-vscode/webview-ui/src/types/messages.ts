@@ -513,6 +513,11 @@ export interface PartUpdatedMessage {
   delta?: PartDelta
 }
 
+export interface PartsUpdatedMessage {
+  type: "partsUpdated"
+  updates: PartUpdatedMessage[]
+}
+
 export interface SessionStatusMessage {
   type: "sessionStatus"
   sessionID: string
@@ -1463,6 +1468,7 @@ export type ExtensionMessage =
   | ErrorMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
+  | PartsUpdatedMessage
   | SessionStatusMessage
   | SessionErrorMessage
   | PermissionRequestMessage

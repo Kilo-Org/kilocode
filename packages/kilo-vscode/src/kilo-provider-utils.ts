@@ -280,14 +280,22 @@ export function resolveContextDirectory(input: {
   })
 }
 
+type PartUpdate = {
+  type: "partUpdated"
+  sessionID: string
+  messageID: string
+  part: unknown
+  delta?: { type: "text-delta"; textDelta: string }
+}
+
+type PartBatch = {
+  type: "partsUpdated"
+  updates: PartUpdate[]
+}
+
 export type WebviewMessage =
-  | {
-      type: "partUpdated"
-      sessionID: string
-      messageID: string
-      part: unknown
-      delta?: { type: "text-delta"; textDelta: string }
-    }
+  | PartUpdate
+  | PartBatch
   | {
       type: "messageCreated"
       message: Record<string, unknown>
@@ -316,8 +324,6 @@ export type WebviewMessage =
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
   | null
-
-type PartUpdate = Extract<NonNullable<WebviewMessage>, { type: "partUpdated" }>
 
 function partField(part: unknown, key: string): unknown {
   if (!part || typeof part !== "object") return undefined
@@ -351,57 +357,240 @@ function mergePartUpdate(prev: PartUpdate | undefined, msg: PartUpdate): PartUpd
   }
 }
 
-const PART_FLUSH_MS = 16
+export type StreamSchedulerStats = {
+  received: number
+  emitted: number
+  batches: number
+  active: number
+  background: number
+}
 
-export class PartUpdateQueue {
-  private timer: ReturnType<typeof setTimeout> | null = null
-  private queue = new Map<string, PartUpdate>()
+export type StreamSchedulerOptions = {
+  /** Flush cadence for the focused/active session. Defaults to 16ms. */
+  activeMs?: number
+  /** Base background cadence. Defaults to 150ms. */
+  backgroundBaseMs?: number
+  /**
+   * Additional ms per background session above the first 2 (adaptive throttle).
+   * 10 background sessions → base + 8 * step. Defaults to 20ms.
+   */
+  backgroundStepMs?: number
+  /** Hard cap for the background cadence. Defaults to 400ms. */
+  backgroundMaxMs?: number
+}
 
-  constructor(private readonly send: (msg: PartUpdate) => void) {}
+const DEFAULT_ACTIVE_MS = 16
+const DEFAULT_BG_BASE_MS = 150
+const DEFAULT_BG_STEP_MS = 20
+const DEFAULT_BG_MAX_MS = 400
 
-  push(msg: PartUpdate): void {
-    const key = partUpdateKey(msg)
-    if (!key) {
-      this.flush()
-      this.send(msg)
-      return
-    }
-
-    const prev = this.queue.get(key)
-    if (prev?.delta && !msg.delta) {
-      this.flush()
-    }
-
-    const cur = this.queue.get(key)
-    this.queue.set(key, mergePartUpdate(cur, msg))
-
-    if (this.timer) {
-      return
-    }
-    this.timer = setTimeout(() => this.flush(), PART_FLUSH_MS)
+export class SessionStreamScheduler {
+  private active: string | undefined
+  private atimer: ReturnType<typeof setTimeout> | null = null
+  private btimer: ReturnType<typeof setTimeout> | null = null
+  private readonly queues = new Map<string, Map<string, PartUpdate>>()
+  private readonly activeMs: number
+  private readonly bgBase: number
+  private readonly bgStep: number
+  private readonly bgMax: number
+  private readonly counters: StreamSchedulerStats = {
+    received: 0,
+    emitted: 0,
+    batches: 0,
+    active: 0,
+    background: 0,
   }
 
-  flush(): void {
-    if (this.timer) {
-      clearTimeout(this.timer)
-      this.timer = null
+  constructor(
+    private readonly send: (msg: PartUpdate | PartBatch) => void,
+    opts?: StreamSchedulerOptions,
+  ) {
+    this.activeMs = opts?.activeMs ?? DEFAULT_ACTIVE_MS
+    this.bgBase = opts?.backgroundBaseMs ?? DEFAULT_BG_BASE_MS
+    this.bgStep = opts?.backgroundStepMs ?? DEFAULT_BG_STEP_MS
+    this.bgMax = opts?.backgroundMaxMs ?? DEFAULT_BG_MAX_MS
+  }
+
+  focus(sessionID?: string): void {
+    if (this.active === sessionID) return
+    const prev = this.active
+    if (this.atimer) {
+      clearTimeout(this.atimer)
+      this.atimer = null
+    }
+    this.active = sessionID
+    if (prev && this.queues.get(prev)?.size) this.scheduleBackground()
+    if (sessionID) this.flush(sessionID)
+  }
+
+  push(msg: PartUpdate): void {
+    this.counters.received++
+    const key = partUpdateKey(msg)
+    if (!key) {
+      // Non-keyable updates can't be merged. Flush pending first to preserve order.
+      this.flush(msg.sessionID)
+      this.emitOne(msg)
+      return
     }
 
-    if (this.queue.size === 0) return
+    const queue = this.ensureQueue(msg.sessionID)
+    const prev = queue.get(key)
+    // A full-part replacement after buffered deltas would lose information; flush first.
+    if (prev?.delta && !msg.delta) {
+      this.flush(msg.sessionID)
+      this.ensureQueue(msg.sessionID).set(key, msg)
+    } else {
+      queue.set(key, mergePartUpdate(prev, msg))
+    }
+    this.schedule(msg.sessionID)
+  }
 
-    const queue = [...this.queue.values()]
-    this.queue.clear()
-    for (const msg of queue) {
-      this.send(msg)
+  flush(sessionID?: string): void {
+    if (!sessionID) {
+      this.clearTimers()
+      this.emit(this.takeAll())
+      return
+    }
+
+    if (this.active === sessionID && this.atimer) {
+      clearTimeout(this.atimer)
+      this.atimer = null
+    }
+
+    this.emit(this.take(sessionID))
+
+    if (this.btimer && !this.hasBackground()) {
+      clearTimeout(this.btimer)
+      this.btimer = null
+    }
+  }
+
+  /** Drop any queued updates for a session (e.g. session deleted or untracked). */
+  drop(sessionID: string): void {
+    this.queues.delete(sessionID)
+    if (this.btimer && !this.hasBackground()) {
+      clearTimeout(this.btimer)
+      this.btimer = null
+    }
+    if (this.active === sessionID) {
+      this.active = undefined
+      if (this.atimer) {
+        clearTimeout(this.atimer)
+        this.atimer = null
+      }
     }
   }
 
   dispose(): void {
-    if (this.timer) {
-      clearTimeout(this.timer)
+    this.clearTimers()
+    this.queues.clear()
+  }
+
+  stats(): Readonly<StreamSchedulerStats> {
+    return this.counters
+  }
+
+  private ensureQueue(sid: string): Map<string, PartUpdate> {
+    const existing = this.queues.get(sid)
+    if (existing) return existing
+    const queue = new Map<string, PartUpdate>()
+    this.queues.set(sid, queue)
+    return queue
+  }
+
+  private schedule(sessionID: string): void {
+    if (!this.queues.get(sessionID)?.size) return
+    if (this.active === sessionID) {
+      if (this.atimer) return
+      this.atimer = setTimeout(() => this.flushActive(), this.activeMs)
+      return
     }
-    this.timer = null
-    this.queue.clear()
+    this.scheduleBackground()
+  }
+
+  private scheduleBackground(): void {
+    if (this.btimer) return
+    const count = this.backgroundCount()
+    if (count === 0) return
+    const extra = Math.max(0, count - 2) * this.bgStep
+    const interval = Math.min(this.bgMax, this.bgBase + extra)
+    this.btimer = setTimeout(() => this.flushBackground(), interval)
+  }
+
+  private flushActive(): void {
+    this.atimer = null
+    if (this.active) this.emit(this.take(this.active))
+  }
+
+  private flushBackground(): void {
+    this.btimer = null
+    this.emit(this.takeBackground())
+  }
+
+  private take(sessionID: string): PartUpdate[] {
+    const queue = this.queues.get(sessionID)
+    if (!queue) return []
+    this.queues.delete(sessionID)
+    return [...queue.values()]
+  }
+
+  private takeAll(): PartUpdate[] {
+    const updates = [...this.queues.values()].flatMap((queue) => [...queue.values()])
+    this.queues.clear()
+    return updates
+  }
+
+  private takeBackground(): PartUpdate[] {
+    const updates: PartUpdate[] = []
+    for (const [sid, queue] of this.queues) {
+      if (sid === this.active) continue
+      updates.push(...queue.values())
+      this.queues.delete(sid)
+    }
+    return updates
+  }
+
+  private backgroundCount(): number {
+    let n = 0
+    for (const [sid, queue] of this.queues) {
+      if (sid !== this.active && queue.size > 0) n++
+    }
+    return n
+  }
+
+  private hasBackground(): boolean {
+    return this.backgroundCount() > 0
+  }
+
+  private emit(updates: PartUpdate[]): void {
+    if (updates.length === 0) return
+    if (updates.length === 1) {
+      this.emitOne(updates[0]!)
+      return
+    }
+    this.counters.emitted += updates.length
+    this.counters.batches++
+    this.countLane(updates[0]!.sessionID)
+    this.send({ type: "partsUpdated", updates })
+  }
+
+  private emitOne(msg: PartUpdate): void {
+    this.counters.emitted++
+    this.counters.batches++
+    this.countLane(msg.sessionID)
+    this.send(msg)
+  }
+
+  private countLane(sessionID: string): void {
+    if (sessionID === this.active) this.counters.active++
+    else this.counters.background++
+  }
+
+  private clearTimers(): void {
+    if (this.atimer) clearTimeout(this.atimer)
+    this.atimer = null
+    if (this.btimer) clearTimeout(this.btimer)
+    this.btimer = null
   }
 }
 

@@ -9,7 +9,7 @@ import {
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
   mergeFileSearchResults,
-  PartUpdateQueue,
+  SessionStreamScheduler,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -477,23 +477,28 @@ describe("mapSSEEventToWebviewMessage", () => {
   })
 })
 
-describe("part update coalescing", () => {
-  type Sent = { part: { text?: string }; delta?: { textDelta?: string }; messageID: string }
-
-  function update(text: string, delta?: string) {
+describe("session stream scheduling", () => {
+  function update(text: string, delta?: string, sid = "sess-1", partID = "p1") {
     const msg = {
       type: "partUpdated" as const,
-      sessionID: "sess-1",
+      sessionID: sid,
       messageID: "m1",
-      part: { id: "p1", type: "text", messageID: "m1", text },
+      part: { id: partID, type: "text", messageID: "m1", text },
     }
     if (delta === undefined) return msg
     return { ...msg, delta: { type: "text-delta" as const, textDelta: delta } }
   }
 
-  function flush(...msgs: ReturnType<typeof update>[]) {
+  type Item = ReturnType<typeof update>
+  type Sent = Item | { type: "partsUpdated"; updates: Item[] }
+
+  function items(sent: Sent[]) {
+    return sent.flatMap((msg) => (msg.type === "partsUpdated" ? msg.updates : [msg]))
+  }
+
+  function flush(...msgs: Item[]) {
     const sent: Sent[] = []
-    const queue = new PartUpdateQueue((msg) => sent.push(msg as Sent))
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
     for (const msg of msgs) {
       queue.push(msg)
     }
@@ -502,34 +507,144 @@ describe("part update coalescing", () => {
   }
 
   it("merges repeated text deltas", () => {
-    const sent = flush(update("a", "a"), update("b", "b"))
+    const sent = items(flush(update("a", "a"), update("b", "b")))
     expect(sent).toHaveLength(1)
     expect(sent[0]!.part.text).toBe("ab")
     expect(sent[0]!.delta?.textDelta).toBe("ab")
   })
 
   it("uses part messageID when messageID is blank", () => {
-    const sent = flush({ ...update("a", "a"), messageID: "" }, { ...update("b", "b"), messageID: "" })
+    const sent = items(flush({ ...update("a", "a"), messageID: "" }, { ...update("b", "b"), messageID: "" }))
     expect(sent).toHaveLength(1)
     expect(sent[0]!.part.text).toBe("ab")
   })
 
   it("appends deltas onto queued full parts", () => {
-    const sent = flush(update("hello"), update(" world", " world"))
+    const sent = items(flush(update("hello"), update(" world", " world")))
     expect(sent[0]!.part.text).toBe("hello world")
     expect(sent[0]!.delta).toBeUndefined()
   })
 
   it("keeps the latest full part", () => {
-    const sent = flush(update("old"), update("new"))
+    const sent = items(flush(update("old"), update("new")))
     expect(sent[0]!.part.text).toBe("new")
   })
 
   it("flushes deltas before later full updates", () => {
-    const sent = flush(update("a", "a"), update("done"))
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.push(update("a", "a"))
+    queue.push(update("done"))
+    queue.flush()
+    const flat = items(sent)
+    expect(flat).toHaveLength(2)
+    expect(flat[0]!.part.text).toBe("a")
+    expect(flat[1]!.part.text).toBe("done")
+  })
+
+  it("batches multiple sessions into one message", () => {
+    const sent = flush(update("a", "a", "sess-1"), update("b", "b", "sess-2"))
+    expect(sent).toHaveLength(1)
+    expect(sent[0]!.type).toBe("partsUpdated")
+    expect(items(sent)).toHaveLength(2)
+  })
+
+  it("flushes focused sessions immediately", () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.push(update("a", "a", "sess-2"))
+    queue.focus("sess-2")
+    expect(items(sent)[0]!.part.text).toBe("a")
+  })
+
+  it("drop() discards queued updates and clears active", () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.focus("sess-1")
+    queue.push(update("a", "a", "sess-2"))
+    queue.drop("sess-2")
+    queue.drop("sess-1")
+    queue.flush()
+    expect(sent).toHaveLength(0)
+  })
+
+  it("tracks stats across coalesced and batched emissions", () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent))
+    queue.push(update("a", "a", "sess-1"))
+    queue.push(update("b", "b", "sess-1"))
+    queue.push(update("c", "c", "sess-2"))
+    queue.flush()
+    const stats = queue.stats()
+    expect(stats.received).toBe(3)
+    // 2 deltas to sess-1 merged into 1 update; sess-2 has 1 update; both emitted in one batch
+    expect(stats.emitted).toBe(2)
+    expect(stats.batches).toBe(1)
+  })
+
+  function sleep(ms: number) {
+    return new Promise<void>((r) => setTimeout(r, ms))
+  }
+
+  it("active session flushes on its cadence", async () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent), {
+      activeMs: 5,
+      backgroundBaseMs: 1000,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 1000,
+    })
+    queue.focus("sess-1")
+    queue.push(update("a", "a", "sess-1"))
+    queue.push(update("b", "b", "sess-1"))
+    await sleep(25)
+    expect(items(sent)[0]!.part.text).toBe("ab")
+    expect(queue.stats().active).toBe(1)
+    expect(queue.stats().background).toBe(0)
+    queue.dispose()
+  })
+
+  it("background throttles independent of active", async () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent), {
+      activeMs: 5,
+      backgroundBaseMs: 20,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 20,
+    })
+    queue.focus("sess-1")
+    queue.push(update("a", "a", "sess-1"))
+    queue.push(update("x", "x", "sess-2"))
+    queue.push(update("y", "y", "sess-3"))
+    await sleep(15)
+    // Active lane flushed alone first
+    expect(sent).toHaveLength(1)
+    await sleep(20)
+    // Background batch flushed after its own interval
     expect(sent).toHaveLength(2)
-    expect(sent[0]!.part.text).toBe("a")
-    expect(sent[1]!.part.text).toBe("done")
+    expect(queue.stats().active).toBe(1)
+    expect(queue.stats().background).toBe(1)
+    queue.dispose()
+  })
+
+  it("focus(A→B) flushes B immediately and schedules A on background", async () => {
+    const sent: Sent[] = []
+    const queue = new SessionStreamScheduler((msg) => sent.push(msg as Sent), {
+      activeMs: 50,
+      backgroundBaseMs: 10,
+      backgroundStepMs: 0,
+      backgroundMaxMs: 10,
+    })
+    queue.focus("sess-1")
+    queue.push(update("a", "a", "sess-1"))
+    queue.push(update("b", "b", "sess-2"))
+    queue.focus("sess-2")
+    // Switching flushed sess-2's pending update immediately
+    expect(items(sent).some((item) => item.part.text === "b")).toBe(true)
+    await sleep(25)
+    // Sess-1 drained on background lane after focus switch
+    expect(items(sent).some((item) => item.part.text === "a")).toBe(true)
+    queue.dispose()
   })
 })
 

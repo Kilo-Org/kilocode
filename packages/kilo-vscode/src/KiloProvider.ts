@@ -32,7 +32,7 @@ import {
   resolveContextDirectory,
   resolveWorkspaceDirectory,
   mergeFileSearchResults,
-  PartUpdateQueue,
+  SessionStreamScheduler,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
@@ -172,7 +172,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
-  private readonly partUpdates = new PartUpdateQueue((msg) => this.postMessage(msg))
+  private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
   private readonly confirmations = new MessageConfirmation()
   private unsubscribeEvent: (() => void) | null = null
   private unsubscribeState: (() => void) | null = null
@@ -242,6 +242,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
   }
   private focusSession(id?: string): void {
+    this.streams.focus(id)
     if (id) this.connectionService.registerFocused(this.instanceId, id)
     else this.connectionService.unregisterFocused(this.instanceId)
   }
@@ -1519,6 +1520,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const workspaceDir = this.getWorkspaceDirectory(sessionID)
       await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
       this.trackedSessionIds.delete(sessionID)
+      this.streams.drop(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
@@ -2911,7 +2913,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.sessionStatusMap.set(sid, event.properties.status.type)
       const msg = mapSSEEventToWebviewMessage(event, sid)
       if (msg) {
-        this.partUpdates.flush()
+        this.streams.flush(sid)
         this.postMessage(msg)
       }
       return
@@ -2991,13 +2993,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
     if (msg) {
       if (msg.type === "partUpdated") {
-        this.partUpdates.push({
+        this.streams.push({
           ...msg,
           part: this.slimPart(msg.part),
         })
         return
       }
-      this.partUpdates.flush()
+      this.streams.flush(sessionID)
       this.postMessage(msg)
     }
   }
@@ -3333,7 +3335,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
-    this.partUpdates.dispose()
+    this.streams.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)
