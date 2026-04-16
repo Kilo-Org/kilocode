@@ -326,6 +326,11 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.takeHeapSnapshot",
+        "title": "Take Heap Snapshot",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [

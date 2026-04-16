@@ -46,7 +46,7 @@ jobs:
 
       - uses: ./.github/actions/setup-bun
 
-      # kilocode_change start - install deps for changeset changelog generation
+      # kilocode_change start - install deps for version script workspace resolution
       - name: Install dependencies
         run: bun install
 

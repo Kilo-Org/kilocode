@@ -199,17 +199,17 @@ class KiloBackendWorkspace(
                     ProviderInfo(
                         id = p.id,
                         name = p.name,
-                        source = p.api,
+                        source = p.source.value,
                         models = p.models.mapValues { (_, m) ->
                             ModelInfo(
                                 id = m.id,
                                 name = m.name,
-                                attachment = m.attachment,
-                                reasoning = m.reasoning,
-                                temperature = m.temperature,
-                                toolCall = m.toolCall,
+                                attachment = m.capabilities.attachment,
+                                reasoning = m.capabilities.reasoning,
+                                temperature = m.capabilities.temperature,
+                                toolCall = m.capabilities.toolcall,
                                 free = m.isFree ?: false,
-                                status = m.status?.value,
+                                status = m.status.value,
                             )
                         },
                     )
