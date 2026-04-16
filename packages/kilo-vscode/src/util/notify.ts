@@ -50,6 +50,7 @@ export async function sendOsNotification(title: string, body: string): Promise<v
           `$textNodes.Item(0).AppendChild($xml.CreateTextNode($t)) > $null; ` +
           `$textNodes.Item(1).AppendChild($xml.CreateTextNode($b)) > $null; ` +
           `$audio = $xml.CreateElement("audio"); $audio.SetAttribute("silent", "true"); ` +
+          `$xml.DocumentElement.AppendChild($audio) > $null; ` +
           `$toast = [Windows.UI.Notifications.ToastNotification]::new($xml); ` +
           `[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Kilo Code").Show($toast)`,
       ]).catch((err) => {

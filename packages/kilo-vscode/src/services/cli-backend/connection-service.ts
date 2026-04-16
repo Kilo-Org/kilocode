@@ -253,9 +253,11 @@ export class KiloConnectionService {
    * This prevents multiple KiloProvider instances from emitting duplicate
    * OS notifications for the same backend event.
    * When requestID is provided, distinct requests in the same session are not suppressed.
+   * For events without requestID, a timestamp is included to allow repeated events from the same session.
    */
   shouldNotify(sessionID: string, eventType: string, requestID?: string): boolean {
-    const key = requestID ? `${sessionID}:${eventType}:${requestID}` : `${sessionID}:${eventType}`
+    const timestamp = Date.now()
+    const key = requestID ? `${sessionID}:${eventType}:${requestID}` : `${sessionID}:${eventType}:${timestamp}`
     if (this.notifiedEvents.has(key)) return false
     this.notifiedEvents.add(key)
     setTimeout(() => this.notifiedEvents.delete(key), 5_000)

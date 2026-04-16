@@ -2442,11 +2442,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Uses platform-specific commands (osascript/notify-send/PowerShell) instead of VS Code's
    * built-in notification system, which only shows in-app toasts.
    */
-  private notifyIfNotFocused(setting: "agent" | "permissions" | "errors", title: string, message?: string): void {
+  private notifyIfNotFocused(
+    setting: "agent" | "permissions" | "errors",
+    title: string,
+    message?: string,
+    sessionID?: string,
+  ): void {
     const now = Date.now()
-    const last = this.notificationCooldowns.get(setting) ?? 0
+    const cooldownKey = sessionID ? `${setting}:${sessionID}` : setting
+    const last = this.notificationCooldowns.get(cooldownKey) ?? 0
     if (now - last < this.COOLDOWN_MS) return
-    this.notificationCooldowns.set(setting, now)
+    this.notificationCooldowns.set(cooldownKey, now)
 
     const config = vscode.workspace.getConfiguration("kilo-code.new.notifications")
     if (!config.get<boolean>(setting, true)) return
@@ -3226,7 +3232,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       } else if (status === "idle" && this.busySessions.has(sid) && this.trackedSessionIds.has(sid)) {
         this.busySessions.delete(sid)
         if (this.connectionService.shouldNotify(sid, "session.status:idle"))
-          this.notifyIfNotFocused("agent", "Agent task completed")
+          this.notifyIfNotFocused("agent", "Agent task completed", undefined, sid)
       }
       const msg = mapSSEEventToWebviewMessage(event, sid)
       if (msg) {
@@ -3318,7 +3324,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.connectionService.shouldNotify(sessionID, "permission.asked", event.properties.id)
     ) {
       const tool = event.properties.permission ?? event.properties.tool ?? "tool"
-      this.notifyIfNotFocused("permissions", `Permission required: ${tool}`)
+      this.notifyIfNotFocused("permissions", `Permission required: ${tool}`, undefined, sessionID)
     }
     if (
       event.type === "question.asked" &&
@@ -3326,7 +3332,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.connectionService.shouldNotify(sessionID, "question.asked", event.properties.id)
     ) {
       const questions = event.properties.questions as Array<{ question: string }> | undefined
-      this.notifyIfNotFocused("permissions", "Agent Question", questions?.[0]?.question)
+      this.notifyIfNotFocused("permissions", "Agent Question", questions?.[0]?.question, sessionID)
     }
     if (
       event.type === "session.error" &&
@@ -3334,7 +3340,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.connectionService.shouldNotify(sessionID, "session.error")
     ) {
       const err = event.properties.error as { message?: string } | undefined
-      this.notifyIfNotFocused("errors", `Session error: ${err?.message ?? "Unknown error"}`)
+      this.notifyIfNotFocused("errors", `Session error: ${err?.message ?? "Unknown error"}`, undefined, sessionID)
     }
 
     const msg = mapSSEEventToWebviewMessage(event, sessionID)
