@@ -481,3 +481,123 @@ describe("edge cases and error handling", () => {
     }
   })
 })
+
+// ── Regression tests for #9050 ──────────────────────────────────────────────
+// The auto-apply createEffect in local.tsx previously clobbered user-selected
+// per-agent models whenever it re-fired. The fix gates it on (a) modelStore.ready
+// and (b) the absence of an existing saved entry for that agent.
+
+describe("#9050: auto-apply effect respects saved per-agent selection", () => {
+  test("13: fresh start — config model for active agent is applied after ready", async () => {
+    // plan is second; code (first) has no config model. Switch to plan post-init.
+    mockAgents = [
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      // Effect should not touch the code agent (no config model).
+      expect(local.model.saved("code")).toBeUndefined()
+
+      local.agent.set("plan")
+      // Give the effect time to re-run now that agent.current() changed.
+      await Bun.sleep(50)
+
+      // First-time application: no saved entry → config model applied and persisted.
+      expect(local.model.saved("plan")).toEqual(OPUS)
+      const data = await readModelJson()
+      expect(data.model.plan).toEqual(OPUS)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("14: saved entry from model.json is preserved over a differing config model", async () => {
+    // Config says plan → OPUS; saved file says plan → SONNET. Saved must win.
+    mockAgents = [
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { plan: SONNET },
+        favorite: [],
+        variant: {},
+      },
+    })
+    try {
+      local.agent.set("plan")
+      await Bun.sleep(50)
+
+      // The fix: effect sees an existing saved entry and leaves it alone.
+      expect(local.model.saved("plan")).toEqual(SONNET)
+      const data = await readModelJson()
+      expect(data.model.plan).toEqual(SONNET)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("15: user override of a config-model agent sticks across agent switches", async () => {
+    // plan has config model OPUS; user picks SONNET for plan; switching away
+    // and back must not revert to OPUS.
+    mockAgents = [
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      local.agent.set("plan")
+      await Bun.sleep(50)
+      // Effect applied config default (no saved entry yet).
+      expect(local.model.saved("plan")).toEqual(OPUS)
+
+      // User picks a different model.
+      local.model.set(SONNET, { recent: true })
+      await Bun.sleep(50)
+      expect(local.model.saved("plan")).toEqual(SONNET)
+
+      // Bounce agents.
+      local.agent.set("code")
+      await Bun.sleep(50)
+      local.agent.set("plan")
+      await Bun.sleep(50)
+
+      // Saved pick survives.
+      expect(local.model.saved("plan")).toEqual(SONNET)
+      const data = await readModelJson()
+      expect(data.model.plan).toEqual(SONNET)
+    } finally {
+      dispose()
+    }
+  })
+
+  test("16: invalid config model still emits a warning toast", async () => {
+    // Ensure the fix didn't silence the existing invalid-model warning path.
+    mockAgents = [
+      { name: "code", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+      {
+        name: "plan",
+        mode: "primary",
+        hidden: false,
+        model: { providerID: "nonexistent", modelID: "fake-model" },
+        color: undefined,
+        permission: {},
+      },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      toastMessages = []
+      local.agent.set("plan")
+      await Bun.sleep(50)
+
+      const warnings = toastMessages.filter((t) => t.variant === "warning" && t.message.includes("not valid"))
+      expect(warnings.length).toBeGreaterThan(0)
+      // And no bogus value was written.
+      expect(local.model.saved("plan")).toBeUndefined()
+    } finally {
+      dispose()
+    }
+  })
+})

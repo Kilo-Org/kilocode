@@ -216,6 +216,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         get ready() {
           return modelStore.ready
         },
+        // kilocode_change start - expose saved per-agent pick for auto-apply guard
+        saved(name: string) {
+          return modelStore.model[name]
+        },
+        // kilocode_change end
         recent() {
           return modelStore.recent
         },
@@ -409,21 +414,24 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     // Automatically update model when agent changes
     createEffect(() => {
+      // kilocode_change start - wait for persistence load and skip when a per-agent pick already exists (#9050)
+      if (!model.ready) return
       const value = agent.current()
-      if (!value) return // kilocode_change - guard against empty agent list during org switch
-      if (value.model) {
-        if (isModelValid(value.model))
-          model.set({
-            providerID: value.model.providerID,
-            modelID: value.model.modelID,
-          })
-        else
-          toast.show({
-            variant: "warning",
-            message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
-            duration: 3000,
-          })
-      }
+      if (!value) return // guard against empty agent list during org switch
+      if (!value.model) return
+      if (model.saved(value.name)) return
+      if (isModelValid(value.model))
+        model.set({
+          providerID: value.model.providerID,
+          modelID: value.model.modelID,
+        })
+      else
+        toast.show({
+          variant: "warning",
+          message: `Agent ${value.name}'s configured model ${value.model.providerID}/${value.model.modelID} is not valid`,
+          duration: 3000,
+        })
+      // kilocode_change end
     })
 
     const result = {
