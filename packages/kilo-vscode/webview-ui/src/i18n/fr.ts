@@ -1434,6 +1434,8 @@ export const dict = {
   "settings.saveBar.warning.one": "Une session est en cours et sera interrompue",
   "settings.saveBar.warning.many": "Plusieurs sessions sont en cours et seront interrompues",
   "settings.saveBar.saveAnyway": "Enregistrer quand même",
+  "settings.saveBar.saving": "Enregistrement…",
+  "settings.saveBar.saveFailed": "Impossible d'enregistrer les paramètres",
   "settings.saveBar.cancel": "Annuler",
   "notifications.action.next": "Suivant",
   "notifications.action.close": "Fermer",

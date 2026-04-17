@@ -1390,6 +1390,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Кілька сесій виконуються і будуть перервані",
   "settings.saveBar.saveAnyway": "Зберегти все одно",
   "settings.saveBar.cancel": "Скасувати",
+  "settings.saveBar.saving": "Збереження…",
+  "settings.saveBar.saveFailed": "Не вдалося зберегти налаштування",
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",

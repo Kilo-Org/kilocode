@@ -97,7 +97,7 @@ export function getConfigErrorDetails(error: unknown): string | undefined {
   const out: string[] = []
   if (path) out.push(`File: ${path}`)
   if (issues && issues.length > 0) {
-    out.push("")
+    if (out.length > 0) out.push("")
     out.push(issues.length === 1 ? "Issue:" : `${issues.length} issues:`)
     for (const raw of issues) {
       if (!raw || typeof raw !== "object") continue

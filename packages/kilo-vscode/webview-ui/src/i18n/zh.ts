@@ -1358,6 +1358,8 @@ export const dict = {
   "settings.saveBar.warning.one": "一个会话正在运行，将被中断",
   "settings.saveBar.warning.many": "多个会话正在运行，将被中断",
   "settings.saveBar.saveAnyway": "仍然保存",
+  "settings.saveBar.saving": "保存中…",
+  "settings.saveBar.saveFailed": "无法保存设置",
   "settings.saveBar.cancel": "取消",
   "notifications.action.next": "下一个",
   "notifications.action.close": "关闭",

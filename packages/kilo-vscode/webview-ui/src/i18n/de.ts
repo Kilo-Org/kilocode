@@ -1430,6 +1430,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
+  "settings.saveBar.saving": "Speichern…",
+  "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",

@@ -9,6 +9,8 @@ import {
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
   mergeFileSearchResults,
+  getErrorMessage,
+  getConfigErrorDetails,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -656,5 +658,146 @@ describe("mergeFileSearchResults", () => {
       active: "src/utils/path.ts",
     })
     expect(result).toEqual(["src/utils/path.ts", "src/index.ts"])
+  })
+})
+
+describe("getErrorMessage", () => {
+  it("extracts message from an Error instance", () => {
+    expect(getErrorMessage(new Error("boom"))).toBe("boom")
+  })
+
+  it("returns the string as-is", () => {
+    expect(getErrorMessage("plain text failure")).toBe("plain text failure")
+  })
+
+  it("reads a direct .message field", () => {
+    expect(getErrorMessage({ message: "bad input" })).toBe("bad input")
+  })
+
+  it("reads a direct .error string field", () => {
+    expect(getErrorMessage({ error: "nope" })).toBe("nope")
+  })
+
+  it("reads SDK throwOnError shape { error: { message } }", () => {
+    expect(getErrorMessage({ error: { message: "sdk said no" } })).toBe("sdk said no")
+  })
+
+  it("reads NotFoundError shape { data: { message } }", () => {
+    expect(getErrorMessage({ name: "NotFoundError", data: { message: "not found" } })).toBe("not found")
+  })
+
+  it("reads the first Zod issue message from ConfigInvalidError", () => {
+    const err = {
+      name: "ConfigInvalidError",
+      data: {
+        path: "/Users/me/.config/kilo/kilo.json",
+        issues: [
+          { code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' },
+          { code: "invalid_type", path: ["timeout"], message: "Expected number" },
+        ],
+      },
+    }
+    expect(getErrorMessage(err)).toBe('Unrecognized key: "indexing"')
+  })
+
+  it("reads Hono validator shape { data: { error: [{ message }] } }", () => {
+    const err = { data: { error: [{ message: "required" }] }, success: false }
+    expect(getErrorMessage(err)).toBe("required")
+  })
+
+  it("reads Hono validator shape with string errors", () => {
+    expect(getErrorMessage({ data: { error: ["bad field"] } })).toBe("bad field")
+  })
+
+  it("reads BadRequestError shape { errors: [{ message }] }", () => {
+    expect(getErrorMessage({ errors: [{ message: "first error" }, { message: "second" }] })).toBe("first error")
+  })
+
+  it("reads BadRequestError shape with string errors", () => {
+    expect(getErrorMessage({ errors: ["boom"] })).toBe("boom")
+  })
+
+  it("falls back to JSON for unknown object shapes", () => {
+    expect(getErrorMessage({ weird: true, code: 42 })).toBe('{"weird":true,"code":42}')
+  })
+
+  it("falls back to String() for non-serializable values", () => {
+    expect(getErrorMessage(undefined)).toBe("undefined")
+    expect(getErrorMessage(null)).toBe("null")
+    expect(getErrorMessage(42)).toBe("42")
+  })
+
+  it("skips JSON fallback for empty objects", () => {
+    expect(getErrorMessage({})).toBe("[object Object]")
+  })
+
+  it("prefers .message over nested shapes", () => {
+    const err = { message: "outer", data: { issues: [{ message: "inner" }] } }
+    expect(getErrorMessage(err)).toBe("outer")
+  })
+
+  it("falls through when the first issue has no message", () => {
+    // firstMessage only inspects index 0, so an invalid first entry causes the
+    // branch to skip and the JSON fallback kicks in.
+    const err = { data: { issues: [{ code: "bad" }] } }
+    expect(getErrorMessage(err)).toBe('{"data":{"issues":[{"code":"bad"}]}}')
+  })
+})
+
+describe("getConfigErrorDetails", () => {
+  it("returns undefined for non-object errors", () => {
+    expect(getConfigErrorDetails("oops")).toBeUndefined()
+    expect(getConfigErrorDetails(undefined)).toBeUndefined()
+    expect(getConfigErrorDetails(null)).toBeUndefined()
+    expect(getConfigErrorDetails(42)).toBeUndefined()
+  })
+
+  it("returns undefined when .data is missing", () => {
+    expect(getConfigErrorDetails({ message: "hi" })).toBeUndefined()
+  })
+
+  it("returns undefined when .data has no path or issues", () => {
+    expect(getConfigErrorDetails({ data: { unrelated: true } })).toBeUndefined()
+  })
+
+  it("formats a single-issue ConfigInvalidError", () => {
+    const err = {
+      data: {
+        path: "/home/me/.config/kilo/kilo.json",
+        issues: [{ code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' }],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      'File: /home/me/.config/kilo/kilo.json\n\nIssue:\n  • Unrecognized key: "indexing"',
+    )
+  })
+
+  it("formats a multi-issue ConfigInvalidError with paths", () => {
+    const err = {
+      data: {
+        path: "/cfg.json",
+        issues: [
+          { path: ["timeout"], message: "Expected number" },
+          { path: ["nested", "field"], message: "Required" },
+        ],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /cfg.json\n\n2 issues:\n  • timeout: Expected number\n  • nested.field: Required",
+    )
+  })
+
+  it("omits the path line when only issues are present", () => {
+    const err = { data: { issues: [{ path: [], message: "something" }] } }
+    expect(getConfigErrorDetails(err)).toBe("Issue:\n  • something")
+  })
+
+  it("omits the issues section when only the path is present", () => {
+    expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("skips non-object issues entries", () => {
+    const err = { data: { path: "/c", issues: [null, "bad", { message: "ok" }] } }
+    expect(getConfigErrorDetails(err)).toBe("File: /c\n\n3 issues:\n  • ok")
   })
 })

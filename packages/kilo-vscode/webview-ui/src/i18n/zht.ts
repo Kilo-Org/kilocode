@@ -1363,6 +1363,8 @@ export const dict = {
   "settings.saveBar.warning.many": "多個工作階段正在執行，將被中斷",
   "settings.saveBar.saveAnyway": "仍然儲存",
   "settings.saveBar.cancel": "取消",
+  "settings.saveBar.saving": "儲存中…",
+  "settings.saveBar.saveFailed": "無法儲存設定",
   "notifications.action.next": "下一個",
   "notifications.action.close": "關閉",
   "notifications.action.tryModel": "嘗試 {{model}}",
