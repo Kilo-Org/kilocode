@@ -106,27 +106,13 @@ export namespace LSPServer {
     ),
     extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
     async spawn(root) {
-      const tsserver = Module.resolve("typescript/lib/tsserver.js", Instance.directory)
-      log.info("typescript server", { tsserver })
-      if (!tsserver) return
-      const bin = await Npm.which("typescript-language-server")
-      if (!bin) return
-
-      const args = ["--stdio", "--tsserver-log-verbosity", "off", "--tsserver-path", tsserver]
-
-      if (
-        !(await pathExists(path.join(root, "tsconfig.json"))) &&
-        !(await pathExists(path.join(root, "jsconfig.json")))
-      ) {
-        args.push("--ignore-node-modules")
+      if (!Flag.KILO_EXPERIMENTAL_LSP_TOOL) return undefined
+      const bin = await TsCheck.native_tsgo(root)
+      if (!bin) {
+        log.info("tsgo native binary not found, falling back to lightweight client")
+        return undefined
       }
-
-      const proc = spawn(bin, args, {
-        cwd: root,
-        env: {
-          ...process.env,
-        },
-      })
+      log.info("spawning tsgo --lsp", { bin, root })
       return {
         process: spawn(bin, ["--lsp", "--stdio"], { cwd: root }),
       }

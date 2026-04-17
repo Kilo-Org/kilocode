@@ -383,10 +383,12 @@ export namespace ProviderTransform {
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
-    const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
-      model.api.id.includes(v),
-    )
-    const adaptiveEfforts = ["low", "medium", "high", "max"]
+    // kilocode_change start: add opus-4.7 (with xhigh effort)
+    const isOpus47 = ["opus-4-7", "opus-4.7"].some((v) => model.api.id.includes(v))
+    const isAnthropicAdaptive =
+      isOpus47 || ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) => model.api.id.includes(v))
+    const adaptiveEfforts = isOpus47 ? ["low", "medium", "high", "xhigh", "max"] : ["low", "medium", "high", "max"]
+    // kilocode_change end
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||

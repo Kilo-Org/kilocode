@@ -105,9 +105,13 @@ if (Script.release) {
   // kilocode_change end
 
   // kilocode_change start - mark prerelease GitHub releases accordingly
-  // and populate release notes from the changelog updated by changeset above
+  // and populate release notes from the changelog updated by changeset above.
+  // Use an absolute path for the CHANGELOG because the imported SDK build
+  // script chdirs into packages/sdk/js, so a relative path would miss the file
+  // and fall through to the "No notable changes" default.
   const flags = Script.preview ? ["--draft=false", "--prerelease"] : ["--draft=false"]
-  const changelog = await Bun.file("packages/kilo-vscode/CHANGELOG.md")
+  const changelogPath = fileURLToPath(new URL("../packages/kilo-vscode/CHANGELOG.md", import.meta.url))
+  const changelog = await Bun.file(changelogPath)
     .text()
     .catch(() => "")
   const body = extractLatestSection(changelog) || "No notable changes"
