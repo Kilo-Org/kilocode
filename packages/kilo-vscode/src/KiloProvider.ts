@@ -1365,8 +1365,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
 
-      // Snapshot supersedes any queued deltas; re-emitting them after
-      // messagesLoaded would duplicate streamed text in the webview.
+      // Snapshot must reflect every SSE event up to its taken-time; any
+      // delta still queued here is either already applied in the snapshot
+      // (re-emitting would duplicate streamed text) or trails the snapshot
+      // and is silently lost via drop().
       this.streams.drop(sessionID)
       this.postMessage({ type: "messagesLoaded", sessionID, messages })
       // Recover any prompts missed while the webview was loading or during an SSE reconnection.
@@ -1421,7 +1423,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
 
-      // Snapshot supersedes any queued deltas; same race as handleLoadMessages.
+      // Snapshot supersedes any queued deltas (see handleLoadMessages for the
+      // snapshot-freshness assumption that governs drop() here).
       this.streams.drop(sessionID)
       this.postMessage({ type: "messagesLoaded", sessionID, messages })
       // Recover any prompts emitted by the child before we started tracking it.

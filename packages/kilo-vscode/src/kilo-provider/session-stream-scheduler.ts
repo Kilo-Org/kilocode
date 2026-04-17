@@ -9,18 +9,8 @@
  * See the tuning comment on the default constants below for rationale.
  */
 
-export type PartUpdate = {
-  type: "partUpdated"
-  sessionID: string
-  messageID: string
-  part: unknown
-  delta?: { type: "text-delta"; textDelta: string }
-}
-
-export type PartBatch = {
-  type: "partsUpdated"
-  updates: PartUpdate[]
-}
+import type { PartBatch, PartUpdate } from "../shared/stream-messages"
+export type { PartBatch, PartUpdate } from "../shared/stream-messages"
 
 export type StreamSchedulerStats = {
   received: number
