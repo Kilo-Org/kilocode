@@ -91,7 +91,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             if (part.type !== "tool") return undefined
             const tp = part as unknown as ToolPart
             if (tp.tool !== "question") return undefined
-            if (tp.state?.status !== "pending" && tp.state?.status !== "running") return undefined
             return session.questions().find((q) => q.tool?.callID === tp.callID && q.tool?.messageID === tp.messageID)
           })
 

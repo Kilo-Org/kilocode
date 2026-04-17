@@ -786,6 +786,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.low": "low",
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Supprimer le modèle",
   "provider.custom.models.add": "Ajouter un modèle",
   "provider.custom.models.fetch": "Récupérer les modèles",

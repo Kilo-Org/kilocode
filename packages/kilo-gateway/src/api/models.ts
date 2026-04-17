@@ -118,6 +118,11 @@ export async function fetchKiloModels(options?: {
         continue
       }
 
+      // Skip models that don't support tools — Kilo requires tool calling
+      if (!model.supported_parameters?.includes("tools")) {
+        continue
+      }
+
       const transformedModel = transformToModelDevFormat(model)
       models[model.id] = transformedModel
     }

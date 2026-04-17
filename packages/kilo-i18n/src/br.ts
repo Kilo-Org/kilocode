@@ -69,4 +69,6 @@ export const dict = {
   "marketplace.warning.busyMany": "Várias sessões estão em execução e serão interrompidas",
   "marketplace.warning.installAnyway": "Instalar mesmo assim",
   "marketplace.warning.cancel": "Cancelar",
+  "marketplace.contribute.prompt": "Está faltando uma skill, modo ou servidor MCP?",
+  "marketplace.contribute.cta": "Contribuir no GitHub",
 }

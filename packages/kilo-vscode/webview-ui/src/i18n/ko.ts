@@ -775,6 +775,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.low": "low",
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "모델 제거",
   "provider.custom.models.add": "모델 추가",
   "provider.custom.models.fetch": "모델 가져오기",

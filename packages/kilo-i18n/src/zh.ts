@@ -66,4 +66,6 @@ export const dict = {
   "marketplace.warning.busyMany": "多个会话正在运行，将被中断",
   "marketplace.warning.installAnyway": "仍然安装",
   "marketplace.warning.cancel": "取消",
+  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 服务器？",
+  "marketplace.contribute.cta": "在 GitHub 上贡献",
 }

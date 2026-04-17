@@ -63,6 +63,13 @@
   font-size: 13px;
 }
 
+.message-list-content {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .message-list-content-empty {
   display: flex;
   min-height: 100%;
@@ -151,10 +158,6 @@
   width: 100%;
   min-width: 0;
   padding: 0 4px;
-}
-
-.vscode-session-turn + .vscode-session-turn {
-  margin-top: 12px;
 }
 
 .vscode-session-turn-user {

@@ -69,4 +69,6 @@ export const dict = {
   "marketplace.warning.busyMany": "มีหลายเซสชันกำลังทำงานและจะถูกขัดจังหวะ",
   "marketplace.warning.installAnyway": "ติดตั้งต่อไป",
   "marketplace.warning.cancel": "ยกเลิก",
+  "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
+  "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
 }

@@ -69,4 +69,6 @@ export const dict = {
   "marketplace.warning.busyMany": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "marketplace.warning.installAnyway": "Yine de yükle",
   "marketplace.warning.cancel": "İptal",
+  "marketplace.contribute.prompt": "Bir yetenek, mod veya MCP sunucusu mu eksik?",
+  "marketplace.contribute.cta": "GitHub'da katkıda bulun",
 }

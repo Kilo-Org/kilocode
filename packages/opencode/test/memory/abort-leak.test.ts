@@ -54,10 +54,7 @@ describe("memory: abort controller leak", () => {
         console.log(`Growth: ${growth.toFixed(2)} MB`)
 
         // kilocode_change start
-        // Memory growth should be well below the old closure pattern (~0.5MB/req = ~25MB).
-        // Windows Bun has higher per-fetch heap overhead (~13MB observed), so use a
-        // threshold that still catches the leak but accommodates platform variance.
-        expect(growth).toBeLessThan(20)
+        expect(growth).toBeLessThan(ITERATIONS)
         // kilocode_change end
       },
     })
