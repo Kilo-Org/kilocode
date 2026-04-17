@@ -1,5 +1,3 @@
-// kilocode_change - new file
-//
 // Fast-path initial render for completed (non-streaming) markdown blocks.
 // Skips morphdom's expensive tree-matching by writing innerHTML directly
 // when the container is empty. On large session switches this avoids the
