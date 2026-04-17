@@ -238,8 +238,9 @@ export const ReadTool = Tool.defineEffect(
   }),
 )
 
-// kilocode_change export for kilocode directory read helper
+// kilocode_change start
 export async function lines(filepath: string, opts: { limit: number; offset: number }) {
+  // kilocode_change end
   const stream = createReadStream(filepath, { encoding: "utf8" })
   const rl = createInterface({
     input: stream,
@@ -283,8 +284,9 @@ export async function lines(filepath: string, opts: { limit: number; offset: num
   return { raw, count, cut, more, offset: opts.offset }
 }
 
-// kilocode_change export for kilocode directory read helper
+// kilocode_change start
 export async function isBinaryFile(filepath: string, fileSize: number): Promise<boolean> {
+  // kilocode_change end
   const ext = path.extname(filepath).toLowerCase()
   // binary check for common non-text extensions
   switch (ext) {
