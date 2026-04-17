@@ -1,0 +1,78 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "ollama/gemma4:e4b",
+  "provider": {
+    "ollama": {
+      "api": "http://localhost:11434/v1",
+      "models": {
+        "qwen3-coder-next:cloud": {
+          "name": "Qwen 3 Coder Next (Cloud)",
+          "tool_call": true,
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
+        "deepseek-v3.2:cloud": {
+          "name": "DeepSeek V3.2 (Cloud)",
+          "tool_call": true,
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
+        "gemma4:31b-cloud": {
+          "name": "Gemma 4 31B (Cloud)",
+          "tool_call": true,
+          "limit": {
+            "context": 131072,
+            "output": 8192
+          }
+        },
+        "minimax-m2.7:cloud": {
+          "name": "MiniMax M2.7 (Cloud)",
+          "tool_call": true,
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
+        "gemma4:e4b": {
+          "name": "Gemma 4 E4B (8B Local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "llama3.1:8b": {
+          "name": "Llama 3.1 8B (Local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        },
+        "starcoder2:15b": {
+          "name": "StarCoder2 15B (Local)",
+          "tool_call": false,
+          "limit": {
+            "context": 16384,
+            "output": 4096
+          }
+        },
+        "qwen3.5:latest": {
+          "name": "Qwen 3.5 9.7B (Local)",
+          "tool_call": true,
+          "limit": {
+            "context": 32768,
+            "output": 8192
+          }
+        }
+      }
+    }
+  },
+  "permission": {
+    "bash": "allow"
+  }
+}
