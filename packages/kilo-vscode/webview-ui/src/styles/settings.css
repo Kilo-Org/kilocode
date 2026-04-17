@@ -1,23 +1,15 @@
 /* Settings save bar */
+.settings-save-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border-weak-base);
+}
+
 .settings-save-bar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 0 16px;
-  border-top: 1px solid var(--border-weak-base);
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition:
-    max-height 0.2s ease,
-    opacity 0.2s ease,
-    padding 0.2s ease;
-}
-
-.settings-save-bar--visible {
-  max-height: 52px;
-  opacity: 1;
   padding: 8px 16px;
 }
 
@@ -25,6 +17,62 @@
   font-size: 12px;
   color: var(--foreground-secondary);
   margin-right: auto;
+}
+
+/* Save error — mirrors the startup-error-banner style */
+.settings-save-bar-error {
+  border: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-errorBackground, rgba(241, 76, 76, 0.1));
+  margin: 8px 16px 0 16px;
+  font-size: 12px;
+}
+
+.settings-save-bar-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  user-select: none;
+  min-width: 0;
+}
+
+.settings-save-bar-error-title {
+  flex: 1;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.settings-save-bar-error-firstline {
+  font-weight: 400;
+}
+
+.settings-save-bar-error-chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  transition: transform 150ms;
+}
+
+.settings-save-bar-error-chevron-expanded {
+  transform: rotate(90deg);
+}
+
+.settings-save-bar-error-details {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--vscode-inputValidation-errorBorder, #f14c4c);
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 [data-slot="settings-row"] {
