@@ -280,7 +280,7 @@ async function parse(command: string, ps: boolean) {
   return tree.rootNode
 }
 
-async function ask(ctx: Tool.Context, scan: Scan) {
+async function ask(ctx: Tool.Context, scan: Scan, command: string) {
   if (scan.dirs.size > 0) {
     const globs = Array.from(scan.dirs).map((dir) => {
       if (process.platform === "win32") return Filesystem.normalizePathPattern(path.join(dir, "*"))
@@ -299,7 +299,7 @@ async function ask(ctx: Tool.Context, scan: Scan) {
     permission: "bash",
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: {},
+    metadata: { command }, // kilocode_change
   })
 }
 
@@ -479,7 +479,7 @@ export const BashTool = Tool.define("bash", async () => {
       const root = await parse(params.command, ps)
       const scan = await collect(root, cwd, ps, shell)
       if (!Instance.containsPath(cwd)) scan.dirs.add(cwd)
-      await ask(ctx, scan)
+      await ask(ctx, scan, params.command)
 
       return run(
         {
