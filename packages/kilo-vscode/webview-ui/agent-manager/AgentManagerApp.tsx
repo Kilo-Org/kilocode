@@ -762,6 +762,7 @@ const AgentManagerContent: Component = () => {
     return result
   })
 
+  // Oldest-first sort before applyTabOrder — worktree label and tab bar must agree on "first session".
   const sessionsForWorktree = (worktreeId: string): SessionInfo[] => {
     const ids = new Set(
       managedSessions()

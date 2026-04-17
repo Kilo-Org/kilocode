@@ -25,6 +25,10 @@ export async function loadCommands(client: KiloClient, dir: string): Promise<unk
   try {
     return await promise
   } finally {
+    // Clear the cache entry once the request settles so subsequent calls
+    // fetch fresh data. Identity check guards against clear-then-restart
+    // races: if clearCommandsCache() wiped the map and a new loadCommands()
+    // already stored a fresh promise, don't delete its entry.
     if (promises.get(dir) === promise) promises.delete(dir)
   }
 }
