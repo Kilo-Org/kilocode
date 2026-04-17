@@ -1,5 +1,9 @@
 package ai.kilocode.rpc
 
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -45,4 +49,21 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Get the effective directory for a session (worktree or fallback). */
     suspend fun getDirectory(id: String, fallback: String): String
+
+    // ------ chat ------
+
+    /** Send a prompt to a session (fire-and-forget). */
+    suspend fun prompt(id: String, directory: String, prompt: PromptDto)
+
+    /** Abort ongoing processing for a session. */
+    suspend fun abort(id: String, directory: String)
+
+    /** Load message history for a session. */
+    suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
+
+    /** Subscribe to streaming chat events for a specific session. */
+    suspend fun events(id: String, directory: String): Flow<ChatEventDto>
+
+    /** Update config (model, agent/mode, temperature). */
+    suspend fun updateConfig(directory: String, config: ConfigUpdateDto)
 }

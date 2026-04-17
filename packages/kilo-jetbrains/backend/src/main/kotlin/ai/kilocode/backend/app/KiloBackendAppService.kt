@@ -1,5 +1,7 @@
 package ai.kilocode.backend.app
 
+import ai.kilocode.backend.cli.CliServer
+import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.util.IntellijLog
 import ai.kilocode.backend.util.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import okhttp3.OkHttpClient
 import kotlinx.coroutines.sync.withLock
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -89,8 +92,11 @@ class KiloBackendAppService private constructor(
 
     val events: SharedFlow<SseEvent> get() = connection.events
     val api: DefaultApi? get() = connection.api
+    val http: OkHttpClient? get() = connection.apiClient
+    val port: Int get() = connection.port
 
     val sessions = KiloBackendSessionManager(cs, log)
+    val chat = KiloBackendChatManager(cs, log)
     val workspaces = KiloBackendWorkspaceManager(cs, sessions, log)
 
     @Volatile var profile: KiloProfile200Response? = null
@@ -230,7 +236,8 @@ class KiloBackendAppService private constructor(
                     profile = prof
                     config = cfg
                     notifications = notifs
-                    sessions.start(connection.api!!, connection.events)
+                    sessions.start(connection.api!!, connection.apiClient!!, connection.port, connection.events)
+                    chat.start(connection.apiClient!!, connection.port, connection.events)
                     workspaces.start(connection.api!!, connection.events)
                     _appState.value = KiloAppState.Ready(
                         AppData(
@@ -256,8 +263,12 @@ class KiloBackendAppService private constructor(
 
     /**
      * Fetch the user profile. Returns [FetchResult.ok] with the response
-     * on success, [FetchResult.ok] with `null` when not logged in (401),
-     * or [FetchResult.fail] on other errors. Never throws.
+     * on success, [FetchResult.ok] with `null` when not logged in or when
+     * the server cannot reach the profile endpoint. Never throws.
+     *
+     * Profile is optional — 401 (not logged in) and 5xx (gateway/network
+     * errors) are both non-fatal. Only unexpected client errors are treated
+     * as failures.
      */
     private suspend fun fetchProfile(): FetchResult<KiloProfile200Response?> {
         val client = connection.api
@@ -274,6 +285,12 @@ class KiloBackendAppService private constructor(
             log.warn("Profile fetch failed: HTTP ${e.statusCode}", e)
             logResponseBody("profile", e)
             FetchResult.fail("profile", e)
+        } catch (e: ServerException) {
+            // 5xx from the CLI — profile endpoint is unreachable (no auth,
+            // gateway down, etc.). Treat the same as not-logged-in.
+            log.warn("Profile fetch: server error (${e.statusCode}) — treating as unavailable", e)
+            logResponseBody("profile", e)
+            FetchResult.ok(null)
         } catch (e: Exception) {
             log.warn("Profile fetch failed: ${e.message}", e)
             logResponseBody("profile", e)
@@ -399,6 +416,7 @@ class KiloBackendAppService private constructor(
             eventWatcher?.cancel()
         }
         workspaces.stop()
+        chat.stop()
         sessions.stop()
         profile = null
         config = null

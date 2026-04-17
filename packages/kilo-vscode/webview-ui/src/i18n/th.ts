@@ -772,6 +772,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.low": "low",
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "ลบโมเดล",
   "provider.custom.models.add": "เพิ่มโมเดล",
   "provider.custom.models.fetch": "ดึงโมเดล",

@@ -3,6 +3,7 @@
  */
 
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { PartBatch, PartUpdate } from "../../../src/shared/stream-messages"
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -505,13 +506,10 @@ export interface SendMessageFailedMessage {
   files?: FileAttachment[]
 }
 
-export interface PartUpdatedMessage {
-  type: "partUpdated"
-  sessionID?: string
-  messageID?: string
-  part: Part
-  delta?: PartDelta
-}
+// Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
+// webview's concrete union.
+export type PartUpdatedMessage = PartUpdate<Part>
+export type PartsUpdatedMessage = PartBatch<Part>
 
 export interface SessionStatusMessage {
   type: "sessionStatus"
@@ -1463,6 +1461,7 @@ export type ExtensionMessage =
   | ErrorMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
+  | PartsUpdatedMessage
   | SessionStatusMessage
   | SessionErrorMessage
   | PermissionRequestMessage

@@ -167,4 +167,36 @@ Use this skill.
       process.env.KILO_TEST_HOME = home
     }
   })
+
+  test("built-in kilo-config includes named command lookup guidance", async () => {
+    await using tmp = await tmpdir({ git: true })
+
+    const home = process.env.KILO_TEST_HOME
+    process.env.KILO_TEST_HOME = tmp.path
+
+    try {
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const tool = await SkillTool.init()
+          const ctx: Tool.Context = {
+            ...baseCtx,
+            ask: async () => {},
+          }
+
+          const result = await tool.execute({ name: "kilo-config" }, ctx)
+
+          expect(tool.description).toContain("where it loads things from")
+          expect(result.metadata.dir).toBe("builtin")
+          expect(result.output).toContain("Finding a named command")
+          expect(result.output).toContain("~/.config/kilo/")
+          expect(result.output).toContain("~/.kilocode/")
+          expect(result.output).toContain("**/command/")
+          expect(result.output).toContain("explicit search")
+        },
+      })
+    } finally {
+      process.env.KILO_TEST_HOME = home
+    }
+  })
 })

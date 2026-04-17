@@ -1,5 +1,8 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
 import type { CloudSessionMessage } from "./services/cli-backend/types"
+import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
+
+export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
@@ -281,13 +284,8 @@ export function resolveContextDirectory(input: {
 }
 
 export type WebviewMessage =
-  | {
-      type: "partUpdated"
-      sessionID: string
-      messageID: string
-      part: unknown
-      delta?: { type: "text-delta"; textDelta: string }
-    }
+  | PartUpdate
+  | PartBatch
   | {
       type: "messageCreated"
       message: Record<string, unknown>

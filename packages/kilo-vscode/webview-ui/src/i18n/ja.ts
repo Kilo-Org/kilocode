@@ -774,6 +774,7 @@ export const dict = {
   "provider.custom.models.variants.reasoningEffort.low": "low",
   "provider.custom.models.variants.reasoningEffort.medium": "medium",
   "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "モデルを削除",
   "provider.custom.models.add": "モデルを追加",
   "provider.custom.models.fetch": "モデルを取得",
