@@ -21,9 +21,15 @@ function rank(query: string, p: string): number {
 export function mergeFileSearchItems(input: { query: string; files: string[]; folders: string[] }): FileSearchItem[] {
   const query = normalize(input.query).trim().toLowerCase()
   const files = input.files.map((p) => ({ path: normalize(p), type: "file" as const }))
-  const seen = new Set(input.files.map(trim))
+  // Dedup folders against themselves; a file and a folder that share a stem are distinct entries.
+  const seen = new Set<string>()
   const folders = input.folders
-    .filter((p) => !seen.has(trim(p)))
+    .filter((p) => {
+      const key = trim(p)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     .map((p, index) => ({
       item: { path: normalize(p), type: "folder" as const },
       index,

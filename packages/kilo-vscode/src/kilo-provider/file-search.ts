@@ -31,23 +31,24 @@ export async function handleFileSearch(input: Input): Promise<void> {
   const dir = input.dir(id)
   const open = dir ? await input.open(dir) : new Set<string>()
 
-  void Promise.all([
-    client.find.files({ query: input.message.query, directory: dir, type: "file", limit: 50 }, { throwOnError: true }),
-    client.find.files(
-      { query: input.message.query, directory: dir, type: "directory", limit: 50 },
-      { throwOnError: true },
-    ),
-  ])
-    .then(([files, folders]) => {
-      const uri = vscode.window.activeTextEditor?.document.uri
-      const rel = uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath) : undefined
-      const active = rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel.replaceAll("\\", "/") : undefined
-      const result = mergeFileSearchResults({ query: input.message.query, backend: files.data, open, active })
-      const items = mergeFileSearchItems({ query: input.message.query, files: result, folders: folders.data })
-      input.post({ type: "fileSearchResult", paths: result, items, dir, requestId: input.message.requestId })
-    })
-    .catch((error: unknown) => {
-      console.error("[Kilo New] File search failed:", error)
-      input.post({ type: "fileSearchResult", paths: [], items: [], dir, requestId: input.message.requestId })
-    })
+  const query = input.message.query
+  void Promise.allSettled([
+    client.find.files({ query, directory: dir, type: "file", limit: 50 }, { throwOnError: true }),
+    client.find.files({ query, directory: dir, type: "directory", limit: 50 }, { throwOnError: true }),
+  ]).then(([fileRes, folderRes]) => {
+    const files = settled(fileRes, "file")
+    const folders = settled(folderRes, "folder")
+    const uri = vscode.window.activeTextEditor?.document.uri
+    const rel = uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath) : undefined
+    const active = rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel.replaceAll("\\", "/") : undefined
+    const result = mergeFileSearchResults({ query, backend: files, open, active })
+    const items = mergeFileSearchItems({ query, files: result, folders })
+    input.post({ type: "fileSearchResult", paths: result, items, dir, requestId: input.message.requestId })
+  })
+}
+
+function settled(result: PromiseSettledResult<{ data: string[] }>, kind: "file" | "folder"): string[] {
+  if (result.status === "fulfilled") return result.value.data
+  console.error(`[Kilo New] File search (${kind}) failed:`, result.reason)
+  return []
 }

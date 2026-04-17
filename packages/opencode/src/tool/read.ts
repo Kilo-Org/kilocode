@@ -128,7 +128,8 @@ export const ReadTool = Tool.defineEffect(
         const sliced = items.slice(start, start + limit)
         const truncated = start + sliced.length < items.length
         // kilocode_change start
-        const loaded = yield* readDirectoryFiles(fs, filepath, sliced)
+        const expand = Boolean(ctx.extra?.["includeDirectoryFiles"])
+        const loaded = expand ? yield* readDirectoryFiles(fs, filepath, sliced) : []
         const content = loaded.map((item) => item.content).join("\n\n")
         // kilocode_change end
 
@@ -237,7 +238,8 @@ export const ReadTool = Tool.defineEffect(
   }),
 )
 
-async function lines(filepath: string, opts: { limit: number; offset: number }) {
+// kilocode_change export for kilocode directory read helper
+export async function lines(filepath: string, opts: { limit: number; offset: number }) {
   const stream = createReadStream(filepath, { encoding: "utf8" })
   const rl = createInterface({
     input: stream,
@@ -281,7 +283,8 @@ async function lines(filepath: string, opts: { limit: number; offset: number }) 
   return { raw, count, cut, more, offset: opts.offset }
 }
 
-async function isBinaryFile(filepath: string, fileSize: number): Promise<boolean> {
+// kilocode_change export for kilocode directory read helper
+export async function isBinaryFile(filepath: string, fileSize: number): Promise<boolean> {
   const ext = path.extname(filepath).toLowerCase()
   // binary check for common non-text extensions
   switch (ext) {

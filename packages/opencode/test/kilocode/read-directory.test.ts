@@ -14,7 +14,7 @@ import { Tool } from "../../src/tool/tool"
 import { provideInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const ctx = {
+const baseCtx = {
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make(""),
   callID: "",
@@ -24,6 +24,8 @@ const ctx = {
   metadata: () => {},
   ask: async () => {},
 }
+
+const expandCtx = { ...baseCtx, extra: { includeDirectoryFiles: true } }
 
 const it = testEffect(
   Layer.mergeAll(
@@ -41,13 +43,20 @@ const init = Effect.fn("ReadDirectoryTest.init")(function* () {
   return yield* Effect.promise(() => info.init())
 })
 
-const run = Effect.fn("ReadDirectoryTest.run")(function* (args: Tool.InferParameters<typeof ReadTool>) {
+const run = Effect.fn("ReadDirectoryTest.run")(function* (
+  args: Tool.InferParameters<typeof ReadTool>,
+  ctx = expandCtx,
+) {
   const tool = yield* init()
   return yield* Effect.promise(() => tool.execute(args, ctx))
 })
 
-const exec = Effect.fn("ReadDirectoryTest.exec")(function* (dir: string, args: Tool.InferParameters<typeof ReadTool>) {
-  return yield* provideInstance(dir)(run(args))
+const exec = Effect.fn("ReadDirectoryTest.exec")(function* (
+  dir: string,
+  args: Tool.InferParameters<typeof ReadTool>,
+  ctx = expandCtx,
+) {
+  return yield* provideInstance(dir)(run(args, ctx))
 })
 
 const put = Effect.fn("ReadDirectoryTest.put")(function* (p: string, content: string | Uint8Array) {
@@ -70,6 +79,19 @@ describe("kilocode directory reads", () => {
       expect(result.output).not.toContain('<file_content path="folder/nested/b.txt">')
       expect(result.output).not.toContain('<file_content path="folder/binary.bin">')
       expect(result.metadata.loaded).toContain(path.join(dir, "folder", "a.txt"))
+    }),
+  )
+
+  it.live("skips content inlining without the kilo flag", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      yield* put(path.join(dir, "folder", "a.txt"), "alpha")
+
+      const result = yield* exec(dir, { filePath: path.join(dir, "folder") }, baseCtx)
+
+      expect(result.output).toContain("a.txt")
+      expect(result.output).not.toContain('<file_content path="folder/a.txt">')
+      expect(result.metadata.loaded).toEqual([])
     }),
   )
 

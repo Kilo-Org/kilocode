@@ -1141,7 +1141,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
                 if (part.mime === "application/x-directory") {
                   const args = { filePath: filepath }
-                  const exit = yield* execRead(args).pipe(Effect.exit)
+                  // kilocode_change: inline top-level files for folder mentions
+                  const exit = yield* execRead(args, { includeDirectoryFiles: true }).pipe(Effect.exit)
                   if (Exit.isFailure(exit)) {
                     const error = Cause.squash(exit.cause)
                     log.error("failed to read directory", { error })
