@@ -29,6 +29,7 @@ const team = new Set([
   "alex-alecu",
   "imanolmzd-svg",
   "kilocode-bot",
+  "kilo-code-bot",
   "kilo-code-bot[bot]",
   "kirillk",
   "lambertjosh",
