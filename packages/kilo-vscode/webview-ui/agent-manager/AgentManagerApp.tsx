@@ -2908,13 +2908,12 @@ const AgentManagerContent: Component = () => {
                 setSelection(LOCAL)
                 return
               }
-              if (worktreeSessionIds().has(id)) {
-                const ms = managedSessions().find((s) => s.id === id)
-                if (ms?.worktreeId) {
-                  selectWorktree(ms.worktreeId)
-                  session.selectSession(id)
-                  return
-                }
+              const ms = worktreeSessionIds().has(id) ? managedSessions().find((s) => s.id === id) : undefined
+              if (ms?.worktreeId) {
+                selectWorktree(ms.worktreeId)
+                session.selectSession(id)
+                setReviewActive(false)
+                return
               }
               openLocally(id)
             }}

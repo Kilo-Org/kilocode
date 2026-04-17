@@ -1,4 +1,4 @@
-import { describe, expect, test, mock, beforeEach, afterEach } from "bun:test"
+import { describe, expect, test, mock, beforeEach } from "bun:test"
 import type { GitContext } from "@/kilocode/commit-message/types"
 
 // Mock dependencies before importing the module under test.
@@ -10,6 +10,7 @@ const realLog = await import("@/util/log")
 const realProvider = await import("@/provider/provider")
 const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
+const realGitContext = await import("@/kilocode/commit-message/git-context")
 
 let mockStreamText = "feat(src): add hello world logging"
 
@@ -26,6 +27,15 @@ const defaultGitContext: GitContext = {
 }
 
 let mockGitContext: GitContext = { ...defaultGitContext }
+let captured: { path: string; selected?: string[] } = { path: "" }
+
+mock.module("@/kilocode/commit-message/git-context", () => ({
+  ...realGitContext,
+  getGitContext: async (repoPath: string, selectedFiles?: string[]) => {
+    captured = { path: repoPath, selected: selectedFiles }
+    return mockGitContext
+  },
+}))
 
 mock.module("@/provider/provider", () => ({
   ...realProvider,
@@ -72,21 +82,19 @@ mock.module("@/util/log", () => ({
 }))
 
 import { generateCommitMessage } from "../../../src/kilocode/commit-message/generate"
-import { setGitContextForTest } from "@/kilocode/commit-message/git-context"
 
 describe("commit-message.generate", () => {
-  afterEach(() => setGitContextForTest(undefined))
-
   beforeEach(() => {
     mockStreamText = "feat(src): add hello world logging"
     mockGitContext = { ...defaultGitContext }
-    setGitContextForTest(async () => mockGitContext)
+    captured = { path: "" }
   })
 
   describe("prompt construction", () => {
     test("passes path to getGitContext", async () => {
       const result = await generateCommitMessage({ path: "/repo" })
       expect(result.message).toBeTruthy()
+      expect(captured.path).toBe("/repo")
     })
 
     test("generates message from git context with multiple files", async () => {
@@ -164,6 +172,8 @@ describe("commit-message.generate", () => {
         selectedFiles: ["src/a.ts"],
       })
       expect(result.message).toBeTruthy()
+      expect(captured.path).toBe("/repo")
+      expect(captured.selected).toEqual(["src/a.ts"])
     })
   })
 
