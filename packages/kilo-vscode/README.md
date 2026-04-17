@@ -131,6 +131,13 @@ Thanks to all the contributors who help make Kilo better!
       </a>
     </td>
     <td align="center">
+      <a href="https://github.com/apps/kilo-code-bot">
+        <img src="https://avatars.githubusercontent.com/in/2193792?size=100" width="100" height="100" alt="kilo-code-bot" style="border-radius: 50%;" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
       <a href="https://github.com/Kilo-Org/kilocode/graphs/contributors">
         <b>more ...</b>
       </a>
