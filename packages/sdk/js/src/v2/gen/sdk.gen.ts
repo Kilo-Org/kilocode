@@ -66,6 +66,8 @@ import type {
   KiloCloudSessionImportResponses,
   KiloCloudSessionsErrors,
   KiloCloudSessionsResponses,
+  KilocodeHeapSnapshotErrors,
+  KilocodeHeapSnapshotResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveSkillErrors,
@@ -5125,6 +5127,42 @@ export class SessionImport extends HeyApiClient {
   }
 }
 
+export class Heap extends HeyApiClient {
+  /**
+   * Write heap snapshot
+   *
+   * Write a heap snapshot for the CLI process to the log directory.
+   */
+  public snapshot<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeHeapSnapshotResponses,
+      KilocodeHeapSnapshotErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/heap/snapshot",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Kilocode extends HeyApiClient {
   /**
    * Remove a skill
@@ -5207,6 +5245,11 @@ export class Kilocode extends HeyApiClient {
   private _sessionImport?: SessionImport
   get sessionImport(): SessionImport {
     return (this._sessionImport ??= new SessionImport({ client: this.client }))
+  }
+
+  private _heap?: Heap
+  get heap(): Heap {
+    return (this._heap ??= new Heap({ client: this.client }))
   }
 }
 

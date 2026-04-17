@@ -121,30 +121,22 @@ const LOCK_FILES = new Set([
   "devcontainer.lock.json",
 ])
 
-const MAX_DIFF_LENGTH = 4000
+export const MAX_DIFF_LENGTH = 4000
 
-function isLockFile(filepath: string): boolean {
+export function isLockFile(filepath: string): boolean {
   const name = filepath.split("/").pop() ?? filepath
   return LOCK_FILES.has(name)
 }
 
-// kilocode_change start — test seams to avoid process-wide mock.module pollution
-type GitRunner = (args: string[], cwd: string) => string
+// kilocode_change start — test seam to avoid process-wide mock.module pollution
 type ContextOverride = (path: string, selected?: string[]) => Promise<GitContext>
-
-let runner: GitRunner | undefined
 let override: ContextOverride | undefined
-
-export function setGitRunnerForTest(fn: GitRunner | undefined) {
-  runner = fn
-}
 export function setGitContextForTest(fn: ContextOverride | undefined) {
   override = fn
 }
 // kilocode_change end
 
-function git(args: string[], cwd: string): string {
-  if (runner) return runner(args, cwd) // kilocode_change
+export function git(args: string[], cwd: string): string {
   const result = Bun.spawnSync(["git", ...args], {
     cwd,
     stdout: "pipe",
@@ -154,7 +146,7 @@ function git(args: string[], cwd: string): string {
   return result.stdout.toString().trimEnd()
 }
 
-function parseNameStatus(output: string): Array<{ status: string; path: string }> {
+export function parseNameStatus(output: string): Array<{ status: string; path: string }> {
   if (!output) return []
   return output.split("\n").map((line) => {
     const [status, ...rest] = line.split("\t")
@@ -169,7 +161,7 @@ function parseNameStatus(output: string): Array<{ status: string; path: string }
   })
 }
 
-function parsePorcelain(output: string): Array<{ status: string; path: string }> {
+export function parsePorcelain(output: string): Array<{ status: string; path: string }> {
   if (!output) return []
   return output
     .split("\n")
@@ -181,7 +173,7 @@ function parsePorcelain(output: string): Array<{ status: string; path: string }>
     })
 }
 
-function mapStatus(code: string): FileChange["status"] {
+export function mapStatus(code: string): FileChange["status"] {
   if (code.startsWith("R")) return "renamed"
   if (code === "A" || code === "??" || code === "?") return "added"
   if (code === "D") return "deleted"
@@ -189,7 +181,7 @@ function mapStatus(code: string): FileChange["status"] {
   return "modified"
 }
 
-function isUntracked(code: string): boolean {
+export function isUntracked(code: string): boolean {
   return code === "??" || code === "?"
 }
 

@@ -20,6 +20,9 @@ import java.io.File
  *     `JsonElement` for dynamic JSON values.
  *  7. Empty anyOf wrappers — `anyOf` unions that generate empty classes.
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
+ *  9. AnyOf union wrappers — `anyOf` unions like `boolean | object` that
+ *     generate paired `Foo` + `FooAnyOf` classes the generator can't flatten.
+ *     Replaced with `kotlinx.serialization.json.JsonElement`.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
     @get:OutputDirectory
@@ -29,6 +32,7 @@ abstract class FixGeneratedApiTask : DefaultTask() {
     fun run() {
         val root = generated.get().asFile
         fixEmptyWrappers(root)
+        fixAnyOfUnionWrappers(root)
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
 
@@ -42,6 +46,56 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             ?.filter { f -> val t = f.readText(); empty.containsMatchIn(t) && !t.contains("val ") }
             ?.map { it.nameWithoutExtension }
             ?: return
+
+        for (name in wrappers) File(models, "$name.kt").delete()
+
+        root.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
+            var text = file.readText()
+            var changed = false
+            for (name in wrappers) {
+                if (!text.contains(name)) continue
+                text = text.replace(Regex("""import [^\n]*\.$name\n"""), "")
+                text = text.replace(Regex("""\b$name\b"""), "kotlinx.serialization.json.JsonElement")
+                changed = true
+            }
+            if (changed) file.writeText(text)
+        }
+    }
+
+    /**
+     * Fix 9: anyOf union wrappers — the generator creates paired `Foo` and
+     * `FooAnyOf` data classes for `anyOf` unions like `boolean | object`.
+     * When both classes have identical fields it means the generator couldn't
+     * flatten the union; neither class can represent all JSON forms, so replace
+     * them with `kotlinx.serialization.json.JsonElement`.
+     */
+    private fun fixAnyOfUnionWrappers(root: File) {
+        val models = File(root, "ai/kilocode/jetbrains/api/model")
+        if (!models.isDirectory) return
+
+        val files = models.listFiles()?.filter { it.extension == "kt" } ?: return
+        val byName = files.associateBy { it.nameWithoutExtension }
+
+        val field = Regex("""\bval\s+`?(\w+)`?\s*:""")
+        fun fields(file: File): Set<String> =
+            field.findAll(file.readText()).map { it.groupValues[1] }.toSet()
+
+        // Collect wrapper pairs where Foo and FooAnyOf have identical fields —
+        // a sign the generator duplicated one anyOf variant as a wrapper.
+        val wrappers = mutableListOf<String>()
+        for ((name, file) in byName) {
+            if (!name.endsWith("AnyOf")) continue
+            val parent = name.removeSuffix("AnyOf")
+            val parentFile = byName[parent] ?: continue
+            if (fields(file) == fields(parentFile)) {
+                wrappers.add(name)
+                wrappers.add(parent)
+            }
+        }
+        if (wrappers.isEmpty()) return
+
+        // Sort longest-first so replacements don't collide (e.g. FooAnyOf before Foo).
+        wrappers.sortByDescending { it.length }
 
         for (name in wrappers) File(models, "$name.kt").delete()
 

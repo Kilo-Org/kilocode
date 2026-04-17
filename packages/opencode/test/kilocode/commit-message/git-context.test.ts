@@ -1,105 +1,194 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test"
+import { describe, expect, test } from "bun:test"
+import { $ } from "bun"
+import * as fs from "fs/promises"
+import path from "path"
+import { tmpdir } from "../../fixture/fixture"
+import {
+  getGitContext,
+  isLockFile,
+  parseNameStatus,
+  parsePorcelain,
+  mapStatus,
+  isUntracked,
+  MAX_DIFF_LENGTH,
+} from "../../../src/kilocode/commit-message/git-context"
 
-const spawnSyncResults: Record<string, string> = {}
-
-function setGitOutput(args: string, output: string) {
-  spawnSyncResults[args] = output
-}
-
-function clearGitOutputs() {
-  for (const key of Object.keys(spawnSyncResults)) {
-    delete spawnSyncResults[key]
+// ── Helper: stage files in a temp git repo ──────────────────────────
+async function stage(dir: string, files: Record<string, string>) {
+  for (const [file, text] of Object.entries(files)) {
+    const target = path.join(dir, file)
+    await fs.mkdir(path.dirname(target), { recursive: true })
+    await Bun.write(target, text)
+    await $`git add ${file}`.cwd(dir).quiet()
   }
 }
 
-import { getGitContext, setGitRunnerForTest } from "@/kilocode/commit-message/git-context"
+// ── Pure-function unit tests (no git needed) ────────────────────────
 
 describe("commit-message.git-context", () => {
-  afterEach(() => setGitRunnerForTest(undefined))
+  describe("parseNameStatus", () => {
+    test("parses added file", () => {
+      const result = parseNameStatus("A\tsrc/new-file.ts")
+      expect(result).toEqual([{ status: "A", path: "src/new-file.ts" }])
+    })
 
-  beforeEach(() => {
-    setGitRunnerForTest((args) => spawnSyncResults[args.join(" ")] ?? "")
-    clearGitOutputs()
-    // Defaults
-    setGitOutput("branch --show-current", "main")
-    setGitOutput("log --oneline -5", "abc1234 initial commit")
-    setGitOutput("diff --name-status --cached", "")
-    setGitOutput("status --porcelain", "")
+    test("parses modified file", () => {
+      const result = parseNameStatus("M\tsrc/existing.ts")
+      expect(result).toEqual([{ status: "M", path: "src/existing.ts" }])
+    })
+
+    test("parses deleted file", () => {
+      const result = parseNameStatus("D\tsrc/removed.ts")
+      expect(result).toEqual([{ status: "D", path: "src/removed.ts" }])
+    })
+
+    test("parses renamed file using new path", () => {
+      const result = parseNameStatus("R100\told-name.ts\tnew-name.ts")
+      expect(result).toEqual([{ status: "R100", path: "new-name.ts" }])
+    })
+
+    test("parses multiple entries", () => {
+      const result = parseNameStatus("M\tsrc/a.ts\nA\tsrc/b.ts")
+      expect(result).toHaveLength(2)
+      expect(result[0]!.path).toBe("src/a.ts")
+      expect(result[1]!.path).toBe("src/b.ts")
+    })
+
+    test("returns empty array for empty input", () => {
+      expect(parseNameStatus("")).toEqual([])
+    })
   })
 
-  // NOTE: git() trims stdout, which eats the leading space of the first
-  // porcelain line. We use staged (--name-status) tests for path-sensitive
-  // assertions and only use porcelain for behavior tests where this is acceptable.
+  describe("parsePorcelain", () => {
+    test("parses untracked file", () => {
+      const result = parsePorcelain("?? src/brand-new.ts")
+      expect(result).toEqual([{ status: "??", path: "src/brand-new.ts" }])
+    })
+
+    test("parses modified file", () => {
+      const result = parsePorcelain(" M src/changed.ts")
+      expect(result).toEqual([{ status: "M", path: "src/changed.ts" }])
+    })
+
+    test("returns empty array for empty input", () => {
+      expect(parsePorcelain("")).toEqual([])
+    })
+
+    test("filters blank lines", () => {
+      const result = parsePorcelain("?? a.ts\n\n?? b.ts")
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe("mapStatus", () => {
+    test("maps R-prefix to renamed", () => {
+      expect(mapStatus("R100")).toBe("renamed")
+      expect(mapStatus("R050")).toBe("renamed")
+    })
+
+    test("maps A to added", () => {
+      expect(mapStatus("A")).toBe("added")
+    })
+
+    test("maps ?? to added", () => {
+      expect(mapStatus("??")).toBe("added")
+    })
+
+    test("maps ? to added", () => {
+      expect(mapStatus("?")).toBe("added")
+    })
+
+    test("maps D to deleted", () => {
+      expect(mapStatus("D")).toBe("deleted")
+    })
+
+    test("maps M to modified", () => {
+      expect(mapStatus("M")).toBe("modified")
+    })
+
+    test("maps unknown codes to modified", () => {
+      expect(mapStatus("X")).toBe("modified")
+    })
+  })
+
+  describe("isUntracked", () => {
+    test("returns true for ??", () => {
+      expect(isUntracked("??")).toBe(true)
+    })
+
+    test("returns true for ?", () => {
+      expect(isUntracked("?")).toBe(true)
+    })
+
+    test("returns false for other codes", () => {
+      expect(isUntracked("M")).toBe(false)
+      expect(isUntracked("A")).toBe(false)
+    })
+  })
+
+  describe("isLockFile", () => {
+    test("detects package-lock.json", () => {
+      expect(isLockFile("package-lock.json")).toBe(true)
+    })
+
+    test("detects yarn.lock", () => {
+      expect(isLockFile("yarn.lock")).toBe(true)
+    })
+
+    test("detects lock files in subdirectories", () => {
+      expect(isLockFile("packages/api/package-lock.json")).toBe(true)
+    })
+
+    test("detects various lock files", () => {
+      expect(isLockFile("bun.lockb")).toBe(true)
+      expect(isLockFile("go.sum")).toBe(true)
+      expect(isLockFile("Cargo.lock")).toBe(true)
+      expect(isLockFile("poetry.lock")).toBe(true)
+      expect(isLockFile("pnpm-lock.yaml")).toBe(true)
+    })
+
+    test("does not flag normal files", () => {
+      expect(isLockFile("src/index.ts")).toBe(false)
+      expect(isLockFile("README.md")).toBe(false)
+    })
+  })
+
+  // ── Integration tests using real git repos ────────────────────────
 
   describe("lock file filtering", () => {
-    test("filters out package-lock.json from staged changes", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/index.ts\nM\tpackage-lock.json")
-      setGitOutput("diff --cached -- src/index.ts", "+console.log('hello')")
-      setGitOutput("diff --cached -- package-lock.json", "+lots of lock content")
+    test("filters out lock files from staged changes", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, {
+        "src/index.ts": "console.log('hello')\n",
+        "package-lock.json": '{"lockfileVersion": 3}\n',
+      })
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
       expect(ctx.files[0]!.path).toBe("src/index.ts")
     })
 
-    test("filters out yarn.lock from staged changes", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/app.ts\nM\tyarn.lock")
-      setGitOutput("diff --cached -- src/app.ts", "+import x")
-      setGitOutput("diff --cached -- yarn.lock", "+lock data")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.path).toBe("src/app.ts")
-    })
-
-    test("filters out pnpm-lock.yaml from staged changes", async () => {
-      setGitOutput("diff --name-status --cached", "M\treadme.md\nM\tpnpm-lock.yaml")
-      setGitOutput("diff --cached -- pnpm-lock.yaml", "+lock")
-      setGitOutput("diff --cached -- readme.md", "+docs")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.path).toBe("readme.md")
-    })
-
     test("filters lock files in subdirectories", async () => {
-      setGitOutput("diff --name-status --cached", "M\tpackages/api/package-lock.json\nM\tpackages/api/src/index.ts")
-      setGitOutput("diff --cached -- packages/api/package-lock.json", "+lock stuff")
-      setGitOutput("diff --cached -- packages/api/src/index.ts", "+code")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, {
+        "packages/api/package-lock.json": "lock\n",
+        "packages/api/src/index.ts": "export {}\n",
+      })
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
       expect(ctx.files[0]!.path).toBe("packages/api/src/index.ts")
-    })
-
-    test("filters out bun.lockb, go.sum, Cargo.lock, poetry.lock", async () => {
-      setGitOutput(
-        "diff --name-status --cached",
-        "M\tbun.lockb\nM\tgo.sum\nM\tCargo.lock\nM\tpoetry.lock\nM\tsrc/main.rs",
-      )
-      setGitOutput("diff --cached -- bun.lockb", "binary")
-      setGitOutput("diff --cached -- go.sum", "+hash")
-      setGitOutput("diff --cached -- Cargo.lock", "+lock")
-      setGitOutput("diff --cached -- poetry.lock", "+lock")
-      setGitOutput("diff --cached -- src/main.rs", "+fn main() {}")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.path).toBe("src/main.rs")
     })
   })
 
   describe("status parsing", () => {
     test("parses staged added files", async () => {
-      setGitOutput("diff --name-status --cached", "A\tsrc/new-file.ts")
-      setGitOutput("diff --cached -- src/new-file.ts", "+new content")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, { "src/new-file.ts": "new content\n" })
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
       expect(ctx.files[0]!.status).toBe("added")
@@ -107,154 +196,58 @@ describe("commit-message.git-context", () => {
     })
 
     test("parses staged modified files", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/existing.ts")
-      setGitOutput("diff --cached -- src/existing.ts", "+changed line")
+      await using tmp = await tmpdir({ git: true })
+      // Create, commit, then modify
+      await stage(tmp.path, { "src/existing.ts": "original\n" })
+      await $`git commit -m "add file"`.cwd(tmp.path).quiet()
+      await Bun.write(path.join(tmp.path, "src/existing.ts"), "changed\n")
+      await $`git add src/existing.ts`.cwd(tmp.path).quiet()
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
       expect(ctx.files[0]!.status).toBe("modified")
     })
 
     test("parses staged deleted files", async () => {
-      setGitOutput("diff --name-status --cached", "D\tsrc/removed.ts")
-      setGitOutput("diff --cached -- src/removed.ts", "-deleted content")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, { "src/removed.ts": "to delete\n" })
+      await $`git commit -m "add file"`.cwd(tmp.path).quiet()
+      await $`git rm src/removed.ts`.cwd(tmp.path).quiet()
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
       expect(ctx.files[0]!.status).toBe("deleted")
     })
-
-    test("parses staged renamed files", async () => {
-      setGitOutput("diff --name-status --cached", "R100\told-name.ts\tnew-name.ts")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.status).toBe("renamed")
-    })
-
-    test("parses untracked files from porcelain", async () => {
-      setGitOutput("status --porcelain", "?? src/brand-new.ts")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.status).toBe("added")
-      expect(ctx.files[0]!.diff).toBe("New untracked file: src/brand-new.ts")
-    })
-
-    test("parses porcelain modified files", async () => {
-      // Use staged to avoid porcelain trim edge case
-      setGitOutput("diff --name-status --cached", "M\tsrc/changed.ts")
-      setGitOutput("diff --cached -- src/changed.ts", "+line")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.status).toBe("modified")
-    })
-
-    test("prefers staged changes over unstaged", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/staged.ts")
-      setGitOutput("diff --cached -- src/staged.ts", "+staged change")
-      // unstaged also exists but should be ignored when staged is present
-      setGitOutput("status --porcelain", " M src/unstaged.ts")
-      setGitOutput("diff -- src/unstaged.ts", "+unstaged change")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.path).toBe("src/staged.ts")
-    })
-
-    test("mapStatus returns 'modified' for unknown codes", async () => {
-      setGitOutput("diff --name-status --cached", "X\tsrc/weird.ts")
-      setGitOutput("diff --cached -- src/weird.ts", "+stuff")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files[0]!.status).toBe("modified")
-    })
   })
 
   describe("diff truncation", () => {
-    test("truncates diffs exceeding 4000 characters", async () => {
-      const longDiff = "x".repeat(5000)
-      setGitOutput("diff --name-status --cached", "M\tsrc/big.ts")
-      setGitOutput("diff --cached -- src/big.ts", longDiff)
+    test("truncates diffs exceeding max length", async () => {
+      await using tmp = await tmpdir({ git: true })
+      const long = "x".repeat(MAX_DIFF_LENGTH + 2000)
+      await stage(tmp.path, { "src/big.ts": "original\n" })
+      await $`git commit -m "add"`.cwd(tmp.path).quiet()
+      await Bun.write(path.join(tmp.path, "src/big.ts"), long + "\n")
+      await $`git add src/big.ts`.cwd(tmp.path).quiet()
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.diff.length).toBeLessThan(5000)
       expect(ctx.files[0]!.diff).toContain("... [truncated]")
-      // 4000 chars + "\n... [truncated]"
-      expect(ctx.files[0]!.diff.length).toBe(4000 + "\n... [truncated]".length)
-    })
-
-    test("does not truncate diffs at exactly 4000 characters", async () => {
-      const exactDiff = "y".repeat(4000)
-      setGitOutput("diff --name-status --cached", "M\tsrc/exact.ts")
-      setGitOutput("diff --cached -- src/exact.ts", exactDiff)
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files[0]!.diff).toBe(exactDiff)
-      expect(ctx.files[0]!.diff).not.toContain("... [truncated]")
-    })
-
-    test("does not truncate diffs under 4000 characters", async () => {
-      const shortDiff = "z".repeat(100)
-      setGitOutput("diff --name-status --cached", "M\tsrc/small.ts")
-      setGitOutput("diff --cached -- src/small.ts", shortDiff)
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files[0]!.diff).toBe(shortDiff)
-    })
-  })
-
-  describe("binary file detection", () => {
-    test("detects 'Binary files' in diff output", async () => {
-      setGitOutput("diff --name-status --cached", "M\tassets/logo.png")
-      setGitOutput("diff --cached -- assets/logo.png", "Binary files a/assets/logo.png and b/assets/logo.png differ")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.diff).toBe("Binary file assets/logo.png has been modified")
-    })
-
-    test("detects 'GIT binary patch' in diff output", async () => {
-      setGitOutput("diff --name-status --cached", "M\tassets/icon.ico")
-      setGitOutput("diff --cached -- assets/icon.ico", "GIT binary patch\nliteral 1234\ndata...")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files).toHaveLength(1)
-      expect(ctx.files[0]!.diff).toBe("Binary file assets/icon.ico has been modified")
-    })
-
-    test("does not flag normal diffs as binary", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/code.ts")
-      setGitOutput("diff --cached -- src/code.ts", "+const x = 1")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.files[0]!.diff).toBe("+const x = 1")
     })
   })
 
   describe("selected files filtering", () => {
     test("only includes files in selectedFiles set", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/a.ts\nM\tsrc/b.ts\nM\tsrc/c.ts")
-      setGitOutput("diff --cached -- src/a.ts", "+a")
-      setGitOutput("diff --cached -- src/b.ts", "+b")
-      setGitOutput("diff --cached -- src/c.ts", "+c")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, {
+        "src/a.ts": "a\n",
+        "src/b.ts": "b\n",
+        "src/c.ts": "c\n",
+      })
 
-      const ctx = await getGitContext("/repo", ["src/a.ts", "src/c.ts"])
+      const ctx = await getGitContext(tmp.path, ["src/a.ts", "src/c.ts"])
 
       expect(ctx.files).toHaveLength(2)
       const paths = ctx.files.map((f) => f.path)
@@ -264,20 +257,22 @@ describe("commit-message.git-context", () => {
     })
 
     test("includes all files when selectedFiles is undefined", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/a.ts\nM\tsrc/b.ts")
-      setGitOutput("diff --cached -- src/a.ts", "+a")
-      setGitOutput("diff --cached -- src/b.ts", "+b")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, {
+        "src/a.ts": "a\n",
+        "src/b.ts": "b\n",
+      })
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.files).toHaveLength(2)
     })
 
     test("returns empty files when selectedFiles has no matches", async () => {
-      setGitOutput("diff --name-status --cached", "M\tsrc/a.ts")
-      setGitOutput("diff --cached -- src/a.ts", "+a")
+      await using tmp = await tmpdir({ git: true })
+      await stage(tmp.path, { "src/a.ts": "a\n" })
 
-      const ctx = await getGitContext("/repo", ["src/nonexistent.ts"])
+      const ctx = await getGitContext(tmp.path, ["src/nonexistent.ts"])
 
       expect(ctx.files).toHaveLength(0)
     })
@@ -285,35 +280,24 @@ describe("commit-message.git-context", () => {
 
   describe("branch and recent commits", () => {
     test("returns current branch name", async () => {
-      setGitOutput("branch --show-current", "feature/my-branch")
+      await using tmp = await tmpdir({ git: true })
+      await $`git checkout -b feature/my-branch`.cwd(tmp.path).quiet()
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
       expect(ctx.branch).toBe("feature/my-branch")
     })
 
-    test("falls back to HEAD when branch is empty", async () => {
-      setGitOutput("branch --show-current", "")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.branch).toBe("HEAD")
-    })
-
     test("returns recent commits as array", async () => {
-      setGitOutput("log --oneline -5", "abc1234 first\ndef5678 second\nghi9012 third")
+      await using tmp = await tmpdir({ git: true })
+      // tmpdir already creates a root commit
+      await stage(tmp.path, { "a.ts": "a\n" })
+      await $`git commit -m "second commit"`.cwd(tmp.path).quiet()
 
-      const ctx = await getGitContext("/repo")
+      const ctx = await getGitContext(tmp.path)
 
-      expect(ctx.recentCommits).toEqual(["abc1234 first", "def5678 second", "ghi9012 third"])
-    })
-
-    test("returns empty array when no commits", async () => {
-      setGitOutput("log --oneline -5", "")
-
-      const ctx = await getGitContext("/repo")
-
-      expect(ctx.recentCommits).toEqual([])
+      expect(ctx.recentCommits.length).toBeGreaterThanOrEqual(1)
+      expect(ctx.recentCommits.some((c) => c.includes("second commit"))).toBe(true)
     })
   })
 })

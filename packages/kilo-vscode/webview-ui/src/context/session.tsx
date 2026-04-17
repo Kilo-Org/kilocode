@@ -44,6 +44,7 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
+import { queuedUserMessageIDs } from "./session-queue"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -640,123 +641,139 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "toggleFavorite", action, providerID, modelID })
   }
 
+  function handleStreamMessage(message: ExtensionMessage): boolean {
+    if (message.type === "partUpdated") {
+      handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
+      return true
+    }
+
+    if (message.type === "partsUpdated") {
+      batch(() => {
+        for (const update of message.updates) {
+          handlePartUpdated(update.sessionID, update.messageID, update.part, update.delta)
+        }
+      })
+      return true
+    }
+
+    return false
+  }
+
+  function handleExtensionMessage(message: ExtensionMessage): void {
+    if (handleStreamMessage(message)) return
+    switch (message.type) {
+      case "sessionCreated":
+        handleSessionCreated(message.session, message.draftID)
+        break
+
+      case "messagesLoaded":
+        handleMessagesLoaded(message.sessionID, message.messages)
+        break
+
+      case "messageCreated":
+        handleMessageCreated(message.message)
+        break
+
+      case "sessionStatus":
+        handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
+        break
+
+      case "todoUpdated":
+        handleTodoUpdated(message.sessionID, message.items)
+        break
+
+      case "questionRequest":
+        handleQuestionRequest(message.question)
+        break
+
+      case "questionResolved":
+        handleQuestionResolved(message.requestID)
+        break
+
+      case "questionError":
+        handleQuestionError(message.requestID)
+        break
+
+      case "clearPendingPrompts":
+        setPermissions([])
+        setQuestions([])
+        setRespondingPermissions(new Set<string>())
+        break
+
+      case "sessionsLoaded":
+        handleSessionsLoaded(message.sessions, message.preserveSessionIds)
+        break
+
+      case "sessionUpdated":
+        setStore("sessions", message.session.id, message.session)
+        break
+
+      case "sessionDeleted":
+        handleSessionDeleted(message.sessionID)
+        break
+
+      case "messageRemoved":
+        handleMessageRemoved(message.sessionID, message.messageID)
+        break
+
+      case "sessionError": {
+        if (message.error?.name === "MessageAbortedError") break
+        const sid = message.sessionID ?? currentSessionID()
+        if (!sid) break
+        // Find the last user message in this session to use as parentID
+        const msgs = store.messages[sid] ?? []
+        const parent = [...msgs].reverse().find((m) => m.role === "user")
+        const errorMsg: Message = {
+          id: Identifier.ascending("message"),
+          sessionID: sid,
+          role: "assistant",
+          createdAt: new Date().toISOString(),
+          parentID: parent?.id,
+          error: message.error,
+        }
+        handleMessageCreated(errorMsg)
+        break
+      }
+
+      case "error":
+        // Only clear loading if the error is for the current session
+        // (or has no sessionID for backwards compatibility)
+        if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
+        break
+
+      case "sendMessageFailed":
+        handleSendMessageFailed(message as unknown as SendMessageFailedMessage)
+        break
+
+      case "cloudSessionDataLoaded":
+        handleCloudSessionDataLoaded(message.cloudSessionId, message.title, message.messages)
+        break
+
+      case "cloudSessionImported":
+        handleCloudSessionImported(message.cloudSessionId, message.session)
+        break
+
+      case "cloudSessionImportFailed":
+        setCloudPreviewId(null)
+        setCurrentSessionID(undefined)
+        setLoading(false)
+        showToast({
+          variant: "error",
+          title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
+          description: message.error,
+        })
+        console.error("[Kilo New] Cloud session import failed:", message.error)
+        break
+
+      case "worktreeStatsLoaded":
+        setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
+        break
+    }
+  }
+
   // Handle messages from extension
   onMount(() => {
-    const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-      switch (message.type) {
-        case "sessionCreated":
-          handleSessionCreated(message.session, message.draftID)
-          break
-
-        case "messagesLoaded":
-          handleMessagesLoaded(message.sessionID, message.messages)
-          break
-
-        case "messageCreated":
-          handleMessageCreated(message.message)
-          break
-
-        case "partUpdated":
-          handlePartUpdated(message.sessionID, message.messageID, message.part, message.delta)
-          break
-
-        case "sessionStatus":
-          handleSessionStatus(message.sessionID, message.status, message.attempt, message.message, message.next)
-          break
-
-        case "todoUpdated":
-          handleTodoUpdated(message.sessionID, message.items)
-          break
-
-        case "questionRequest":
-          handleQuestionRequest(message.question)
-          break
-
-        case "questionResolved":
-          handleQuestionResolved(message.requestID)
-          break
-
-        case "questionError":
-          handleQuestionError(message.requestID)
-          break
-
-        case "clearPendingPrompts":
-          setPermissions([])
-          setQuestions([])
-          setRespondingPermissions(new Set<string>())
-          break
-
-        case "sessionsLoaded":
-          handleSessionsLoaded(message.sessions, message.preserveSessionIds)
-          break
-
-        case "sessionUpdated":
-          setStore("sessions", message.session.id, message.session)
-          break
-
-        case "sessionDeleted":
-          handleSessionDeleted(message.sessionID)
-          break
-
-        case "messageRemoved":
-          handleMessageRemoved(message.sessionID, message.messageID)
-          break
-
-        case "sessionError": {
-          if (message.error?.name === "MessageAbortedError") break
-          const sid = message.sessionID ?? currentSessionID()
-          if (!sid) break
-          // Find the last user message in this session to use as parentID
-          const msgs = store.messages[sid] ?? []
-          const parent = [...msgs].reverse().find((m) => m.role === "user")
-          const errorMsg: Message = {
-            id: Identifier.ascending("message"),
-            sessionID: sid,
-            role: "assistant",
-            createdAt: new Date().toISOString(),
-            parentID: parent?.id,
-            error: message.error,
-          }
-          handleMessageCreated(errorMsg)
-          break
-        }
-
-        case "error":
-          // Only clear loading if the error is for the current session
-          // (or has no sessionID for backwards compatibility)
-          if (!message.sessionID || message.sessionID === currentSessionID()) setLoading(false)
-          break
-
-        case "sendMessageFailed":
-          handleSendMessageFailed(message as unknown as SendMessageFailedMessage)
-          break
-
-        case "cloudSessionDataLoaded":
-          handleCloudSessionDataLoaded(message.cloudSessionId, message.title, message.messages)
-          break
-
-        case "cloudSessionImported":
-          handleCloudSessionImported(message.cloudSessionId, message.session)
-          break
-
-        case "cloudSessionImportFailed":
-          setCloudPreviewId(null)
-          setCurrentSessionID(undefined)
-          setLoading(false)
-          showToast({
-            variant: "error",
-            title: language.t("session.cloud.import.failed") ?? "Failed to import cloud session",
-            description: message.error,
-          })
-          console.error("[Kilo New] Cloud session import failed:", message.error)
-          break
-
-        case "worktreeStatsLoaded":
-          setWorktreeStats({ files: message.files, additions: message.additions, deletions: message.deletions })
-          break
-      }
-    })
-
+    const unsubscribe = vscode.onMessage(handleExtensionMessage)
     onCleanup(unsubscribe)
   })
 
@@ -1488,9 +1505,12 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
+    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
+
     vscode.postMessage({
       type: "abort",
       sessionID,
+      queuedMessageIDs,
     })
   }
 

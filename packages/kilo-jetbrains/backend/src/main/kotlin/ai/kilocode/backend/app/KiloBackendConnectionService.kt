@@ -1,7 +1,9 @@
 package ai.kilocode.backend.app
 
+import ai.kilocode.backend.cli.KiloBackendHttpClients
+import ai.kilocode.backend.cli.KiloCliDataParser
+import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.util.IntellijLog
-import ai.kilocode.backend.util.KiloBackendHttpClients
 import ai.kilocode.backend.util.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
@@ -64,7 +66,6 @@ class KiloConnectionService(
         private const val HEARTBEAT_TIMEOUT_MS = 15_000L
         private const val HEALTH_POLL_INTERVAL_MS = 10_000L
         private const val RECONNECT_DELAY_MS = 250L
-        private val TYPE_REGEX = Regex(""""type"\s*:\s*"([^"]+)"""")
     }
 
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
@@ -77,9 +78,13 @@ class KiloConnectionService(
     var api: DefaultApi? = null
         private set
 
-    private var apiClient: OkHttpClient? = null
+    /** OkHttp client used for API calls — no call/read timeout. Null when disconnected. */
+    var apiClient: OkHttpClient? = null
+        private set
     private var healthClient: OkHttpClient? = null
-    private var port = 0
+    /** Port the CLI server is listening on. Zero when disconnected. */
+    var port = 0
+        private set
     private var password = ""
 
     private val source = AtomicReference<EventSource?>(null)
@@ -214,7 +219,7 @@ class KiloConnectionService(
 
         override fun onEvent(src: EventSource, id: String?, type: String?, data: String) {
             lastEvent.set(System.currentTimeMillis())
-            val kind = type ?: extractType(data)
+            val kind = type ?: KiloCliDataParser.extractEventType(data)
             cs.launch { _events.emit(SseEvent(type = kind, data = data)) }
         }
 
@@ -326,9 +331,6 @@ class KiloConnectionService(
         if (disposed) return
         _state.value = next
     }
-
-    internal fun extractType(data: String): String =
-        TYPE_REGEX.find(data)?.groupValues?.get(1) ?: "unknown"
 
     fun dispose() {
         disposed = true

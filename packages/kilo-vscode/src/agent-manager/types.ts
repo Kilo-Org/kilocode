@@ -590,6 +590,7 @@ interface ForkSessionIn {
 interface AbortIn {
   type: "abort"
   sessionID: string
+  queuedMessageIDs?: string[]
 }
 
 interface ContinueInWorktreeIn {

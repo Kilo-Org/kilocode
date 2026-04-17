@@ -16,6 +16,7 @@ import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
+import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
@@ -361,6 +362,8 @@ export function activate(context: vscode.ExtensionContext) {
       return [...dirs]
     },
   )
+
+  registerHeapSnapshot(context, connectionService)
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)

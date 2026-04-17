@@ -58,10 +58,7 @@ export class GitStatsPoller {
   private lastHash: string | undefined
   private lastLocalHash: string | undefined
   private lastLocalStats: LocalStats | undefined
-  private lastStats: Record<
-    string,
-    { files: number; additions: number; deletions: number; ahead: number; behind: number }
-  > = {}
+  private lastStats: Record<string, WorktreeStats> = {}
   private readonly intervalMs: number
   private readonly hiddenIntervalMs: number
   private readonly git: GitOps
@@ -85,8 +82,14 @@ export class GitStatsPoller {
   }
 
   /** Replace the entire skip set with the given IDs. */
-  syncSkips(ids: Set<string>): void {
+  syncSkips(ids: Set<string>): WorktreeStats[] | undefined {
     this.skipWorktreeIds = ids
+    const stats = Object.values(this.lastStats).filter((item) => !ids.has(item.worktreeId))
+    if (stats.length === 0) return undefined
+    const hash = this.hash(stats)
+    if (hash === this.lastHash) return undefined
+    this.lastHash = hash
+    return stats
   }
 
   /** Pre-emptively exclude a single worktree (e.g. before deletion). */
@@ -163,8 +166,14 @@ export class GitStatsPoller {
     const missing = new Set(
       presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
     )
-    const active = worktrees.filter((wt) => !missing.has(wt.id) && !this.skipWorktreeIds.has(wt.id))
+    const available = worktrees.filter((wt) => !missing.has(wt.id))
+    const ids = new Set(available.map((wt) => wt.id))
+    for (const id of Object.keys(this.lastStats)) {
+      if (!ids.has(id)) delete this.lastStats[id]
+    }
+    const active = available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     if (active.length === 0) {
+      if (available.length > 0) return
       if (this.lastHash === "") return
       this.lastHash = ""
       this.lastStats = {}
@@ -192,45 +201,29 @@ export class GitStatsPoller {
             return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-            const prev = this.lastStats[wt.id]
-            if (!prev) return undefined
-            return {
-              worktreeId: wt.id,
-              files: prev.files,
-              additions: prev.additions,
-              deletions: prev.deletions,
-              ahead: prev.ahead,
-              behind: prev.behind,
-            }
+            return this.lastStats[wt.id]
           }
         }),
       )
     ).filter((item): item is WorktreeStats => !!item)
 
-    if (stats.length === 0) return
+    for (const item of stats) this.lastStats[item.worktreeId] = item
 
-    const hash = stats
+    const visible = Object.values(this.lastStats).filter((item) => !this.skipWorktreeIds.has(item.worktreeId))
+    if (visible.length === 0) return
+
+    const hash = this.hash(visible)
+    if (hash === this.lastHash) return
+    this.lastHash = hash
+    this.options.onStats(visible)
+  }
+
+  private hash(stats: WorktreeStats[]): string {
+    return stats
       .map(
         (item) => `${item.worktreeId}:${item.files}:${item.additions}:${item.deletions}:${item.ahead}:${item.behind}`,
       )
       .join("|")
-    if (hash === this.lastHash) return
-    this.lastHash = hash
-    this.lastStats = stats.reduce(
-      (acc, item) => {
-        acc[item.worktreeId] = {
-          files: item.files,
-          additions: item.additions,
-          deletions: item.deletions,
-          ahead: item.ahead,
-          behind: item.behind,
-        }
-        return acc
-      },
-      {} as Record<string, { files: number; additions: number; deletions: number; ahead: number; behind: number }>,
-    )
-
-    this.options.onStats(stats)
   }
 
   private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult> {

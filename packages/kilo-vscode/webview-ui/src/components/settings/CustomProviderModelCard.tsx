@@ -10,7 +10,7 @@ export type Translator = ReturnType<typeof useLanguage>["t"]
 // undefined = not set; true/false = enable_thinking value
 export type EnableThinkingValue = undefined | boolean
 export type ThinkingTypeValue = undefined | "enabled" | "disabled"
-export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high"
+export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
 
 export type VariantEntry = {
   name: string
@@ -47,6 +47,7 @@ const REASONING_EFFORT_OPTIONS: SelectOption<ReasoningEffortValue>[] = [
   { value: "low", labelKey: "provider.custom.models.variants.reasoningEffort.low" },
   { value: "medium", labelKey: "provider.custom.models.variants.reasoningEffort.medium" },
   { value: "high", labelKey: "provider.custom.models.variants.reasoningEffort.high" },
+  { value: "xhigh", labelKey: "provider.custom.models.variants.reasoningEffort.xhigh" },
 ]
 
 type VariantRowProps = {

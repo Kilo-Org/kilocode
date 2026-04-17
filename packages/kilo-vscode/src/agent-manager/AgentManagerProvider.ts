@@ -8,7 +8,7 @@ import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { WorktreeStateManager } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
-import { GitStatsPoller, type WorktreePresenceResult } from "./GitStatsPoller"
+import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
 import { PRStatusBridge } from "./pr-status-bridge"
 import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
@@ -59,8 +59,8 @@ export class AgentManagerProvider implements Disposable {
   private gitOps: GitOps
   private diffs: WorktreeDiffController
   private staleWorktreeIds = new Set<string>()
-  private cachedWorktreeStats: AgentManagerOutMessage | undefined
-  private cachedLocalStats: AgentManagerOutMessage | undefined
+  private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
+  private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -1283,7 +1283,11 @@ export class AgentManagerProvider implements Disposable {
       if (!sec.collapsed) continue
       for (const id of state.getWorktreesInSection(sec.id)) skipped.add(id)
     }
-    this.statsPoller.syncSkips(skipped)
+    const stats = this.statsPoller.syncSkips(skipped)
+    if (!stats) return
+    const msg = { type: "agentManager.worktreeStats" as const, stats }
+    this.cachedWorktreeStats = msg
+    this.postToWebview(msg)
   }
 
   private pushState(): void {

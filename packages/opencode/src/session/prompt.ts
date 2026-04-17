@@ -2,6 +2,7 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import z from "zod"
 import { SessionID, MessageID, PartID } from "./schema"
@@ -107,6 +108,7 @@ export namespace SessionPrompt {
 
       const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
         log.info("cancel", { sessionID })
+        yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
         yield* state.cancel(sessionID)
       })
 
@@ -1274,6 +1276,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         function* (input: PromptInput) {
           const session = yield* sessions.get(input.sessionID)
           yield* Effect.promise(() => SessionRevert.cleanup(session))
+          // kilocode_change start - persist queued prompts immediately while serializing each follow-up loop
           const message = yield* createUserMessage(input)
           yield* sessions.touch(input.sessionID)
 
@@ -1287,9 +1290,15 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
 
           if (input.noReply === true) return message
-          return yield* loop({ sessionID: input.sessionID })
+          return yield* KiloSessionPromptQueue.enqueue(
+            input.sessionID,
+            message.info.id,
+            loop({ sessionID: input.sessionID }),
+            lastAssistant(input.sessionID),
+          )
         },
       )
+      // kilocode_change end
 
       const lastAssistant = (sessionID: SessionID) =>
         Effect.promise(async () => {
@@ -1325,6 +1334,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             log.info("loop", { step, sessionID })
 
             let msgs = yield* MessageV2.filterCompactedEffect(sessionID)
+            msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
 
             let lastUser: MessageV2.User | undefined
             let lastAssistant: MessageV2.Assistant | undefined
@@ -1356,6 +1366,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               lastAssistant?.finish &&
               !["tool-calls"].includes(lastAssistant.finish) &&
               !hasToolCalls &&
+              lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
               lastUser.id < lastAssistant.id
             ) {
               // kilocode_change start - ask follow-up when plan_exit tool was called
