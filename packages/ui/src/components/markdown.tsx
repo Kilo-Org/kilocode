@@ -314,6 +314,7 @@ export function Markdown(
     const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
     if (fast.handled) {
       copyCleanup = fast.copyCleanup
+      kickHighlight(container, labels)
       return
     }
     // kilocode_change end
@@ -366,14 +367,37 @@ export function Markdown(
     })
     // kilocode_change end
 
-    if (!copyCleanup)
-      copyCleanup = setupCodeCopy(container, () => ({
-        copy: i18n.t("ui.message.copy"),
-        copied: i18n.t("ui.message.copied"),
-      }))
+    kickHighlight(container, labels)
   })
 
+  // kilocode_change start: progressive Shiki highlighting (issue #6221, PR #7102).
+  // Parser emits plain <pre><code data-lang="..."> blocks; we upgrade them to
+  // Shiki-highlighted <pre class="shiki"> here via setTimeout(0) so initial
+  // paint is instant and session switches with many code blocks don't freeze.
+  // The generation counter + abort signal cancel a previous in-flight pass
+  // when streaming tokens (or session switches) spawn a new render.
+  function kickHighlight(container: HTMLDivElement, labels: { copy: string; copied: string }) {
+    highlightState.signal.aborted = true
+    const gen = ++highlightState.gen
+    const signal = { aborted: false }
+    highlightState.signal = signal
+    void deferredHighlight(
+      container,
+      () => {
+        if (gen !== highlightState.gen) return
+        if (copyCleanup) copyCleanup()
+        copyCleanup = setupCodeCopy(container, () => labels)
+      },
+      signal,
+    )
+  }
+  // kilocode_change end
+
   onCleanup(() => {
+    // kilocode_change: cancel any in-flight deferredHighlight pass so its
+    // completion callback doesn't touch the unmounted DOM.
+    highlightState.signal.aborted = true
+    highlightState.gen++
     if (copyCleanup) copyCleanup()
   })
 

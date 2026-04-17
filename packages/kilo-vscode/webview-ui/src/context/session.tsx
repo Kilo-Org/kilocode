@@ -46,6 +46,7 @@ import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
 import { queuedUserMessageIDs } from "./session-queue"
+import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
 const RECENT_LIMIT = 5
@@ -273,7 +274,7 @@ export const SessionProvider: ParentComponent = (props) => {
   // until a VscodeSessionTurn is rendered by the virtualizer and calls
   // hydrateParts(). This avoids writing parts for off-screen messages into
   // the store, which would trigger expensive DOM work for invisible content.
-  const stash = new Map<string, Part[]>()
+  const stash = new PartStash()
 
   // Pending permissions
   const [permissions, setPermissions] = createSignal<PermissionRequest[]>([])
@@ -854,6 +855,18 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   function mergeMessages(current: Message[], incoming: Message[], mode: Exclude<MessageLoadMode, "focus">) {
+    if (mode === "reconcile") {
+      // Tail reconcile: incoming is the authoritative newest-N snapshot.
+      // Local state may already hold some of those IDs and may also hold
+      // newer optimistic entries created after the fetch was taken. Merge
+      // by id (server wins on collision) then sort by createdAt so new
+      // server messages land in the right position and optimistic tail
+      // entries stay at the end.
+      const byId = new Map<string, Message>()
+      for (const msg of current) byId.set(msg.id, msg)
+      for (const msg of incoming) byId.set(msg.id, msg)
+      return [...byId.values()].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    }
     const seen = new Set<string>()
     const source = mode === "prepend" ? [...incoming, ...current] : incoming
     return source.filter((msg) => {
@@ -872,6 +885,21 @@ export const SessionProvider: ParentComponent = (props) => {
     return [...messages, ...orphans]
   }
 
+  // Cheap shape check: same ids in same order AND same part counts per message.
+  // Used to short-circuit reconcile when the server snapshot matches local state
+  // (the common case — SSE didn't actually miss anything). Skipping the full
+  // reconcile here avoids 80 setStore("parts", ...) calls per session switch.
+  function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
+    if (current.length !== incoming.length) return false
+    for (let i = 0; i < incoming.length; i++) {
+      if (current[i]!.id !== incoming[i]!.id) return false
+      const cp = current[i]!.parts?.length ?? 0
+      const ip = incoming[i]!.parts?.length ?? 0
+      if (cp !== ip) return false
+    }
+    return true
+  }
+
   function handleMessagesLoaded(
     sessionID: string,
     messages: Message[],
@@ -879,6 +907,15 @@ export const SessionProvider: ParentComponent = (props) => {
   ) {
     const mode = input.mode ?? "replace"
     const reset = mode === "prepend"
+
+    // Reconcile fast-path: if the tail matches local state shape-wise, every
+    // message+part-count already agrees with the server. Skip the reactive
+    // store churn entirely — virtualizer and rendering stay untouched.
+    if (mode === "reconcile" && sameReconcileShape(store.messages[sessionID] ?? [], messages)) {
+      patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+      return
+    }
+
     batch(() => {
       setLoaded((prev) => {
         if (prev.has(sessionID)) return prev
@@ -889,31 +926,51 @@ export const SessionProvider: ParentComponent = (props) => {
       if (sessionID === currentSessionID()) setLoading(false)
 
       const current = store.messages[sessionID] ?? []
-      const merged = mode === "prepend" ? mergeMessages(current, messages, mode) : withPending(sessionID, messages)
+      const merged =
+        mode === "prepend" || mode === "reconcile"
+          ? mergeMessages(current, messages, mode)
+          : withPending(sessionID, messages)
       // "replace" mode (session switch): assign directly — reconcile's O(n)
       // diff is unnecessary when the entire list is new, and its reactive
       // proxy creation for each message object dominated the trace (~900ms).
-      // "prepend" mode (older page): reconcile to preserve existing proxies.
+      // "prepend" / "reconcile": reconcile to preserve existing proxies.
       if (mode === "replace") {
         setStore("messages", sessionID, merged)
       } else {
         setStore("messages", sessionID, reconcile(merged, { key: "id" }))
       }
 
-      // Stash parts outside the reactive store — they'll be hydrated on
-      // demand when the virtualizer renders the corresponding turn.
       for (const msg of messages) {
-        if (msg.parts && msg.parts.length > 0) stash.set(msg.id, msg.parts)
+        if (!msg.parts || msg.parts.length === 0) continue
+        if (mode === "reconcile" && store.parts[msg.id]) {
+          // Reconcile on a message already hydrated into the reactive store:
+          // write parts directly so visible turns pick up the server-
+          // authoritative state immediately instead of waiting for the
+          // virtualizer to re-render.
+          setStore("parts", msg.id, reconcile(msg.parts, { key: "id" }))
+          stash.remove(msg.id)
+        } else {
+          // Stash parts outside the reactive store — they'll be hydrated
+          // on demand when the virtualizer renders the corresponding turn.
+          stash.put(msg.id, msg.parts)
+        }
       }
 
-      setPages(sessionID, {
-        initialLoaded: true,
-        loadingInitial: false,
-        loadingOlder: false,
-        before: input.cursor,
-        hasMore: input.hasMore ?? Boolean(input.cursor),
-        lastMutation: mode,
-      })
+      // "reconcile" is a background tail refresh, not a page navigation —
+      // preserve the existing pagination cursor/hasMore so "load earlier"
+      // keeps working.
+      if (mode === "reconcile") {
+        patchPage(sessionID, { initialLoaded: true, lastMutation: "update" })
+      } else {
+        setPages(sessionID, {
+          initialLoaded: true,
+          loadingInitial: false,
+          loadingOlder: false,
+          before: input.cursor,
+          hasMore: input.hasMore ?? Boolean(input.cursor),
+          lastMutation: mode,
+        })
+      }
 
       const agent = resolveSessionAgent(merged, agentNames())
       if (agent) {
@@ -965,7 +1022,7 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (message.parts && message.parts.length > 0) {
-      stash.delete(message.id)
+      stash.remove(message.id)
       setStore("parts", message.id, message.parts)
     }
   }
@@ -988,9 +1045,9 @@ export const SessionProvider: ParentComponent = (props) => {
 
     // If the stash has parts for this message, hydrate them first so the
     // SSE update merges into the full part list rather than an empty array.
-    const stashed = stash.get(effectiveMessageID)
+    const stashed = stash.peek(effectiveMessageID)
     if (stashed) {
-      stash.delete(effectiveMessageID)
+      stash.remove(effectiveMessageID)
       setStore("parts", effectiveMessageID, stashed)
     }
 
@@ -1117,7 +1174,7 @@ export const SessionProvider: ParentComponent = (props) => {
   function handleSendMessageFailed(message: SendMessageFailedMessage) {
     if (message.sessionID && message.messageID) {
       pendingOptimistic.get(message.sessionID)?.delete(message.messageID)
-      stash.delete(message.messageID)
+      stash.remove(message.messageID)
       batch(() => {
         setStore("messages", message.sessionID!, (msgs = []) => msgs.filter((m) => m.id !== message.messageID))
         setStore(
@@ -1260,7 +1317,7 @@ export const SessionProvider: ParentComponent = (props) => {
       // Collect message IDs so we can clean up their parts (store + stash)
       const msgs = store.messages[sessionID] ?? []
       const msgIds = msgs.map((m) => m.id)
-      for (const id of msgIds) stash.delete(id)
+      for (const id of msgIds) stash.remove(id)
 
       setStore(
         "sessions",
@@ -1340,6 +1397,10 @@ export const SessionProvider: ParentComponent = (props) => {
         delete parts[messageID]
       }),
     )
+    // Also clear any stashed parts for this message. Without this, a
+    // removed-before-hydrated message leaks parts in the stash and can
+    // resurface them via getParts() after the message is gone.
+    stash.remove(messageID)
   }
 
   function handleCloudSessionDataLoaded(cloudSessionId: string, title: string, messages: Message[]) {
@@ -1820,19 +1881,11 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   const getParts = (messageID: string) => {
-    return store.parts[messageID] || stash.get(messageID) || []
+    return store.parts[messageID] || stash.peek(messageID) || []
   }
 
   function hydrateParts(ids: string[]) {
-    const pending: Record<string, Part[]> = {}
-    for (const id of ids) {
-      // Already in the reactive store — skip.
-      if (store.parts[id]) continue
-      const parts = stash.get(id)
-      if (!parts) continue
-      pending[id] = parts
-      stash.delete(id)
-    }
+    const pending = stash.take(ids, (id) => Boolean(store.parts[id]))
     if (Object.keys(pending).length === 0) return
     setStore(
       "parts",

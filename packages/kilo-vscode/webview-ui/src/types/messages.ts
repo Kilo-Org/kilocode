@@ -570,7 +570,7 @@ export interface MessageRemovedMessage {
   messageID: string
 }
 
-export type MessageLoadMode = "replace" | "prepend" | "focus"
+export type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 
 export interface MessagesLoadedMessage {
   type: "messagesLoaded"

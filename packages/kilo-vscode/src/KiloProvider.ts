@@ -110,7 +110,7 @@ type KiloProviderOptions = {
   slimEditMetadata?: boolean
 }
 
-type MessageLoadMode = "replace" | "prepend" | "focus"
+type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 
 // Helper to map agent data to the subset of fields sent to the webview
 const mapAgent = (a: Agent) => ({
@@ -172,8 +172,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionDirectories = new Map<string, string>()
   /** Project ID for the current workspace, used to filter out sessions from other repositories. */
   private projectID: string | undefined
-  /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
+  /** Per-session last focus-mode reconcile timestamp — throttles rapid tab switching. */
+  private lastReconciledAt = new Map<string, number>()
   /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
@@ -454,7 +455,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   public loadMessages(sessionID: string): Promise<void> {
-    return this.handleLoadMessages(sessionID)
+    // Sub-agent viewer: full transcript (no "load earlier" UI, no pagination).
+    return this.handleLoadMessages(sessionID, { limit: 0 })
   }
 
   /**
@@ -1339,14 +1341,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const dir = this.getWorkspaceDirectory(sessionID)
     if (mode === "focus") {
       this.refreshSessionDetails(sessionID, dir)
+      // Reconcile tail so SSE drops self-heal. Throttled to skip rapid tab-switching bursts.
+      if (Date.now() - (this.lastReconciledAt.get(sessionID) ?? 0) < 1000) return
+      await this.handleLoadMessages(sessionID, { mode: "reconcile", limit: options.limit ?? MESSAGE_PAGE_LIMIT })
       return
     }
+    // Replace competes for the spinner and cancels earlier loads; prepend/reconcile run in parallel.
     const abort = mode === "replace" ? new AbortController() : undefined
     if (abort) {
       this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
     }
-    if (focus) this.refreshSessionDetails(sessionID, dir, abort?.signal)
+    if (mode === "replace") this.refreshSessionDetails(sessionID, dir, abort?.signal)
     try {
       const page = await fetchMessagePage(this.client, {
         sessionID,
@@ -1356,6 +1362,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         signal: abort?.signal,
       })
       if (abort?.signal.aborted) return
+      // Drop results for a session deleted mid-fetch. Prepend/reconcile have
+      // no abort controller, so this guard prevents ghost entries.
+      if (!this.trackedSessionIds.has(sessionID)) return
       const messages = page.items.map((m) => ({
         ...m.info,
         parts: this.slimParts(m.parts),
@@ -1364,12 +1373,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       for (const message of messages) {
         this.connectionService.recordMessageSessionId(message.id, message.sessionID)
       }
-      // On a full replace, the snapshot reflects every SSE event up to its
-      // taken-time; any delta still queued here is either already applied
-      // in the snapshot (re-emitting would duplicate streamed text) or
-      // trails the snapshot and is silently lost via drop(). Prepend loads
-      // fetch older history, so they must not clobber live deltas.
-      if (mode === "replace") this.streams.drop(sessionID)
+      // Authoritative snapshot: drop queued deltas. Prepend is older history
+      // and must not clobber live deltas.
+      if (mode === "replace" || mode === "reconcile") this.streams.drop(sessionID)
+      if (mode === "reconcile") this.lastReconciledAt.set(sessionID, Date.now())
       this.postMessage({
         type: "messagesLoaded",
         sessionID,
@@ -1387,10 +1394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle syncing a child session (e.g. spawned by the task tool).
-   * Tracks the session for SSE events and fetches its messages.
-   */
+  /** Handle syncing a child session (e.g. spawned by the task tool). */
   private async handleSyncSession(sessionID: string, parentSessionID?: string): Promise<void> {
     if (!this.client) return
     if (this.syncedChildSessions.has(sessionID)) return
@@ -1398,10 +1402,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.syncedChildSessions.add(sessionID)
     this.trackedSessionIds.add(sessionID)
 
-    // Inherit the parent's worktree directory so permission responses use
-    // the correct backend Instance. Without this, child sessions in Agent
-    // Manager worktrees fall back to workspace root and fail to find the
-    // pending permission request.
+    // Inherit parent's worktree directory so permission responses use the right backend Instance.
     if (!this.sessionDirectories.has(sessionID) && parentSessionID) {
       const dir = this.sessionDirectories.get(parentSessionID)
       if (dir) {
@@ -1515,9 +1516,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle deleting a session.
-   */
+  /** Handle deleting a session. */
   private async handleDeleteSession(sessionID: string): Promise<void> {
     if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
@@ -1531,6 +1530,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.streams.drop(sessionID)
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
+      this.lastReconciledAt.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
