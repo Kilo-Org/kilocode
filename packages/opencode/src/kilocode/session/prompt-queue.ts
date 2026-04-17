@@ -39,7 +39,25 @@ export namespace KiloSessionPromptQueue {
       if (item.info.role === "assistant") return !hidden.has(item.info.parentID)
       return true
     })
-    return visible
+
+    // When a user prompt is queued mid-turn, its time_created falls in the
+    // middle of the prior turn's messages (a later assistant step in that turn
+    // was written after the queue event). Ordering by time_created alone puts
+    // the queued prompt before the prior turn's final assistant reply, which
+    // makes the next request end with an assistant message and trips Anthropic's
+    // prefill rejection. Move the target user message and any of its own turn's
+    // assistant messages to the end so the request always ends with the queued
+    // user prompt (or with its own turn's latest assistant step).
+    const owns = (item: MessageV2.WithParts) => {
+      if (item.info.role === "user") return item.info.id === target
+      if (item.info.role === "assistant") return item.info.parentID === target
+      return false
+    }
+    const before: MessageV2.WithParts[] = []
+    const after: MessageV2.WithParts[] = []
+    for (const item of visible) (owns(item) ? after : before).push(item)
+    if (after.length === 0) return visible
+    return [...before, ...after]
   }
 
   export function enqueue<A, E>(
