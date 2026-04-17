@@ -24,6 +24,7 @@ import {
   buildSettingPath,
   mapSSEEventToWebviewMessage,
   getErrorMessage,
+  getConfigErrorDetails,
   isEventFromForeignProject,
   MessageConfirmation,
   runWithMessageConfirmation,
@@ -31,7 +32,6 @@ import {
   flushPendingSessionRefresh as flushPendingSessionRefreshUtil,
   resolveContextDirectory,
   resolveWorkspaceDirectory,
-  mergeFileSearchResults,
   SessionStreamScheduler,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
@@ -46,6 +46,7 @@ import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
+import { handleFileSearch } from "./kilo-provider/file-search"
 import { getTerminalContents } from "./services/terminal/context"
 import { matchFollowup, recordFollowup, type Followup } from "./kilo-provider/followup-session"
 import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
@@ -89,6 +90,7 @@ import {
   handleQuestionReject,
   fetchAndSendPendingQuestions,
 } from "./kilo-provider/handlers/question"
+import { fetchAndSendPendingSuggestions, routeSuggestionWebviewMessage } from "./kilo-provider/handlers/suggestion"
 
 import {
   buildActionContext,
@@ -287,6 +289,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  // Strip edit-tool metadata.filediff.before/after (multi-MB for edit-heavy
+  // sessions) to keep session switches fast. Logic in kilo-provider/slim-metadata.ts.
   private slimPart<T>(part: T): T {
     if (!this.slimEditMetadata) return part
     return slimPart(part)
@@ -514,6 +518,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       await Promise.all([
         fetchAndSendPendingPermissions(this.permissionCtx),
         fetchAndSendPendingQuestions(this.questionCtx),
+        fetchAndSendPendingSuggestions(this.questionCtx),
       ])
     }
   }
@@ -567,6 +572,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
       }
 
+      await routeSuggestionWebviewMessage(this.questionCtx, message)
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -823,29 +829,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           )
           break
         }
-        case "requestFileSearch": {
-          const sdkClient = this.client
-          if (sdkClient) {
-            const dir = this.getWorkspaceDirectory(this.currentSession?.id)
-            const openPaths = dir ? await this.getOpenTabPaths(dir) : new Set<string>()
-            void sdkClient.find
-              .files({ query: message.query, directory: dir, type: "file", limit: 50 }, { throwOnError: true })
-              .then(({ data: paths }) => {
-                const uri = vscode.window.activeTextEditor?.document.uri
-                const active =
-                  uri?.scheme === "file" && dir ? path.relative(dir, uri.fsPath).replaceAll("\\", "/") : undefined
-                const result = mergeFileSearchResults({ query: message.query, backend: paths, open: openPaths, active })
-                this.postMessage({ type: "fileSearchResult", paths: result, dir, requestId: message.requestId })
-              })
-              .catch((error: unknown) => {
-                console.error("[Kilo New] File search failed:", error)
-                this.postMessage({ type: "fileSearchResult", paths: [], dir, requestId: message.requestId })
-              })
-          } else {
-            this.postMessage({ type: "fileSearchResult", paths: [], dir: "", requestId: message.requestId })
-          }
+        case "requestFileSearch":
+          await handleFileSearch({
+            client: this.client,
+            message,
+            current: this.currentSession?.id,
+            context: this.contextSessionID,
+            dir: (id) => this.getWorkspaceDirectory(id),
+            open: (dir) => this.getOpenTabPaths(dir),
+            post: (msg) => this.postMessage(msg),
+          })
           break
-        }
         case "requestTerminalContext":
           void this.handleTerminalContext(message.requestId)
           break
@@ -2251,7 +2245,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    */
   private async handleUpdateConfig(partial: Partial<Config>): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
+      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
     }
 
@@ -2260,42 +2254,39 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       partial.disabled_providers !== undefined ||
       partial.enabled_providers !== undefined
 
-    // Belt-and-suspenders guard: prevent fetchAndSendConfig from sending a
-    // stale configLoaded while this write is in flight (the SSE-triggered reload
-    // races with the async config.update() write on the CLI backend).
+    // Guard against fetchAndSendConfig pushing stale data while the write is in flight.
     this.pending++
+
+    // Phase 1: write. Errors here = real save failures the user can fix + retry.
     try {
-      // Reject all pending permissions and questions across every provider
-      // so their CLI-side Promises resolve before disposeAll() wipes
-      // Instance state.  Throws on failure to abort the config save.
       await this.connectionService.drainPendingPrompts()
-
       await this.client.global.config.update({ config: partial }, { throwOnError: true })
-
-      // Re-fetch the full merged config (global + project + all layers) so the
-      // webview receives the complete resolved config, not just global-only data.
-      // Config.state is reset by updateGlobal (via Instance.resetStateEntry) so
-      // config.get() returns fresh data without a full dispose cycle.
-      const dir = this.getWorkspaceDirectory()
-      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
-
-      this.cachedConfigMessage = { type: "configLoaded", config: merged }
-      this.postMessage({ type: "configUpdated", config: merged })
-
-      if (refreshProviders) {
-        await this.fetchAndSendProviders()
-      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
-        type: "error",
+        type: "configUpdateFailed",
         message: getErrorMessage(error) || "Failed to update config",
+        details: getConfigErrorDetails(error),
       })
-      // Send configUpdated with the last known good config so the webview
-      // clears its saving flag and reverts optimistic state.
-      if (this.cachedConfigMessage) {
-        this.postMessage({ type: "configUpdated", config: (this.cachedConfigMessage as { config: unknown }).config })
-      }
+      this.pending--
+      return
+    }
+
+    // Phase 2: refresh. Config is already on disk — post-write errors are
+    // transient, so send an optimistic configUpdated to clear the webview's
+    // saving/draft state. SSE global.config.updated pushes the real data next.
+    try {
+      const dir = this.getWorkspaceDirectory()
+      const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
+      this.cachedConfigMessage = { type: "configLoaded", config: merged }
+      this.postMessage({ type: "configUpdated", config: merged })
+      if (refreshProviders) await this.fetchAndSendProviders()
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Config write succeeded but post-write refresh failed:", error)
+      const cached = (this.cachedConfigMessage as { config?: unknown } | null)?.config
+      const optimistic =
+        cached && typeof cached === "object" ? { ...(cached as Record<string, unknown>), ...partial } : partial
+      this.postMessage({ type: "configUpdated", config: optimistic })
     } finally {
       this.pending--
     }

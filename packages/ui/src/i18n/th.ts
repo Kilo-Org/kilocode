@@ -77,6 +77,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "รายการ {{count}} รายการ",
   "ui.messagePart.context.list.other": "รายการ {{count}} รายการ",
   "ui.messagePart.diagnostic.error": "ข้อผิดพลาด",
+  "ui.messagePart.mcp.input": "อินพุต",
+  "ui.messagePart.mcp.output": "เอาต์พุต",
   "ui.messagePart.title.edit": "แก้ไข",
   "ui.messagePart.title.write": "เขียน",
   "ui.messagePart.option.typeOwnAnswer": "พิมพ์คำตอบของคุณเอง",

@@ -1,5 +1,21 @@
 # kilo-code
 
+## 7.2.12
+
+### Minor Changes
+
+- [#9099](https://github.com/Kilo-Org/kilocode/pull/9099) [`49b283e`](https://github.com/Kilo-Org/kilocode/commit/49b283e72a7307a1398c38c0862214faa043c128) - Add a "Contribute on GitHub" call-to-action in the Marketplace view so users can easily propose a new skill, mode, or MCP server. The CTA appears as a subtle footer below the card grid and inside the empty search-results state, linking to the `kilo-marketplace` repository.
+
+### Patch Changes
+
+- [#9066](https://github.com/Kilo-Org/kilocode/pull/9066) [`79ba643`](https://github.com/Kilo-Org/kilocode/commit/79ba643cba201971a9779e454fe66769019a7a5a) - Add `xhigh` reasoning effort option to custom provider model variants so users can access the highest tier on models that support it (gpt-5.2, gpt-5.3, gpt-5.4, gpt-5.1-codex-max, etc.).
+
+- [#9068](https://github.com/Kilo-Org/kilocode/pull/9068) [`e65c2d9`](https://github.com/Kilo-Org/kilocode/commit/e65c2d99c0d234d3dc1dff2e75e58e22bea8ce7f) Thanks [@kilo-code-bot](https://github.com/apps/kilo-code-bot)! - Hide Kilo Gateway models that do not support tool calling from the model list.
+
+- [#9040](https://github.com/Kilo-Org/kilocode/pull/9040) [`7d2f5a7`](https://github.com/Kilo-Org/kilocode/commit/7d2f5a7eced0b3599231f75656c0a27c68770d74) - Preserve local Agent Manager sessions after the panel reloads while still pruning stale worktree sessions.
+
+- [#9057](https://github.com/Kilo-Org/kilocode/pull/9057) [`1526a4b`](https://github.com/Kilo-Org/kilocode/commit/1526a4b8a890e01c0c890b4e17b595f35bfd745b) - Keep the active chat session responsive while other sessions stream in the background. Applies to both the sidebar and the Agent Manager.
+
 ## 7.2.11
 
 ### Minor Changes

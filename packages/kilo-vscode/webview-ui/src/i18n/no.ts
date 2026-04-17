@@ -1401,6 +1401,8 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
+  "settings.saveBar.saving": "Lagrer…",
+  "settings.saveBar.saveFailed": "Kunne ikke lagre innstillinger",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",

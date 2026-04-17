@@ -81,6 +81,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} Liste",
   "ui.messagePart.context.list.other": "{{count}} Listen",
   "ui.messagePart.diagnostic.error": "Fehler",
+  "ui.messagePart.mcp.input": "Eingabe",
+  "ui.messagePart.mcp.output": "Ausgabe",
   "ui.messagePart.title.edit": "Bearbeiten",
   "ui.messagePart.title.write": "Schreiben",
   "ui.messagePart.option.typeOwnAnswer": "Eigene Antwort eingeben",

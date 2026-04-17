@@ -5247,6 +5247,206 @@
         ]
       }
     },
+    "/suggestion": {
+      "get": {
+        "operationId": "suggestion.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List pending suggestions",
+        "description": "Get all pending suggestion requests across all sessions.",
+        "responses": {
+          "200": {
+            "description": "List of pending suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionRequest"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/accept": {
+      "post": {
+        "operationId": "suggestion.accept",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Accept suggestion request",
+        "description": "Accept a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "description": "Zero-based action index to accept",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["index"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.accept({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/dismiss": {
+      "post": {
+        "operationId": "suggestion.dismiss",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Dismiss suggestion request",
+        "description": "Dismiss a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion dismissed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.dismiss({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/provider": {
       "get": {
         "operationId": "provider.list",
@@ -10978,6 +11178,7 @@
         },
         "required": ["name", "data"]
       },
+
       "Event.session.error": {
         "type": "object",
         "properties": {
@@ -13082,6 +13283,18 @@
           },
           {
             "$ref": "#/components/schemas/Event.lsp.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.edited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.shown"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.accepted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.dismissed"
           },
           {
             "$ref": "#/components/schemas/Event.tui.prompt.append"

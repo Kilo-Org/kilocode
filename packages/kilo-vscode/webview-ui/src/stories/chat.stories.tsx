@@ -12,10 +12,11 @@ import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProvid
 import { ChatView } from "../components/chat/ChatView"
 import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
+import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
-import type { QuestionRequest, TodoItem } from "../types/messages"
+import type { QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -67,6 +68,14 @@ const multiQuestion: QuestionRequest = {
   tool: { messageID: "asst-msg-001", callID: "call-question-002" },
 }
 
+const reviewSuggestion: SuggestionRequest = {
+  id: "s-review-001",
+  sessionID: SESSION_ID,
+  text: "Start a code review of uncommitted changes?",
+  actions: [{ label: "Start review", description: "Run a local review now", prompt: "/local-review-uncommitted" }],
+  tool: { messageID: "asst-msg-002", callID: "call-suggest-001" },
+}
+
 // ---------------------------------------------------------------------------
 // Meta
 // ---------------------------------------------------------------------------
@@ -113,6 +122,44 @@ export const ChatViewWithMessages: Story = {
       </StoryProviders>
     )
   },
+}
+
+/**
+ * ChatView with a pending question tool call and an empty input.
+ *
+ * Locks in the fix for the regression where the question tool's pending request
+ * caused the Send button to render as a Stop square. The snapshot captures the
+ * prompt bar footer — the submit control must be the paper-plane arrow icon,
+ * not the filled square Stop icon.
+ *
+ * If someone re-couples the prompt input to the question tool, this story's
+ * baseline PNG will diverge and the visual-regression CI job will fail.
+ */
+const pendingToolQuestion: QuestionRequest = {
+  id: "q-toolcall-001",
+  sessionID: SESSION_ID,
+  questions: [
+    {
+      question: "What would you like to do next?",
+      header: "Next step",
+      options: [
+        { label: "Continue", description: "Keep going with the current plan" },
+        { label: "Revise", description: "Adjust the approach before continuing" },
+      ],
+    },
+  ],
+  tool: { messageID: "asst-q-001", callID: "call-q-001" },
+}
+
+export const ChatViewWithPendingQuestionEmptyInput: Story = {
+  name: "ChatView — pending question, empty input (submit must be arrow, not square)",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} status="busy" questions={[pendingToolQuestion]}>
+      <div style={{ "max-height": "400px", display: "flex", "flex-direction": "column" }}>
+        <ChatView />
+      </div>
+    </StoryProviders>
+  ),
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +215,17 @@ export const QuestionDockManyOptions: Story = {
     <StoryProviders sessionID={SESSION_ID} questions={[manyOptionsQuestion]}>
       <div style={{ width: "100%" }}>
         <QuestionDock request={manyOptionsQuestion} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SuggestBarReview: Story = {
+  name: "SuggestBar — review suggestion",
+  render: () => (
+    <StoryProviders sessionID={SESSION_ID} suggestions={[reviewSuggestion]}>
+      <div style={{ width: "100%" }}>
+        <SuggestBar request={reviewSuggestion} />
       </div>
     </StoryProviders>
   ),

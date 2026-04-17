@@ -42,6 +42,17 @@ export function resolveEventSessionId(
     case "question.rejected":
       return event.properties.sessionID
     default:
+      return resolveSuggestionSessionId(event)
+  }
+}
+
+function resolveSuggestionSessionId(event: Event): string | undefined {
+  switch (event.type) {
+    case "suggestion.shown":
+    case "suggestion.accepted":
+    case "suggestion.dismissed":
+      return event.properties.sessionID
+    default:
       // session.network.* events are not yet in the SDK Event type union
       // (pending SDK regeneration). Handle them via string comparison.
       if ((event.type as string).startsWith("session.network.")) {

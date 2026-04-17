@@ -29,7 +29,7 @@ import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageA
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
+import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
@@ -50,6 +50,10 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
 
 interface PromptInputProps {
   blocked?: () => boolean
+  /** When true, session is busy only because a suggestion is pending — treat as idle for input */
+  suggesting?: () => boolean
+  /** When true, session is busy only because a question is pending — treat as idle for input */
+  questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -61,10 +65,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(vscode)
+  const mention = useFileMention(
+    vscode,
+    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+  )
   const terminal = useTerminalContext(vscode)
-  const excluded = worktree ? new Set(["sessions"]) : undefined
-  const slash = useSlashCommand(vscode, excluded)
+  const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -268,7 +274,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
-  const isBusy = () => session.status() !== "idle"
+  const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
   const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
@@ -711,7 +717,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">No files or folders found</div>}
           >
             <For each={mention.mentionResults()}>
               {(item, index) => (
@@ -732,8 +738,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     </>
                   ) : (
                     <>
-                      <FileIcon node={{ path: item.value, type: "file" }} class="file-mention-icon" />
-                      <span class="file-mention-name">{fileName(item.value)}</span>
+                      <FileIcon
+                        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+                        class="file-mention-icon"
+                      />
+                      <span class="file-mention-name">
+                        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+                      </span>
                       <span class="file-mention-dir">{dirName(item.value)}</span>
                     </>
                   )}

@@ -156,6 +156,24 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
     }
   }
 
+  /* Reposition copy button tooltip to appear below (not above) to avoid clipping */
+  [data-component="tool-output"] [data-slot="markdown-copy-button"]::after {
+    bottom: auto;
+    top: calc(100% + 4px);
+  }
+
+  [data-slot="mcp-section-label"] {
+    padding: 6px 12px 0;
+    font-size: 11px;
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="mcp-tool-divider"] {
+    height: 1px;
+    background: var(--border-weak-base, var(--vscode-panel-border));
+    margin-top: 4px;
+  }
+
   /* Expandable tool output content */
   [data-component="tool-output"] {
     padding: 8px 12px;

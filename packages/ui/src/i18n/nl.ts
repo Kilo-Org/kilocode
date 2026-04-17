@@ -69,6 +69,8 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen",
 
   "ui.messagePart.diagnostic.error": "Fout",
+  "ui.messagePart.mcp.input": "Invoer",
+  "ui.messagePart.mcp.output": "Uitvoer",
   "ui.messagePart.title.edit": "Bewerken",
   "ui.messagePart.title.write": "Schrijven",
   "ui.messagePart.option.typeOwnAnswer": "Typ je eigen antwoord",

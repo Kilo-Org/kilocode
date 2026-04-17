@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import z from "zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
@@ -1141,7 +1142,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
                 if (part.mime === "application/x-directory") {
                   const args = { filePath: filepath }
-                  const exit = yield* execRead(args).pipe(Effect.exit)
+                  const exit = yield* execRead(args, { includeDirectoryFiles: true }).pipe(Effect.exit) // kilocode_change inline folder files
                   if (Exit.isFailure(exit)) {
                     const error = Cause.squash(exit.cause)
                     log.error("failed to read directory", { error })
@@ -1290,6 +1291,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
 
           if (input.noReply === true) return message
+          // kilocode_change start — dismiss pending suggestions so a previous loop
+          // blocked on a suggestion can settle before the queue runs the next prompt
+          yield* Effect.promise(() => Suggestion.dismissAll(input.sessionID))
+          // kilocode_change end
           return yield* KiloSessionPromptQueue.enqueue(
             input.sessionID,
             message.info.id,

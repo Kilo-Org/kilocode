@@ -12,6 +12,7 @@ import { KilocodeRoutes } from "../../server/routes/kilocode"
 import { PermissionKilocodeRoutes } from "../permission/routes"
 import { RemoteRoutes } from "../../server/routes/remote"
 import { NetworkRoutes } from "../../server/routes/network"
+import { SuggestionRoutes } from "../suggestion/routes"
 import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
 import { errors } from "../../server/error"
@@ -27,6 +28,7 @@ export function register(app: Hono): Hono {
   return app
     .route("/permission", PermissionKilocodeRoutes())
     .route("/network", NetworkRoutes())
+    .route("/suggestion", SuggestionRoutes())
     .route("/telemetry", TelemetryRoutes())
     .route("/remote", RemoteRoutes())
     .route("/commit-message", CommitMessageRoutes())

@@ -9,6 +9,7 @@ import type {
   Command,
   PermissionRequest,
   QuestionRequest,
+  SuggestionRequest, // kilocode_change
   SessionNetworkWait, // kilocode_change
   LspStatus,
   McpStatus,
@@ -27,6 +28,7 @@ import type { Snapshot } from "@/snapshot"
 import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
+import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { Log } from "@/util/log"
 import { useToast } from "@tui/ui/toast" // kilocode_change
 import type { Path } from "@kilocode/sdk"
@@ -52,6 +54,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         [sessionID: string]: QuestionRequest[]
       }
       // kilocode_change start
+      suggestion: {
+        [sessionID: string]: SuggestionRequest[]
+      }
       network: {
         [sessionID: string]: SessionNetworkWait[]
       }
@@ -98,6 +103,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       permission: {},
       question: {},
       // kilocode_change start
+      suggestion: {},
       network: {},
       // kilocode_change end
       command: [],
@@ -143,6 +149,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           delete draft.session_diff[sessionID]
           delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
+          delete draft.permission[sessionID]
+          delete draft.question[sessionID]
+          delete draft.suggestion[sessionID]
           delete draft.network[sessionID]
         }),
       )
@@ -256,6 +265,15 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
 
+        // kilocode_change start
+        case "suggestion.accepted":
+        case "suggestion.dismissed":
+        case "suggestion.shown": {
+          handleSuggestionEvent(event, store, setStore)
+          break
+        }
+        // kilocode_change end
+
         case "session.network.restored": {
           const requests = store.network[event.properties.sessionID]
           if (!requests) break
@@ -288,7 +306,6 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
         // kilocode_change end
-
         case "todo.updated":
           setStore("todo", event.properties.sessionID, event.properties.todos)
           break

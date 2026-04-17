@@ -9,8 +9,11 @@ import {
   mapCloudSessionMessageToWebviewMessage,
   MessageConfirmation,
   mergeFileSearchResults,
+  getErrorMessage,
+  getConfigErrorDetails,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
+import { mergeFileSearchItems } from "../../src/kilo-provider/file-search-items"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
 import type {
   Session,
@@ -26,6 +29,9 @@ import type {
   EventQuestionAsked,
   EventQuestionReplied,
   EventQuestionRejected,
+  EventSuggestionShown,
+  EventSuggestionAccepted,
+  EventSuggestionDismissed,
   EventSessionCreated,
   EventSessionUpdated,
   EventServerConnected,
@@ -444,6 +450,43 @@ describe("mapSSEEventToWebviewMessage", () => {
     }
   })
 
+  it("maps suggestion.shown to suggestionRequest", () => {
+    const event: EventSuggestionShown = {
+      type: "suggestion.shown",
+      properties: {
+        id: "sug-1",
+        sessionID: "sess-1",
+        text: "Review changes?",
+        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionRequest")
+  })
+
+  it("maps suggestion.accepted to suggestionResolved", () => {
+    const event: EventSuggestionAccepted = {
+      type: "suggestion.accepted",
+      properties: {
+        sessionID: "sess-1",
+        requestID: "sug-1",
+        index: 0,
+        action: { label: "Start", prompt: "/local-review-uncommitted" },
+      },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
+  })
+
+  it("maps suggestion.dismissed to suggestionResolved", () => {
+    const event: EventSuggestionDismissed = {
+      type: "suggestion.dismissed",
+      properties: { sessionID: "sess-1", requestID: "sug-2" },
+    }
+    const msg = mapSSEEventToWebviewMessage(event, "sess-1")
+    expect(msg?.type).toBe("suggestionResolved")
+  })
+
   it("maps session.created to sessionCreated with ISO dates", () => {
     const event: EventSessionCreated = {
       type: "session.created",
@@ -564,6 +607,47 @@ describe("mapCloudSessionMessage", () => {
   })
 })
 
+describe("mergeFileSearchItems", () => {
+  it("puts exact folder matches before file matches", () => {
+    const result = mergeFileSearchItems({
+      query: "script",
+      files: ["script/hooks", "script/release", "script/beta.ts"],
+      folders: ["script/", "script/run-script/"],
+    })
+    expect(result).toEqual([
+      { path: "script/", type: "folder" },
+      { path: "script/hooks", type: "file" },
+      { path: "script/release", type: "file" },
+      { path: "script/beta.ts", type: "file" },
+      { path: "script/run-script/", type: "folder" },
+    ])
+  })
+
+  it("keeps file ordering before non-prefix folder matches", () => {
+    const result = mergeFileSearchItems({
+      query: "test",
+      files: ["src/test.ts"],
+      folders: ["src/latest/"],
+    })
+    expect(result).toEqual([
+      { path: "src/test.ts", type: "file" },
+      { path: "src/latest/", type: "folder" },
+    ])
+  })
+
+  it("normalizes Windows separators for matching and output", () => {
+    const result = mergeFileSearchItems({
+      query: "kilo-vscode",
+      files: ["packages\\kilo-vscode\\src\\KiloProvider.ts"],
+      folders: ["packages\\kilo-vscode\\"],
+    })
+    expect(result).toEqual([
+      { path: "packages/kilo-vscode/", type: "folder" },
+      { path: "packages/kilo-vscode/src/KiloProvider.ts", type: "file" },
+    ])
+  })
+})
+
 describe("mergeFileSearchResults", () => {
   it("returns backend results when no open files", () => {
     const result = mergeFileSearchResults({
@@ -656,5 +740,153 @@ describe("mergeFileSearchResults", () => {
       active: "src/utils/path.ts",
     })
     expect(result).toEqual(["src/utils/path.ts", "src/index.ts"])
+  })
+
+  it("normalizes backslash paths before filtering and deduping", () => {
+    const result = mergeFileSearchResults({
+      query: "utils/path",
+      backend: ["src\\utils\\path.ts"],
+      open: new Set(["src/utils/path.ts"]),
+      active: "src\\utils\\path.ts",
+    })
+    expect(result).toEqual(["src/utils/path.ts"])
+  })
+})
+
+describe("getErrorMessage", () => {
+  it("extracts message from an Error instance", () => {
+    expect(getErrorMessage(new Error("boom"))).toBe("boom")
+  })
+
+  it("returns the string as-is", () => {
+    expect(getErrorMessage("plain text failure")).toBe("plain text failure")
+  })
+
+  it("reads a direct .message field", () => {
+    expect(getErrorMessage({ message: "bad input" })).toBe("bad input")
+  })
+
+  it("reads a direct .error string field", () => {
+    expect(getErrorMessage({ error: "nope" })).toBe("nope")
+  })
+
+  it("reads SDK throwOnError shape { error: { message } }", () => {
+    expect(getErrorMessage({ error: { message: "sdk said no" } })).toBe("sdk said no")
+  })
+
+  it("reads NotFoundError shape { data: { message } }", () => {
+    expect(getErrorMessage({ name: "NotFoundError", data: { message: "not found" } })).toBe("not found")
+  })
+
+  it("reads the first Zod issue message from ConfigInvalidError", () => {
+    const err = {
+      name: "ConfigInvalidError",
+      data: {
+        path: "/Users/me/.config/kilo/kilo.json",
+        issues: [
+          { code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' },
+          { code: "invalid_type", path: ["timeout"], message: "Expected number" },
+        ],
+      },
+    }
+    expect(getErrorMessage(err)).toBe('Unrecognized key: "indexing"')
+  })
+
+  it("reads Hono validator shape { data: { error: [{ message }] } }", () => {
+    const err = { data: { error: [{ message: "required" }] }, success: false }
+    expect(getErrorMessage(err)).toBe("required")
+  })
+
+  it("reads Hono validator shape with string errors", () => {
+    expect(getErrorMessage({ data: { error: ["bad field"] } })).toBe("bad field")
+  })
+
+  it("reads BadRequestError shape { errors: [{ message }] }", () => {
+    expect(getErrorMessage({ errors: [{ message: "first error" }, { message: "second" }] })).toBe("first error")
+  })
+
+  it("reads BadRequestError shape with string errors", () => {
+    expect(getErrorMessage({ errors: ["boom"] })).toBe("boom")
+  })
+
+  it("falls back to JSON for unknown object shapes", () => {
+    expect(getErrorMessage({ weird: true, code: 42 })).toBe('{"weird":true,"code":42}')
+  })
+
+  it("falls back to String() for non-serializable values", () => {
+    expect(getErrorMessage(undefined)).toBe("undefined")
+    expect(getErrorMessage(null)).toBe("null")
+    expect(getErrorMessage(42)).toBe("42")
+  })
+
+  it("skips JSON fallback for empty objects", () => {
+    expect(getErrorMessage({})).toBe("[object Object]")
+  })
+
+  it("prefers .message over nested shapes", () => {
+    const err = { message: "outer", data: { issues: [{ message: "inner" }] } }
+    expect(getErrorMessage(err)).toBe("outer")
+  })
+
+  it("falls through when the first issue has no message", () => {
+    // firstMessage only inspects index 0, so an invalid first entry causes the
+    // branch to skip and the JSON fallback kicks in.
+    const err = { data: { issues: [{ code: "bad" }] } }
+    expect(getErrorMessage(err)).toBe('{"data":{"issues":[{"code":"bad"}]}}')
+  })
+})
+
+describe("getConfigErrorDetails", () => {
+  it("returns undefined for non-object errors", () => {
+    expect(getConfigErrorDetails("oops")).toBeUndefined()
+    expect(getConfigErrorDetails(undefined)).toBeUndefined()
+    expect(getConfigErrorDetails(null)).toBeUndefined()
+    expect(getConfigErrorDetails(42)).toBeUndefined()
+  })
+
+  it("returns undefined when .data is missing", () => {
+    expect(getConfigErrorDetails({ message: "hi" })).toBeUndefined()
+  })
+
+  it("returns undefined when .data has no path or issues", () => {
+    expect(getConfigErrorDetails({ data: { unrelated: true } })).toBeUndefined()
+  })
+
+  it("formats a single-issue ConfigInvalidError", () => {
+    const err = {
+      data: {
+        path: "/home/me/.config/kilo/kilo.json",
+        issues: [{ code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' }],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe('File: /home/me/.config/kilo/kilo.json\n\n✖ Unrecognized key: "indexing"')
+  })
+
+  it("formats a multi-issue ConfigInvalidError with paths (including array indices)", () => {
+    const err = {
+      data: {
+        path: "/cfg.json",
+        issues: [
+          { path: ["timeout"], message: "Expected number" },
+          { path: ["agents", 0, "name"], message: "Required" },
+        ],
+      },
+    }
+    expect(getConfigErrorDetails(err)).toBe(
+      "File: /cfg.json\n\n✖ Expected number\n  → at timeout\n✖ Required\n  → at agents[0].name",
+    )
+  })
+
+  it("omits the path line when only issues are present", () => {
+    const err = { data: { issues: [{ path: [], message: "something" }] } }
+    expect(getConfigErrorDetails(err)).toBe("✖ something")
+  })
+
+  it("omits the issues section when only the path is present", () => {
+    expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
+  })
+
+  it("returns undefined when issues array is empty and no path", () => {
+    expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
   })
 })

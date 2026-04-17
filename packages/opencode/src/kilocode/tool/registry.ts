@@ -26,6 +26,11 @@ export namespace KiloToolRegistry {
     return true
   }
 
+  /** Suggest tool is only registered for cli and vscode clients */
+  export function suggest(tool: Tool.Def): Tool.Def[] {
+    return ["cli", "vscode"].includes(Flag.KILO_CLIENT) ? [tool] : []
+  }
+
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
     tools: { codebase: Tool.Def; recall: Tool.Def },

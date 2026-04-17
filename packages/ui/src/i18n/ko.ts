@@ -76,6 +76,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}}개 목록",
   "ui.messagePart.context.list.other": "{{count}}개 목록",
   "ui.messagePart.diagnostic.error": "오류",
+  "ui.messagePart.mcp.input": "입력",
+  "ui.messagePart.mcp.output": "출력",
   "ui.messagePart.title.edit": "편집",
   "ui.messagePart.title.write": "작성",
   "ui.messagePart.option.typeOwnAnswer": "직접 답변 입력",

@@ -265,6 +265,9 @@ export class AgentManagerProvider implements Disposable {
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
+    if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
+      return { ...msg, sessionID: this.activeSessionId }
+    }
     const m = msg as unknown as AgentManagerInMessage
 
     const worktree = await this.onWorktreeMessage(m)

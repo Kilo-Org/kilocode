@@ -1,5 +1,6 @@
 import { PlanExitTool } from "./plan"
 import { QuestionTool } from "./question"
+import { SuggestTool } from "../kilocode/suggestion/tool" // kilocode_change
 import { BashTool } from "./bash"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
@@ -161,6 +162,7 @@ export namespace ToolRegistry {
             question: Tool.init(question),
             lsp: Tool.init(LspTool),
             plan: Tool.init(PlanExitTool),
+            suggest: Tool.init(SuggestTool), // kilocode_change
           })
 
           const kilo = yield* KiloToolRegistry.build() // kilocode_change
@@ -185,6 +187,7 @@ export namespace ToolRegistry {
               tool.patch,
               ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []), // kilocode_change
               ...(KiloToolRegistry.plan() ? [tool.plan] : []), // kilocode_change
+              ...KiloToolRegistry.suggest(tool.suggest), // kilocode_change
               ...KiloToolRegistry.extra(kilo, cfg), // kilocode_change
             ],
             task: tool.task,

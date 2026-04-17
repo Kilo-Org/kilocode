@@ -50,6 +50,11 @@ describe("buildMentionResults", () => {
     const result = buildMentionResults("src", ["src/index.ts"])
     expect(result.map((item) => item.type)).toEqual(["file"])
   })
+
+  it("includes folder results", () => {
+    const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }])
+  })
 })
 
 describe("syncMentionedPaths", () => {

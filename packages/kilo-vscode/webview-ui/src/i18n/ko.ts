@@ -1390,6 +1390,8 @@ export const dict = {
   "settings.saveBar.warning.many": "여러 세션이 실행 중이며 중단됩니다",
   "settings.saveBar.saveAnyway": "그래도 저장",
   "settings.saveBar.cancel": "취소",
+  "settings.saveBar.saving": "저장 중…",
+  "settings.saveBar.saveFailed": "설정을 저장할 수 없습니다",
   "notifications.action.next": "다음",
   "notifications.action.close": "닫기",
   "notifications.action.tryModel": "{{model}} 시도",

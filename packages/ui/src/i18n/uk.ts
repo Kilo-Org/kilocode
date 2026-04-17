@@ -82,6 +82,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} список",
   "ui.messagePart.context.list.other": "{{count}} списків",
   "ui.messagePart.diagnostic.error": "Помилка",
+  "ui.messagePart.mcp.input": "Вхід",
+  "ui.messagePart.mcp.output": "Вихід",
   "ui.messagePart.title.edit": "Редагувати",
   "ui.messagePart.title.write": "Записати",
   "ui.messagePart.option.typeOwnAnswer": "Введіть власну відповідь",
