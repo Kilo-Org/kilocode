@@ -1,4 +1,5 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 
@@ -81,31 +82,28 @@ export function getErrorMessage(error: unknown): string {
  * the file path and every Zod issue. Used as the expandable details next to
  * the short getErrorMessage() summary.
  *
+ * Zod issues are formatted via zod's built-in `prettifyError` so the output
+ * matches Zod's canonical format (array indices rendered as `foo[0].bar`, etc).
+ *
  * Returns undefined when the error doesn't carry structured config data —
  * callers should omit the details section in that case.
  */
 export function getConfigErrorDetails(error: unknown): string | undefined {
   if (!error || typeof error !== "object") return undefined
-  const obj = error as Record<string, unknown>
-  const data = obj.data
+  const data = (error as Record<string, unknown>).data
   if (!data || typeof data !== "object") return undefined
   const scoped = data as Record<string, unknown>
   const path = typeof scoped.path === "string" ? scoped.path : undefined
   const issues = Array.isArray(scoped.issues) ? scoped.issues : undefined
-  if (!path && !issues) return undefined
+  if (!path && (!issues || issues.length === 0)) return undefined
 
   const out: string[] = []
   if (path) out.push(`File: ${path}`)
   if (issues && issues.length > 0) {
     if (out.length > 0) out.push("")
-    out.push(issues.length === 1 ? "Issue:" : `${issues.length} issues:`)
-    for (const raw of issues) {
-      if (!raw || typeof raw !== "object") continue
-      const issue = raw as Record<string, unknown>
-      const msg = typeof issue.message === "string" ? issue.message : String(issue)
-      const ipath = Array.isArray(issue.path) ? issue.path.join(".") : ""
-      out.push(ipath ? `  • ${ipath}: ${msg}` : `  • ${msg}`)
-    }
+    // prettifyError accepts any object with an `issues` array; the cast is
+    // safe because it only reads the issues field.
+    out.push(prettifyError({ issues } as Parameters<typeof prettifyError>[0]))
   }
   return out.join("\n")
 }

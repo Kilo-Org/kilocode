@@ -767,37 +767,34 @@ describe("getConfigErrorDetails", () => {
         issues: [{ code: "unrecognized_keys", keys: ["indexing"], path: [], message: 'Unrecognized key: "indexing"' }],
       },
     }
-    expect(getConfigErrorDetails(err)).toBe(
-      'File: /home/me/.config/kilo/kilo.json\n\nIssue:\n  • Unrecognized key: "indexing"',
-    )
+    expect(getConfigErrorDetails(err)).toBe('File: /home/me/.config/kilo/kilo.json\n\n✖ Unrecognized key: "indexing"')
   })
 
-  it("formats a multi-issue ConfigInvalidError with paths", () => {
+  it("formats a multi-issue ConfigInvalidError with paths (including array indices)", () => {
     const err = {
       data: {
         path: "/cfg.json",
         issues: [
           { path: ["timeout"], message: "Expected number" },
-          { path: ["nested", "field"], message: "Required" },
+          { path: ["agents", 0, "name"], message: "Required" },
         ],
       },
     }
     expect(getConfigErrorDetails(err)).toBe(
-      "File: /cfg.json\n\n2 issues:\n  • timeout: Expected number\n  • nested.field: Required",
+      "File: /cfg.json\n\n✖ Expected number\n  → at timeout\n✖ Required\n  → at agents[0].name",
     )
   })
 
   it("omits the path line when only issues are present", () => {
     const err = { data: { issues: [{ path: [], message: "something" }] } }
-    expect(getConfigErrorDetails(err)).toBe("Issue:\n  • something")
+    expect(getConfigErrorDetails(err)).toBe("✖ something")
   })
 
   it("omits the issues section when only the path is present", () => {
     expect(getConfigErrorDetails({ data: { path: "/cfg.json" } })).toBe("File: /cfg.json")
   })
 
-  it("skips non-object issues entries", () => {
-    const err = { data: { path: "/c", issues: [null, "bad", { message: "ok" }] } }
-    expect(getConfigErrorDetails(err)).toBe("File: /c\n\n3 issues:\n  • ok")
+  it("returns undefined when issues array is empty and no path", () => {
+    expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
   })
 })
