@@ -1,5 +1,6 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
+import { WorktreeDiffClient } from "../worktree-diff-client"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
@@ -8,7 +9,6 @@ import type { AgentManagerOutMessage } from "./types"
 const LOCAL_DIFF_ID = "local" as const
 
 type Target = { sessionId: string; directory: string; baseBranch: string }
-type Status = "added" | "deleted" | "modified"
 
 export interface WorktreeDiffControllerContext {
   getState: () => WorktreeStateManager | undefined
@@ -111,12 +111,8 @@ export class WorktreeDiffController {
     }
 
     try {
-      const result = await this.ctx.git.revertFile(
-        target.directory,
-        target.baseBranch,
-        file,
-        await this.status(target, file),
-      )
+      const diff = new WorktreeDiffClient(this.ctx.getClient(), this.ctx.git, (...args) => this.ctx.log(...args))
+      const result = await diff.revertFile(target, file)
       this.ctx.post({
         type: "agentManager.revertWorktreeFileResult",
         sessionId,
@@ -264,18 +260,6 @@ export class WorktreeDiffController {
 
   private async resolveLocal(): Promise<{ directory: string; baseBranch: string } | undefined> {
     return await resolveLocalDiffTarget(this.ctx.git, (...args) => this.ctx.log(...args), this.ctx.getRoot())
-  }
-
-  private async status(target: { directory: string; baseBranch: string }, file: string): Promise<Status | undefined> {
-    try {
-      const { data } = await this.ctx
-        .getClient()
-        .worktree.diffFile({ directory: target.directory, base: target.baseBranch, file }, { throwOnError: true })
-      return data?.status
-    } catch (error) {
-      this.ctx.log("Failed to look up file status for revert:", error)
-      return undefined
-    }
   }
 
   private async ready(msg: string): Promise<void> {

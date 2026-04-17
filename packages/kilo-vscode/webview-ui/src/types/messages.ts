@@ -1363,6 +1363,13 @@ export interface DiffViewerLoadingMessage {
   loading: boolean
 }
 
+export interface DiffViewerRevertFileResultMessage {
+  type: "diffViewer.revertFileResult"
+  file: string
+  status: "success" | "error"
+  message: string
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -1555,6 +1562,7 @@ export type ExtensionMessage =
   | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
+  | DiffViewerRevertFileResultMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
