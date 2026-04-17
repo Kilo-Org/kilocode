@@ -901,16 +901,16 @@ export const SessionProvider: ParentComponent = (props) => {
   }
 
   // Cheap shape check: same ids in same order AND same part counts per message.
-  // Used to short-circuit reconcile when the server snapshot matches local state
-  // (the common case — SSE didn't actually miss anything). Skipping the full
-  // reconcile here avoids 80 setStore("parts", ...) calls per session switch.
+  // Short-circuits reconcile when the server snapshot matches local state
+  // (the common case — SSE didn't actually miss anything), avoiding the
+  // 80 setStore("parts", ...) calls per session switch.
   function sameReconcileShape(current: Message[], incoming: Message[]): boolean {
     if (current.length !== incoming.length) return false
     for (let i = 0; i < incoming.length; i++) {
-      if (current[i]!.id !== incoming[i]!.id) return false
-      const cp = current[i]!.parts?.length ?? 0
-      const ip = incoming[i]!.parts?.length ?? 0
-      if (cp !== ip) return false
+      const c = current[i]!
+      const n = incoming[i]!
+      if (c.id !== n.id) return false
+      if ((c.parts?.length ?? 0) !== (n.parts?.length ?? 0)) return false
     }
     return true
   }

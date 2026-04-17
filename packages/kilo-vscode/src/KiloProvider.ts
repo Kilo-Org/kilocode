@@ -1323,8 +1323,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     options: { mode?: MessageLoadMode; before?: string; limit?: number } = {},
   ): Promise<void> {
     const mode = options.mode ?? "replace"
-    const focus = mode !== "prepend"
-    if (focus) {
+    if (mode !== "prepend") {
       this.trackedSessionIds.add(sessionID)
       this.focusSession(sessionID)
       this.contextSessionID = sessionID
@@ -1346,8 +1345,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     if (abort) {
       this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
+      this.refreshSessionDetails(sessionID, dir, abort.signal)
     }
-    if (mode === "replace") this.refreshSessionDetails(sessionID, dir, abort?.signal)
     try {
       const page = await fetchMessagePage(this.client, {
         sessionID,

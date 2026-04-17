@@ -23,38 +23,27 @@ export async function fetchMessagePage(
     signal?: AbortSignal
   },
 ) {
-  // limit: 0 is the server contract for "no pagination, return every message"
-  // — used by the sub-agent viewer which has no "load earlier" UI.
+  // limit: 0 is the server contract for "return every message" — used by
+  // the sub-agent viewer, which has no "load earlier" UI.
   const full = input.limit === 0
   const read = async (before?: string) => {
     const result = await retry(() =>
       client.session.messages(
-        {
-          sessionID: input.sessionID,
-          directory: input.workspaceDir,
-          ...(full ? {} : { limit: input.limit }),
-          ...(before ? { before } : {}),
-        },
+        { sessionID: input.sessionID, directory: input.workspaceDir, limit: input.limit, before },
         { throwOnError: true, signal: input.signal },
       ),
     )
-    // The server sets X-Next-Cursor when more pages exist. CORS proxies, auth
-    // gateways, or older binaries may strip the header. When the response
-    // fills the requested limit, fall back to a client-synthesized cursor so
-    // "load earlier" keeps working. A full response usually means more exists
-    // — the risk of one extra empty request is preferable to silently hiding
-    // older history. The fallback does NOT apply to full loads (limit: 0):
-    // those return everything by contract and must not synthesize a cursor.
-    const header = result.response.headers.get("X-Next-Cursor") ?? undefined
+    // When a proxy/auth gateway strips X-Next-Cursor but the response fills
+    // the requested limit, synthesize a cursor from the oldest item so the
+    // "load earlier" path keeps working. Risk of one extra empty request is
+    // preferable to silently hiding older history. Never synthesize for
+    // full loads — those return everything by contract.
     const items = result.data
-    const oldest = items[0]
+    const header = result.response.headers.get("X-Next-Cursor")
     const cursor = full
       ? undefined
-      : (header ?? (items.length >= input.limit && oldest ? synthesizeCursor(oldest) : undefined))
-    return {
-      items,
-      cursor,
-    }
+      : (header ?? (items.length >= input.limit && items[0] ? synthesizeCursor(items[0]) : undefined))
+    return { items, cursor }
   }
 
   const suffix = (items: Awaited<ReturnType<typeof read>>["items"]) => {
