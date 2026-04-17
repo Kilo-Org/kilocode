@@ -174,6 +174,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionDirectories = new Map<string, string>()
   /** Project ID for the current workspace, used to filter out sessions from other repositories. */
   private projectID: string | undefined
+  /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
   private loadMessagesAbort: AbortController | null = null
   /** Per-session last focus-mode reconcile timestamp — throttles rapid tab switching. */
   private lastReconciledAt = new Map<string, number>()
@@ -1388,7 +1389,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /** Handle syncing a child session (e.g. spawned by the task tool). */
+  /**
+   * Handle syncing a child session (e.g. spawned by the task tool).
+   * Tracks the session for SSE events and fetches its messages.
+   */
   private async handleSyncSession(sessionID: string, parentSessionID?: string): Promise<void> {
     if (!this.client) return
     if (this.syncedChildSessions.has(sessionID)) return
@@ -1396,7 +1400,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.syncedChildSessions.add(sessionID)
     this.trackedSessionIds.add(sessionID)
 
-    // Inherit parent's worktree directory so permission responses use the right backend Instance.
+    // Inherit the parent's worktree directory so permission responses use
+    // the correct backend Instance. Without this, child sessions in Agent
+    // Manager worktrees fall back to workspace root and fail to find the
+    // pending permission request.
     if (!this.sessionDirectories.has(sessionID) && parentSessionID) {
       const dir = this.sessionDirectories.get(parentSessionID)
       if (dir) {
@@ -1510,7 +1517,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /** Handle deleting a session. */
+  /**
+   * Handle deleting a session.
+   */
   private async handleDeleteSession(sessionID: string): Promise<void> {
     if (!this.client) {
       this.postMessage({ type: "error", message: "Not connected to CLI backend" })
