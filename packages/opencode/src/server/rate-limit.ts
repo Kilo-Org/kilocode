@@ -1,0 +1,87 @@
+// devilcode_change - Bun-native rate limiter middleware (replaces hono-rate-limiter)
+import type { Context, Next } from "hono"
+import { Log } from "../util/log"
+
+const log = Log.create({ service: "rate-limit" })
+
+export type RateLimitOptions = {
+  /** Window length in milliseconds. */
+  windowMs: number
+  /** Maximum number of requests per key per window. */
+  limit: number
+  /** Custom key extractor; defaults to client IP. */
+  keyGenerator?: (c: Context) => string
+  /** Optional path predicate; return false to bypass for that request. */
+  shouldApply?: (c: Context) => boolean
+  /** Standardized rate-limit response headers (draft-6). Defaults to true. */
+  standardHeaders?: boolean
+  /** Optional clock injection for tests. */
+  now?: () => number
+}
+
+type Bucket = {
+  count: number
+  resetAt: number
+}
+
+const DEFAULT_KEY = (c: Context) =>
+  c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+  c.req.header("x-real-ip") ||
+  c.req.header("cf-connecting-ip") ||
+  "unknown"
+
+/**
+ * Fixed-window rate limiter. Tracks per-key counters in-process.
+ *
+ * Trade-offs:
+ * - Per-process state — multiple workers will track independently. Acceptable for the
+ *   single-instance Devil server use case (CLI-spawned). Use a shared store if we add
+ *   horizontal scaling.
+ * - Fixed window: bursts at window boundaries are possible. Mitigated by short windows.
+ */
+export function rateLimit(options: RateLimitOptions) {
+  const buckets = new Map<string, Bucket>()
+  const keyOf = options.keyGenerator ?? DEFAULT_KEY
+  const headers = options.standardHeaders ?? true
+  const now = options.now ?? Date.now
+
+  // Periodic cleanup so the map does not grow unbounded under varied keys.
+  const sweep = () => {
+    const t = now()
+    for (const [k, v] of buckets) {
+      if (v.resetAt <= t) buckets.delete(k)
+    }
+  }
+  // Bun supports unref(); avoid keeping the process alive solely for sweeps.
+  const interval = setInterval(sweep, Math.max(options.windowMs, 30_000))
+  if (typeof (interval as any).unref === "function") (interval as any).unref()
+
+  return async function rateLimitMiddleware(c: Context, next: Next) {
+    if (options.shouldApply && !options.shouldApply(c)) return next()
+    const key = keyOf(c)
+    const t = now()
+    let bucket = buckets.get(key)
+    if (!bucket || bucket.resetAt <= t) {
+      bucket = { count: 0, resetAt: t + options.windowMs }
+      buckets.set(key, bucket)
+    }
+    bucket.count++
+
+    const remaining = Math.max(0, options.limit - bucket.count)
+    if (headers) {
+      c.header("RateLimit-Limit", String(options.limit))
+      c.header("RateLimit-Remaining", String(remaining))
+      c.header("RateLimit-Reset", String(Math.ceil((bucket.resetAt - t) / 1000)))
+    }
+
+    if (bucket.count > options.limit) {
+      log.warn("rate_limited", { key, path: c.req.path, count: bucket.count })
+      if (headers) {
+        c.header("Retry-After", String(Math.ceil((bucket.resetAt - t) / 1000)))
+      }
+      return c.json({ error: "Too Many Requests" }, 429)
+    }
+
+    return next()
+  }
+}
