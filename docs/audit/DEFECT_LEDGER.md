@@ -42,7 +42,15 @@
 | D-011 | Training (F/65) | Medium | Training compare response type mismatch — `trainingComparison` instead of `trainingCompareResult` | KiloProvider emitted `trainingComparison` but TrainingTab expects `trainingCompareResult`. | Fixed | Changed type string from `trainingComparison` to `trainingCompareResult` in KiloProvider | `KiloProvider.ts:1350` | Builder | Pending Confirmer |
 | D-012 | VPS (B/31) | Low | V4SubsystemMessage union missing 2 types emitted by VPSService: `vpsDeployPreflightFailed` and `vpsReverseProxyConfigsLoaded` | VPSService.handleMessage emits these types at runtime but they were absent from the union type, making them untyped in the webview. | Fixed | Added both types to V4SubsystemMessage union and cleaned up stale type aliases | `messages.ts:1644-1648` | Builder | Pending Confirmer |
 
-## Next ID: D-013
+| D-013 | VPS (B/27) | Medium | VPS `vpsServerAdd` and `vpsServerRemove` handlers lack try/catch — TypeError on malformed input | `VPSService.ts` lines 1218-1233: only handlers in `handleMessage` without try/catch. If `message.server` is undefined, `addOrUpdateServer(undefined)` throws TypeError on `.id` access. All other branches are wrapped. | Fixed | Wrapped both cases in try/catch with input validation, error logging, and `vpsError` response | `VPSService.ts:1218-1246` | Builder | Pending Confirmer |
+| D-014 | Training (F/59) | Medium | `validateJsonl` reads entire file into memory with `readFileSync` — OOM risk on large datasets up to 10GB max | `TrainingService.ts` line 397: `fs.readFileSync(path, "utf-8")` loads full file. Combined with 10GB max dataset limit, this could exhaust Node.js heap. Same issue at line 438 for CSV validation. | Open | Should use streaming line-by-line reader instead of readFileSync | -- | -- | -- |
+| D-015 | Governance (H/68) | Medium | `tierLevel()` has no default case — invalid tier name returns `undefined`, causing NaN in comparisons | `GovernanceService.ts` line 288: exhaustive switch with no default. If an invalid tier name reaches this function, it returns `undefined` which becomes `NaN` in numeric comparisons. | Open | Add default case returning 0 or throw | -- | -- | -- |
+| D-016 | Governance (H/68) | Medium | Evidence bundles stored only in-memory Map — lost on extension restart | `GovernanceService.ts` line 993: `createEvidenceBundle()` stores in `Map` but never persists to disk. All evidence is lost when the extension deactivates/reloads. | Open | Should persist to `.kilo/evidence.json` or globalState | -- | -- | -- |
+
+| D-017 | Memory (E/54) | Medium | `memoryRecall` in KiloProvider passes bare string instead of options object — project filter silently ignored | `KiloProvider.ts` line 1257: `recall(query, message.project)` but `recall()` expects `(query, { project })`. The string is accessed as `.project` which returns `undefined`, so the project filter is silently dropped. | Fixed | Changed to `recall(message.query, { project: message.project })` | `KiloProvider.ts:1257` | Builder | Pending Confirmer |
+| D-018 | Memory (E/55) | High | `memoryWrite` in KiloProvider has no try/catch — throws on invalid input leave webview hanging | `KiloProvider.ts` lines 1261-1265: `writeMemory()` throws on empty summary, invalid factType, invalid scope. No catch block. Webview never receives failure response. | Fixed | Wrapped in try/catch, sends `memoryWriteResult` with `success: false` and error message on failure | `KiloProvider.ts:1261-1269` | Builder | Pending Confirmer |
+
+## Next ID: D-019
 
 ## Cross-Reference
 
@@ -60,3 +68,9 @@
 | D-010 | F | 59 | Training missing routes |
 | D-011 | F | 65 | Training compare response name |
 | D-012 | B | 31 | VPS missing union types |
+| D-013 | B | 27 | VPS server add/remove try/catch |
+| D-014 | F | 59 | Training OOM on large dataset validation |
+| D-015 | H | 68 | Governance tierLevel no default |
+| D-016 | H | 68 | Governance evidence not persisted |
+| D-017 | E | 54 | Memory recall project filter ignored |
+| D-018 | E | 55 | Memory write uncaught throw |

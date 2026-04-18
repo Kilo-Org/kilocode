@@ -1216,20 +1216,32 @@ export class VPSService implements vscode.Disposable {
       }
 
       case "vpsServerAdd": {
-        const serverData = message.server as VPSServer
-        const server = await this.addOrUpdateServer(serverData)
-        const isUpdate = (message.server as VPSServer).id === server.id
-        postToWebview({
-          type: isUpdate ? "vpsServerUpdated" : "vpsServerAdded",
-          server,
-        })
+        try {
+          const serverData = message.server as VPSServer
+          if (!serverData?.id) throw new Error("Invalid server data: missing id")
+          const server = await this.addOrUpdateServer(serverData)
+          const isUpdate = (message.server as VPSServer).id === server.id
+          postToWebview({
+            type: isUpdate ? "vpsServerUpdated" : "vpsServerAdded",
+            server,
+          })
+        } catch (err) {
+          this.log(`Error adding server: ${err}`)
+          postToWebview({ type: "vpsError", error: String(err) })
+        }
         return true
       }
 
       case "vpsServerRemove": {
-        const serverId = message.serverId as string
-        await this.removeServer(serverId)
-        postToWebview({ type: "vpsServerRemoved", serverId })
+        try {
+          const serverId = message.serverId as string
+          if (!serverId) throw new Error("Invalid serverId")
+          await this.removeServer(serverId)
+          postToWebview({ type: "vpsServerRemoved", serverId })
+        } catch (err) {
+          this.log(`Error removing server: ${err}`)
+          postToWebview({ type: "vpsError", error: String(err) })
+        }
         return true
       }
 

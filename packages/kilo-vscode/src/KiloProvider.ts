@@ -1254,14 +1254,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "memoryRecall":
           if (this.memoryService) {
-            const results = this.memoryService.recall(message.query, message.project)
+            const results = this.memoryService.recall(message.query, { project: message.project })
             this.postMessage({ type: "memoryRecallResult", results } as never)
           }
           break
         case "memoryWrite":
           if (this.memoryService) {
-            this.memoryService.writeMemory(message.entry)
-            this.postMessage({ type: "memoryWriteResult", success: true } as never)
+            try {
+              this.memoryService.writeMemory(message.entry)
+              this.postMessage({ type: "memoryWriteResult", success: true } as never)
+            } catch (err) {
+              this.postMessage({ type: "memoryWriteResult", success: false, error: err instanceof Error ? err.message : "Write failed" } as never)
+            }
           }
           break
         case "memoryReconnect":
