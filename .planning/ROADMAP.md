@@ -2,7 +2,7 @@
 
 ## Phases
 
-- [ ] Phase 1: Foundation — Canonical Library & Capability Model
+- [x] Phase 1: Foundation — Canonical Library & Capability Model
 - [ ] Phase 2: Preset Migration & Clean-Break Schema Cleanup
 - [ ] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives
 - [ ] Phase 4: Team Builder Views
