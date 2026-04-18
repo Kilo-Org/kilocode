@@ -3,6 +3,7 @@
 node_modules
 .claude/
 *.vsix
+build-release/
 docs/audit/
 .worktrees
 .sst
