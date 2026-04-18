@@ -50,7 +50,19 @@
 | D-017 | Memory (E/54) | Medium | `memoryRecall` in KiloProvider passes bare string instead of options object — project filter silently ignored | `KiloProvider.ts` line 1257: `recall(query, message.project)` but `recall()` expects `(query, { project })`. The string is accessed as `.project` which returns `undefined`, so the project filter is silently dropped. | Fixed | Changed to `recall(message.query, { project: message.project })` | `KiloProvider.ts:1257` | Builder | Pending Confirmer |
 | D-018 | Memory (E/55) | High | `memoryWrite` in KiloProvider has no try/catch — throws on invalid input leave webview hanging | `KiloProvider.ts` lines 1261-1265: `writeMemory()` throws on empty summary, invalid factType, invalid scope. No catch block. Webview never receives failure response. | Fixed | Wrapped in try/catch, sends `memoryWriteResult` with `success: false` and error message on failure | `KiloProvider.ts:1261-1269` | Builder | Pending Confirmer |
 
-## Next ID: D-019
+| D-019 | ZeroClaw (C/35) | High | ZeroClaw submit throws on invalid input (empty description, invalid riskLevel) — webview hangs | `KiloProvider.ts:1167-1171`: `zeroClawSubmitTask` case had no try/catch. `ZeroClawService.submit()` throws on validation failure. The throw propagates as unhandled Promise rejection; webview never gets a response. | Fixed | Wrapped in try/catch, sends `zeroClawError` with error message on failure | `KiloProvider.ts:1167-1175` | Builder | Pending Confirmer |
+| D-020 | ZeroClaw (C/40) | Medium | ZeroClaw retry budget exhaustion produces no user feedback | `ZeroClawService.retry()` returns `undefined` when budget (3/3) is exhausted. KiloProvider silently refreshes task list. No warning shown. | Fixed | Added `vscode.window.showWarningMessage` when `retry()` returns `undefined`. Also wrapped in try/catch. | `KiloProvider.ts:1178-1192` | Builder | Pending Confirmer |
+| D-021 | Memory (E/54) | High | `memoryRecall` case has no try/catch — undefined query causes TypeError, webview hangs | `KiloProvider.ts:1255-1259`: If `message.query` is undefined/null, `query.trim()` in MemoryService throws TypeError. No catch. Webview never gets `memoryRecallResult`. | Fixed | Wrapped in try/catch, returns `status: "failed"` recall result on error | `KiloProvider.ts:1257-1264` | Builder | Pending Confirmer |
+| D-022 | Memory (E/57) | Medium | `memoryRunDiagnostics` case has no try/catch — unexpected throw leaves webview waiting | `KiloProvider.ts:1286-1290`: `runDiagnostics()` is async and could reject. No catch block. | Fixed | Wrapped in try/catch, sends diagnostic result with `passed: false` on error | `KiloProvider.ts:1290-1298` | Builder | Pending Confirmer |
+| D-023 | Training (F/61) | High | Training `launchJob` case has no try/catch — 3 throw paths (unvalidated dataset, GPU quota, memory limit) all crash KiloProvider | `KiloProvider.ts:1315-1319`: `launchJob()` throws on unvalidated dataset, GPU quota exceeded, or memory over limit. Webview hangs. | Fixed | Wrapped in try/catch, sends `trainingError` message on failure | `KiloProvider.ts:1319-1327` | Builder | Pending Confirmer |
+| D-024 | Training (F/66) | High | Training `exportModel` case has no try/catch — throws on incomplete job or invalid format | `KiloProvider.ts:1361-1365`: `exportModel()` calls `validateExportOptions()` which throws on incomplete job or invalid format. Webview hangs. | Fixed | Wrapped in try/catch, sends `trainingError` message on failure | `KiloProvider.ts:1368-1376` | Builder | Pending Confirmer |
+| D-025 | Training (F/64) | High | Training `resumeJob` case has no try/catch — throws on non-paused job | `KiloProvider.ts:1325-1329`: `resumeJob()` throws if job status is not "paused". Webview hangs. | Fixed | Wrapped in try/catch, sends `trainingError` message on failure | `KiloProvider.ts:1329-1337` | Builder | Pending Confirmer |
+| D-026 | Training (F/65) | High | Training `compareRuns` case has no try/catch — throws on invalid job IDs | `KiloProvider.ts:1355-1359`: `compareRuns()` throws if jobA or jobB not found. Webview hangs. | Fixed | Wrapped in try/catch, sends `trainingError` message on failure | `KiloProvider.ts:1362-1370` | Builder | Pending Confirmer |
+| D-027 | Training (F/61) | Medium | Training `cancelJob` silently corrupts completed job — no status guard + no try/catch | `TrainingService.ts:593`: `cancelJob()` unconditionally sets `status = "failed"` regardless of current status. Cancelling a completed job silently overwrites it to failed. KiloProvider case also had no try/catch. | Fixed | Added status guard `if (completed\|failed) throw` in TrainingService. Wrapped KiloProvider case in try/catch. | `TrainingService.ts:596-598`, `KiloProvider.ts:1339-1347` | Builder | Pending Confirmer |
+| D-028 | Governance (H/68) | Medium | `governanceSetTier` accepts arbitrary tier names — stores garbage data in tier assignments | `KiloProvider.ts:1378`: Passes `message.tier` directly to `setUserTier()` with no runtime validation. An invalid tier name like "superduper" gets stored, then `getUserTier()` falls back to observer tier. Data integrity issue. | Fixed | Added runtime validation of tier name against `["observer", "operator", "admin", "superadmin"]`. Invalid tier posts `governanceError`. | `KiloProvider.ts:1381-1386` | Builder | Pending Confirmer |
+| D-029 | KiloProvider (all) | Critical | No top-level error boundary in message handler — any unhandled throw produces an unhandled Promise rejection | `KiloProvider.ts:604-1451`: The `onDidReceiveMessage` async callback has no outer try/catch around the switch. Any service method that throws without a per-case catch becomes an unhandled rejection. Webview hangs waiting for a response. | Fixed | Wrapped entire switch in try/catch with `console.error` logging and `v4Error` fallback message to webview | `KiloProvider.ts:604-1458` | Builder | Pending Confirmer |
+
+## Next ID: D-030
 
 ## Cross-Reference
 
@@ -74,3 +86,14 @@
 | D-016 | H | 68 | Governance evidence not persisted |
 | D-017 | E | 54 | Memory recall project filter ignored |
 | D-018 | E | 55 | Memory write uncaught throw |
+| D-019 | C | 35 | ZeroClaw submit validation crash |
+| D-020 | C | 40 | ZeroClaw retry budget silent |
+| D-021 | E | 54 | Memory recall undefined query crash |
+| D-022 | E | 57 | Memory diagnostics unhandled throw |
+| D-023 | F | 61 | Training launch unhandled throws |
+| D-024 | F | 66 | Training export unhandled throws |
+| D-025 | F | 64 | Training resume unhandled throw |
+| D-026 | F | 65 | Training compare unhandled throws |
+| D-027 | F | 61 | Training cancelJob state corruption |
+| D-028 | H | 68 | Governance setTier no validation |
+| D-029 | All | All | No top-level error boundary |

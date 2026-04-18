@@ -593,6 +593,9 @@ export class TrainingService implements vscode.Disposable {
   cancelJob(jobId: string): TrainingJob {
     const job = this.jobs.find((j) => j.id === jobId)
     if (!job) throw new Error(`Job not found: ${jobId}`)
+    if (job.status === "completed" || job.status === "failed") {
+      throw new Error(`Cannot cancel job in "${job.status}" state`)
+    }
 
     job.status = "failed"
     job.error = "Cancelled by user"

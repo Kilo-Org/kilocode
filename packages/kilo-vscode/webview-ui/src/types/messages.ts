@@ -1649,7 +1649,7 @@ export interface V4SubsystemMessage {
     // ZeroClaw
     | "zeroClawTasksLoaded" | "zeroClawTaskSubmitted" | "zeroClawTaskUpdated"
     | "zeroClawTaskRetried" | "zeroClawHistoryLoaded"
-    | "zeroClawTaskResult" | "zeroClawArtifacts"
+    | "zeroClawTaskResult" | "zeroClawArtifacts" | "zeroClawError"
     // Routing
     | "routingProvidersLoaded" | "routingTracesLoaded" | "routingHealthLoaded"
     | "routingConfigLoaded" | "routingTestResult" | "routingKeyConfigured"
@@ -1662,9 +1662,11 @@ export interface V4SubsystemMessage {
     | "trainingState" | "trainingCompareResult" | "trainingExportComplete"
     | "trainingDatasetRegistered" | "trainingDatasetValidated" | "trainingDatasetRemoved"
     | "trainingJobLaunched" | "trainingJobUpdated" | "trainingJobRemoved"
-    | "trainingGPUDetected" | "trainingBrowsePathResult"
+    | "trainingGPUDetected" | "trainingBrowsePathResult" | "trainingError"
     // Governance
-    | "governanceState" | "governanceAuditLog" | "governanceAuditExport"
+    | "governanceState" | "governanceAuditLog" | "governanceAuditExport" | "governanceError"
+    // Generic V4 error fallback
+    | "v4Error"
     // Workstation
     | "workstationProfile" | "workstationHardware" | "workstationLimits"
     | "workstationLocalAI" | "workstationRoutingPrefs" | "workstationLocalPref"

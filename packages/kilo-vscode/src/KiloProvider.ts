@@ -602,6 +602,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
+      try {
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -1165,9 +1166,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "zeroClawSubmitTask":
           if (this.zeroClawService) {
-            const submitted = this.zeroClawService.submit(message.task)
-            this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
-            this.postMessage({ type: "zeroClawTaskUpdated", task: submitted } as never)
+            try {
+              const submitted = this.zeroClawService.submit(message.task)
+              this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
+              this.postMessage({ type: "zeroClawTaskUpdated", task: submitted } as never)
+            } catch (err) {
+              this.postMessage({ type: "zeroClawError", error: err instanceof Error ? err.message : "Task submission failed" } as never)
+            }
           }
           break
         case "zeroClawCancelTask":
@@ -1176,9 +1181,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "zeroClawRetryTask":
           if (this.zeroClawService) {
-            const retried = this.zeroClawService.retry(message.taskId)
-            this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
-            if (retried) this.postMessage({ type: "zeroClawTaskRetried", newTask: retried } as never)
+            try {
+              const retried = this.zeroClawService.retry(message.taskId)
+              this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
+              if (retried) {
+                this.postMessage({ type: "zeroClawTaskRetried", newTask: retried } as never)
+              } else {
+                vscode.window.showWarningMessage("Retry budget exhausted — task has reached the maximum retry limit.")
+              }
+            } catch (err) {
+              this.postMessage({ type: "zeroClawError", error: err instanceof Error ? err.message : "Retry failed" } as never)
+            }
           }
           break
         case "zeroClawApproveTask":
@@ -1254,8 +1267,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "memoryRecall":
           if (this.memoryService) {
-            const results = this.memoryService.recall(message.query, { project: message.project })
-            this.postMessage({ type: "memoryRecallResult", results } as never)
+            try {
+              const results = this.memoryService.recall(message.query, { project: message.project })
+              this.postMessage({ type: "memoryRecallResult", results } as never)
+            } catch (err) {
+              this.postMessage({ type: "memoryRecallResult", results: { query: message.query ?? "", project: message.project, results: [], status: "failed", timestamp: Date.now() } } as never)
+            }
           }
           break
         case "memoryWrite":
@@ -1285,8 +1302,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "memoryRunDiagnostics":
           if (this.memoryService) {
-            const diagResult = await this.memoryService.runDiagnostics()
-            this.postMessage({ type: "memoryDiagnosticResult", result: diagResult } as never)
+            try {
+              const diagResult = await this.memoryService.runDiagnostics()
+              this.postMessage({ type: "memoryDiagnosticResult", result: diagResult } as never)
+            } catch (err) {
+              this.postMessage({ type: "memoryDiagnosticResult", result: { passed: false, tests: [], error: err instanceof Error ? err.message : "Diagnostics failed" } } as never)
+            }
           }
           break
         case "memoryGetRecallTraces":
@@ -1314,8 +1335,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "trainingLaunchJob":
           if (this.trainingService) {
-            this.trainingService.launchJob(message.config)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            try {
+              this.trainingService.launchJob(message.config)
+              this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Launch failed" } as never)
+            }
           }
           break
         case "trainingPauseJob":
@@ -1324,14 +1349,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "trainingResumeJob":
           if (this.trainingService) {
-            this.trainingService.resumeJob(message.jobId)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            try {
+              this.trainingService.resumeJob(message.jobId)
+              this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Resume failed" } as never)
+            }
           }
           break
         case "trainingCancelJob":
           if (this.trainingService) {
-            this.trainingService.cancelJob(message.jobId)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            try {
+              this.trainingService.cancelJob(message.jobId)
+              this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Cancel failed" } as never)
+            }
           }
           break
         case "trainingRemoveDataset":
@@ -1348,20 +1381,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "trainingResumeCheckpoint":
           if (this.trainingService) {
-            this.trainingService.resumeFromCheckpoint(message.jobId, message.checkpointId)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            try {
+              this.trainingService.resumeFromCheckpoint(message.jobId, message.checkpointId)
+              this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Checkpoint resume failed" } as never)
+            }
           }
           break
         case "trainingCompareRuns":
           if (this.trainingService) {
-            const comparison = this.trainingService.compareRuns(message.jobIds?.[0], message.jobIds?.[1])
-            this.postMessage({ type: "trainingCompareResult", comparison } as never)
+            try {
+              const comparison = this.trainingService.compareRuns(message.jobIds?.[0], message.jobIds?.[1])
+              this.postMessage({ type: "trainingCompareResult", comparison } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Comparison failed" } as never)
+            }
           }
           break
         case "trainingExportModel":
           if (this.trainingService) {
-            const exportResult = await this.trainingService.exportModel(message.exportOptions)
-            this.postMessage({ type: "trainingExportComplete", exportResult } as never)
+            try {
+              const exportResult = await this.trainingService.exportModel(message.exportOptions)
+              this.postMessage({ type: "trainingExportComplete", exportResult } as never)
+            } catch (err) {
+              this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Export failed" } as never)
+            }
           }
           break
         case "trainingDetectGPU":
@@ -1375,10 +1420,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestGovernanceState":
           if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
           break
-        case "governanceSetTier":
+        case "governanceSetTier": {
+          const validTiers = ["observer", "operator", "admin", "superadmin"]
+          if (!validTiers.includes(message.tier)) {
+            this.postMessage({ type: "governanceError", error: `Invalid tier: "${message.tier}". Must be one of: ${validTiers.join(", ")}` } as never)
+            break
+          }
           this.governanceService?.setUserTier(message.userId, message.tier, message.assignedBy ?? "operator")
           if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
           break
+        }
         case "governanceApproveAction":
           this.governanceService?.approveAction(message.actionId, message.approver, message.reason)
           if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
@@ -1448,6 +1499,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.postMessage({ type: "workstationProfile", profile: this.workstationProfile.getProfile() } as never)
           }
           break
+      }
+      } catch (err) {
+        console.error(`[Kilo New] KiloProvider: unhandled error in message handler for "${message?.type}":`, err)
+        // Safety net: send a generic error to the webview so it never hangs waiting for a response
+        this.postMessage({ type: "v4Error", subsystem: message?.type ?? "unknown", error: err instanceof Error ? err.message : "Unknown error" } as never)
       }
     })
   }
