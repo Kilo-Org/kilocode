@@ -1,4 +1,4 @@
-export { MemoryService } from "./MemoryService"
+export { MemoryService, MemoryError } from "./MemoryService"
 export type {
   MemoryEntry,
   RecallResult,
@@ -6,4 +6,9 @@ export type {
   ConnectionEvent,
   AgentPermission,
   WriteHistoryRecord,
+  CrossAgentRecallRequest,
+  AgentRecallTrace,
+  MemoryErrorCode,
+  MemoryHealthCheck,
+  MemoryDiagnosticResult,
 } from "./MemoryService"

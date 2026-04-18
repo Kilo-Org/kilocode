@@ -62,12 +62,38 @@ interface AgentPermission {
   }
 }
 
+interface AgentRecallTrace {
+  requestingAgent: string
+  query: string
+  entriesSearched: number
+  entriesReturned: number
+  permissionChecks: Array<{ scope: string; granted: boolean }>
+  timestamp: number
+}
+
+interface MemoryHealthCheck {
+  status: "healthy" | "degraded" | "unavailable"
+  lastSuccessfulWrite: number | null
+  lastSuccessfulRecall: number | null
+  errorRate: number
+  consecutiveFailures: number
+}
+
+interface MemoryDiagnosticResult {
+  connectivity: boolean
+  writeTest: boolean
+  recallTest: boolean
+  latencyMs: number
+  errors: string[]
+}
+
 interface MemoryStatusPayload {
   connection: MemoryConnection
   connectionHistory: ConnectionEvent[]
   entryCount: number
   writeHistoryCount: number
   permissions: AgentPermission[]
+  health: MemoryHealthCheck
 }
 
 // ─── Style Constants ─────────────────────────────────────
@@ -142,6 +168,12 @@ const statusColors: Record<string, string> = {
   connected: "var(--vscode-testing-iconPassed)",
   disconnected: "var(--vscode-disabledForeground)",
   error: "var(--vscode-testing-iconFailed)",
+}
+
+const healthStatusColors: Record<string, string> = {
+  healthy: "var(--vscode-testing-iconPassed)",
+  degraded: "var(--vscode-charts-yellow)",
+  unavailable: "var(--vscode-testing-iconFailed)",
 }
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -273,11 +305,28 @@ const MemoryTab: Component = () => {
   const [permissions, setPermissions] = createSignal<AgentPermission[]>([])
   const [newAgentId, setNewAgentId] = createSignal("")
 
+  // ── Health & diagnostics state ──
+  const [health, setHealth] = createSignal<MemoryHealthCheck>({
+    status: "healthy",
+    lastSuccessfulWrite: null,
+    lastSuccessfulRecall: null,
+    errorRate: 0,
+    consecutiveFailures: 0,
+  })
+  const [diagnosticResult, setDiagnosticResult] = createSignal<MemoryDiagnosticResult | null>(null)
+  const [diagRunning, setDiagRunning] = createSignal(false)
+
+  // ── Agent recall traces state ──
+  const [recallTraces, setRecallTraces] = createSignal<AgentRecallTrace[]>([])
+  const [expandedTraceIdx, setExpandedTraceIdx] = createSignal<number | null>(null)
+
   // ── Section collapse ──
   const [connectOpen, setConnectOpen] = createSignal(true)
   const [recallOpen, setRecallOpen] = createSignal(true)
   const [historyOpen, setHistoryOpen] = createSignal(true)
   const [agentOpen, setAgentOpen] = createSignal(true)
+  const [healthOpen, setHealthOpen] = createSignal(false)
+  const [tracesOpen, setTracesOpen] = createSignal(false)
 
   // ── Message handler ──
   const unsubscribe = vscode.onMessage((msg) => {
@@ -287,6 +336,9 @@ const MemoryTab: Component = () => {
         setConnection(payload.connection)
         setConnectionHistory(payload.connectionHistory)
         setPermissions(payload.permissions)
+        if (payload.health) {
+          setHealth(payload.health)
+        }
         setReconnecting(false)
         break
       }
@@ -329,6 +381,22 @@ const MemoryTab: Component = () => {
           }
           return [...prev, payload.permission]
         })
+        break
+      }
+      case "memoryHealthChanged": {
+        const payload = msg as unknown as { type: string; health: MemoryHealthCheck }
+        setHealth(payload.health)
+        break
+      }
+      case "memoryDiagnosticResult": {
+        const payload = msg as unknown as { type: string; result: MemoryDiagnosticResult }
+        setDiagnosticResult(payload.result)
+        setDiagRunning(false)
+        break
+      }
+      case "memoryRecallTracesLoaded": {
+        const payload = msg as unknown as { type: string; traces: AgentRecallTrace[] }
+        setRecallTraces(payload.traces)
         break
       }
     }
@@ -400,6 +468,16 @@ const MemoryTab: Component = () => {
     doSetPermission(id, "project", true)
     doSetPermission(id, "task", true)
     setNewAgentId("")
+  }
+
+  function doRunDiagnostics() {
+    setDiagRunning(true)
+    setDiagnosticResult(null)
+    vscode.postMessage({ type: "memoryRunDiagnostics" } as never)
+  }
+
+  function doLoadRecallTraces() {
+    vscode.postMessage({ type: "memoryGetRecallTraces" } as never)
   }
 
   // Refresh history when filters change
@@ -1063,6 +1141,286 @@ const MemoryTab: Component = () => {
                   </div>
                 )}
               </For>
+            </Show>
+          </div>
+        </Show>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════
+          Health & Diagnostics
+          ═══════════════════════════════════════════════════════ */}
+      <div style={cardStyle}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => setHealthOpen(!healthOpen())}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <span>{healthOpen() ? "\u25BC" : "\u25B6"}</span>
+            <span>Health & Diagnostics</span>
+            <span
+              style={{
+                display: "inline-block",
+                width: "8px",
+                height: "8px",
+                "border-radius": "50%",
+                background: healthStatusColors[health().status] ?? healthStatusColors.unavailable,
+              }}
+              title={health().status}
+            />
+            <span style={{ "font-weight": "400", "font-size": "12px", color: "var(--vscode-descriptionForeground)" }}>
+              {health().status}
+            </span>
+          </div>
+          <button
+            style={secondaryButtonStyle}
+            disabled={diagRunning()}
+            onClick={(e) => {
+              e.stopPropagation()
+              doRunDiagnostics()
+            }}
+          >
+            {diagRunning() ? "Running..." : "Run Diagnostics"}
+          </button>
+        </div>
+
+        <Show when={healthOpen()}>
+          <div style={sectionContentStyle}>
+            {/* Health metrics */}
+            <div style={{ display: "grid", "grid-template-columns": "auto 1fr", gap: "4px 12px", "font-size": "12px", "margin-bottom": "8px" }}>
+              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Status:</span>
+              <span style={{ color: healthStatusColors[health().status] ?? "var(--vscode-foreground)", "font-weight": "600" }}>
+                {health().status.charAt(0).toUpperCase() + health().status.slice(1)}
+              </span>
+              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Error Rate:</span>
+              <span>{(health().errorRate * 100).toFixed(1)}%</span>
+              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Consecutive Failures:</span>
+              <span style={{ color: health().consecutiveFailures > 0 ? "var(--vscode-errorForeground)" : "var(--vscode-foreground)" }}>
+                {health().consecutiveFailures}
+              </span>
+              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Last Write:</span>
+              <span>{health().lastSuccessfulWrite ? formatTimestamp(health().lastSuccessfulWrite!) : "Never"}</span>
+              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Last Recall:</span>
+              <span>{health().lastSuccessfulRecall ? formatTimestamp(health().lastSuccessfulRecall!) : "Never"}</span>
+            </div>
+
+            {/* Diagnostic results */}
+            <Show when={diagnosticResult()}>
+              {(result) => (
+                <div
+                  style={{
+                    border: "1px solid var(--vscode-panel-border)",
+                    "border-radius": "3px",
+                    padding: "8px",
+                    background: "var(--vscode-textBlockQuote-background)",
+                  }}
+                >
+                  <div style={{ "font-weight": "600", "font-size": "12px", "margin-bottom": "6px" }}>
+                    Diagnostic Results
+                    <span style={{ "font-weight": "400", "font-size": "11px", color: "var(--vscode-descriptionForeground)", "margin-left": "8px" }}>
+                      ({result().latencyMs}ms)
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", gap: "16px", "font-size": "12px", "margin-bottom": "6px" }}>
+                    <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "8px",
+                          height: "8px",
+                          "border-radius": "50%",
+                          background: result().connectivity ? "var(--vscode-testing-iconPassed)" : "var(--vscode-testing-iconFailed)",
+                        }}
+                      />
+                      <span>Connectivity</span>
+                    </div>
+                    <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "8px",
+                          height: "8px",
+                          "border-radius": "50%",
+                          background: result().writeTest ? "var(--vscode-testing-iconPassed)" : "var(--vscode-testing-iconFailed)",
+                        }}
+                      />
+                      <span>Write</span>
+                    </div>
+                    <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                      <span
+                        style={{
+                          display: "inline-block",
+                          width: "8px",
+                          height: "8px",
+                          "border-radius": "50%",
+                          background: result().recallTest ? "var(--vscode-testing-iconPassed)" : "var(--vscode-testing-iconFailed)",
+                        }}
+                      />
+                      <span>Recall</span>
+                    </div>
+                  </div>
+                  <Show when={result().errors.length > 0}>
+                    <div style={{ "font-size": "11px", color: "var(--vscode-errorForeground)", "margin-top": "4px" }}>
+                      <For each={result().errors}>
+                        {(err) => <div style={{ padding: "1px 0" }}>- {err}</div>}
+                      </For>
+                    </div>
+                  </Show>
+                </div>
+              )}
+            </Show>
+          </div>
+        </Show>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════
+          Agent Recall Traces
+          ═══════════════════════════════════════════════════════ */}
+      <div style={cardStyle}>
+        <div
+          style={sectionHeaderStyle}
+          onClick={() => {
+            const opening = !tracesOpen()
+            setTracesOpen(opening)
+            if (opening) doLoadRecallTraces()
+          }}
+        >
+          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <span>{tracesOpen() ? "\u25BC" : "\u25B6"}</span>
+            <span>Agent Recall Traces</span>
+            <Show when={recallTraces().length > 0}>
+              <span style={{ "font-weight": "400", "font-size": "11px", color: "var(--vscode-descriptionForeground)" }}>
+                ({recallTraces().length})
+              </span>
+            </Show>
+          </div>
+          <Show when={tracesOpen()}>
+            <button
+              style={secondaryButtonStyle}
+              onClick={(e) => {
+                e.stopPropagation()
+                doLoadRecallTraces()
+              }}
+            >
+              Refresh
+            </button>
+          </Show>
+        </div>
+
+        <Show when={tracesOpen()}>
+          <div style={sectionContentStyle}>
+            <Show
+              when={recallTraces().length > 0}
+              fallback={
+                <div style={{ "font-size": "12px", color: "var(--vscode-descriptionForeground)", padding: "8px 0", "text-align": "center" }}>
+                  No cross-agent recall traces recorded.
+                </div>
+              }
+            >
+              <div style={{ "max-height": "350px", "overflow-y": "auto", display: "flex", "flex-direction": "column", gap: "4px" }}>
+                <For each={recallTraces().slice().reverse()}>
+                  {(trace, idx) => {
+                    const isExpanded = () => expandedTraceIdx() === idx()
+                    return (
+                      <div
+                        style={{
+                          border: "1px solid var(--vscode-panel-border)",
+                          "border-radius": "3px",
+                          overflow: "hidden",
+                        }}
+                      >
+                        {/* Trace summary row */}
+                        <div
+                          style={{
+                            display: "flex",
+                            "align-items": "center",
+                            gap: "8px",
+                            padding: "6px 8px",
+                            cursor: "pointer",
+                            background: isExpanded() ? "var(--vscode-list-hoverBackground)" : "transparent",
+                          }}
+                          onClick={() => setExpandedTraceIdx(isExpanded() ? null : idx())}
+                        >
+                          <span style={{ "font-size": "10px", "flex-shrink": "0" }}>
+                            {isExpanded() ? "\u25BC" : "\u25B6"}
+                          </span>
+                          <span
+                            style={{
+                              "font-size": "11px",
+                              padding: "1px 6px",
+                              "border-radius": "8px",
+                              background: "var(--vscode-badge-background)",
+                              color: "var(--vscode-badge-foreground)",
+                              "flex-shrink": "0",
+                            }}
+                          >
+                            {trace.requestingAgent}
+                          </span>
+                          <span style={{ flex: "1", "font-size": "12px", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
+                            {trace.query}
+                          </span>
+                          <span style={{ "font-size": "11px", color: "var(--vscode-descriptionForeground)", "flex-shrink": "0" }}>
+                            {trace.entriesReturned}/{trace.entriesSearched}
+                          </span>
+                          <span style={{ "font-size": "10px", color: "var(--vscode-descriptionForeground)", "flex-shrink": "0" }}>
+                            {formatTimestamp(trace.timestamp)}
+                          </span>
+                        </div>
+
+                        {/* Expanded trace detail */}
+                        <Show when={isExpanded()}>
+                          <div
+                            style={{
+                              padding: "8px 12px",
+                              "border-top": "1px solid var(--vscode-panel-border)",
+                              "font-size": "12px",
+                              background: "var(--vscode-textBlockQuote-background)",
+                            }}
+                          >
+                            <div style={{ display: "grid", "grid-template-columns": "auto 1fr", gap: "2px 10px", "font-size": "11px", "margin-bottom": "6px" }}>
+                              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Agent:</span>
+                              <span>{trace.requestingAgent}</span>
+                              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Query:</span>
+                              <span style={{ "word-break": "break-word" }}>{trace.query}</span>
+                              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Searched:</span>
+                              <span>{trace.entriesSearched} entries</span>
+                              <span style={{ color: "var(--vscode-descriptionForeground)" }}>Returned:</span>
+                              <span>{trace.entriesReturned} entries</span>
+                            </div>
+
+                            <Show when={trace.permissionChecks.length > 0}>
+                              <div style={{ "font-weight": "600", "font-size": "11px", "margin-bottom": "4px", color: "var(--vscode-descriptionForeground)" }}>
+                                Permission Checks
+                              </div>
+                              <div style={{ "max-height": "100px", "overflow-y": "auto", "font-size": "11px" }}>
+                                <For each={trace.permissionChecks}>
+                                  {(check) => (
+                                    <div style={{ display: "flex", "align-items": "center", gap: "6px", padding: "1px 0" }}>
+                                      <span
+                                        style={{
+                                          display: "inline-block",
+                                          width: "6px",
+                                          height: "6px",
+                                          "border-radius": "50%",
+                                          background: check.granted ? "var(--vscode-testing-iconPassed)" : "var(--vscode-testing-iconFailed)",
+                                          "flex-shrink": "0",
+                                        }}
+                                      />
+                                      <span style={{ color: "var(--vscode-descriptionForeground)" }}>{check.scope}:</span>
+                                      <span style={{ color: check.granted ? "var(--vscode-testing-iconPassed)" : "var(--vscode-testing-iconFailed)" }}>
+                                        {check.granted ? "granted" : "denied"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </For>
+                              </div>
+                            </Show>
+                          </div>
+                        </Show>
+                      </div>
+                    )
+                  }}
+                </For>
+              </div>
             </Show>
           </div>
         </Show>

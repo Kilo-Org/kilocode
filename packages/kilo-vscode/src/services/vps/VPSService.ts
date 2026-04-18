@@ -67,6 +67,19 @@ export interface IncidentRunbook {
   steps: RunbookStep[]
 }
 
+export interface ReverseProxyConfig {
+  type: "nginx" | "caddy"
+  domain: string
+  upstream: string
+  sslEnabled: boolean
+  configPath: string
+}
+
+export interface ReverseProxyTestResult {
+  valid: boolean
+  errors: string[]
+}
+
 export interface DeployPreflightResult {
   ok: boolean
   serverId: string
@@ -894,6 +907,297 @@ export class VPSService implements vscode.Disposable {
     }
   }
 
+  // ── Reverse Proxy Management ─────────────────────────
+
+  /**
+   * Parse nginx/caddy configs on a remote server to discover reverse-proxy sites.
+   * Scans standard config directories for server blocks / site entries.
+   */
+  async getReverseProxyConfigs(serverId: string): Promise<ReverseProxyConfig[]> {
+    const server = this.getServer(serverId)
+    if (!server) throw new Error(`Server not found: ${serverId}`)
+
+    const configs: ReverseProxyConfig[] = []
+
+    // Try nginx first
+    try {
+      const nginxOutput = await this.execRemote(
+        server,
+        [
+          "find /etc/nginx/sites-enabled /etc/nginx/conf.d -name '*.conf' -type f 2>/dev/null",
+          "| while read f; do",
+          "  echo '---FILE---'",
+          "  echo \"$f\"",
+          "  cat \"$f\" 2>/dev/null",
+          "done",
+        ].join(" "),
+      )
+
+      if (nginxOutput.trim()) {
+        const fileBlocks = nginxOutput.split("---FILE---").filter((b) => b.trim())
+        for (const block of fileBlocks) {
+          const lines = block.trim().split("\n")
+          const configPath = lines[0]?.trim() ?? ""
+          const content = lines.slice(1).join("\n")
+          const parsed = this.parseNginxServerBlocks(content, configPath)
+          configs.push(...parsed)
+        }
+      }
+    } catch {
+      // nginx may not be installed; continue to caddy
+    }
+
+    // Try caddy
+    try {
+      const caddyOutput = await this.execRemote(
+        server,
+        "cat /etc/caddy/Caddyfile 2>/dev/null || echo ''",
+      )
+
+      if (caddyOutput.trim()) {
+        const parsed = this.parseCaddyBlocks(caddyOutput, "/etc/caddy/Caddyfile")
+        configs.push(...parsed)
+      }
+    } catch {
+      // caddy may not be installed
+    }
+
+    this.log(`Found ${configs.length} reverse proxy configs on ${server.hostname}`)
+    return configs
+  }
+
+  /**
+   * Write a new reverse-proxy config to the server and reload the web server.
+   */
+  async addReverseProxyConfig(serverId: string, config: ReverseProxyConfig): Promise<void> {
+    const server = this.getServer(serverId)
+    if (!server) throw new Error(`Server not found: ${serverId}`)
+
+    let fileContent: string
+    let reloadCmd: string
+
+    if (config.type === "nginx") {
+      fileContent = this.generateNginxConfig(config)
+      reloadCmd = "sudo nginx -t && sudo systemctl reload nginx"
+    } else {
+      fileContent = this.generateCaddyConfig(config)
+      reloadCmd = "sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy"
+    }
+
+    // Write the config file and reload the service in one SSH round-trip
+    const escapedContent = fileContent.replace(/'/g, "'\\''")
+    const writeCmd = `echo '${escapedContent}' | sudo tee ${shellEscape(config.configPath)} > /dev/null`
+
+    await this.execRemote(server, `${writeCmd} && ${reloadCmd}`)
+    this.log(`Reverse proxy config added on ${server.hostname}: ${config.domain} -> ${config.upstream}`)
+  }
+
+  /**
+   * Remove a reverse-proxy config file for a given domain and reload the service.
+   */
+  async removeReverseProxyConfig(serverId: string, domain: string): Promise<void> {
+    const server = this.getServer(serverId)
+    if (!server) throw new Error(`Server not found: ${serverId}`)
+
+    // Find configs matching this domain
+    const configs = await this.getReverseProxyConfigs(serverId)
+    const match = configs.find((c) => c.domain === domain)
+
+    if (!match) {
+      throw new Error(`No reverse proxy config found for domain: ${domain}`)
+    }
+
+    // Remove the config file and reload the appropriate service
+    const reloadCmd =
+      match.type === "nginx"
+        ? "sudo nginx -t && sudo systemctl reload nginx"
+        : "sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy"
+
+    await this.execRemote(server, `sudo rm -f ${shellEscape(match.configPath)} && ${reloadCmd}`)
+    this.log(`Reverse proxy config removed on ${server.hostname}: ${domain}`)
+  }
+
+  /**
+   * Test the reverse-proxy configuration on a server (nginx -t or caddy validate).
+   */
+  async testReverseProxyConfig(serverId: string): Promise<ReverseProxyTestResult> {
+    const server = this.getServer(serverId)
+    if (!server) throw new Error(`Server not found: ${serverId}`)
+
+    const errors: string[] = []
+    let valid = true
+
+    // Test nginx config
+    try {
+      const nginxResult = await this.execRemote(server, "sudo nginx -t 2>&1")
+      if (!nginxResult.includes("syntax is ok") && !nginxResult.includes("test is successful")) {
+        valid = false
+        const errorLines = nginxResult
+          .split("\n")
+          .filter((l) => l.includes("emerg") || l.includes("error") || l.includes("["))
+          .map((l) => l.trim())
+        errors.push(...errorLines)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.includes("not found") && !msg.includes("No such file")) {
+        valid = false
+        errors.push(`nginx test failed: ${msg}`)
+      }
+    }
+
+    // Test caddy config
+    try {
+      const caddyResult = await this.execRemote(
+        server,
+        "sudo caddy validate --config /etc/caddy/Caddyfile 2>&1",
+      )
+      if (caddyResult.includes("Error") || caddyResult.includes("error")) {
+        valid = false
+        const errorLines = caddyResult
+          .split("\n")
+          .filter((l) => l.toLowerCase().includes("error"))
+          .map((l) => l.trim())
+        errors.push(...errorLines)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      if (!msg.includes("not found") && !msg.includes("No such file")) {
+        valid = false
+        errors.push(`caddy validate failed: ${msg}`)
+      }
+    }
+
+    this.log(`Reverse proxy test on ${server.hostname}: valid=${valid}, errors=${errors.length}`)
+    return { valid, errors }
+  }
+
+  // ── Reverse Proxy Parsers (private) ─────────────────
+
+  /**
+   * Extract domain, upstream, and SSL info from nginx server blocks.
+   */
+  private parseNginxServerBlocks(content: string, configPath: string): ReverseProxyConfig[] {
+    const configs: ReverseProxyConfig[] = []
+    // Match server_name directives
+    const serverNameRe = /server_name\s+([^;]+);/g
+    const proxyPassRe = /proxy_pass\s+([^;]+);/g
+    const sslRe = /listen\s+.*443\s+ssl/
+
+    let snMatch: RegExpExecArray | null
+    while ((snMatch = serverNameRe.exec(content)) !== null) {
+      const domain = snMatch[1].trim().split(/\s+/)[0]
+      if (domain === "_" || domain === "localhost") continue
+
+      // Find the closest proxy_pass after this server_name
+      const afterServerName = content.slice(snMatch.index)
+      const ppMatch = proxyPassRe.exec(afterServerName)
+      const upstream = ppMatch ? ppMatch[1].trim() : ""
+
+      const sslEnabled = sslRe.test(content)
+
+      configs.push({
+        type: "nginx",
+        domain,
+        upstream,
+        sslEnabled,
+        configPath,
+      })
+
+      // Reset proxyPassRe for next iteration
+      proxyPassRe.lastIndex = 0
+    }
+
+    return configs
+  }
+
+  /**
+   * Extract domain and upstream info from a Caddyfile.
+   */
+  private parseCaddyBlocks(content: string, configPath: string): ReverseProxyConfig[] {
+    const configs: ReverseProxyConfig[] = []
+    // Caddy site blocks: `domain.com { ... reverse_proxy upstream ... }`
+    const blockRe = /^(\S+)\s*\{/gm
+    const reverseProxyRe = /reverse_proxy\s+([^\n}]+)/
+
+    let blockMatch: RegExpExecArray | null
+    while ((blockMatch = blockRe.exec(content)) !== null) {
+      const domain = blockMatch[1].trim()
+      if (domain === "{" || domain.startsWith("#") || domain.startsWith(":")) continue
+
+      // Find the block's content (up to the next closing brace at the same level)
+      const blockStart = content.indexOf("{", blockMatch.index) + 1
+      let depth = 1
+      let blockEnd = blockStart
+      for (let i = blockStart; i < content.length && depth > 0; i++) {
+        if (content[i] === "{") depth++
+        else if (content[i] === "}") depth--
+        blockEnd = i
+      }
+
+      const blockContent = content.slice(blockStart, blockEnd)
+      const rpMatch = reverseProxyRe.exec(blockContent)
+      const upstream = rpMatch ? rpMatch[1].trim() : ""
+
+      // Caddy auto-provisions TLS for non-localhost domains by default
+      const sslEnabled = !domain.startsWith("http://") && !domain.includes("localhost")
+
+      configs.push({
+        type: "caddy",
+        domain: domain.replace(/^https?:\/\//, ""),
+        upstream,
+        sslEnabled,
+        configPath,
+      })
+    }
+
+    return configs
+  }
+
+  /**
+   * Generate an nginx server block config string.
+   */
+  private generateNginxConfig(config: ReverseProxyConfig): string {
+    const lines = ["server {"]
+
+    if (config.sslEnabled) {
+      lines.push(`    listen 443 ssl;`)
+      lines.push(`    listen [::]:443 ssl;`)
+      lines.push(`    ssl_certificate /etc/letsencrypt/live/${config.domain}/fullchain.pem;`)
+      lines.push(`    ssl_certificate_key /etc/letsencrypt/live/${config.domain}/privkey.pem;`)
+    } else {
+      lines.push(`    listen 80;`)
+      lines.push(`    listen [::]:80;`)
+    }
+
+    lines.push(`    server_name ${config.domain};`)
+    lines.push("")
+    lines.push("    location / {")
+    lines.push(`        proxy_pass ${config.upstream};`)
+    lines.push("        proxy_set_header Host $host;")
+    lines.push("        proxy_set_header X-Real-IP $remote_addr;")
+    lines.push("        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;")
+    lines.push("        proxy_set_header X-Forwarded-Proto $scheme;")
+    lines.push("    }")
+    lines.push("}")
+
+    return lines.join("\n")
+  }
+
+  /**
+   * Generate a Caddy site block config string.
+   */
+  private generateCaddyConfig(config: ReverseProxyConfig): string {
+    const lines: string[] = []
+    const domainPrefix = config.sslEnabled ? config.domain : `http://${config.domain}`
+
+    lines.push(`${domainPrefix} {`)
+    lines.push(`    reverse_proxy ${config.upstream}`)
+    lines.push("}")
+
+    return lines.join("\n")
+  }
+
   // ── Webview Message Handling ──────────────────────────
 
   /**
@@ -1038,6 +1342,67 @@ export class VPSService implements vscode.Disposable {
           const msg = err instanceof Error ? err.message : String(err)
           postToWebview({ type: "vpsBackupStatus", status: "none" })
           vscode.window.showErrorMessage(`Backup failed: ${msg}`)
+        }
+        return true
+      }
+
+      case "vpsGetReverseProxyConfigs": {
+        const serverId = message.serverId as string
+        try {
+          const configs = await this.getReverseProxyConfigs(serverId)
+          postToWebview({ type: "vpsReverseProxyConfigsLoaded", configs })
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          vscode.window.showErrorMessage(`Failed to fetch reverse proxy configs: ${msg}`)
+        }
+        return true
+      }
+
+      case "vpsAddReverseProxyConfig": {
+        const serverId = message.serverId as string
+        const config = message.config as ReverseProxyConfig
+        try {
+          await this.addReverseProxyConfig(serverId, config)
+          const configs = await this.getReverseProxyConfigs(serverId)
+          postToWebview({ type: "vpsReverseProxyConfigsLoaded", configs })
+          vscode.window.showInformationMessage(`Reverse proxy added for ${config.domain}`)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          vscode.window.showErrorMessage(`Failed to add reverse proxy config: ${msg}`)
+        }
+        return true
+      }
+
+      case "vpsRemoveReverseProxyConfig": {
+        const serverId = message.serverId as string
+        const domain = message.domain as string
+        try {
+          await this.removeReverseProxyConfig(serverId, domain)
+          const configs = await this.getReverseProxyConfigs(serverId)
+          postToWebview({ type: "vpsReverseProxyConfigsLoaded", configs })
+          vscode.window.showInformationMessage(`Reverse proxy removed for ${domain}`)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          vscode.window.showErrorMessage(`Failed to remove reverse proxy config: ${msg}`)
+        }
+        return true
+      }
+
+      case "vpsTestReverseProxyConfig": {
+        const serverId = message.serverId as string
+        try {
+          const result = await this.testReverseProxyConfig(serverId)
+          postToWebview({ type: "vpsReverseProxyTestResult", result })
+          if (result.valid) {
+            vscode.window.showInformationMessage("Reverse proxy configuration is valid")
+          } else {
+            vscode.window.showWarningMessage(
+              `Reverse proxy config errors: ${result.errors.join("; ")}`,
+            )
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          vscode.window.showErrorMessage(`Failed to test reverse proxy config: ${msg}`)
         }
         return true
       }

@@ -87,9 +87,33 @@ export interface GpuQuota {
 
 export interface ExportOptions {
   jobId: string
-  format: "gguf" | "safetensors" | "onnx"
+  format: "gguf" | "safetensors" | "pytorch" | "onnx"
+  quantization: "none" | "q4_0" | "q4_1" | "q5_0" | "q5_1" | "q8_0" | "f16"
   outputPath: string
-  quantization?: string
+  includeTokenizer: boolean
+  includeConfig: boolean
+  includeReadme: boolean
+  mergeAdapter: boolean
+}
+
+export interface ExportFile {
+  name: string
+  path: string
+  sizeBytes: number
+  type: "model" | "tokenizer" | "config" | "readme" | "metadata"
+}
+
+export interface ExportResult {
+  exportId: string
+  jobId: string
+  format: string
+  outputPath: string
+  files: ExportFile[]
+  totalSizeBytes: number
+  status: "pending" | "exporting" | "complete" | "failed"
+  startedAt: number
+  completedAt?: number
+  error?: string
 }
 
 interface TrainingState {
@@ -179,6 +203,7 @@ export class TrainingService implements vscode.Disposable {
   private disposables: vscode.Disposable[] = []
   private jobTimers: Map<string, ReturnType<typeof setInterval>> = new Map()
   private jobTimeoutTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private exports: Map<string, ExportResult> = new Map()
   private workspaceRoot: string
   private readonly gpuQuota: GpuQuota = {
     maxConcurrentJobs: 2,
@@ -806,43 +831,332 @@ export class TrainingService implements vscode.Disposable {
 
   // ─── Model Export ───────────────────────────────────────
 
-  async exportModel(options: ExportOptions): Promise<string> {
-    const job = this.jobs.find((j) => j.id === options.jobId)
-    if (!job) throw new Error(`Job not found: ${options.jobId}`)
-    if (job.status !== "completed") throw new Error("Can only export completed jobs")
+  validateExportOptions(options: ExportOptions): { valid: boolean; errors: string[] } {
+    const errors: string[] = []
 
+    // Validate job exists and is completed
+    const job = this.jobs.find((j) => j.id === options.jobId)
+    if (!job) {
+      errors.push(`Job not found: ${options.jobId}`)
+    } else if (job.status !== "completed") {
+      errors.push(`Job has not completed (current status: ${job.status}). Only completed jobs can be exported.`)
+    }
+
+    // Validate format
+    const validFormats = ["gguf", "safetensors", "pytorch", "onnx"]
+    if (!validFormats.includes(options.format)) {
+      errors.push(`Invalid format "${options.format}". Must be one of: ${validFormats.join(", ")}`)
+    }
+
+    // Validate quantization
+    const validQuantizations = ["none", "q4_0", "q4_1", "q5_0", "q5_1", "q8_0", "f16"]
+    if (!validQuantizations.includes(options.quantization)) {
+      errors.push(`Invalid quantization "${options.quantization}". Must be one of: ${validQuantizations.join(", ")}`)
+    }
+
+    // GGUF-specific: quantization other than "none" only makes sense for gguf
+    if (options.format !== "gguf" && options.quantization !== "none" && options.quantization !== "f16") {
+      errors.push(`Quantization "${options.quantization}" is only supported for GGUF format. Use "none" or "f16" for ${options.format}.`)
+    }
+
+    // Validate output path is provided
+    if (!options.outputPath || options.outputPath.trim().length === 0) {
+      errors.push("Output path must be specified")
+    }
+
+    // mergeAdapter only meaningful for LoRA/QLoRA presets
+    if (options.mergeAdapter && job && job.preset !== "lora" && job.preset !== "qlora") {
+      errors.push(`mergeAdapter is only applicable to LoRA/QLoRA jobs (this job uses preset "${job.preset}")`)
+    }
+
+    return { valid: errors.length === 0, errors }
+  }
+
+  estimateExportSize(jobId: string, format: string, quantization: string): number {
+    const job = this.jobs.find((j) => j.id === jobId)
+    if (!job) return 0
+
+    // Base model size estimate derived from training steps and hyperparams.
+    // In a real implementation this would come from the model architecture;
+    // here we approximate using the relationship between dataset rows,
+    // batch size, and epochs to infer a rough parameter count.
+    const dataset = this.datasets.find((d) => d.id === job.datasetId)
+    const rowCount = dataset?.rowCount ?? 100
+    // Rough heuristic: ~1M params per 100 rows for a fine-tune adapter
+    const estimatedParams = Math.max(1_000_000, rowCount * 10_000)
+
+    // Bytes per parameter depends on quantization
+    let bytesPerParam: number
+    switch (quantization) {
+      case "q4_0":
+      case "q4_1":
+        bytesPerParam = 0.5 // 4-bit
+        break
+      case "q5_0":
+      case "q5_1":
+        bytesPerParam = 0.625 // 5-bit
+        break
+      case "q8_0":
+        bytesPerParam = 1.0 // 8-bit
+        break
+      case "f16":
+        bytesPerParam = 2.0 // 16-bit
+        break
+      default: // "none" — full precision float32
+        bytesPerParam = 4.0
+        break
+    }
+
+    let modelBytes = Math.round(estimatedParams * bytesPerParam)
+
+    // Format overhead multipliers
+    switch (format) {
+      case "gguf":
+        modelBytes = Math.round(modelBytes * 1.02) // ~2% metadata overhead
+        break
+      case "onnx":
+        modelBytes = Math.round(modelBytes * 1.15) // ONNX graph overhead
+        break
+      case "safetensors":
+        modelBytes = Math.round(modelBytes * 1.01) // minimal header
+        break
+      case "pytorch":
+        modelBytes = Math.round(modelBytes * 1.05) // pickle overhead
+        break
+    }
+
+    // Add tokenizer + config estimates (~2 MB)
+    return modelBytes + 2 * 1024 * 1024
+  }
+
+  async exportModel(options: ExportOptions): Promise<ExportResult> {
+    // ── Validate ──
+    const validation = this.validateExportOptions(options)
+    if (!validation.valid) {
+      throw new Error(`Export validation failed:\n${validation.errors.join("\n")}`)
+    }
+
+    const job = this.jobs.find((j) => j.id === options.jobId)!
+    const exportId = generateId()
+
+    // ── Ensure output directory ──
     const outputDir = options.outputPath || path.join(this.workspaceRoot, ".kilo", "exports")
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true })
     }
 
-    const ext = options.format === "gguf" ? ".gguf" : options.format === "safetensors" ? ".safetensors" : ".onnx"
-    const fileName = `${job.name.replace(/[^a-zA-Z0-9_-]/g, "_")}_${options.format}${ext}`
-    const outputPath = path.join(outputDir, fileName)
-
-    // Write a manifest describing the export (actual conversion would require ML frameworks)
-    const manifest = {
-      exportedAt: Date.now(),
+    // ── Initialise ExportResult ──
+    const result: ExportResult = {
+      exportId,
+      jobId: options.jobId,
       format: options.format,
-      quantization: options.quantization,
-      sourceJob: {
-        id: job.id,
-        name: job.name,
-        preset: job.preset,
-        finalLoss: job.loss,
-        totalSteps: job.totalSteps,
-        hyperparams: job.hyperparams,
-      },
-      outputPath,
+      outputPath: outputDir,
+      files: [],
+      totalSizeBytes: 0,
+      status: "pending",
+      startedAt: Date.now(),
     }
-
-    fs.writeFileSync(outputPath + ".manifest.json", JSON.stringify(manifest, null, 2), "utf8")
-    job.logs.push(
-      `[${new Date().toISOString()}] Model exported as ${options.format.toUpperCase()} to ${outputPath}`
-    )
+    this.exports.set(exportId, result)
     this.emitChange()
 
-    return outputPath
+    try {
+      result.status = "exporting"
+      this.emitChange()
+
+      const safeName = job.name.replace(/[^a-zA-Z0-9_-]/g, "_")
+
+      // ── Build export manifest & simulate files ──
+
+      // 1. Model weight file
+      const extMap: Record<string, string> = {
+        gguf: ".gguf",
+        safetensors: ".safetensors",
+        pytorch: ".bin",
+        onnx: ".onnx",
+      }
+      const modelFileName = `${safeName}${extMap[options.format] ?? ".bin"}`
+      const modelFilePath = path.join(outputDir, modelFileName)
+      const estimatedModelSize = this.estimateExportSize(options.jobId, options.format, options.quantization)
+      result.files.push({
+        name: modelFileName,
+        path: modelFilePath,
+        sizeBytes: estimatedModelSize,
+        type: "model",
+      })
+
+      // 2. Tokenizer (optional)
+      if (options.includeTokenizer) {
+        const tokenizerPath = path.join(outputDir, "tokenizer.json")
+        const tokenizerContent = JSON.stringify(
+          {
+            type: "BPE",
+            version: "1.0",
+            sourceJob: job.id,
+            note: "Placeholder tokenizer — replace with actual tokenizer from base model",
+          },
+          null,
+          2
+        )
+        fs.writeFileSync(tokenizerPath, tokenizerContent, "utf8")
+        const tokenizerSize = Buffer.byteLength(tokenizerContent, "utf8")
+        result.files.push({
+          name: "tokenizer.json",
+          path: tokenizerPath,
+          sizeBytes: tokenizerSize,
+          type: "tokenizer",
+        })
+      }
+
+      // 3. Config (optional)
+      if (options.includeConfig) {
+        const configPath = path.join(outputDir, "config.json")
+        const configContent = JSON.stringify(
+          {
+            model_type: "fine-tuned",
+            source_job: job.id,
+            source_job_name: job.name,
+            preset: job.preset,
+            format: options.format,
+            quantization: options.quantization,
+            merge_adapter: options.mergeAdapter,
+            hyperparams: job.hyperparams,
+            training: {
+              total_steps: job.totalSteps,
+              final_loss: job.loss,
+              epochs: job.hyperparams.epochs,
+              completed_at: job.completedAt,
+            },
+          },
+          null,
+          2
+        )
+        fs.writeFileSync(configPath, configContent, "utf8")
+        const configSize = Buffer.byteLength(configContent, "utf8")
+        result.files.push({
+          name: "config.json",
+          path: configPath,
+          sizeBytes: configSize,
+          type: "config",
+        })
+      }
+
+      // 4. README model card (optional)
+      if (options.includeReadme) {
+        const readmePath = path.join(outputDir, "README.md")
+        const dataset = this.datasets.find((d) => d.id === job.datasetId)
+        const readmeContent = [
+          `# ${job.name}`,
+          "",
+          `Fine-tuned model exported from KiloCode Training.`,
+          "",
+          "## Training Details",
+          "",
+          `| Field | Value |`,
+          `|-------|-------|`,
+          `| Preset | ${job.preset} |`,
+          `| Dataset | ${dataset?.name ?? job.datasetId} |`,
+          `| Epochs | ${job.hyperparams.epochs} |`,
+          `| Learning Rate | ${job.hyperparams.learningRate} |`,
+          `| Batch Size | ${job.hyperparams.batchSize} |`,
+          `| Total Steps | ${job.totalSteps} |`,
+          `| Final Loss | ${job.loss?.toFixed(4) ?? "N/A"} |`,
+          "",
+          "## Export Settings",
+          "",
+          `| Field | Value |`,
+          `|-------|-------|`,
+          `| Format | ${options.format} |`,
+          `| Quantization | ${options.quantization} |`,
+          `| Adapter Merged | ${options.mergeAdapter ? "Yes" : "No"} |`,
+          `| Tokenizer Included | ${options.includeTokenizer ? "Yes" : "No"} |`,
+          "",
+          `Exported at: ${new Date().toISOString()}`,
+          "",
+        ].join("\n")
+        fs.writeFileSync(readmePath, readmeContent, "utf8")
+        const readmeSize = Buffer.byteLength(readmeContent, "utf8")
+        result.files.push({
+          name: "README.md",
+          path: readmePath,
+          sizeBytes: readmeSize,
+          type: "readme",
+        })
+      }
+
+      // 5. Metadata / manifest file (always written)
+      const manifestPath = path.join(outputDir, `${safeName}.manifest.json`)
+      const manifestContent = JSON.stringify(
+        {
+          exportId,
+          exportedAt: Date.now(),
+          format: options.format,
+          quantization: options.quantization,
+          mergeAdapter: options.mergeAdapter,
+          sourceJob: {
+            id: job.id,
+            name: job.name,
+            preset: job.preset,
+            finalLoss: job.loss,
+            totalSteps: job.totalSteps,
+            hyperparams: job.hyperparams,
+            completedAt: job.completedAt,
+          },
+          files: result.files.map((f) => ({ name: f.name, type: f.type, sizeBytes: f.sizeBytes })),
+        },
+        null,
+        2
+      )
+      fs.writeFileSync(manifestPath, manifestContent, "utf8")
+      const manifestSize = Buffer.byteLength(manifestContent, "utf8")
+      result.files.push({
+        name: `${safeName}.manifest.json`,
+        path: manifestPath,
+        sizeBytes: manifestSize,
+        type: "metadata",
+      })
+
+      // ── Finalize ──
+      result.totalSizeBytes = result.files.reduce((sum, f) => sum + f.sizeBytes, 0)
+      result.status = "complete"
+      result.completedAt = Date.now()
+
+      job.logs.push(
+        `[${new Date().toISOString()}] Model exported as ${options.format.toUpperCase()} (${options.quantization}) to ${outputDir} — ${result.files.length} files, ${(result.totalSizeBytes / (1024 * 1024)).toFixed(2)} MB`
+      )
+    } catch (err: unknown) {
+      result.status = "failed"
+      result.completedAt = Date.now()
+      result.error = err instanceof Error ? err.message : String(err)
+      job.logs.push(`[${new Date().toISOString()}] Export failed: ${result.error}`)
+    }
+
+    this.emitChange()
+    return result
+  }
+
+  getExports(): ExportResult[] {
+    return [...this.exports.values()]
+  }
+
+  getExport(exportId: string): ExportResult | undefined {
+    return this.exports.get(exportId)
+  }
+
+  cancelExport(exportId: string): void {
+    const result = this.exports.get(exportId)
+    if (!result) throw new Error(`Export not found: ${exportId}`)
+    if (result.status === "complete" || result.status === "failed") {
+      throw new Error(`Cannot cancel an export that is already ${result.status}`)
+    }
+    result.status = "failed"
+    result.error = "Cancelled by user"
+    result.completedAt = Date.now()
+
+    const job = this.jobs.find((j) => j.id === result.jobId)
+    if (job) {
+      job.logs.push(`[${new Date().toISOString()}] Export ${exportId} cancelled`)
+    }
+    this.emitChange()
   }
 
   // ─── Disposal ───────────────────────────────────────────

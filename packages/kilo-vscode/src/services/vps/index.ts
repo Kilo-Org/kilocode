@@ -6,4 +6,6 @@ export type {
   DockerContainer,
   DeployEntry,
   SSHService,
+  ReverseProxyConfig,
+  ReverseProxyTestResult,
 } from "./VPSService"

@@ -48,6 +48,58 @@ export interface AgentPermission {
   }
 }
 
+export interface CrossAgentRecallRequest {
+  requestingAgent: string
+  targetAgent?: string
+  query: string
+  projectScope?: string
+  includeGlobal: boolean
+}
+
+export interface AgentRecallTrace {
+  requestingAgent: string
+  query: string
+  entriesSearched: number
+  entriesReturned: number
+  permissionChecks: Array<{ scope: string; granted: boolean }>
+  timestamp: number
+}
+
+export type MemoryErrorCode =
+  | "CONNECTION_FAILED"
+  | "WRITE_REJECTED"
+  | "RECALL_EMPTY"
+  | "PERMISSION_DENIED"
+  | "QUOTA_EXCEEDED"
+  | "INVALID_SCOPE"
+  | "TIMEOUT"
+
+export class MemoryError extends Error {
+  constructor(
+    message: string,
+    public readonly code: MemoryErrorCode,
+  ) {
+    super(message)
+    this.name = "MemoryError"
+  }
+}
+
+export interface MemoryHealthCheck {
+  status: "healthy" | "degraded" | "unavailable"
+  lastSuccessfulWrite: number | null
+  lastSuccessfulRecall: number | null
+  errorRate: number
+  consecutiveFailures: number
+}
+
+export interface MemoryDiagnosticResult {
+  connectivity: boolean
+  writeTest: boolean
+  recallTest: boolean
+  latencyMs: number
+  errors: string[]
+}
+
 interface MemoryStore {
   entries: MemoryEntry[]
   writeHistory: WriteHistoryRecord[]
@@ -132,6 +184,17 @@ export class MemoryService implements vscode.Disposable {
   private saveTimer: ReturnType<typeof setTimeout> | undefined
   private pingTimer: ReturnType<typeof setInterval> | undefined
 
+  // ── Cross-agent recall traces ──
+  private recallTraces: AgentRecallTrace[] = []
+  private readonly maxRecallTraces = 100
+
+  // ── Health tracking ──
+  private lastSuccessfulWrite: number | null = null
+  private lastSuccessfulRecall: number | null = null
+  private operationResults: Array<{ success: boolean; timestamp: number }> = []
+  private consecutiveFailures = 0
+  private readonly autoReconnectThreshold = 3
+
   private readonly _onConnectionChanged = new vscode.EventEmitter<MemoryConnection>()
   readonly onConnectionChanged = this._onConnectionChanged.event
 
@@ -143,6 +206,9 @@ export class MemoryService implements vscode.Disposable {
 
   private readonly _onPermissionChanged = new vscode.EventEmitter<AgentPermission>()
   readonly onPermissionChanged = this._onPermissionChanged.event
+
+  private readonly _onHealthChanged = new vscode.EventEmitter<MemoryHealthCheck>()
+  readonly onHealthChanged = this._onHealthChanged.event
 
   constructor(private readonly ctx: vscode.ExtensionContext) {
     this.resolveStorePath()
@@ -257,6 +323,8 @@ export class MemoryService implements vscode.Disposable {
     }
 
     this.scheduleSave()
+    this.lastSuccessfulWrite = Date.now()
+    this.recordOperation(true)
     this._onMemoryWritten.fire(entry)
     return entry
   }
@@ -365,9 +433,12 @@ export class MemoryService implements vscode.Disposable {
         timestamp: Date.now(),
       }
 
+      this.lastSuccessfulRecall = Date.now()
+      this.recordOperation(true)
       this._onRecallCompleted.fire(result)
       return result
     } catch (err: unknown) {
+      this.recordOperation(false)
       const result: RecallResult = {
         query,
         project,
@@ -438,6 +509,223 @@ export class MemoryService implements vscode.Disposable {
     return { agentId: perm.agentId, scopes: { ...perm.scopes } }
   }
 
+  // ─── Cross-Agent Recall Workflow ──────────────────────
+
+  registerAgent(agentId: string, permissions: AgentPermission): void {
+    const existing = this.store.permissions.findIndex((p) => p.agentId === agentId)
+    const perm: AgentPermission = {
+      agentId,
+      scopes: { ...permissions.scopes },
+    }
+    if (existing >= 0) {
+      this.store.permissions[existing] = perm
+    } else {
+      this.store.permissions.push(perm)
+    }
+    this.scheduleSave()
+    this._onPermissionChanged.fire({ agentId: perm.agentId, scopes: { ...perm.scopes } })
+  }
+
+  getRegisteredAgents(): Array<{ agentId: string; permissions: AgentPermission }> {
+    return this.store.permissions.map((p) => ({
+      agentId: p.agentId,
+      permissions: { agentId: p.agentId, scopes: { ...p.scopes } },
+    }))
+  }
+
+  crossAgentRecall(request: CrossAgentRecallRequest): RecallResult {
+    const project = request.projectScope ?? this.getWorkspaceName()
+    const permissionChecks: Array<{ scope: string; granted: boolean }> = []
+
+    // Verify the requesting agent is registered
+    const agentPerm = this.store.permissions.find((p) => p.agentId === request.requestingAgent)
+    if (!agentPerm) {
+      const trace: AgentRecallTrace = {
+        requestingAgent: request.requestingAgent,
+        query: request.query,
+        entriesSearched: 0,
+        entriesReturned: 0,
+        permissionChecks: [{ scope: "agent_registration", granted: false }],
+        timestamp: Date.now(),
+      }
+      this.addRecallTrace(trace)
+      this.recordOperation(false)
+      throw new MemoryError(
+        `Agent "${request.requestingAgent}" is not registered`,
+        "PERMISSION_DENIED",
+      )
+    }
+
+    if (!request.query.trim()) {
+      const result: RecallResult = { query: request.query, project, results: [], status: "empty", timestamp: Date.now() }
+      const trace: AgentRecallTrace = {
+        requestingAgent: request.requestingAgent,
+        query: request.query,
+        entriesSearched: 0,
+        entriesReturned: 0,
+        permissionChecks: [],
+        timestamp: Date.now(),
+      }
+      this.addRecallTrace(trace)
+      return result
+    }
+
+    // Filter candidates based on cross-agent permissions
+    const candidates = this.store.entries.filter((entry) => {
+      // If a target agent is specified, only include entries from that agent
+      if (request.targetAgent && entry.agent !== request.targetAgent) {
+        return false
+      }
+
+      // Check scope-level permissions for the requesting agent
+      const scopeGranted = this.checkPermission(request.requestingAgent, project, entry.scope)
+      permissionChecks.push({ scope: `${entry.scope}:${entry.project}`, granted: scopeGranted })
+
+      if (!scopeGranted) return false
+
+      // Project isolation: project/task scoped entries must match projectScope
+      if (entry.scope === "project" || entry.scope === "task") {
+        if (entry.project !== project) return false
+      }
+
+      // Global entries are only included if includeGlobal is true
+      if (entry.scope === "global" && !request.includeGlobal) {
+        return false
+      }
+
+      return true
+    })
+
+    // Use the existing recall logic for scoring
+    const result = this.recall(request.query, {
+      project,
+      projectOnly: !request.includeGlobal,
+    })
+
+    // Filter the recall results to only include entries the agent has permission to see
+    const candidateIds = new Set(candidates.map((c) => c.id))
+    const filteredResults = result.results.filter((r) => candidateIds.has(r.id))
+
+    const finalResult: RecallResult = {
+      query: request.query,
+      project,
+      results: filteredResults,
+      status: filteredResults.length > 0 ? "success" : "empty",
+      timestamp: Date.now(),
+    }
+
+    const trace: AgentRecallTrace = {
+      requestingAgent: request.requestingAgent,
+      query: request.query,
+      entriesSearched: candidates.length,
+      entriesReturned: filteredResults.length,
+      permissionChecks,
+      timestamp: Date.now(),
+    }
+    this.addRecallTrace(trace)
+    this.recordOperation(true)
+
+    return finalResult
+  }
+
+  getAgentRecallTraces(): AgentRecallTrace[] {
+    return [...this.recallTraces]
+  }
+
+  // ─── Health & Diagnostics ───────────────────────────
+
+  getHealthCheck(): MemoryHealthCheck {
+    // Compute error rate from recent operations (last 100)
+    const recentOps = this.operationResults.slice(-100)
+    const errorRate = recentOps.length > 0
+      ? recentOps.filter((op) => !op.success).length / recentOps.length
+      : 0
+
+    let status: MemoryHealthCheck["status"]
+    if (this.connection.status === "error" || this.consecutiveFailures >= this.autoReconnectThreshold) {
+      status = "unavailable"
+    } else if (errorRate > 0.1 || this.consecutiveFailures > 0) {
+      status = "degraded"
+    } else {
+      status = "healthy"
+    }
+
+    return {
+      status,
+      lastSuccessfulWrite: this.lastSuccessfulWrite,
+      lastSuccessfulRecall: this.lastSuccessfulRecall,
+      errorRate: Math.round(errorRate * 1000) / 1000,
+      consecutiveFailures: this.consecutiveFailures,
+    }
+  }
+
+  async runDiagnostics(): Promise<MemoryDiagnosticResult> {
+    const errors: string[] = []
+    const started = Date.now()
+
+    // Connectivity test
+    let connectivity = false
+    try {
+      if (this.storeFilePath) {
+        const dirExists = fs.existsSync(path.dirname(this.storeFilePath))
+        connectivity = dirExists
+        if (!dirExists) {
+          errors.push("Store directory does not exist")
+        }
+      } else {
+        errors.push("No store file path resolved")
+      }
+    } catch (err: unknown) {
+      errors.push(`Connectivity check failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+    }
+
+    // Write test
+    let writeTest = false
+    try {
+      const testEntry = this.writeMemory({
+        summary: "__diagnostic_test__",
+        content: "__diagnostic_test_content__",
+        factType: "recall",
+        scope: "task",
+        project: "__diagnostics__",
+      })
+      // Clean up the test entry
+      const idx = this.store.entries.findIndex((e) => e.id === testEntry.id)
+      if (idx >= 0) {
+        this.store.entries.splice(idx, 1)
+      }
+      // Also clean up the write history record
+      const histIdx = this.store.writeHistory.findIndex((h) => h.entryId === testEntry.id)
+      if (histIdx >= 0) {
+        this.store.writeHistory.splice(histIdx, 1)
+      }
+      this.scheduleSave()
+      writeTest = true
+    } catch (err: unknown) {
+      errors.push(`Write test failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+    }
+
+    // Recall test
+    let recallTest = false
+    try {
+      const result = this.recall("diagnostic test query", { project: "__diagnostics__" })
+      // We consider recall working even if results are empty, as long as it doesn't throw
+      recallTest = result.status !== "failed"
+    } catch (err: unknown) {
+      errors.push(`Recall test failed: ${err instanceof Error ? err.message : "Unknown error"}`)
+    }
+
+    const latencyMs = Date.now() - started
+
+    return {
+      connectivity,
+      writeTest,
+      recallTest,
+      latencyMs,
+      errors,
+    }
+  }
+
   // ─── Status ──────────────────────────────────────────
 
   getStatus(): {
@@ -446,6 +734,7 @@ export class MemoryService implements vscode.Disposable {
     entryCount: number
     writeHistoryCount: number
     permissions: AgentPermission[]
+    health: MemoryHealthCheck
   } {
     return {
       connection: this.getConnection(),
@@ -453,6 +742,7 @@ export class MemoryService implements vscode.Disposable {
       entryCount: this.store.entries.length,
       writeHistoryCount: this.store.writeHistory.length,
       permissions: this.getPermissions(),
+      health: this.getHealthCheck(),
     }
   }
 
@@ -475,9 +765,45 @@ export class MemoryService implements vscode.Disposable {
     this._onMemoryWritten.dispose()
     this._onRecallCompleted.dispose()
     this._onPermissionChanged.dispose()
+    this._onHealthChanged.dispose()
   }
 
   // ─── Private ─────────────────────────────────────────
+
+  private addRecallTrace(trace: AgentRecallTrace): void {
+    this.recallTraces.push(trace)
+    if (this.recallTraces.length > this.maxRecallTraces) {
+      this.recallTraces = this.recallTraces.slice(-this.maxRecallTraces)
+    }
+  }
+
+  private recordOperation(success: boolean): void {
+    this.operationResults.push({ success, timestamp: Date.now() })
+    // Keep last 200 to compute rolling error rate
+    if (this.operationResults.length > 200) {
+      this.operationResults = this.operationResults.slice(-200)
+    }
+
+    const prevHealth = this.getHealthCheck()
+
+    if (success) {
+      this.consecutiveFailures = 0
+    } else {
+      this.consecutiveFailures++
+      // Auto-reconnect after consecutive failures threshold
+      if (this.consecutiveFailures >= this.autoReconnectThreshold) {
+        console.warn(
+          `[Kilo Memory] ${this.consecutiveFailures} consecutive failures detected, triggering auto-reconnect`,
+        )
+        void this.reconnect()
+      }
+    }
+
+    const newHealth = this.getHealthCheck()
+    if (prevHealth.status !== newHealth.status) {
+      this._onHealthChanged.fire(newHealth)
+    }
+  }
 
   /**
    * Check whether an agent has permission to access a memory scope within a project.

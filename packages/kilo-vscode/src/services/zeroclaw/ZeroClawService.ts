@@ -51,6 +51,24 @@ export interface TaskStatusEvent {
 	task: ZeroClawTask
 }
 
+export interface Artifact {
+	name: string
+	path: string
+	type: "file" | "diff" | "log" | "screenshot"
+	sizeBytes: number
+	createdAt: number
+}
+
+export interface TaskResult {
+	taskId: string
+	status: string
+	artifacts: Artifact[]
+	logs: string[]
+	summary: string
+	duration: number
+	exitCode?: number
+}
+
 type StatusListener = (event: TaskStatusEvent) => void
 
 const HISTORY_STATE_KEY = "zeroclaw.executionHistory"
@@ -258,6 +276,189 @@ export class ZeroClawService implements vscode.Disposable {
 	/** Get the last N tasks for history display. */
 	getHistory(limit = 50): ZeroClawTask[] {
 		return this.getAllTasks().slice(0, limit)
+	}
+
+	// ─── Result & Artifact API ─────────────────────────────
+
+	/**
+	 * Build a full TaskResult snapshot for a given task.
+	 * Returns undefined if the task does not exist.
+	 */
+	getTaskResult(taskId: string): TaskResult | undefined {
+		const task = this.tasks.get(taskId)
+		if (!task) return undefined
+
+		const duration =
+			task.completedAt && task.createdAt
+				? task.completedAt - task.createdAt
+				: 0
+
+		return {
+			taskId: task.taskId,
+			status: task.status,
+			artifacts: this.buildArtifactsFromTask(task),
+			logs: [...task.logs],
+			summary: this.formatTaskSummary(taskId),
+			duration,
+			exitCode: task.exitCode,
+		}
+	}
+
+	/**
+	 * Scan a task's workspace and artifact paths to collect structured Artifact records.
+	 * Inspects the task's changedFiles and artifacts lists, then stats each path
+	 * on disk to gather size and creation time.
+	 */
+	async collectArtifacts(taskId: string): Promise<Artifact[]> {
+		const task = this.tasks.get(taskId)
+		if (!task) return []
+
+		const fs = await import("fs/promises")
+		const path = await import("path")
+		const collected: Artifact[] = []
+
+		// Combine both changedFiles and artifacts into candidates
+		const candidates = [...new Set([...task.changedFiles, ...task.artifacts])]
+
+		for (const filePath of candidates) {
+			try {
+				const stat = await fs.stat(filePath)
+				const ext = path.extname(filePath).toLowerCase()
+				const artifactType = this.classifyArtifact(ext, filePath)
+
+				collected.push({
+					name: path.basename(filePath),
+					path: filePath,
+					type: artifactType,
+					sizeBytes: stat.size,
+					createdAt: stat.birthtimeMs || stat.mtimeMs,
+				})
+			} catch {
+				// File may have been cleaned up or is unreachable; skip it
+			}
+		}
+
+		// Update the task's artifact list with any newly discovered paths
+		const existingSet = new Set(task.artifacts)
+		for (const a of collected) {
+			if (!existingSet.has(a.path)) {
+				task.artifacts.push(a.path)
+			}
+		}
+
+		if (collected.length > 0) {
+			this.appendLog(taskId, `[ZeroClaw] Collected ${collected.length} artifact(s)`)
+			this.persistHistory()
+		}
+
+		return collected
+	}
+
+	/**
+	 * Build a human-readable summary of a task's execution.
+	 * Suitable for display in the webview or notification messages.
+	 */
+	formatTaskSummary(taskId: string): string {
+		const task = this.tasks.get(taskId)
+		if (!task) return `Task ${taskId}: not found`
+
+		const lines: string[] = []
+
+		// Header
+		const statusLabel = task.status.toUpperCase()
+		lines.push(`Task ${task.taskId} [${statusLabel}]`)
+
+		// Description (truncated)
+		const descPreview =
+			task.description.length > 80
+				? task.description.slice(0, 77) + "..."
+				: task.description
+		lines.push(`  Description: ${descPreview}`)
+
+		// Risk + policies
+		lines.push(`  Risk: ${task.riskLevel} | Network: ${task.networkPolicy} | Write: ${task.writePolicy}`)
+
+		// Duration
+		if (task.completedAt && task.createdAt) {
+			const durSec = ((task.completedAt - task.createdAt) / 1000).toFixed(1)
+			lines.push(`  Duration: ${durSec}s`)
+		} else if (task.status === "running") {
+			const elapsed = ((Date.now() - task.createdAt) / 1000).toFixed(1)
+			lines.push(`  Elapsed: ${elapsed}s (still running)`)
+		}
+
+		// Exit code
+		if (task.exitCode !== undefined) {
+			lines.push(`  Exit code: ${task.exitCode}`)
+		}
+
+		// Changed files
+		if (task.changedFiles.length > 0) {
+			lines.push(`  Changed files (${task.changedFiles.length}):`)
+			for (const f of task.changedFiles.slice(0, 10)) {
+				lines.push(`    - ${f}`)
+			}
+			if (task.changedFiles.length > 10) {
+				lines.push(`    ... and ${task.changedFiles.length - 10} more`)
+			}
+		}
+
+		// Artifacts
+		if (task.artifacts.length > 0) {
+			lines.push(`  Artifacts (${task.artifacts.length}):`)
+			for (const a of task.artifacts.slice(0, 10)) {
+				lines.push(`    - ${a}`)
+			}
+			if (task.artifacts.length > 10) {
+				lines.push(`    ... and ${task.artifacts.length - 10} more`)
+			}
+		}
+
+		// Approval info
+		if (task.approvedBy) {
+			lines.push(`  Approved by: ${task.approvedBy}`)
+		}
+
+		// Retry count
+		if (task.retryCount > 0) {
+			lines.push(`  Retries: ${task.retryCount}`)
+		}
+
+		return lines.join("\n")
+	}
+
+	// ─── Artifact helpers (private) ────────────────────────
+
+	/**
+	 * Classify a file into an artifact type based on its extension and path.
+	 */
+	private classifyArtifact(ext: string, filePath: string): Artifact["type"] {
+		if (ext === ".diff" || ext === ".patch") return "diff"
+		if (ext === ".log" || ext === ".txt") return "log"
+		if (ext === ".png" || ext === ".jpg" || ext === ".jpeg" || ext === ".webp") return "screenshot"
+		if (filePath.includes("/logs/") || filePath.includes("\\logs\\")) return "log"
+		if (filePath.includes("/screenshots/") || filePath.includes("\\screenshots\\")) return "screenshot"
+		return "file"
+	}
+
+	/**
+	 * Build Artifact records from a task's existing artifact paths
+	 * without hitting the filesystem (uses placeholder sizes).
+	 * For accurate sizes, use collectArtifacts() instead.
+	 */
+	private buildArtifactsFromTask(task: ZeroClawTask): Artifact[] {
+		const path = require("path") as typeof import("path")
+
+		return task.artifacts.map((filePath) => {
+			const ext = path.extname(filePath).toLowerCase()
+			return {
+				name: path.basename(filePath),
+				path: filePath,
+				type: this.classifyArtifact(ext, filePath),
+				sizeBytes: 0, // Unknown without fs stat; use collectArtifacts for accurate data
+				createdAt: task.createdAt,
+			}
+		})
 	}
 
 	/** Register a listener for task status changes. Returns a disposable to unsubscribe. */

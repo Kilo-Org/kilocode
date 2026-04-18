@@ -8,4 +8,11 @@ export type {
 	ZeroClawTask,
 	TaskSubmission,
 	TaskStatusEvent,
+	Artifact,
+	TaskResult,
 } from "./ZeroClawService"
+export { HermesZeroClawAdapter } from "./HermesZeroClawAdapter"
+export type {
+	HermesExecutionResult,
+	HermesCompletionPayload,
+} from "./HermesZeroClawAdapter"

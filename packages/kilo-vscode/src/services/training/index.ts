@@ -6,4 +6,6 @@ export type {
   GPUInfo,
   RunComparison,
   ExportOptions,
+  ExportFile,
+  ExportResult,
 } from "./TrainingService"

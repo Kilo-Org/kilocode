@@ -41,6 +41,13 @@ interface LogLine {
   text: string
 }
 
+interface SSHErrorEntry {
+  message: string
+  code: string
+  profileName: string
+  timestamp: number
+}
+
 // ─── Defaults ───────────────────────────────────────────
 
 const EMPTY_PROFILE: SSHProfile = {
@@ -171,6 +178,15 @@ const SSHTab: Component = () => {
   const [sftpLoading, setSftpLoading] = createSignal(false)
   const [expandedDirs, setExpandedDirs] = createSignal<Set<string>>(new Set())
 
+  // --- File preview (Phase 22) ---
+  const [previewContent, setPreviewContent] = createSignal<string | null>(null)
+  const [previewPath, setPreviewPath] = createSignal<string | null>(null)
+  const [previewLoading, setPreviewLoading] = createSignal(false)
+
+  // --- SSH errors (Phase 26) ---
+  const [sshErrors, setSSHErrors] = createSignal<SSHErrorEntry[]>([])
+  const [errorsOpen, setErrorsOpen] = createSignal(false)
+
   // --- Remote logs ---
   const [logProfile, setLogProfile] = createSignal<string | null>(null)
   const [logService, setLogService] = createSignal("")
@@ -219,6 +235,26 @@ const SSHTab: Component = () => {
       case "sshLogTailingStopped":
         setLogTailing(false)
         break
+      case "sshFilePreviewResult": {
+        const data = msg as unknown as { remotePath: string; content: string }
+        setPreviewPath(data.remotePath)
+        setPreviewContent(data.content)
+        setPreviewLoading(false)
+        break
+      }
+      case "sshErrors": {
+        const data = msg as unknown as { errors: SSHErrorEntry[] }
+        setSSHErrors(data.errors)
+        break
+      }
+      case "sshError": {
+        const data = msg as unknown as { error: SSHErrorEntry }
+        setSSHErrors((prev) => {
+          const combined = [...prev, data.error]
+          return combined.length > 50 ? combined.slice(combined.length - 50) : combined
+        })
+        break
+      }
     }
   })
 
@@ -371,10 +407,33 @@ const SSHTab: Component = () => {
     vscode.postMessage({ type: "sshFileDownload", profileName: profile, remotePath: entry.path } as never)
   }
 
+  const previewFile = (entry: RemoteFileEntry) => {
+    const profile = sftpProfile()
+    if (!profile || entry.isDirectory) return
+    setPreviewLoading(true)
+    setPreviewPath(entry.path)
+    setPreviewContent(null)
+    vscode.postMessage({ type: "sshFilePreview", profileName: profile, remotePath: entry.path } as never)
+  }
+
+  const closePreview = () => {
+    setPreviewContent(null)
+    setPreviewPath(null)
+  }
+
   const uploadFile = () => {
     const profile = sftpProfile()
     if (!profile) return
     vscode.postMessage({ type: "sshFileUpload", profileName: profile, remotePath: sftpPath() } as never)
+  }
+
+  const requestErrors = () => {
+    vscode.postMessage({ type: "sshGetErrors" } as never)
+    setErrorsOpen(true)
+  }
+
+  const clearErrors = () => {
+    setSSHErrors([])
   }
 
   // --- Logs ---
@@ -913,11 +972,56 @@ const SSHTab: Component = () => {
                         onToggle={toggleDirectory}
                         onOpen={openRemoteFile}
                         onDownload={downloadFile}
+                        onPreview={previewFile}
                       />
                     )}
                   </For>
                 </Show>
               </div>
+
+              {/* File Preview Panel (Phase 22) */}
+              <Show when={previewPath()}>
+                <div
+                  style={{
+                    border: "1px solid var(--vscode-panel-border)",
+                    "border-radius": "4px",
+                    "margin-bottom": "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      "align-items": "center",
+                      "justify-content": "space-between",
+                      padding: "6px 8px",
+                      background: "var(--vscode-textBlockQuote-background)",
+                      "border-bottom": "1px solid var(--vscode-panel-border)",
+                      "font-size": "12px",
+                    }}
+                  >
+                    <span style={{ "font-weight": "600" }}>Preview: {previewPath()!.split("/").pop()}</span>
+                    <Button variant="secondary" size="small" onClick={closePreview}>
+                      Close
+                    </Button>
+                  </div>
+                  <div
+                    style={{
+                      "max-height": "200px",
+                      overflow: "auto",
+                      padding: "6px 8px",
+                      background: "var(--vscode-editor-background)",
+                      ...monoStyle,
+                      "white-space": "pre-wrap",
+                      "word-break": "break-all",
+                    }}
+                  >
+                    <Show when={!previewLoading()} fallback={<span style={{ color: "var(--vscode-descriptionForeground)" }}>Loading preview...</span>}>
+                      {previewContent() ?? ""}
+                    </Show>
+                  </div>
+                </div>
+              </Show>
 
               {/* Upload button */}
               <div style={{ display: "flex", gap: "8px" }}>
@@ -1076,6 +1180,103 @@ const SSHTab: Component = () => {
           </div>
         </Show>
       </Card>
+
+      {/* --- SECTION 5: SSH Error Log (Phase 26) --- */}
+      <Card>
+        <div style={sectionHeaderStyle(true)} onClick={() => { if (!errorsOpen()) requestErrors(); else setErrorsOpen(false); }}>
+          <span style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            {errorsOpen() ? "\u25BE" : "\u25B8"} SSH Error Log
+          </span>
+          <Show when={sshErrors().length > 0}>
+            <span
+              style={{
+                "font-size": "11px",
+                padding: "1px 6px",
+                "border-radius": "8px",
+                background: "var(--vscode-inputValidation-errorBackground, #5a1d1d)",
+                color: "var(--vscode-inputValidation-errorForeground, #f48771)",
+              }}
+            >
+              {sshErrors().length} error{sshErrors().length !== 1 ? "s" : ""}
+            </span>
+          </Show>
+        </div>
+        <Show when={errorsOpen()}>
+          <div style={{ padding: "0 12px 12px" }}>
+            <Show
+              when={sshErrors().length > 0}
+              fallback={
+                <div
+                  style={{
+                    padding: "16px",
+                    "text-align": "center",
+                    color: "var(--vscode-descriptionForeground)",
+                    "font-size": "13px",
+                    border: "1px solid var(--vscode-panel-border)",
+                    "border-radius": "4px",
+                  }}
+                >
+                  No SSH errors recorded.
+                </div>
+              }
+            >
+              <div
+                style={{
+                  "max-height": "240px",
+                  overflow: "auto",
+                  border: "1px solid var(--vscode-panel-border)",
+                  "border-radius": "4px",
+                  "margin-bottom": "8px",
+                }}
+              >
+                <For each={sshErrors().slice().reverse()}>
+                  {(err) => (
+                    <div
+                      style={{
+                        padding: "6px 10px",
+                        "border-bottom": "1px solid var(--vscode-panel-border)",
+                        "font-size": "12px",
+                      }}
+                    >
+                      <div style={{ display: "flex", "align-items": "center", gap: "6px", "margin-bottom": "2px" }}>
+                        <span
+                          style={{
+                            padding: "0 4px",
+                            "border-radius": "3px",
+                            background: "var(--vscode-inputValidation-errorBackground, #5a1d1d)",
+                            color: "var(--vscode-inputValidation-errorForeground, #f48771)",
+                            "font-size": "10px",
+                            "font-weight": "600",
+                          }}
+                        >
+                          {err.code}
+                        </span>
+                        <span style={{ color: "var(--vscode-descriptionForeground)", "font-size": "11px" }}>
+                          {err.profileName}
+                        </span>
+                        <span style={{ color: "var(--vscode-descriptionForeground)", "font-size": "10px", "margin-left": "auto" }}>
+                          {new Date(err.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                      <div style={{ color: "var(--vscode-foreground)", ...monoStyle, "word-break": "break-all" }}>
+                        {err.message}
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <Button variant="secondary" size="small" onClick={requestErrors}>
+                  Refresh
+                </Button>
+                <Button variant="secondary" size="small" onClick={clearErrors}>
+                  Clear
+                </Button>
+              </div>
+            </Show>
+          </div>
+        </Show>
+      </Card>
     </div>
   )
 }
@@ -1089,6 +1290,7 @@ interface FileEntryRowProps {
   onToggle: (entry: RemoteFileEntry) => void
   onOpen: (entry: RemoteFileEntry) => void
   onDownload: (entry: RemoteFileEntry) => void
+  onPreview: (entry: RemoteFileEntry) => void
 }
 
 const FileEntryRow: Component<FileEntryRowProps> = (props) => {
@@ -1146,6 +1348,16 @@ const FileEntryRow: Component<FileEntryRowProps> = (props) => {
               size="small"
               onClick={(e: MouseEvent) => {
                 e.stopPropagation()
+                props.onPreview(props.entry)
+              }}
+            >
+              Preview
+            </Button>
+            <Button
+              variant="secondary"
+              size="small"
+              onClick={(e: MouseEvent) => {
+                e.stopPropagation()
                 props.onOpen(props.entry)
               }}
             >
@@ -1175,6 +1387,7 @@ const FileEntryRow: Component<FileEntryRowProps> = (props) => {
               onToggle={props.onToggle}
               onOpen={props.onOpen}
               onDownload={props.onDownload}
+              onPreview={props.onPreview}
             />
           )}
         </For>

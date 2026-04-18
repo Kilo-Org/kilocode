@@ -1,10 +1,41 @@
 import * as fs from "fs"
+import * as os from "os"
+import * as path from "path"
 import * as vscode from "vscode"
 
 // ─── Types ──────────────────────────────────────────────
 
 export type AuthMode = "key" | "password"
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error"
+
+export type SSHErrorCode =
+  | "CONNECTION_REFUSED"
+  | "AUTH_FAILED"
+  | "TIMEOUT"
+  | "HOST_KEY_MISMATCH"
+  | "SFTP_ERROR"
+  | "UNKNOWN"
+
+export class SSHError extends Error {
+  readonly code: SSHErrorCode
+  readonly profileName: string
+  readonly timestamp: number
+
+  constructor(message: string, code: SSHErrorCode, profileName: string) {
+    super(message)
+    this.name = "SSHError"
+    this.code = code
+    this.profileName = profileName
+    this.timestamp = Date.now()
+  }
+}
+
+/** Metadata for a remote file opened locally for editing. */
+export interface TrackedRemoteFile {
+  localPath: string
+  remotePath: string
+  profileId: string
+}
 
 export interface SSHProfile {
   name: string
@@ -48,8 +79,10 @@ export type SSHEvent =
   | { type: "sessionsChanged"; sessions: SSHSessionSnapshot[] }
   | { type: "connectionStatus"; profileName: string; status: ConnectionStatus; error?: string }
   | { type: "filesListed"; profileName: string; path: string; entries: RemoteFileEntry[] }
+  | { type: "filePreview"; profileName: string; remotePath: string; content: string }
   | { type: "logOutput"; profileName: string; lines: { timestamp: string; text: string }[] }
   | { type: "logTailingStopped"; profileName: string }
+  | { type: "sshError"; error: { message: string; code: SSHErrorCode; profileName: string; timestamp: number } }
 
 export interface SSHSessionSnapshot {
   profileName: string
@@ -71,6 +104,17 @@ export class SSHService implements vscode.Disposable {
   private readonly listeners = new Set<(event: SSHEvent) => void>()
   private readonly reconnectAttempts = new Map<string, number>()
   private readonly outputChannel: vscode.OutputChannel
+
+  // Phase 22: SFTP browser model — current browse path per session
+  private readonly currentBrowsePaths = new Map<string, string>()
+
+  // Phase 23: Remote edit/save — tracked temp files keyed by local temp path
+  private readonly trackedRemoteFiles = new Map<string, TrackedRemoteFile>()
+
+  // Phase 26: Error tracking
+  private readonly errorLog: SSHError[] = []
+  private static readonly MAX_ERROR_LOG = 50
+  private readonly errorListeners = new Set<(error: SSHError) => void>()
 
   constructor(private readonly ctx: vscode.ExtensionContext) {
     this.outputChannel = vscode.window.createOutputChannel("KiloCode SSH")
@@ -109,6 +153,17 @@ export class SSHService implements vscode.Disposable {
     })
     this.disposables.push(configWatcher)
 
+    // Phase 23: Watch for saves on tracked remote temp files
+    const saveWatcher = vscode.workspace.onDidSaveTextDocument((doc) => {
+      const normalizedPath = doc.uri.fsPath.replace(/\\/g, "/")
+      const tracked = this.trackedRemoteFiles.get(normalizedPath)
+      if (tracked) {
+        this.log(`Detected save on tracked remote file: ${tracked.remotePath}`)
+        void this.saveRemoteFile(tracked.profileId, normalizedPath, tracked.remotePath)
+      }
+    })
+    this.disposables.push(saveWatcher)
+
     this.log("SSHService initialized")
   }
 
@@ -131,6 +186,59 @@ export class SSHService implements vscode.Disposable {
 
   private emitSessionsChanged(): void {
     this.emit({ type: "sessionsChanged", sessions: this.getSessionSnapshots() })
+  }
+
+  // ─── Error Handling (Phase 26) ──────────────────────────
+
+  /** Subscribe to SSH errors. Returns an unsubscribe function. */
+  onError(listener: (error: SSHError) => void): () => void {
+    this.errorListeners.add(listener)
+    return () => this.errorListeners.delete(listener)
+  }
+
+  /** Returns recent errors, optionally filtered by profileName. */
+  getLastErrors(profileId?: string): SSHError[] {
+    if (profileId) {
+      return this.errorLog.filter((e) => e.profileName === profileId)
+    }
+    return [...this.errorLog]
+  }
+
+  /** Classify a raw error message into an SSHErrorCode. */
+  private classifyError(message: string): SSHErrorCode {
+    const lower = message.toLowerCase()
+    if (lower.includes("connection refused") || lower.includes("no route to host")) return "CONNECTION_REFUSED"
+    if (lower.includes("permission denied") || lower.includes("authentication failed") || lower.includes("auth fail")) return "AUTH_FAILED"
+    if (lower.includes("timed out") || lower.includes("timeout") || lower.includes("connection timed out")) return "TIMEOUT"
+    if (lower.includes("host key") || lower.includes("man-in-the-middle") || lower.includes("offending key")) return "HOST_KEY_MISMATCH"
+    if (lower.includes("sftp") || lower.includes("no such file") || lower.includes("failure")) return "SFTP_ERROR"
+    return "UNKNOWN"
+  }
+
+  /** Record an SSH error and notify listeners. */
+  private recordError(message: string, profileName: string, code?: SSHErrorCode): SSHError {
+    const resolvedCode = code ?? this.classifyError(message)
+    const error = new SSHError(message, resolvedCode, profileName)
+
+    this.errorLog.push(error)
+    if (this.errorLog.length > SSHService.MAX_ERROR_LOG) {
+      this.errorLog.splice(0, this.errorLog.length - SSHService.MAX_ERROR_LOG)
+    }
+
+    this.errorListeners.forEach((listener) => {
+      try {
+        listener(error)
+      } catch (err) {
+        this.log(`Error listener threw: ${err}`)
+      }
+    })
+
+    this.emit({
+      type: "sshError",
+      error: { message: error.message, code: error.code, profileName: error.profileName, timestamp: error.timestamp },
+    })
+
+    return error
   }
 
   // ─── Profile Management ─────────────────────────────────
@@ -271,6 +379,7 @@ export class SSHService implements vscode.Disposable {
       const errorMsg = err instanceof Error ? err.message : String(err)
       session.status = "error"
       session.lastError = errorMsg
+      this.recordError(errorMsg, profileName)
       this.emit({ type: "connectionStatus", profileName, status: "error", error: errorMsg })
       this.emitSessionsChanged()
       this.log(`Connection error for ${profileName}: ${errorMsg}`)
@@ -437,6 +546,7 @@ export class SSHService implements vscode.Disposable {
 
     try {
       const entries = await this.executeSFTPList(profile, normalizedPath)
+      this.currentBrowsePaths.set(profileName, normalizedPath)
       this.emit({
         type: "filesListed",
         profileName,
@@ -445,6 +555,7 @@ export class SSHService implements vscode.Disposable {
       })
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileName, "SFTP_ERROR")
       this.log(`SFTP list error for ${profileName}:${normalizedPath}: ${errorMsg}`)
       // Emit empty result with the path so UI can clear the loading state
       this.emit({
@@ -491,39 +602,234 @@ export class SSHService implements vscode.Disposable {
     return entries
   }
 
+  // ─── Phase 22: SFTP Browser Model ──────────────────────
+
+  /**
+   * Browse a remote directory, returning its entries.
+   * Wraps listRemoteFiles with error handling and breadcrumb tracking.
+   */
+  async browseDirectory(profileId: string, browsePath: string): Promise<RemoteFileEntry[]> {
+    const profile = this.getProfiles().find((p) => p.name === profileId)
+    if (!profile) {
+      this.recordError(`Profile "${profileId}" not found`, profileId, "SFTP_ERROR")
+      return []
+    }
+
+    const normalizedPath = browsePath || "/"
+    try {
+      const entries = await this.executeSFTPList(profile, normalizedPath)
+      this.currentBrowsePaths.set(profileId, normalizedPath)
+      this.emit({
+        type: "filesListed",
+        profileName: profileId,
+        path: normalizedPath,
+        entries,
+      })
+      return entries
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileId, "SFTP_ERROR")
+      this.log(`browseDirectory error for ${profileId}:${normalizedPath}: ${errorMsg}`)
+      return []
+    }
+  }
+
+  /** Get the current browse path for a profile. */
+  getCurrentBrowsePath(profileId: string): string {
+    return this.currentBrowsePaths.get(profileId) ?? "/"
+  }
+
+  /**
+   * Preview a small text file from a remote host (< 100 KB).
+   * Returns the file content as a string, or empty string on failure.
+   */
+  async getFilePreview(profileId: string, remotePath: string): Promise<string> {
+    const profile = this.getProfiles().find((p) => p.name === profileId)
+    if (!profile) {
+      this.recordError(`Profile "${profileId}" not found`, profileId, "SFTP_ERROR")
+      return ""
+    }
+
+    this.log(`File preview: ${profileId}:${remotePath}`)
+
+    try {
+      const sshBase = this.buildSSHCommandBase(profile)
+      // Check file size first; bail if > 100KB
+      const sizeCmd = `${sshBase} "stat -c%s ${this.escapeRemotePath(remotePath)} 2>/dev/null || stat -f%z ${this.escapeRemotePath(remotePath)} 2>/dev/null"`
+      const sizeOut = await this.executeCommand(sizeCmd)
+      const fileSize = parseInt(sizeOut.trim(), 10)
+      if (!isNaN(fileSize) && fileSize > 100 * 1024) {
+        this.log(`File preview skipped (${fileSize} bytes > 100KB): ${remotePath}`)
+        return `[File too large for preview: ${Math.round(fileSize / 1024)} KB]`
+      }
+
+      // Read the file content
+      const catCmd = `${sshBase} "cat ${this.escapeRemotePath(remotePath)}"`
+      const content = await this.executeCommand(catCmd)
+
+      this.emit({
+        type: "filePreview",
+        profileName: profileId,
+        remotePath,
+        content,
+      })
+
+      return content
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileId, "SFTP_ERROR")
+      this.log(`File preview error for ${profileId}:${remotePath}: ${errorMsg}`)
+      return ""
+    }
+  }
+
+  // ─── Phase 23: Remote Edit / Save Flow ─────────────────
+
+  /**
+   * Download a remote file to a temp directory and open it in VS Code.
+   * Tracked so that saves auto-upload back to the remote host.
+   */
   async openRemoteFile(profileName: string, remotePath: string): Promise<void> {
     const profile = this.getProfiles().find((p) => p.name === profileName)
-    if (!profile) return
+    if (!profile) {
+      this.recordError(`Profile "${profileName}" not found`, profileName, "SFTP_ERROR")
+      return
+    }
 
     this.log(`Opening remote file: ${profileName}:${remotePath}`)
 
     try {
-      // Download to a temp location and open
-      const tmpDir = this.ctx.globalStorageUri.fsPath
+      // Create a temp directory scoped to this extension
+      const tmpDir = path.join(os.tmpdir(), "kilocode-ssh", profileName)
       await vscode.workspace.fs.createDirectory(vscode.Uri.file(tmpDir))
 
       const fileName = remotePath.split("/").pop() ?? "remote-file"
-      const tmpPath = vscode.Uri.joinPath(vscode.Uri.file(tmpDir), `ssh-${profileName}-${fileName}`)
+      // Use a deterministic name so re-opening the same file reuses the same temp path
+      const safeName = remotePath.replace(/\//g, "__").replace(/[^a-zA-Z0-9._\-]/g, "_")
+      const localTmpPath = path.join(tmpDir, safeName)
 
       const sshBase = this.buildSSHCommandBase(profile)
       const catCmd = `${sshBase} "cat ${this.escapeRemotePath(remotePath)}"`
       const content = await this.executeCommand(catCmd)
 
-      await vscode.workspace.fs.writeFile(tmpPath, Buffer.from(content, "utf-8"))
+      const tmpUri = vscode.Uri.file(localTmpPath)
+      await vscode.workspace.fs.writeFile(tmpUri, Buffer.from(content, "utf-8"))
 
-      const doc = await vscode.workspace.openTextDocument(tmpPath)
+      // Track this file for auto-save-back
+      const normalizedLocal = localTmpPath.replace(/\\/g, "/")
+      this.trackedRemoteFiles.set(normalizedLocal, {
+        localPath: normalizedLocal,
+        remotePath,
+        profileId: profileName,
+      })
+
+      const doc = await vscode.workspace.openTextDocument(tmpUri)
       await vscode.window.showTextDocument(doc)
-      this.log(`Opened remote file: ${remotePath}`)
+      this.log(`Opened remote file (tracked): ${remotePath} -> ${localTmpPath}`)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileName, "SFTP_ERROR")
       this.log(`Failed to open remote file ${remotePath}: ${errorMsg}`)
       vscode.window.showErrorMessage(`Failed to open remote file: ${errorMsg}`)
     }
   }
 
+  /**
+   * Upload a local temp file back to the remote host.
+   * Called automatically when a tracked temp file is saved, or manually.
+   * @param confirmAndUpload If true, shows a diff before uploading (Phase 24).
+   */
+  async saveRemoteFile(
+    profileId: string,
+    localTempPath: string,
+    remotePath: string,
+    confirmAndUpload: boolean = false,
+  ): Promise<void> {
+    const profile = this.getProfiles().find((p) => p.name === profileId)
+    if (!profile) {
+      this.recordError(`Profile "${profileId}" not found`, profileId, "SFTP_ERROR")
+      return
+    }
+
+    if (confirmAndUpload) {
+      // Phase 24: show diff before uploading
+      await this.diffRemoteFile(profileId, localTempPath, remotePath)
+      return
+    }
+
+    this.log(`Saving remote file: ${localTempPath} -> ${profileId}:${remotePath}`)
+
+    try {
+      const sftpCmd = this.buildSFTPCommand(profile)
+      const normalizedLocal = localTempPath.replace(/\\/g, "/")
+      const uploadCmd = `echo "put ${this.quoteArg(normalizedLocal)} ${this.escapeRemotePath(remotePath)}" | ${sftpCmd} -b -`
+      await this.executeCommand(uploadCmd)
+      vscode.window.showInformationMessage(`Saved remote file: ${remotePath}`)
+      this.log(`Saved remote file: ${remotePath}`)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileId, "SFTP_ERROR")
+      this.log(`Failed to save remote file ${remotePath}: ${errorMsg}`)
+      vscode.window.showErrorMessage(`Failed to save remote file: ${errorMsg}`)
+    }
+  }
+
+  /** Return a snapshot of all currently tracked remote files. */
+  getTrackedRemoteFiles(): TrackedRemoteFile[] {
+    return Array.from(this.trackedRemoteFiles.values())
+  }
+
+  // ─── Phase 24: Diff Before Save ────────────────────────
+
+  /**
+   * Open a VS Code diff editor comparing the local version with the current remote version.
+   * After reviewing, the user can manually trigger the upload.
+   */
+  async diffRemoteFile(profileId: string, localPath: string, remotePath: string): Promise<void> {
+    const profile = this.getProfiles().find((p) => p.name === profileId)
+    if (!profile) {
+      this.recordError(`Profile "${profileId}" not found`, profileId, "SFTP_ERROR")
+      return
+    }
+
+    this.log(`Diff remote file: ${profileId}:${remotePath} vs ${localPath}`)
+
+    try {
+      // Download current remote version to a second temp file
+      const tmpDir = path.join(os.tmpdir(), "kilocode-ssh", profileId, ".diff")
+      await vscode.workspace.fs.createDirectory(vscode.Uri.file(tmpDir))
+
+      const fileName = remotePath.split("/").pop() ?? "remote-file"
+      const remoteTmpPath = path.join(tmpDir, `remote-${fileName}`)
+
+      const sshBase = this.buildSSHCommandBase(profile)
+      const catCmd = `${sshBase} "cat ${this.escapeRemotePath(remotePath)}"`
+      const remoteContent = await this.executeCommand(catCmd)
+
+      const remoteTmpUri = vscode.Uri.file(remoteTmpPath)
+      await vscode.workspace.fs.writeFile(remoteTmpUri, Buffer.from(remoteContent, "utf-8"))
+
+      const localUri = vscode.Uri.file(localPath)
+      const title = `${fileName} (Remote) \u2194 ${fileName} (Local Edit)`
+
+      await vscode.commands.executeCommand("vscode.diff", remoteTmpUri, localUri, title)
+      this.log(`Opened diff view for: ${remotePath}`)
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileId, "SFTP_ERROR")
+      this.log(`Failed to diff remote file ${remotePath}: ${errorMsg}`)
+      vscode.window.showErrorMessage(`Failed to open diff: ${errorMsg}`)
+    }
+  }
+
+  // ─── SFTP Download / Upload ─────────────────────────────
+
   async downloadFile(profileName: string, remotePath: string): Promise<void> {
     const profile = this.getProfiles().find((p) => p.name === profileName)
-    if (!profile) return
+    if (!profile) {
+      this.recordError(`Profile "${profileName}" not found`, profileName, "SFTP_ERROR")
+      return
+    }
 
     const fileName = remotePath.split("/").pop() ?? "downloaded-file"
     const saveUri = await vscode.window.showSaveDialog({
@@ -543,6 +849,7 @@ export class SSHService implements vscode.Disposable {
       this.log(`Downloaded: ${remotePath} -> ${saveUri.fsPath}`)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileName, "SFTP_ERROR")
       this.log(`Download failed for ${remotePath}: ${errorMsg}`)
       vscode.window.showErrorMessage(`Download failed: ${errorMsg}`)
     }
@@ -550,7 +857,10 @@ export class SSHService implements vscode.Disposable {
 
   async uploadFile(profileName: string, remoteDir: string): Promise<void> {
     const profile = this.getProfiles().find((p) => p.name === profileName)
-    if (!profile) return
+    if (!profile) {
+      this.recordError(`Profile "${profileName}" not found`, profileName, "SFTP_ERROR")
+      return
+    }
 
     const fileUris = await vscode.window.showOpenDialog({
       canSelectFiles: true,
@@ -576,6 +886,7 @@ export class SSHService implements vscode.Disposable {
       void this.listFiles(profileName, remoteDir)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
+      this.recordError(errorMsg, profileName, "SFTP_ERROR")
       this.log(`Upload failed: ${errorMsg}`)
       vscode.window.showErrorMessage(`Upload failed: ${errorMsg}`)
     }
@@ -732,6 +1043,12 @@ export class SSHService implements vscode.Disposable {
     // Clear listeners and reconnect tracking
     this.listeners.clear()
     this.reconnectAttempts.clear()
+
+    // Phase 22/23/26 cleanup
+    this.currentBrowsePaths.clear()
+    this.trackedRemoteFiles.clear()
+    this.errorLog.length = 0
+    this.errorListeners.clear()
 
     // Dispose registered disposables
     for (const d of this.disposables) {

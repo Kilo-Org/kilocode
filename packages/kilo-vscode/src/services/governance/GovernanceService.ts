@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs"
+import * as crypto from "crypto"
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -73,6 +74,59 @@ export interface TierAssignment {
 	tier: AuthorityTier["name"]
 	assignedAt: number
 	assignedBy: string
+}
+
+// ─── Adversarial Audit Interfaces ───────────────────────
+
+export interface AuditFinding {
+	severity: "critical" | "high" | "medium" | "low"
+	category: string
+	description: string
+	subsystem: string
+	recommendation: string
+}
+
+export interface SubsystemAuditResult {
+	name: string
+	score: number
+	findings: AuditFinding[]
+	evidencePresent: boolean
+}
+
+export interface AdversarialAuditResult {
+	auditId: string
+	timestamp: number
+	subsystems: SubsystemAuditResult[]
+	overallScore: number
+	criticalFindings: string[]
+	recommendations: string[]
+	verdict: "pass" | "conditional_pass" | "fail"
+}
+
+// ─── Evidence Bundle Interfaces ─────────────────────────
+
+export interface EvidenceItem {
+	type: "screenshot" | "log" | "trace" | "config" | "test_result"
+	description: string
+	path?: string
+	data?: string
+	capturedAt: number
+}
+
+export interface EvidenceBundle {
+	bundleId: string
+	block: string
+	createdAt: number
+	items: EvidenceItem[]
+	status: "collecting" | "complete" | "verified"
+}
+
+// ─── Subsystem Registration ─────────────────────────────
+
+export interface RegisteredSubsystem {
+	name: string
+	status: "active" | "degraded" | "inactive"
+	registeredAt: number
 }
 
 export interface GovernanceState {
@@ -253,6 +307,8 @@ export class GovernanceService implements vscode.Disposable {
 	private escalationTimer: ReturnType<typeof setInterval> | undefined
 	private readonly onStateChangedEmitter = new vscode.EventEmitter<GovernanceState>()
 	public readonly onStateChanged = this.onStateChangedEmitter.event
+	private registeredSubsystems: Map<string, RegisteredSubsystem> = new Map()
+	private evidenceBundles: Map<string, EvidenceBundle> = new Map()
 
 	public escalationConfig: EscalationConfig = {
 		timeoutMs: 3600000,
@@ -850,6 +906,11 @@ export class GovernanceService implements vscode.Disposable {
 		const latestVerdict = this.getLatestVerdict()
 		const rollbackReady = this.isRollbackReady()
 
+		// Check if an adversarial audit has passed by looking at recent audit entries
+		const adversarialAuditPassed = this.state.auditLog.some(
+			(e) => e.action.includes("Adversarial audit completed") && e.result === "approved",
+		)
+
 		return [
 			{
 				label: "No pending approvals",
@@ -875,6 +936,10 @@ export class GovernanceService implements vscode.Disposable {
 				label: "Rollback plan documented",
 				passed: rollbackReady,
 			},
+			{
+				label: "Adversarial audit passed",
+				passed: adversarialAuditPassed,
+			},
 		]
 	}
 
@@ -892,6 +957,338 @@ export class GovernanceService implements vscode.Disposable {
 		if (hasCriticalFailure) return "fail"
 
 		return "conditional_pass"
+	}
+
+	// ── Subsystem Registration ─────────────────────────
+
+	registerSubsystem(name: string, status: "active" | "degraded" | "inactive"): void {
+		const entry: RegisteredSubsystem = {
+			name,
+			status,
+			registeredAt: Date.now(),
+		}
+		this.registeredSubsystems.set(name, entry)
+
+		this.addAuditEntry({
+			actor: "system",
+			action: `Registered subsystem: ${name}`,
+			riskLevel: "low",
+			result: "auto",
+			details: `Subsystem "${name}" registered with status "${status}"`,
+		})
+
+		this.emitChange()
+	}
+
+	getRegisteredSubsystems(): Array<{ name: string; status: string; registeredAt: number }> {
+		return Array.from(this.registeredSubsystems.values()).map((entry) => ({
+			name: entry.name,
+			status: entry.status,
+			registeredAt: entry.registeredAt,
+		}))
+	}
+
+	// ── Evidence Bundles ────────────────────────────────
+
+	createEvidenceBundle(block: string): EvidenceBundle {
+		const bundle: EvidenceBundle = {
+			bundleId: crypto.randomUUID(),
+			block,
+			createdAt: Date.now(),
+			items: [],
+			status: "collecting",
+		}
+		this.evidenceBundles.set(bundle.bundleId, bundle)
+
+		this.addAuditEntry({
+			actor: "system",
+			action: `Created evidence bundle for block: ${block}`,
+			riskLevel: "low",
+			result: "auto",
+			details: `Evidence bundle "${bundle.bundleId}" created for block "${block}"`,
+		})
+
+		this.emitChange()
+		return { ...bundle, items: [...bundle.items] }
+	}
+
+	addEvidence(bundleId: string, item: Omit<EvidenceItem, "capturedAt">): void {
+		const bundle = this.evidenceBundles.get(bundleId)
+		if (!bundle) {
+			throw new Error(`Evidence bundle "${bundleId}" not found`)
+		}
+		if (bundle.status === "verified") {
+			throw new Error(`Evidence bundle "${bundleId}" is already verified and cannot be modified`)
+		}
+
+		const fullItem: EvidenceItem = {
+			...item,
+			capturedAt: Date.now(),
+		}
+		bundle.items.push(fullItem)
+
+		this.addAuditEntry({
+			actor: "system",
+			action: `Added evidence to bundle: ${bundleId}`,
+			riskLevel: "low",
+			result: "auto",
+			details: `Evidence item of type "${item.type}" added: ${item.description}`,
+		})
+
+		this.emitChange()
+	}
+
+	getEvidenceBundles(): EvidenceBundle[] {
+		return Array.from(this.evidenceBundles.values()).map((bundle) => ({
+			...bundle,
+			items: bundle.items.map((i) => ({ ...i })),
+		}))
+	}
+
+	verifyEvidenceBundle(bundleId: string): { complete: boolean; missing: string[] } {
+		const bundle = this.evidenceBundles.get(bundleId)
+		if (!bundle) {
+			throw new Error(`Evidence bundle "${bundleId}" not found`)
+		}
+
+		const requiredTypes: EvidenceItem["type"][] = ["screenshot", "log", "trace", "config", "test_result"]
+		const presentTypes = new Set(bundle.items.map((i) => i.type))
+		const missing: string[] = []
+
+		for (const required of requiredTypes) {
+			if (!presentTypes.has(required)) {
+				missing.push(required)
+			}
+		}
+
+		const complete = missing.length === 0
+		if (complete) {
+			bundle.status = "verified"
+		} else {
+			bundle.status = "complete"
+		}
+
+		this.addAuditEntry({
+			actor: "system",
+			action: `Verified evidence bundle: ${bundleId}`,
+			riskLevel: "low",
+			result: complete ? "approved" : "denied",
+			details: complete
+				? `Evidence bundle "${bundleId}" verified successfully`
+				: `Evidence bundle "${bundleId}" missing evidence types: ${missing.join(", ")}`,
+		})
+
+		this.emitChange()
+		return { complete, missing }
+	}
+
+	// ── Adversarial Audit ──────────────────────────────
+
+	runAdversarialAudit(): AdversarialAuditResult {
+		const auditId = crypto.randomUUID()
+		const subsystemResults: SubsystemAuditResult[] = []
+		const criticalFindings: string[] = []
+		const recommendations: string[] = []
+
+		// Define the 7 expected subsystems and their audit criteria
+		const expectedSubsystems = [
+			"governance",
+			"hermes",
+			"speech",
+			"security",
+			"telemetry",
+			"configuration",
+			"diagnostics",
+		]
+
+		// Weight map for subsystem importance (must sum to 1.0)
+		const subsystemWeights: Record<string, number> = {
+			governance: 0.25,
+			hermes: 0.15,
+			speech: 0.10,
+			security: 0.20,
+			telemetry: 0.10,
+			configuration: 0.10,
+			diagnostics: 0.10,
+		}
+
+		for (const subsystemName of expectedSubsystems) {
+			const findings: AuditFinding[] = []
+			let score = 100
+			const registered = this.registeredSubsystems.get(subsystemName)
+
+			// Check 1: Service exists and is registered
+			if (!registered) {
+				score -= 40
+				findings.push({
+					severity: "critical",
+					category: "registration",
+					description: `Subsystem "${subsystemName}" is not registered`,
+					subsystem: subsystemName,
+					recommendation: `Register the "${subsystemName}" subsystem via registerSubsystem()`,
+				})
+			} else if (registered.status === "inactive") {
+				score -= 30
+				findings.push({
+					severity: "high",
+					category: "availability",
+					description: `Subsystem "${subsystemName}" is registered but inactive`,
+					subsystem: subsystemName,
+					recommendation: `Activate the "${subsystemName}" subsystem or investigate why it is inactive`,
+				})
+			} else if (registered.status === "degraded") {
+				score -= 15
+				findings.push({
+					severity: "medium",
+					category: "availability",
+					description: `Subsystem "${subsystemName}" is in degraded state`,
+					subsystem: subsystemName,
+					recommendation: `Investigate and resolve degraded state for "${subsystemName}"`,
+				})
+			}
+
+			// Check 2: Error handling — look for audit entries indicating errors
+			const errorEntries = this.state.auditLog.filter(
+				(e) =>
+					e.action.toLowerCase().includes(subsystemName) &&
+					(e.result === "denied" || e.result === "blocked"),
+			)
+			if (registered && errorEntries.length === 0) {
+				// No error patterns observed — may indicate insufficient error handling coverage
+				score -= 5
+				findings.push({
+					severity: "low",
+					category: "error_handling",
+					description: `No error-handling audit trail found for "${subsystemName}"`,
+					subsystem: subsystemName,
+					recommendation: `Verify that "${subsystemName}" has proper error handling and logs failures to the audit trail`,
+				})
+			}
+
+			// Check 3: Audit trail coverage
+			const auditEntries = this.state.auditLog.filter((e) =>
+				e.action.toLowerCase().includes(subsystemName) || e.details.toLowerCase().includes(subsystemName),
+			)
+			if (registered && auditEntries.length === 0) {
+				score -= 15
+				findings.push({
+					severity: "high",
+					category: "audit_coverage",
+					description: `No audit trail entries found for "${subsystemName}"`,
+					subsystem: subsystemName,
+					recommendation: `Ensure "${subsystemName}" operations are logged to the governance audit trail`,
+				})
+			}
+
+			// Check 4: Failure mode handling — check for evidence bundles
+			const hasEvidence = Array.from(this.evidenceBundles.values()).some(
+				(b) => b.block.toLowerCase().includes(subsystemName),
+			)
+			if (registered && !hasEvidence) {
+				score -= 10
+				findings.push({
+					severity: "medium",
+					category: "failure_modes",
+					description: `No evidence bundle found for "${subsystemName}"`,
+					subsystem: subsystemName,
+					recommendation: `Create an evidence bundle documenting failure modes and recovery procedures for "${subsystemName}"`,
+				})
+			}
+
+			// Clamp score
+			score = Math.max(0, Math.min(100, score))
+
+			// Collect critical findings
+			for (const finding of findings) {
+				if (finding.severity === "critical") {
+					criticalFindings.push(`[${subsystemName}] ${finding.description}`)
+				}
+				if (finding.severity === "critical" || finding.severity === "high") {
+					recommendations.push(finding.recommendation)
+				}
+			}
+
+			subsystemResults.push({
+				name: subsystemName,
+				score,
+				findings,
+				evidencePresent: hasEvidence,
+			})
+		}
+
+		// Calculate weighted overall score
+		let overallScore = 0
+		for (const result of subsystemResults) {
+			const weight = subsystemWeights[result.name] ?? (1 / expectedSubsystems.length)
+			overallScore += result.score * weight
+		}
+		overallScore = Math.round(overallScore)
+
+		// Determine verdict
+		let verdict: AdversarialAuditResult["verdict"]
+		if (criticalFindings.length > 0 || overallScore < 50) {
+			verdict = "fail"
+		} else if (overallScore < 80) {
+			verdict = "conditional_pass"
+		} else {
+			verdict = "pass"
+		}
+
+		const auditResult: AdversarialAuditResult = {
+			auditId,
+			timestamp: Date.now(),
+			subsystems: subsystemResults,
+			overallScore,
+			criticalFindings,
+			recommendations,
+			verdict,
+		}
+
+		this.addAuditEntry({
+			actor: "system",
+			action: `Adversarial audit completed: ${verdict.toUpperCase()}`,
+			riskLevel: verdict === "fail" ? "critical" : verdict === "conditional_pass" ? "high" : "low",
+			result: verdict === "fail" ? "denied" : "approved",
+			details: `Audit ${auditId}: overall score ${overallScore}/100, ${criticalFindings.length} critical findings, verdict: ${verdict}`,
+		})
+
+		this.emitChange()
+		return auditResult
+	}
+
+	// ── Final Release Verdict ──────────────────────────
+
+	generateFinalVerdict(auditResult: AdversarialAuditResult): ReleaseVerdict {
+		let decision: ReleaseVerdict["decision"]
+		if (auditResult.verdict === "fail" || auditResult.overallScore < 50) {
+			decision = "fail"
+		} else if (auditResult.verdict === "conditional_pass" || auditResult.overallScore < 80) {
+			decision = "conditional_pass"
+		} else {
+			decision = "pass"
+		}
+
+		const riskSummary = [
+			`Adversarial audit score: ${auditResult.overallScore}/100`,
+			`Critical findings: ${auditResult.criticalFindings.length}`,
+			`Subsystems audited: ${auditResult.subsystems.length}`,
+			auditResult.recommendations.length > 0
+				? `Top recommendation: ${auditResult.recommendations[0]}`
+				: "No outstanding recommendations",
+		].join(". ")
+
+		const rollbackPlan = decision === "fail"
+			? "Release blocked — resolve all critical findings before proceeding"
+			: "Standard rollback procedure: revert to previous stable release tag if post-deploy issues detected"
+
+		return this.createReleaseVerdict(
+			`adversarial-audit-${auditResult.auditId}`,
+			auditResult.criticalFindings.length,
+			auditResult.recommendations.length,
+			riskSummary,
+			rollbackPlan,
+			decision,
+		)
 	}
 
 	// ── Disposal ───────────────────────────────────────

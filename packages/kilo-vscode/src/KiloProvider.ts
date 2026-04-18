@@ -1116,6 +1116,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "sshFileUpload":
           await this.sshService?.uploadFile(message.profileName, message.remotePath)
           break
+        case "sshFilePreview":
+          if (this.sshService) {
+            const preview = await this.sshService.getFilePreview(message.profileName, message.remotePath)
+            this.postMessage({ type: "sshFilePreviewResult", profileName: message.profileName, remotePath: message.remotePath, content: preview } as never)
+          }
+          break
+        case "sshFileDiff":
+          await this.sshService?.diffRemoteFile(message.profileName, message.localPath, message.remotePath)
+          break
+        case "sshFileSaveRemote":
+          await this.sshService?.saveRemoteFile(message.profileName, message.localPath, message.remotePath, message.confirmAndUpload ?? false)
+          break
+        case "sshGetErrors":
+          if (this.sshService) {
+            const errors = this.sshService.getLastErrors(message.profileName)
+            this.postMessage({ type: "sshErrors", errors: errors.map((e: { message: string; code: string; profileName: string; timestamp: number }) => ({ message: e.message, code: e.code, profileName: e.profileName, timestamp: e.timestamp })) } as never)
+          }
+          break
         case "sshTailLogs":
           if (message.action === "stop") this.sshService?.stopLogTail(message.profileName)
           else this.sshService?.startLogTail(message.profileName, message.service)
@@ -1225,6 +1243,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "memorySetPermission":
           this.memoryService?.setPermission(message.agentId, message.scope, message.allowed)
           break
+        case "memoryRunDiagnostics":
+          if (this.memoryService) {
+            const diagResult = await this.memoryService.runDiagnostics()
+            this.postMessage({ type: "memoryDiagnosticResult", result: diagResult } as never)
+          }
+          break
+        case "memoryGetRecallTraces":
+          if (this.memoryService) {
+            this.postMessage({ type: "memoryRecallTracesLoaded", traces: this.memoryService.getAgentRecallTraces() } as never)
+          }
+          break
 
         // Training
         case "requestTrainingState":
@@ -1267,8 +1296,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "trainingExportModel":
           if (this.trainingService) {
-            await this.trainingService.exportModel(message.exportOptions)
-            this.postMessage({ type: "trainingExportComplete", jobId: message.exportOptions?.jobId } as never)
+            const exportResult = await this.trainingService.exportModel(message.exportOptions)
+            this.postMessage({ type: "trainingExportComplete", exportResult } as never)
           }
           break
         case "trainingDetectGPU":
