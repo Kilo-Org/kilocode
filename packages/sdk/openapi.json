@@ -1276,6 +1276,194 @@
         ]
       }
     },
+    "/experimental/console": {
+      "get": {
+        "operationId": "experimental.console.get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get active Console provider metadata",
+        "description": "Get the active Console org name and the set of provider IDs managed by that Console org.",
+        "responses": {
+          "200": {
+            "description": "Active Console provider metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "consoleManagedProviders": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "activeOrgName": {
+                      "type": "string"
+                    },
+                    "switchableOrgCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["consoleManagedProviders", "switchableOrgCount"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/console/orgs": {
+      "get": {
+        "operationId": "experimental.console.listOrgs",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List switchable Console orgs",
+        "description": "Get the available Console orgs across logged-in accounts, including the current active org.",
+        "responses": {
+          "200": {
+            "description": "Switchable Console orgs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "orgs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "accountID": {
+                            "type": "string"
+                          },
+                          "accountEmail": {
+                            "type": "string"
+                          },
+                          "accountUrl": {
+                            "type": "string"
+                          },
+                          "orgID": {
+                            "type": "string"
+                          },
+                          "orgName": {
+                            "type": "string"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": ["accountID", "accountEmail", "accountUrl", "orgID", "orgName", "active"]
+                      }
+                    }
+                  },
+                  "required": ["orgs"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.listOrgs({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/console/switch": {
+      "post": {
+        "operationId": "experimental.console.switchOrg",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Switch active Console org",
+        "description": "Persist a new active Console account/org selection for the current local Kilo state.",
+        "responses": {
+          "200": {
+            "description": "Switch success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountID": {
+                    "type": "string"
+                  },
+                  "orgID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["accountID", "orgID"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.console.switchOrg({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/experimental/tool/ids": {
       "get": {
         "operationId": "tool.ids",
@@ -1841,7 +2029,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/FileDiff"
+                    "$ref": "#/components/schemas/SnapshotFileDiff"
                   }
                 }
               }
@@ -3157,7 +3345,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/FileDiff"
+                    "$ref": "#/components/schemas/SnapshotFileDiff"
                   }
                 }
               }
@@ -4230,7 +4418,19 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AssistantMessage"
+                  "type": "object",
+                  "properties": {
+                    "info": {
+                      "$ref": "#/components/schemas/Message"
+                    },
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Part"
+                      }
+                    }
+                  },
+                  "required": ["info", "parts"]
                 }
               }
             }
@@ -4262,6 +4462,10 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "messageID": {
+                    "type": "string",
+                    "pattern": "^msg.*"
+                  },
                   "agent": {
                     "type": "string"
                   },
@@ -5043,6 +5247,206 @@
         ]
       }
     },
+    "/suggestion": {
+      "get": {
+        "operationId": "suggestion.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List pending suggestions",
+        "description": "Get all pending suggestion requests across all sessions.",
+        "responses": {
+          "200": {
+            "description": "List of pending suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionRequest"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/accept": {
+      "post": {
+        "operationId": "suggestion.accept",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Accept suggestion request",
+        "description": "Accept a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "description": "Zero-based action index to accept",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["index"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.accept({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/dismiss": {
+      "post": {
+        "operationId": "suggestion.dismiss",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Dismiss suggestion request",
+        "description": "Dismiss a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion dismissed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.dismiss({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/provider": {
       "get": {
         "operationId": "provider.list",
@@ -5075,225 +5479,7 @@
                     "all": {
                       "type": "array",
                       "items": {
-                        "type": "object",
-                        "properties": {
-                          "api": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "env": {
-                            "type": "array",
-                            "items": {
-                              "type": "string"
-                            }
-                          },
-                          "id": {
-                            "type": "string"
-                          },
-                          "npm": {
-                            "type": "string"
-                          },
-                          "models": {
-                            "type": "object",
-                            "propertyNames": {
-                              "type": "string"
-                            },
-                            "additionalProperties": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                },
-                                "family": {
-                                  "type": "string"
-                                },
-                                "release_date": {
-                                  "type": "string"
-                                },
-                                "attachment": {
-                                  "type": "boolean"
-                                },
-                                "reasoning": {
-                                  "type": "boolean"
-                                },
-                                "temperature": {
-                                  "type": "boolean"
-                                },
-                                "tool_call": {
-                                  "type": "boolean"
-                                },
-                                "interleaved": {
-                                  "anyOf": [
-                                    {
-                                      "type": "boolean",
-                                      "const": true
-                                    },
-                                    {
-                                      "type": "object",
-                                      "properties": {
-                                        "field": {
-                                          "type": "string",
-                                          "enum": ["reasoning_content", "reasoning_details"]
-                                        }
-                                      },
-                                      "required": ["field"],
-                                      "additionalProperties": false
-                                    }
-                                  ]
-                                },
-                                "cost": {
-                                  "type": "object",
-                                  "properties": {
-                                    "input": {
-                                      "type": "number"
-                                    },
-                                    "output": {
-                                      "type": "number"
-                                    },
-                                    "cache_read": {
-                                      "type": "number"
-                                    },
-                                    "cache_write": {
-                                      "type": "number"
-                                    },
-                                    "context_over_200k": {
-                                      "type": "object",
-                                      "properties": {
-                                        "input": {
-                                          "type": "number"
-                                        },
-                                        "output": {
-                                          "type": "number"
-                                        },
-                                        "cache_read": {
-                                          "type": "number"
-                                        },
-                                        "cache_write": {
-                                          "type": "number"
-                                        }
-                                      },
-                                      "required": ["input", "output"]
-                                    }
-                                  },
-                                  "required": ["input", "output"]
-                                },
-                                "limit": {
-                                  "type": "object",
-                                  "properties": {
-                                    "context": {
-                                      "type": "number"
-                                    },
-                                    "input": {
-                                      "type": "number"
-                                    },
-                                    "output": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": ["context", "output"]
-                                },
-                                "modalities": {
-                                  "type": "object",
-                                  "properties": {
-                                    "input": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string",
-                                        "enum": ["text", "audio", "image", "video", "pdf"]
-                                      }
-                                    },
-                                    "output": {
-                                      "type": "array",
-                                      "items": {
-                                        "type": "string",
-                                        "enum": ["text", "audio", "image", "video", "pdf"]
-                                      }
-                                    }
-                                  },
-                                  "required": ["input", "output"]
-                                },
-                                "recommendedIndex": {
-                                  "type": "number"
-                                },
-                                "prompt": {
-                                  "type": "string",
-                                  "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"]
-                                },
-                                "isFree": {
-                                  "type": "boolean"
-                                },
-                                "ai_sdk_provider": {
-                                  "type": "string",
-                                  "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
-                                },
-                                "experimental": {
-                                  "type": "boolean"
-                                },
-                                "status": {
-                                  "type": "string",
-                                  "enum": ["alpha", "beta", "deprecated"]
-                                },
-                                "options": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {}
-                                },
-                                "headers": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "string"
-                                  }
-                                },
-                                "provider": {
-                                  "type": "object",
-                                  "properties": {
-                                    "npm": {
-                                      "type": "string"
-                                    },
-                                    "api": {
-                                      "type": "string"
-                                    }
-                                  }
-                                },
-                                "variants": {
-                                  "type": "object",
-                                  "propertyNames": {
-                                    "type": "string"
-                                  },
-                                  "additionalProperties": {
-                                    "type": "object",
-                                    "propertyNames": {
-                                      "type": "string"
-                                    },
-                                    "additionalProperties": {}
-                                  }
-                                }
-                              },
-                              "required": [
-                                "id",
-                                "name",
-                                "release_date",
-                                "attachment",
-                                "reasoning",
-                                "temperature",
-                                "tool_call",
-                                "limit",
-                                "options"
-                              ]
-                            }
-                          }
-                        },
-                        "required": ["name", "env", "id", "models"]
+                        "$ref": "#/components/schemas/Provider"
                       }
                     },
                     "default": {
@@ -7289,6 +7475,59 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/vcs/diff": {
+      "get": {
+        "operationId": "vcs.diff",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "type": "string",
+              "enum": ["git", "branch"]
+            },
+            "required": true
+          }
+        ],
+        "summary": "Get VCS diff",
+        "description": "Retrieve the current git diff for the working tree or against the default branch.",
+        "responses": {
+          "200": {
+            "description": "VCS diff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VcsFileDiff"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.vcs.diff({\n  ...\n})"
           }
         ]
       }
@@ -10162,6 +10401,25 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.server.instance.disposed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "server.instance.disposed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              }
+            },
+            "required": ["directory"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.installation.updated": {
         "type": "object",
         "properties": {
@@ -10196,25 +10454,6 @@
               }
             },
             "required": ["version"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.server.instance.disposed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "server.instance.disposed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "directory": {
-                "type": "string"
-              }
-            },
-            "required": ["directory"]
           }
         },
         "required": ["type", "properties"]
@@ -10595,6 +10834,48 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.session.turn.open": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.turn.open"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.turn.close": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.turn.close"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["completed", "error", "interrupted"]
+              }
+            },
+            "required": ["sessionID", "reason"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "PermissionRequest": {
         "type": "object",
         "properties": {
@@ -10681,6 +10962,365 @@
               }
             },
             "required": ["sessionID", "requestID", "reply"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "SnapshotFileDiff": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "string"
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "deleted", "modified"]
+          }
+        },
+        "required": ["file", "patch", "additions", "deletions"]
+      },
+      "Event.session.diff": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.diff"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "diff": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SnapshotFileDiff"
+                }
+              }
+            },
+            "required": ["sessionID", "diff"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "ProviderAuthError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "ProviderAuthError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "providerID": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["providerID", "message"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "UnknownError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "UnknownError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "MessageOutputLengthError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "MessageOutputLengthError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "MessageAbortedError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "MessageAbortedError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "StructuredOutputError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "StructuredOutputError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "retries": {
+                "type": "number"
+              }
+            },
+            "required": ["message", "retries"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "ContextOverflowError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "ContextOverflowError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "responseBody": {
+                "type": "string"
+              }
+            },
+            "required": ["message"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+      "APIError": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "const": "APIError"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "statusCode": {
+                "type": "number"
+              },
+              "isRetryable": {
+                "type": "boolean"
+              },
+              "responseHeaders": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "responseBody": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": ["message", "isRetryable"]
+          }
+        },
+        "required": ["name", "data"]
+      },
+
+      "Event.session.error": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.error"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "error": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ProviderAuthError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UnknownError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MessageOutputLengthError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MessageAbortedError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/StructuredOutputError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ContextOverflowError"
+                  },
+                  {
+                    "$ref": "#/components/schemas/APIError"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.file.edited": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.edited"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            },
+            "required": ["file"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.file.watcher.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.watcher.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "event": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "add"
+                  },
+                  {
+                    "type": "string",
+                    "const": "change"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unlink"
+                  }
+                ]
+              }
+            },
+            "required": ["file", "event"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.vcs.branch.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "vcs.branch.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.command.executed": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "command.executed"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "arguments": {
+                "type": "string"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg.*"
+              }
+            },
+            "required": ["name", "sessionID", "arguments", "messageID"]
           }
         },
         "required": ["type", "properties"]
@@ -11001,409 +11641,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.file.edited": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "file.edited"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              }
-            },
-            "required": ["file"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.file.watcher.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "file.watcher.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              },
-              "event": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "add"
-                  },
-                  {
-                    "type": "string",
-                    "const": "change"
-                  },
-                  {
-                    "type": "string",
-                    "const": "unlink"
-                  }
-                ]
-              }
-            },
-            "required": ["file", "event"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.command.executed": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "command.executed"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
-              },
-              "arguments": {
-                "type": "string"
-              },
-              "messageID": {
-                "type": "string",
-                "pattern": "^msg.*"
-              }
-            },
-            "required": ["name", "sessionID", "arguments", "messageID"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.session.turn.open": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.turn.open"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              }
-            },
-            "required": ["sessionID"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.session.turn.close": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.turn.close"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string",
-                "enum": ["completed", "error", "interrupted"]
-              }
-            },
-            "required": ["sessionID", "reason"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "FileDiff": {
-        "type": "object",
-        "properties": {
-          "file": {
-            "type": "string"
-          },
-          "before": {
-            "type": "string"
-          },
-          "after": {
-            "type": "string"
-          },
-          "additions": {
-            "type": "number"
-          },
-          "deletions": {
-            "type": "number"
-          },
-          "status": {
-            "type": "string",
-            "enum": ["added", "deleted", "modified"]
-          }
-        },
-        "required": ["file", "before", "after", "additions", "deletions"]
-      },
-      "Event.session.diff": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.diff"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
-              },
-              "diff": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/FileDiff"
-                }
-              }
-            },
-            "required": ["sessionID", "diff"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "ProviderAuthError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "ProviderAuthError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "providerID": {
-                "type": "string"
-              },
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["providerID", "message"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "UnknownError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "UnknownError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "MessageOutputLengthError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "MessageOutputLengthError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {}
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "MessageAbortedError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "MessageAbortedError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "StructuredOutputError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "StructuredOutputError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              },
-              "retries": {
-                "type": "number"
-              }
-            },
-            "required": ["message", "retries"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "ContextOverflowError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "ContextOverflowError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              },
-              "responseBody": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "APIError": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "const": "APIError"
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              },
-              "statusCode": {
-                "type": "number"
-              },
-              "isRetryable": {
-                "type": "boolean"
-              },
-              "responseHeaders": {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "responseBody": {
-                "type": "string"
-              },
-              "metadata": {
-                "type": "object",
-                "propertyNames": {
-                  "type": "string"
-                },
-                "additionalProperties": {
-                  "type": "string"
-                }
-              }
-            },
-            "required": ["message", "isRetryable"]
-          }
-        },
-        "required": ["name", "data"]
-      },
-      "Event.session.error": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.error"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
-              },
-              "error": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/ProviderAuthError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/UnknownError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/MessageOutputLengthError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/MessageAbortedError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/StructuredOutputError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/ContextOverflowError"
-                  },
-                  {
-                    "$ref": "#/components/schemas/APIError"
-                  }
-                ]
-              }
-            }
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.vcs.branch.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "vcs.branch.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "branch": {
-                "type": "string"
-              }
-            }
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Event.kilo-sessions.remote-status-changed": {
         "type": "object",
         "properties": {
@@ -11703,7 +11940,7 @@
               "diffs": {
                 "type": "array",
                 "items": {
-                  "$ref": "#/components/schemas/FileDiff"
+                  "$ref": "#/components/schemas/SnapshotFileDiff"
                 }
               }
             },
@@ -11720,6 +11957,9 @@
               },
               "modelID": {
                 "type": "string"
+              },
+              "variant": {
+                "type": "string"
               }
             },
             "required": ["providerID", "modelID"]
@@ -11735,9 +11975,6 @@
             "additionalProperties": {
               "type": "boolean"
             }
-          },
-          "variant": {
-            "type": "string"
           },
           "editorContext": {
             "type": "object",
@@ -13024,13 +13261,13 @@
             "$ref": "#/components/schemas/Event.project.updated"
           },
           {
+            "$ref": "#/components/schemas/Event.server.instance.disposed"
+          },
+          {
             "$ref": "#/components/schemas/Event.installation.updated"
           },
           {
             "$ref": "#/components/schemas/Event.installation.update-available"
-          },
-          {
-            "$ref": "#/components/schemas/Event.server.instance.disposed"
           },
           {
             "$ref": "#/components/schemas/Event.server.connected"
@@ -13046,6 +13283,18 @@
           },
           {
             "$ref": "#/components/schemas/Event.lsp.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.edited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.shown"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.accepted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.dismissed"
           },
           {
             "$ref": "#/components/schemas/Event.tui.prompt.append"
@@ -13081,10 +13330,34 @@
             "$ref": "#/components/schemas/Event.message.part.delta"
           },
           {
+            "$ref": "#/components/schemas/Event.session.turn.open"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.turn.close"
+          },
+          {
             "$ref": "#/components/schemas/Event.permission.asked"
           },
           {
             "$ref": "#/components/schemas/Event.permission.replied"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.diff"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.error"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.edited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.watcher.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.vcs.branch.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.command.executed"
           },
           {
             "$ref": "#/components/schemas/Event.question.asked"
@@ -13106,30 +13379,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.session.compacted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.file.edited"
-          },
-          {
-            "$ref": "#/components/schemas/Event.file.watcher.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.command.executed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.turn.open"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.turn.close"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.diff"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.error"
-          },
-          {
-            "$ref": "#/components/schemas/Event.vcs.branch.updated"
           },
           {
             "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
@@ -13887,6 +14136,60 @@
           "npm": {
             "type": "string"
           },
+          "whitelist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "blacklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              },
+              "baseURL": {
+                "type": "string"
+              },
+              "enterpriseUrl": {
+                "description": "GitHub Enterprise URL for copilot authentication",
+                "type": "string"
+              },
+              "setCacheKey": {
+                "description": "Enable promptCacheKey for this provider (default false)",
+                "type": "boolean"
+              },
+              "timeout": {
+                "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
+                "anyOf": [
+                  {
+                    "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "description": "Disable timeout for this provider entirely.",
+                    "type": "boolean",
+                    "const": false
+                  }
+                ]
+              },
+              "chunkTimeout": {
+                "description": "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "additionalProperties": {}
+          },
           "models": {
             "type": "object",
             "propertyNames": {
@@ -14009,26 +14312,23 @@
                   },
                   "required": ["input", "output"]
                 },
-                "recommendedIndex": {
-                  "type": "number"
-                },
-                "prompt": {
-                  "type": "string",
-                  "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"]
-                },
-                "isFree": {
-                  "type": "boolean"
-                },
-                "ai_sdk_provider": {
-                  "type": "string",
-                  "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
-                },
                 "experimental": {
                   "type": "boolean"
                 },
                 "status": {
                   "type": "string",
                   "enum": ["alpha", "beta", "deprecated"]
+                },
+                "provider": {
+                  "type": "object",
+                  "properties": {
+                    "npm": {
+                      "type": "string"
+                    },
+                    "api": {
+                      "type": "string"
+                    }
+                  }
                 },
                 "options": {
                   "type": "object",
@@ -14044,17 +14344,6 @@
                   },
                   "additionalProperties": {
                     "type": "string"
-                  }
-                },
-                "provider": {
-                  "type": "object",
-                  "properties": {
-                    "npm": {
-                      "type": "string"
-                    },
-                    "api": {
-                      "type": "string"
-                    }
                   }
                 },
                 "variants": {
@@ -14076,60 +14365,6 @@
                 }
               }
             }
-          },
-          "whitelist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "blacklist": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "options": {
-            "type": "object",
-            "properties": {
-              "apiKey": {
-                "type": "string"
-              },
-              "baseURL": {
-                "type": "string"
-              },
-              "enterpriseUrl": {
-                "description": "GitHub Enterprise URL for copilot authentication",
-                "type": "string"
-              },
-              "setCacheKey": {
-                "description": "Enable promptCacheKey for this provider (default false)",
-                "type": "boolean"
-              },
-              "timeout": {
-                "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
-                "anyOf": [
-                  {
-                    "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
-                    "type": "integer",
-                    "exclusiveMinimum": 0,
-                    "maximum": 9007199254740991
-                  },
-                  {
-                    "description": "Disable timeout for this provider entirely.",
-                    "type": "boolean",
-                    "const": false
-                  }
-                ]
-              },
-              "chunkTimeout": {
-                "description": "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
-                "type": "integer",
-                "exclusiveMinimum": 0,
-                "maximum": 9007199254740991
-              }
-            },
-            "additionalProperties": {}
           }
         },
         "additionalProperties": false
@@ -14186,6 +14421,10 @@
           },
           "scope": {
             "description": "OAuth scopes to request during authorization",
+            "type": "string"
+          },
+          "redirectUri": {
+            "description": "OAuth redirect URI (default: http://127.0.0.1:19876/mcp/oauth/callback).",
             "type": "string"
           }
         },
@@ -14648,6 +14887,16 @@
               }
             }
           },
+          "commit_message": {
+            "description": "Configuration for AI-generated commit messages",
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "description": "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+                "type": "string"
+              }
+            }
+          },
           "compaction": {
             "type": "object",
             "properties": {
@@ -14763,6 +15012,15 @@
           },
           "key": {
             "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
         "required": ["type", "key"]
@@ -15221,10 +15479,7 @@
           "file": {
             "type": "string"
           },
-          "before": {
-            "type": "string"
-          },
-          "after": {
+          "patch": {
             "type": "string"
           },
           "additions": {
@@ -15236,6 +15491,12 @@
           "status": {
             "type": "string",
             "enum": ["added", "deleted", "modified"]
+          },
+          "before": {
+            "type": "string"
+          },
+          "after": {
+            "type": "string"
           },
           "tracked": {
             "type": "boolean"
@@ -15252,10 +15513,11 @@
         },
         "required": [
           "file",
-          "before",
-          "after",
+          "patch",
           "additions",
           "deletions",
+          "before",
+          "after",
           "tracked",
           "generatedLike",
           "summarized",
@@ -15967,8 +16229,33 @@
         "properties": {
           "branch": {
             "type": "string"
+          },
+          "default_branch": {
+            "type": "string"
           }
         }
+      },
+      "VcsFileDiff": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "patch": {
+            "type": "string"
+          },
+          "additions": {
+            "type": "number"
+          },
+          "deletions": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["added", "deleted", "modified"]
+          }
+        },
+        "required": ["file", "patch", "additions", "deletions"]
       },
       "Command": {
         "type": "object",

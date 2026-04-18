@@ -9,6 +9,7 @@ import type {
   Command,
   PermissionRequest,
   QuestionRequest,
+  SuggestionRequest, // kilocode_change
   SessionNetworkWait, // kilocode_change
   LspStatus,
   McpStatus,
@@ -27,10 +28,12 @@ import type { Snapshot } from "@/snapshot"
 import { useExit } from "./exit"
 import { useArgs } from "./args"
 import { batch, onMount } from "solid-js"
+import { handleSuggestionEvent } from "@/kilocode/suggestion/tui/sync" // kilocode_change
 import { Log } from "@/util/log"
 import { useToast } from "@tui/ui/toast" // kilocode_change
 import type { Path } from "@kilocode/sdk"
 import type { Workspace } from "@kilocode/sdk/v2"
+import { ConsoleState, emptyConsoleState, type ConsoleState as ConsoleStateType } from "@/config/console-state"
 
 export const { use: useSync, provider: SyncProvider } = createSimpleContext({
   name: "Sync",
@@ -40,6 +43,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       provider: Provider[]
       provider_default: Record<string, string>
       provider_next: ProviderListResponse
+      console_state: ConsoleStateType
       provider_auth: Record<string, ProviderAuthMethod[]>
       agent: Agent[]
       command: Command[]
@@ -50,6 +54,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         [sessionID: string]: QuestionRequest[]
       }
       // kilocode_change start
+      suggestion: {
+        [sessionID: string]: SuggestionRequest[]
+      }
       network: {
         [sessionID: string]: SessionNetworkWait[]
       }
@@ -88,6 +95,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         default: {},
         connected: [],
       },
+      console_state: emptyConsoleState,
       provider_auth: {},
       config: {},
       status: "loading",
@@ -95,6 +103,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       permission: {},
       question: {},
       // kilocode_change start
+      suggestion: {},
       network: {},
       // kilocode_change end
       command: [],
@@ -140,6 +149,9 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           delete draft.session_diff[sessionID]
           delete draft.session_status[sessionID]
           delete draft.todo[sessionID]
+          delete draft.permission[sessionID]
+          delete draft.question[sessionID]
+          delete draft.suggestion[sessionID]
           delete draft.network[sessionID]
         }),
       )
@@ -253,6 +265,15 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
 
+        // kilocode_change start
+        case "suggestion.accepted":
+        case "suggestion.dismissed":
+        case "suggestion.shown": {
+          handleSuggestionEvent(event, store, setStore)
+          break
+        }
+        // kilocode_change end
+
         case "session.network.restored": {
           const requests = store.network[event.properties.sessionID]
           if (!requests) break
@@ -285,17 +306,12 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           break
         }
         // kilocode_change end
-
         case "todo.updated":
           setStore("todo", event.properties.sessionID, event.properties.todos)
           break
 
         case "session.diff":
-          setStore(
-            "session_diff",
-            event.properties.sessionID,
-            event.properties.diff.map(({ before: _, after: __, ...rest }) => rest),
-          )
+          setStore("session_diff", event.properties.sessionID, event.properties.diff)
           break
 
         // kilocode_change start
@@ -477,6 +493,10 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
       // blocking - include session.list when continuing a session
       const providersPromise = sdk.client.config.providers({}, { throwOnError: true })
       const providerListPromise = sdk.client.provider.list({}, { throwOnError: true })
+      const consoleStatePromise = sdk.client.experimental.console
+        .get({}, { throwOnError: true })
+        .then((x) => ConsoleState.parse(x.data))
+        .catch(() => emptyConsoleState)
       const agentsPromise = sdk.client.app.agents({}, { throwOnError: true })
       const configPromise = sdk.client.config.get({}, { throwOnError: true })
       const blockingRequests: Promise<unknown>[] = [
@@ -491,6 +511,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
         .then(() => {
           const providersResponse = providersPromise.then((x) => x.data!)
           const providerListResponse = providerListPromise.then((x) => x.data!)
+          const consoleStateResponse = consoleStatePromise
           const agentsResponse = agentsPromise.then((x) => x.data ?? [])
           const configResponse = configPromise.then((x) => x.data!)
           const sessionListResponse = args.continue ? sessionListPromise : undefined
@@ -498,20 +519,23 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           return Promise.all([
             providersResponse,
             providerListResponse,
+            consoleStateResponse,
             agentsResponse,
             configResponse,
             ...(sessionListResponse ? [sessionListResponse] : []),
           ]).then((responses) => {
             const providers = responses[0]
             const providerList = responses[1]
-            const agents = responses[2]
-            const config = responses[3]
-            const sessions = responses[4]
+            const consoleState = responses[2]
+            const agents = responses[3]
+            const config = responses[4]
+            const sessions = responses[5]
 
             batch(() => {
               setStore("provider", reconcile(providers.providers))
               setStore("provider_default", reconcile(providers.default))
               setStore("provider_next", reconcile(providerList))
+              setStore("console_state", reconcile(consoleState))
               setStore("agent", reconcile(agents))
               setStore("config", reconcile(config))
               if (sessions !== undefined) setStore("session", reconcile(sessions))
@@ -523,6 +547,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           // non-blocking
           Promise.all([
             ...(args.continue ? [] : [sessionListPromise.then((sessions) => setStore("session", reconcile(sessions)))]),
+            consoleStatePromise.then((consoleState) => setStore("console_state", reconcile(consoleState))),
             sdk.client.command.list().then((x) => setStore("command", reconcile(x.data ?? []))),
             sdk.client.lsp.status().then((x) => setStore("lsp", reconcile(x.data!))),
             sdk.client.mcp.status().then((x) => setStore("mcp", reconcile(x.data!))),
@@ -623,7 +648,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
               for (const message of messages.data!) {
                 draft.part[message.info.id] = message.parts
               }
-              draft.session_diff[sessionID] = (diff.data ?? []).map(({ before: _, after: __, ...rest }) => rest)
+              draft.session_diff[sessionID] = diff.data ?? []
             }),
           )
           fullSyncedSessions.add(sessionID)

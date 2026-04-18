@@ -15,6 +15,7 @@ import { Keybind } from "@/util/keybind"
 import { Locale } from "@/util/locale"
 import { Global } from "@/global"
 import { useDialog } from "../../ui/dialog"
+import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../context/tui-config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 
@@ -63,12 +64,14 @@ function EditBody(props: { request: PermissionRequest }) {
   })
 
   const ft = createMemo(() => filetype(filepath()))
+  const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
 
   return (
     <box flexDirection="column" gap={1}>
       <Show when={diff()}>
         <scrollbox
           height="100%"
+          scrollAcceleration={scrollAcceleration()}
           verticalScrollbarOptions={{
             trackOptions: {
               backgroundColor: theme.background,
@@ -535,7 +538,10 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
         gap={1}
       >
         <textarea
-          ref={(val: TextareaRenderable) => (input = val)}
+          ref={(val: TextareaRenderable) => {
+            input = val
+            val.traits = { status: "REJECT" }
+          }}
           focused
           textColor={theme.text}
           focusedTextColor={theme.text}

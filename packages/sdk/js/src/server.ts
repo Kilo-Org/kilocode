@@ -1,5 +1,6 @@
-import { spawn } from "node:child_process"
+import launch from "cross-spawn"
 import { type Config } from "./gen/types.gen.js"
+import { stop, bindAbort } from "./process.js"
 
 // kilocode_change start - Merge existing KILO_CONFIG_CONTENT with new config
 // This preserves Kilocode-injected modes when spawning nested CLI instances
@@ -64,23 +65,25 @@ export async function createKiloServer(options?: ServerOptions) {
   const args = [`serve`, `--hostname=${options.hostname}`, `--port=${options.port}`]
   if (options.config?.logLevel) args.push(`--log-level=${options.config.logLevel}`)
 
-  // kilocode_change start
-  const proc = spawn(`kilo`, args, {
-    // kilocode_change end
-    signal: options.signal,
-    windowsHide: true,
+  const proc = launch(`kilo`, args, {
+    // kilocode_change
     env: {
       ...process.env,
       KILO_CONFIG_CONTENT: buildConfigEnv(options.config), // kilocode_change
     },
   })
+  let clear = () => {}
 
   const url = await new Promise<string>((resolve, reject) => {
     const id = setTimeout(() => {
+      clear()
+      stop(proc)
       reject(new Error(`Timeout waiting for server to start after ${options.timeout}ms`))
     }, options.timeout)
     let output = ""
+    let resolved = false
     proc.stdout?.on("data", (chunk) => {
+      if (resolved) return
       output += chunk.toString()
       const lines = output.split("\n")
       for (const line of lines) {
@@ -89,9 +92,14 @@ export async function createKiloServer(options?: ServerOptions) {
           // kilocode_change end
           const match = line.match(/on\s+(https?:\/\/[^\s]+)/)
           if (!match) {
-            throw new Error(`Failed to parse server url from output: ${line}`)
+            clear()
+            stop(proc)
+            clearTimeout(id)
+            reject(new Error(`Failed to parse server url from output: ${line}`))
+            return
           }
           clearTimeout(id)
+          resolved = true
           resolve(match[1]!)
           return
         }
@@ -112,18 +120,17 @@ export async function createKiloServer(options?: ServerOptions) {
       clearTimeout(id)
       reject(error)
     })
-    if (options.signal) {
-      options.signal.addEventListener("abort", () => {
-        clearTimeout(id)
-        reject(new Error("Aborted"))
-      })
-    }
+    clear = bindAbort(proc, options.signal, () => {
+      clearTimeout(id)
+      reject(options.signal?.reason)
+    })
   })
 
   return {
     url,
     close() {
-      proc.kill()
+      clear()
+      stop(proc)
     },
   }
 }
@@ -144,10 +151,8 @@ export function createKiloTui(options?: TuiOptions) {
     args.push(`--agent=${options.agent}`)
   }
 
-  // kilocode_change start
-  const proc = spawn(`kilo`, args, {
-    // kilocode_change end
-    signal: options?.signal,
+  const proc = launch(`kilo`, args, {
+    // kilocode_change
     stdio: "inherit",
     windowsHide: true,
     env: {
@@ -156,9 +161,12 @@ export function createKiloTui(options?: TuiOptions) {
     },
   })
 
+  const clear = bindAbort(proc, options?.signal)
+
   return {
     close() {
-      proc.kill()
+      clear()
+      stop(proc)
     },
   }
 }

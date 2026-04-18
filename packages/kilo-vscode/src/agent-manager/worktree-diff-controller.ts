@@ -1,21 +1,31 @@
 import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
+import { WorktreeDiffClient } from "../worktree-diff-client"
 import type { ApplyConflict, GitOps } from "./GitOps"
 import { shouldStopDiffPolling } from "./delete-worktree"
 import { remoteRef, type ManagedSession, type WorktreeStateManager } from "./WorktreeStateManager"
-import type { AgentManagerOutMessage } from "./types"
+import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
 
 const LOCAL_DIFF_ID = "local" as const
 
 type Target = { sessionId: string; directory: string; baseBranch: string }
-type Status = "added" | "deleted" | "modified"
 
 export interface WorktreeDiffControllerContext {
   getState: () => WorktreeStateManager | undefined
   getRoot: () => string | undefined
   getStateReady: () => Promise<void> | undefined
+  /**
+   * SDK client — used by `revert()` via `WorktreeDiffClient` for the one-shot
+   * file-status lookup. Hot polling paths (`request`, `requestFile`, `poll`)
+   * deliberately bypass the client and go through `localDiff`/`localDiffFile`
+   * to keep git spawns out of the Bun `kilo serve` process (see oven-sh/bun#18265).
+   */
   getClient: () => KiloClient
   git: GitOps
+  /** In-process diff summary (replaces client.worktree.diffSummary). */
+  localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
+  /** In-process single-file diff (replaces client.worktree.diffFile). */
+  localDiffFile: (dir: string, base: string, file: string) => Promise<WorktreeDiffEntry | null>
   post: (msg: AgentManagerOutMessage) => void
   log: (...args: unknown[]) => void
 }
@@ -111,12 +121,8 @@ export class WorktreeDiffController {
     }
 
     try {
-      const result = await this.ctx.git.revertFile(
-        target.directory,
-        target.baseBranch,
-        file,
-        await this.status(target, file),
-      )
+      const diff = new WorktreeDiffClient(this.ctx.getClient(), this.ctx.git, (...args) => this.ctx.log(...args))
+      const result = await diff.revertFile(target, file)
       this.ctx.post({
         type: "agentManager.revertWorktreeFileResult",
         sessionId,
@@ -149,11 +155,7 @@ export class WorktreeDiffController {
     this.ctx.post({ type: "agentManager.worktreeDiffLoading", sessionId, loading: true })
 
     try {
-      const { data } = await this.ctx
-        .getClient()
-        .worktree.diffSummary({ directory: target.directory, base: target.baseBranch }, { throwOnError: true })
-
-      const files = data ?? []
+      const files = await this.ctx.localDiff(target.directory, target.baseBranch)
       this.ctx.log(`Worktree diff returned ${files.length} file(s) for session ${sessionId}`)
       this.hash = hashFileDiffs(files)
       this.session = sessionId
@@ -175,10 +177,8 @@ export class WorktreeDiffController {
     this.target = { sessionId, directory: target.directory, baseBranch: target.baseBranch }
 
     try {
-      const { data } = await this.ctx
-        .getClient()
-        .worktree.diffFile({ directory: target.directory, base: target.baseBranch, file }, { throwOnError: true })
-      this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data ?? null })
+      const data = await this.ctx.localDiffFile(target.directory, target.baseBranch, file)
+      this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: data })
     } catch (error) {
       this.ctx.log("Failed to fetch worktree diff file:", error)
       this.ctx.post({ type: "agentManager.worktreeDiffFile", sessionId, file, diff: null })
@@ -219,11 +219,7 @@ export class WorktreeDiffController {
     if (!target) return
 
     try {
-      const { data } = await this.ctx
-        .getClient()
-        .worktree.diffSummary({ directory: target.directory, base: target.baseBranch }, { throwOnError: true })
-
-      const files = data ?? []
+      const files = await this.ctx.localDiff(target.directory, target.baseBranch)
       const hash = hashFileDiffs(files)
       if (hash === this.hash && this.session === sessionId) return
       this.hash = hash
@@ -264,18 +260,6 @@ export class WorktreeDiffController {
 
   private async resolveLocal(): Promise<{ directory: string; baseBranch: string } | undefined> {
     return await resolveLocalDiffTarget(this.ctx.git, (...args) => this.ctx.log(...args), this.ctx.getRoot())
-  }
-
-  private async status(target: { directory: string; baseBranch: string }, file: string): Promise<Status | undefined> {
-    try {
-      const { data } = await this.ctx
-        .getClient()
-        .worktree.diffFile({ directory: target.directory, base: target.baseBranch, file }, { throwOnError: true })
-      return data?.status
-    } catch (error) {
-      this.ctx.log("Failed to look up file status for revert:", error)
-      return undefined
-    }
   }
 
   private async ready(msg: string): Promise<void> {

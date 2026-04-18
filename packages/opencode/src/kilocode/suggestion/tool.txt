@@ -1,0 +1,17 @@
+Use this tool to suggest a local code review to the user after completing implementation work.
+
+This tool is ONLY for suggesting code review. Do NOT use it to suggest running tests, committing, pushing, or any other action.
+
+Guidelines:
+- Only suggest review when you are at least 90% confident the user's request is fully addressed
+- Do not suggest review after every edit or partial implementation turn
+- Do not repeat a review suggestion that was already dismissed in this conversation
+- Keep the suggestion text concise and actionable
+- Provide 1-2 actions maximum
+- Make each action prompt self-contained so it can be injected as a synthetic user message
+- If you need a real answer from the user, use the `question` tool instead
+
+Choosing the right review command for the action prompt:
+- Use `/local-review-uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
+- Use `/local-review` as the action prompt for committed branch-level changes
+- Prefer `/local-review-uncommitted` when the work you just did has not been committed yet

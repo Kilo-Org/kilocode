@@ -63,6 +63,40 @@
   font-size: 13px;
 }
 
+.message-list-page-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0 12px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+}
+
+.message-list-load-older {
+  display: block;
+  margin: 0 auto 12px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 6px;
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  cursor: pointer;
+  padding: 5px 10px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.message-list-load-older:hover {
+  background: var(--vscode-button-secondaryHoverBackground);
+}
+
+.message-list-content {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .message-list-content-empty {
   display: flex;
   min-height: 100%;
@@ -153,10 +187,6 @@
   padding: 0 4px;
 }
 
-.vscode-session-turn + .vscode-session-turn {
-  margin-top: 12px;
-}
-
 .vscode-session-turn-user {
   width: 100%;
 }
@@ -175,4 +205,10 @@
 
 .vscode-session-turn-diffs {
   width: 100%;
+}
+
+.vscode-session-turn-diffs [data-slot="session-turn-diffs-title"] {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }

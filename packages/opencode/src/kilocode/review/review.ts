@@ -351,27 +351,51 @@ export namespace Review {
   }
 
   /**
-   * Get uncommitted changes (staged + unstaged)
+   * Get uncommitted changes (staged + unstaged + untracked)
    * Implements SCOPE-01
    *
-   * Uses: git diff HEAD to capture both staged and unstaged changes
+   * Uses: git diff HEAD for tracked changes, plus git ls-files for untracked files
    */
   export async function getUncommittedChanges(): Promise<DiffResult> {
     log.info("getting uncommitted changes")
 
-    // git diff HEAD shows all uncommitted changes (staged + unstaged)
+    // git diff HEAD shows all uncommitted changes (staged + unstaged) for tracked files
     // Using -c core.quotepath=false to handle unicode filenames
     const result = await $`git -c core.quotepath=false diff HEAD`.cwd(Instance.directory).quiet().nothrow()
+
+    let raw = result.exitCode === 0 ? result.stdout.toString() : ""
 
     if (result.exitCode !== 0) {
       log.warn("git diff failed", {
         exitCode: result.exitCode,
         stderr: result.stderr.toString(),
       })
-      return { files: [], raw: "" }
     }
 
-    const raw = result.stdout.toString()
+    // Also include untracked files — git diff HEAD misses brand-new files
+    const untracked = await $`git ls-files --others --exclude-standard -z`.cwd(Instance.directory).quiet().nothrow()
+    if (untracked.exitCode === 0) {
+      const paths = untracked.stdout.toString().split("\0").filter(Boolean)
+      // Process in batches to avoid spawning hundreds of git processes
+      const batch = 20
+      for (let i = 0; i < paths.length; i += batch) {
+        const chunk = paths.slice(i, i + batch)
+        const diffs = await Promise.all(
+          chunk.map((p) =>
+            // --no-index exits 1 when files differ, which is expected
+            $`git -c core.quotepath=false diff --no-index -- /dev/null ${p}`
+              .cwd(Instance.directory)
+              .quiet()
+              .nothrow()
+              .then((fd) => fd.stdout.toString()),
+          ),
+        )
+        for (const out of diffs) {
+          if (out) raw += out
+        }
+      }
+    }
+
     const parsed = parseDiff(raw)
 
     log.info("parsed uncommitted changes", {

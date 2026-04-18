@@ -78,6 +78,7 @@ import { NotificationsProvider } from "../src/context/notifications"
 import { SessionProvider, useSession } from "../src/context/session"
 import { WorktreeModeProvider } from "../src/context/worktree-mode"
 import { ChatView } from "../src/components/chat"
+import HistoryView from "../src/components/history/HistoryView"
 import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { LanguageBridge, DataBridge } from "../src/App"
 import { useLanguage } from "../src/context/language"
@@ -348,6 +349,7 @@ const AgentManagerContent: Component = () => {
   let diffRaf: number | undefined
   let pendingDiffWidth: number | undefined
 
+  const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
@@ -697,28 +699,23 @@ const AgentManagerContent: Component = () => {
     const valid = prev.filter((lid) => isPending(lid) || validateLocalSession(lid, ids))
     if (valid.length !== prev.length) {
       const removed = prev.filter((lid) => !isPending(lid) && !valid.includes(lid))
-      for (const id of removed) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
-      }
+      for (const id of removed) vscode.postMessage({ type: "agentManager.forgetSession", sessionId: id })
       setLocalSessionIDs(valid)
     }
   })
   // Drop in-memory review state for worktrees that no longer exist.
   createEffect(() => {
     const ids = new Set(worktrees().map((wt) => wt.id))
-
     setReviewOpenByContext((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-
     setReviewCommentsByContext((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => id === LOCAL || ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-
     setApplyStates((prev) => {
       const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
       if (Object.keys(next).length === Object.keys(prev).length) return prev
@@ -765,20 +762,28 @@ const AgentManagerContent: Component = () => {
     return result
   })
 
-  // Sessions for the currently selected worktree (tab bar), respecting custom order if set
+  // Oldest-first sort before applyTabOrder — worktree label and tab bar must agree on "first session".
+  const sessionsForWorktree = (worktreeId: string): SessionInfo[] => {
+    const ids = new Set(
+      managedSessions()
+        .filter((ms) => ms.worktreeId === worktreeId)
+        .map((ms) => ms.id),
+    )
+    return applyTabOrder(
+      session
+        .sessions()
+        .filter((s) => ids.has(s.id))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+      worktreeTabOrder()[worktreeId],
+    )
+  }
+
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (!sel || sel === LOCAL) return []
-    const managed = managedSessions().filter((ms) => ms.worktreeId === sel)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session
-      .sessions()
-      .filter((s) => ids.has(s.id))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    return applyTabOrder(sessions, worktreeTabOrder()[sel])
+    return sessionsForWorktree(sel)
   })
 
-  // Active tab sessions: local sessions when on "local", worktree sessions otherwise
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
@@ -786,11 +791,10 @@ const AgentManagerContent: Component = () => {
     return []
   })
 
-  // Whether the selected context has zero sessions
   const contextEmpty = createMemo(() => {
     const sel = selection()
     if (sel === LOCAL) return localSessionIDs().length === 0
-    if (sel) return activeWorktreeSessions().length === 0
+    if (sel) return activeWorktreeSessions().length === 0 && managedSessions().every((ms) => ms.worktreeId !== sel)
     return false
   })
 
@@ -805,8 +809,6 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  // Scroll the sidebar to the focused item whenever selection changes (covers keyboard
-  // navigation, new worktree creation, and any other programmatic selection change).
   createEffect(() => {
     const id = selection() ?? session.currentSessionID()
     if (!id) return
@@ -816,22 +818,16 @@ const AgentManagerContent: Component = () => {
     })
   })
 
-  // Read-only mode: viewing an unassigned session (not in a worktree or local)
   const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
 
-  // Tab scroll: hidden scrollbar with fade overflow indicators
   const visibleTabId = createMemo(() =>
     reviewActive() ? REVIEW_TAB_ID : (session.currentSessionID() ?? activePendingId()),
   )
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
-  // Display name for worktree — prefers persisted label, then first session title, then branch
   const worktreeLabel = (wt: WorktreeState): string => {
     if (wt.label) return wt.label
-    const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session.sessions().filter((s) => ids.has(s.id))
-    return firstOrderedTitle(sessions, worktreeTabOrder()[wt.id], wt.branch)
+    return firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
   }
 
   const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
@@ -841,7 +837,6 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
-  /** True when any session in the given ID list is actively working (busy/retry and not blocked by permissions/questions). */
   const isAnySessionBusy = (ids: string[]): boolean => {
     if (ids.length === 0) return false
     const statuses = session.allStatusMap()
@@ -1000,12 +995,8 @@ const AgentManagerContent: Component = () => {
     if (fallback && !isPending(fallback.id)) {
       setActivePendingId(undefined)
       session.selectSession(fallback.id)
-    } else if (fallback && isPending(fallback.id)) {
-      setActivePendingId(fallback.id)
-      session.clearCurrentSession()
-      vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     } else {
-      setActivePendingId(undefined)
+      setActivePendingId(fallback && isPending(fallback.id) ? fallback.id : undefined)
       session.clearCurrentSession()
       vscode.postMessage({ type: "agentManager.showExistingLocalTerminal" })
     }
@@ -1015,17 +1006,17 @@ const AgentManagerContent: Component = () => {
   const selectWorktree = (worktreeId: string) => {
     saveTabMemory()
     setSelection(worktreeId)
+    // Try rich session list first, fall back to managed session IDs when
+    // session.sessions() hasn't been populated yet for this worktree.
+    const rich = sessionsForWorktree(worktreeId)
     const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session.sessions().filter((s) => ids.has(s.id))
     const remembered = tabMemory()[worktreeId]
-    const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-    const fallback = target ?? sessions[0]
-    if (fallback) {
-      session.selectSession(fallback.id)
-    } else {
-      session.setCurrentSessionID(undefined)
-    }
+    const target = remembered
+      ? (rich.find((s) => s.id === remembered) ?? managed.find((ms) => ms.id === remembered))
+      : undefined
+    const fallback = target ?? rich[0] ?? managed[0]
+    if (fallback) session.selectSession(fallback.id)
+    else session.setCurrentSessionID(undefined)
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
   }
 
@@ -1048,7 +1039,8 @@ const AgentManagerContent: Component = () => {
 
   onMount(() => {
     const handler = (event: MessageEvent) => {
-      const msg = event.data as ExtensionMessage
+      const msg = event.data
+      if (msg?.type === "navigate" && msg.view === "history") return setHistory(true)
       if (msg?.type !== "action") return
       if (msg.action === "sessionPrevious") navigate("up")
       else if (msg.action === "sessionNext") navigate("down")
@@ -1062,9 +1054,7 @@ const AgentManagerContent: Component = () => {
         if (reviewActive()) {
           closeReviewTab()
           setSidePanel("diff")
-        } else {
-          setSidePanel((prev) => (prev === "diff" ? null : "diff"))
-        }
+        } else setSidePanel((prev) => (prev === "diff" ? null : "diff"))
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
       else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
@@ -1372,28 +1362,18 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeDiff") {
         const ev = msg as AgentManagerWorktreeDiffMessage
+        let staleFiles: Set<string> | undefined
         setDiffDatas((prev) => {
           const existing = prev[ev.sessionId]
-          const next = existing ? mergeWorktreeDiffs(existing, ev.diffs) : ev.diffs
-          if (existing && existing.length === next.length) {
-            const same = existing.every((old, i) => {
-              const item = next[i]!
-              return (
-                old.file === item.file &&
-                old.before === item.before &&
-                old.after === item.after &&
-                old.status === item.status &&
-                old.tracked === item.tracked &&
-                old.generatedLike === item.generatedLike &&
-                old.summarized === item.summarized &&
-                old.additions === item.additions &&
-                old.deletions === item.deletions
-              )
-            })
-            if (same) return prev
-          }
+          const merged = existing
+            ? mergeWorktreeDiffs(existing, ev.diffs)
+            : { diffs: ev.diffs, stale: new Set<string>() }
+          staleFiles = merged.stale
+          const next = merged.diffs
+          if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
           return { ...prev, [ev.sessionId]: next }
         })
+        if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
       }
 
       if (msg.type === "agentManager.worktreeDiffFile") {
@@ -1638,6 +1618,15 @@ const AgentManagerContent: Component = () => {
     if (diffFileLoading()[sessionId]?.[file]) return
     setDiffFilePending(sessionId, file, true)
     vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+  }
+
+  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
+    const loading = diffFileLoading()[sessionId] ?? {}
+    for (const file of files) {
+      if (loading[file]) continue
+      setDiffFilePending(sessionId, file, true)
+      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+    }
   }
 
   const diffFileLoadingForCurrent = createMemo(() => {
@@ -1887,9 +1876,7 @@ const AgentManagerContent: Component = () => {
     if (pending) {
       setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? sid : id)))
       setActivePendingId(undefined)
-    } else {
-      setLocalSessionIDs((prev) => [...prev, sid])
-    }
+    } else setLocalSessionIDs((prev) => [...prev, sid])
     setSelection(LOCAL)
     setReviewActive(false)
     session.selectSession(sid)
@@ -1898,20 +1885,14 @@ const AgentManagerContent: Component = () => {
 
   const handleAddSession = () => {
     const sel = selection()
-    if (sel === LOCAL) {
-      addPendingTab()
-    } else if (sel) {
-      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
-    }
+    if (sel === LOCAL) addPendingTab()
+    else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
 
   const handleForkSession = (sessionId: string) => {
     const sel = selection()
-    if (sel === LOCAL) {
-      vscode.postMessage({ type: "agentManager.forkSession", sessionId })
-    } else if (sel) {
-      vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
-    }
+    if (sel === LOCAL) vscode.postMessage({ type: "agentManager.forkSession", sessionId })
+    else if (sel) vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
   }
 
   const handleCloseTab = (sessionId: string) => {
@@ -1921,14 +1902,12 @@ const AgentManagerContent: Component = () => {
       const tabs = activeTabs()
       const idx = tabs.findIndex((s) => s.id === sessionId)
       const next = tabs[idx + 1] ?? tabs[idx - 1]
-      if (next) {
-        if (isPending(next.id)) {
-          setActivePendingId(next.id)
-          session.clearCurrentSession()
-        } else {
-          setActivePendingId(undefined)
-          session.selectSession(next.id)
-        }
+      if (next && isPending(next.id)) {
+        setActivePendingId(next.id)
+        session.clearCurrentSession()
+      } else if (next) {
+        setActivePendingId(undefined)
+        session.selectSession(next.id)
       } else {
         setActivePendingId(undefined)
         session.clearCurrentSession()
@@ -1936,9 +1915,7 @@ const AgentManagerContent: Component = () => {
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
-      if (!pending) {
-        vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
-      }
+      if (!pending) vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
     } else {
       vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
@@ -2922,7 +2899,29 @@ const AgentManagerContent: Component = () => {
             </Show>
           )
         })()}
-        <Show when={!contextEmpty()}>
+        <Show when={history()}>
+          <HistoryView
+            onSelectSession={(id) => {
+              setHistory(false)
+              if (localSessionIDs().includes(id)) {
+                saveTabMemory()
+                session.selectSession(id)
+                setSelection(LOCAL)
+                return
+              }
+              const ms = worktreeSessionIds().has(id) ? managedSessions().find((s) => s.id === id) : undefined
+              if (ms?.worktreeId) {
+                selectWorktree(ms.worktreeId)
+                session.selectSession(id)
+                setReviewActive(false)
+                return
+              }
+              openLocally(id)
+            }}
+            onBack={() => setHistory(false)}
+          />
+        </Show>
+        <Show when={!contextEmpty() && !history()}>
           {/* Chat + side diff panel (hidden when review tab is active) */}
           <div
             class={`am-detail-content ${sidePanel() !== null ? "am-detail-split" : ""}`}
@@ -2948,6 +2947,7 @@ const AgentManagerContent: Component = () => {
                   }
                   openLocally(id)
                 }}
+                onShowHistory={() => setHistory(true)}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
                 promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}
@@ -3016,10 +3016,11 @@ const AgentManagerContent: Component = () => {
                       onClose={() => setSidePanel(null)}
                       onExpand={selection() !== null ? openReviewTab : undefined}
                       onRequestDiff={requestDiffFile}
-                      onOpenFile={(file) => {
+                      onOpenFile={(file, line) => {
                         const id = currentDiffSessionId()
-                        if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
-                        else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
+                        if (id)
+                          vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                        else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                       }}
                       onRevertFile={revertCtl.revert}
                       revertingFiles={revertCtl.reverting()}
@@ -3044,10 +3045,10 @@ const AgentManagerContent: Component = () => {
                 diffStyle={reviewDiffStyle()}
                 onDiffStyleChange={setSharedDiffStyle}
                 onRequestDiff={requestDiffFile}
-                onOpenFile={(file) => {
+                onOpenFile={(file, line) => {
                   const id = currentDiffSessionId()
-                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file })
-                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file })
+                  if (id) vscode.postMessage({ type: "agentManager.openFile", sessionId: id, filePath: file, line })
+                  else if (selection() === LOCAL) vscode.postMessage({ type: "openFile", filePath: file, line })
                 }}
                 onRevertFile={revertCtl.revert}
                 revertingFiles={revertCtl.reverting()}

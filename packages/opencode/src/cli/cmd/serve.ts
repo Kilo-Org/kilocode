@@ -16,7 +16,7 @@ export const ServeCommand = cmd({
       console.log("Warning: KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
     const opts = await resolveNetworkOptions(args)
-    const server = Server.listen(opts)
+    const server = await Server.listen(opts)
     console.log(`kilo server listening on http://${server.hostname}:${server.port}`)
 
     let workspaceSync: Array<ReturnType<typeof Workspace.startSyncing>> = []

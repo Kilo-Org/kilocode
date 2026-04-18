@@ -115,6 +115,7 @@ export async function generateHandover(input: {
 export namespace PlanFollowup {
   const log = Log.create({ service: "plan.followup" })
 
+  export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
 
@@ -131,7 +132,7 @@ export namespace PlanFollowup {
     })
     .passthrough()
 
-  async function resolveCodeModel(input: Pick<MessageV2.User, "model" | "variant">) {
+  async function resolveCodeModel(input: Pick<MessageV2.User, "model">) {
     const state =
       Flag.KILO_CLIENT === "cli"
         ? await Bun.file(path.join(Global.Path.state, "model.json"))
@@ -146,8 +147,7 @@ export namespace PlanFollowup {
       if (full) {
         const key = `${saved.providerID}/${saved.modelID}`
         return {
-          model: saved,
-          variant: resolveVariant(state?.variant?.[key], full),
+          model: { ...saved, variant: resolveVariant(state?.variant?.[key], full) },
         }
       }
     }
@@ -157,8 +157,7 @@ export namespace PlanFollowup {
       const full = await Provider.getModel(agent.model.providerID, agent.model.modelID).catch(() => undefined)
       if (full) {
         return {
-          model: agent.model,
-          variant: resolveVariant(agent.variant, full),
+          model: { ...agent.model, variant: resolveVariant(agent.variant, full) },
         }
       }
     }
@@ -195,7 +194,6 @@ export namespace PlanFollowup {
     sessionID: SessionID
     agent: string
     model: MessageV2.User["model"]
-    variant?: MessageV2.User["variant"]
     text: string
     synthetic?: boolean
   }) {
@@ -208,7 +206,6 @@ export namespace PlanFollowup {
       },
       agent: input.agent,
       model: input.model,
-      variant: input.variant,
     }
     await Session.updateMessage(msg)
     await Session.updatePart({
@@ -265,12 +262,10 @@ export namespace PlanFollowup {
     plan: string
     messages: MessageV2.WithParts[]
     model: MessageV2.User["model"]
-    variant?: MessageV2.User["variant"]
     abort?: AbortSignal
   }) {
     const code = await resolveCodeModel({
       model: input.model,
-      variant: input.variant,
     })
     const session = await Session.get(input.sessionID)
     const [handover, todos] = await Promise.all([
@@ -301,7 +296,6 @@ export namespace PlanFollowup {
           sessionID: next.id,
           agent: "code",
           model: code.model,
-          variant: code.variant,
           text: sections.join("\n\n"),
           synthetic: false,
         })
@@ -359,7 +353,6 @@ export namespace PlanFollowup {
         plan,
         messages: input.messages,
         model: user.model,
-        variant: user.variant,
         abort: input.abort,
       })
       return "break"
@@ -369,13 +362,11 @@ export namespace PlanFollowup {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
       const code = await resolveCodeModel({
         model: user.model,
-        variant: user.variant,
       })
       await inject({
         sessionID: input.sessionID,
         agent: "code",
         model: code.model,
-        variant: code.variant,
         text: "Implement the plan above.",
       })
       return "continue"
@@ -386,7 +377,6 @@ export namespace PlanFollowup {
       sessionID: input.sessionID,
       agent: "plan",
       model: user.model,
-      variant: user.variant,
       text: answer,
     })
     return "continue"

@@ -14,6 +14,7 @@ import { Instance } from "../project/instance"
 import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectory } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 
 const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -73,6 +74,7 @@ export const WriteTool = Tool.define("write", {
       projectDiagnosticsCount++
       output += `\n\nLSP errors detected in other files:\n<diagnostics file="${file}">\n${limited.map(LSP.Diagnostic.pretty).join("\n")}${suffix}\n</diagnostics>`
     }
+    output += await ConfigValidation.check(filepath) // kilocode_change
 
     return {
       title: path.relative(Instance.worktree, filepath),

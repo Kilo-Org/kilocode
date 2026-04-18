@@ -34,6 +34,38 @@ Add highlights before publishing. Delete this section if no highlights.
 
 console.log("=== publishing ===\n")
 
+// kilocode_change start - consume changesets on the publish runner so changelog
+// changes are included in the release commit. Previously this ran in the
+// version job on a separate runner whose workspace was discarded.
+{
+  await $`bun install`
+  const paths = ["packages/kilo-vscode/CHANGELOG.md", "packages/opencode/CHANGELOG.md"]
+  const before = new Map<string, string>()
+  for (const p of paths) {
+    before.set(
+      p,
+      await Bun.file(p)
+        .text()
+        .catch(() => ""),
+    )
+  }
+  const res = await $`bunx changeset version`.nothrow()
+  if (res.exitCode !== 0) {
+    console.warn("changeset version failed (exit " + res.exitCode + ")")
+  }
+  // Changeset computes its own version from package.json, but we use
+  // Script.version. Fix the heading in any changelog that was modified.
+  for (const p of paths) {
+    const content = await Bun.file(p)
+      .text()
+      .catch(() => "")
+    if (content !== before.get(p)) {
+      await Bun.write(p, content.replace(/^## .+$/m, `## ${Script.version}`))
+    }
+  }
+}
+// kilocode_change end
+
 const pkgjsons = await Array.fromAsync(
   new Bun.Glob("**/package.json").scan({
     absolute: true,
@@ -73,7 +105,20 @@ if (Script.release) {
   // kilocode_change end
 
   // kilocode_change start - mark prerelease GitHub releases accordingly
+  // and populate release notes from the changelog updated by changeset above.
+  // Use an absolute path for the CHANGELOG because the imported SDK build
+  // script chdirs into packages/sdk/js, so a relative path would miss the file
+  // and fall through to the "No notable changes" default.
   const flags = Script.preview ? ["--draft=false", "--prerelease"] : ["--draft=false"]
+  const changelogPath = fileURLToPath(new URL("../packages/kilo-vscode/CHANGELOG.md", import.meta.url))
+  const changelog = await Bun.file(changelogPath)
+    .text()
+    .catch(() => "")
+  const body = extractLatestSection(changelog) || "No notable changes"
+  const tmp = process.env.RUNNER_TEMP ?? "/tmp"
+  const notes = `${tmp}/release-notes.txt`
+  await Bun.write(notes, body)
+  flags.push("--notes-file", notes)
   await $`gh release edit v${Script.version} ${flags} --repo ${process.env.GH_REPO}`
   // kilocode_change end
 }
@@ -94,3 +139,17 @@ await import(`../packages/kilo-vscode/script/publish.ts`)
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
+
+// kilocode_change start - extract latest changelog section for release notes
+function extractLatestSection(changelog: string): string {
+  if (!changelog) return ""
+  const lines = changelog.split("\n")
+  const start = lines.findIndex((line) => /^## /.test(line))
+  if (start < 0) return ""
+  const end = lines.findIndex((line, i) => i > start && /^## /.test(line))
+  return lines
+    .slice(start + 1, end < 0 ? undefined : end)
+    .join("\n")
+    .trim()
+}
+// kilocode_change end

@@ -1,7 +1,7 @@
 import * as path from "path"
 import * as vscode from "vscode"
 import { inspect } from "util"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
+import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { GitOps } from "./agent-manager/GitOps"
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
@@ -44,7 +44,7 @@ export async function resolveLocalDiffTarget(
 
 export function hashFileDiffs(
   diffs: Array<
-    FileDiff & {
+    SnapshotFileDiff & {
       tracked?: boolean
       generatedLike?: boolean
       summarized?: boolean
@@ -54,7 +54,7 @@ export function hashFileDiffs(
 ): string {
   return diffs
     .map((diff) => {
-      const content = diff.summarized ? "" : `${diff.before}:${diff.after}`
+      const content = diff.summarized ? "" : diff.patch
       return [
         diff.file,
         diff.status,

@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "会话变更",
+  "ui.sessionReview.title.git": "Git 更改",
+  "ui.sessionReview.title.branch": "分支更改",
   "ui.sessionReview.title.lastTurn": "上一轮变更",
   "ui.sessionReview.diffStyle.unified": "统一",
   "ui.sessionReview.diffStyle.split": "拆分",
@@ -41,6 +43,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "隐藏步骤",
   "ui.sessionTurn.summary.response": "回复",
   "ui.sessionTurn.diff.showMore": "显示更多更改（{{count}}）",
+  "ui.sessionTurn.diffs.changed": "已更改",
+  "ui.sessionTurn.diffs.showAll": "显示全部",
+  "ui.sessionTurn.diffs.showLess": "显示更少",
+  "ui.sessionTurn.diffs.more": "+{{count}} 个更多文件",
 
   "ui.sessionTurn.retry.retrying": "重试中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}} 秒后",
@@ -74,6 +80,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 个列表",
   "ui.messagePart.context.list.other": "{{count}} 个列表",
   "ui.messagePart.diagnostic.error": "错误",
+  "ui.messagePart.mcp.input": "输入",
+  "ui.messagePart.mcp.output": "输出",
   "ui.messagePart.title.edit": "编辑",
   "ui.messagePart.title.write": "写入",
   "ui.messagePart.option.typeOwnAnswer": "输入自己的答案",

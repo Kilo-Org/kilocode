@@ -1,10 +1,12 @@
 import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
+import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import { Permission } from "@/permission"
 import { Session } from "@/session"
 import { SessionID } from "@/session/schema" // kilocode_change
+import { Event } from "../../server/event"
 import { errors } from "../../server/error"
 import { lazy } from "../../util/lazy"
 
@@ -54,6 +56,7 @@ export const PermissionKilocodeRoutes = lazy(() =>
 
         await Config.updateGlobal({ permission: { "*": { "*": null } } }, { dispose: false })
         await Permission.allowEverything({ enable: false })
+        await Bus.publish(Event.ConfigUpdated, {})
         return c.json(true)
       }
 
@@ -65,6 +68,7 @@ export const PermissionKilocodeRoutes = lazy(() =>
         })
       } else {
         await Config.updateGlobal({ permission: Permission.toConfig(rules) }, { dispose: false })
+        await Bus.publish(Event.ConfigUpdated, {})
       }
 
       await Permission.allowEverything({

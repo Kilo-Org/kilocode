@@ -212,6 +212,17 @@ export class KiloConnectionService {
   }
 
   /**
+   * Remove all messageID → sessionID entries for a given session.
+   * Called when a session is deleted or otherwise pruned so the map
+   * does not grow unbounded over the extension lifetime.
+   */
+  pruneSession(sessionId: string): void {
+    for (const [mid, sid] of this.messageSessionIdsByMessageId) {
+      if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
+    }
+  }
+
+  /**
    * Best-effort sessionID extraction for an SSE event.
    * Returns undefined for global events.
    */
@@ -394,6 +405,7 @@ export class KiloConnectionService {
           if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
+      await drainSuggestions(this.client, dir)
       await drainNetworkWaits(this.client, dir)
     }
     for (const listener of this.clearPendingPromptsListeners) {
@@ -620,5 +632,16 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+}
+
+async function drainSuggestions(client: KiloClient, directory: string): Promise<void> {
+  const { data, error: err } = await client.suggestion.list({ directory })
+  if (err) throw new Error(`Failed to list suggestions for ${directory}: ${String(err)}`)
+  if (data) {
+    for (const s of data) {
+      const { error } = await client.suggestion.dismiss({ requestID: s.id, directory })
+      if (error) throw new Error(`Failed to dismiss suggestion ${s.id}: ${String(error)}`)
+    }
   }
 }

@@ -70,6 +70,13 @@ export class ServerManager {
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
         env: {
           ...process.env,
+          // Force mimalloc (the allocator Bun ships with) to return freed pages
+          // to the OS immediately instead of retaining them in its arenas.
+          // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
+          // RSS per call on Windows, causing the Agent Manager (which polls git
+          // once per second per worktree) to reach multi-GB RSS in minutes.
+          // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
+          MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",

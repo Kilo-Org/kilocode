@@ -1143,6 +1143,11 @@ button.am-section-toggle:hover .am-section-label {
   touch-action: none;
 }
 
+.am-tab-sortable > [data-component="tooltip-trigger"],
+.am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
+  height: 100%;
+}
+
 .am-tab-dragging {
   opacity: 0.25;
 }
@@ -1612,6 +1617,12 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="session-review-file-info"] {
   min-width: 0;
   flex: 1 1 auto;
+  cursor: grab;
+}
+
+.am-diff-content [data-slot="session-review-file-info"]:active,
+.am-review-diff-content [data-slot="session-review-file-info"]:active {
+  cursor: grabbing;
 }
 
 .am-diff-content [data-slot="session-review-file-name-container"],

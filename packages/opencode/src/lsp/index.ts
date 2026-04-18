@@ -246,7 +246,7 @@ export namespace LSP {
               })
 
             if (!handle) return undefined
-            log.info("spawned lsp server", { serverID: server.id })
+            log.info("spawned lsp server", { serverID: server.id, root })
 
             const client = await LSPClient.create({
               serverID: server.id,
@@ -277,6 +277,21 @@ export namespace LSP {
             const root = await server.root(file)
             if (!root) continue
             if (s.broken.has(root + server.id)) continue
+
+            // kilocode_change start - use lightweight tsgo-based client when persistent LSP is not enabled
+            if (server.id === "typescript" && !Flag.KILO_EXPERIMENTAL_LSP_TOOL) {
+              const existing = s.clients.find((x) => x.root === root && x.serverID === server.id)
+              if (existing) {
+                result.push(existing)
+                continue
+              }
+              const client = TsClient.create({ root })
+              s.clients.push(client)
+              result.push(client)
+              Bus.publish(Event.Updated, {})
+              continue
+            }
+            // kilocode_change end
 
             const match = s.clients.find((x) => x.root === root && x.serverID === server.id)
             if (match) {

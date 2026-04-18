@@ -37,6 +37,7 @@ export namespace Question {
       id: QuestionID.zod,
       sessionID: SessionID.zod,
       questions: z.array(Info).describe("Questions to ask"),
+      blocking: z.boolean().optional().describe("Whether this question blocks prompt input (default: true)"), // kilocode_change
       tool: z
         .object({
           messageID: MessageID.zod,
@@ -97,6 +98,7 @@ export namespace Question {
     readonly ask: (input: {
       sessionID: SessionID
       questions: Info[]
+      blocking?: boolean // kilocode_change
       tool?: { messageID: MessageID; callID: string }
     }) => Effect.Effect<Answer[], RejectedError>
     readonly reply: (input: { requestID: QuestionID; answers: Answer[] }) => Effect.Effect<void>
@@ -109,6 +111,7 @@ export namespace Question {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
+      const bus = yield* Bus.Service
       const state = yield* InstanceState.make<State>(
         Effect.fn("Question.state")(function* () {
           const state = {
@@ -131,6 +134,7 @@ export namespace Question {
       const ask = Effect.fn("Question.ask")(function* (input: {
         sessionID: SessionID
         questions: Info[]
+        blocking?: boolean // kilocode_change
         tool?: { messageID: MessageID; callID: string }
       }) {
         const pending = (yield* InstanceState.get(state)).pending
@@ -142,10 +146,11 @@ export namespace Question {
           id,
           sessionID: input.sessionID,
           questions: input.questions,
+          blocking: input.blocking, // kilocode_change
           tool: input.tool,
         }
         pending.set(id, { info, deferred })
-        Bus.publish(Event.Asked, info)
+        yield* bus.publish(Event.Asked, info)
 
         return yield* Effect.ensuring(
           Deferred.await(deferred),
@@ -164,7 +169,7 @@ export namespace Question {
         }
         pending.delete(input.requestID)
         log.info("replied", { requestID: input.requestID, answers: input.answers })
-        Bus.publish(Event.Replied, {
+        yield* bus.publish(Event.Replied, {
           sessionID: existing.info.sessionID,
           requestID: existing.info.id,
           answers: input.answers,
@@ -181,7 +186,7 @@ export namespace Question {
         }
         pending.delete(requestID)
         log.info("rejected", { requestID })
-        Bus.publish(Event.Rejected, {
+        yield* bus.publish(Event.Rejected, {
           sessionID: existing.info.sessionID,
           requestID: existing.info.id,
         })
@@ -197,11 +202,14 @@ export namespace Question {
     }),
   )
 
-  const { runPromise } = makeRuntime(Service, layer)
+  export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+
+  const { runPromise } = makeRuntime(Service, defaultLayer)
 
   export async function ask(input: {
     sessionID: SessionID
     questions: Info[]
+    blocking?: boolean // kilocode_change
     tool?: { messageID: MessageID; callID: string }
   }): Promise<Answer[]> {
     return runPromise((s) => s.ask(input))

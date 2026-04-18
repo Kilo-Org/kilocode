@@ -23,6 +23,21 @@ import { IgnoreMigrator } from "../ignore-migrator"
 export namespace KilocodeConfig {
   const log = Log.create({ service: "kilocode.config" })
 
+  // ── Config schema extensions ─────────────────────────────────────────
+
+  /** Schema for AI-generated commit message configuration. */
+  export const CommitMessageSchema = z
+    .object({
+      prompt: z
+        .string()
+        .optional()
+        .describe(
+          "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+        ),
+    })
+    .optional()
+    .describe("Configuration for AI-generated commit messages")
+
   // ── Config file constants ────────────────────────────────────────────
 
   /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */
@@ -292,13 +307,14 @@ export namespace KilocodeConfig {
 
   // ── Config merge utilities ───────────────────────────────────────────
 
-  /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
+  /** Recursively remove null values and drop objects left empty after removal. */
   export function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
     const result: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(obj)) {
       if (value === null) continue
       if (isRecord(value)) {
-        result[key] = stripNulls(value)
+        const stripped = stripNulls(value)
+        if (Object.keys(stripped).length > 0) result[key] = stripped
       } else {
         result[key] = value
       }

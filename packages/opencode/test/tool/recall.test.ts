@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { afterEach, describe, expect, mock, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
 import path from "path"
 import { Instance } from "../../src/project/instance"
@@ -9,17 +9,11 @@ import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import type { Tool } from "../../src/tool/tool"
 import { SessionID, MessageID } from "../../src/session/schema"
+import { RemoteSender } from "../../src/kilo-sessions/remote-sender"
 
-mock.module("@/kilo-sessions/remote-sender", () => ({
-  RemoteSender: {
-    create() {
-      return {
-        handle() {},
-        dispose() {},
-      }
-    },
-  },
-}))
+beforeEach(() => {
+  spyOn(RemoteSender, "create").mockReturnValue({ handle() {}, dispose() {} })
+})
 
 const ctx: Tool.Context = {
   sessionID: SessionID.make("ses_test"),
@@ -33,6 +27,7 @@ const ctx: Tool.Context = {
 }
 
 afterEach(async () => {
+  mock.restore()
   await resetDatabase()
 })
 

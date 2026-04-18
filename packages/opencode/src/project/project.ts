@@ -160,7 +160,7 @@ export namespace Project {
           // kilocode change end
           Effect.map((x) => x.trim()),
           Effect.map(ProjectID.make),
-          Effect.catch(() => Effect.succeed(undefined)),
+          Effect.catch(() => Effect.void),
         )
       })
 
@@ -260,8 +260,7 @@ export namespace Project {
               time: { created: Date.now(), updated: Date.now() },
             }
 
-        if (Flag.KILO_EXPERIMENTAL_ICON_DISCOVERY)
-          yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
+        if (Flag.KILO_EXPERIMENTAL_ICON_DISCOVERY) yield* discover(existing).pipe(Effect.ignore, Effect.forkIn(scope))
 
         const result: Info = {
           ...existing,

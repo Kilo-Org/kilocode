@@ -15,6 +15,15 @@ import { useVSCode } from "../../context/vscode"
 import type { ExtensionMessage, ProviderConfig } from "../../types/messages"
 import { createProviderAction } from "../../utils/provider-action"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
+import { ModelCard } from "./CustomProviderModelCard"
+import type {
+  EnableThinkingValue,
+  ModelEntry,
+  ReasoningEffortValue,
+  ThinkingTypeValue,
+  Translator,
+  VariantEntry,
+} from "./CustomProviderModelCard"
 
 const PROVIDER_ID = /^[a-z0-9][a-z0-9-_]*$/
 const OPENAI_COMPATIBLE = "@ai-sdk/openai-compatible"
@@ -32,13 +41,6 @@ function fuzzy(query: string, target: string) {
   return qi === q.length
 }
 
-type Translator = ReturnType<typeof useLanguage>["t"]
-
-type ModelRow = {
-  id: string
-  name: string
-}
-
 type HeaderRow = {
   key: string
   value: string
@@ -49,7 +51,7 @@ type FormState = {
   name: string
   baseURL: string
   apiKey: string
-  models: ModelRow[]
+  models: ModelEntry[]
   headers: HeaderRow[]
   saving: boolean
 }
@@ -58,7 +60,7 @@ type FormErrors = {
   providerID: string | undefined
   name: string | undefined
   baseURL: string | undefined
-  models: Array<{ id?: string; name?: string }>
+  models: Array<{ id?: string; name?: string; variants?: Array<{ name?: string }> }>
   headers: Array<{ key?: string; value?: string }>
 }
 
@@ -119,10 +121,43 @@ function validateCustomProvider(input: ValidateArgs) {
             return undefined
           })()
     const modelNameError = !m.name.trim() ? input.t("provider.custom.error.required") : undefined
-    return { id: modelIdError, name: modelNameError }
+    const seen = new Set<string>()
+    const verrs = m.reasoning
+      ? m.variants.map((v) => {
+          const n = v.name.trim()
+          const nameError = !n
+            ? input.t("provider.custom.error.required")
+            : seen.has(n)
+              ? input.t("provider.custom.error.duplicate")
+              : (() => {
+                  seen.add(n)
+                  return undefined
+                })()
+          return { name: nameError }
+        })
+      : []
+    return { id: modelIdError, name: modelNameError, variants: verrs }
   })
-  const modelsValid = modelErrors.every((m) => !m.id && !m.name)
-  const models = Object.fromEntries(input.form.models.map((m) => [m.id.trim(), { name: m.name.trim() }]))
+  const modelsValid = modelErrors.every((m) => !m.id && !m.name && m.variants.every((v) => !v.name))
+  const models = Object.fromEntries(
+    input.form.models.map((m) => {
+      const ventries = m.reasoning
+        ? m.variants
+            .filter((v) => v.name.trim())
+            .map((v) => {
+              const cfg: Record<string, unknown> = {}
+              if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
+              if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
+              if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
+              return [v.name.trim(), cfg]
+            })
+        : []
+      const entry: Record<string, unknown> = { name: m.name.trim() }
+      if (m.reasoning) entry.reasoning = true
+      if (ventries.length > 0) entry.variants = Object.fromEntries(ventries)
+      return [m.id.trim(), entry]
+    }),
+  )
 
   const seenHeaders = new Set<string>()
   const headerErrors = input.form.headers.map((h) => {
@@ -203,12 +238,30 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
 
   const editing = () => !!props.existing
 
-  function initModels(): ModelRow[] {
+  function initModels(): ModelEntry[] {
     const cfg = props.existing?.config
-    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "" }]
+    if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
     const entries = Object.entries(cfg.models)
-    if (entries.length === 0) return [{ id: "", name: "" }]
-    return entries.map(([id, m]) => ({ id, name: (m as { name?: string })?.name ?? id }))
+    if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+    return entries.map(([id, m]) => {
+      const raw = m as { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+      const variants: VariantEntry[] = Object.entries(raw?.variants ?? {}).map(([vname, vcfg]) => ({
+        name: vname,
+        enableThinking: typeof vcfg.enable_thinking === "boolean" ? (vcfg.enable_thinking as boolean) : undefined,
+        thinking:
+          typeof vcfg.thinking === "object" && vcfg.thinking !== null
+            ? ((vcfg.thinking as { type?: string }).type as ThinkingTypeValue)
+            : undefined,
+        reasoningEffort:
+          typeof vcfg.reasoningEffort === "string" ? (vcfg.reasoningEffort as ReasoningEffortValue) : undefined,
+      }))
+      return {
+        id,
+        name: raw?.name ?? id,
+        reasoning: raw?.reasoning ?? false,
+        variants,
+      }
+    })
   }
 
   function initHeaders(): HeaderRow[] {
@@ -240,7 +293,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     providerID: undefined,
     name: undefined,
     baseURL: undefined,
-    models: form.models.map(() => ({})),
+    models: form.models.map((m) => ({ variants: m.variants.map(() => ({})) })),
     headers: form.headers.map(() => ({})),
   })
   const [apiTouched, setApiTouched] = createSignal(false)
@@ -410,12 +463,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const merged = empty ? picked : [...form.models, ...picked]
+    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
+    const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
 
     setForm("models", merged)
     setErrors(
       "models",
-      merged.map(() => ({})),
+      merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
     )
     setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(picked.length) }))
     setFetchedModels(undefined)
@@ -438,8 +492,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "" }])
-    setErrors("models", (v) => [...v, {}])
+    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [] }])
+    setErrors("models", (v) => [...v, { variants: [] }])
   }
 
   function removeModel(index: number) {
@@ -457,6 +511,17 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     if (form.headers.length <= 1) return
     setForm("headers", (v) => v.filter((_, i) => i !== index))
     setErrors("headers", (v) => v.filter((_, i) => i !== index))
+  }
+
+  function addVariant(mi: number) {
+    const blank: VariantEntry = { name: "", enableThinking: undefined, thinking: undefined, reasoningEffort: undefined }
+    setForm("models", mi, "variants", (v) => [...v, blank])
+    setErrors("models", mi, "variants", (v) => [...(v ?? []), {}])
+  }
+
+  function removeVariant(mi: number, vi: number) {
+    setForm("models", mi, "variants", (v) => v.filter((_, i) => i !== vi))
+    setErrors("models", mi, "variants", (v) => (v ?? []).filter((_, i) => i !== vi))
   }
 
   function validate() {
@@ -619,39 +684,27 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             </div>
             <For each={form.models}>
               {(m, i) => (
-                <div style={{ display: "flex", gap: "8px", "align-items": "start" }}>
-                  <div style={{ flex: 1 }}>
-                    <TextField
-                      label={language.t("provider.custom.models.id.label")}
-                      hideLabel
-                      placeholder={language.t("provider.custom.models.id.placeholder")}
-                      value={m.id}
-                      onChange={(v) => setForm("models", i(), "id", v)}
-                      validationState={errors.models[i()]?.id ? "invalid" : undefined}
-                      error={errors.models[i()]?.id}
-                    />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <TextField
-                      label={language.t("provider.custom.models.name.label")}
-                      hideLabel
-                      placeholder={language.t("provider.custom.models.name.placeholder")}
-                      value={m.name}
-                      onChange={(v) => setForm("models", i(), "name", v)}
-                      validationState={errors.models[i()]?.name ? "invalid" : undefined}
-                      error={errors.models[i()]?.name}
-                    />
-                  </div>
-                  <IconButton
-                    type="button"
-                    icon="trash"
-                    variant="ghost"
-                    onClick={() => removeModel(i())}
-                    disabled={form.models.length <= 1}
-                    aria-label={language.t("provider.custom.models.remove")}
-                    style={{ "margin-top": "6px" }}
-                  />
-                </div>
+                <ModelCard
+                  m={m}
+                  i={i}
+                  errors={errors.models[i()] ?? {}}
+                  t={language.t}
+                  canRemove={form.models.length > 1}
+                  onChangeId={(v) => setForm("models", i(), "id", v)}
+                  onChangeName={(v) => setForm("models", i(), "name", v)}
+                  onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onRemove={() => removeModel(i())}
+                  onAddVariant={() => addVariant(i())}
+                  onRemoveVariant={(vi) => removeVariant(i(), vi)}
+                  onChangeVariantName={(vi, val) => setForm("models", i(), "variants", vi, "name", val)}
+                  onChangeVariantEnableThinking={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "enableThinking", val)
+                  }
+                  onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
+                  onChangeVariantReasoningEffort={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "reasoningEffort", val)
+                  }
+                />
               )}
             </For>
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addModel}>

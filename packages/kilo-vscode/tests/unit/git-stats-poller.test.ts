@@ -2,11 +2,11 @@ import { describe, it, expect } from "bun:test"
 import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { GitStatsPoller, type WorktreePresenceResult } from "../../src/agent-manager/GitStatsPoller"
 import { GitOps } from "../../src/agent-manager/GitOps"
 import { Semaphore } from "../../src/agent-manager/semaphore"
 import type { Worktree } from "../../src/agent-manager/WorktreeStateManager"
+import type { WorktreeDiffEntry } from "../../src/agent-manager/types"
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -31,8 +31,22 @@ function worktree(id: string, remote = "origin"): Worktree {
   }
 }
 
-function diff(additions: number, deletions: number) {
-  return [{ file: "file.ts", before: "", after: "", additions, deletions, status: "modified" as const }]
+function diff(additions: number, deletions: number): WorktreeDiffEntry[] {
+  return [
+    {
+      file: "file.ts",
+      patch: "",
+      before: "",
+      after: "",
+      additions,
+      deletions,
+      status: "modified",
+      tracked: true,
+      generatedLike: false,
+      summarized: true,
+      stamp: `${additions}:${deletions}`,
+    },
+  ]
 }
 
 function gitOps(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
@@ -45,23 +59,19 @@ describe("GitStatsPoller", () => {
     let max = 0
     let calls = 0
 
-    const client = {
-      worktree: {
-        diffSummary: async () => {
-          calls += 1
-          running += 1
-          max = Math.max(max, running)
-          await sleep(40)
-          running -= 1
-          return { data: diff(2, 1) }
-        },
-      },
-    } as unknown as KiloClient
+    const localDiff = async () => {
+      calls += 1
+      running += 1
+      max = Math.max(max, running)
+      await sleep(40)
+      running -= 1
+      return diff(2, 1)
+    }
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
       getWorkspaceRoot: () => undefined,
-      getClient: () => client,
+      localDiff,
       onStats: () => undefined,
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -85,20 +95,16 @@ describe("GitStatsPoller", () => {
       Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
     > = []
 
-    const client = {
-      worktree: {
-        diffSummary: async () => {
-          calls += 1
-          if (calls === 1) return { data: diff(7, 3) }
-          throw new Error("transient backend failure")
-        },
-      },
-    } as unknown as KiloClient
+    const localDiff = async () => {
+      calls += 1
+      if (calls === 1) return diff(7, 3)
+      throw new Error("transient backend failure")
+    }
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a")],
       getWorkspaceRoot: () => undefined,
-      getClient: () => client,
+      localDiff,
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -134,8 +140,8 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
       getWorkspaceRoot: () => root,
-      getClient: () => {
-        throw new Error("backend unavailable")
+      localDiff: async () => {
+        throw new Error("should not be called when backend unavailable path")
       },
       onStats: () => undefined,
       onLocalStats: () => undefined,
@@ -171,9 +177,7 @@ describe("GitStatsPoller", () => {
     const poller = new GitStatsPoller({
       getWorktrees: () => [{ ...worktree("a"), path: wtPath }],
       getWorkspaceRoot: () => root,
-      getClient: () => {
-        throw new Error("backend unavailable")
-      },
+      localDiff: async () => diff(0, 0),
       onStats: () => undefined,
       onLocalStats: () => undefined,
       onWorktreePresence: (result) => presence.push(result),
@@ -202,17 +206,8 @@ describe("GitStatsPoller", () => {
     fs.mkdirSync(wtAPath, { recursive: true })
 
     const calls: string[] = []
-    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number; commits: number }>> = []
+    const emitted: Array<Array<{ worktreeId: string; additions: number; deletions: number }>> = []
     const presence: WorktreePresenceResult[] = []
-
-    const client = {
-      worktree: {
-        diffSummary: async ({ directory }: { directory: string }) => {
-          calls.push(directory)
-          return { data: diff(1, 1) }
-        },
-      },
-    } as unknown as KiloClient
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [
@@ -220,7 +215,10 @@ describe("GitStatsPoller", () => {
         { ...worktree("b"), path: wtBPath },
       ],
       getWorkspaceRoot: () => root,
-      getClient: () => client,
+      localDiff: async (dir) => {
+        calls.push(dir)
+        return diff(1, 1)
+      },
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       onWorktreePresence: (result) => presence.push(result),
@@ -252,7 +250,7 @@ describe("GitStatsPoller", () => {
     expect(emitted[0]?.map((item) => item.worktreeId)).toEqual(["a"])
   })
 
-  it("preserves local stats when client fails after initial success", async () => {
+  it("preserves local stats when diff fails after initial success", async () => {
     let diffCalls = 0
     const emitted: Array<{
       branch: string
@@ -263,20 +261,16 @@ describe("GitStatsPoller", () => {
       behind: number
     }> = []
 
-    const client = {
-      worktree: {
-        diffSummary: async () => {
-          diffCalls += 1
-          if (diffCalls === 1) return { data: diff(5, 2) }
-          throw new Error("transient backend failure")
-        },
-      },
-    } as unknown as KiloClient
+    const localDiff = async () => {
+      diffCalls += 1
+      if (diffCalls === 1) return diff(5, 2)
+      throw new Error("transient backend failure")
+    }
 
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      getClient: () => client,
+      localDiff,
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -310,14 +304,10 @@ describe("GitStatsPoller", () => {
       behind: number
     }> = []
 
-    const client = {
-      worktree: { diffSummary: async () => ({ data: diff(10, 4) }) },
-    } as unknown as KiloClient
-
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      getClient: () => client,
+      localDiff: async () => diff(10, 4),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -358,14 +348,10 @@ describe("GitStatsPoller", () => {
       behind: number
     }> = []
 
-    const client = {
-      worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
-    } as unknown as KiloClient
-
     const poller = new GitStatsPoller({
       getWorktrees: () => [],
       getWorkspaceRoot: () => "/workspace",
-      getClient: () => client,
+      localDiff: async () => diff(0, 0),
       onStats: () => undefined,
       onLocalStats: (stats) => emitted.push(stats),
       log: () => undefined,
@@ -405,14 +391,10 @@ describe("GitStatsPoller", () => {
       Array<{ worktreeId: string; files: number; additions: number; deletions: number; ahead: number; behind: number }>
     > = []
 
-    const client = {
-      worktree: { diffSummary: async () => ({ data: diff(0, 0) }) },
-    } as unknown as KiloClient
-
     const poller = new GitStatsPoller({
       getWorktrees: () => [worktree("a", "upstream"), worktree("b", "upstream")],
       getWorkspaceRoot: () => undefined,
-      getClient: () => client,
+      localDiff: async () => diff(0, 0),
       onStats: (stats) => emitted.push(stats),
       onLocalStats: () => undefined,
       log: () => undefined,
@@ -432,32 +414,57 @@ describe("GitStatsPoller", () => {
     expect(fetches.length).toBe(0)
   })
 
-  it("limits concurrent diffSummary calls when semaphore is provided", async () => {
+  it("runs diffs in parallel without stalling (no extra semaphore layer)", async () => {
+    // localDiff is a synchronous promise — since the poller no longer wraps
+    // it in a semaphore (GitOps.execGit() gates at the child-process layer),
+    // many worktrees can have their diffs computed concurrently without
+    // contending for a dedicated outer gate.
     let running = 0
     let peak = 0
     let ticks = 0
-    const sem = new Semaphore(2)
 
-    const client = {
-      worktree: {
-        diffSummary: async () => {
-          running++
-          peak = Math.max(peak, running)
-          await sleep(20)
-          running--
-          return { data: diff(1, 0) }
-        },
-      },
-    } as unknown as KiloClient
-
-    // Wire the SAME semaphore into GitOps to prove there's no deadlock —
-    // aheadBehind acquires the semaphore independently, not nested inside
-    // the diffSummary gate.
     const wts = Array.from({ length: 5 }, (_, i) => worktree(String(i)))
     const poller = new GitStatsPoller({
       getWorktrees: () => wts,
       getWorkspaceRoot: () => undefined,
-      getClient: () => client,
+      localDiff: async () => {
+        running++
+        peak = Math.max(peak, running)
+        await sleep(20)
+        running--
+        return diff(1, 0)
+      },
+      onStats: () => {
+        ticks++
+      },
+      onLocalStats: () => undefined,
+      log: () => undefined,
+      intervalMs: 5,
+      git: gitOps(async (args) => {
+        if (args[0] === "rev-list" && args[1] === "--left-right") return "0\t0"
+        return ""
+      }),
+    })
+
+    poller.setEnabled(true)
+    await waitFor(() => ticks >= 1)
+    poller.stop()
+
+    // All 5 diffs can run in parallel (no artificial cap at this layer).
+    expect(peak).toBeGreaterThan(1)
+  })
+
+  it("runs concurrent diffs without deadlock when GitOps semaphore is shared", async () => {
+    // Wire the SAME semaphore into GitOps to prove the aheadBehind path
+    // (which goes through GitOps.raw) does not deadlock with the diff path.
+    const sem = new Semaphore(2)
+    let ticks = 0
+
+    const wts = Array.from({ length: 5 }, (_, i) => worktree(String(i)))
+    const poller = new GitStatsPoller({
+      getWorktrees: () => wts,
+      getWorkspaceRoot: () => undefined,
+      localDiff: async () => diff(1, 0),
       onStats: () => {
         ticks++
       },
@@ -479,7 +486,6 @@ describe("GitStatsPoller", () => {
     await waitFor(() => ticks >= 1)
     poller.stop()
 
-    // Only diffSummary calls are tracked — they should be bounded.
-    expect(peak).toBeLessThanOrEqual(2)
+    expect(ticks).toBeGreaterThan(0)
   })
 })

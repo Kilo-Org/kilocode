@@ -95,7 +95,7 @@ const deps = Layer.mergeAll(
   Session.defaultLayer,
   Snapshot.defaultLayer,
   AgentSvc.defaultLayer,
-  Permission.layer,
+  Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
   status,
@@ -172,7 +172,7 @@ describe("session processor empty tool-calls", () => {
 
           yield* handle.process(input)
           expect(handle.message.finish).toBe("stop")
-          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const parts = MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(0)
         }),
@@ -180,7 +180,7 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
-  it.effect("preserves tool-calls finish when tool parts exist", () =>
+  it.live("preserves tool-calls finish when tool parts exist", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -248,7 +248,7 @@ describe("session processor empty tool-calls", () => {
           const result = yield* handle.process(input)
           expect(handle.message.finish).toBe("tool-calls")
           expect(result).toBe("continue")
-          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const parts = MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(1)
         }),
