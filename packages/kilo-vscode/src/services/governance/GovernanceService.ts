@@ -295,6 +295,9 @@ function tierLevel(name: AuthorityTier["name"]): number {
 			return 2
 		case "superadmin":
 			return 3
+		default:
+			console.warn(`[Governance] Unknown tier name: "${name}", defaulting to observer level (0)`)
+			return 0
 	}
 }
 
@@ -1093,12 +1096,15 @@ export class GovernanceService implements vscode.Disposable {
 		// Define the 7 expected subsystems and their audit criteria
 		const expectedSubsystems = [
 			"governance",
+			"ssh",
+			"vps",
+			"zeroClaw",
+			"routing",
+			"memory",
+			"training",
+			"workstation",
 			"hermes",
 			"speech",
-			"security",
-			"telemetry",
-			"configuration",
-			"diagnostics",
 		]
 
 		// Weight map for subsystem importance (must sum to 1.0)

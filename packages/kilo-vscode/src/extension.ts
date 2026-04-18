@@ -88,6 +88,18 @@ export function activate(context: vscode.ExtensionContext) {
   const workstationProfile = new WorkstationProfileService()
   context.subscriptions.push(workstationProfile)
 
+  // Register all V4 subsystems with governance for adversarial audit coverage
+  governanceService.registerSubsystem("governance", "active")
+  governanceService.registerSubsystem("ssh", "active")
+  governanceService.registerSubsystem("vps", "active")
+  governanceService.registerSubsystem("zeroClaw", "active")
+  governanceService.registerSubsystem("routing", "active")
+  governanceService.registerSubsystem("memory", "active")
+  governanceService.registerSubsystem("training", "active")
+  governanceService.registerSubsystem("workstation", "active")
+  governanceService.registerSubsystem("hermes", "active")
+  governanceService.registerSubsystem("speech", "active")
+
   // Sync the Hermes provider preset into the CLI backend config on toggle.
   // Runs once on toggle and once on each CLI reconnect (in case Hermes was
   // already enabled before the backend started).
@@ -222,6 +234,16 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
         tabProvider.setRemoteService(remoteService)
+        tabProvider.setV4Services({
+          ssh: sshService,
+          vps: vpsService,
+          zeroClaw: zeroClawService,
+          routing: routingService,
+          memory: memoryService,
+          training: trainingService,
+          governance: governanceService,
+          workstation: workstationProfile,
+        })
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
         )
@@ -359,6 +381,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels,
         diffVirtualProvider,
         remoteService,
+        { ssh: sshService, vps: vpsService, zeroClaw: zeroClawService, routing: routingService, memory: memoryService, training: trainingService, governance: governanceService, workstation: workstationProfile },
       )
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
@@ -499,6 +522,7 @@ async function openKiloInNewTab(
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
+  v4Services: Parameters<KiloProvider["setV4Services"]>[0],
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -522,6 +546,7 @@ async function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
   tabProvider.setRemoteService(remoteService)
+  tabProvider.setV4Services(v4Services)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
