@@ -1,0 +1,43 @@
+ecosystem:
+  name: dave-ecosystem
+
+  vps:
+    hostname: daveai.tech
+    ssh_profile: vps-main
+    services:
+      - website
+      - hermes-bot
+      - docker
+
+  hermes:
+    channels:
+      telegram:
+        enabled: true
+        bot_name: hermes_bot
+      discord:
+        enabled: true
+        bot_name: HermesBot
+    connected_to:
+      - kilocode
+      - windsurf
+      - claude_desktop
+
+  external_tools:
+    windsurf:
+      enabled: true
+      integration: bidirectional
+    claude_desktop:
+      enabled: true
+      integration: bidirectional
+
+  docker:
+    workstation:
+      enabled: true
+      runtime: docker_desktop
+    vps:
+      enabled: true
+      runtime: docker_ce
+
+  communication:
+    pattern: mesh
+    description: "All systems communicate bidirectionally through Dave's ecosystem"

@@ -1189,6 +1189,36 @@
           "type": "array",
           "default": ["large_planning", "contract_generation", "high_parallel_execution"],
           "description": "Task types that should prefer cloud execution."
+        },
+        "kilo-code.new.workstation.modelLibrary.lmStudioModelsPath": {
+          "type": "string",
+          "default": "C:\\Users\\Admin\\.lmstudio\\models",
+          "description": "Path to LM Studio models directory (~700GB)."
+        },
+        "kilo-code.new.workstation.modelLibrary.ollamaModelsPath": {
+          "type": "string",
+          "default": "C:\\Users\\Admin\\.ollama\\models",
+          "description": "Path to Ollama models directory."
+        },
+        "kilo-code.new.workstation.modelLibrary.loraPath": {
+          "type": "string",
+          "default": "G:\\LoRAs",
+          "description": "Path to LoRA adapters for fine-tuning."
+        },
+        "kilo-code.new.workstation.modelLibrary.comfyuiModelsPath": {
+          "type": "string",
+          "default": "G:\\ComfyUI\\models",
+          "description": "Path to ComfyUI models (checkpoints, VAE, ControlNet, upscalers)."
+        },
+        "kilo-code.new.workstation.modelLibrary.mediaModelsPath": {
+          "type": "string",
+          "default": "G:\\Models",
+          "description": "Root path for TTS, STT, image, video, music, voice models."
+        },
+        "kilo-code.new.workstation.modelLibrary.totalEstimatedSizeGb": {
+          "type": "number",
+          "default": 800,
+          "description": "Total estimated model storage in GB across all libraries."
         }
       }
     }

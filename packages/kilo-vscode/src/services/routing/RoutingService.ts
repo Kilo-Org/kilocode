@@ -5,6 +5,7 @@ import * as vscode from "vscode"
 export interface ProviderConfig {
   id: string
   name: string
+  apiBase?: string
   apiKeyConfigured: boolean
   roles: string[]
   status: "healthy" | "degraded" | "offline" | "unconfigured"
@@ -151,31 +152,38 @@ export class RoutingService implements vscode.Disposable {
     const defaults: Array<{
       id: string
       name: string
+      apiBase?: string
       roles: string[]
     }> = [
       {
         id: "claude",
         name: "Claude",
+        apiBase: "https://api.anthropic.com/v1",
         roles: [ROLE_CONTRACTS, ROLE_AUDITS, ROLE_ARCHITECTURE, ROLE_RELEASE],
       },
+      // MiniMax: standard always-on execution provider
       {
         id: "minimax",
         name: "MiniMax",
+        apiBase: "https://api.minimax.chat/v1",
         roles: [ROLE_EXECUTION],
       },
       {
         id: "siliconflow",
         name: "SiliconFlow",
+        apiBase: "https://api.siliconflow.com/v1", // Dashboard at cloud.siliconflow.com/me/account/ak
         roles: [ROLE_FALLBACK],
       },
       {
         id: "ollama",
         name: "Ollama",
+        apiBase: "http://localhost:11434",
         roles: [ROLE_LOCAL, ROLE_EXECUTION],
       },
       {
         id: "lmstudio",
         name: "LM Studio",
+        apiBase: "http://localhost:1234",
         roles: [ROLE_LOCAL],
       },
     ]
@@ -184,6 +192,7 @@ export class RoutingService implements vscode.Disposable {
       this.providers.set(def.id, {
         id: def.id,
         name: def.name,
+        apiBase: def.apiBase,
         apiKeyConfigured: false,
         roles: def.roles,
         status: "unconfigured",

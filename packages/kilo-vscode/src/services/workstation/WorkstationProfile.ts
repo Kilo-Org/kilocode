@@ -55,6 +55,42 @@ export interface WorkstationPaths {
   workspace: string
   downloads: string
   models: string
+  loraRoot: string
+  comfyuiModels: string
+  ollamaModels: string
+}
+
+// ─── Model Library ────────────────────────────────────────
+
+export type ModelCategory =
+  | "llm"
+  | "lora"
+  | "embedding"
+  | "tts"
+  | "stt"
+  | "image"
+  | "video"
+  | "music"
+  | "voice_clone"
+  | "comfyui"
+  | "other"
+
+export interface ModelLibraryEntry {
+  category: ModelCategory
+  path: string
+  estimatedSizeGb: number
+  provider: "lmstudio" | "ollama" | "comfyui" | "standalone"
+  description: string
+}
+
+export interface ModelLibrary {
+  entries: ModelLibraryEntry[]
+  totalEstimatedSizeGb: number
+  lmStudioModelsPath: string
+  ollamaModelsPath: string
+  loraPath: string
+  comfyuiModelsPath: string
+  mediaModelsPath: string
 }
 
 export interface WorkstationConfig {
@@ -62,6 +98,7 @@ export interface WorkstationConfig {
   hardware: HardwareSpec
   paths: WorkstationPaths
   localAI: LocalAIConfig
+  modelLibrary: ModelLibrary
   capabilities: {
     canRunLargeModels: boolean
     maxContextEstimate: string
@@ -90,6 +127,9 @@ const DEFAULT_PROFILE: WorkstationConfig = {
     workspace: "G:\\Github",
     downloads: "C:\\Users\\Admin\\Downloads\\VPS",
     models: "C:\\Users\\Admin\\.lmstudio\\models",
+    loraRoot: "G:\\LoRAs",
+    comfyuiModels: "G:\\ComfyUI\\models",
+    ollamaModels: "C:\\Users\\Admin\\.ollama\\models",
   },
   localAI: {
     lmStudio: {
@@ -101,6 +141,26 @@ const DEFAULT_PROFILE: WorkstationConfig = {
       enabled: true,
       apiBase: "http://localhost:11434",
     },
+  },
+  modelLibrary: {
+    lmStudioModelsPath: "C:\\Users\\Admin\\.lmstudio\\models",
+    ollamaModelsPath: "C:\\Users\\Admin\\.ollama\\models",
+    loraPath: "G:\\LoRAs",
+    comfyuiModelsPath: "G:\\ComfyUI\\models",
+    mediaModelsPath: "G:\\Models",
+    totalEstimatedSizeGb: 800,
+    entries: [
+      { category: "llm", path: "C:\\Users\\Admin\\.lmstudio\\models", estimatedSizeGb: 700, provider: "lmstudio", description: "LM Studio model library — 700GB of LLMs, chat, code, instruct models" },
+      { category: "llm", path: "C:\\Users\\Admin\\.ollama\\models", estimatedSizeGb: 20, provider: "ollama", description: "Ollama model library — pulled models for local inference" },
+      { category: "lora", path: "G:\\LoRAs", estimatedSizeGb: 10, provider: "standalone", description: "LoRA adapters for fine-tuning and model customization" },
+      { category: "comfyui", path: "G:\\ComfyUI\\models", estimatedSizeGb: 30, provider: "comfyui", description: "ComfyUI models — checkpoints, VAE, ControlNet, upscalers" },
+      { category: "tts", path: "G:\\Models\\TTS", estimatedSizeGb: 5, provider: "standalone", description: "Text-to-speech models" },
+      { category: "stt", path: "G:\\Models\\STT", estimatedSizeGb: 3, provider: "standalone", description: "Speech-to-text / transcription models" },
+      { category: "image", path: "G:\\Models\\Image", estimatedSizeGb: 15, provider: "standalone", description: "Image generation and editing models (Stable Diffusion, etc.)" },
+      { category: "video", path: "G:\\Models\\Video", estimatedSizeGb: 10, provider: "standalone", description: "Video generation and processing models" },
+      { category: "music", path: "G:\\Models\\Music", estimatedSizeGb: 3, provider: "standalone", description: "Music generation models" },
+      { category: "voice_clone", path: "G:\\Models\\Voice", estimatedSizeGb: 2, provider: "standalone", description: "Voice cloning and voice conversion models" },
+    ],
   },
   capabilities: {
     canRunLargeModels: true,
@@ -153,6 +213,9 @@ export class WorkstationProfileService implements vscode.Disposable {
         workspace: config.get<string>("paths.workspace", DEFAULT_PROFILE.paths.workspace),
         downloads: config.get<string>("paths.downloads", DEFAULT_PROFILE.paths.downloads),
         models: config.get<string>("paths.models", DEFAULT_PROFILE.paths.models),
+        loraRoot: config.get<string>("paths.loraRoot", DEFAULT_PROFILE.paths.loraRoot),
+        comfyuiModels: config.get<string>("paths.comfyuiModels", DEFAULT_PROFILE.paths.comfyuiModels),
+        ollamaModels: config.get<string>("paths.ollamaModels", DEFAULT_PROFILE.paths.ollamaModels),
       },
       localAI: {
         lmStudio: {
@@ -164,6 +227,15 @@ export class WorkstationProfileService implements vscode.Disposable {
           enabled: config.get<boolean>("localAI.ollama.enabled", DEFAULT_PROFILE.localAI.ollama.enabled),
           apiBase: config.get<string>("localAI.ollama.apiBase", DEFAULT_PROFILE.localAI.ollama.apiBase),
         },
+      },
+      modelLibrary: {
+        lmStudioModelsPath: config.get<string>("modelLibrary.lmStudioModelsPath", DEFAULT_PROFILE.modelLibrary.lmStudioModelsPath),
+        ollamaModelsPath: config.get<string>("modelLibrary.ollamaModelsPath", DEFAULT_PROFILE.modelLibrary.ollamaModelsPath),
+        loraPath: config.get<string>("modelLibrary.loraPath", DEFAULT_PROFILE.modelLibrary.loraPath),
+        comfyuiModelsPath: config.get<string>("modelLibrary.comfyuiModelsPath", DEFAULT_PROFILE.modelLibrary.comfyuiModelsPath),
+        mediaModelsPath: config.get<string>("modelLibrary.mediaModelsPath", DEFAULT_PROFILE.modelLibrary.mediaModelsPath),
+        totalEstimatedSizeGb: config.get<number>("modelLibrary.totalEstimatedSizeGb", DEFAULT_PROFILE.modelLibrary.totalEstimatedSizeGb),
+        entries: config.get<ModelLibraryEntry[]>("modelLibrary.entries", DEFAULT_PROFILE.modelLibrary.entries),
       },
       capabilities: {
         canRunLargeModels: config.get<boolean>("capabilities.canRunLargeModels", DEFAULT_PROFILE.capabilities.canRunLargeModels),
@@ -219,6 +291,44 @@ export class WorkstationProfileService implements vscode.Disposable {
 
   getPaths(): WorkstationPaths {
     return { ...this.profile.paths }
+  }
+
+  /** Get the full local model library. */
+  getModelLibrary(): ModelLibrary {
+    return {
+      ...this.profile.modelLibrary,
+      entries: [...this.profile.modelLibrary.entries],
+    }
+  }
+
+  /** Get model entries for a specific category (llm, lora, tts, stt, image, video, etc.). */
+  getModelsByCategory(category: ModelCategory): ModelLibraryEntry[] {
+    return this.profile.modelLibrary.entries.filter((e) => e.category === category)
+  }
+
+  /** Check if any models exist for a given category. */
+  hasModelsFor(category: ModelCategory): boolean {
+    return this.profile.modelLibrary.entries.some((e) => e.category === category)
+  }
+
+  /** Get total estimated model storage in GB. */
+  getTotalModelStorageGb(): number {
+    return this.profile.modelLibrary.totalEstimatedSizeGb
+  }
+
+  /** Check if a LoRA adapter path is available for training/merge. */
+  hasLoRAs(): boolean {
+    return this.profile.modelLibrary.entries.some((e) => e.category === "lora")
+  }
+
+  /** Check if TTS models are available locally. */
+  hasLocalTTS(): boolean {
+    return this.profile.modelLibrary.entries.some((e) => e.category === "tts")
+  }
+
+  /** Check if STT models are available locally. */
+  hasLocalSTT(): boolean {
+    return this.profile.modelLibrary.entries.some((e) => e.category === "stt")
   }
 
   /** Check if a task type should prefer local execution. */

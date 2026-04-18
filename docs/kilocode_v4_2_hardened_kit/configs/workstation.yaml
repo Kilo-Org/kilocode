@@ -26,6 +26,9 @@ workstation:
     workspace: "G:\\Github"
     downloads: "C:\\Users\\Admin\\Downloads\\VPS"
     models: "C:\\Users\\Admin\\.lmstudio\\models"
+    lora_root: "G:\\LoRAs"
+    comfyui_models: "G:\\ComfyUI\\models"
+    ollama_models: "C:\\Users\\Admin\\.ollama\\models"
 
   local_ai:
     lm_studio:
@@ -36,6 +39,67 @@ workstation:
     ollama:
       enabled: true
       api_base: "http://localhost:11434"
+      models_path: "C:\\Users\\Admin\\.ollama\\models"
+
+  # ── Model Library ──────────────────────────────
+  # Full inventory of local model assets across all drives.
+  # Both LM Studio and Ollama can serve these. New models
+  # can be downloaded via either tool. LoRAs, ComfyUI,
+  # and media models are standalone on G:\.
+  model_library:
+    total_estimated_size_gb: 800
+
+    lm_studio:
+      path: "C:\\Users\\Admin\\.lmstudio\\models"
+      estimated_size_gb: 700
+      description: "LM Studio model library — LLMs, chat, code, instruct"
+      downloadable: true
+
+    ollama:
+      path: "C:\\Users\\Admin\\.ollama\\models"
+      estimated_size_gb: 20
+      description: "Ollama pulled models for local inference"
+      downloadable: true
+
+    lora:
+      path: "G:\\LoRAs"
+      estimated_size_gb: 10
+      description: "LoRA adapters for fine-tuning and model customization"
+
+    comfyui:
+      path: "G:\\ComfyUI\\models"
+      estimated_size_gb: 30
+      description: "ComfyUI models — checkpoints, VAE, ControlNet, upscalers, embeddings"
+
+    tts:
+      path: "G:\\Models\\TTS"
+      estimated_size_gb: 5
+      description: "Text-to-speech models (Bark, XTTS, Coqui, etc.)"
+
+    stt:
+      path: "G:\\Models\\STT"
+      estimated_size_gb: 3
+      description: "Speech-to-text / transcription models (Whisper, etc.)"
+
+    image:
+      path: "G:\\Models\\Image"
+      estimated_size_gb: 15
+      description: "Image generation models (Stable Diffusion, SDXL, Flux, etc.)"
+
+    video:
+      path: "G:\\Models\\Video"
+      estimated_size_gb: 10
+      description: "Video generation and processing models"
+
+    music:
+      path: "G:\\Models\\Music"
+      estimated_size_gb: 3
+      description: "Music generation models (AudioCraft, MusicGen, etc.)"
+
+    voice_clone:
+      path: "G:\\Models\\Voice"
+      estimated_size_gb: 2
+      description: "Voice cloning and voice conversion models (RVC, etc.)"
 
   capabilities:
     can_run_large_models: true
@@ -49,11 +113,19 @@ workstation:
       - embeddings
       - small_generation
       - private_data_tasks
+      - tts_local
+      - stt_local
+      - image_generation
 
     prefer_cloud_for:
       - large_planning
       - contract_generation
       - high_parallel_execution
+
+  ecosystem:
+    vps_host: daveai.tech
+    hermes_channels: [telegram, discord]
+    external_tools: [windsurf, claude_desktop]
 
   limits:
     max_parallel_jobs: 4

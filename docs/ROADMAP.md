@@ -370,11 +370,67 @@ the system knows it's running on a high-end desktop with local GPU and local AI 
 | Ollama | `http://localhost:11434` |
 | Docker/WSL | Supported |
 
-**Routing impact:** Memory tasks, embeddings, small generation, and private data tasks prefer local execution. Large planning, contract generation, and high-parallel execution prefer cloud.
+**Routing impact:** Memory tasks, embeddings, small generation, private data tasks, local TTS/STT, and image generation prefer local execution. Large planning, contract generation, and high-parallel execution prefer cloud.
 
 **Training impact:** LoRA/QLoRA on small datasets runs locally on the 3090 Ti. Large datasets route to remote GPU.
 
 **ZeroClaw impact:** Respects GPU job limits (max 1 concurrent GPU job, 4 parallel total).
+
+### Local Model Library (~800 GB)
+
+| Category | Path | Size | Description |
+|----------|------|------|-------------|
+| LLMs (LM Studio) | `C:\Users\Admin\.lmstudio\models` | ~700 GB | Chat, code, instruct models; downloadable |
+| LLMs (Ollama) | `C:\Users\Admin\.ollama\models` | ~20 GB | Pulled models for local inference; downloadable |
+| LoRA Adapters | `G:\LoRAs` | ~10 GB | Fine-tuning adapters, merge-ready |
+| ComfyUI | `G:\ComfyUI\models` | ~30 GB | Checkpoints, VAE, ControlNet, upscalers |
+| TTS | `G:\Models\TTS` | ~5 GB | Text-to-speech (Bark, XTTS, Coqui) |
+| STT | `G:\Models\STT` | ~3 GB | Speech-to-text (Whisper, etc.) |
+| Image | `G:\Models\Image` | ~15 GB | Stable Diffusion, SDXL, Flux |
+| Video | `G:\Models\Video` | ~10 GB | Video generation/processing |
+| Music | `G:\Models\Music` | ~3 GB | AudioCraft, MusicGen |
+| Voice Clone | `G:\Models\Voice` | ~2 GB | RVC, voice conversion |
+
+Both LM Studio and Ollama can download new models. LoRAs can be merged during training export. ComfyUI and media models are available for local generation pipelines.
+
+---
+
+## Ecosystem (Dave's Production Stack)
+
+**Config:** `docs/kilocode_v4_2_hardened_kit/configs/ecosystem.yaml`
+
+All systems communicate bidirectionally through a mesh pattern.
+
+| Component | Details |
+|-----------|---------|
+| **VPS** | daveai.tech — production website, Hermes bot, Docker |
+| **Hermes** | Connected via Telegram + Discord; routes to KiloCode |
+| **Windsurf** | Bidirectional integration with KiloCode |
+| **Claude Desktop** | Bidirectional integration with KiloCode |
+| **Docker** | Available on workstation (Docker Desktop) and VPS (Docker CE) |
+
+### Provider Stack
+
+| Provider | Role | API Endpoint | Always-On |
+|----------|------|-------------|-----------|
+| Claude Opus 4.7 | Master auditor, contracts, architecture, verdicts | `api.anthropic.com/v1` | No |
+| MiniMax | **Standard execution worker**, parallel tasks | `api.minimax.chat/v1` | **YES** |
+| SiliconFlow | Fallback, overflow, alternate models | `api.siliconflow.com/v1` | No |
+| Ollama | Local private, memory, embeddings | `localhost:11434` | Local |
+| LM Studio | Local private, helper | `localhost:1234` | Local |
+
+> SiliconFlow dashboard/keys at `cloud.siliconflow.com/me/account/ak` (NOT cn)
+> MiniMax is the always-on standard — it should never be down.
+
+### Agent Roles (Production Audit)
+
+| Role | Model | Responsibility |
+|------|-------|---------------|
+| Lead Auditor | Claude Opus 4.7 | Owns master contract, decomposes passes, decides pass/fail |
+| Builder Agents | Claude Opus 4.7 | Fix issues found by audit, refactor, harden |
+| Challenger Agents | Claude Opus 4.7 | Try to break claims, test failure paths, reopen weak items |
+| Execution Layer | MiniMax + ZeroClaw | Run commands, tests, builds, packaging |
+| Evidence Steward | Hermes + KiloCode | Update truth matrix, defect ledger, run ledger, verdict |
 
 ---
 
@@ -551,24 +607,80 @@ Each block requires evidence proving completion. Evidence infrastructure exists 
 
 ---
 
+## Production Audit Framework
+
+**Full spec:** `docs/audit/AUDIT_FRAMEWORK.md`
+**Live tracking files:** `docs/audit/`
+
+The system does NOT stop at "typecheck passes" or "tabs exist." It stops only when:
+a real project is created by the system, that project runs, the evidence bundle proves it,
+and the release artifacts install and behave correctly.
+
+### 6 Audit Passes
+
+| Pass | Name | What it proves |
+|------|------|---------------|
+| A | Static Structure | All tabs, services, routes, settings, disposal, imports are correct |
+| B | Subsystem Runtime | Each of 8 subsystems initializes and responds to messages |
+| C | Failure Path | Bad creds, unreachable hosts, denied actions, empty recalls all surface correctly |
+| D | Integration | Hermes→KiloCode→ZeroClaw chains work, memory persists, approvals gate execution |
+| E | E2E Product | Contract→execution→result→speech, fallback chain, memory continuity, project creation |
+| F | Release | VSIX builds, clean install, activation, rollback, release notes, GitHub artifacts |
+
+### 4 Evidence Gates
+
+| Gate | Requirement |
+|------|------------|
+| 1 — Subsystem Proof | Each subsystem: 1 success path + 1 failure path + logs + screenshot + ledger entry |
+| 2 — Routing Proof | Claude=contract, MiniMax=execution, fallback proven, local stayed local |
+| 3 — Memory Proof | Write happened, recall happened, cross-agent recall happened, failure surfaced honestly |
+| 4 — Project Creation | Spec created → files generated → commands run → project runs → logged → memorized → announced |
+
+### Multi-Layered Correction Loop
+
+```
+Owner fixes → Confirmer reruns proof → Challenger break-tests → Lead Auditor closes/reopens
+```
+
+**Fixer ≠ Closer.** Always.
+
+### Live Audit Files
+
+| File | Purpose |
+|------|---------|
+| `docs/audit/FEATURE_TRUTH_MATRIX.md` | Every feature: Code/Wired/UI/Runtime/Evidence status |
+| `docs/audit/DEFECT_LEDGER.md` | Every real defect with ID, severity, owner, closer |
+| `docs/audit/RUN_LEDGER.jsonl` | Every test run with pass/fail/evidence |
+| `docs/audit/RELEASE_VERDICT.md` | Final verdict: pass/conditional/fail with sign-off |
+| `docs/audit/EVIDENCE/` | Screenshots, logs, traces, artifacts |
+
+---
+
 ## Release Gate Checklist
 
-Per the Master Completion Contract, all items must pass before release.
+Release target: **v7.2.14+full-cockpit**
+Branch: **feat/azure-voice-studio**
 
 | # | Gate | Status |
 |---|------|--------|
-| 1 | Blocks C–I proofs complete | ✅ All 72 phases implemented |
-| 2 | 3 mandatory E2E workflows pass | ✅ All 3 complete |
-| 3 | Project creation acceptance test passes | [~] 7/8 steps done, needs live validation |
-| 4 | No critical defects open | ✅ No critical defects in ledger |
-| 5 | Release verdict infrastructure | ✅ runAdversarialAudit() + generateFinalVerdict() |
-| 6 | Rollback path documented | ✅ isRollbackReady() in GovernanceService |
+| 1 | Build passes | ✅ `bun turbo typecheck` 12/12 |
+| 2 | Typecheck passes (all packages) | ✅ 12/12 packages zero errors |
+| 3 | Extension activates on clean install | ⬜ Pending Pass B |
+| 4 | All 8 tabs render | ⬜ Pending Pass B |
+| 5 | All 8 services initialize | ✅ Instantiated in extension.ts |
+| 6 | 3 mandatory E2E workflows pass | ✅ Code complete, ⬜ runtime proof pending |
+| 7 | Project creation acceptance test passes | ⬜ Pending Pass E (Gate 4) |
+| 8 | No critical defects open | ✅ Zero critical in defect ledger |
+| 9 | 6 audit passes complete (A–F) | ⬜ Pending |
+| 10 | 4 evidence gates satisfied | ⬜ Pending |
+| 11 | Release verdict written | ⬜ Pending Pass F |
+| 12 | Rollback notes written | ⬜ Pending Pass F |
 
 ---
 
 ## V4.2 Gap Fixes Summary (2026-04-18)
 
-12 gaps identified by completion pack review, all fixed in code:
+12 gaps identified by completion pack review + 1 found during audit setup:
 
 | # | Service | Gap | Fix Applied |
 |---|---------|-----|-------------|
@@ -584,21 +696,33 @@ Per the Master Completion Contract, all items must pass before release.
 | 10 | Memory | No entry limit | `maxMemoryEntries` = 5000 with eviction |
 | 11 | Training | GPU quota too low | Updated from 16384 to 24576 MB (RTX 3090 Ti 24GB) |
 | 12 | Governance | No escalation timeout | EscalationConfig with 60-min timeout |
+| 13 | Routing | SiliconFlow wrong API URL | Fixed to `api.siliconflow.com/v1` (D-001) |
 
 ---
 
 ## Overall Readiness
 
-**100% — 72 of 72 phases complete, 0 in progress, 0 not started.**
+**Code: 100% — 72 of 72 phases complete, 0 in progress, 0 not started.**
+**Runtime proof: PENDING — Audit passes A–F not yet executed.**
 
-All code exists across 8 TypeScript services (~8,300 lines) and 8 Solid.js UI tabs.
-All services are instantiated, wired to the message router, and type-checked (12/12 packages pass).
-All 12 gaps from the completion pack review have been fixed.
-All 3 mandatory E2E workflows are complete.
-All 12 additional workflows are complete.
-Evidence bundle infrastructure is in place.
-Adversarial audit engine is operational.
-Workstation profile is hardware-aware (RTX 3090 Ti / MSI X570S / 128 GB DDR4).
+### What exists (code-complete)
+- 8 TypeScript services (~8,300 lines) + 8 Solid.js UI tabs (~9,000 lines)
+- All services instantiated, wired, type-checked (12/12 packages pass)
+- 13 gap fixes applied and verified
+- 3 mandatory + 12 additional E2E workflows implemented
+- Adversarial audit engine operational
+- Evidence bundle infrastructure in place
+- Workstation profile hardware-aware (RTX 3090 Ti / MSI X570S / 128 GB DDR4)
+- Ecosystem configured (daveai.tech, Hermes via Telegram+Discord, Windsurf, Claude Desktop)
+- Provider stack correct (MiniMax always-on, SiliconFlow api.siliconflow.com)
 
-**One remaining item:** Live execution validation of project creation acceptance test (step 6).
-This requires running the extension and executing a real project creation flow to verify runtime behavior.
+### What remains (runtime proof)
+1. Execute 6 audit passes (A through F) using the layered audit swarm
+2. Satisfy 4 evidence gates with real screenshots/logs/traces
+3. Run the project creation acceptance test (Gate 4)
+4. Close all defects through the multi-layered correction loop (fixer ≠ closer)
+5. Write and sign off the release verdict
+6. Build VSIX, test clean install, verify activation and rollback
+
+**The system is not production-ready until Gate 4 passes.**
+A real project must be created end-to-end, run or have its tests pass, and the evidence bundle must prove it.

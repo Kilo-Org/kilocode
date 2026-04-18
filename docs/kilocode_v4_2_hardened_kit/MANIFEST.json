@@ -1,7 +1,7 @@
 {
   "name": "KiloCode Full Coverage Final v4.2 Hardened",
   "date": "2026-04-17",
-  "file_count": 36,
+  "file_count": 37,
   "files": [
     "01_MASTER/DEFECT_TRIBUNAL_SYSTEM.md",
     "01_MASTER/KILOCODE_FINAL_V4_2_72_PHASE_EXECUTION_PLAN.md",
@@ -31,6 +31,7 @@
     "08_TRACKERS/PHASE_TRACKER.csv",
     "MANIFEST.json",
     "README.md",
+    "configs/ecosystem.yaml",
     "configs/execution.yaml",
     "configs/governance.yaml",
     "configs/memory.yaml",

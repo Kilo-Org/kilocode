@@ -1666,6 +1666,8 @@ export interface V4SubsystemMessage {
     // Workstation
     | "workstationProfile" | "workstationHardware" | "workstationLimits"
     | "workstationLocalAI" | "workstationRoutingPrefs" | "workstationLocalPref"
+    | "workstationModelLibrary" | "workstationModelsForCategory"
+    | "workstationLoRAStatus" | "workstationLocalTTSStatus" | "workstationLocalSTTStatus"
   [key: string]: unknown
 }
 
@@ -2734,6 +2736,8 @@ export interface V4SubsystemRequest {
     | "governanceGetAuditLog" | "governanceCreateVerdict" | "governanceExportAudit"
     | "workstationGetProfile" | "workstationGetHardware" | "workstationGetLimits"
     | "workstationGetLocalAI" | "workstationGetRoutingPrefs" | "workstationShouldPreferLocal"
+    | "workstationGetModelLibrary" | "workstationGetModelsByCategory"
+    | "workstationHasLoRAs" | "workstationHasLocalTTS" | "workstationHasLocalSTT"
     | "workstationReload"
   [key: string]: unknown
 }

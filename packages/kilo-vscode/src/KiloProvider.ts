@@ -1363,6 +1363,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "workstationShouldPreferLocal":
           if (this.workstationProfile) this.postMessage({ type: "workstationLocalPref", prefer: this.workstationProfile.shouldPreferLocal(message.taskType as string) } as never)
           break
+        case "workstationGetModelLibrary":
+          if (this.workstationProfile) this.postMessage({ type: "workstationModelLibrary", library: this.workstationProfile.getModelLibrary() } as never)
+          break
+        case "workstationGetModelsByCategory":
+          if (this.workstationProfile) this.postMessage({ type: "workstationModelsForCategory", models: this.workstationProfile.getModelsByCategory(message.category as never) } as never)
+          break
+        case "workstationHasLoRAs":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLoRAStatus", available: this.workstationProfile.hasLoRAs() } as never)
+          break
+        case "workstationHasLocalTTS":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLocalTTSStatus", available: this.workstationProfile.hasLocalTTS() } as never)
+          break
+        case "workstationHasLocalSTT":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLocalSTTStatus", available: this.workstationProfile.hasLocalSTT() } as never)
+          break
         case "workstationReload":
           if (this.workstationProfile) {
             this.workstationProfile.reload()
