@@ -200,6 +200,36 @@ describe("CanonicalTeamConfig strict stage coverage", () => {
     expect(result.success).toBe(false)
   })
 
+  // TRA-3: non-canonical role key is rejected by the roles key refine
+  test("role keyed with non-canonical position is rejected", () => {
+    const result = CanonicalTeamConfig.safeParse({
+      enabled: false,
+      roles: {
+        "totally-bogus-role": {
+          displayName: "Bogus",
+          positionId: "developer",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          capabilities: ["implementation"],
+          supplementaryCapabilities: [],
+        },
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "developer",
+        escalationEnabled: true,
+      },
+      reactions: [],
+    })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const messages = result.error.issues.map((i) => i.message).join(" ")
+      expect(messages).toContain("valid CanonicalPosition")
+    }
+  })
+
   test("enabled:false canonical team skips coverage refinement", () => {
     // A team with enabled:false but no capabilities should parse fine
     const result = CanonicalTeamConfig.safeParse({
@@ -359,6 +389,129 @@ describe("fromLegacyTeamConfig migration helper", () => {
         const reparse = CanonicalTeamConfig.safeParse(result.value)
         expect(reparse.success, `preset "${preset.id}" failed round-trip: ${!reparse.success ? reparse.error.message : ""}`).toBe(true)
       }
+    }
+  })
+
+  // TRA-1: SUPPLEMENTARY_TO_IMPLEMENTATION code path
+  test("capabilities 'ui' and 'api' inject 'implementation' and land in supplementaryCapabilities", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        "frontend-specialist": TeamRole.parse({
+          displayName: "Frontend Specialist",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          capabilities: ["ui", "api"],
+        }),
+      },
+      routing: { strategy: "hierarchical", defaultRole: "frontend-specialist", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const role = result.value.roles["frontend-specialist"]
+      expect(role).toBeDefined()
+      if (role) {
+        expect(role.capabilities).toContain("implementation")
+        expect(role.supplementaryCapabilities).toContain("ui")
+        expect(role.supplementaryCapabilities).toContain("api")
+      }
+    }
+  })
+
+  // TRA-2: defaultRole fallback path when legacy defaultRole is unresolvable
+  test("unresolvable defaultRole falls back to first canonical role and emits missing-position-id warning", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+      },
+      routing: { strategy: "hierarchical", defaultRole: "totally-unknown-default", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const missingPositionWarnings = result.warnings.filter((w) => w.kind === "missing-position-id")
+      expect(missingPositionWarnings.length).toBeGreaterThan(0)
+      const validPositions = CanonicalPosition.options as readonly string[]
+      expect(validPositions).toContain(result.value.routing.defaultRole)
+    }
+  })
+
+  // TRA-4 (part 1): parentRole synonym resolution — "orchestrator" → "coordinator"
+  test("parentRole 'orchestrator' migrates to canonical 'coordinator'", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+        orchestrator: TeamRole.parse({
+          displayName: "Orchestrator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "coordinator",
+        escalationEnabled: true,
+        parentRole: "orchestrator",
+      },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.routing.parentRole).toBe("coordinator")
+    }
+  })
+
+  // TRA-4 (part 2): unresolvable parentRole is silently dropped (undefined)
+  test("unresolvable parentRole is dropped from migrated routing", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "coordinator",
+        escalationEnabled: true,
+        parentRole: "totally-unknown",
+      },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.routing.parentRole).toBeUndefined()
     }
   })
 })

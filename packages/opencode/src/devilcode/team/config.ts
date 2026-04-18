@@ -270,26 +270,53 @@ export function fromLegacyTeamConfig(input: TeamConfig): LegacyMigrationResult {
         if (synonym) {
           canDelegate.push(synonym)
         } else {
-          warnings.push({ kind: "unknown-capability", roleId, value: `canDelegate:${delegatee}` })
+          // QA-4: use missing-position-id for position resolution failures, not unknown-capability
+          warnings.push({ kind: "missing-position-id", roleId, inferredFrom: "canDelegate" })
         }
       }
     }
 
+    // QA-2: deduplicate canDelegate entries (two legacy strings can resolve to the same CanonicalPosition)
+    const uniqueCanDelegate = [...new Set(canDelegate)]
+
     if (positionId !== undefined) {
       const libraryEntry = POSITION_LIBRARY[positionId]
+
+      // QA-1: emit warning when no capabilities map to canonical values before falling back
+      if (canonicalCapabilities.length === 0) {
+        warnings.push({ kind: "unknown-capability", roleId, value: "<no-mappable-capabilities-fallback:research>" })
+      }
       const resolvedCapabilities = canonicalCapabilities.length > 0 ? canonicalCapabilities : ["research" as CanonicalCapability]
 
-      canonicalRoles[positionId] = {
-        displayName: role.displayName,
-        positionId,
-        provider: role.provider,
-        model: role.model,
-        effort: role.effort,
-        tier: libraryEntry ? libraryEntry.tier : role.tier,
-        canDelegate,
-        maxConcurrent: role.maxConcurrent,
-        capabilities: resolvedCapabilities as [CanonicalCapability, ...CanonicalCapability[]],
-        supplementaryCapabilities,
+      // QA-3: detect collision when two legacy roles resolve to the same CanonicalPosition
+      if (positionId in canonicalRoles) {
+        const existing = canonicalRoles[positionId]!
+        warnings.push({ kind: "ambiguous-capability-mapping", roleId, value: positionId, candidates: [] })
+        // Merge: union capabilities (dedup), keep higher tier (lower number), keep higher effort (first-write-wins is existing)
+        const mergedCapabilities = [...new Set([...existing.capabilities, ...resolvedCapabilities])] as [
+          CanonicalCapability,
+          ...CanonicalCapability[],
+        ]
+        const mergedTier = Math.min(existing.tier, libraryEntry ? libraryEntry.tier : role.tier)
+        canonicalRoles[positionId] = {
+          ...existing,
+          capabilities: mergedCapabilities,
+          tier: mergedTier,
+          supplementaryCapabilities: [...new Set([...existing.supplementaryCapabilities, ...supplementaryCapabilities])],
+        }
+      } else {
+        canonicalRoles[positionId] = {
+          displayName: role.displayName,
+          positionId,
+          provider: role.provider,
+          model: role.model,
+          effort: role.effort,
+          tier: libraryEntry ? libraryEntry.tier : role.tier,
+          canDelegate: uniqueCanDelegate,
+          maxConcurrent: role.maxConcurrent,
+          capabilities: resolvedCapabilities as [CanonicalCapability, ...CanonicalCapability[]],
+          supplementaryCapabilities,
+        }
       }
     }
   }

@@ -69,4 +69,19 @@ describe("capabilities", () => {
     const result = requiredCapabilitiesFor([])
     expect(result).toEqual([])
   })
+
+  // TRA-5: all 7 stages yield 6 unique capabilities (plan+challenge both map to "planning")
+  test("requiredCapabilitiesFor all 7 stages yields 6 unique capabilities without 'research'", () => {
+    const allStages = WorkflowStage.options as z.infer<typeof WorkflowStage>[]
+    expect(allStages).toHaveLength(7)
+    const result = requiredCapabilitiesFor(allStages)
+    expect(result).toHaveLength(6)
+    expect(result).not.toContain("research")
+    expect(result).toContain("planning")
+    expect(result).toContain("design")
+    expect(result).toContain("implementation")
+    expect(result).toContain("review")
+    expect(result).toContain("release")
+    expect(result).toContain("retrospective")
+  })
 })
