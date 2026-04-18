@@ -43,9 +43,10 @@ export function createProviderAction(vscode: Transport) {
   const unsubscribe = vscode.onMessage((message) => {
     if (!("requestId" in message)) return
 
-    const item = pending.get(message.requestId)
+    const reqId = (message as Record<string, unknown>).requestId as string
+    const item = pending.get(reqId)
     if (!item) return
-    pending.delete(message.requestId)
+    pending.delete(reqId)
 
     if (message.type === "providerOAuthReady") {
       item.onOAuthReady?.(message)
