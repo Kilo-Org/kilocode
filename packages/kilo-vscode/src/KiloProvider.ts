@@ -246,6 +246,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private workstationProfile: import("./services/workstation").WorkstationProfileService | null = null
   private discoveryService: import("./services/onboarding").OnboardingDiscoveryService | null = null
 
+  /** Build an enriched governance snapshot with release checklist/readiness data. */
+  private getEnrichedGovernanceSnapshot(): Record<string, unknown> | null {
+    if (!this.governanceService) return null
+    const snapshot = this.governanceService.getSnapshot() as unknown as Record<string, unknown>
+    snapshot.checklist = this.governanceService.getReleaseChecklist()
+    snapshot.releaseReadiness = this.governanceService.computeReleaseReadiness()
+    snapshot.rollbackReady = this.governanceService.isRollbackReady()
+    return snapshot
+  }
+
+  /** Send the enriched governance state to the webview. */
+  private sendGovernanceState(): void {
+    const snapshot = this.getEnrichedGovernanceSnapshot()
+    if (snapshot) {
+      this.postMessage({ type: "governanceState", state: snapshot } as never)
+    }
+  }
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
@@ -1152,10 +1170,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           await this.sshService?.openTerminal(message.profileName)
           break
         case "sshBrowseFiles":
-          if (this.sshService) {
-            const fileEntries = await this.sshService.listFiles(message.profileName, message.path ?? "/")
-            this.postMessage({ type: "sshFilesListed", path: message.path ?? "/", entries: fileEntries ?? [] } as never)
-          }
+          // listFiles() returns void and emits a "filesListed" event, which is
+          // forwarded to the webview by the SSH event relay in setV4Services().
+          // No manual postMessage needed here — the event bridge handles it.
+          await this.sshService?.listFiles(message.profileName, message.path ?? "/")
           break
         case "sshFileOpen":
           await this.sshService?.openRemoteFile(message.profileName, message.remotePath)
@@ -1540,15 +1558,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Helper to send governance state to the webview (wrap in state property for tab)
         case "requestGovernanceState":
         case "governanceGetAuditLog":
-          if (this.governanceService) {
-            const snapshot = this.governanceService.getSnapshot()
-            // Tab reads msg.state, so wrap the snapshot in a state property
-            this.postMessage({ type: "governanceState", state: snapshot } as never)
-            // Also send audit log if explicitly requested
-            if (message.type === "governanceGetAuditLog") {
-              this.postMessage({ type: "governanceState", state: snapshot } as never)
-            }
-          }
+          this.sendGovernanceState()
           break
         case "governanceSetTier": {
           const validTiers = ["observer", "operator", "admin", "superadmin"]
@@ -1559,7 +1569,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           // Tab sends { user }, not { userId }
           const userId = message.userId ?? message.user
           this.governanceService?.setUserTier(userId, message.tier, message.assignedBy ?? "operator")
-          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          this.sendGovernanceState()
           break
         }
         case "governanceApproveAction":
@@ -1569,7 +1579,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.approver ?? message.approvedBy ?? "operator",
             message.reason,
           )
-          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          this.sendGovernanceState()
           break
         case "governanceRejectAction":
           // Tab sends { approvalId, rejectedBy }, not { actionId, approver }
@@ -1578,7 +1588,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.approver ?? message.rejectedBy ?? "operator",
             message.reason,
           )
-          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          this.sendGovernanceState()
           break
         case "governanceAddDangerousAction":
           // Tab sends individual fields (name, description, minimumTier, requiresApproval), not message.action
@@ -1590,23 +1600,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             requiresApproval: message.requiresApproval ?? true,
             blocked: message.blocked ?? false,
           })
-          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          this.sendGovernanceState()
           break
         case "governanceToggleBlock":
           this.governanceService?.toggleActionBlock(message.actionId, message.blocked)
-          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          this.sendGovernanceState()
           break
         case "governanceCreateVerdict":
           if (this.governanceService) {
             this.governanceService.createReleaseVerdict(message.scope, message.criticalDefects ?? 0, message.highDefects ?? 0, message.riskSummary ?? "", message.rollbackPlan ?? "", message.decision ?? "pass")
-            this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+            this.sendGovernanceState()
           }
           break
         case "governanceExportAudit":
           if (this.governanceService) {
             const auditData = this.governanceService.getAuditLog()
             this.postMessage({ type: "governanceAuditExport", data: auditData } as never)
-            this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+            this.sendGovernanceState()
           }
           break
 
