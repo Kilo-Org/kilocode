@@ -1,0 +1,94 @@
+# Provider Routing Configuration
+# Referenced by: 03_SPECS/KILOCODE_PROVIDER_ROUTING_COMPLETE_SPEC.md
+# Phases: 45 (Provider role matrix), 46-49 (Provider lanes), 50-52 (Health, routing, cost)
+
+providers:
+  - id: claude
+    name: Claude (Anthropic)
+    type: cloud
+    endpoint: https://api.anthropic.com/v1
+    auth_method: api_key
+    env_var: ANTHROPIC_API_KEY
+    capabilities: [contract_writing, architecture_review, audit, verdict, planning]
+    cost_per_1k_tokens: 0.003
+    max_context_window: 200000
+    health_check_url: https://api.anthropic.com/v1/models
+    priority: 1
+
+  - id: minimax
+    name: MiniMax
+    type: cloud
+    endpoint: https://api.minimax.chat/v1
+    auth_method: api_key
+    env_var: MINIMAX_API_KEY
+    capabilities: [code_execution, bulk_processing, worker_tasks, high_throughput]
+    cost_per_1k_tokens: 0.0005
+    max_context_window: 128000
+    health_check_url: https://api.minimax.chat/v1/models
+    priority: 2
+
+  - id: siliconflow
+    name: SiliconFlow
+    type: cloud
+    endpoint: https://api.siliconflow.cn/v1
+    auth_method: api_key
+    env_var: SILICONFLOW_API_KEY
+    capabilities: [overflow, fallback, bulk_processing, code_execution]
+    cost_per_1k_tokens: 0.0003
+    max_context_window: 128000
+    health_check_url: https://api.siliconflow.cn/v1/models
+    priority: 3
+
+  - id: ollama
+    name: Ollama (Local)
+    type: local
+    endpoint: http://localhost:11434/api
+    auth_method: none
+    env_var: null
+    capabilities: [local_private, code_assist, quick_query]
+    cost_per_1k_tokens: 0
+    max_context_window: 128000
+    health_check_url: http://localhost:11434/api/tags
+    priority: 4
+
+  - id: lmstudio
+    name: LM Studio (Local)
+    type: local
+    endpoint: http://localhost:1234/v1
+    auth_method: none
+    env_var: null
+    capabilities: [local_private, code_assist, quick_query, fine_tuned_inference]
+    cost_per_1k_tokens: 0
+    max_context_window: 128000
+    health_check_url: http://localhost:1234/v1/models
+    priority: 5
+
+role_matrix:
+  contract_writing:    { primary: claude,     fallback: null }
+  architecture_review: { primary: claude,     fallback: null }
+  audit:               { primary: claude,     fallback: null }
+  verdict:             { primary: claude,     fallback: null }
+  code_execution:      { primary: minimax,    fallback: siliconflow }
+  bulk_processing:     { primary: minimax,    fallback: siliconflow }
+  overflow:            { primary: siliconflow, fallback: minimax }
+  local_private:       { primary: ollama,     fallback: lmstudio }
+  quick_query:         { primary: ollama,     fallback: claude }
+
+fallback_policy:
+  max_retries: 2
+  retry_delay_ms: 1000
+  circuit_breaker_threshold: 3
+  circuit_breaker_reset_ms: 60000
+  timeout_ms: 30000
+  log_all_fallback_events: true
+
+health_check:
+  interval_seconds: 60
+  consecutive_failures_before_circuit_break: 3
+  recovery_probe_interval_seconds: 300
+
+cost_tracking:
+  enabled: true
+  budget_alert_threshold_usd: 10.00
+  daily_cap_usd: 50.00
+  log_destination: run_ledger

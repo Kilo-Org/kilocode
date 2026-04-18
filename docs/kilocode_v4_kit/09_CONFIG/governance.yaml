@@ -1,0 +1,151 @@
+# Governance and Release Configuration
+# Referenced by: 03_SPECS/KILOCODE_GOVERNANCE_RELEASE_COMPLETE_SPEC.md
+# Phases: 67 (Authority tiers), 68 (Approval modal), 69 (Dangerous action rules),
+#         70 (CI/CD and release), 71 (Adversarial audit), 72 (Release verdict)
+
+authority_tiers:
+  viewer:
+    level: 0
+    permissions: [read, recall, search]
+    can_approve: false
+    description: Read-only access to dashboards and memory recall
+  operator:
+    level: 1
+    permissions: [read, recall, search, execute_low, execute_medium]
+    can_approve: false
+    description: Can run low and medium risk tasks without approval
+  admin:
+    level: 2
+    permissions: [read, recall, search, execute_low, execute_medium, execute_high, approve_medium]
+    can_approve: true
+    max_approve_risk: medium
+    description: Can approve medium-risk actions and run high-risk with owner approval
+  owner:
+    level: 3
+    permissions: [read, recall, search, execute_low, execute_medium, execute_high, approve_high, configure, release]
+    can_approve: true
+    max_approve_risk: high
+    description: Full authority including high-risk approval and release
+
+approval:
+  modal:
+    show_risk_level: true
+    show_affected_files: true
+    show_diff_preview: true
+    show_rollback_plan: true
+    require_reason: true
+    timeout_seconds: 300          # auto-deny if no response
+  audit_history:
+    retention_days: 365
+    fields:
+      - action_id
+      - timestamp
+      - actor
+      - actor_tier
+      - risk_level
+      - action_type
+      - decision                  # approved | denied | timed_out
+      - reason
+      - affected_paths
+    storage: evidence/approval_audit/
+
+dangerous_actions:
+  deny_list:
+    - rm -rf /
+    - drop database
+    - format disk
+    - delete all
+    - shutdown -h now
+    - iptables -F
+  gate_list:
+    - description: Production file modifications
+      pattern: "write:production/**"
+      required_tier: admin
+      requires_diff: true
+    - description: SSH key operations
+      pattern: "ssh:key:*"
+      required_tier: admin
+      requires_diff: false
+    - description: Network policy changes
+      pattern: "network:policy:*"
+      required_tier: owner
+      requires_diff: true
+    - description: Release operations
+      pattern: "release:*"
+      required_tier: owner
+      requires_diff: true
+    - description: Training job launch
+      pattern: "training:launch:*"
+      required_tier: operator
+      requires_diff: false
+  logging:
+    log_all_denials: true
+    log_all_approvals: true
+    log_destination: run_ledger
+    alert_on_repeated_denials: true
+    repeated_denial_threshold: 3
+
+cicd:
+  build:
+    command: "npm run build"
+    timeout_seconds: 600
+    required_before_release: true
+  test:
+    command: "npm run test"
+    timeout_seconds: 300
+    required_before_release: true
+    min_coverage_pct: 80
+  package:
+    format: vsix
+    include_patterns:
+      - "dist/**"
+      - "package.json"
+      - "README.md"
+      - "LICENSE*"
+    exclude_patterns:
+      - "node_modules/**"
+      - "src/**"
+      - "tests/**"
+      - ".env*"
+  release:
+    require_passing_build: true
+    require_passing_tests: true
+    require_adversarial_audit: true
+    require_release_verdict: true
+    changelog_required: true
+    tag_format: "v{version}"
+    rollback:
+      enabled: true
+      max_rollback_versions: 5
+      require_approval: true
+      approval_tier: owner
+
+adversarial_audit:
+  required_inputs:
+    - feature_truth_matrix       # Phase 02
+    - defect_ledger              # Phase 03
+    - run_ledger                 # Phase 04
+    - all_phase_evidence         # Phase 08
+    - cost_trace_data            # Phase 52
+    - memory_failure_log         # Phase 58
+  checks:
+    - truth_matrix_coverage
+    - defect_ledger_zero_open_critical
+    - all_phases_gated
+    - no_fake_completions
+    - no_drift_from_spec
+    - security_review_passed
+    - cost_within_budget
+  pass_threshold: all            # all checks must pass
+
+release_verdict:
+  template_path: 04_ENFORCEMENT/RELEASE_VERDICT_TEMPLATE.md
+  required_signatures:
+    - owner
+    - challenger
+  fields:
+    - verdict                    # ship | hold | reject
+    - open_defects_summary
+    - risk_assessment
+    - rollback_readiness
+    - evidence_bundle_path

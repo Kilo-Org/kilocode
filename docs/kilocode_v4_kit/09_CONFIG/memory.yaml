@@ -1,0 +1,87 @@
+# Memory and Continuity Configuration
+# Referenced by: 03_SPECS/KILOCODE_MEMORY_COMPLETE_SPEC.md
+# Phases: 53 (Shiba connectivity), 54 (Recall trace), 55 (Write history),
+#         56 (Project-scoped memory), 57 (Cross-agent recall), 58 (Failure paths)
+
+shiba:
+  endpoint: http://localhost:8600/api
+  health_check_url: http://localhost:8600/api/health
+  connection_timeout_ms: 5000
+  request_timeout_ms: 10000
+  retry:
+    max_attempts: 3
+    backoff_ms: 1000
+  status_poll_interval_seconds: 30
+  status_display:
+    connected: { icon: "shiba-online", color: "#2a9d8f" }
+    disconnected: { icon: "shiba-offline", color: "#e63946" }
+    degraded: { icon: "shiba-warn", color: "#f4a261" }
+
+recall:
+  trace_panel:
+    enabled: true
+    show_source: true
+    show_confidence: true
+    show_timestamp: true
+    max_results_displayed: 20
+  search:
+    semantic_enabled: true
+    keyword_enabled: true
+    max_results: 50
+    min_confidence: 0.5
+  cache:
+    enabled: true
+    ttl_seconds: 300
+    max_entries: 1000
+
+write:
+  history_panel:
+    enabled: true
+    show_agent_id: true
+    show_timestamp: true
+    show_project_scope: true
+    max_entries_displayed: 100
+  validation:
+    max_fact_size_bytes: 8192
+    deduplicate: true
+    require_source_attribution: true
+  confirmation:
+    display_write_result: true
+    notify_on_failure: true
+
+project_scope:
+  enabled: true
+  scope_key_format: "project:{project_path_hash}"
+  isolation: strict              # strict | shared | inherit
+  max_facts_per_project: 10000
+  cleanup:
+    stale_fact_days: 180
+    auto_prune: false
+    prune_requires_approval: true
+
+cross_agent:
+  enabled: true
+  allowed_agents:
+    - claude
+    - hermes
+    - zeroclaw
+  share_mode: read_only          # read_only | read_write
+  namespace_isolation: true
+  audit_cross_reads: true
+
+failure_handling:
+  connection_lost:
+    behavior: degrade_gracefully
+    cache_writes_locally: true
+    local_cache_path: .kilocode/memory_cache/
+    max_local_cache_mb: 50
+    sync_on_reconnect: true
+  write_failure:
+    retry: true
+    max_retries: 3
+    notify_user: true
+    log_to_defect_ledger: true
+  recall_failure:
+    return_empty: true
+    show_failure_reason: true
+    fallback_to_local_cache: true

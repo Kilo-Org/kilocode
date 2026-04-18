@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="780" viewBox="0 0 1400 780">
+  <style>
+    .bg { fill:#0d1117; }
+    .card { fill:#161b22; stroke:#3fb950; stroke-width:2; rx:18; ry:18; }
+    .txt { fill:#e6edf3; font: 22px Arial, sans-serif; }
+    .sub { fill:#9fb3c8; font: 16px Arial, sans-serif; }
+    .line { stroke:#58a6ff; stroke-width:3; marker-end:url(#a); }
+  </style>
+  <rect class="bg" x="0" y="0" width="1400" height="780"/>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
+    </marker>
+  </defs>
+
+  <!-- Row 1: User -> Hermes -> KiloCode -> Speech -> ZeroClaw -->
+  <rect class="card" x="30" y="80" width="200" height="90"/>
+  <text class="txt" x="75" y="130">User / Bot</text>
+  <text class="sub" x="58" y="155">front-door interaction</text>
+
+  <rect class="card" x="280" y="80" width="220" height="90"/>
+  <text class="txt" x="340" y="130">Hermes</text>
+  <text class="sub" x="305" y="155">routing, policy, memory</text>
+
+  <rect class="card" x="550" y="80" width="230" height="90"/>
+  <text class="txt" x="610" y="130">KiloCode</text>
+  <text class="sub" x="590" y="155">cockpit + workspace</text>
+
+  <rect class="card" x="830" y="80" width="220" height="90"/>
+  <text class="txt" x="895" y="130">Speech</text>
+  <text class="sub" x="860" y="155">TTS / STT / voice UI</text>
+
+  <rect class="card" x="1100" y="80" width="250" height="90"/>
+  <text class="txt" x="1160" y="130">ZeroClaw</text>
+  <text class="sub" x="1130" y="155">sandbox execution</text>
+
+  <!-- Row 2: Providers | Shiba | Training/GPU | Truth + Ledgers -->
+  <rect class="card" x="60" y="300" width="220" height="90"/>
+  <text class="txt" x="115" y="350">Providers</text>
+  <text class="sub" x="82" y="375">Claude / MiniMax / SF / Local</text>
+
+  <rect class="card" x="360" y="300" width="220" height="90"/>
+  <text class="txt" x="430" y="350">Shiba</text>
+  <text class="sub" x="405" y="375">memory + recall</text>
+
+  <rect class="card" x="660" y="300" width="250" height="90"/>
+  <text class="txt" x="720" y="350">Training / GPU</text>
+  <text class="sub" x="700" y="375">fine-tune + compute</text>
+
+  <rect class="card" x="1000" y="300" width="260" height="90"/>
+  <text class="txt" x="1050" y="350">Truth + Ledgers</text>
+  <text class="sub" x="1036" y="375">evidence / defects / runs</text>
+
+  <!-- Row 1 horizontal connections -->
+  <line class="line" x1="230" y1="125" x2="280" y2="125"/>
+  <line class="line" x1="500" y1="125" x2="550" y2="125"/>
+  <line class="line" x1="780" y1="125" x2="830" y2="125"/>
+  <line class="line" x1="1050" y1="125" x2="1100" y2="125"/>
+
+  <!-- Hermes -> Providers -->
+  <line class="line" x1="390" y1="170" x2="170" y2="300"/>
+  <!-- Hermes -> Shiba -->
+  <line class="line" x1="390" y1="170" x2="470" y2="300"/>
+  <!-- KiloCode -> Training/GPU -->
+  <line class="line" x1="665" y1="170" x2="785" y2="300"/>
+  <!-- ZeroClaw -> Truth + Ledgers -->
+  <line class="line" x1="1225" y1="170" x2="1130" y2="300"/>
+  <!-- Speech -> Training/GPU -->
+  <line class="line" x1="940" y1="170" x2="785" y2="300"/>
+
+  <text class="sub" x="240" y="540">KiloCode is the cockpit. Hermes is the planner/router. Speech is the voice layer. ZeroClaw is the execution bay.</text>
+  <text class="sub" x="240" y="565">Providers think. Shiba remembers. Training/GPU fine-tunes. Ledgers prove what happened.</text>
+</svg>

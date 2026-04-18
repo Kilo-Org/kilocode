@@ -1,0 +1,145 @@
+# Training and GPU Orchestration Configuration
+# Referenced by: 03_SPECS/KILOCODE_TRAINING_GPU_COMPLETE_SPEC.md
+# Phases: 59 (Dataset registry), 60 (Validation), 61 (Job templates),
+#         62 (GPU target selection), 63 (Monitoring), 64 (Checkpoint),
+#         65 (Compare runs), 66 (Export/package)
+
+dataset_registry:
+  storage_path: datasets/
+  index_file: datasets/registry.json
+  supported_formats: [jsonl, csv, parquet, arrow, hf_dataset]
+  max_dataset_size_gb: 50
+  validation:
+    required_before_training: true
+    checks:
+      - format_valid
+      - no_empty_rows
+      - schema_consistent
+      - no_duplicate_ids
+      - token_count_within_limits
+  preprocessing:
+    tokenizer_default: auto       # auto-detect from model
+    max_sequence_length: 4096
+    truncation: true
+    padding: max_length
+    shuffle: true
+    train_split: 0.9
+    eval_split: 0.1
+
+job_templates:
+  lora:
+    method: lora
+    rank: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, v_proj, k_proj, o_proj]
+    learning_rate: 0.0002
+    epochs: 3
+    batch_size: 4
+    gradient_accumulation_steps: 4
+    warmup_ratio: 0.03
+    weight_decay: 0.01
+    fp16: true
+    logging_steps: 10
+    save_steps: 100
+    eval_steps: 100
+
+  qlora:
+    method: qlora
+    quantization_bits: 4
+    rank: 16
+    alpha: 32
+    dropout: 0.05
+    target_modules: [q_proj, v_proj, k_proj, o_proj]
+    learning_rate: 0.0002
+    epochs: 3
+    batch_size: 2
+    gradient_accumulation_steps: 8
+    warmup_ratio: 0.03
+    weight_decay: 0.01
+    fp16: true
+    logging_steps: 10
+    save_steps: 100
+    eval_steps: 100
+
+  full_finetune:
+    method: full
+    learning_rate: 0.00005
+    epochs: 3
+    batch_size: 2
+    gradient_accumulation_steps: 8
+    warmup_ratio: 0.1
+    weight_decay: 0.01
+    fp16: true
+    logging_steps: 10
+    save_steps: 200
+    eval_steps: 200
+
+gpu_targets:
+  local:
+    enabled: true
+    detection: auto               # auto-detect CUDA/ROCm/MPS
+    min_vram_gb: 8
+    preferred_device: cuda:0
+    multi_gpu: false
+    health_check_command: "nvidia-smi"
+  remote:
+    enabled: true
+    provider_lane: minimax        # routes through provider routing
+    fallback_lane: siliconflow
+    api_timeout_ms: 60000
+    max_concurrent_jobs: 2
+  selection_strategy: prefer_local  # prefer_local | prefer_remote | cost_optimized
+
+monitoring:
+  dashboard:
+    refresh_interval_seconds: 5
+    metrics:
+      - loss
+      - eval_loss
+      - learning_rate
+      - epoch
+      - gpu_utilization
+      - gpu_memory_used
+      - throughput_samples_per_sec
+  alerts:
+    loss_spike_threshold: 2.0     # alert if loss increases by this factor
+    gpu_memory_threshold_pct: 95
+    stall_timeout_seconds: 300
+
+checkpoint:
+  auto_save: true
+  save_interval_steps: 100
+  max_checkpoints: 5             # rolling window
+  resume:
+    enabled: true
+    auto_detect_latest: true
+    verify_optimizer_state: true
+  storage_path: checkpoints/
+
+compare_runs:
+  enabled: true
+  metrics_to_compare:
+    - final_loss
+    - eval_loss
+    - training_duration
+    - total_steps
+    - peak_gpu_memory
+  visualization: table           # table | chart | both
+  max_runs_in_comparison: 10
+
+export:
+  formats:
+    - safetensors
+    - gguf
+    - onnx
+  merge_lora_before_export: true
+  quantization_options: [none, q4_k_m, q5_k_m, q8_0]
+  output_path: exports/
+  include_metadata: true
+  metadata_fields:
+    - base_model
+    - training_config
+    - dataset_id
+    - final_metrics
+    - timestamp

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="420" viewBox="0 0 1500 420">
+  <style>
+    .bg { fill:#0d1117; }
+    .box { fill:#161b22; stroke:#3fb950; stroke-width:2; rx:14; ry:14; }
+    .t { fill:#e6edf3; font:20px Arial, sans-serif; }
+    .s { fill:#9fb3c8; font:15px Arial, sans-serif; }
+    .line { stroke:#58a6ff; stroke-width:3; marker-end:url(#a); }
+  </style>
+  <rect class="bg" width="1500" height="420"/>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#58a6ff"/></marker></defs>
+
+  <rect class="box" x="40" y="140" width="150" height="90"/><text class="t" x="85" y="190">A</text><text class="s" x="60" y="215">truth + inventory</text>
+  <rect class="box" x="230" y="140" width="150" height="90"/><text class="t" x="275" y="190">B</text><text class="s" x="255" y="215">workflows</text>
+  <rect class="box" x="420" y="140" width="150" height="90"/><text class="t" x="467" y="190">C</text><text class="s" x="448" y="215">SSH / remote</text>
+  <rect class="box" x="610" y="140" width="150" height="90"/><text class="t" x="658" y="190">D</text><text class="s" x="636" y="215">VPS / infra</text>
+  <rect class="box" x="800" y="140" width="150" height="90"/><text class="t" x="845" y="190">E</text><text class="s" x="820" y="215">ZeroClaw</text>
+  <rect class="box" x="990" y="140" width="150" height="90"/><text class="t" x="1035" y="190">F</text><text class="s" x="1004" y="215">routing</text>
+  <rect class="box" x="1180" y="140" width="150" height="90"/><text class="t" x="1225" y="190">G</text><text class="s" x="1203" y="215">memory</text>
+  <rect class="box" x="1360" y="140" width="110" height="90"/><text class="t" x="1392" y="190">H/I</text><text class="s" x="1373" y="215">train + release</text>
+
+  <line class="line" x1="190" y1="185" x2="230" y2="185"/>
+  <line class="line" x1="380" y1="185" x2="420" y2="185"/>
+  <line class="line" x1="570" y1="185" x2="610" y2="185"/>
+  <line class="line" x1="760" y1="185" x2="800" y2="185"/>
+  <line class="line" x1="950" y1="185" x2="990" y2="185"/>
+  <line class="line" x1="1140" y1="185" x2="1180" y2="185"/>
+  <line class="line" x1="1330" y1="185" x2="1360" y2="185"/>
+</svg>

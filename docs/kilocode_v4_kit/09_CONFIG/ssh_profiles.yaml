@@ -1,0 +1,114 @@
+# SSH Profile Configuration
+# Referenced by: 03_SPECS/KILOCODE_SSH_VPS_COMPLETE_SPEC.md
+# Phases: 17 (SSH profile schema), 18 (Host groups), 19 (Key management),
+#         20 (Jump hosts), 21 (Terminal tabs), 26 (Failure paths)
+
+profiles:
+  - id: prod-web-01
+    host: 192.168.1.100
+    port: 22
+    user: deploy
+    auth_method: key            # key | password | agent
+    key_path: ~/.ssh/id_ed25519_prod
+    passphrase_env: SSH_PROD_PASSPHRASE
+    group: production
+    labels: [web, frontend, primary]
+    jump_host: null
+    reconnect:
+      enabled: true
+      max_attempts: 5
+      backoff_ms: 2000
+    timeout_seconds: 30
+
+  - id: staging-api-01
+    host: 10.0.0.50
+    port: 22
+    user: deploy
+    auth_method: key
+    key_path: ~/.ssh/id_ed25519_staging
+    passphrase_env: null
+    group: staging
+    labels: [api, backend]
+    jump_host: bastion-01
+    reconnect:
+      enabled: true
+      max_attempts: 3
+      backoff_ms: 1000
+    timeout_seconds: 15
+
+  - id: bastion-01
+    host: bastion.example.com
+    port: 22
+    user: admin
+    auth_method: key
+    key_path: ~/.ssh/id_ed25519_bastion
+    passphrase_env: SSH_BASTION_PASSPHRASE
+    group: infrastructure
+    labels: [bastion, jump]
+    jump_host: null
+    reconnect:
+      enabled: false
+      max_attempts: 0
+      backoff_ms: 0
+    timeout_seconds: 10
+
+host_groups:
+  production:
+    description: Production servers
+    approval_required: true
+    approval_tier: operator       # operator | admin | owner
+    color: "#e63946"
+  staging:
+    description: Staging and QA servers
+    approval_required: false
+    approval_tier: null
+    color: "#f4a261"
+  infrastructure:
+    description: Bastion hosts and network appliances
+    approval_required: true
+    approval_tier: admin
+    color: "#457b9d"
+  development:
+    description: Development and sandbox servers
+    approval_required: false
+    approval_tier: null
+    color: "#2a9d8f"
+
+key_management:
+  allowed_key_types: [ed25519, rsa-4096]
+  rejected_key_types: [dsa, rsa-1024, rsa-2048]
+  key_rotation_warning_days: 90
+  key_storage_path: ~/.ssh/
+  agent_forwarding: false         # disabled by default for security
+  strict_host_key_checking: true
+
+terminal:
+  default_shell: /bin/bash
+  scrollback_lines: 10000
+  tab_title_format: "{group}/{id}"
+  transcript_capture:
+    enabled: true
+    storage_path: evidence/ssh_transcripts/
+    max_size_mb: 50
+  sftp:
+    auto_refresh: true
+    hidden_files: false
+    max_upload_size_mb: 100
+
+failure_handling:
+  permission_denied:
+    log: true
+    notify: true
+    retry: false
+    escalation_path: operator_runbook
+  host_unreachable:
+    log: true
+    notify: true
+    retry: true
+    max_retries: 3
+    backoff_ms: 5000
+  auth_failure:
+    log: true
+    notify: true
+    retry: false
+    lock_after_failures: 5

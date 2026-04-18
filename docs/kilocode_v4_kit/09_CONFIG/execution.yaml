@@ -1,0 +1,104 @@
+# ZeroClaw Execution Configuration
+# Referenced by: 03_SPECS/KILOCODE_ZEROCLAW_COMPLETE_SPEC.md
+# Phases: 35 (Task intake schema), 36 (Risk levels), 37 (Hermes adapter),
+#         38 (Workspace scope), 39 (Network policy), 40-42 (Risk paths), 44 (Rollback)
+
+task_intake:
+  required_fields:
+    - task_id
+    - origin
+    - project_path
+    - risk_level
+    - requires_execution
+    - allowed_workspace_scope
+    - network_policy
+    - write_policy
+    - limits
+  origin_format: "{agent_id}:{session_id}:{timestamp}"
+  task_id_format: "zclaw-{ulid}"
+
+risk_levels:
+  low:
+    label: Low Risk
+    auto_execute: true
+    requires_approval: false
+    allowed_operations: [read, list, stat, search]
+    max_duration_seconds: 60
+    network_access: none
+    write_access: none
+  medium:
+    label: Medium Risk
+    auto_execute: false
+    requires_approval: false
+    allowed_operations: [read, write, create, delete_temp]
+    max_duration_seconds: 300
+    network_access: allowlist_only
+    write_access: buffered_diff
+    diff_display: required
+  high:
+    label: High Risk
+    auto_execute: false
+    requires_approval: true
+    approval_tier: operator       # matches governance authority tiers
+    allowed_operations: [read, write, create, delete, execute, network]
+    max_duration_seconds: 600
+    network_access: full
+    write_access: gated
+    diff_display: required
+
+hermes_adapter:
+  protocol: envelope
+  envelope_version: "1.0"
+  max_payload_size_kb: 512
+  timeout_ms: 30000
+  retry_on_timeout: true
+  max_retries: 2
+
+workspace_scope:
+  default_scope: project_root
+  allowed_scopes:
+    - project_root
+    - user_home
+    - temp
+    - custom
+  denied_paths:
+    - /etc
+    - /var/log
+    - /root
+    - ~/.ssh
+    - ~/.gnupg
+  sandbox_type: container        # container | vm | chroot | none
+
+network_policy:
+  default: deny_all
+  allowlist:
+    - "*.github.com:443"
+    - "*.npmjs.org:443"
+    - "pypi.org:443"
+    - "registry.yarnpkg.com:443"
+  denylist:
+    - "*.internal:*"
+    - "10.0.0.0/8:*"
+    - "172.16.0.0/12:*"
+    - "192.168.0.0/16:*"
+  log_blocked_requests: true
+
+artifact_handling:
+  return_surfaces:
+    - execution_timeline
+    - logs_panel
+    - artifact_panel
+    - diff_panel
+  max_artifact_size_mb: 25
+  artifact_retention_days: 30
+  log_retention_days: 90
+
+rollback:
+  enabled: true
+  auto_snapshot_before_write: true
+  snapshot_storage: evidence/snapshots/
+  max_snapshots_per_task: 5
+  retry_policy:
+    max_retries: 2
+    backoff_ms: 1000
+    escalate_on_final_failure: true
