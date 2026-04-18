@@ -13,6 +13,9 @@ export const PlanTask = z.object({
   files: z.array(z.string()).default([]),
   verification: z.array(z.string()).default([]),
   description: z.string(),
+  // devilcode_change - audit MA3: track escalation depth to bound re-dispatch recursion.
+  // Kept optional so legacy PlanTask literals (pre-MA3) still typecheck; consumers default to 0.
+  escalationDepth: z.number().int().min(0).optional(),
 })
 export type PlanTask = z.infer<typeof PlanTask>
 

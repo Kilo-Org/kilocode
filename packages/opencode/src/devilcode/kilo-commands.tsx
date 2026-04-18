@@ -17,6 +17,16 @@ import { DialogDevilTeamSelect } from "./components/dialog-kilo-team-select.js"
 import { DialogDevilProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
+import { Log } from "@/util/log"
+
+// devilcode_change - audit N3: log catch helper so silent failures are still observable.
+const log = Log.create({ service: "kilo-commands" })
+function logCatch(label: string) {
+  return (err: unknown) => {
+    log.warn(label, { error: err instanceof Error ? err.message : String(err) })
+    return null
+  }
+}
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
@@ -54,8 +64,8 @@ export function registerDevilCommands(useSDK: () => UseSDK) {
       onSelect: async () => {
         // Fetch profile (for org context) and instance status in parallel
         const [profileRes, res] = await Promise.all([
-          sdk.client.kilo.profile().catch(() => null),
-          sdk.client.kilo.claw.status().catch(() => null),
+          sdk.client.kilo.profile().catch(logCatch("profile.fetch.failed")),
+          sdk.client.kilo.claw.status().catch(logCatch("claw.status.failed")),
         ])
         const orgId = profileRes?.data?.currentOrgId ?? null
         const status = res?.data as ClawStatus | undefined
@@ -67,7 +77,7 @@ export function registerDevilCommands(useSDK: () => UseSDK) {
         }
 
         // Instance exists — check for chat credentials
-        const creds = await sdk.client.kilo.claw.chatCredentials().catch(() => null)
+        const creds = await sdk.client.kilo.claw.chatCredentials().catch(logCatch("claw.chatCredentials.failed"))
 
         if (!creds?.data || creds.error) {
           // Instance exists but no chat credentials — needs upgrade

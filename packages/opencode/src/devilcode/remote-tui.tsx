@@ -5,6 +5,10 @@
  */
 
 import { createSignal, onMount, onCleanup, Show } from "solid-js"
+import { Log } from "@/util/log"
+
+// devilcode_change - audit N3: log polling failures instead of swallowing them silently.
+const log = Log.create({ service: "remote-tui" })
 
 /**
  * Footer indicator showing remote connection status.
@@ -18,7 +22,10 @@ export function RemoteIndicator(props: { sdk: any; theme: any; kilo: boolean }) 
 
   onMount(() => {
     const poll = async () => {
-      const res = await props.sdk.client.remote.status().catch(() => null)
+      const res = await props.sdk.client.remote.status().catch((err: unknown) => {
+        log.warn("remote.status.failed", { error: err instanceof Error ? err.message : String(err) })
+        return null
+      })
       if (res?.data) setStatus(res.data)
     }
     poll()

@@ -27,6 +27,8 @@ export {
   fetchProfile,
   fetchBalance,
   fetchProfileWithBalance,
+  fetchBalanceResult,
+  type FetchBalanceResult,
   fetchDefaultModel,
   getDevilProfile,
   getDevilBalance,
@@ -36,7 +38,9 @@ export {
 export { fetchDevilModels } from "./api/models.js"
 export {
   fetchOrganizationModes,
+  fetchOrganizationModesResult,
   clearModesCache,
+  type FetchOrganizationModesResult,
   type OrganizationMode,
   type OrganizationModeConfig,
 } from "./api/modes.js"

@@ -11,7 +11,7 @@
     "script/*.ts"
   ],
   "project": ["src/**/*.ts", "webview-ui/**/*.{ts,tsx}"],
-  "ignore": ["src/services/autocomplete/**"],
+  "ignore": ["src/services/autocomplete/**", "webview-ui/src/globals.d.ts"],
   "ignoreExportsUsedInFile": true,
   "exclude": ["dependencies", "devDependencies", "optionalPeerDependencies", "unlisted", "unresolved", "binaries"]
 }

@@ -1,20 +1,18 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 import type { PlanTask, ActiveTask, TaskResult } from "@/devilcode/workflow/types"
 import type { WorkflowState } from "@/devilcode/workflow/types"
+import type { TeamConfig } from "@/devilcode/team/config"
+import { MAX_ESCALATION_DEPTH } from "@/devilcode/workflow/escalation"
 
 // Mock dependencies
-const mockSessionCreate = mock(() =>
-  Promise.resolve({ id: "session-001", slug: "test-session" }),
-)
-const mockSessionPrompt = mock(() =>
-  Promise.resolve({ info: { role: "assistant" } }),
-)
+const mockSessionCreate = mock(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
+const mockSessionPrompt = mock(() => Promise.resolve({ info: { role: "assistant" } }))
 const mockWorktreeCreate = mock(() =>
   Promise.resolve({ name: "brave-cabin", branch: "opencode/brave-cabin", directory: "/tmp/worktree-1" }),
 )
 const mockWorktreeRemove = mock(() => Promise.resolve())
-const mockInstanceProvide = mock(
-  ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+const mockInstanceProvide = mock(({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) =>
+  Promise.resolve(fn()),
 )
 const mockInstanceDispose = mock(() => Promise.resolve())
 
@@ -72,6 +70,7 @@ function makeTask(overrides: Partial<PlanTask>): PlanTask {
     files: overrides.files ?? [],
     verification: overrides.verification ?? [],
     description: overrides.description ?? "Do the thing",
+    escalationDepth: overrides.escalationDepth,
   }
 }
 
@@ -83,9 +82,7 @@ describe("BuildRunner", () => {
     mockWorktreeRemove.mockReset()
     mockInstanceProvide.mockReset()
     mockInstanceDispose.mockReset()
-    mockSessionCreate.mockImplementation(() =>
-      Promise.resolve({ id: "session-001", slug: "test-session" }),
-    )
+    mockSessionCreate.mockImplementation(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
     mockWorktreeCreate.mockImplementation(() =>
       Promise.resolve({
         name: "brave-cabin",
@@ -94,8 +91,8 @@ describe("BuildRunner", () => {
       }),
     )
     mockWorktreeRemove.mockImplementation(() => Promise.resolve())
-    mockInstanceProvide.mockImplementation(
-      ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+    mockInstanceProvide.mockImplementation(({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) =>
+      Promise.resolve(fn()),
     )
     mockInstanceDispose.mockImplementation(() => Promise.resolve())
   })
@@ -108,11 +105,7 @@ describe("BuildRunner", () => {
       onOutput: () => {},
     })
 
-    const tasks = [
-      makeTask({ id: "t1", wave: 2 }),
-      makeTask({ id: "t2", wave: 1 }),
-      makeTask({ id: "t3", wave: 1 }),
-    ]
+    const tasks = [makeTask({ id: "t1", wave: 2 }), makeTask({ id: "t2", wave: 1 }), makeTask({ id: "t3", wave: 1 })]
 
     const waves = runner.groupWaves(tasks)
     expect([...waves.keys()]).toEqual([1, 2])
@@ -181,10 +174,7 @@ describe("BuildRunner", () => {
       }),
     )
 
-    const tasks = [
-      makeTask({ id: "t1", wave: 1 }),
-      makeTask({ id: "t2", wave: 1 }),
-    ]
+    const tasks = [makeTask({ id: "t1", wave: 1 }), makeTask({ id: "t2", wave: 1 })]
     await runner.executeWave(tasks)
 
     expect(mockWorktreeCreate).toHaveBeenCalledTimes(2)
@@ -248,8 +238,9 @@ describe("BuildRunner", () => {
             capabilities: [],
           },
         },
+        // devilcode_change - audit MA1: flat strategy avoids the hierarchy check for top-level dispatch.
         routing: {
-          strategy: "hierarchical",
+          strategy: "flat",
           defaultRole: "worker",
           escalationEnabled: true,
         },
@@ -279,6 +270,182 @@ describe("BuildRunner", () => {
     })
   })
 
+  it("allows top-level default-role tasks without an explicit parent role", async () => {
+    const runner = new BuildRunner({
+      teamConfig: {
+        enabled: true,
+        roles: {
+          lead: {
+            displayName: "Lead",
+            provider: "openai",
+            model: "gpt-5.4",
+            effort: "high",
+            tier: 1,
+            canDelegate: ["worker"],
+            maxConcurrent: 1,
+            capabilities: [],
+          },
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-5.4-mini",
+            effort: "medium",
+            tier: 2,
+            canDelegate: [],
+            maxConcurrent: 2,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "lead",
+          escalationEnabled: true,
+        },
+      },
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [],
+      }),
+    )
+
+    const results = await runner.executeWave([makeTask({ id: "t-top", role: "lead", wave: 1 })])
+
+    expect(results[0]?.status).toBe("completed")
+    const call = (mockSessionPrompt.mock.calls as Array<Array<Record<string, unknown>>>)[0]
+    expect(call?.[0]?.agent).toBe("lead")
+  })
+
+  // devilcode_change start - audit MA3: re-dispatch escalated tasks to resolved target role.
+  it("re-dispatches escalated tasks to the resolved target role", async () => {
+    const completed: Array<{ taskId: string; status: string }> = []
+    const teamConfig: TeamConfig = {
+      enabled: true,
+      roles: {
+        senior: {
+          displayName: "Senior",
+          provider: "openai",
+          model: "gpt-5.4",
+          effort: "high",
+          tier: 2,
+          canDelegate: ["worker"],
+          maxConcurrent: 1,
+          capabilities: [],
+        },
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: [],
+        },
+      },
+      routing: {
+        strategy: "hierarchical" as const,
+        defaultRole: "worker",
+        escalationEnabled: true,
+        parentRole: "senior",
+      },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: (taskId, result) => completed.push({ taskId, status: result.status }),
+      onOutput: () => {},
+    })
+
+    let call = 0
+    mockSessionPrompt.mockImplementation(() => {
+      call++
+      const text = call === 1 ? "Escalating to senior: this needs architecture review." : "Resolved successfully."
+      return Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [{ type: "text", text }],
+      })
+    })
+
+    const results = await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(2)
+    const promptCalls = mockSessionPrompt.mock.calls as Array<Array<Record<string, unknown>>>
+    expect(promptCalls[0]?.[0]?.agent).toBe("worker")
+    expect(promptCalls[1]?.[0]?.agent).toBe("senior")
+    // Final result for the original task id reflects the escalated re-dispatch outcome.
+    expect(results[0]?.status).toBe("completed")
+    // Two onTaskComplete calls: original (escalated) + re-dispatched (completed).
+    expect(completed.map((c) => c.status)).toEqual(["escalated", "completed"])
+  })
+
+  it("stops re-dispatching once MAX_ESCALATION_DEPTH is hit", async () => {
+    const teamConfig: TeamConfig = {
+      enabled: true,
+      roles: {
+        senior: {
+          displayName: "Senior",
+          provider: "openai",
+          model: "gpt-5.4",
+          effort: "high",
+          tier: 2,
+          canDelegate: ["worker"],
+          maxConcurrent: 1,
+          capabilities: [],
+        },
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: [],
+        },
+      },
+      routing: {
+        strategy: "hierarchical" as const,
+        defaultRole: "worker",
+        escalationEnabled: true,
+        parentRole: "senior",
+      },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [{ type: "text", text: "Escalating to senior: still stuck." }],
+      }),
+    )
+
+    const results = await runner.executeWave([
+      makeTask({
+        id: "t1",
+        role: "worker",
+        wave: 1,
+        escalationDepth: MAX_ESCALATION_DEPTH,
+      }),
+    ])
+
+    // Already at the maximum depth, so the runner should return the escalated result
+    // immediately without spawning a follow-up task.
+    expect(results[0]?.status).toBe("escalated")
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(1)
+  })
+  // devilcode_change end
+
   it("stops after the current wave when pause is requested", async () => {
     const paused: number[] = []
     const runner = new BuildRunner({
@@ -298,10 +465,7 @@ describe("BuildRunner", () => {
     )
 
     runner.requestPause()
-    const results = await runner.executeAll([
-      makeTask({ id: "t1", wave: 1 }),
-      makeTask({ id: "t2", wave: 2 }),
-    ])
+    const results = await runner.executeAll([makeTask({ id: "t1", wave: 1 }), makeTask({ id: "t2", wave: 2 })])
 
     expect(results.map((result) => result.taskId)).toEqual(["t1"])
     expect(paused).toEqual([1])

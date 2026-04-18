@@ -214,7 +214,9 @@ const TeamRoleEditor: Component<TeamRoleEditorProps> = (props) => {
       </SettingsRow>
 
       {error() ? (
-        <div style={{ "font-size": "12px", color: "var(--vscode-errorForeground)", "margin-top": "8px" }}>{error()}</div>
+        <div style={{ "font-size": "12px", color: "var(--vscode-errorForeground)", "margin-top": "8px" }}>
+          {error()}
+        </div>
       ) : null}
 
       <div style={{ display: "flex", gap: "8px", "justify-content": "flex-end", "margin-top": "12px" }}>

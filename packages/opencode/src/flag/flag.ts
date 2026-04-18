@@ -34,6 +34,11 @@ export namespace Flag {
   export declare const DEVIL_CLIENT: string
   export const DEVIL_SERVER_PASSWORD = process.env["DEVIL_SERVER_PASSWORD"]
   export const DEVIL_SERVER_USERNAME = process.env["DEVIL_SERVER_USERNAME"]
+  // devilcode_change start - rate limiting tunables (audit C7)
+  export const DEVIL_DISABLE_RATE_LIMIT = truthy("DEVIL_DISABLE_RATE_LIMIT")
+  export const DEVIL_RATE_LIMIT_WINDOW_MS = number("DEVIL_RATE_LIMIT_WINDOW_MS")
+  export const DEVIL_RATE_LIMIT_MAX = number("DEVIL_RATE_LIMIT_MAX")
+  // devilcode_change end
   export const DEVIL_ENABLE_QUESTION_TOOL = truthy("DEVIL_ENABLE_QUESTION_TOOL")
 
   // Experimental

@@ -54,6 +54,35 @@ export type EventServerInstanceDisposed = {
   }
 }
 
+export type PermissionRequest = {
+  id: string
+  sessionID: string
+  permission: string
+  patterns: Array<string>
+  metadata: {
+    [key: string]: unknown
+  }
+  always: Array<string>
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+export type EventPermissionAsked = {
+  type: "permission.asked"
+  properties: PermissionRequest
+}
+
+export type EventPermissionReplied = {
+  type: "permission.replied"
+  properties: {
+    sessionID: string
+    requestID: string
+    reply: "once" | "always" | "reject"
+  }
+}
+
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -303,6 +332,7 @@ export type SubtaskPart = {
     modelID: string
   }
   command?: string
+  teamRole?: string
 }
 
 export type ReasoningPart = {
@@ -559,35 +589,6 @@ export type EventMessagePartRemoved = {
     sessionID: string
     messageID: string
     partID: string
-  }
-}
-
-export type PermissionRequest = {
-  id: string
-  sessionID: string
-  permission: string
-  patterns: Array<string>
-  metadata: {
-    [key: string]: unknown
-  }
-  always: Array<string>
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
-
-export type EventPermissionAsked = {
-  type: "permission.asked"
-  properties: PermissionRequest
-}
-
-export type EventPermissionReplied = {
-  type: "permission.replied"
-  properties: {
-    sessionID: string
-    requestID: string
-    reply: "once" | "always" | "reject"
   }
 }
 
@@ -999,6 +1000,8 @@ export type Event =
   | EventInstallationUpdateAvailable
   | EventProjectUpdated
   | EventServerInstanceDisposed
+  | EventPermissionAsked
+  | EventPermissionReplied
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
@@ -1010,8 +1013,6 @@ export type Event =
   | EventMessagePartUpdated
   | EventMessagePartDelta
   | EventMessagePartRemoved
-  | EventPermissionAsked
-  | EventPermissionReplied
   | EventSessionStatus
   | EventSessionIdle
   | EventQuestionAsked
@@ -1554,14 +1555,67 @@ export type Config = {
      */
     mcp_timeout?: number
   }
+  /**
+   * Multi-model team configuration for hierarchical agent dispatch
+   */
+  team?: {
+    enabled?: boolean
+    roles: {
+      [key: string]: {
+        displayName: string
+        provider: string
+        model: string
+        effort?: "max" | "xhigh" | "high" | "medium" | "low" | "default"
+        tier: number
+        canDelegate?: Array<string>
+        maxConcurrent?: number
+        capabilities?: Array<string>
+      }
+    }
+    routing: {
+      strategy?: "hierarchical" | "flat"
+      defaultRole: string
+      escalationEnabled?: boolean
+      parentRole?: string
+      reviewEscalationRole?: string
+    }
+    reactions?: Array<{
+      trigger: "ci-failed" | "review-requested" | "approved-and-green" | "agent-stuck"
+      auto?: boolean
+      action: "send-to-agent" | "notify" | "escalate"
+      targetRole?: string
+      retries?: number
+      escalateAfterMinutes?: number
+    }>
+  }
 }
 
 export type BadRequestError = {
-  data: unknown
-  errors: Array<{
-    [key: string]: unknown
-  }>
   success: false
+  errors: Array<{
+    /**
+     * Human-readable error message
+     */
+    message: string
+    /**
+     * Error code for programmatic handling
+     */
+    code?: string
+    /**
+     * Field that caused the error (for validation errors)
+     */
+    field?: string
+    /**
+     * Additional error context
+     */
+    details?: {
+      [key: string]: unknown
+    }
+  }>
+  /**
+   * Always null on error responses
+   */
+  data: null
 }
 
 export type OAuth = {
@@ -1587,10 +1641,26 @@ export type WellKnownAuth = {
 export type Auth = OAuth | ApiAuth | WellKnownAuth
 
 export type NotFoundError = {
-  name: "NotFoundError"
-  data: {
+  success: false
+  errors: Array<{
     message: string
-  }
+    code?: string
+    /**
+     * Type of resource that was not found
+     */
+    resource?: string
+    /**
+     * ID of the resource that was not found
+     */
+    id?: string
+    details?: {
+      [key: string]: unknown
+    }
+  }>
+  /**
+   * Always null on error responses
+   */
+  data: null
 }
 
 export type Model = {
@@ -1837,6 +1907,7 @@ export type SubtaskPartInput = {
     modelID: string
   }
   command?: string
+  teamRole?: string
 }
 
 export type ProviderAuthMethod = {
@@ -1848,6 +1919,34 @@ export type ProviderAuthAuthorization = {
   url: string
   method: "auto" | "code"
   instructions: string
+}
+
+export type UnauthorizedError = {
+  success: false
+  errors: Array<{
+    /**
+     * Human-readable error message
+     */
+    message: string
+    /**
+     * Error code for programmatic handling
+     */
+    code?: string
+    /**
+     * Field that caused the error (for validation errors)
+     */
+    field?: string
+    /**
+     * Additional error context
+     */
+    details?: {
+      [key: string]: unknown
+    }
+  }>
+  /**
+   * Always null on error responses
+   */
+  data: null
 }
 
 export type Symbol = {
@@ -2045,7 +2144,7 @@ export type GlobalConfigUpdateData = {
 
 export type GlobalConfigUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2088,7 +2187,7 @@ export type AuthRemoveData = {
 
 export type AuthRemoveErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2115,7 +2214,7 @@ export type AuthSetData = {
 
 export type AuthSetErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2215,11 +2314,11 @@ export type ProjectUpdateData = {
 
 export type ProjectUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -2274,7 +2373,7 @@ export type PtyCreateData = {
 
 export type PtyCreateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2304,7 +2403,7 @@ export type PtyRemoveData = {
 
 export type PtyRemoveErrors = {
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -2334,7 +2433,7 @@ export type PtyGetData = {
 
 export type PtyGetErrors = {
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -2370,7 +2469,7 @@ export type PtyUpdateData = {
 
 export type PtyUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2400,7 +2499,7 @@ export type PtyConnectData = {
 
 export type PtyConnectErrors = {
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -2447,7 +2546,7 @@ export type ConfigUpdateData = {
 
 export type ConfigUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2462,6 +2561,82 @@ export type ConfigUpdateResponses = {
 }
 
 export type ConfigUpdateResponse = ConfigUpdateResponses[keyof ConfigUpdateResponses]
+
+export type ConfigTeamValidateData = {
+  body?: unknown
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/team/validate"
+}
+
+export type ConfigTeamValidateResponses = {
+  /**
+   * Validation status
+   */
+  200: {
+    valid: boolean
+    errors: Array<string>
+  }
+}
+
+export type ConfigTeamValidateResponse = ConfigTeamValidateResponses[keyof ConfigTeamValidateResponses]
+
+export type ConfigTeamPresetsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/team/presets"
+}
+
+export type ConfigTeamPresetsResponses = {
+  /**
+   * Team presets
+   */
+  200: Array<{
+    id: string
+    name: string
+    description: string
+    icon?: string
+    team: {
+      enabled?: boolean
+      roles: {
+        [key: string]: {
+          displayName: string
+          provider: string
+          model: string
+          effort?: "max" | "xhigh" | "high" | "medium" | "low" | "default"
+          tier: number
+          canDelegate?: Array<string>
+          maxConcurrent?: number
+          capabilities?: Array<string>
+        }
+      }
+      routing: {
+        strategy?: "hierarchical" | "flat"
+        defaultRole: string
+        escalationEnabled?: boolean
+        parentRole?: string
+        reviewEscalationRole?: string
+      }
+      reactions?: Array<{
+        trigger: "ci-failed" | "review-requested" | "approved-and-green" | "agent-stuck"
+        auto?: boolean
+        action: "send-to-agent" | "notify" | "escalate"
+        targetRole?: string
+        retries?: number
+        escalateAfterMinutes?: number
+      }>
+    }
+  }>
+}
+
+export type ConfigTeamPresetsResponse = ConfigTeamPresetsResponses[keyof ConfigTeamPresetsResponses]
 
 export type ConfigWarningsData = {
   body?: never
@@ -2522,7 +2697,7 @@ export type ToolIdsData = {
 
 export type ToolIdsErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2552,7 +2727,7 @@ export type ToolListData = {
 
 export type ToolListErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2605,7 +2780,7 @@ export type ExperimentalWorkspaceCreateData = {
 
 export type ExperimentalWorkspaceCreateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2637,7 +2812,7 @@ export type ExperimentalWorkspaceRemoveData = {
 
 export type ExperimentalWorkspaceRemoveErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2667,7 +2842,7 @@ export type WorktreeRemoveData = {
 
 export type WorktreeRemoveErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2714,7 +2889,7 @@ export type WorktreeCreateData = {
 
 export type WorktreeCreateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2742,7 +2917,7 @@ export type WorktreeResetData = {
 
 export type WorktreeResetErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2774,7 +2949,7 @@ export type WorktreeDiffData = {
 
 export type WorktreeDiffErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2806,7 +2981,7 @@ export type WorktreeDiffSummaryData = {
 
 export type WorktreeDiffSummaryErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2842,7 +3017,7 @@ export type WorktreeDiffFileData = {
 
 export type WorktreeDiffFileErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -2989,7 +3164,7 @@ export type SessionCreateData = {
 
 export type SessionCreateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -3017,7 +3192,7 @@ export type SessionStatusData = {
 
 export type SessionStatusErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -3049,11 +3224,11 @@ export type SessionDeleteData = {
 
 export type SessionDeleteErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3083,11 +3258,11 @@ export type SessionGetData = {
 
 export type SessionGetErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3122,11 +3297,11 @@ export type SessionUpdateData = {
 
 export type SessionUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3156,11 +3331,11 @@ export type SessionChildrenData = {
 
 export type SessionChildrenErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3193,11 +3368,11 @@ export type SessionTodoData = {
 
 export type SessionTodoErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3234,11 +3409,11 @@ export type SessionInitData = {
 
 export type SessionInitErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3291,11 +3466,11 @@ export type SessionAbortData = {
 
 export type SessionAbortErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3325,11 +3500,11 @@ export type SessionUnshareData = {
 
 export type SessionUnshareErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3359,11 +3534,11 @@ export type SessionShareData = {
 
 export type SessionShareErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3422,11 +3597,11 @@ export type SessionSummarizeData = {
 
 export type SessionSummarizeErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3460,11 +3635,11 @@ export type SessionMessagesData = {
 
 export type SessionMessagesErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3524,11 +3699,11 @@ export type SessionPromptData = {
 
 export type SessionPromptErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3568,11 +3743,11 @@ export type SessionDeleteMessageData = {
 
 export type SessionDeleteMessageErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3609,11 +3784,11 @@ export type SessionMessageData = {
 
 export type SessionMessageErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3657,11 +3832,11 @@ export type PartDeleteData = {
 
 export type PartDeleteErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3702,11 +3877,11 @@ export type PartUpdateData = {
 
 export type PartUpdateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3763,11 +3938,11 @@ export type SessionPromptAsyncData = {
 
 export type SessionPromptAsyncErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3815,11 +3990,11 @@ export type SessionCommandData = {
 
 export type SessionCommandErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3862,11 +4037,11 @@ export type SessionShellData = {
 
 export type SessionShellErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3899,11 +4074,11 @@ export type SessionRevertData = {
 
 export type SessionRevertErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3933,11 +4108,11 @@ export type SessionUnrevertData = {
 
 export type SessionUnrevertErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -3970,11 +4145,11 @@ export type PermissionRespondData = {
 
 export type PermissionRespondErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -4028,11 +4203,11 @@ export type PermissionReplyData = {
 
 export type PermissionReplyErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -4065,11 +4240,11 @@ export type PermissionSaveAlwaysRulesData = {
 
 export type PermissionSaveAlwaysRulesErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -4085,43 +4260,6 @@ export type PermissionSaveAlwaysRulesResponses = {
 
 export type PermissionSaveAlwaysRulesResponse =
   PermissionSaveAlwaysRulesResponses[keyof PermissionSaveAlwaysRulesResponses]
-
-export type PermissionAllowEverythingData = {
-  body?: {
-    enable: boolean
-    requestID?: string
-    sessionID?: string
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/permission/allow-everything"
-}
-
-export type PermissionAllowEverythingErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-  /**
-   * Not found
-   */
-  404: NotFoundError
-}
-
-export type PermissionAllowEverythingError = PermissionAllowEverythingErrors[keyof PermissionAllowEverythingErrors]
-
-export type PermissionAllowEverythingResponses = {
-  /**
-   * Success
-   */
-  200: boolean
-}
-
-export type PermissionAllowEverythingResponse =
-  PermissionAllowEverythingResponses[keyof PermissionAllowEverythingResponses]
 
 export type PermissionListData = {
   body?: never
@@ -4141,6 +4279,43 @@ export type PermissionListResponses = {
 }
 
 export type PermissionListResponse = PermissionListResponses[keyof PermissionListResponses]
+
+export type PermissionAllowEverythingData = {
+  body?: {
+    enable: boolean
+    requestID?: string
+    sessionID?: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/permission/allow-everything"
+}
+
+export type PermissionAllowEverythingErrors = {
+  /**
+   * Bad request - invalid input parameters
+   */
+  400: BadRequestError
+  /**
+   * Not found - resource does not exist
+   */
+  404: NotFoundError
+}
+
+export type PermissionAllowEverythingError = PermissionAllowEverythingErrors[keyof PermissionAllowEverythingErrors]
+
+export type PermissionAllowEverythingResponses = {
+  /**
+   * Success
+   */
+  200: boolean
+}
+
+export type PermissionAllowEverythingResponse =
+  PermissionAllowEverythingResponses[keyof PermissionAllowEverythingResponses]
 
 export type QuestionListData = {
   body?: never
@@ -4180,11 +4355,11 @@ export type QuestionReplyData = {
 
 export type QuestionReplyErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -4214,11 +4389,11 @@ export type QuestionRejectData = {
 
 export type QuestionRejectErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -4367,7 +4542,7 @@ export type ProviderOauthAuthorizeData = {
 
 export type ProviderOauthAuthorizeErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4409,7 +4584,7 @@ export type ProviderOauthCallbackData = {
 
 export type ProviderOauthCallbackErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4448,9 +4623,16 @@ export type TelemetryCaptureData = {
 
 export type TelemetryCaptureErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Telemetry backend unavailable
+   */
+  502: {
+    ok: false
+    error: string
+  }
 }
 
 export type TelemetryCaptureError = TelemetryCaptureErrors[keyof TelemetryCaptureErrors]
@@ -4459,7 +4641,9 @@ export type TelemetryCaptureResponses = {
   /**
    * Event captured
    */
-  200: boolean
+  200: {
+    ok: boolean
+  }
 }
 
 export type TelemetryCaptureResponse = TelemetryCaptureResponses[keyof TelemetryCaptureResponses]
@@ -4473,6 +4657,17 @@ export type RemoteEnableData = {
   }
   url: "/remote/enable"
 }
+
+export type RemoteEnableErrors = {
+  /**
+   * Unauthorized — Devil session ingest credentials missing or invalid
+   */
+  401: {
+    error: string
+  }
+}
+
+export type RemoteEnableError = RemoteEnableErrors[keyof RemoteEnableErrors]
 
 export type RemoteEnableResponses = {
   /**
@@ -4555,7 +4750,7 @@ export type CommitMessageGenerateData = {
 
 export type CommitMessageGenerateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4590,7 +4785,7 @@ export type EnhancePromptEnhanceData = {
 
 export type EnhancePromptEnhanceErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4634,9 +4829,13 @@ export type DevilcodeSessionImportProjectData = {
 
 export type DevilcodeSessionImportProjectErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Duplicate request - idempotency key already processed
+   */
+  409: unknown
 }
 
 export type DevilcodeSessionImportProjectError =
@@ -4700,9 +4899,13 @@ export type DevilcodeSessionImportSessionData = {
 
 export type DevilcodeSessionImportSessionErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Duplicate request - idempotency key already processed
+   */
+  409: unknown
 }
 
 export type DevilcodeSessionImportSessionError =
@@ -4784,9 +4987,13 @@ export type DevilcodeSessionImportMessageData = {
 
 export type DevilcodeSessionImportMessageErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Duplicate request - idempotency key already processed
+   */
+  409: unknown
 }
 
 export type DevilcodeSessionImportMessageError =
@@ -4907,9 +5114,13 @@ export type DevilcodeSessionImportPartData = {
 
 export type DevilcodeSessionImportPartErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Duplicate request - idempotency key already processed
+   */
+  409: unknown
 }
 
 export type DevilcodeSessionImportPartError = DevilcodeSessionImportPartErrors[keyof DevilcodeSessionImportPartErrors]
@@ -4928,8 +5139,234 @@ export type DevilcodeSessionImportPartResponses = {
 export type DevilcodeSessionImportPartResponse =
   DevilcodeSessionImportPartResponses[keyof DevilcodeSessionImportPartResponses]
 
+export type DevilcodeWorkflowStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/status"
+}
+
+export type DevilcodeWorkflowStatusErrors = {
+  /**
+   * Workflow status read failed
+   */
+  500: {
+    error: string
+  }
+}
+
+export type DevilcodeWorkflowStatusError = DevilcodeWorkflowStatusErrors[keyof DevilcodeWorkflowStatusErrors]
+
+export type DevilcodeWorkflowStatusResponses = {
+  /**
+   * Workflow status
+   */
+  200:
+    | {
+        project: string
+        currentPhase: string
+        currentStage: "plan" | "challenge" | "contract" | "build" | "review" | "ship" | "retro"
+        activeWave?: number
+        totalWaves?: number
+        activeTasks?: Array<{
+          id: string
+          role: string
+          status: "pending" | "in_progress" | "completed" | "escalated" | "blocked" | "failed"
+        }>
+        lastUpdated: string
+      }
+    | {
+        initialized: false
+      }
+}
+
+export type DevilcodeWorkflowStatusResponse = DevilcodeWorkflowStatusResponses[keyof DevilcodeWorkflowStatusResponses]
+
+export type DevilcodeWorkflowPlansData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/plans"
+}
+
+export type DevilcodeWorkflowPlansErrors = {
+  /**
+   * Workflow plans read failed
+   */
+  500: {
+    error: string
+  }
+}
+
+export type DevilcodeWorkflowPlansError = DevilcodeWorkflowPlansErrors[keyof DevilcodeWorkflowPlansErrors]
+
+export type DevilcodeWorkflowPlansResponses = {
+  /**
+   * Plan tasks
+   */
+  200: Array<{
+    id: string
+    title: string
+    role: string
+    wave: number
+    dependsOn?: Array<string>
+    estimatedComplexity?: "low" | "medium" | "high"
+    files?: Array<string>
+    verification?: Array<string>
+    description: string
+    escalationDepth?: number
+  }>
+}
+
+export type DevilcodeWorkflowPlansResponse = DevilcodeWorkflowPlansResponses[keyof DevilcodeWorkflowPlansResponses]
+
+export type DevilcodeWorkflowReviewData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/review"
+}
+
+export type DevilcodeWorkflowReviewErrors = {
+  /**
+   * No review found for the current phase
+   */
+  404: unknown
+}
+
+export type DevilcodeWorkflowReviewResponses = {
+  /**
+   * Review verdict
+   */
+  200: {
+    verdict: "pass" | "fail" | "escalate"
+    cycle: number
+    findings: Array<{
+      id: string
+      severity: "blocker" | "warning" | "suggestion"
+      category:
+        | "security"
+        | "correctness"
+        | "performance"
+        | "type-safety"
+        | "test-coverage"
+        | "style"
+        | "architecture"
+        | "compatibility"
+      file: string
+      line?: number
+      description: string
+      suggestedFix?: string
+      suggestedRole?: string
+      verificationCommand?: string
+    }>
+    blockerCount: number
+    warningCount: number
+    suggestionCount: number
+    summary: string
+  }
+}
+
+export type DevilcodeWorkflowReviewResponse = DevilcodeWorkflowReviewResponses[keyof DevilcodeWorkflowReviewResponses]
+
+export type DevilcodeWorkflowLocksData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/locks"
+}
+
+export type DevilcodeWorkflowLocksResponses = {
+  /**
+   * Active file locks
+   */
+  200: Array<{
+    taskId: string
+    role: string
+    files: Array<string>
+    lockedAt: string
+  }>
+}
+
+export type DevilcodeWorkflowLocksResponse = DevilcodeWorkflowLocksResponses[keyof DevilcodeWorkflowLocksResponses]
+
+export type DevilcodeWorkflowEventsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/events"
+}
+
+export type DevilcodeWorkflowEventsResponses = {
+  /**
+   * Recent workflow events
+   */
+  200: Array<{
+    eventType: string
+    taskId?: string
+    role?: string
+    message: string
+    durationMs?: number
+    metadata?: {
+      [key: string]: unknown
+    }
+    timestamp?: string
+  }>
+}
+
+export type DevilcodeWorkflowEventsResponse = DevilcodeWorkflowEventsResponses[keyof DevilcodeWorkflowEventsResponses]
+
+export type DevilcodeWorkflowLessonsData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/devilcode/workflow/lessons"
+}
+
+export type DevilcodeWorkflowLessonsResponses = {
+  /**
+   * Captured lessons
+   */
+  200: Array<{
+    id: string
+    scope: "global" | "project"
+    category: "code_pattern" | "command_failure" | "review_failure" | "infra_timeout"
+    title: string
+    trigger: string
+    resolution: string
+    files?: Array<string>
+    confidence?: number
+    hitCount?: number
+    createdAt: string
+  }>
+}
+
+export type DevilcodeWorkflowLessonsResponse =
+  DevilcodeWorkflowLessonsResponses[keyof DevilcodeWorkflowLessonsResponses]
+
 export type DevilcodeRemoveSkillData = {
   body?: {
+    /**
+     * Absolute path to the skill directory
+     */
     location: string
   }
   path?: never
@@ -4942,7 +5379,7 @@ export type DevilcodeRemoveSkillData = {
 
 export type DevilcodeRemoveSkillErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4951,7 +5388,7 @@ export type DevilcodeRemoveSkillError = DevilcodeRemoveSkillErrors[keyof Devilco
 
 export type DevilcodeRemoveSkillResponses = {
   /**
-   * Skill removed
+   * Skill removed successfully
    */
   200: boolean
 }
@@ -4960,6 +5397,9 @@ export type DevilcodeRemoveSkillResponse = DevilcodeRemoveSkillResponses[keyof D
 
 export type DevilcodeRemoveAgentData = {
   body?: {
+    /**
+     * Name of the custom agent
+     */
     name: string
   }
   path?: never
@@ -4972,7 +5412,7 @@ export type DevilcodeRemoveAgentData = {
 
 export type DevilcodeRemoveAgentErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -4981,14 +5421,14 @@ export type DevilcodeRemoveAgentError = DevilcodeRemoveAgentErrors[keyof Devilco
 
 export type DevilcodeRemoveAgentResponses = {
   /**
-   * Agent removed
+   * Agent removed successfully
    */
   200: boolean
 }
 
 export type DevilcodeRemoveAgentResponse = DevilcodeRemoveAgentResponses[keyof DevilcodeRemoveAgentResponses]
 
-export type DevilProfileData = {
+export type KiloProfileData = {
   body?: never
   path?: never
   query?: {
@@ -4998,16 +5438,20 @@ export type DevilProfileData = {
   url: "/kilo/profile"
 }
 
-export type DevilProfileErrors = {
+export type KiloProfileErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
 }
 
-export type DevilProfileError = DevilProfileErrors[keyof DevilProfileErrors]
+export type KiloProfileError = KiloProfileErrors[keyof KiloProfileErrors]
 
-export type DevilProfileResponses = {
+export type KiloProfileResponses = {
   /**
    * Profile data
    */
@@ -5024,13 +5468,17 @@ export type DevilProfileResponses = {
     balance: {
       balance: number
     } | null
+    balanceError?: {
+      status?: number
+      error: string
+    } | null
     currentOrgId: string | null
   }
 }
 
-export type DevilProfileResponse = DevilProfileResponses[keyof DevilProfileResponses]
+export type KiloProfileResponse = KiloProfileResponses[keyof KiloProfileResponses]
 
-export type DevilOrganizationSetData = {
+export type KiloOrganizationSetData = {
   body?: {
     organizationId: string | null
   }
@@ -5042,25 +5490,29 @@ export type DevilOrganizationSetData = {
   url: "/kilo/organization"
 }
 
-export type DevilOrganizationSetErrors = {
+export type KiloOrganizationSetErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
 }
 
-export type DevilOrganizationSetError = DevilOrganizationSetErrors[keyof DevilOrganizationSetErrors]
+export type KiloOrganizationSetError = KiloOrganizationSetErrors[keyof KiloOrganizationSetErrors]
 
-export type DevilOrganizationSetResponses = {
+export type KiloOrganizationSetResponses = {
   /**
    * Organization updated successfully
    */
   200: boolean
 }
 
-export type DevilOrganizationSetResponse = DevilOrganizationSetResponses[keyof DevilOrganizationSetResponses]
+export type KiloOrganizationSetResponse = KiloOrganizationSetResponses[keyof KiloOrganizationSetResponses]
 
-export type DevilModesData = {
+export type KiloModesData = {
   body?: never
   path?: never
   query?: {
@@ -5070,7 +5522,30 @@ export type DevilModesData = {
   url: "/kilo/modes"
 }
 
-export type DevilModesResponses = {
+export type KiloModesErrors = {
+  /**
+   * No organization selected
+   */
+  400: {
+    error: string
+  }
+  /**
+   * Missing or invalid Devil Gateway credentials
+   */
+  401: {
+    error: string
+  }
+  /**
+   * Devil Gateway modes lookup failed
+   */
+  502: {
+    error: string
+  }
+}
+
+export type KiloModesError = KiloModesErrors[keyof KiloModesErrors]
+
+export type KiloModesResponses = {
   /**
    * Organization modes list
    */
@@ -5103,9 +5578,9 @@ export type DevilModesResponses = {
   }
 }
 
-export type DevilModesResponse = DevilModesResponses[keyof DevilModesResponses]
+export type KiloModesResponse = KiloModesResponses[keyof KiloModesResponses]
 
-export type DevilFimData = {
+export type KiloFimData = {
   body?: {
     prefix: string
     suffix: string
@@ -5121,16 +5596,20 @@ export type DevilFimData = {
   url: "/kilo/fim"
 }
 
-export type DevilFimErrors = {
+export type KiloFimErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
 }
 
-export type DevilFimError = DevilFimErrors[keyof DevilFimErrors]
+export type KiloFimError = KiloFimErrors[keyof KiloFimErrors]
 
-export type DevilFimResponses = {
+export type KiloFimResponses = {
   /**
    * Streaming FIM completion response
    */
@@ -5148,9 +5627,9 @@ export type DevilFimResponses = {
   }
 }
 
-export type DevilFimResponse = DevilFimResponses[keyof DevilFimResponses]
+export type KiloFimResponse = KiloFimResponses[keyof KiloFimResponses]
 
-export type DevilNotificationsData = {
+export type KiloNotificationsData = {
   body?: never
   path?: never
   query?: {
@@ -5160,16 +5639,20 @@ export type DevilNotificationsData = {
   url: "/kilo/notifications"
 }
 
-export type DevilNotificationsErrors = {
+export type KiloNotificationsErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
 }
 
-export type DevilNotificationsError = DevilNotificationsErrors[keyof DevilNotificationsErrors]
+export type KiloNotificationsError = KiloNotificationsErrors[keyof KiloNotificationsErrors]
 
-export type DevilNotificationsResponses = {
+export type KiloNotificationsResponses = {
   /**
    * Notifications list
    */
@@ -5186,9 +5669,9 @@ export type DevilNotificationsResponses = {
   }>
 }
 
-export type DevilNotificationsResponse = DevilNotificationsResponses[keyof DevilNotificationsResponses]
+export type KiloNotificationsResponse = KiloNotificationsResponses[keyof KiloNotificationsResponses]
 
-export type DevilCloudSessionGetData = {
+export type KiloCloudSessionGetData = {
   body?: never
   path: {
     id: string
@@ -5200,23 +5683,27 @@ export type DevilCloudSessionGetData = {
   url: "/kilo/cloud/session/{id}"
 }
 
-export type DevilCloudSessionGetErrors = {
+export type KiloCloudSessionGetErrors = {
   /**
-   * Not found
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
+  /**
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
 
-export type DevilCloudSessionGetError = DevilCloudSessionGetErrors[keyof DevilCloudSessionGetErrors]
+export type KiloCloudSessionGetError = KiloCloudSessionGetErrors[keyof KiloCloudSessionGetErrors]
 
-export type DevilCloudSessionGetResponses = {
+export type KiloCloudSessionGetResponses = {
   /**
    * Cloud session data
    */
   200: unknown
 }
 
-export type DevilCloudSessionImportData = {
+export type KiloCloudSessionImportData = {
   body?: {
     sessionId: string
   }
@@ -5228,27 +5715,31 @@ export type DevilCloudSessionImportData = {
   url: "/kilo/cloud/session/import"
 }
 
-export type DevilCloudSessionImportErrors = {
+export type KiloCloudSessionImportErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
+  /**
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
 
-export type DevilCloudSessionImportError = DevilCloudSessionImportErrors[keyof DevilCloudSessionImportErrors]
+export type KiloCloudSessionImportError = KiloCloudSessionImportErrors[keyof KiloCloudSessionImportErrors]
 
-export type DevilCloudSessionImportResponses = {
+export type KiloCloudSessionImportResponses = {
   /**
    * Imported session info
    */
   200: unknown
 }
 
-export type DevilClawStatusData = {
+export type KiloClawStatusData = {
   body?: never
   path?: never
   query?: {
@@ -5258,7 +5749,16 @@ export type DevilClawStatusData = {
   url: "/kilo/claw/status"
 }
 
-export type DevilClawStatusResponses = {
+export type KiloClawStatusErrors = {
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
+}
+
+export type KiloClawStatusError = KiloClawStatusErrors[keyof KiloClawStatusErrors]
+
+export type KiloClawStatusResponses = {
   /**
    * Instance status
    */
@@ -5279,9 +5779,9 @@ export type DevilClawStatusResponses = {
   }
 }
 
-export type DevilClawStatusResponse = DevilClawStatusResponses[keyof DevilClawStatusResponses]
+export type KiloClawStatusResponse = KiloClawStatusResponses[keyof KiloClawStatusResponses]
 
-export type DevilClawChatCredentialsData = {
+export type KiloClawChatCredentialsData = {
   body?: never
   path?: never
   query?: {
@@ -5291,7 +5791,16 @@ export type DevilClawChatCredentialsData = {
   url: "/kilo/claw/chat-credentials"
 }
 
-export type DevilClawChatCredentialsResponses = {
+export type KiloClawChatCredentialsErrors = {
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
+}
+
+export type KiloClawChatCredentialsError = KiloClawChatCredentialsErrors[keyof KiloClawChatCredentialsErrors]
+
+export type KiloClawChatCredentialsResponses = {
   /**
    * Stream Chat credentials or null
    */
@@ -5303,9 +5812,9 @@ export type DevilClawChatCredentialsResponses = {
   } | null
 }
 
-export type DevilClawChatCredentialsResponse = DevilClawChatCredentialsResponses[keyof DevilClawChatCredentialsResponses]
+export type KiloClawChatCredentialsResponse = KiloClawChatCredentialsResponses[keyof KiloClawChatCredentialsResponses]
 
-export type DevilCloudSessionsData = {
+export type KiloCloudSessionsData = {
   body?: never
   path?: never
   query?: {
@@ -5318,16 +5827,20 @@ export type DevilCloudSessionsData = {
   url: "/kilo/cloud-sessions"
 }
 
-export type DevilCloudSessionsErrors = {
+export type KiloCloudSessionsErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
+  /**
+   * Unauthorized - authentication required
+   */
+  401: UnauthorizedError
 }
 
-export type DevilCloudSessionsError = DevilCloudSessionsErrors[keyof DevilCloudSessionsErrors]
+export type KiloCloudSessionsError = KiloCloudSessionsErrors[keyof KiloCloudSessionsErrors]
 
-export type DevilCloudSessionsResponses = {
+export type KiloCloudSessionsResponses = {
   /**
    * Cloud sessions list
    */
@@ -5343,7 +5856,7 @@ export type DevilCloudSessionsResponses = {
   }
 }
 
-export type DevilCloudSessionsResponse = DevilCloudSessionsResponses[keyof DevilCloudSessionsResponses]
+export type KiloCloudSessionsResponse = KiloCloudSessionsResponses[keyof KiloCloudSessionsResponses]
 
 export type FindTextData = {
   body?: never
@@ -5455,6 +5968,19 @@ export type FileReadData = {
   url: "/file/content"
 }
 
+export type FileReadErrors = {
+  /**
+   * Bad request - invalid input parameters
+   */
+  400: BadRequestError
+  /**
+   * Not found - resource does not exist
+   */
+  404: NotFoundError
+}
+
+export type FileReadError = FileReadErrors[keyof FileReadErrors]
+
 export type FileReadResponses = {
   /**
    * File content
@@ -5519,7 +6045,7 @@ export type McpAddData = {
 
 export type McpAddErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -5551,7 +6077,7 @@ export type McpAuthRemoveData = {
 
 export type McpAuthRemoveErrors = {
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -5583,11 +6109,11 @@ export type McpAuthStartData = {
 
 export type McpAuthStartErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -5627,11 +6153,11 @@ export type McpAuthCallbackData = {
 
 export type McpAuthCallbackErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -5661,11 +6187,11 @@ export type McpAuthAuthenticateData = {
 
 export type McpAuthAuthenticateErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -5737,7 +6263,7 @@ export type TuiAppendPromptData = {
 
 export type TuiAppendPromptErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -5881,7 +6407,7 @@ export type TuiExecuteCommandData = {
 
 export type TuiExecuteCommandErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -5936,7 +6462,7 @@ export type TuiPublishData = {
 
 export type TuiPublishErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }
@@ -5969,11 +6495,11 @@ export type TuiSelectSessionData = {
 
 export type TuiSelectSessionErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
   /**
-   * Not found
+   * Not found - resource does not exist
    */
   404: NotFoundError
 }
@@ -6137,7 +6663,7 @@ export type AppLogData = {
 
 export type AppLogErrors = {
   /**
-   * Bad request
+   * Bad request - invalid input parameters
    */
   400: BadRequestError
 }

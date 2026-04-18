@@ -60,7 +60,8 @@ const TeamTab: Component = () => {
   const deleteRole = (roleID: string) => {
     const roles = { ...team().roles }
     delete roles[roleID]
-    const defaultRole = team().routing.defaultRole === roleID ? Object.keys(roles)[0] ?? "" : team().routing.defaultRole
+    const defaultRole =
+      team().routing.defaultRole === roleID ? (Object.keys(roles)[0] ?? "") : team().routing.defaultRole
     saveTeam({
       ...team(),
       roles,
@@ -87,8 +88,21 @@ const TeamTab: Component = () => {
         </div>
       </Card>
 
-      <div style={{ display: "flex", gap: "0", "border-bottom": "1px solid var(--vscode-panel-border)", "margin-bottom": "12px" }}>
-        <For each={[{ id: "roles", key: "settings.team.subtab.roles" }, { id: "routing", key: "settings.team.subtab.routing" }, { id: "templates", key: "settings.team.subtab.templates" }]}>
+      <div
+        style={{
+          display: "flex",
+          gap: "0",
+          "border-bottom": "1px solid var(--vscode-panel-border)",
+          "margin-bottom": "12px",
+        }}
+      >
+        <For
+          each={[
+            { id: "roles", key: "settings.team.subtab.roles" },
+            { id: "routing", key: "settings.team.subtab.routing" },
+            { id: "templates", key: "settings.team.subtab.templates" },
+          ]}
+        >
           {(item) => (
             <button
               style={{
@@ -97,9 +111,14 @@ const TeamTab: Component = () => {
                 padding: "8px 14px",
                 "font-size": "13px",
                 cursor: "pointer",
-                color: activeSubtab() === (item.id as TeamSubtab) ? "var(--vscode-foreground)" : "var(--vscode-descriptionForeground)",
+                color:
+                  activeSubtab() === (item.id as TeamSubtab)
+                    ? "var(--vscode-foreground)"
+                    : "var(--vscode-descriptionForeground)",
                 "border-bottom":
-                  activeSubtab() === (item.id as TeamSubtab) ? "2px solid var(--vscode-foreground)" : "2px solid transparent",
+                  activeSubtab() === (item.id as TeamSubtab)
+                    ? "2px solid var(--vscode-foreground)"
+                    : "2px solid transparent",
               }}
               onClick={() => {
                 setActiveSubtab(item.id as TeamSubtab)
@@ -121,8 +140,17 @@ const TeamTab: Component = () => {
           <TeamRoleEditor team={team()} roleID={editingRole()} onBack={() => setRoleView("list")} />
         </Show>
         <Show when={roleView() === "list"}>
-          <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "8px" }}>
-            <div style={{ "font-size": "12px", color: "var(--text-weak-base)" }}>{language.t("settings.team.roles.description")}</div>
+          <div
+            style={{
+              display: "flex",
+              "justify-content": "space-between",
+              "align-items": "center",
+              "margin-bottom": "8px",
+            }}
+          >
+            <div style={{ "font-size": "12px", color: "var(--text-weak-base)" }}>
+              {language.t("settings.team.roles.description")}
+            </div>
             <Button variant="secondary" size="small" onClick={() => setRoleView("create")}>
               {language.t("settings.team.roles.add")}
             </Button>
@@ -146,7 +174,8 @@ const TeamTab: Component = () => {
                       "align-items": "center",
                       "justify-content": "space-between",
                       padding: "8px 0",
-                      "border-bottom": index() < roleEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                      "border-bottom":
+                        index() < roleEntries().length - 1 ? "1px solid var(--border-weak-base)" : "none",
                     }}
                   >
                     <div>

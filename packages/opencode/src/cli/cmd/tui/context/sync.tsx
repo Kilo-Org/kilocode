@@ -408,7 +408,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     const args = useArgs()
 
     async function bootstrap() {
-      console.log("bootstrapping")
+      // devilcode_change - audit N6: removed console.log "bootstrapping" stdout noise.
       const start = Date.now() - 30 * 24 * 60 * 60 * 1000
       const sessionListPromise = sdk.client.session
         .list({ start: start })

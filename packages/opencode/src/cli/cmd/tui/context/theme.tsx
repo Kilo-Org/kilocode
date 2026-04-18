@@ -331,13 +331,12 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     onMount(init)
 
     function resolveSystemTheme() {
-      console.log("resolveSystemTheme")
+      // devilcode_change - audit N6: removed stdout noise; debug via Log.create if needed.
       renderer
         .getPalette({
           size: 16,
         })
         .then((colors) => {
-          console.log(colors.palette)
           if (!colors.palette[0]) {
             if (store.active === "system") {
               setStore(

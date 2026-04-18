@@ -417,12 +417,14 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
                   }
                 }),
               )
+              // devilcode_change - audit MA9: derive role from the actual task instead of hardcoding "worker".
+              const taskForSession = store.plans.find((p) => p.id === taskId)
               setStore(
                 produce((s) => {
                   s.activeSessions[sessionId] = {
                     sessionId,
                     taskId,
-                    role: "worker",
+                    role: taskForSession?.role ?? "unknown",
                     status: "running",
                     output: [],
                   }
@@ -519,9 +521,14 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
             if (store.state?.currentStage !== "plan") {
               await Workflow.advanceStage(manager, "plan")
             }
-            const roles = options?.teamConfig
-              ? Object.keys(options.teamConfig.roles)
-              : ["senior", "worker"]
+            // devilcode_change - audit MA9: derive role list from team config; surface explicit
+            // error when no team configured rather than silently defaulting to "senior"/"worker".
+            const roles = options?.teamConfig ? Object.keys(options.teamConfig.roles) : []
+            if (roles.length === 0) {
+              throw new Error(
+                "No team roles available — configure `team.roles` in devilcode config before running plan dispatch.",
+              )
+            }
             await orchestrator.executePlan({
               ...info(),
               phaseContext: options?.phaseContext ?? "",

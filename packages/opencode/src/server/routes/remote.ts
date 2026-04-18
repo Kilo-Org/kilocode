@@ -10,6 +10,20 @@ const Status = z.object({
   connected: z.boolean(),
 })
 
+// devilcode_change - audit N13: shared 401 schema so the SDK type for failures is generated.
+const RemoteError = z.object({
+  error: z.string(),
+})
+
+const unauthorizedResponse = {
+  description: "Unauthorized — Devil session ingest credentials missing or invalid",
+  content: {
+    "application/json": {
+      schema: resolver(RemoteError),
+    },
+  },
+}
+
 export const RemoteRoutes = lazy(() =>
   new Hono()
     .post(
@@ -27,6 +41,7 @@ export const RemoteRoutes = lazy(() =>
               },
             },
           },
+          401: unauthorizedResponse,
         },
       }),
       async (c) => {

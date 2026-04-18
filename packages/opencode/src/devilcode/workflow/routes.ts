@@ -16,6 +16,7 @@ import { Log } from "../../util/log"
 import z from "zod"
 
 const log = Log.create({ service: "workflow.routes" })
+const InternalError = z.object({ error: z.string() })
 
 function isENOENT(e: unknown): e is { code: "ENOENT" } {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
@@ -39,6 +40,14 @@ export const WorkflowRoutes = lazy(() =>
             content: {
               "application/json": {
                 schema: resolver(z.union([WorkflowState, UninitializedStatus])),
+              },
+            },
+          },
+          500: {
+            description: "Workflow status read failed",
+            content: {
+              "application/json": {
+                schema: resolver(InternalError),
               },
             },
           },
@@ -76,6 +85,14 @@ export const WorkflowRoutes = lazy(() =>
               },
             },
           },
+          500: {
+            description: "Workflow plans read failed",
+            content: {
+              "application/json": {
+                schema: resolver(InternalError),
+              },
+            },
+          },
         },
       }),
       async (c) => {
@@ -88,8 +105,13 @@ export const WorkflowRoutes = lazy(() =>
           if (!state.currentPhase) return c.json([] as PlanTask[])
           const plans = await manager.readAllPlans(state.currentPhase)
           return c.json(plans)
-        } catch {
-          return c.json([] as PlanTask[])
+        } catch (e) {
+          // devilcode_change - audit N5: distinguish "no plans yet" (ENOENT) from real disk errors.
+          if (isENOENT(e)) {
+            return c.json([] as PlanTask[])
+          }
+          log.error("workflow plans read failed", { error: e })
+          return c.json({ error: "Internal error" }, 500)
         }
       },
     )

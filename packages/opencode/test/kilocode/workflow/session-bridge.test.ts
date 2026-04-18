@@ -30,6 +30,10 @@ mock.module("@/session", () => ({
 mock.module("@/session/message-v2", () => ({
   MessageV2: {
     stream: mock(() => []),
+    Event: {
+      // devilcode_change - audit MA8: provide PartUpdated mock for streaming output tests.
+      PartUpdated: { type: "message.part.updated" },
+    },
   },
 }))
 
@@ -117,6 +121,38 @@ describe("SessionBridge", () => {
 
     bridge.unwatch("session-001")
     expect(subscriptions.length).toBeLessThan(countBefore)
+  })
+
+  // devilcode_change - audit MA8: stream message text deltas through onOutput.
+  it("emits text deltas via onOutput when PartUpdated fires for the watched session", () => {
+    const lines: Array<{ sessionId: string; line: string }> = []
+    const bridge = new SessionBridge({
+      onOutput: (sessionId, _taskId, line) => lines.push({ sessionId, line }),
+      onStatusChange: () => {},
+    })
+
+    bridge.watch("session-001", "task-1")
+
+    // Find the PartUpdated subscription installed by the bridge.
+    const partSub = subscriptions.find((s) => s.type === "message.part.updated")
+    expect(partSub).toBeDefined()
+
+    // First update: full text becomes the first delta.
+    partSub!.callback({
+      properties: { part: { id: "p1", sessionID: "session-001", messageID: "m1", type: "text", text: "Hello" } },
+    })
+    // Second update: only the new tail is emitted.
+    partSub!.callback({
+      properties: {
+        part: { id: "p1", sessionID: "session-001", messageID: "m1", type: "text", text: "Hello world" },
+      },
+    })
+    // Other-session update: ignored.
+    partSub!.callback({
+      properties: { part: { id: "p2", sessionID: "session-other", messageID: "m2", type: "text", text: "nope" } },
+    })
+
+    expect(lines.map((l) => l.line)).toEqual(["Hello", " world"])
   })
 
   it("unwatchAll cleans up all subscriptions", () => {

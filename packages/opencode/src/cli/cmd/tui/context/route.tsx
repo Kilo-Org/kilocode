@@ -46,15 +46,14 @@ export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
         return store
       },
       navigate(route: Route) {
-        console.log("navigate", route)
-        previous = structuredClone(unwrap(store)) // devilcode_change
+        // devilcode_change - audit N6: drop console.log noise (was leaking to TUI stdout)
+        previous = structuredClone(unwrap(store))
         setStore(route)
       },
       // devilcode_change start
       back() {
         const target = previous ?? ({ type: "home" } as const)
         previous = undefined
-        console.log("navigate", target)
         setStore(target)
       },
       // devilcode_change end

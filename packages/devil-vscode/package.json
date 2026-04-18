@@ -794,7 +794,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
-    "check-devilcode-change": "! grep -rn 'devilcode_change' . ../kilo-ui/ --exclude='package.json' --exclude='*.md' --exclude-dir='node_modules' --exclude-dir='dist' | grep -v '`devilcode_change`'",
+    "check-devilcode-change": "bun run script/check-devilcode-change.ts",
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",

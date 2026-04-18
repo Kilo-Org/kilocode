@@ -19,9 +19,21 @@ export const TeamRouting = z.object({
   strategy: z.enum(["hierarchical", "flat"]).default("hierarchical"),
   defaultRole: z.string(),
   escalationEnabled: z.boolean().default(true),
+  // devilcode_change start - audit MA1: explicit parent role for hierarchical dispatch.
+  // When omitted, BuildRunner falls back to defaultRole (no longer hardcoded "orchestrator").
+  parentRole: z.string().optional(),
+  // devilcode_change end
+  // devilcode_change start - audit MA2: optional override for review-fix routing.
+  // When omitted, reviewer falls back to defaultRole instead of hardcoded "senior".
+  reviewEscalationRole: z.string().optional(),
+  // devilcode_change end
 })
 export type TeamRouting = z.infer<typeof TeamRouting>
 
+// devilcode_change - audit MA4: schema reserved for future automation triggers.
+// No runtime dispatcher consumes this yet; UI accepts and persists rules but they are
+// inert until a workflow event subscriber is wired up. Keep the schema stable so user
+// configs don't break when the dispatcher lands.
 export const ReactionRule = z.object({
   trigger: z.enum(["ci-failed", "review-requested", "approved-and-green", "agent-stuck"]),
   auto: z.boolean().default(false),
@@ -45,5 +57,16 @@ export const TeamConfig = z.object({
     role.canDelegate.every(d => d in cfg.roles)
   ),
   { message: "canDelegate entries must reference existing roles", path: ["roles"] }
+).refine(
+  // devilcode_change - audit MA1: parentRole must reference an existing role when set.
+  (cfg) => !cfg.enabled || !cfg.routing.parentRole || cfg.routing.parentRole in cfg.roles,
+  { message: "routing.parentRole must reference an existing role", path: ["routing", "parentRole"] }
+).refine(
+  // devilcode_change - audit MA2: reviewEscalationRole must reference an existing role when set.
+  (cfg) =>
+    !cfg.enabled ||
+    !cfg.routing.reviewEscalationRole ||
+    cfg.routing.reviewEscalationRole in cfg.roles,
+  { message: "routing.reviewEscalationRole must reference an existing role", path: ["routing", "reviewEscalationRole"] }
 )
 export type TeamConfig = z.infer<typeof TeamConfig>

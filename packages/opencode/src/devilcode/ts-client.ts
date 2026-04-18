@@ -10,6 +10,16 @@ import { Log } from "../util/log"
 import { withTimeout } from "../util/timeout"
 import path from "path"
 import { Instance } from "../project/instance"
+import { NamedError } from "@opencode-ai/util/error"
+import z from "zod"
+
+// devilcode_change - audit N1: typed error so callers can detect lightweight-mode rejection.
+export const TsLspNotAvailableError = NamedError.create(
+  "TsLspNotAvailableError",
+  z.object({
+    operation: z.string().optional(),
+  }),
+)
 
 export namespace TsClient {
   const log = Log.create({ service: "ts-client" })
@@ -56,10 +66,9 @@ export namespace TsClient {
         // rejects so those code paths surface a clear error instead
         // of crashing with "cannot read property sendRequest of undefined".
         return {
-          sendRequest() {
-            return Promise.reject(
-              new Error("TypeScript LSP operations are not supported in lightweight diagnostic mode"),
-            )
+          // devilcode_change - audit N1: typed rejection so callers can degrade gracefully.
+          sendRequest(method?: string) {
+            return Promise.reject(new TsLspNotAvailableError({ operation: method }))
           },
           sendNotification() {
             return Promise.resolve()

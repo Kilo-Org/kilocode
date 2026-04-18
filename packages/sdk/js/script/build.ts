@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { fileURLToPath } from "url"
+import { tmpdir } from "os"
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
@@ -9,10 +10,12 @@ import path from "path"
 
 import { createClient } from "@hey-api/openapi-ts"
 
-await $`bun dev generate > ${dir}/openapi.json`.cwd(path.resolve(dir, "../../opencode"))
+const file = path.join(tmpdir(), `devil-sdk-openapi-${process.pid}.json`)
+
+await $`bun dev generate > ${file}`.cwd(path.resolve(dir, "../../opencode"))
 
 await createClient({
-  input: "./openapi.json",
+  input: file,
   output: {
     path: "./src/v2/gen",
     tsConfigPath: path.join(dir, "tsconfig.json"),
@@ -42,4 +45,4 @@ await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
 await $`rm -rf dist tsconfig.tsbuildinfo`
 await $`bun tsc`
-await $`rm openapi.json`
+await $`rm -f ${file}`

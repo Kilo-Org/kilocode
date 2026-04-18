@@ -2,4 +2,7 @@
 
 import { $ } from "bun"
 
-await $`bun run prettier --ignore-unknown --write .`
+const args = process.argv.slice(2)
+const target = args.length > 0 ? args : ["."]
+
+await $`bun run prettier --ignore-unknown --write ${target}`

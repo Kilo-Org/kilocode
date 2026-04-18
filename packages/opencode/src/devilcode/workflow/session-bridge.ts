@@ -1,5 +1,6 @@
 import { Bus } from "@/bus"
 import { Session } from "@/session"
+import { MessageV2 } from "@/session/message-v2"
 import { Log } from "@/util/log"
 
 const log = Log.create({ service: "workflow.session-bridge" })
@@ -64,7 +65,7 @@ export class SessionBridge {
       }),
     )
 
-    // Subscribe to session updates for streaming output
+    // Subscribe to session updates for title changes (still useful for tab labels).
     unsubscribers.push(
       Bus.subscribe(Session.Event.Updated, (event) => {
         if (event.properties.info.id !== sessionId) return
@@ -74,6 +75,27 @@ export class SessionBridge {
         }
       }),
     )
+
+    // devilcode_change start - audit MA8: stream actual message text deltas to onOutput so
+    // the workflow TUI shows real progress instead of only the static title.
+    let lastTextById: Record<string, string> = {}
+    unsubscribers.push(
+      Bus.subscribe(MessageV2.Event.PartUpdated, (event) => {
+        const part = event.properties.part
+        if (part.sessionID !== sessionId) return
+        if (part.type !== "text" || typeof (part as { text?: string }).text !== "string") return
+        const next = (part as { text: string }).text
+        const prev = lastTextById[part.id] ?? ""
+        if (next === prev) return
+        // Only emit the new tail to avoid resending the full message on every update.
+        const delta = next.startsWith(prev) ? next.slice(prev.length) : next
+        lastTextById[part.id] = next
+        if (delta.length > 0) {
+          this.callbacks.onOutput(sessionId, taskId, delta)
+        }
+      }),
+    )
+    // devilcode_change end
 
     this.watched.set(sessionId, { sessionId, taskId, unsubscribers })
   }

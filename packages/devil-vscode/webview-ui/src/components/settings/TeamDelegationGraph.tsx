@@ -34,7 +34,9 @@ const TeamDelegationGraph: Component<TeamDelegationGraphProps> = (props) => {
               </div>
               <Show
                 when={role.canDelegate.length > 0}
-                fallback={<div style={{ "font-size": "11px", color: "var(--text-weak-base)" }}>No delegation targets</div>}
+                fallback={
+                  <div style={{ "font-size": "11px", color: "var(--text-weak-base)" }}>No delegation targets</div>
+                }
               >
                 <div style={{ "font-size": "11px", color: "var(--text-weak-base)" }}>
                   delegates to: {role.canDelegate.join(", ")}

@@ -16,25 +16,59 @@ import { Log } from "@/util/log"
 
 const log = Log.create({ service: "claw-chat" })
 
+// devilcode_change start - audit N2: tighten the public Claw types so consumers see something
+// stronger than `any`. We keep `unknown`/structural types here instead of importing real
+// stream-chat types because type-only imports of stream-chat trip the Bun loader (see
+// loadStreamChat below).
+type StreamChannel = {
+  watch: (opts?: { presence?: boolean }) => Promise<unknown>
+  sendMessage: (msg: { text: string }) => Promise<unknown>
+  on: (event: string, handler: (e: StreamEvent) => void) => unknown
+  off: (event: string, handler: (e: StreamEvent) => void) => unknown
+  state: {
+    messages: RawMessage[]
+    members?: Record<string, { user?: { online?: boolean } } | undefined>
+  }
+}
+
+type RawMessage = {
+  id?: string
+  text?: string
+  user?: { id?: string } | null
+  user_id?: string
+  created_at?: string | Date
+}
+
+type StreamEvent = {
+  message?: RawMessage
+  user?: { id?: string; online?: boolean } | null
+}
+
 export type ClawChatClient = {
-  channel: any
+  channel: StreamChannel
   disconnect: () => Promise<void>
   send: (text: string) => Promise<void>
   onMessage: (cb: (msg: ChatMessage) => void) => () => void
   onMessageUpdated: (cb: (msg: ChatMessage) => void) => () => void
   onPresence: (cb: (online: boolean) => void) => () => void
 }
+// devilcode_change end
 
 export function botId(creds: ChatCredentials): string {
   return `bot-${creds.channelId.replace(/^default-/, "")}`
 }
 
-function toMessage(raw: any, bot: string): ChatMessage {
+function toMessage(raw: RawMessage, bot: string): ChatMessage {
+  const created = raw.created_at
+    ? raw.created_at instanceof Date
+      ? raw.created_at
+      : new Date(raw.created_at)
+    : new Date()
   return {
     id: raw.id ?? "",
     text: raw.text ?? "",
     user: raw.user?.id ?? raw.user_id ?? "",
-    created: raw.created_at ? new Date(raw.created_at) : new Date(),
+    created,
     bot: (raw.user?.id ?? raw.user_id ?? "") === bot,
   }
 }
@@ -112,7 +146,7 @@ export async function connect(creds: ChatCredentials): Promise<ClawChatClient> {
   const bot = botId(creds)
 
   return {
-    channel,
+    channel: channel as StreamChannel,
     async disconnect() {
       await client.disconnectUser()
     },
@@ -120,21 +154,21 @@ export async function connect(creds: ChatCredentials): Promise<ClawChatClient> {
       await channel.sendMessage({ text })
     },
     onMessage(cb) {
-      const handler = (event: any) => {
+      const handler = (event: StreamEvent) => {
         if (event.message) cb(toMessage(event.message, bot))
       }
       channel.on("message.new", handler)
       return () => channel.off("message.new", handler)
     },
     onMessageUpdated(cb) {
-      const handler = (event: any) => {
+      const handler = (event: StreamEvent) => {
         if (event.message) cb(toMessage(event.message, bot))
       }
       channel.on("message.updated", handler)
       return () => channel.off("message.updated", handler)
     },
     onPresence(cb) {
-      const handler = (event: any) => {
+      const handler = (event: StreamEvent) => {
         if (event.user?.id === bot) {
           cb(event.user.online ?? false)
         }
@@ -145,9 +179,9 @@ export async function connect(creds: ChatCredentials): Promise<ClawChatClient> {
   }
 }
 
-export async function history(channel: any, bot: string): Promise<ChatMessage[]> {
+export async function history(channel: StreamChannel, bot: string): Promise<ChatMessage[]> {
   const state = channel.state.messages
-  return state.map((raw: any) => toMessage(raw, bot))
+  return state.map((raw) => toMessage(raw, bot))
 }
 
 /**
@@ -155,7 +189,7 @@ export async function history(channel: any, bot: string): Promise<ChatMessage[]>
  * Mirrors the cloud's `useBotOnlineStatus` which reads
  * `channel.state.members[botUserId]?.user?.online`.
  */
-export function presence(channel: any, bot: string): boolean {
+export function presence(channel: StreamChannel, bot: string): boolean {
   const member = channel.state.members?.[bot]
   return !!member?.user?.online
 }

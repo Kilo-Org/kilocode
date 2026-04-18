@@ -40,7 +40,7 @@ export type OrganizationModeConfig = z.infer<typeof OrganizationModeConfigSchema
 export type OrganizationMode = z.infer<typeof OrganizationModeSchema>
 
 /**
- * In-memory cache for organization modes, keyed by organizationId.
+ * In-memory cache for organization modes, keyed by organization + credential scope.
  */
 const cache = new Map<string, { modes: OrganizationMode[]; timestamp: number }>()
 const TTL = 5 * 60 * 1000 // 5 minutes
@@ -53,22 +53,32 @@ export function clearModesCache() {
   cache.clear()
 }
 
+// devilcode_change start - audit OB2: discriminated result so callers can distinguish auth/transport
+// errors from "no modes" instead of silently flattening every failure to [].
+export type FetchOrganizationModesResult =
+  | { ok: true; modes: OrganizationMode[] }
+  | { ok: false; status?: number; error: string }
+
 /**
  * Fetch custom modes for an organization from the Devil Cloud API.
  *
  * @param token - Bearer authentication token
  * @param organizationId - Organization UUID
- * @returns Array of organization modes, or empty array on error
+ * @returns Discriminated result: success carries modes; failure carries upstream status + reason.
  */
-export async function fetchOrganizationModes(token: string, organizationId: string): Promise<OrganizationMode[]> {
+export async function fetchOrganizationModesResult(
+  token: string,
+  organizationId: string,
+): Promise<FetchOrganizationModesResult> {
   // Skip real HTTP calls in test environment to avoid 401 noise and network dependency
   if (process.env.NODE_ENV === "test") {
-    return []
+    return { ok: true, modes: [] }
   }
 
-  const cached = cache.get(organizationId)
+  const key = `${organizationId}:${token}`
+  const cached = cache.get(key)
   if (cached && Date.now() - cached.timestamp < TTL) {
-    return cached.modes
+    return { ok: true, modes: cached.modes }
   }
 
   try {
@@ -83,7 +93,7 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
 
     if (!response.ok) {
       console.warn(`[Devil Gateway] Failed to fetch organization modes: ${response.status}`)
-      return []
+      return { ok: false, status: response.status, error: `upstream returned ${response.status}` }
     }
 
     const json = await response.json()
@@ -91,14 +101,24 @@ export async function fetchOrganizationModes(token: string, organizationId: stri
 
     if (!parsed.success) {
       console.warn("[Devil Gateway] Organization modes response validation failed:", parsed.error.format())
-      return []
+      return { ok: false, error: "response validation failed" }
     }
 
     const modes = parsed.data.modes
-    cache.set(organizationId, { modes, timestamp: Date.now() })
-    return modes
+    cache.set(key, { modes, timestamp: Date.now() })
+    return { ok: true, modes }
   } catch (err) {
     console.warn("[Devil Gateway] Error fetching organization modes:", err)
-    return []
+    return { ok: false, error: err instanceof Error ? err.message : String(err) }
   }
 }
+
+/**
+ * Backwards-compatible helper that flattens errors to []. Prefer
+ * {@link fetchOrganizationModesResult} so callers can act on auth/transport failures.
+ */
+export async function fetchOrganizationModes(token: string, organizationId: string): Promise<OrganizationMode[]> {
+  const r = await fetchOrganizationModesResult(token, organizationId)
+  return r.ok ? r.modes : []
+}
+// devilcode_change end

@@ -5,15 +5,19 @@
  * This factory function accepts OpenCode dependencies to create Devil-specific routes
  */
 
-import { fetchProfile, fetchBalance } from "../api/profile.js"
+import { fetchProfile, fetchBalanceResult } from "../api/profile.js"
 import { fetchDevilcodeNotifications, DevilcodeNotificationSchema } from "../api/notifications.js"
-import { fetchOrganizationModes, clearModesCache } from "../api/modes.js"
+import { fetchOrganizationModesResult, clearModesCache } from "../api/modes.js"
 import { DEVIL_API_BASE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "../api/constants.js"
 import { buildDevilHeaders } from "../headers.js"
 import type { ImportDeps, DrizzleDb } from "../cloud-sessions.js"
 import { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "../cloud-sessions.js"
 
 // Type definitions for OpenCode dependencies (injected at runtime)
+// devilcode_change - audit N10: these `any` shims are intentional. Devil Gateway is published
+// as a standalone package and cannot import `hono`/`zod` directly without inverting the
+// dependency graph (opencode would then own the gateway types). When/if we colocate the
+// gateway with opencode, replace these with concrete `import type { Hono, Context } from "hono"`.
 type Hono = any
 type DescribeRoute = any
 type Validator = any
@@ -93,10 +97,22 @@ export function createDevilRoutes(deps: DevilRoutesDeps) {
   const Balance = z.object({
     balance: z.number(),
   })
+  const SimpleError = z.object({
+    error: z.string(),
+  })
 
   const ProfileWithBalance = z.object({
     profile: Profile,
     balance: Balance.nullable(),
+    // devilcode_change - audit OB4: surface upstream balance failures so the UI can show a toast
+    // instead of silently rendering "no balance".
+    balanceError: z
+      .object({
+        status: z.number().optional(),
+        error: z.string(),
+      })
+      .nullable()
+      .optional(),
     currentOrgId: z.string().nullable(),
   })
 
@@ -152,13 +168,18 @@ export function createDevilRoutes(deps: DevilRoutesDeps) {
         const currentOrgId = auth.accountId ?? null
 
         // Fetch profile and balance in parallel
-        // Pass organizationId to fetchBalance to get team balance when in org context
-        const [profile, balance] = await Promise.all([
+        // devilcode_change - audit OB4: include balanceError so UI can disambiguate failure vs zero balance.
+        const [profile, balanceResult] = await Promise.all([
           fetchProfile(token),
-          fetchBalance(token, currentOrgId ?? undefined),
+          fetchBalanceResult(token, currentOrgId ?? undefined),
         ])
 
-        return c.json({ profile, balance, currentOrgId })
+        return c.json({
+          profile,
+          balance: balanceResult.ok ? balanceResult.balance : null,
+          balanceError: balanceResult.ok ? null : { status: balanceResult.status, error: balanceResult.error },
+          currentOrgId,
+        })
       },
     )
     .post(
@@ -256,31 +277,54 @@ export function createDevilRoutes(deps: DevilRoutesDeps) {
               },
             },
           },
+          400: {
+            description: "No organization selected",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
+              },
+            },
+          },
+          401: {
+            description: "Missing or invalid Devil Gateway credentials",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
+              },
+            },
+          },
+          502: {
+            description: "Devil Gateway modes lookup failed",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
+              },
+            },
+          },
         },
       }),
       async (c: any) => {
+        // devilcode_change start - audit OB2: forward upstream auth/transport status to caller.
         const auth = await Auth.get("kilo")
-
         if (!auth || auth.type !== "oauth") {
-          return c.json({ modes: [] })
+          return c.json({ error: "not authenticated" }, 401)
         }
-
         const token = auth.access
         if (!token) {
-          return c.json({ modes: [] })
+          return c.json({ error: "missing access token" }, 401)
         }
-
         const orgId = auth.accountId
         if (!orgId) {
-          return c.json({ modes: [] })
+          return c.json({ error: "no organization selected" }, 400)
         }
 
-        try {
-          const modes = await fetchOrganizationModes(token, orgId)
-          return c.json({ modes })
-        } catch {
-          return c.json({ modes: [] })
+        const result = await fetchOrganizationModesResult(token, orgId)
+        if (!result.ok) {
+          const status = result.status && result.status >= 400 && result.status < 600 ? result.status : 502
+          return c.json({ error: result.error }, status as any)
         }
+        return c.json({ modes: result.modes })
+        // devilcode_change end
       },
     )
     .post(
