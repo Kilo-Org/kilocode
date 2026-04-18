@@ -1,0 +1,9 @@
+training:
+  presets:
+    - name: lora-default
+      type: lora
+      target: remote_gpu
+    - name: qlora-default
+      type: qlora
+      target: local_gpu
+  monitor_fields: [status, gpu, vram, loss, checkpoint]

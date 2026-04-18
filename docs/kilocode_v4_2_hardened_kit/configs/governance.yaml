@@ -1,0 +1,8 @@
+governance:
+  authority_tiers: [observer, operator, admin]
+  approval_required_for:
+    - remote_install
+    - destructive_delete
+    - credential_change
+    - cross_project_write
+    - privileged_restart

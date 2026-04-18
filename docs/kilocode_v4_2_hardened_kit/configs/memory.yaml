@@ -1,0 +1,6 @@
+memory:
+  provider: shiba
+  project_scope_enabled: true
+  trace_logging: true
+  write_history: true
+  required_fields: [project, scope, fact_type, summary]

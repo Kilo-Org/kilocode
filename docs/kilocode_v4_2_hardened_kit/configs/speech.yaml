@@ -1,0 +1,5 @@
+speech:
+  input_enabled: true
+  output_enabled: true
+  provider_modes: [local, cloud]
+  trace_logging: true

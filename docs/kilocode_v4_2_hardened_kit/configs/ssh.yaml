@@ -1,0 +1,10 @@
+profiles:
+  - name: prod-vps
+    host: 203.0.113.10
+    port: 22
+    user: admin
+    auth_mode: key
+    key_path: ~/.ssh/id_ed25519
+    jump_host: null
+    labels: [prod, web]
+    group: vps

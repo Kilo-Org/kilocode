@@ -1,0 +1,13 @@
+execution:
+  low:
+    approval: auto
+    write_policy: read_only
+    network_policy: deny
+  medium:
+    approval: diff_required
+    write_policy: buffered
+    network_policy: allowlist
+  high:
+    approval: required
+    write_policy: approved
+    network_policy: allowlist

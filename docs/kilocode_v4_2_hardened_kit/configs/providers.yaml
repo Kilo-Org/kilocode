@@ -1,0 +1,26 @@
+providers:
+  claude:
+    role: planning
+    api_env: ANTHROPIC_API_KEY
+    supports: [contract, architecture, audit, release_verdict]
+    fallback: siliconflow
+  minimax:
+    role: execution
+    api_env: MINIMAX_API_KEY
+    supports: [execution, worker, bulk_ops]
+    fallback: siliconflow
+  siliconflow:
+    role: fallback
+    api_env: SILICONFLOW_API_KEY
+    supports: [fallback, overflow, alternate_models]
+    fallback: null
+  ollama:
+    role: local
+    api_env: null
+    supports: [local_private, memory_check, helper]
+    fallback: lm_studio
+  lm_studio:
+    role: local
+    api_env: null
+    supports: [local_private, helper]
+    fallback: ollama

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760">
+  <style>
+    .bg { fill:#0d1117; }
+    .card { fill:#161b22; stroke:#3fb950; stroke-width:2; rx:16; ry:16; }
+    .txt { fill:#e6edf3; font: 22px Arial, sans-serif; }
+    .sub { fill:#9fb3c8; font: 15px Arial, sans-serif; }
+    .line { stroke:#58a6ff; stroke-width:3; marker-end:url(#a); }
+  </style>
+  <defs>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#58a6ff"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1400" height="760"/>
+  <rect class="card" x="60" y="90" width="220" height="90"/>
+  <text class="txt" x="126" y="142">User / Bot</text>
+  <text class="sub" x="104" y="165">front-door interaction</text>
+
+  <rect class="card" x="340" y="90" width="260" height="90"/>
+  <text class="txt" x="430" y="142">Hermes</text>
+  <text class="sub" x="374" y="165">routing, policy, memory</text>
+
+  <rect class="card" x="680" y="90" width="260" height="90"/>
+  <text class="txt" x="760" y="142">KiloCode</text>
+  <text class="sub" x="724" y="165">cockpit + workspace</text>
+
+  <rect class="card" x="1020" y="90" width="280" height="90"/>
+  <text class="txt" x="1108" y="142">ZeroClaw</text>
+  <text class="sub" x="1065" y="165">sandbox execution bay</text>
+
+  <rect class="card" x="260" y="320" width="260" height="90"/>
+  <text class="txt" x="332" y="372">Providers</text>
+  <text class="sub" x="294" y="395">Claude / MiniMax / SF / Local</text>
+
+  <rect class="card" x="570" y="320" width="260" height="90"/>
+  <text class="txt" x="658" y="372">Shiba</text>
+  <text class="sub" x="624" y="395">memory + recall traces</text>
+
+  <rect class="card" x="880" y="320" width="320" height="90"/>
+  <text class="txt" x="960" y="372">Truth + Ledgers</text>
+  <text class="sub" x="928" y="395">evidence / defects / runs / approvals</text>
+
+  <line class="line" x1="280" y1="135" x2="340" y2="135"/>
+  <line class="line" x1="600" y1="135" x2="680" y2="135"/>
+  <line class="line" x1="940" y1="135" x2="1020" y2="135"/>
+
+  <line class="line" x1="470" y1="180" x2="390" y2="320"/>
+  <line class="line" x1="470" y1="180" x2="700" y2="320"/>
+  <line class="line" x1="470" y1="180" x2="1040" y2="320"/>
+
+  <text class="sub" x="330" y="560">KiloCode is the cockpit. Hermes is the planner/router. ZeroClaw is the execution substrate.</text>
+  <text class="sub" x="330" y="585">Providers think. Shiba remembers. Truth docs and ledgers prove what happened.</text>
+</svg>
