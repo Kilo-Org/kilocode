@@ -69,6 +69,12 @@ export interface RiskThresholds {
 	critical: { min: number; max: number }
 }
 
+export interface RiskBehavior {
+	level: "low" | "medium" | "high"
+	action: "auto-execute" | "execute-with-logging" | "block-until-approved"
+	description: string
+}
+
 export interface TierAssignment {
 	user: string
 	tier: AuthorityTier["name"]
@@ -133,6 +139,7 @@ export interface GovernanceState {
 	tiers: AuthorityTier[]
 	tierAssignments: TierAssignment[]
 	riskThresholds: RiskThresholds
+	riskBehaviors: RiskBehavior[]
 	pendingApprovals: ApprovalRecord[]
 	resolvedApprovals: ApprovalRecord[]
 	dangerousActions: DangerousAction[]
@@ -264,12 +271,104 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		requiresApproval: true,
 		blocked: false,
 	},
+	// ── Infrastructure & Platform Actions ────────────────
+	{
+		id: "vps_deploy",
+		name: "VPS Deploy",
+		description: "Deploy services or containers to a VPS instance",
+		severity: "critical",
+		minimumTier: "admin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "vps_rollback",
+		name: "VPS Rollback",
+		description: "Rollback a VPS deployment to a previous state",
+		severity: "critical",
+		minimumTier: "admin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "ssh_root_access",
+		name: "SSH Root Access",
+		description: "Obtain root-level SSH access to a remote host",
+		severity: "critical",
+		minimumTier: "superadmin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "training_launch",
+		name: "Training Launch",
+		description: "Launch a model training or fine-tuning job",
+		severity: "warning",
+		minimumTier: "operator",
+		requiresApproval: false,
+		blocked: false,
+	},
+	{
+		id: "memory_wipe",
+		name: "Memory Wipe",
+		description: "Erase stored agent memory or knowledge-base data",
+		severity: "critical",
+		minimumTier: "superadmin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "routing_config_change",
+		name: "Routing Config Change",
+		description: "Modify model routing configuration or traffic rules",
+		severity: "warning",
+		minimumTier: "admin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "governance_modify",
+		name: "Governance Modify",
+		description: "Change governance rules, tiers, or approval policies",
+		severity: "critical",
+		minimumTier: "superadmin",
+		requiresApproval: true,
+		blocked: false,
+	},
+	{
+		id: "zeroclaw_high_risk",
+		name: "ZeroClaw High Risk",
+		description: "Execute a ZeroClaw action classified as high-risk",
+		severity: "critical",
+		minimumTier: "admin",
+		requiresApproval: true,
+		blocked: false,
+	},
+]
+
+const DEFAULT_RISK_BEHAVIORS: RiskBehavior[] = [
+	{
+		level: "low",
+		action: "auto-execute",
+		description: "Low-risk actions are executed automatically without human intervention",
+	},
+	{
+		level: "medium",
+		action: "execute-with-logging",
+		description: "Medium-risk actions are executed but logged for audit review",
+	},
+	{
+		level: "high",
+		action: "block-until-approved",
+		description: "High-risk actions are blocked until explicitly approved by an authorized tier",
+	},
 ]
 
 const DEFAULT_STATE: GovernanceState = {
 	tiers: DEFAULT_TIERS,
 	tierAssignments: [],
 	riskThresholds: DEFAULT_RISK_THRESHOLDS,
+	riskBehaviors: DEFAULT_RISK_BEHAVIORS,
 	pendingApprovals: [],
 	resolvedApprovals: [],
 	dangerousActions: DEFAULT_DANGEROUS_ACTIONS,
@@ -322,6 +421,7 @@ export class GovernanceService implements vscode.Disposable {
 		const kiloDir = path.join(workspaceRoot, ".kilo")
 		this.storagePath = path.join(kiloDir, "governance.json")
 		this.state = this.load(kiloDir)
+		this.seedDefaults()
 	}
 
 	// ── Persistence ────────────────────────────────────
@@ -335,6 +435,7 @@ export class GovernanceService implements vscode.Disposable {
 					tiers: parsed.tiers ?? DEFAULT_TIERS,
 					tierAssignments: parsed.tierAssignments ?? [],
 					riskThresholds: parsed.riskThresholds ?? DEFAULT_RISK_THRESHOLDS,
+					riskBehaviors: parsed.riskBehaviors ?? DEFAULT_RISK_BEHAVIORS,
 					pendingApprovals: parsed.pendingApprovals ?? [],
 					resolvedApprovals: parsed.resolvedApprovals ?? [],
 					dangerousActions: parsed.dangerousActions ?? DEFAULT_DANGEROUS_ACTIONS,
@@ -350,6 +451,50 @@ export class GovernanceService implements vscode.Disposable {
 			fs.mkdirSync(kiloDir, { recursive: true })
 		}
 		return JSON.parse(JSON.stringify(DEFAULT_STATE))
+	}
+
+	/**
+	 * Seed sensible defaults into state when it is empty or missing
+	 * expected entries. This runs on every construction so that both
+	 * fresh installs AND existing saved states gain any newly-added
+	 * default tiers, dangerous actions, and risk behaviors without
+	 * duplicating entries that already exist.
+	 */
+	private seedDefaults(): void {
+		let changed = false
+
+		// ── Tiers: ensure all four canonical tiers are present ──
+		for (const defaultTier of DEFAULT_TIERS) {
+			if (!this.state.tiers.some((t) => t.name === defaultTier.name)) {
+				this.state.tiers.push({ ...defaultTier })
+				changed = true
+			}
+		}
+
+		// ── Risk behaviors: backfill any missing levels ──
+		if (!this.state.riskBehaviors || this.state.riskBehaviors.length === 0) {
+			this.state.riskBehaviors = JSON.parse(JSON.stringify(DEFAULT_RISK_BEHAVIORS))
+			changed = true
+		} else {
+			for (const defaultBehavior of DEFAULT_RISK_BEHAVIORS) {
+				if (!this.state.riskBehaviors.some((b) => b.level === defaultBehavior.level)) {
+					this.state.riskBehaviors.push({ ...defaultBehavior })
+					changed = true
+				}
+			}
+		}
+
+		// ── Dangerous actions: add any missing defaults by id ──
+		for (const defaultAction of DEFAULT_DANGEROUS_ACTIONS) {
+			if (!this.state.dangerousActions.some((a) => a.id === defaultAction.id)) {
+				this.state.dangerousActions.push({ ...defaultAction })
+				changed = true
+			}
+		}
+
+		if (changed) {
+			this.scheduleSave()
+		}
 	}
 
 	private scheduleSave(): void {
@@ -434,6 +579,10 @@ export class GovernanceService implements vscode.Disposable {
 
 	getRiskThresholds(): RiskThresholds {
 		return { ...this.state.riskThresholds }
+	}
+
+	getRiskBehaviors(): RiskBehavior[] {
+		return this.state.riskBehaviors.slice()
 	}
 
 	setRiskThresholds(thresholds: RiskThresholds): void {

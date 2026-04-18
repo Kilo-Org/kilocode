@@ -5,6 +5,7 @@ export type {
 	DangerousAction,
 	AuditEntry,
 	ReleaseVerdict,
+	RiskBehavior,
 	RiskThresholds,
 	TierAssignment,
 	GovernanceState,

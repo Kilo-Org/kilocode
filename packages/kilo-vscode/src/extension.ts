@@ -88,6 +88,10 @@ export function activate(context: vscode.ExtensionContext) {
   const workstationProfile = new WorkstationProfileService()
   context.subscriptions.push(workstationProfile)
 
+  // Auto-discovery — created here, wired into providers, started after setV4Services.
+  // Import is dynamic so the onboarding bundle is only loaded when the module exists.
+  let discoveryService: import("./services/onboarding").OnboardingDiscoveryService | undefined
+
   // Register all V4 subsystems with governance for adversarial audit coverage
   governanceService.registerSubsystem("governance", "active")
   governanceService.registerSubsystem("ssh", "active")
@@ -99,6 +103,7 @@ export function activate(context: vscode.ExtensionContext) {
   governanceService.registerSubsystem("workstation", "active")
   governanceService.registerSubsystem("hermes", "active")
   governanceService.registerSubsystem("speech", "active")
+  governanceService.registerSubsystem("onboarding", "active")
 
   // Sync the Hermes provider preset into the CLI backend config on toggle.
   // Runs once on toggle and once on each CLI reconnect (in case Hermes was
@@ -187,6 +192,54 @@ export function activate(context: vscode.ExtensionContext) {
     training: trainingService,
     governance: governanceService,
     workstation: workstationProfile,
+    discovery: discoveryService,
+  })
+
+  // Run discovery in background (don't block activation).
+  // Dynamic import so the onboarding bundle is only pulled when the module ships.
+  void import("./services/onboarding").then(({ OnboardingDiscoveryService }) => {
+    discoveryService = new OnboardingDiscoveryService(context)
+    context.subscriptions.push(discoveryService)
+
+    // Wire into all existing providers so tabs can request results
+    provider.setV4Services({
+      ssh: sshService,
+      vps: vpsService,
+      zeroClaw: zeroClawService,
+      routing: routingService,
+      memory: memoryService,
+      training: trainingService,
+      governance: governanceService,
+      workstation: workstationProfile,
+      discovery: discoveryService,
+    })
+
+    discoveryService.runFullDiscovery().then(async (result) => {
+      console.log(
+        "[Kilo New] Discovery complete:",
+        result.providers.ollama.available ? "Ollama" : "",
+        result.providers.lmstudio.available ? "LM Studio" : "",
+        result.gpu.detected ? result.gpu.name : "No GPU",
+      )
+
+      // Auto-test local providers that discovery found available
+      if (result.providers.ollama.available) {
+        await routingService.testProvider("ollama").catch(() => {})
+      }
+      if (result.providers.lmstudio.available) {
+        await routingService.testProvider("lmstudio").catch(() => {})
+      }
+
+      // Pre-populate GPU detection for TrainingTab
+      if (result.gpu.detected && trainingService) {
+        await trainingService.detectGPUs().catch(() => {})
+      }
+    }).catch((err) => {
+      console.warn("[Kilo New] Background discovery failed (non-fatal):", err)
+    })
+  }).catch(() => {
+    // Module doesn't exist yet — another agent is creating it. Silently skip.
+    console.log("[Kilo New] Onboarding discovery module not yet available, skipping")
   })
 
   // Register the webview view provider for the sidebar.
@@ -243,6 +296,7 @@ export function activate(context: vscode.ExtensionContext) {
           training: trainingService,
           governance: governanceService,
           workstation: workstationProfile,
+          discovery: discoveryService,
         })
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),
@@ -381,7 +435,7 @@ export function activate(context: vscode.ExtensionContext) {
         tabPanels,
         diffVirtualProvider,
         remoteService,
-        { ssh: sshService, vps: vpsService, zeroClaw: zeroClawService, routing: routingService, memory: memoryService, training: trainingService, governance: governanceService, workstation: workstationProfile },
+        { ssh: sshService, vps: vpsService, zeroClaw: zeroClawService, routing: routingService, memory: memoryService, training: trainingService, governance: governanceService, workstation: workstationProfile, discovery: discoveryService },
       )
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {

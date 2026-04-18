@@ -292,6 +292,124 @@ export class SSHService implements vscode.Disposable {
     this.emit({ type: "profilesChanged", profiles })
   }
 
+  /**
+   * Parse ~/.ssh/config and import host entries as SSHProfile objects.
+   * Read-only: no connections are made. Skips wildcard hosts and hosts
+   * that already exist (matched by name). Returns the newly imported profiles.
+   */
+  async importFromSSHConfig(): Promise<SSHProfile[]> {
+    const configPath = path.join(os.homedir(), ".ssh", "config")
+
+    if (!fs.existsSync(configPath)) {
+      this.log(`SSH config not found at ${configPath}`)
+      return []
+    }
+
+    let content: string
+    try {
+      content = fs.readFileSync(configPath, "utf-8")
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      this.log(`Failed to read SSH config: ${msg}`)
+      return []
+    }
+
+    const existingProfiles = this.getProfiles()
+    const existingNames = new Set(existingProfiles.map((p) => p.name))
+
+    const imported: SSHProfile[] = []
+    const lines = content.split(/\r?\n/)
+
+    let current: Partial<SSHProfile> | null = null
+    let currentNames: string[] = []
+
+    const flushCurrent = () => {
+      if (!current || currentNames.length === 0) return
+      for (const hostAlias of currentNames) {
+        if (existingNames.has(hostAlias)) {
+          this.log(`Skipping SSH config host "${hostAlias}" (already exists)`)
+          continue
+        }
+        const profile: SSHProfile = {
+          name: hostAlias,
+          host: (current.host as string) || hostAlias,
+          port: current.port ?? 22,
+          user: current.user ?? "",
+          authMode: current.keyPath ? "key" : "password",
+          keyPath: current.keyPath,
+          jumpHost: current.jumpHost,
+          group: "imported",
+          labels: ["ssh-config"],
+        }
+        imported.push(profile)
+        existingNames.add(hostAlias)
+      }
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine.trim()
+      if (line === "" || line.startsWith("#")) continue
+
+      const hostMatch = line.match(/^Host\s+(.+)$/i)
+      if (hostMatch) {
+        // Flush the previous block
+        flushCurrent()
+
+        // Start a new block — split on whitespace for multiple host aliases
+        const aliases = hostMatch[1].split(/\s+/).filter((h) => h.length > 0)
+        // Skip any alias that is a wildcard pattern
+        const validAliases = aliases.filter((h) => !h.includes("*") && !h.includes("?"))
+        if (validAliases.length === 0) {
+          current = null
+          currentNames = []
+        } else {
+          current = {}
+          currentNames = validAliases
+        }
+        continue
+      }
+
+      if (!current) continue
+
+      const kvMatch = line.match(/^(\S+)\s+(.+)$/)
+      if (!kvMatch) continue
+
+      const key = kvMatch[1].toLowerCase()
+      const value = kvMatch[2].trim()
+
+      switch (key) {
+        case "hostname":
+          current.host = value
+          break
+        case "port":
+          current.port = parseInt(value, 10) || 22
+          break
+        case "user":
+          current.user = value
+          break
+        case "identityfile":
+          current.keyPath = value
+          break
+        case "proxyjump":
+          current.jumpHost = value
+          break
+      }
+    }
+
+    // Flush the last block
+    flushCurrent()
+
+    if (imported.length > 0) {
+      const allProfiles = [...existingProfiles, ...imported]
+      await this.writeProfiles(allProfiles)
+      this.log(`Imported ${imported.length} profile(s) from SSH config`)
+    } else {
+      this.log("No new profiles to import from SSH config")
+    }
+
+    return imported
+  }
+
   // ─── Connection Management ──────────────────────────────
 
   getSessionSnapshots(): SSHSessionSnapshot[] {

@@ -243,6 +243,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private trainingService: import("./services/training").TrainingService | null = null
   private governanceService: import("./services/governance").GovernanceService | null = null
   private workstationProfile: import("./services/workstation").WorkstationProfileService | null = null
+  private discoveryService: import("./services/onboarding").OnboardingDiscoveryService | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -274,6 +275,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     training: import("./services/training").TrainingService
     governance: import("./services/governance").GovernanceService
     workstation: import("./services/workstation").WorkstationProfileService
+    discovery?: import("./services/onboarding").OnboardingDiscoveryService
   }): void {
     this.sshService = services.ssh
     this.vpsService = services.vps
@@ -283,6 +285,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trainingService = services.training
     this.governanceService = services.governance
     this.workstationProfile = services.workstation
+    if (services.discovery) this.discoveryService = services.discovery
 
     // Bridge SSH service events to the webview
     if (services.ssh && typeof services.ssh.onChange === "function") {
@@ -1179,6 +1182,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (message.action === "stop") this.sshService?.stopLogTail(message.profileName)
           else this.sshService?.startLogTail(message.profileName, message.service)
           break
+        case "sshImportConfig":
+          if (this.sshService) {
+            await this.sshService.importFromSSHConfig()
+            this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
+          }
+          break
 
         // VPS
         case "requestVPSServers":
@@ -1633,6 +1642,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.workstationProfile) {
             this.workstationProfile.reload()
             this.postMessage({ type: "workstationProfile", profile: this.workstationProfile.getProfile() } as never)
+          }
+          break
+
+        // ── Onboarding Discovery ──────────────────────────
+        case "requestDiscoveryResult":
+          if (this.discoveryService) {
+            const result = await this.discoveryService.getCachedResult()
+            this.postMessage({ type: "discoveryResult", result } as never)
+          }
+          break
+        case "triggerDiscovery":
+          if (this.discoveryService) {
+            const result = await this.discoveryService.runFullDiscovery()
+            this.postMessage({ type: "discoveryResult", result } as never)
           }
           break
       }
