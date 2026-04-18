@@ -33,6 +33,7 @@ interface ZeroClawTask {
 	approvedBy?: string
 	createdAt: number
 	completedAt?: number
+	retryCount: number
 }
 
 interface ApprovalRecord {

@@ -20,6 +20,7 @@ interface ProviderConfig {
   failureCount: number
   estimatedCost: number
   wrongRoleBlocks: number
+  retriesUsed: number
 }
 
 interface RouteDecision {
@@ -31,6 +32,7 @@ interface RouteDecision {
   timestamp: number
   success: boolean
   fallbackUsed: boolean
+  fallbackDepth: number
   trace: RouteTraceStep[]
 }
 
@@ -81,6 +83,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     failureCount: 0,
     estimatedCost: 0,
     wrongRoleBlocks: 0,
+    retriesUsed: 0,
   },
   {
     id: "minimax",
@@ -93,6 +96,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     failureCount: 0,
     estimatedCost: 0,
     wrongRoleBlocks: 0,
+    retriesUsed: 0,
   },
   {
     id: "siliconflow",
@@ -105,6 +109,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     failureCount: 0,
     estimatedCost: 0,
     wrongRoleBlocks: 0,
+    retriesUsed: 0,
   },
   {
     id: "ollama",
@@ -117,6 +122,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     failureCount: 0,
     estimatedCost: 0,
     wrongRoleBlocks: 0,
+    retriesUsed: 0,
   },
   {
     id: "lmstudio",
@@ -129,6 +135,7 @@ const DEFAULT_PROVIDERS: ProviderConfig[] = [
     failureCount: 0,
     estimatedCost: 0,
     wrongRoleBlocks: 0,
+    retriesUsed: 0,
   },
 ]
 

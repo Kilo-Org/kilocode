@@ -79,6 +79,12 @@ export interface RunComparison {
   datasetB: Dataset | undefined
 }
 
+export interface GpuQuota {
+  maxConcurrentJobs: number
+  maxGpuMemoryMb: number
+  maxTrainingTimeMs: number
+}
+
 export interface ExportOptions {
   jobId: string
   format: "gguf" | "safetensors" | "onnx"
@@ -172,7 +178,14 @@ export class TrainingService implements vscode.Disposable {
   private gpuCache: GPUInfo[] = []
   private disposables: vscode.Disposable[] = []
   private jobTimers: Map<string, ReturnType<typeof setInterval>> = new Map()
+  private jobTimeoutTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private workspaceRoot: string
+  private readonly gpuQuota: GpuQuota = {
+    maxConcurrentJobs: 2,
+    maxGpuMemoryMb: 24576, // RTX 3090 Ti 24GB
+    maxTrainingTimeMs: 86400000,
+  }
+  private readonly maxDatasetSizeBytes: number = 10 * 1024 * 1024 * 1024 // 10 GB
   private readonly _onStateChange = new vscode.EventEmitter<void>()
   public readonly onStateChange = this._onStateChange.event
 
@@ -291,6 +304,16 @@ export class TrainingService implements vscode.Disposable {
       }
       dataset.rowCount = entries.length
       dataset.sizeBytes = this.calculateDirSize(resolvedPath)
+
+      // Max dataset size check for folders
+      if (dataset.sizeBytes > this.maxDatasetSizeBytes) {
+        dataset.errors.push(
+          `Dataset size (${(dataset.sizeBytes / (1024 * 1024 * 1024)).toFixed(2)} GB) exceeds maximum allowed size (${(this.maxDatasetSizeBytes / (1024 * 1024 * 1024)).toFixed(0)} GB)`
+        )
+        dataset.validationStatus = "failed"
+        this.emitChange()
+        return dataset
+      }
       if (entries.length < 10) {
         dataset.warnings.push("Very few files in directory (< 10). Consider adding more data.")
       }
@@ -306,6 +329,16 @@ export class TrainingService implements vscode.Disposable {
 
       if (stat.size === 0) {
         dataset.errors.push("File is empty (0 bytes)")
+        dataset.validationStatus = "failed"
+        this.emitChange()
+        return dataset
+      }
+
+      // Max dataset size check for files
+      if (stat.size > this.maxDatasetSizeBytes) {
+        dataset.errors.push(
+          `Dataset file size (${(stat.size / (1024 * 1024 * 1024)).toFixed(2)} GB) exceeds maximum allowed size (${(this.maxDatasetSizeBytes / (1024 * 1024 * 1024)).toFixed(0)} GB)`
+        )
         dataset.validationStatus = "failed"
         this.emitChange()
         return dataset
@@ -455,6 +488,28 @@ export class TrainingService implements vscode.Disposable {
       throw new Error("Dataset must pass validation before training")
     }
 
+    // ── GPU quota enforcement ──
+    const runningJobs = this.jobs.filter((j) => j.status === "running" || j.status === "queued")
+    if (runningJobs.length >= this.gpuQuota.maxConcurrentJobs) {
+      throw new Error(
+        `GPU quota exceeded: maximum concurrent jobs is ${this.gpuQuota.maxConcurrentJobs}, currently ${runningJobs.length} active`
+      )
+    }
+
+    // ── Resource limit enforcement ──
+    if (params.resourceLimits.maxGpuMemoryMB > this.gpuQuota.maxGpuMemoryMb) {
+      throw new Error(
+        `GPU quota exceeded: requested ${params.resourceLimits.maxGpuMemoryMB} MB GPU memory, maximum allowed is ${this.gpuQuota.maxGpuMemoryMb} MB`
+      )
+    }
+
+    const requestedTimeMs = params.resourceLimits.timeoutMinutes * 60 * 1000
+    if (requestedTimeMs > this.gpuQuota.maxTrainingTimeMs) {
+      throw new Error(
+        `GPU quota exceeded: requested training time ${params.resourceLimits.timeoutMinutes} minutes exceeds maximum allowed ${Math.round(this.gpuQuota.maxTrainingTimeMs / 60000)} minutes`
+      )
+    }
+
     const rowCount = dataset.rowCount ?? 100
     const stepsPerEpoch = Math.ceil(rowCount / params.hyperparams.batchSize)
     const totalSteps = stepsPerEpoch * params.hyperparams.epochs
@@ -480,6 +535,7 @@ export class TrainingService implements vscode.Disposable {
     this.jobs.push(job)
     this.emitChange()
     this.startJobSimulation(job)
+    this.startJobTimeoutTimer(job)
     return job
   }
 
@@ -491,6 +547,7 @@ export class TrainingService implements vscode.Disposable {
     job.status = "paused"
     job.logs.push(`[${new Date().toISOString()}] Job paused at step ${job.currentStep}`)
     this.stopJobTimer(jobId)
+    this.stopJobTimeoutTimer(jobId)
     this.emitChange()
     return job
   }
@@ -504,6 +561,7 @@ export class TrainingService implements vscode.Disposable {
     job.logs.push(`[${new Date().toISOString()}] Job resumed at step ${job.currentStep}`)
     this.emitChange()
     this.startJobSimulation(job)
+    this.startJobTimeoutTimer(job)
     return job
   }
 
@@ -515,6 +573,7 @@ export class TrainingService implements vscode.Disposable {
     job.error = "Cancelled by user"
     job.logs.push(`[${new Date().toISOString()}] Job cancelled`)
     this.stopJobTimer(jobId)
+    this.stopJobTimeoutTimer(jobId)
     this.emitChange()
     return job
   }
@@ -557,6 +616,7 @@ export class TrainingService implements vscode.Disposable {
     const idx = this.jobs.findIndex((j) => j.id === jobId)
     if (idx === -1) return false
     this.stopJobTimer(jobId)
+    this.stopJobTimeoutTimer(jobId)
     this.jobs.splice(idx, 1)
     this.emitChange()
     return true
@@ -624,6 +684,7 @@ export class TrainingService implements vscode.Disposable {
           `[${new Date().toISOString()}] Training completed. Final loss: ${job.loss.toFixed(4)}`
         )
         this.stopJobTimer(job.id)
+        this.stopJobTimeoutTimer(job.id)
       }
 
       this.emitChange()
@@ -637,6 +698,42 @@ export class TrainingService implements vscode.Disposable {
     if (timer) {
       clearInterval(timer)
       this.jobTimers.delete(jobId)
+    }
+  }
+
+  // ─── Job Timeout Enforcement ───────────────────────────────
+
+  private startJobTimeoutTimer(job: TrainingJob): void {
+    const timeoutMs = job.resourceLimits.timeoutMinutes * 60 * 1000
+    if (timeoutMs <= 0) return
+
+    // Clear any existing timeout timer for this job
+    this.stopJobTimeoutTimer(job.id)
+
+    const timer = setTimeout(() => {
+      // Only auto-cancel if the job is still running or queued
+      if (job.status === "running" || job.status === "queued") {
+        job.status = "failed"
+        job.error = "timeout"
+        job.completedAt = Date.now()
+        job.logs.push(
+          `[${new Date().toISOString()}] Job auto-cancelled: exceeded timeout of ${job.resourceLimits.timeoutMinutes} minutes`
+        )
+        console.warn(`[Kilo Training] Job ${job.id} ("${job.name}") timed out after ${job.resourceLimits.timeoutMinutes} minutes`)
+        this.stopJobTimer(job.id)
+        this.jobTimeoutTimers.delete(job.id)
+        this.emitChange()
+      }
+    }, timeoutMs)
+
+    this.jobTimeoutTimers.set(job.id, timer)
+  }
+
+  private stopJobTimeoutTimer(jobId: string): void {
+    const timer = this.jobTimeoutTimers.get(jobId)
+    if (timer) {
+      clearTimeout(timer)
+      this.jobTimeoutTimers.delete(jobId)
     }
   }
 
@@ -755,6 +852,10 @@ export class TrainingService implements vscode.Disposable {
       clearInterval(timer)
     }
     this.jobTimers.clear()
+    for (const timer of this.jobTimeoutTimers.values()) {
+      clearTimeout(timer)
+    }
+    this.jobTimeoutTimers.clear()
     for (const d of this.disposables) {
       d.dispose()
     }

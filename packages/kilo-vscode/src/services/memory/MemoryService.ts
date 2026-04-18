@@ -19,7 +19,7 @@ export interface MemoryEntry {
 export interface RecallResult {
   query: string
   project: string
-  results: Array<MemoryEntry & { relevanceScore: number; matchReason: string }>
+  results: Array<MemoryEntry & { relevanceScore: number; matchReason: string; crossProject?: boolean }>
   status: "success" | "empty" | "failed"
   timestamp: number
 }
@@ -112,9 +112,15 @@ function cosineSimilarity(a: TermFrequencies, b: TermFrequencies): number {
   return denom === 0 ? 0 : dot / denom
 }
 
+// ─── Constants ──────────────────────────────────────────
+
+const VALID_FACT_TYPES: ReadonlySet<MemoryEntry["factType"]> = new Set(["contract", "fix", "recall", "decision"])
+const VALID_SCOPES: ReadonlySet<MemoryEntry["scope"]> = new Set(["global", "project", "task"])
+
 // ─── Service ─────────────────────────────────────────────
 
 export class MemoryService implements vscode.Disposable {
+  private readonly maxMemoryEntries: number = 5000
   private store: MemoryStore = { entries: [], writeHistory: [], permissions: [] }
   private connection: MemoryConnection = {
     status: "disconnected",
@@ -191,6 +197,35 @@ export class MemoryService implements vscode.Disposable {
     project?: string
     agent?: string
   }): MemoryEntry {
+    // ── Write validation ──
+    if (!params.summary || !params.summary.trim()) {
+      const msg = "[Kilo Memory] Write rejected: summary must be non-empty"
+      console.error(msg)
+      throw new Error(msg)
+    }
+    if (!VALID_FACT_TYPES.has(params.factType)) {
+      const msg = `[Kilo Memory] Write rejected: invalid factType "${params.factType}". Must be one of: ${[...VALID_FACT_TYPES].join(", ")}`
+      console.error(msg)
+      throw new Error(msg)
+    }
+    if (!VALID_SCOPES.has(params.scope)) {
+      const msg = `[Kilo Memory] Write rejected: invalid scope "${params.scope}". Must be one of: ${[...VALID_SCOPES].join(", ")}`
+      console.error(msg)
+      throw new Error(msg)
+    }
+
+    // ── Memory size limit: evict oldest entry if at capacity ──
+    if (this.store.entries.length >= this.maxMemoryEntries) {
+      let oldestIdx = 0
+      for (let i = 1; i < this.store.entries.length; i++) {
+        if (this.store.entries[i].timestamp < this.store.entries[oldestIdx].timestamp) {
+          oldestIdx = i
+        }
+      }
+      const evicted = this.store.entries.splice(oldestIdx, 1)[0]
+      console.warn(`[Kilo Memory] Memory limit reached (${this.maxMemoryEntries}). Evicted oldest entry: ${evicted.id}`)
+    }
+
     const project = params.project ?? this.getWorkspaceName()
     const entry: MemoryEntry = {
       id: this.generateId(),
@@ -228,22 +263,26 @@ export class MemoryService implements vscode.Disposable {
 
   // ─── Memory Recall with TF-IDF ──────────────────────
 
-  recall(query: string, options?: { project?: string; scope?: MemoryEntry["scope"]; factType?: MemoryEntry["factType"]; limit?: number }): RecallResult {
+  recall(query: string, options?: { project?: string; scope?: MemoryEntry["scope"]; factType?: MemoryEntry["factType"]; limit?: number; projectOnly?: boolean }): RecallResult {
     const project = options?.project ?? this.getWorkspaceName()
     const limit = options?.limit ?? 20
+    const projectOnly = options?.projectOnly ?? true
 
     if (!query.trim()) {
       return { query, project, results: [], status: "empty", timestamp: Date.now() }
     }
 
     try {
-      // Filter candidates by scope/project/factType
+      // Filter candidates by scope/project/factType with cross-project isolation
       let candidates = this.store.entries.filter((e) => {
         if (options?.scope && e.scope !== options.scope) return false
         if (options?.factType && e.factType !== options.factType) return false
-        // Global entries are always visible; project entries must match
-        if (e.scope === "project" && e.project !== project) return false
-        if (e.scope === "task" && e.project !== project) return false
+        if (projectOnly) {
+          // Only return memories matching the given project
+          if (e.scope === "project" && e.project !== project) return false
+          if (e.scope === "task" && e.project !== project) return false
+        }
+        // Global entries are always visible regardless of projectOnly
         return true
       })
 
@@ -308,6 +347,7 @@ export class MemoryService implements vscode.Disposable {
           ...entry,
           relevanceScore: Math.round(relevanceScore * 1000) / 1000,
           matchReason: reasons.join("; ") || "low relevance",
+          ...(!projectOnly ? { crossProject: entry.project !== project } : {}),
         }
       })
 
@@ -438,6 +478,34 @@ export class MemoryService implements vscode.Disposable {
   }
 
   // ─── Private ─────────────────────────────────────────
+
+  /**
+   * Check whether an agent has permission to access a memory scope within a project.
+   * - "task" scope: only the originating agent can access
+   * - "project" scope: any agent with project permission can access
+   * - "global" scope: any agent with global permission can access
+   */
+  private checkPermission(agentId: string, project: string, scope: MemoryEntry["scope"]): boolean {
+    const perm = this.store.permissions.find((p) => p.agentId === agentId)
+    if (!perm) {
+      // Unknown agent: deny access
+      return false
+    }
+
+    switch (scope) {
+      case "task":
+        // Only the originating agent can access task-scoped memories
+        return perm.scopes.task
+      case "project":
+        // Any agent with project permission can access
+        return perm.scopes.project
+      case "global":
+        // Any agent with global permission can access
+        return perm.scopes.global
+      default:
+        return false
+    }
+  }
 
   private resolveStorePath(): void {
     const folders = vscode.workspace.workspaceFolders

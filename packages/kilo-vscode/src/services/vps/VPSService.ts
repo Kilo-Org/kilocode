@@ -10,7 +10,7 @@ export interface VPSServer {
   os: string
   region: string
   tags: string[]
-  status: "online" | "offline" | "degraded" | "unknown"
+  status: "online" | "offline" | "degraded" | "critical" | "unknown"
 }
 
 export interface VPSMetrics {
@@ -45,6 +45,34 @@ export interface DeployEntry {
   action: string
   status: "success" | "failed" | "in-progress"
   rollbackAvailable: boolean
+}
+
+export interface RunbookStep {
+  order: number
+  name: string
+  description: string
+  command?: string
+}
+
+export interface BackupRunbook {
+  serverId: string
+  title: string
+  estimatedDurationMinutes: number
+  steps: RunbookStep[]
+}
+
+export interface IncidentRunbook {
+  serverId: string
+  title: string
+  steps: RunbookStep[]
+}
+
+export interface DeployPreflightResult {
+  ok: boolean
+  serverId: string
+  reachable: boolean
+  status: VPSServer["status"]
+  errors: string[]
 }
 
 /**
@@ -681,8 +709,43 @@ export class VPSService implements vscode.Disposable {
     if (!server) return "unknown"
 
     try {
-      const output = await this.execRemote(server, "echo OK && uptime")
+      // Gather uptime + CPU idle + memory in one round-trip
+      const combinedCmd = [
+        "echo OK && uptime",
+        "echo '---CPUCHK---'",
+        "top -bn1 | grep 'Cpu(s)' 2>/dev/null || echo ''",
+        "echo '---MEMCHK---'",
+        "free -b | grep Mem 2>/dev/null || echo ''",
+      ].join(" ; ")
+
+      const output = await this.execRemote(server, combinedCmd)
       if (output.includes("OK")) {
+        // Parse CPU usage from the embedded section
+        const cpuSection = output.indexOf("---CPUCHK---")
+        const memSection = output.indexOf("---MEMCHK---")
+        let cpuPercent = 0
+        let ramPercent = 0
+
+        if (cpuSection >= 0 && memSection >= 0) {
+          const cpuText = output.slice(cpuSection + "---CPUCHK---".length, memSection).trim()
+          cpuPercent = parseCpuUsage(cpuText)
+        }
+
+        if (memSection >= 0) {
+          const memText = output.slice(memSection + "---MEMCHK---".length).trim()
+          const mem = parseMemory(memText)
+          if (mem.total > 0) {
+            ramPercent = (mem.used / mem.total) * 100
+          }
+        }
+
+        // Critical: CPU > 90% OR RAM > 95%
+        if (cpuPercent > 90 || ramPercent > 95) {
+          this.log(`Server ${server.hostname} is critical: CPU=${cpuPercent}%, RAM=${Math.round(ramPercent)}%`)
+          await this.updateServerStatus(serverId, "critical")
+          return "critical"
+        }
+
         // Check load average for degraded status
         const loadMatch = output.match(/load average:\s*([\d.]+)/)
         if (loadMatch) {
@@ -701,6 +764,133 @@ export class VPSService implements vscode.Disposable {
     } catch {
       await this.updateServerStatus(serverId, "offline")
       return "offline"
+    }
+  }
+
+  // ── Runbooks ─────────────────────────────────────────
+
+  /**
+   * Return a structured backup runbook for the given server.
+   */
+  getBackupRunbook(serverId: string): BackupRunbook {
+    const server = this.getServer(serverId)
+    const hostname = server?.hostname ?? serverId
+
+    return {
+      serverId,
+      title: `Backup Runbook for ${hostname}`,
+      estimatedDurationMinutes: 15,
+      steps: [
+        {
+          order: 1,
+          name: "Pre-backup checks",
+          description: "Verify disk space and that no other backup is running",
+          command: "df -h /var/backups && ! pgrep -f 'tar.*backup'",
+        },
+        {
+          order: 2,
+          name: "Create snapshot",
+          description: "Create a timestamped compressed archive of critical paths",
+          command: "sudo tar -czf /var/backups/vps-backup-$(date +%Y%m%d-%H%M%S).tar.gz /etc /var/www 2>/dev/null",
+        },
+        {
+          order: 3,
+          name: "Verify backup",
+          description: "Check the archive integrity and list contents summary",
+          command: "sudo tar -tzf /var/backups/$(ls -t /var/backups/vps-backup-*.tar.gz | head -1) | wc -l",
+        },
+        {
+          order: 4,
+          name: "Post-backup cleanup",
+          description: "Remove backups older than 30 days to reclaim space",
+          command: "find /var/backups -name 'vps-backup-*.tar.gz' -mtime +30 -delete",
+        },
+      ],
+    }
+  }
+
+  /**
+   * Return a structured incident recovery runbook for the given server.
+   */
+  getIncidentRunbook(serverId: string): IncidentRunbook {
+    const server = this.getServer(serverId)
+    const hostname = server?.hostname ?? serverId
+
+    return {
+      serverId,
+      title: `Incident Recovery Runbook for ${hostname}`,
+      steps: [
+        {
+          order: 1,
+          name: "Triage",
+          description: "Identify the scope and severity of the incident. Check monitoring dashboards and recent alerts.",
+        },
+        {
+          order: 2,
+          name: "Isolate",
+          description: "Prevent further damage by isolating the affected service or network segment.",
+          command: "sudo iptables -A INPUT -j DROP -m comment --comment 'incident-isolation'",
+        },
+        {
+          order: 3,
+          name: "Diagnose",
+          description: "Gather logs, metrics, and system state to determine root cause.",
+          command: "journalctl --since '1 hour ago' --no-pager | tail -200 && dmesg | tail -50",
+        },
+        {
+          order: 4,
+          name: "Remediate",
+          description: "Apply the fix: restart services, roll back changes, or patch the vulnerability.",
+          command: "sudo systemctl restart affected-service",
+        },
+        {
+          order: 5,
+          name: "Verify",
+          description: "Confirm the service is restored and operating normally. Remove isolation rules.",
+          command: "sudo iptables -D INPUT -j DROP -m comment --comment 'incident-isolation'",
+        },
+        {
+          order: 6,
+          name: "Postmortem",
+          description: "Document the timeline, root cause, impact, and corrective actions to prevent recurrence.",
+        },
+      ],
+    }
+  }
+
+  // ── Deploy Pre-flight ───────────────────────────────
+
+  /**
+   * Run a pre-flight check before deploying to a server.
+   * Verifies the server is reachable and not in "critical" status.
+   */
+  async preflightCheck(serverId: string): Promise<DeployPreflightResult> {
+    const errors: string[] = []
+    let reachable = false
+    let status: VPSServer["status"] = "unknown"
+
+    try {
+      status = await this.checkStatus(serverId)
+      reachable = status !== "offline" && status !== "unknown"
+    } catch {
+      reachable = false
+      status = "offline"
+    }
+
+    if (!reachable) {
+      errors.push(`Server "${serverId}" is unreachable (status: ${status})`)
+    }
+
+    if (status === "critical") {
+      errors.push(`Server "${serverId}" is in critical status -- deploy is blocked until the server recovers`)
+    }
+
+    return {
+      ok: errors.length === 0,
+      serverId,
+      reachable,
+      status,
+      errors,
     }
   }
 
@@ -799,6 +989,16 @@ export class VPSService implements vscode.Disposable {
       case "vpsDeploy": {
         const serverId = message.serverId as string
         try {
+          // Pre-flight safety check before deploying
+          const preflight = await this.preflightCheck(serverId)
+          if (!preflight.ok) {
+            const reason = preflight.errors.join("; ")
+            this.log(`Deploy blocked for ${serverId}: ${reason}`)
+            vscode.window.showErrorMessage(`Deploy pre-flight failed: ${reason}`)
+            postToWebview({ type: "vpsDeployPreflightFailed", serverId, errors: preflight.errors })
+            return true
+          }
+
           const entry = await this.recordDeploy(serverId, "Manual deploy", "success")
           const history = this.getDeployHistory(serverId)
           postToWebview({ type: "vpsDeployHistoryLoaded", history })

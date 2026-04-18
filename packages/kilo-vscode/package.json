@@ -1129,6 +1129,66 @@
           "default": "Operator",
           "enum": ["Observer", "Operator", "Admin", "SuperAdmin"],
           "description": "Default authority tier for the current user."
+        },
+        "kilo-code.new.workstation.name": {
+          "type": "string",
+          "default": "dave-main-workstation",
+          "description": "Friendly name for this workstation profile."
+        },
+        "kilo-code.new.workstation.hardware.gpu.model": {
+          "type": "string",
+          "default": "RTX_3090_Ti",
+          "description": "GPU model identifier for hardware-aware routing."
+        },
+        "kilo-code.new.workstation.hardware.gpu.vramGb": {
+          "type": "number",
+          "default": 24,
+          "description": "GPU VRAM in GB."
+        },
+        "kilo-code.new.workstation.hardware.ramGb": {
+          "type": "number",
+          "default": 128,
+          "description": "System RAM in GB."
+        },
+        "kilo-code.new.workstation.localAI.lmStudio.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable LM Studio as a local AI endpoint."
+        },
+        "kilo-code.new.workstation.localAI.lmStudio.apiBase": {
+          "type": "string",
+          "default": "http://localhost:1234",
+          "description": "LM Studio API base URL."
+        },
+        "kilo-code.new.workstation.localAI.ollama.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Ollama as a local AI endpoint."
+        },
+        "kilo-code.new.workstation.localAI.ollama.apiBase": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "Ollama API base URL."
+        },
+        "kilo-code.new.workstation.limits.maxParallelJobs": {
+          "type": "number",
+          "default": 4,
+          "description": "Maximum parallel jobs across all subsystems."
+        },
+        "kilo-code.new.workstation.limits.maxGpuMemoryMb": {
+          "type": "number",
+          "default": 24576,
+          "description": "Maximum GPU memory allocation in MB."
+        },
+        "kilo-code.new.workstation.routingPreferences.preferLocalFor": {
+          "type": "array",
+          "default": ["memory_tasks", "embeddings", "small_generation", "private_data_tasks"],
+          "description": "Task types that should prefer local execution."
+        },
+        "kilo-code.new.workstation.routingPreferences.preferCloudFor": {
+          "type": "array",
+          "default": ["large_planning", "contract_generation", "high_parallel_execution"],
+          "description": "Task types that should prefer cloud execution."
         }
       }
     }

@@ -14,6 +14,7 @@ export interface ProviderConfig {
   failureCount: number
   estimatedCost: number
   wrongRoleBlocks: number
+  retriesUsed: number
 }
 
 export interface RouteDecision {
@@ -25,6 +26,7 @@ export interface RouteDecision {
   timestamp: number
   success: boolean
   fallbackUsed: boolean
+  fallbackDepth: number
   trace: RouteTraceStep[]
 }
 
@@ -56,6 +58,8 @@ export interface RoutingConfig {
   fallbackOrder: string[]
   privacyMode: "local_preferred" | "cloud_ok"
   costThreshold: number
+  maxFallbackDepth: number
+  retryBudget: number
 }
 
 export interface HealthSummary {
@@ -118,6 +122,7 @@ export class RoutingService implements vscode.Disposable {
   private config: RoutingConfig
   private circuitTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
   private healthTimer: ReturnType<typeof setInterval> | undefined
+  private retryBudgetTimer: ReturnType<typeof setInterval> | undefined
   private readonly listeners = new Set<() => void>()
 
   constructor() {
@@ -126,11 +131,18 @@ export class RoutingService implements vscode.Disposable {
       fallbackOrder: ["claude", "minimax", "siliconflow", "ollama", "lmstudio"],
       privacyMode: "cloud_ok",
       costThreshold: 10.0,
+      maxFallbackDepth: 3,
+      retryBudget: 5,
     }
     this.initializeProviders()
     this.healthTimer = setInterval(() => {
       void this.runHealthChecks()
     }, 60_000)
+
+    // Reset retry budgets for all providers every hour
+    this.retryBudgetTimer = setInterval(() => {
+      this.resetRetryBudgets()
+    }, 3_600_000)
   }
 
   // ── Provider Initialization ──────────────────────────────
@@ -181,6 +193,7 @@ export class RoutingService implements vscode.Disposable {
         failureCount: 0,
         estimatedCost: 0,
         wrongRoleBlocks: 0,
+        retriesUsed: 0,
       })
     }
 
@@ -279,6 +292,26 @@ export class RoutingService implements vscode.Disposable {
     const trace: RouteTraceStep[] = []
     const now = Date.now()
 
+    // Validate required fields before routing
+    if (!this.validateRouteRequest(request)) {
+      return this.recordDecision({
+        taskType: request.taskType ?? "unknown",
+        riskLevel: request.riskLevel ?? "unknown",
+        primaryProvider: "none",
+        reason: "Route validation failed: missing or invalid required fields",
+        timestamp: now,
+        success: false,
+        fallbackUsed: false,
+        fallbackDepth: 0,
+        trace: [{
+          step: "validation",
+          result: "failed",
+          reason: "Request missing required fields (taskType, riskLevel)",
+          timestamp: now,
+        }],
+      })
+    }
+
     // Determine which roles satisfy this task
     const requiredRoles = TASK_TO_ROLES[request.taskType] ?? [ROLE_EXECUTION]
 
@@ -303,6 +336,7 @@ export class RoutingService implements vscode.Disposable {
         timestamp: now,
         success: false,
         fallbackUsed: false,
+        fallbackDepth: 0,
         trace,
       })
       return decision
@@ -342,6 +376,7 @@ export class RoutingService implements vscode.Disposable {
       timestamp: now,
       success: true,
       fallbackUsed: false,
+      fallbackDepth: 0,
       trace,
     })
 
@@ -397,12 +432,15 @@ export class RoutingService implements vscode.Disposable {
   /**
    * Execute a fallback: route again excluding the failed provider.
    * Returns the new decision with fallbackUsed=true.
+   * Enforces fallback chain depth limit and per-provider retry budget.
    */
   executeFallback(
     originalDecision: RouteDecision,
     failedProviderId: string,
   ): RouteDecision {
     this.reportFailure(failedProviderId)
+
+    const currentDepth = (originalDecision.fallbackDepth ?? 0) + 1
 
     // Find original trace entry count
     const trace: RouteTraceStep[] = [
@@ -411,10 +449,28 @@ export class RoutingService implements vscode.Disposable {
         step: "fallback_trigger",
         provider: failedProviderId,
         result: "failed",
-        reason: `Provider ${failedProviderId} failed, triggering fallback`,
+        reason: `Provider ${failedProviderId} failed, triggering fallback (depth ${currentDepth})`,
         timestamp: Date.now(),
       },
     ]
+
+    // Enforce fallback chain depth limit
+    if (currentDepth > this.config.maxFallbackDepth) {
+      trace.push({
+        step: "fallback_depth_exceeded",
+        result: "failed",
+        reason: `Fallback depth ${currentDepth} exceeds max ${this.config.maxFallbackDepth}`,
+        timestamp: Date.now(),
+      })
+      return this.recordDecision({
+        ...originalDecision,
+        success: false,
+        fallbackUsed: true,
+        fallbackDepth: currentDepth,
+        reason: `${originalDecision.reason} | Fallback chain depth limit exceeded (${currentDepth}/${this.config.maxFallbackDepth})`,
+        trace,
+      })
+    }
 
     const fallbackId = originalDecision.fallbackProvider
     if (!fallbackId) {
@@ -422,6 +478,7 @@ export class RoutingService implements vscode.Disposable {
         ...originalDecision,
         success: false,
         fallbackUsed: true,
+        fallbackDepth: currentDepth,
         reason: `${originalDecision.reason} | Fallback: no fallback provider available`,
         trace,
       })
@@ -440,11 +497,32 @@ export class RoutingService implements vscode.Disposable {
         ...originalDecision,
         success: false,
         fallbackUsed: true,
+        fallbackDepth: currentDepth,
         reason: `${originalDecision.reason} | Fallback provider unavailable`,
         trace,
       })
     }
 
+    // Check retry budget for the fallback provider
+    if (fallback.retriesUsed >= this.config.retryBudget) {
+      trace.push({
+        step: "retry_budget_exhausted",
+        provider: fallbackId,
+        result: "skipped",
+        reason: `Provider ${fallback.name} retry budget exhausted (${fallback.retriesUsed}/${this.config.retryBudget})`,
+        timestamp: Date.now(),
+      })
+      return this.recordDecision({
+        ...originalDecision,
+        success: false,
+        fallbackUsed: true,
+        fallbackDepth: currentDepth,
+        reason: `${originalDecision.reason} | Fallback provider ${fallbackId} retry budget exhausted`,
+        trace,
+      })
+    }
+
+    fallback.retriesUsed++
     fallback.requestCount++
     fallback.estimatedCost += PROVIDER_COST[fallback.id] ?? 0
 
@@ -464,6 +542,7 @@ export class RoutingService implements vscode.Disposable {
       timestamp: Date.now(),
       success: true,
       fallbackUsed: true,
+      fallbackDepth: currentDepth,
       trace,
     })
 
@@ -558,6 +637,10 @@ export class RoutingService implements vscode.Disposable {
       clearInterval(this.healthTimer)
       this.healthTimer = undefined
     }
+    if (this.retryBudgetTimer) {
+      clearInterval(this.retryBudgetTimer)
+      this.retryBudgetTimer = undefined
+    }
     for (const timer of this.circuitTimers.values()) {
       clearTimeout(timer)
     }
@@ -636,6 +719,20 @@ export class RoutingService implements vscode.Disposable {
           })
           continue
         }
+      }
+
+      // Enforce cost cap: if accumulated cost exceeds total budget, mark temporarily unavailable
+      const totalBudget = this.config.costThreshold * 10
+      if (provider.estimatedCost >= totalBudget) {
+        provider.status = "offline"
+        trace.push({
+          step: "cost_cap",
+          provider: pid,
+          result: "blocked",
+          reason: `${provider.name} cost cap exceeded ($${provider.estimatedCost.toFixed(4)} >= $${totalBudget.toFixed(2)} total budget) — marked temporarily unavailable`,
+          timestamp: now,
+        })
+        continue
       }
 
       // Check cost threshold
@@ -736,6 +833,38 @@ export class RoutingService implements vscode.Disposable {
       this.traces = this.traces.slice(0, MAX_TRACE_ENTRIES)
     }
     return decision
+  }
+
+  /**
+   * Validate that a route request has the required fields.
+   * Logs and returns false if the request is malformed.
+   */
+  private validateRouteRequest(request: RouteRequest): boolean {
+    const validTaskTypes = Object.keys(TASK_TO_ROLES)
+    const validRiskLevels = ["low", "medium", "high"]
+
+    if (!request.taskType || !validTaskTypes.includes(request.taskType)) {
+      console.warn(
+        `[RoutingService] Route validation failed: invalid or missing taskType "${request.taskType}"`,
+      )
+      return false
+    }
+
+    if (!request.riskLevel || !validRiskLevels.includes(request.riskLevel)) {
+      console.warn(
+        `[RoutingService] Route validation failed: invalid or missing riskLevel "${request.riskLevel}"`,
+      )
+      return false
+    }
+
+    return true
+  }
+
+  /** Reset retry budgets for all providers. Called hourly by the timer. */
+  private resetRetryBudgets(): void {
+    for (const provider of this.providers.values()) {
+      provider.retriesUsed = 0
+    }
   }
 
   private notifyListeners(): void {

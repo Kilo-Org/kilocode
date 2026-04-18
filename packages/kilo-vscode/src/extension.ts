@@ -27,6 +27,7 @@ import { RoutingService } from "./services/routing"
 import { MemoryService } from "./services/memory"
 import { TrainingService } from "./services/training"
 import { GovernanceService } from "./services/governance"
+import { WorkstationProfileService } from "./services/workstation"
 import type { KiloClient } from "@kilocode/sdk/v2"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
@@ -82,6 +83,9 @@ export function activate(context: vscode.ExtensionContext) {
   const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
   const governanceService = new GovernanceService(workspaceRoot)
   context.subscriptions.push(governanceService)
+
+  const workstationProfile = new WorkstationProfileService()
+  context.subscriptions.push(workstationProfile)
 
   // Sync the Hermes provider preset into the CLI backend config on toggle.
   // Runs once on toggle and once on each CLI reconnect (in case Hermes was
@@ -169,6 +173,7 @@ export function activate(context: vscode.ExtensionContext) {
     memory: memoryService,
     training: trainingService,
     governance: governanceService,
+    workstation: workstationProfile,
   })
 
   // Register the webview view provider for the sidebar.

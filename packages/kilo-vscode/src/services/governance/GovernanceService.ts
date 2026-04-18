@@ -18,6 +18,7 @@ export interface ApprovalRecord {
 	riskScore: number
 	riskLevel: "low" | "medium" | "high" | "critical"
 	status: "pending" | "approved" | "rejected"
+	escalated: boolean
 	approvedBy?: string
 	reason?: string
 	timestamp: number
@@ -28,6 +29,7 @@ export interface DangerousAction {
 	id: string
 	name: string
 	description: string
+	severity: "warning" | "critical"
 	minimumTier: "observer" | "operator" | "admin" | "superadmin"
 	requiresApproval: boolean
 	blocked: boolean
@@ -52,6 +54,11 @@ export interface ReleaseVerdict {
 	rollbackPlan: string
 	decision: "pass" | "conditional_pass" | "fail"
 	timestamp: number
+}
+
+export interface EscalationConfig {
+	timeoutMs: number
+	escalationTier: string
 }
 
 export interface RiskThresholds {
@@ -135,6 +142,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "git-force-push",
 		name: "Git Force Push",
 		description: "Force push to a remote branch, potentially overwriting others' work",
+		severity: "critical",
 		minimumTier: "admin",
 		requiresApproval: true,
 		blocked: false,
@@ -143,6 +151,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "production-deploy",
 		name: "Production Deploy",
 		description: "Deploy changes to the production environment",
+		severity: "critical",
 		minimumTier: "admin",
 		requiresApproval: true,
 		blocked: false,
@@ -151,6 +160,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "database-migration",
 		name: "Database Migration",
 		description: "Execute database schema migration scripts",
+		severity: "critical",
 		minimumTier: "admin",
 		requiresApproval: true,
 		blocked: false,
@@ -159,6 +169,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "delete-branch",
 		name: "Delete Branch",
 		description: "Delete a remote branch from the repository",
+		severity: "warning",
 		minimumTier: "operator",
 		requiresApproval: false,
 		blocked: false,
@@ -167,6 +178,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "reset-hard",
 		name: "Git Reset Hard",
 		description: "Hard reset the working directory, discarding all uncommitted changes",
+		severity: "critical",
 		minimumTier: "admin",
 		requiresApproval: true,
 		blocked: false,
@@ -175,6 +187,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "env-modify",
 		name: "Modify Environment Variables",
 		description: "Modify production environment variables or secrets",
+		severity: "critical",
 		minimumTier: "admin",
 		requiresApproval: true,
 		blocked: false,
@@ -183,6 +196,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "dependency-major-upgrade",
 		name: "Major Dependency Upgrade",
 		description: "Upgrade a dependency to a new major version",
+		severity: "warning",
 		minimumTier: "operator",
 		requiresApproval: true,
 		blocked: false,
@@ -191,6 +205,7 @@ const DEFAULT_DANGEROUS_ACTIONS: DangerousAction[] = [
 		id: "security-config-change",
 		name: "Security Configuration Change",
 		description: "Modify authentication, authorization, or encryption settings",
+		severity: "critical",
 		minimumTier: "superadmin",
 		requiresApproval: true,
 		blocked: false,
@@ -235,8 +250,14 @@ export class GovernanceService implements vscode.Disposable {
 	private state: GovernanceState
 	private storagePath: string
 	private saveTimer: ReturnType<typeof setTimeout> | undefined
+	private escalationTimer: ReturnType<typeof setInterval> | undefined
 	private readonly onStateChangedEmitter = new vscode.EventEmitter<GovernanceState>()
 	public readonly onStateChanged = this.onStateChangedEmitter.event
+
+	public escalationConfig: EscalationConfig = {
+		timeoutMs: 3600000,
+		escalationTier: "SuperAdmin",
+	}
 
 	constructor(workspaceRoot: string) {
 		const kiloDir = path.join(workspaceRoot, ".kilo")
@@ -408,6 +429,7 @@ export class GovernanceService implements vscode.Disposable {
 			riskScore,
 			riskLevel,
 			status: "pending",
+			escalated: false,
 			timestamp: Date.now(),
 		}
 
@@ -428,6 +450,7 @@ export class GovernanceService implements vscode.Disposable {
 			})
 		} else {
 			this.state.pendingApprovals.push(record)
+			this.startEscalationTimer()
 
 			this.addAuditEntry({
 				actor,
@@ -543,6 +566,16 @@ export class GovernanceService implements vscode.Disposable {
 				}
 			}
 
+			// Critical-severity actions require SuperAdmin approval even if actor is Admin
+			if (dangerousAction.severity === "critical" && actorTier.name !== "superadmin") {
+				return {
+					allowed: false,
+					needsApproval: true,
+					blocked: false,
+					reason: `Critical-severity action "${dangerousAction.name}" requires SuperAdmin approval`,
+				}
+			}
+
 			// Check if approval is required
 			if (dangerousAction.requiresApproval) {
 				return {
@@ -577,6 +610,52 @@ export class GovernanceService implements vscode.Disposable {
 		}
 
 		return { allowed: true, needsApproval: false, blocked: false, reason: "Action permitted" }
+	}
+
+	// ── Escalation ────────────────────────────────────
+
+	/**
+	 * Check all pending approvals for escalation.
+	 * Any pending approval older than `escalationConfig.timeoutMs` is
+	 * marked as escalated and an audit entry is logged.
+	 */
+	checkEscalation(): ApprovalRecord[] {
+		const now = Date.now()
+		const escalated: ApprovalRecord[] = []
+
+		for (const record of this.state.pendingApprovals) {
+			if (!record.escalated && now - record.timestamp >= this.escalationConfig.timeoutMs) {
+				record.escalated = true
+				escalated.push(record)
+
+				this.addAuditEntry({
+					actor: "system",
+					action: `Escalated: ${record.actionDescription}`,
+					riskLevel: record.riskLevel,
+					result: "auto",
+					details: `Approval "${record.id}" escalated to ${this.escalationConfig.escalationTier} after ${this.escalationConfig.timeoutMs}ms timeout`,
+				})
+			}
+		}
+
+		if (escalated.length > 0) {
+			this.emitChange()
+		}
+
+		return escalated
+	}
+
+	/**
+	 * Start the escalation timer that checks pending approvals every 60 seconds.
+	 * If the timer is already running, this is a no-op.
+	 */
+	private startEscalationTimer(): void {
+		if (this.escalationTimer) {
+			return
+		}
+		this.escalationTimer = setInterval(() => {
+			this.checkEscalation()
+		}, 60_000)
 	}
 
 	// ── Dangerous Action Registry ──────────────────────
@@ -681,6 +760,27 @@ export class GovernanceService implements vscode.Disposable {
 
 	exportAuditLog(): string {
 		return JSON.stringify(this.state.auditLog, null, 2)
+	}
+
+	/**
+	 * Export audit log entries as JSONL (JSON Lines) format.
+	 * Each line is a self-contained JSON object matching the run ledger format:
+	 * `{ id, ts, actor, action, risk, result, details }`
+	 */
+	exportAuditLogAsJsonl(): string {
+		return this.state.auditLog
+			.map((entry) =>
+				JSON.stringify({
+					id: entry.id,
+					ts: entry.timestamp,
+					actor: entry.actor,
+					action: entry.action,
+					risk: entry.riskLevel,
+					result: entry.result,
+					details: entry.details,
+				}),
+			)
+			.join("\n")
 	}
 
 	// ── Release Verdicts ───────────────────────────────
@@ -800,6 +900,10 @@ export class GovernanceService implements vscode.Disposable {
 		if (this.saveTimer) {
 			clearTimeout(this.saveTimer)
 			this.saveTimer = undefined
+		}
+		if (this.escalationTimer) {
+			clearInterval(this.escalationTimer)
+			this.escalationTimer = undefined
 		}
 		// Final save on disposal
 		this.persistNow()

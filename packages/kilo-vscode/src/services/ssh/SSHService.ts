@@ -1,3 +1,4 @@
+import * as fs from "fs"
 import * as vscode from "vscode"
 
 // ─── Types ──────────────────────────────────────────────
@@ -15,6 +16,8 @@ export interface SSHProfile {
   jumpHost?: string
   group: string
   labels: string[]
+  /** Connection timeout in milliseconds. Defaults to 15000. */
+  connectionTimeoutMs?: number
 }
 
 export interface SSHSession {
@@ -66,6 +69,7 @@ export class SSHService implements vscode.Disposable {
   private readonly sessions = new Map<string, SSHSession>()
   private readonly logTails = new Map<string, LogTailHandle>()
   private readonly listeners = new Set<(event: SSHEvent) => void>()
+  private readonly reconnectAttempts = new Map<string, number>()
   private readonly outputChannel: vscode.OutputChannel
 
   constructor(private readonly ctx: vscode.ExtensionContext) {
@@ -186,12 +190,12 @@ export class SSHService implements vscode.Disposable {
     const snapshots: SSHSessionSnapshot[] = []
     this.sessions.forEach((session) => {
       snapshots.push({
-        profileName: session.profileName,
+        profileName: String(session.profileName),
         status: session.status,
-        lastError: session.lastError,
+        lastError: session.lastError !== undefined ? String(session.lastError) : undefined,
       })
     })
-    return snapshots
+    return JSON.parse(JSON.stringify(snapshots)) as SSHSessionSnapshot[]
   }
 
   getSession(profileName: string): SSHSession | undefined {
@@ -209,6 +213,22 @@ export class SSHService implements vscode.Disposable {
         error: `Profile "${profileName}" not found`,
       })
       return
+    }
+
+    // Validate key file exists when auth mode is "key"
+    if (profile.authMode === "key" && profile.keyPath) {
+      const resolvedKeyPath = profile.keyPath.replace(/^~/, this.getHomePath())
+      if (!fs.existsSync(resolvedKeyPath)) {
+        const errorMsg = `SSH key file not found: ${resolvedKeyPath}`
+        this.log(`Connect failed: ${errorMsg}`)
+        this.emit({
+          type: "connectionStatus",
+          profileName,
+          status: "error",
+          error: errorMsg,
+        })
+        return
+      }
     }
 
     // If already connected, do nothing
@@ -241,6 +261,9 @@ export class SSHService implements vscode.Disposable {
       session.lastError = undefined
       terminal.show()
 
+      // Reset reconnect counter on successful connection
+      this.reconnectAttempts.delete(profileName)
+
       this.emit({ type: "connectionStatus", profileName, status: "connected" })
       this.emitSessionsChanged()
       this.log(`Connected: ${profile.name} (${profile.user}@${profile.host}:${profile.port})`)
@@ -270,6 +293,37 @@ export class SSHService implements vscode.Disposable {
     this.log(`Disconnected: ${profileName}`)
   }
 
+  /**
+   * Disconnect and re-connect to a profile with exponential backoff.
+   * Max 3 retries with 2s / 4s / 8s delays. Counter resets on success.
+   */
+  async reconnect(profileName: string): Promise<void> {
+    const maxRetries = 3
+    const attempt = this.reconnectAttempts.get(profileName) ?? 0
+
+    if (attempt >= maxRetries) {
+      const errorMsg = `Max reconnect attempts (${maxRetries}) reached for "${profileName}"`
+      this.log(errorMsg)
+      this.emit({
+        type: "connectionStatus",
+        profileName,
+        status: "error",
+        error: errorMsg,
+      })
+      this.reconnectAttempts.delete(profileName)
+      return
+    }
+
+    this.reconnectAttempts.set(profileName, attempt + 1)
+    const backoffMs = Math.pow(2, attempt + 1) * 1000 // 2s, 4s, 8s
+
+    this.log(`Reconnect attempt ${attempt + 1}/${maxRetries} for "${profileName}" (backoff ${backoffMs}ms)`)
+    this.disconnect(profileName)
+
+    await new Promise<void>((resolve) => setTimeout(resolve, backoffMs))
+    await this.connect(profileName)
+  }
+
   openTerminal(profileName: string): void {
     const session = this.sessions.get(profileName)
     if (session?.terminal) {
@@ -290,6 +344,10 @@ export class SSHService implements vscode.Disposable {
     parts.push("-o", "StrictHostKeyChecking=accept-new")
     parts.push("-o", "ServerAliveInterval=30")
     parts.push("-o", "ServerAliveCountMax=3")
+
+    // Connection timeout (convert ms to seconds, default 15s)
+    const timeoutSec = Math.ceil((profile.connectionTimeoutMs ?? 15000) / 1000)
+    parts.push("-o", `ConnectTimeout=${timeoutSec}`)
 
     // Port
     if (profile.port !== 22) {
@@ -671,8 +729,9 @@ export class SSHService implements vscode.Disposable {
     })
     this.sessions.clear()
 
-    // Clear listeners
+    // Clear listeners and reconnect tracking
     this.listeners.clear()
+    this.reconnectAttempts.clear()
 
     // Dispose registered disposables
     for (const d of this.disposables) {

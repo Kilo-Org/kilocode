@@ -242,6 +242,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private memoryService: import("./services/memory").MemoryService | null = null
   private trainingService: import("./services/training").TrainingService | null = null
   private governanceService: import("./services/governance").GovernanceService | null = null
+  private workstationProfile: import("./services/workstation").WorkstationProfileService | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -272,6 +273,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     memory: import("./services/memory").MemoryService
     training: import("./services/training").TrainingService
     governance: import("./services/governance").GovernanceService
+    workstation: import("./services/workstation").WorkstationProfileService
   }): void {
     this.sshService = services.ssh
     this.vpsService = services.vps
@@ -280,6 +282,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.memoryService = services.memory
     this.trainingService = services.training
     this.governanceService = services.governance
+    this.workstationProfile = services.workstation
   }
   private focusSession(id?: string): void {
     this.streams.focus(id)
@@ -1310,6 +1313,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "governanceExportAudit":
           if (this.governanceService) this.postMessage({ type: "governanceAuditExport", data: this.governanceService.getAuditLog() } as never)
+          break
+
+        // ── Workstation Profile ──────────────────────────
+        case "workstationGetProfile":
+          if (this.workstationProfile) this.postMessage({ type: "workstationProfile", profile: this.workstationProfile.getProfile() } as never)
+          break
+        case "workstationGetHardware":
+          if (this.workstationProfile) this.postMessage({ type: "workstationHardware", hardware: this.workstationProfile.getHardware() } as never)
+          break
+        case "workstationGetLimits":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLimits", limits: this.workstationProfile.getLimits() } as never)
+          break
+        case "workstationGetLocalAI":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLocalAI", localAI: this.workstationProfile.getLocalAI() } as never)
+          break
+        case "workstationGetRoutingPrefs":
+          if (this.workstationProfile) this.postMessage({ type: "workstationRoutingPrefs", prefs: this.workstationProfile.getRoutingPreferences() } as never)
+          break
+        case "workstationShouldPreferLocal":
+          if (this.workstationProfile) this.postMessage({ type: "workstationLocalPref", prefer: this.workstationProfile.shouldPreferLocal(message.taskType as string) } as never)
+          break
+        case "workstationReload":
+          if (this.workstationProfile) {
+            this.workstationProfile.reload()
+            this.postMessage({ type: "workstationProfile", profile: this.workstationProfile.getProfile() } as never)
+          }
           break
       }
     })

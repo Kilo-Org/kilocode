@@ -1660,6 +1660,9 @@ export interface V4SubsystemMessage {
     | "trainingGPUDetected" | "trainingCompareResult"
     // Governance
     | "governanceState" | "governanceAuditLog" | "governanceAuditExport"
+    // Workstation
+    | "workstationProfile" | "workstationHardware" | "workstationLimits"
+    | "workstationLocalAI" | "workstationRoutingPrefs" | "workstationLocalPref"
   [key: string]: unknown
 }
 
@@ -2722,6 +2725,9 @@ export interface V4SubsystemRequest {
     | "governanceSetTier" | "governanceApproveAction" | "governanceRejectAction"
     | "governanceAddDangerousAction" | "governanceToggleBlock"
     | "governanceGetAuditLog" | "governanceCreateVerdict" | "governanceExportAudit"
+    | "workstationGetProfile" | "workstationGetHardware" | "workstationGetLimits"
+    | "workstationGetLocalAI" | "workstationGetRoutingPrefs" | "workstationShouldPreferLocal"
+    | "workstationReload"
   [key: string]: unknown
 }
 

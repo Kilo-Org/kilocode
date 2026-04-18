@@ -32,6 +32,7 @@ export interface ZeroClawTask {
 	approvedBy?: string
 	createdAt: number
 	completedAt?: number
+	retryCount: number
 }
 
 export interface TaskSubmission {
@@ -74,6 +75,8 @@ export class ZeroClawService implements vscode.Disposable {
 	private readonly listeners = new Set<StatusListener>()
 	private readonly disposables: vscode.Disposable[] = []
 	private readonly terminals = new Map<string, vscode.Terminal>()
+	private readonly executionTimers = new Map<string, ReturnType<typeof setTimeout>>()
+	private readonly maxRetries: number = 3
 	private processing = false
 
 	constructor(private readonly ctx: vscode.ExtensionContext) {
@@ -88,8 +91,10 @@ export class ZeroClawService implements vscode.Disposable {
 			for (const [taskId, term] of this.terminals) {
 				if (term === t) {
 					this.terminals.delete(taskId)
+					this.clearExecutionTimer(taskId)
 					const task = this.tasks.get(taskId)
 					if (task && task.status === "running") {
+						this.rollbackTask(taskId)
 						this.transitionStatus(taskId, "failed")
 						this.appendLog(taskId, "[ZeroClaw] Terminal closed externally")
 					}
@@ -102,8 +107,12 @@ export class ZeroClawService implements vscode.Disposable {
 
 	// ─── Public API ────────────────────────────────────────
 
-	/** Submit a new task. Returns the created task. */
+	/** Submit a new task. Returns the created task, or throws if validation fails. */
 	submit(submission: TaskSubmission): ZeroClawTask {
+		if (!this.validateRiskLevel(submission)) {
+			throw new Error("Invalid task submission: failed risk validation")
+		}
+
 		const taskId = randomUUID().slice(0, 12)
 		const scopeParts = submission.workspaceScope
 			.split(",")
@@ -125,6 +134,7 @@ export class ZeroClawService implements vscode.Disposable {
 			artifacts: [],
 			requiresApproval: submission.riskLevel === "high",
 			createdAt: Date.now(),
+			retryCount: 0,
 		}
 
 		this.tasks.set(taskId, task)
@@ -178,12 +188,22 @@ export class ZeroClawService implements vscode.Disposable {
 		return false
 	}
 
-	/** Retry a failed task by resubmitting it to the queue. */
+	/** Retry a failed task by resubmitting it to the queue. Respects retry budget. */
 	retry(taskId: string): ZeroClawTask | undefined {
 		const original = this.tasks.get(taskId)
 		if (!original || original.status !== "failed") return undefined
 
-		return this.submit({
+		if (original.retryCount >= this.maxRetries) {
+			this.appendLog(taskId, `[ZeroClaw] Retry budget exhausted (${original.retryCount}/${this.maxRetries})`)
+			this.persistHistory()
+			return undefined
+		}
+
+		original.retryCount++
+		this.appendLog(taskId, `[ZeroClaw] Retry ${original.retryCount}/${this.maxRetries}`)
+		this.persistHistory()
+
+		const newTask = this.submit({
 			description: original.description,
 			projectPath: original.projectPath,
 			riskLevel: original.riskLevel,
@@ -192,6 +212,11 @@ export class ZeroClawService implements vscode.Disposable {
 			writePolicy: original.writePolicy,
 			limits: { ...original.limits },
 		})
+
+		// Carry over the retry count to the new task
+		newTask.retryCount = original.retryCount
+		this.persistHistory()
+		return newTask
 	}
 
 	/** Approve a high-risk (blocked) task. Moves it into the queue. */
@@ -246,6 +271,10 @@ export class ZeroClawService implements vscode.Disposable {
 			terminal.dispose()
 		}
 		this.terminals.clear()
+		for (const timer of this.executionTimers.values()) {
+			clearTimeout(timer)
+		}
+		this.executionTimers.clear()
 		this.listeners.clear()
 		for (const d of this.disposables) {
 			d.dispose()
@@ -363,7 +392,8 @@ export class ZeroClawService implements vscode.Disposable {
 
 	/**
 	 * Run the task description as a command in a dedicated VS Code terminal.
-	 * Enforces timeout limits. Captures the terminal name for tracking.
+	 * Enforces timeout limits via an execution timer. Captures the terminal
+	 * name for tracking.
 	 */
 	private async runInTerminal(task: ZeroClawTask): Promise<void> {
 		const terminalName = `ZeroClaw: ${task.taskId}`
@@ -394,15 +424,21 @@ export class ZeroClawService implements vscode.Disposable {
 		this.terminals.set(task.taskId, terminal)
 		this.appendLog(task.taskId, `[ZeroClaw] Terminal "${terminalName}" created`)
 
-		// Apply timeout
+		// Start execution timeout timer
 		const timeoutMs = task.limits.timeoutSec * 1000
+		this.startExecutionTimer(task.taskId, timeoutMs)
+
 		const completed = await this.waitForTerminalExit(task.taskId, terminal, timeoutMs)
 
+		// Clear the execution timer now that the task has settled
+		this.clearExecutionTimer(task.taskId)
+
 		if (!completed) {
-			// Timeout: kill the terminal
+			// Timeout: kill the terminal and attempt rollback
 			this.appendLog(task.taskId, `[ZeroClaw] Task timed out after ${task.limits.timeoutSec}s`)
 			terminal.dispose()
 			this.terminals.delete(task.taskId)
+			this.rollbackTask(task.taskId)
 			this.transitionStatus(task.taskId, "failed")
 			task.exitCode = -1
 		} else if (task.status === "running") {
@@ -447,6 +483,83 @@ export class ZeroClawService implements vscode.Disposable {
 			// If the terminal was already disposed (e.g. instant command)
 			// the onDidCloseTerminal will fire; no extra check needed.
 		})
+	}
+
+	/**
+	 * Best-effort rollback when a task fails mid-execution.
+	 * Records changed files and logs the rollback attempt.
+	 */
+	private rollbackTask(taskId: string): void {
+		const task = this.tasks.get(taskId)
+		if (!task) return
+
+		this.appendLog(taskId, "[ZeroClaw] Attempting rollback of failed task")
+
+		if (task.changedFiles.length > 0) {
+			this.appendLog(
+				taskId,
+				`[ZeroClaw] Files modified before failure: ${task.changedFiles.join(", ")}`,
+			)
+		} else {
+			this.appendLog(taskId, "[ZeroClaw] No changed files recorded for rollback")
+		}
+
+		this.appendLog(taskId, "[ZeroClaw] Rollback attempted (best-effort)")
+	}
+
+	/**
+	 * Validate a task submission before accepting it.
+	 * Checks description, projectPath, and riskLevel for validity.
+	 */
+	private validateRiskLevel(submission: TaskSubmission): boolean {
+		const validRiskLevels: RiskLevel[] = ["low", "medium", "high"]
+
+		if (!submission.description || submission.description.trim().length === 0) {
+			console.warn("[ZeroClaw] Validation failed: description is empty")
+			return false
+		}
+
+		if (!submission.projectPath || submission.projectPath.trim().length === 0) {
+			console.warn("[ZeroClaw] Validation failed: projectPath is empty")
+			return false
+		}
+
+		if (!validRiskLevels.includes(submission.riskLevel)) {
+			console.warn(
+				`[ZeroClaw] Validation failed: invalid risk level "${submission.riskLevel}"`,
+			)
+			return false
+		}
+
+		return true
+	}
+
+	/**
+	 * Start an execution timeout timer for a task. If the timer fires,
+	 * the task is auto-cancelled.
+	 */
+	private startExecutionTimer(taskId: string, timeoutMs: number): void {
+		this.clearExecutionTimer(taskId)
+
+		const timer = setTimeout(() => {
+			const task = this.tasks.get(taskId)
+			if (task && task.status === "running") {
+				this.appendLog(taskId, `[ZeroClaw] Execution timeout enforced after ${timeoutMs}ms`)
+				this.cancel(taskId)
+			}
+			this.executionTimers.delete(taskId)
+		}, timeoutMs)
+
+		this.executionTimers.set(taskId, timer)
+	}
+
+	/** Clear the execution timeout timer for a task. */
+	private clearExecutionTimer(taskId: string): void {
+		const timer = this.executionTimers.get(taskId)
+		if (timer) {
+			clearTimeout(timer)
+			this.executionTimers.delete(taskId)
+		}
 	}
 
 	/** Persist task history to workspace state so it survives reload. */

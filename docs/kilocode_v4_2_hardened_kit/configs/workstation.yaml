@@ -1,0 +1,63 @@
+workstation:
+  name: dave-main-workstation
+
+  hardware:
+    motherboard: MSI_MEG_X570S_ACE_MAX
+    platform: AMD_AM4
+    chipset: X570
+    cpu_class: high_end_desktop   # Ryzen 5000 series on AM4
+    ram_gb: 128                   # DDR4
+    gpu:
+      model: RTX_3090_Ti
+      vram_gb: 24
+      pcie: gen4
+    storage:
+      type: NVMe
+      capacity_tb: 4
+      nvme_slots: 4
+      sata_ports: 8
+
+  environment:
+    os: windows
+    supports_docker: true
+    supports_wsl: true
+
+  paths:
+    workspace: "G:\\Github"
+    downloads: "C:\\Users\\Admin\\Downloads\\VPS"
+    models: "C:\\Users\\Admin\\.lmstudio\\models"
+
+  local_ai:
+    lm_studio:
+      enabled: true
+      api_base: "http://localhost:1234"
+      models_path: "C:\\Users\\Admin\\.lmstudio\\models"
+
+    ollama:
+      enabled: true
+      api_base: "http://localhost:11434"
+
+  capabilities:
+    can_run_large_models: true
+    max_context_estimate: 128k
+    supports_local_training: true
+    supports_parallel_agents: true
+
+  routing_preferences:
+    prefer_local_for:
+      - memory_tasks
+      - embeddings
+      - small_generation
+      - private_data_tasks
+
+    prefer_cloud_for:
+      - large_planning
+      - contract_generation
+      - high_parallel_execution
+
+  limits:
+    max_parallel_jobs: 4
+    max_gpu_jobs: 1
+    max_memory_per_job_gb: 48
+    max_gpu_memory_mb: 24576  # Full RTX 3090 Ti
+    max_training_time_ms: 86400000  # 24 hours

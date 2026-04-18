@@ -1,7 +1,7 @@
 {
   "name": "KiloCode Full Coverage Final v4.2 Hardened",
   "date": "2026-04-17",
-  "file_count": 35,
+  "file_count": 36,
   "files": [
     "01_MASTER/DEFECT_TRIBUNAL_SYSTEM.md",
     "01_MASTER/KILOCODE_FINAL_V4_2_72_PHASE_EXECUTION_PLAN.md",
@@ -37,7 +37,8 @@
     "configs/providers.yaml",
     "configs/speech.yaml",
     "configs/ssh.yaml",
-    "configs/training.yaml"
+    "configs/training.yaml",
+    "configs/workstation.yaml"
   ],
   "notes": [
     "Hardened upgrade over v4.1",
