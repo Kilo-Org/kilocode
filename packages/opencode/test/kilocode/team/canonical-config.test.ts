@@ -514,6 +514,201 @@ describe("fromLegacyTeamConfig migration helper", () => {
       expect(result.value.routing.parentRole).toBeUndefined()
     }
   })
+
+  // C2-2 Test A: QA-1 regression — empty-capability warning is emitted and fallback applied
+  test("role with all-empty capabilities emits no-mappable-capabilities-fallback warning", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        developer: TeamRole.parse({
+          displayName: "Developer",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          capabilities: [],
+        }),
+      },
+      routing: { strategy: "hierarchical", defaultRole: "developer", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const fallbackWarnings = result.warnings.filter(
+        (w) => w.kind === "unknown-capability" && w.value === "<no-mappable-capabilities-fallback:research>",
+      )
+      expect(fallbackWarnings.length).toBeGreaterThan(0)
+    }
+  })
+
+  // C2-2 Test B: QA-2 regression — canDelegate deduplication when two synonyms resolve to same CanonicalPosition
+  test("canDelegate synonyms resolving to the same CanonicalPosition are deduplicated", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          canDelegate: ["deep-researcher", "fast-scanner"],
+          capabilities: ["planning"],
+        }),
+        "deep-researcher": TeamRole.parse({
+          displayName: "Deep Researcher",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          capabilities: ["research"],
+        }),
+        "fast-scanner": TeamRole.parse({
+          displayName: "Fast Scanner",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "low",
+          tier: 3,
+          capabilities: ["research"],
+        }),
+      },
+      routing: { strategy: "hierarchical", defaultRole: "coordinator", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const coordinatorRole = result.value.roles["coordinator"]
+      expect(coordinatorRole).toBeDefined()
+      if (coordinatorRole) {
+        const canDelegate = coordinatorRole.canDelegate
+        // Both "deep-researcher" and "fast-scanner" resolve to "researcher" — no duplicates allowed
+        expect(new Set(canDelegate).size).toBe(canDelegate.length)
+      }
+    }
+  })
+
+  // C2-2 Test C / C2-1 regression: collision detection emits warning AND canDelegate is union-merged
+  test("two roles colliding on same CanonicalPosition emit ambiguous-capability-mapping and union-merge canDelegate", () => {
+    // "deep-researcher" (canDelegate: ["orchestrator"]) and "fast-scanner" (canDelegate: [])
+    // both resolve to "researcher"; "orchestrator" resolves to "coordinator"
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        "deep-researcher": TeamRole.parse({
+          displayName: "Deep Researcher",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 2,
+          canDelegate: ["orchestrator"],
+          capabilities: ["research"],
+        }),
+        "fast-scanner": TeamRole.parse({
+          displayName: "Fast Scanner",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "low",
+          tier: 3,
+          canDelegate: [],
+          capabilities: ["research"],
+        }),
+        orchestrator: TeamRole.parse({
+          displayName: "Orchestrator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+      },
+      routing: { strategy: "hierarchical", defaultRole: "orchestrator", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      // Collision warning must be present
+      const collisionWarnings = result.warnings.filter((w) => w.kind === "ambiguous-capability-mapping")
+      expect(collisionWarnings.length).toBeGreaterThan(0)
+      // Merged "researcher" role must exist
+      const researcherRole = result.value.roles["researcher"]
+      expect(researcherRole).toBeDefined()
+      if (researcherRole) {
+        // "orchestrator" → "coordinator"; the union-merge must include it
+        expect(researcherRole.canDelegate).toContain("coordinator")
+        // No duplicates
+        expect(new Set(researcherRole.canDelegate).size).toBe(researcherRole.canDelegate.length)
+      }
+    }
+  })
+
+  // C2-3: reviewEscalationRole synonym resolution — "reviewer" is a direct CanonicalPosition match
+  test("reviewEscalationRole 'reviewer' migrates to canonical 'reviewer'", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+        reviewer: TeamRole.parse({
+          displayName: "Reviewer",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          capabilities: ["review"],
+        }),
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "coordinator",
+        escalationEnabled: true,
+        reviewEscalationRole: "reviewer",
+      },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.routing.reviewEscalationRole).toBe("reviewer")
+    }
+  })
+
+  // C2-3: unresolvable reviewEscalationRole is silently dropped (undefined)
+  test("unresolvable reviewEscalationRole is dropped from migrated routing", () => {
+    const legacyConfig = TeamConfig.parse({
+      enabled: false,
+      roles: {
+        coordinator: TeamRole.parse({
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          capabilities: ["planning"],
+        }),
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "coordinator",
+        escalationEnabled: true,
+        reviewEscalationRole: "totally-unknown-role",
+      },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.routing.reviewEscalationRole).toBeUndefined()
+    }
+  })
 })
 
 // ---------------------------------------------------------------------------

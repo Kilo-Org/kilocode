@@ -303,6 +303,7 @@ export function fromLegacyTeamConfig(input: TeamConfig): LegacyMigrationResult {
           capabilities: mergedCapabilities,
           tier: mergedTier,
           supplementaryCapabilities: [...new Set([...existing.supplementaryCapabilities, ...supplementaryCapabilities])],
+          canDelegate: [...new Set([...existing.canDelegate, ...uniqueCanDelegate])] as CanonicalPosition[],
         }
       } else {
         canonicalRoles[positionId] = {
