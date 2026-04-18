@@ -15,6 +15,7 @@ const VariantConfigSchema = z.object({
   enable_thinking: z.boolean().optional(),
   thinking: z.object({ type: z.enum(["enabled", "disabled"]) }).optional(),
   reasoningEffort: z.enum(["none", "minimal", "low", "medium", "high"]).optional(),
+  chat_template_args: z.object({ enable_thinking: z.boolean() }).optional(),
 })
 
 export type VariantConfig = z.infer<typeof VariantConfigSchema>

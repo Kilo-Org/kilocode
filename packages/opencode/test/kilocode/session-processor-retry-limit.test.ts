@@ -7,7 +7,7 @@ process.env.KILO_SESSION_RETRY_LIMIT = "2"
 import { NodeFileSystem } from "@effect/platform-node"
 import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
@@ -24,6 +24,7 @@ import { SessionProcessor } from "../../src/session/processor"
 import { SessionRetry } from "../../src/session/retry"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
+import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
 import { Log } from "../../src/util/log"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
@@ -39,7 +40,7 @@ const ref = {
 
 type Script = Stream.Stream<LLM.Event, unknown>
 
-class TestLLM extends ServiceMap.Service<
+class TestLLM extends Context.Service<
   TestLLM,
   {
     readonly push: (stream: Script) => Effect.Effect<void>
@@ -95,6 +96,7 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
             return item
           },
+          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ push, calls: Effect.sync(() => calls) })),
@@ -111,6 +113,7 @@ const deps = Layer.mergeAll(
   Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  SessionSummary.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))

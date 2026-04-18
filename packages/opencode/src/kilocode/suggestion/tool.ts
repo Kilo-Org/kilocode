@@ -1,6 +1,7 @@
 import { Command } from "../../command"
 import { Log } from "../../util/log"
 import z from "zod"
+import { Effect } from "effect"
 import DESCRIPTION from "./tool.txt"
 import { Tool } from "../../tool/tool"
 import { Suggestion } from "./index"
@@ -49,58 +50,62 @@ async function resolve(prompt: string): Promise<string> {
   }
 }
 
-export const SuggestTool = Tool.define<typeof Params, Meta>("suggest", {
-  description: DESCRIPTION,
-  parameters: Params,
-  async execute(params, ctx) {
-    const promise = Suggestion.show({
-      sessionID: ctx.sessionID,
-      text: params.suggest,
-      actions: params.actions,
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-    })
+export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
+  "suggest",
+  Effect.succeed({
+    description: DESCRIPTION,
+    parameters: Params,
+    execute: (params, ctx) =>
+      Effect.promise(async () => {
+        const promise = Suggestion.show({
+          sessionID: ctx.sessionID,
+          text: params.suggest,
+          actions: params.actions,
+          tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
+        })
 
-    const listener = () =>
-      Suggestion.list().then((items: Suggestion.Request[]) => {
-        const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
-        if (match) return Suggestion.dismiss(match.id)
-      })
-    ctx.abort.addEventListener("abort", listener, { once: true })
+        const listener = () =>
+          Suggestion.list().then((items: Suggestion.Request[]) => {
+            const match = items.find((item: Suggestion.Request) => item.tool?.callID === ctx.callID)
+            if (match) return Suggestion.dismiss(match.id)
+          })
+        ctx.abort.addEventListener("abort", listener, { once: true })
 
-    const action = await promise
-      .catch((error) => {
-        if (error instanceof Suggestion.DismissedError) return undefined
-        throw error
-      })
-      .finally(() => {
-        ctx.abort.removeEventListener("abort", listener)
-      })
+        const action = await promise
+          .catch((error) => {
+            if (error instanceof Suggestion.DismissedError) return undefined
+            throw error
+          })
+          .finally(() => {
+            ctx.abort.removeEventListener("abort", listener)
+          })
 
-    if (!action) {
-      const metadata: Meta = {
-        accepted: undefined,
-        dismissed: true,
-        truncated: false,
-      }
-      return {
-        title: "Suggestion dismissed",
-        output: "User dismissed the suggestion.",
-        metadata,
-      }
-    }
+        if (!action) {
+          const metadata: Meta = {
+            accepted: undefined,
+            dismissed: true,
+            truncated: false,
+          }
+          return {
+            title: "Suggestion dismissed",
+            output: "User dismissed the suggestion.",
+            metadata,
+          }
+        }
 
-    const resolved = await resolve(action.prompt)
+        const resolved = await resolve(action.prompt)
 
-    const metadata: Meta = {
-      accepted: action,
-      dismissed: false,
-      truncated: false,
-    }
+        const metadata: Meta = {
+          accepted: action,
+          dismissed: false,
+          truncated: false,
+        }
 
-    return {
-      title: `User accepted: ${action.label}`,
-      output: `User accepted the suggestion "${action.label}". Carry out the following request now:\n\n${resolved}`,
-      metadata,
-    }
-  },
-})
+        return {
+          title: `User accepted: ${action.label}`,
+          output: `User accepted the suggestion "${action.label}". Carry out the following request now:\n\n${resolved}`,
+          metadata,
+        }
+      }),
+  }),
+)

@@ -29,7 +29,7 @@
   "dependencies": {
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
-    "@ai-sdk/anthropic": "3.0.64",
+    "@ai-sdk/anthropic": "3.0.71",
     "@ai-sdk/openai": "3.0.48",
     "@ai-sdk/openai-compatible": "2.0.37",
     "@openrouter/ai-sdk-provider": "2.5.1",

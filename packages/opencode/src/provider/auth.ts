@@ -2,10 +2,9 @@ import type { AuthOAuthResult, Hooks } from "@kilocode/plugin"
 import { NamedError } from "@opencode-ai/util/error"
 import { Auth } from "@/auth"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
 import { Plugin } from "../plugin"
 import { ProviderID } from "./schema"
-import { Array as Arr, Effect, Layer, Record, Result, ServiceMap } from "effect"
+import { Array as Arr, Effect, Layer, Record, Result, Context } from "effect"
 import z from "zod"
 
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
@@ -113,7 +112,7 @@ export namespace ProviderAuth {
     pending: Map<ProviderID, AuthOAuthResult>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/ProviderAuth") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/ProviderAuth") {}
 
   export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> = Layer.effect(
     Service,
@@ -227,6 +226,20 @@ export namespace ProviderAuth {
             ...extra,
           })
         }
+
+        // kilocode_change start - Update telemetry identity on Kilo auth
+        if (input.providerID === "kilo") {
+          const info = yield* auth.get(input.providerID)
+          if (info) {
+            const token = info.type === "oauth" ? info.access : info.type === "api" ? info.key : null
+            const accountId = info.type === "oauth" ? info.accountId : undefined
+            yield* Effect.promise(() => Telemetry.updateIdentity(token, accountId))
+          }
+        }
+        Telemetry.trackAuthSuccess(input.providerID)
+        ModelCache.clear(input.providerID)
+        yield* Effect.promise(() => Instance.disposeAll())
+        // kilocode_change end
       })
 
       return Service.of({ methods, authorize, callback })
@@ -236,35 +249,4 @@ export namespace ProviderAuth {
   export const defaultLayer = Layer.suspend(() =>
     layer.pipe(Layer.provide(Auth.defaultLayer), Layer.provide(Plugin.defaultLayer)),
   )
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function methods() {
-    return runPromise((svc) => svc.methods())
-  }
-
-  export async function authorize(input: {
-    providerID: ProviderID
-    method: number
-    inputs?: Record<string, string>
-  }): Promise<Authorization | undefined> {
-    return runPromise((svc) => svc.authorize(input))
-  }
-
-  export async function callback(input: { providerID: ProviderID; method: number; code?: string }) {
-    await runPromise((svc) => svc.callback(input))
-    // kilocode_change start - Update telemetry identity on Kilo auth
-    if (input.providerID === "kilo") {
-      const auth = await Auth.get(input.providerID)
-      if (auth) {
-        const token = auth.type === "oauth" ? auth.access : auth.type === "api" ? auth.key : null
-        const accountId = auth.type === "oauth" ? auth.accountId : undefined
-        await Telemetry.updateIdentity(token, accountId)
-      }
-    }
-    Telemetry.trackAuthSuccess(input.providerID)
-    ModelCache.clear(input.providerID)
-    await Instance.disposeAll()
-    // kilocode_change end
-  }
 }

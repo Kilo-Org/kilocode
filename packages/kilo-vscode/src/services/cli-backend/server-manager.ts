@@ -67,7 +67,10 @@ export class ServerManager {
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+      // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
+      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+        cwd: spawnCwd,
         env: {
           ...process.env,
           // Force mimalloc (the allocator Bun ships with) to return freed pages

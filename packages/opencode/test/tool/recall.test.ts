@@ -1,10 +1,12 @@
 // kilocode_change - new file
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { $ } from "bun"
+import { Effect } from "effect"
 import path from "path"
 import { Instance } from "../../src/project/instance"
 import { Config } from "../../src/config/config"
 import { RecallTool } from "../../src/tool/recall"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import type { Tool } from "../../src/tool/tool"
@@ -22,8 +24,8 @@ const ctx: Tool.Context = {
   agent: "code",
   abort: AbortSignal.any([]),
   messages: [],
-  metadata: () => {},
-  ask: async () => {},
+  metadata: () => Effect.void,
+  ask: () => Effect.void,
 }
 
 afterEach(async () => {
@@ -62,8 +64,9 @@ describe("tool.recall", () => {
         const result = await Instance.provide({
           directory: first.path,
           fn: async () => {
-            const tool = await RecallTool.init()
-            return tool.execute({ mode: "search", query: "search-target" }, ctx)
+            const info = await AppRuntime.runPromise(RecallTool)
+            const tool = await AppRuntime.runPromise(info.init())
+            return AppRuntime.runPromise(tool.execute({ mode: "search", query: "search-target" }, ctx))
           },
         })
 
@@ -95,8 +98,11 @@ describe("tool.recall", () => {
       const err = await Instance.provide({
         directory: first.path,
         fn: async () => {
-          const tool = await RecallTool.init()
-          return tool.execute({ mode: "read", sessionID: session.id }, ctx).catch((error) => error as Error)
+          const info = await AppRuntime.runPromise(RecallTool)
+          const tool = await AppRuntime.runPromise(info.init())
+          return AppRuntime.runPromise(tool.execute({ mode: "read", sessionID: session.id }, ctx)).catch(
+            (error: unknown) => error as Error,
+          )
         },
       })
 
@@ -128,8 +134,9 @@ describe("tool.recall", () => {
         const result = await Instance.provide({
           directory: first.path,
           fn: async () => {
-            const tool = await RecallTool.init()
-            return tool.execute({ mode: "read", sessionID: session.id }, ctx)
+            const info = await AppRuntime.runPromise(RecallTool)
+            const tool = await AppRuntime.runPromise(info.init())
+            return AppRuntime.runPromise(tool.execute({ mode: "read", sessionID: session.id }, ctx))
           },
         })
 

@@ -8,11 +8,22 @@ import { Env } from "../../env"
 import { Effect } from "effect"
 
 export namespace KiloToolRegistry {
-  /** Build Kilo-specific tools (CodebaseSearch, Recall) as Tool.Def */
-  export function build() {
+  /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
+   * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
+  export function infos() {
+    return Effect.gen(function* () {
+      const codebase = yield* CodebaseSearchTool
+      const recall = yield* RecallTool
+      return { codebase, recall }
+    })
+  }
+
+  /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
+   * it has no Service deps beyond what Tool.init itself needs. */
+  export function build(tools: { codebase: Tool.Info; recall: Tool.Info }) {
     return Effect.all({
-      codebase: Tool.init(CodebaseSearchTool),
-      recall: Tool.init(RecallTool),
+      codebase: Tool.init(tools.codebase),
+      recall: Tool.init(tools.recall),
     })
   }
 

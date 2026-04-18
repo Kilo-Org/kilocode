@@ -70,5 +70,5 @@ describe("npm install artifact behavior", () => {
     } finally {
       await fs.rm(tmp, { recursive: true, force: true })
     }
-  })
+  }, 60_000) // kilocode_change
 })

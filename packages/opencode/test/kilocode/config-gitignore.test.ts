@@ -12,6 +12,7 @@ import { Config } from "../../src/config/config"
 import { Npm } from "../../src/npm"
 import * as Network from "../../src/util/network"
 import { Filesystem } from "../../src/util/filesystem"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { tmpdir } from "../fixture/fixture"
 
 test(".gitignore includes pnpm and yarn lockfile patterns", async () => {
@@ -30,7 +31,7 @@ test(".gitignore includes pnpm and yarn lockfile patterns", async () => {
   })
 
   try {
-    await Config.installDependencies(dir)
+    await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.installDependencies(dir)))
     const ignore = await Filesystem.readText(path.join(dir, ".gitignore"))
     expect(ignore).toContain("pnpm-lock.yaml")
     expect(ignore).toContain("yarn.lock")

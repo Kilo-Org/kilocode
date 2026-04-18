@@ -1,10 +1,10 @@
 import path from "path"
-import { Effect, Layer, Record, Result, Schema, ServiceMap } from "effect"
-import { makeRuntime } from "@/effect/run-service"
+import { Effect, Layer, Record, Result, Schema, Context } from "effect"
 import { zod } from "@/util/effect-zod"
 import { Global } from "../global"
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { AppFileSystem } from "../filesystem"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 export const OAUTH_DUMMY_KEY = "opencode-oauth-dummy-key"
 
@@ -50,7 +50,7 @@ export namespace Auth {
     readonly remove: (key: string) => Effect.Effect<void, AuthError>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Auth") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Auth") {}
 
   export const layer = Layer.effect(
     Service,
@@ -83,6 +83,13 @@ export namespace Auth {
         delete data[key]
         delete data[norm]
         yield* fsys.writeJson(file, data, 0o600).pipe(Effect.mapError(fail("Failed to write auth data")))
+
+        // kilocode_change start - Track logout and reset telemetry identity for Kilo
+        if (key === "kilo") {
+          yield* Effect.promise(() => Telemetry.updateIdentity(null))
+        }
+        Telemetry.trackAuthLogout(key)
+        // kilocode_change end
       })
 
       return Service.of({ get, all, set, remove })
@@ -91,27 +98,11 @@ export namespace Auth {
 
   export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer))
 
+  // kilocode_change start - legacy promise helpers for Kilo callsites
   const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function get(providerID: string) {
-    return runPromise((service) => service.get(providerID))
-  }
-
-  export async function all(): Promise<Record<string, Info>> {
-    return runPromise((service) => service.all())
-  }
-
-  export async function set(key: string, info: Info) {
-    return runPromise((service) => service.set(key, info))
-  }
-
-  export async function remove(key: string) {
-    await runPromise((service) => service.remove(key))
-    // kilocode_change start - Track logout and reset telemetry identity for Kilo
-    if (key === "kilo") {
-      await Telemetry.updateIdentity(null)
-    }
-    Telemetry.trackAuthLogout(key)
-    // kilocode_change end
-  }
+  export const get = (providerID: string) => runPromise((svc) => svc.get(providerID))
+  export const all = () => runPromise((svc) => svc.all())
+  export const set = (key: string, info: Info) => runPromise((svc) => svc.set(key, info))
+  export const remove = (key: string) => runPromise((svc) => svc.remove(key))
+  // kilocode_change end
 }

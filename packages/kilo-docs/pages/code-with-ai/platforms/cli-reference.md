@@ -682,8 +682,9 @@ Positionals:
   sessionID  session id to export  [string]
 
 Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
+  --help      Show help  [boolean]
+  --version   Show version number  [boolean]
+  --sanitize  redact sensitive transcript and file data  [boolean]
 ```
 
 ## kilo import

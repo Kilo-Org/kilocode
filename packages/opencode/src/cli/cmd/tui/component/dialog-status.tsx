@@ -3,6 +3,7 @@ import { fileURLToPath } from "bun"
 import { useTheme } from "../context/theme"
 import { useDialog } from "@tui/ui/dialog"
 import { useSync } from "@tui/context/sync"
+import { useProject } from "@tui/context/project"
 import { For, Match, Switch, Show, createMemo } from "solid-js"
 import { Installation } from "../../../../installation"
 import { Global } from "@/global" // kilocode_change
@@ -11,6 +12,7 @@ export type DialogStatusProps = {}
 
 export function DialogStatus() {
   const sync = useSync()
+  const project = useProject()
   const { theme } = useTheme()
   const dialog = useDialog()
 
@@ -62,10 +64,10 @@ export function DialogStatus() {
           Global config {"  "}
           {Global.Path.config.replace(Global.Path.home, "~")}
         </text>
-        <Show when={sync.data.path.directory}>
+        <Show when={project.instance.path().directory}>
           <text fg={theme.textMuted}>
             Project {"       "}
-            {sync.data.path.directory.replace(Global.Path.home, "~")}
+            {project.instance.path().directory.replace(Global.Path.home, "~")}
           </text>
         </Show>
       </box>

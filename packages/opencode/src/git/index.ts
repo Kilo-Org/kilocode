@@ -1,7 +1,7 @@
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
-import { Effect, Layer, ServiceMap, Stream } from "effect"
+import { Effect, Layer, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { makeRuntime } from "@/effect/run-service"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 
 export namespace Git {
   const cfg = [
@@ -80,7 +80,7 @@ export namespace Git {
     return "modified"
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Git") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Git") {}
 
   export const layer = Layer.effect(
     Service,
@@ -259,13 +259,8 @@ export namespace Git {
 
   export const defaultLayer = layer.pipe(Layer.provide(CrossSpawnSpawner.defaultLayer))
 
+  // kilocode_change start - legacy promise helpers for Kilo callsites
   const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function run(args: string[], opts: Options) {
-    return runPromise((git) => git.run(args, opts))
-  }
-
-  export async function defaultBranch(cwd: string) {
-    return runPromise((git) => git.defaultBranch(cwd))
-  }
+  export const run = (args: string[], opts: Options) => runPromise((svc) => svc.run(args, opts))
+  // kilocode_change end
 }

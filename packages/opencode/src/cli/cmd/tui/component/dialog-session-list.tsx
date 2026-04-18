@@ -2,24 +2,32 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
-import { createMemo, createSignal, createResource, onMount } from "solid-js" // kilocode_change
+import { createMemo, createResource, createSignal, onMount } from "solid-js"
 import { Locale } from "@/util/locale"
+import { useProject } from "@tui/context/project"
 import { useKeybind } from "../context/keybind"
 import { useTheme } from "../context/theme"
 import { useSDK } from "../context/sdk"
+import { Flag } from "@/flag/flag"
 import { DialogSessionRename } from "./dialog-session-rename"
+import { Keybind } from "@/util/keybind"
 import { createDebouncedSignal } from "../util/signal"
+import { useToast } from "../ui/toast"
+import { DialogWorkspaceCreate, openWorkspaceSession } from "./dialog-workspace-create"
 import { Spinner } from "./spinner"
 import path from "path" // kilocode_change
+
+type WorkspaceStatus = "connected" | "connecting" | "disconnected" | "error"
 
 export function DialogSessionList() {
   const dialog = useDialog()
   const route = useRoute()
   const sync = useSync()
+  const project = useProject()
   const keybind = useKeybind()
   const { theme } = useTheme()
   const sdk = useSDK()
-
+  const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
   const [global, setGlobal] = createSignal(true) // kilocode_change - show all worktrees by default
@@ -48,11 +56,28 @@ export function DialogSessionList() {
   const sessions = createMemo(() => {
     const all = searchResults() ?? []
     if (global()) return all
-    const root = sync.data.path.worktree
+    const root = project.instance.path().worktree
     if (!root || root === "/") return all
     return all.filter((s) => s.directory === root || s.directory.startsWith(root + path.sep))
   })
   // kilocode_change end
+
+  function createWorkspace() {
+    dialog.replace(() => (
+      <DialogWorkspaceCreate
+        onSelect={(workspaceID) =>
+          openWorkspaceSession({
+            dialog,
+            route,
+            sdk,
+            sync,
+            toast,
+            workspaceID,
+          })
+        }
+      />
+    ))
+  }
 
   const options = createMemo(() => {
     const today = new Date().toDateString()
@@ -61,6 +86,43 @@ export function DialogSessionList() {
       .filter((x) => x.parentID === undefined)
       .toSorted((a, b) => b.time.updated - a.time.updated)
       .map((x) => {
+        const workspace = x.workspaceID ? project.workspace.get(x.workspaceID) : undefined
+
+        let workspaceStatus: WorkspaceStatus | null = null
+        if (x.workspaceID) {
+          workspaceStatus = project.workspace.status(x.workspaceID) || "error"
+        }
+
+        let footer = ""
+        if (Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+          if (x.workspaceID) {
+            let desc = "unknown"
+            if (workspace) {
+              desc = `${workspace.type}: ${workspace.name}`
+            }
+
+            footer = (
+              <>
+                {desc}{" "}
+                <span
+                  style={{
+                    fg:
+                      workspaceStatus === "error"
+                        ? theme.error
+                        : workspaceStatus === "disconnected"
+                          ? theme.textMuted
+                          : theme.success,
+                  }}
+                >
+                  ■
+                </span>
+              </>
+            )
+          }
+        } else {
+          footer = Locale.time(x.time.updated)
+        }
+
         const date = new Date(x.time.updated)
         let category = date.toDateString()
         if (category === today) {
@@ -75,7 +137,7 @@ export function DialogSessionList() {
           bg: isDeleting ? theme.error : undefined,
           value: x.id,
           category,
-          footer: Locale.time(x.time.updated),
+          footer,
           gutter: isWorking ? <Spinner /> : undefined,
         }
       })
@@ -146,6 +208,15 @@ export function DialogSessionList() {
           },
         },
         // kilocode_change end
+        {
+          keybind: Keybind.parse("ctrl+w")[0],
+          title: "new workspace",
+          side: "right",
+          disabled: !Flag.KILO_EXPERIMENTAL_WORKSPACES,
+          onTrigger: () => {
+            createWorkspace()
+          },
+        },
       ]}
     />
   )

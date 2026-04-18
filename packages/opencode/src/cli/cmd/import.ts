@@ -9,9 +9,10 @@ import { SessionTable, MessageTable, PartTable } from "../../session/session.sql
 import { Instance } from "../../project/instance"
 import { EOL } from "os"
 import { Filesystem } from "../../util/filesystem"
+import { AppRuntime } from "@/effect/app-runtime"
 import { Log } from "../../util/log"
 
-const log = Log.create({ service: "import-command" })
+const log = Log.create({ service: "import" })
 
 /** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =

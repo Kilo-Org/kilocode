@@ -8,6 +8,7 @@ import { Log } from "../util/log"
 import { Npm } from "../npm"
 import { Hash } from "../util/hash"
 import { Plugin } from "../plugin"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { NamedError } from "@opencode-ai/util/error"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
 import { ModelsDev } from "./models"
@@ -18,10 +19,11 @@ import { Flag } from "../flag/flag"
 import { iife } from "@/util/iife"
 import { Global } from "../global"
 import path from "path"
-import { Filesystem } from "../util/filesystem"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Effect, Layer, Context } from "effect"
+import { EffectLogger } from "@/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
+import { AppFileSystem } from "@/filesystem"
+import { isRecord } from "@/util/record"
 
 // Direct imports for bundled providers
 import { createAmazonBedrock, type AmazonBedrockProviderSettings } from "@ai-sdk/amazon-bedrock"
@@ -45,6 +47,7 @@ import { createTogetherAI } from "@ai-sdk/togetherai"
 import { createPerplexity } from "@ai-sdk/perplexity"
 import { createVercel } from "@ai-sdk/vercel"
 import { createVenice } from "venice-ai-sdk-provider"
+import { createAlibaba } from "@ai-sdk/alibaba"
 import {
   createGitLab,
   VERSION as GITLAB_PROVIDER_VERSION,
@@ -127,12 +130,6 @@ export namespace Provider {
     })
   }
 
-  function e2eURL() {
-    const url = Env.get("OPENCODE_E2E_LLM_URL")
-    if (typeof url !== "string" || url === "") return
-    return url
-  }
-
   type BundledSDK = {
     languageModel(modelId: string): LanguageModelV3
   }
@@ -157,6 +154,7 @@ export namespace Provider {
     "@ai-sdk/togetherai": createTogetherAI,
     "@ai-sdk/perplexity": createPerplexity,
     "@ai-sdk/vercel": createVercel,
+    "@ai-sdk/alibaba": createAlibaba,
     "gitlab-ai-provider": createGitLab,
     "@ai-sdk/github-copilot": createGitHubCopilotOpenAICompatible,
     "venice-ai-sdk-provider": createVenice,
@@ -177,6 +175,8 @@ export namespace Provider {
   type CustomDep = {
     auth: (id: string) => Effect.Effect<Auth.Info | undefined>
     config: () => Effect.Effect<Config.Info>
+    env: () => Effect.Effect<Record<string, string | undefined>>
+    get: (key: string) => Effect.Effect<string | undefined>
   }
 
   function useLanguageModel(sdk: any) {
@@ -195,7 +195,7 @@ export namespace Provider {
           },
         }),
       opencode: Effect.fnUntraced(function* (input: Info) {
-        const env = Env.all()
+        const env = yield* dep.env()
         const hasKey = iife(() => {
           if (input.env.some((item) => env[item])) return true
           return false
@@ -242,14 +242,15 @@ export namespace Provider {
           },
           options: {},
         }),
-      azure: (provider) => {
+      azure: Effect.fnUntraced(function* (provider: Info) {
+        const env = yield* dep.env()
         const resource = iife(() => {
           const name = provider.options?.resourceName
           if (typeof name === "string" && name.trim() !== "") return name
-          return Env.get("AZURE_RESOURCE_NAME")
+          return env["AZURE_RESOURCE_NAME"]
         })
 
-        return Effect.succeed({
+        return {
           autoload: false,
           async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
             if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
@@ -265,11 +266,11 @@ export namespace Provider {
               ...(resource && { AZURE_RESOURCE_NAME: resource }),
             }
           },
-        })
-      },
-      "azure-cognitive-services": () => {
-        const resourceName = Env.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME")
-        return Effect.succeed({
+        }
+      }),
+      "azure-cognitive-services": Effect.fnUntraced(function* () {
+        const resourceName = yield* dep.get("AZURE_COGNITIVE_SERVICES_RESOURCE_NAME")
+        return {
           autoload: false,
           async getModel(sdk: any, modelID: string, options?: Record<string, any>) {
             if (useLanguageModel(sdk)) return sdk.languageModel(modelID)
@@ -282,23 +283,24 @@ export namespace Provider {
           options: {
             baseURL: resourceName ? `https://${resourceName}.cognitiveservices.azure.com/openai` : undefined,
           },
-        })
-      },
+        }
+      }),
       "amazon-bedrock": Effect.fnUntraced(function* () {
         const providerConfig = (yield* dep.config()).provider?.["amazon-bedrock"]
         const auth = yield* dep.auth("amazon-bedrock")
+        const env = yield* dep.env()
 
         // Region precedence: 1) config file, 2) env var, 3) default
         const configRegion = providerConfig?.options?.region
-        const envRegion = Env.get("AWS_REGION")
+        const envRegion = env["AWS_REGION"]
         const defaultRegion = configRegion ?? envRegion ?? "us-east-1"
 
         // Profile: config file takes precedence over env var
         const configProfile = providerConfig?.options?.profile
-        const envProfile = Env.get("AWS_PROFILE")
+        const envProfile = env["AWS_PROFILE"]
         const profile = configProfile ?? envProfile
 
-        const awsAccessKeyId = Env.get("AWS_ACCESS_KEY_ID")
+        const awsAccessKeyId = env["AWS_ACCESS_KEY_ID"]
 
         // TODO: Using process.env directly because Env.set only updates a process.env shallow copy,
         // until the scope of the Env API is clarified (test only or runtime?)
@@ -312,7 +314,7 @@ export namespace Provider {
           return undefined
         })
 
-        const awsWebIdentityTokenFile = Env.get("AWS_WEB_IDENTITY_TOKEN_FILE")
+        const awsWebIdentityTokenFile = env["AWS_WEB_IDENTITY_TOKEN_FILE"]
 
         const containerCreds = Boolean(
           process.env.AWS_CONTAINER_CREDENTIALS_RELATIVE_URI || process.env.AWS_CONTAINER_CREDENTIALS_FULL_URI,
@@ -450,24 +452,22 @@ export namespace Provider {
             },
           },
         }),
-      "google-vertex": (provider) => {
+      "google-vertex": Effect.fnUntraced(function* (provider: Info) {
+        const env = yield* dep.env()
         const project =
-          provider.options?.project ??
-          Env.get("GOOGLE_CLOUD_PROJECT") ??
-          Env.get("GCP_PROJECT") ??
-          Env.get("GCLOUD_PROJECT")
+          provider.options?.project ?? env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
 
         const location = String(
           provider.options?.location ??
-            Env.get("GOOGLE_VERTEX_LOCATION") ??
-            Env.get("GOOGLE_CLOUD_LOCATION") ??
-            Env.get("VERTEX_LOCATION") ??
+            env["GOOGLE_VERTEX_LOCATION"] ??
+            env["GOOGLE_CLOUD_LOCATION"] ??
+            env["VERTEX_LOCATION"] ??
             "us-central1",
         )
 
         const autoload = Boolean(project)
-        if (!autoload) return Effect.succeed({ autoload: false })
-        return Effect.succeed({
+        if (!autoload) return { autoload: false }
+        return {
           autoload: true,
           vars(_options: Record<string, any>) {
             const endpoint =
@@ -496,14 +496,15 @@ export namespace Provider {
             const id = String(modelID).trim()
             return sdk.languageModel(id)
           },
-        })
-      },
-      "google-vertex-anthropic": () => {
-        const project = Env.get("GOOGLE_CLOUD_PROJECT") ?? Env.get("GCP_PROJECT") ?? Env.get("GCLOUD_PROJECT")
-        const location = Env.get("GOOGLE_CLOUD_LOCATION") ?? Env.get("VERTEX_LOCATION") ?? "global"
+        }
+      }),
+      "google-vertex-anthropic": Effect.fnUntraced(function* () {
+        const env = yield* dep.env()
+        const project = env["GOOGLE_CLOUD_PROJECT"] ?? env["GCP_PROJECT"] ?? env["GCLOUD_PROJECT"]
+        const location = env["GOOGLE_CLOUD_LOCATION"] ?? env["VERTEX_LOCATION"] ?? "global"
         const autoload = Boolean(project)
-        if (!autoload) return Effect.succeed({ autoload: false })
-        return Effect.succeed({
+        if (!autoload) return { autoload: false }
+        return {
           autoload: true,
           options: {
             project,
@@ -513,8 +514,8 @@ export namespace Provider {
             const id = String(modelID).trim()
             return sdk.languageModel(id)
           },
-        })
-      },
+        }
+      }),
       "sap-ai-core": Effect.fnUntraced(function* () {
         const auth = yield* dep.auth("sap-ai-core")
         // TODO: Using process.env directly because Env.set only updates a shallow copy (not process.env),
@@ -550,14 +551,15 @@ export namespace Provider {
           },
         }),
       gitlab: Effect.fnUntraced(function* (input: Info) {
-        const instanceUrl = Env.get("GITLAB_INSTANCE_URL") || "https://gitlab.com"
+        const instanceUrl = (yield* dep.get("GITLAB_INSTANCE_URL")) || "https://gitlab.com"
 
         const auth = yield* dep.auth(input.id)
         const apiKey = yield* Effect.sync(() => {
           if (auth?.type === "oauth") return auth.access
           if (auth?.type === "api") return auth.key
-          return Env.get("GITLAB_TOKEN")
+          return undefined
         })
+        const token = apiKey ?? (yield* dep.get("GITLAB_TOKEN"))
 
         const providerConfig = (yield* dep.config()).provider?.["gitlab"]
 
@@ -574,10 +576,10 @@ export namespace Provider {
         }
 
         return {
-          autoload: !!apiKey,
+          autoload: !!token,
           options: {
             instanceUrl,
-            apiKey,
+            apiKey: token,
             aiGatewayHeaders,
             featureFlags,
           },
@@ -692,8 +694,8 @@ export namespace Provider {
         if (input.options?.baseURL) return { autoload: false }
 
         const auth = yield* dep.auth(input.id)
-        const accountId =
-          Env.get("CLOUDFLARE_ACCOUNT_ID") || (auth?.type === "api" ? auth.metadata?.accountId : undefined)
+        const env = yield* dep.env()
+        const accountId = env["CLOUDFLARE_ACCOUNT_ID"] || (auth?.type === "api" ? auth.metadata?.accountId : undefined)
         if (!accountId)
           return {
             autoload: false,
@@ -705,7 +707,7 @@ export namespace Provider {
           }
 
         const apiKey = yield* Effect.gen(function* () {
-          const envToken = Env.get("CLOUDFLARE_API_KEY")
+          const envToken = env["CLOUDFLARE_API_KEY"]
           if (envToken) return envToken
           if (auth?.type === "api") return auth.key
           return undefined
@@ -734,10 +736,9 @@ export namespace Provider {
         if (input.options?.baseURL) return { autoload: false }
 
         const auth = yield* dep.auth(input.id)
-        const accountId =
-          Env.get("CLOUDFLARE_ACCOUNT_ID") || (auth?.type === "api" ? auth.metadata?.accountId : undefined)
-        const gateway =
-          Env.get("CLOUDFLARE_GATEWAY_ID") || (auth?.type === "api" ? auth.metadata?.gatewayId : undefined)
+        const env = yield* dep.env()
+        const accountId = env["CLOUDFLARE_ACCOUNT_ID"] || (auth?.type === "api" ? auth.metadata?.accountId : undefined)
+        const gateway = env["CLOUDFLARE_GATEWAY_ID"] || (auth?.type === "api" ? auth.metadata?.gatewayId : undefined)
 
         if (!accountId || !gateway) {
           const missing = [
@@ -756,7 +757,7 @@ export namespace Provider {
 
         // Get API token from env or auth - required for authenticated gateways
         const apiToken = yield* Effect.gen(function* () {
-          const envToken = Env.get("CLOUDFLARE_API_TOKEN") || Env.get("CF_AIG_TOKEN")
+          const envToken = env["CLOUDFLARE_API_TOKEN"] || env["CF_AIG_TOKEN"]
           if (envToken) return envToken
           if (auth?.type === "api") return auth.key
           return undefined
@@ -939,7 +940,7 @@ export namespace Provider {
     varsLoaders: Record<string, CustomVarsLoader>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Provider") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Provider") {}
 
   function cost(c: ModelsDev.Model["cost"]): Model["cost"] {
     const result: Model["cost"] = {
@@ -1043,11 +1044,17 @@ export namespace Provider {
     }
   }
 
-  const layer: Layer.Layer<Service, never, Config.Service | Auth.Service | Plugin.Service> = Layer.effect(
+  const layer: Layer.Layer<
+    Service,
+    never,
+    Config.Service | Auth.Service | Plugin.Service | AppFileSystem.Service | Env.Service
+  > = Layer.effect(
     Service,
     Effect.gen(function* () {
+      const fs = yield* AppFileSystem.Service
       const config = yield* Config.Service
       const auth = yield* Auth.Service
+      const env = yield* Env.Service
       const plugin = yield* Plugin.Service
 
       const state = yield* InstanceState.make<State>(() =>
@@ -1072,6 +1079,8 @@ export namespace Provider {
           const dep = {
             auth: (id: string) => auth.get(id).pipe(Effect.orDie),
             config: () => config.get(),
+            env: () => env.all(),
+            get: (key: string) => env.get(key),
           }
 
           log.info("init")
@@ -1195,11 +1204,11 @@ export namespace Provider {
           }
 
           // load env
-          const env = Env.all()
+          const envs = yield* env.all()
           for (const [id, provider] of Object.entries(database)) {
             const providerID = ProviderID.make(id)
             if (disabled.has(providerID)) continue
-            const apiKey = provider.env.map((item) => env[item]).find(Boolean)
+            const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
             if (!apiKey) continue
             mergeProvider(providerID, {
               source: "env",
@@ -1232,7 +1241,8 @@ export namespace Provider {
 
             const options = yield* Effect.promise(() =>
               plugin.auth!.loader!(
-                () => Effect.runPromise(auth.get(providerID).pipe(Effect.orDie)) as any,
+                () =>
+                  Effect.runPromise(auth.get(providerID).pipe(Effect.orDie, Effect.provide(EffectLogger.layer))) as any,
                 database[plugin.auth!.provider],
               ),
             )
@@ -1373,7 +1383,7 @@ export namespace Provider {
 
       const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
 
-      async function resolveSDK(model: Model, s: State) {
+      async function resolveSDK(model: Model, s: State, envs: Record<string, string | undefined>) {
         try {
           using _ = log.time("getSDK", {
             providerID: model.providerID,
@@ -1404,7 +1414,7 @@ export namespace Provider {
             }
 
             url = url.replace(/\$\{([^}]+)\}/g, (item, key) => {
-              const val = Env.get(String(key))
+              const val = envs[String(key)]
               return val ?? item
             })
             return url
@@ -1543,11 +1553,16 @@ export namespace Provider {
 
       const getLanguage = Effect.fn("Provider.getLanguage")(function* (model: Model) {
         const s = yield* InstanceState.get(state)
+        const envs = yield* env.all()
         const key = `${model.providerID}/${model.id}`
         if (s.models.has(key)) return s.models.get(key)!
 
         return yield* Effect.promise(async () => {
-          const url = e2eURL()
+          const url = (() => {
+            const item = envs["OPENCODE_E2E_LLM_URL"]
+            if (typeof item !== "string" || item === "") return
+            return item
+          })()
           if (url) {
             const language = createOpenAICompatible({
               name: model.providerID,
@@ -1559,7 +1574,7 @@ export namespace Provider {
           }
 
           const provider = s.providers[model.providerID]
-          const sdk = await resolveSDK(model, s)
+          const sdk = await resolveSDK(model, s, envs)
 
           try {
             const language = s.modelLoaders[model.providerID]
@@ -1668,12 +1683,17 @@ export namespace Provider {
         if (cfg.model) return parseModel(cfg.model)
 
         const s = yield* InstanceState.get(state)
-        const recent = yield* Effect.promise(() =>
-          Filesystem.readJson<{
-            recent?: { providerID: ProviderID; modelID: ModelID }[]
-          }>(path.join(Global.Path.state, "model.json"))
-            .then((x): { providerID: ProviderID; modelID: ModelID }[] => (Array.isArray(x.recent) ? x.recent : []))
-            .catch((): { providerID: ProviderID; modelID: ModelID }[] => []),
+        const recent = yield* fs.readJson(path.join(Global.Path.state, "model.json")).pipe(
+          Effect.map((x): { providerID: ProviderID; modelID: ModelID }[] => {
+            if (!isRecord(x) || !Array.isArray(x.recent)) return []
+            return x.recent.flatMap((item) => {
+              if (!isRecord(item)) return []
+              if (typeof item.providerID !== "string") return []
+              if (typeof item.modelID !== "string") return []
+              return [{ providerID: ProviderID.make(item.providerID), modelID: ModelID.make(item.modelID) }]
+            })
+          }),
+          Effect.catch(() => Effect.succeed([] as { providerID: ProviderID; modelID: ModelID }[])),
         )
         for (const entry of recent) {
           const provider = s.providers[entry.providerID]
@@ -1700,41 +1720,13 @@ export namespace Provider {
 
   export const defaultLayer = Layer.suspend(() =>
     layer.pipe(
+      Layer.provide(AppFileSystem.defaultLayer),
+      Layer.provide(Env.defaultLayer),
       Layer.provide(Config.defaultLayer),
       Layer.provide(Auth.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
     ),
   )
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function list() {
-    return runPromise((svc) => svc.list())
-  }
-
-  export async function getProvider(providerID: ProviderID) {
-    return runPromise((svc) => svc.getProvider(providerID))
-  }
-
-  export async function getModel(providerID: ProviderID, modelID: ModelID) {
-    return runPromise((svc) => svc.getModel(providerID, modelID))
-  }
-
-  export async function getLanguage(model: Model) {
-    return runPromise((svc) => svc.getLanguage(model))
-  }
-
-  export async function closest(providerID: ProviderID, query: string[]) {
-    return runPromise((svc) => svc.closest(providerID, query))
-  }
-
-  export async function getSmallModel(providerID: ProviderID) {
-    return runPromise((svc) => svc.getSmallModel(providerID))
-  }
-
-  export async function defaultModel() {
-    return runPromise((svc) => svc.defaultModel())
-  }
 
   const priority = ["gpt-5", "claude-sonnet-4", "big-pickle", "gemini-3-pro"]
   export function sort<T extends { id: string }>(models: T[]) {
@@ -1769,4 +1761,15 @@ export namespace Provider {
       providerID: ProviderID.zod,
     }),
   )
+
+  // kilocode_change start - legacy promise helpers for Kilo callsites
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+  export const list = () => runPromise((svc) => svc.list())
+  export const getModel = (providerID: ProviderID, modelID: ModelID) =>
+    runPromise((svc) => svc.getModel(providerID, modelID))
+  export const getProvider = (providerID: ProviderID) => runPromise((svc) => svc.getProvider(providerID))
+  export const getLanguage = (model: Model) => runPromise((svc) => svc.getLanguage(model))
+  export const getSmallModel = (providerID: ProviderID) => runPromise((svc) => svc.getSmallModel(providerID))
+  export const defaultModel = () => runPromise((svc) => svc.defaultModel())
+  // kilocode_change end
 }
