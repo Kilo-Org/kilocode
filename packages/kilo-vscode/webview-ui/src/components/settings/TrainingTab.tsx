@@ -363,13 +363,13 @@ const TrainingTab: Component = () => {
       }
       case "trainingBrowsePathResult": {
         // Populate the path field from the OS file picker
-        const data = message as { path: string }
+        const data = message as unknown as { path: string }
         if (data.path) setRegPath(data.path)
         break
       }
       case "trainingError": {
         // Display error to user via console (could be enhanced with a toast)
-        const data = message as { error: string }
+        const data = message as unknown as { error: string }
         console.error("[Training]", data.error)
         setDetectingGPU(false)
         setExporting(false)
