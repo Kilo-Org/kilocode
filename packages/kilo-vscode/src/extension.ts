@@ -29,13 +29,29 @@ import { TrainingService } from "./services/training"
 import { GovernanceService } from "./services/governance"
 import { WorkstationProfileService } from "./services/workstation"
 import type { KiloClient } from "@kilocode/sdk/v2"
+import { KiloLogger } from "./services/KiloLogger"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
 // requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
 export function activate(context: vscode.ExtensionContext) {
-  console.log("Kilo Code extension is now active")
+  // Initialize centralized V4 logging (OutputChannel + debug mode toggle)
+  KiloLogger.initialize()
+  const extLog = KiloLogger.for("Extension")
+  extLog.info("Kilo Code extension activating")
+
+  // Register debug mode toggle command
+  context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.v4.toggleDebugMode", async () => {
+      const current = KiloLogger.isDebugMode
+      await KiloLogger.setDebugMode(!current)
+      KiloLogger.showChannel()
+      vscode.window.showInformationMessage(
+        `KiloCode V4 Debug Mode ${!current ? "ENABLED" : "DISABLED"}`,
+      )
+    }),
+  )
 
   const telemetry = TelemetryProxy.getInstance()
 

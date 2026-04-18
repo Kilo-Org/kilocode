@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -126,6 +127,7 @@ export class RoutingService implements vscode.Disposable {
   private retryBudgetTimer: ReturnType<typeof setInterval> | undefined
   private readonly listeners = new Set<() => void>()
   private readonly secrets: vscode.SecretStorage
+  private readonly log = KiloLogger.for("RoutingService")
 
   constructor(context: vscode.ExtensionContext) {
     this.secrets = context.secrets
@@ -146,6 +148,11 @@ export class RoutingService implements vscode.Disposable {
     this.retryBudgetTimer = setInterval(() => {
       this.resetRetryBudgets()
     }, 3_600_000)
+
+    this.log.info("RoutingService initialized", {
+      mode: this.config.mode,
+      providers: this.config.fallbackOrder,
+    })
   }
 
   // ── Provider Initialization ──────────────────────────────
@@ -251,6 +258,7 @@ export class RoutingService implements vscode.Disposable {
   // ── Configuration ────────────────────────────────────────
 
   setMode(mode: "auto" | "manual"): void {
+    this.log.info("Routing mode changed", { mode })
     this.config.mode = mode
     this.notifyListeners()
   }
@@ -263,11 +271,13 @@ export class RoutingService implements vscode.Disposable {
   }
 
   setPrivacyMode(mode: "local_preferred" | "cloud_ok"): void {
+    this.log.info("Privacy mode changed", { privacyMode: mode })
     this.config.privacyMode = mode
     this.notifyListeners()
   }
 
   setCostThreshold(threshold: number): void {
+    this.log.info("Cost threshold changed", { costThreshold: Math.max(0, threshold) })
     this.config.costThreshold = Math.max(0, threshold)
     this.notifyListeners()
   }
@@ -293,6 +303,7 @@ export class RoutingService implements vscode.Disposable {
     const provider = this.providers.get(providerId)
     if (!provider) return
 
+    this.log.info("API key configured", { providerId })
     const secretKey = `kilo-routing-key-${providerId}`
 
     if (apiKey && apiKey.trim().length > 0) {
@@ -409,6 +420,15 @@ export class RoutingService implements vscode.Disposable {
       fallbackDepth: 0,
       trace,
     })
+
+    this.log.info("Route decision", {
+      taskType: request.taskType,
+      riskLevel: request.riskLevel,
+      primaryProvider: primary.id,
+      fallbackProvider: fallback?.id,
+      success: true,
+    })
+    this.log.debug("Route trace", { trace: decision.trace })
 
     this.notifyListeners()
     return decision
@@ -591,12 +611,16 @@ export class RoutingService implements vscode.Disposable {
     const provider = this.providers.get(providerId)
     if (!provider) return false
 
+    this.log.info("Testing provider health", { providerId })
+    const endTimer = this.log.time(`healthCheck:${providerId}`)
+
     provider.lastHealthCheck = Date.now()
 
     const isLocal = providerId === "ollama" || providerId === "lmstudio"
 
     if (!isLocal && !provider.apiKeyConfigured) {
       provider.status = "unconfigured"
+      endTimer()
       this.notifyListeners()
       return false
     }
@@ -619,6 +643,7 @@ export class RoutingService implements vscode.Disposable {
             if (provider.circuitBreaker === "open") {
               provider.circuitBreaker = "half-open"
             }
+            endTimer()
             this.notifyListeners()
             return true
           }
@@ -626,6 +651,7 @@ export class RoutingService implements vscode.Disposable {
           clearTimeout(timeout)
         }
         provider.status = "offline"
+        endTimer()
         this.notifyListeners()
         return false
       }
@@ -635,6 +661,7 @@ export class RoutingService implements vscode.Disposable {
       if (!apiKey) {
         provider.status = "unconfigured"
         provider.apiKeyConfigured = false
+        endTimer()
         this.notifyListeners()
         return false
       }
@@ -648,10 +675,12 @@ export class RoutingService implements vscode.Disposable {
       } else {
         provider.status = "degraded"
       }
+      endTimer()
       this.notifyListeners()
       return healthy
     } catch {
       provider.status = "offline"
+      endTimer()
       this.notifyListeners()
       return false
     }
@@ -717,7 +746,7 @@ export class RoutingService implements vscode.Disposable {
       if (res.ok) return true
       if (res.status === 401 || res.status === 403) {
         // Key is invalid or insufficient — provider is reachable but key is bad
-        console.warn(`[RoutingService] Provider ${providerId} returned ${res.status} — API key may be invalid`)
+        this.log.warn("Provider returned auth error — API key may be invalid", { providerId, status: res.status })
         return false
       }
       // 429 (rate limited) or 5xx (server error) — provider is reachable but degraded
@@ -736,7 +765,8 @@ export class RoutingService implements vscode.Disposable {
     const providers = this.getProviders()
     for (const p of providers) {
       if (p.status !== "unconfigured") {
-        await this.testProvider(p.id)
+        const result = await this.testProvider(p.id)
+        this.log.debug("Health check result", { providerId: p.id, healthy: result, status: p.status })
       }
     }
   }
@@ -962,16 +992,12 @@ export class RoutingService implements vscode.Disposable {
     const validRiskLevels = ["low", "medium", "high"]
 
     if (!request.taskType || !validTaskTypes.includes(request.taskType)) {
-      console.warn(
-        `[RoutingService] Route validation failed: invalid or missing taskType "${request.taskType}"`,
-      )
+      this.log.warn("Route validation failed: invalid or missing taskType", { taskType: request.taskType })
       return false
     }
 
     if (!request.riskLevel || !validRiskLevels.includes(request.riskLevel)) {
-      console.warn(
-        `[RoutingService] Route validation failed: invalid or missing riskLevel "${request.riskLevel}"`,
-      )
+      this.log.warn("Route validation failed: invalid or missing riskLevel", { riskLevel: request.riskLevel })
       return false
     }
 

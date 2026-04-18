@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { randomUUID } from "crypto"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -88,6 +89,7 @@ const MAX_HISTORY = 200
  * for status changes so the webview can stay in sync.
  */
 export class ZeroClawService implements vscode.Disposable {
+	private readonly log = KiloLogger.for("ZeroClawService")
 	private readonly tasks = new Map<string, ZeroClawTask>()
 	private readonly queue: string[] = []
 	private readonly listeners = new Set<StatusListener>()
@@ -121,12 +123,16 @@ export class ZeroClawService implements vscode.Disposable {
 			}
 		})
 		this.disposables.push(termClose)
+
+		this.log.info("ZeroClawService initialized")
 	}
 
 	// ─── Public API ────────────────────────────────────────
 
 	/** Submit a new task. Returns the created task, or throws if validation fails. */
 	submit(submission: TaskSubmission): ZeroClawTask {
+		const endTimer = this.log.time("submitTask")
+
 		if (!this.validateRiskLevel(submission)) {
 			throw new Error("Invalid task submission: failed risk validation")
 		}
@@ -136,6 +142,8 @@ export class ZeroClawService implements vscode.Disposable {
 			.split(",")
 			.map((s) => s.trim())
 			.filter(Boolean)
+
+		this.log.info("Task submitted", { taskId, description: submission.description })
 
 		const task: ZeroClawTask = {
 			taskId,
@@ -167,6 +175,7 @@ export class ZeroClawService implements vscode.Disposable {
 		}
 
 		this.persistHistory()
+		endTimer()
 		return task
 	}
 
@@ -265,11 +274,13 @@ export class ZeroClawService implements vscode.Disposable {
 
 	/** Get a single task by ID. */
 	getTask(taskId: string): ZeroClawTask | undefined {
+		this.log.debug("getTask requested", { taskId })
 		return this.tasks.get(taskId)
 	}
 
 	/** Get all tasks, ordered newest first. */
 	getAllTasks(): ZeroClawTask[] {
+		this.log.debug("getAllTasks requested", { count: this.tasks.size })
 		return [...this.tasks.values()].sort((a, b) => b.createdAt - a.createdAt)
 	}
 
@@ -285,6 +296,7 @@ export class ZeroClawService implements vscode.Disposable {
 	 * Returns undefined if the task does not exist.
 	 */
 	getTaskResult(taskId: string): TaskResult | undefined {
+		this.log.debug("getTaskResult requested", { taskId })
 		const task = this.tasks.get(taskId)
 		if (!task) return undefined
 
@@ -695,6 +707,7 @@ export class ZeroClawService implements vscode.Disposable {
 		const task = this.tasks.get(taskId)
 		if (!task) return
 
+		this.log.info("Rollback started", { taskId })
 		this.appendLog(taskId, "[ZeroClaw] Attempting rollback of failed task")
 
 		if (task.changedFiles.length === 0) {
@@ -727,10 +740,12 @@ export class ZeroClawService implements vscode.Disposable {
 				const safePath = filePath.replace(/"/g, '\\"')
 				execSync(`git checkout -- "${safePath}"`, { cwd, timeout: 10000, stdio: "pipe" })
 				restoredCount++
+				this.log.info("File restored during rollback", { taskId, filePath })
 				this.appendLog(taskId, `[ZeroClaw] Restored: ${filePath}`)
 			} catch (err) {
 				failedCount++
 				const msg = err instanceof Error ? err.message : String(err)
+				this.log.warn("Failed to restore file during rollback", { taskId, filePath, error: msg })
 				this.appendLog(taskId, `[ZeroClaw] Failed to restore ${filePath}: ${msg}`)
 			}
 		}
@@ -771,19 +786,17 @@ export class ZeroClawService implements vscode.Disposable {
 		const validRiskLevels: RiskLevel[] = ["low", "medium", "high"]
 
 		if (!submission.description || submission.description.trim().length === 0) {
-			console.warn("[ZeroClaw] Validation failed: description is empty")
+			this.log.warn("Validation failed: description is empty")
 			return false
 		}
 
 		if (!submission.projectPath || submission.projectPath.trim().length === 0) {
-			console.warn("[ZeroClaw] Validation failed: projectPath is empty")
+			this.log.warn("Validation failed: projectPath is empty")
 			return false
 		}
 
 		if (!validRiskLevels.includes(submission.riskLevel)) {
-			console.warn(
-				`[ZeroClaw] Validation failed: invalid risk level "${submission.riskLevel}"`,
-			)
+			this.log.warn("Validation failed: invalid risk level", { riskLevel: submission.riskLevel })
 			return false
 		}
 

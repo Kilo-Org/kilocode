@@ -12,6 +12,7 @@ import * as os from "os"
 import { execSync } from "child_process"
 import * as fs from "fs"
 import * as path from "path"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Interfaces ────────────────────────────────────────────
 
@@ -189,6 +190,7 @@ const DEFAULT_PROFILE: WorkstationConfig = {
 
 export class WorkstationProfileService implements vscode.Disposable {
   private profile: WorkstationConfig
+  private readonly log = KiloLogger.for("WorkstationProfile")
 
   constructor() {
     // Load config overrides first, then detect real hardware
@@ -244,9 +246,9 @@ export class WorkstationProfileService implements vscode.Disposable {
       this.profile.limits.maxParallelJobs = Math.max(1, Math.floor(cpuCount / 4))
       this.profile.limits.maxMemoryPerJobGb = Math.max(4, Math.floor(totalMemGb / 4))
 
-      console.log(`[Workstation] Detected: ${cpus[0]?.model ?? "unknown CPU"} (${cpuCount} cores), ${totalMemGb}GB RAM, GPU: ${this.profile.hardware.gpu.model} (${this.profile.hardware.gpu.vramGb}GB VRAM)`)
+      this.log.info("Hardware detected", { cpu: cpus[0]?.model ?? "unknown", cores: cpuCount, ramGb: totalMemGb, gpu: this.profile.hardware.gpu.model, vramGb: this.profile.hardware.gpu.vramGb })
     } catch (err) {
-      console.warn("[Workstation] Hardware detection failed, using config defaults:", err)
+      this.log.warn("Hardware detection failed, using config defaults", err)
     }
   }
 
@@ -373,7 +375,7 @@ export class WorkstationProfileService implements vscode.Disposable {
     if (entries.length > 0) {
       this.profile.modelLibrary.entries = entries
       this.profile.modelLibrary.totalEstimatedSizeGb = Math.round(totalSizeGb)
-      console.log(`[Workstation] Scanned ${entries.length} model directories, total ${Math.round(totalSizeGb)}GB`)
+      this.log.info("Model directories scanned", { count: entries.length, totalSizeGb: Math.round(totalSizeGb) })
     }
   }
 

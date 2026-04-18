@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -308,6 +309,7 @@ export class VPSService implements vscode.Disposable {
   private readonly outputChannel: vscode.OutputChannel
   private ssh: SSHService
   private fallbackRunner: TerminalSSHRunner | undefined
+  private readonly kiloLog = KiloLogger.for("VPSService")
 
   constructor(
     private readonly ctx: vscode.ExtensionContext,
@@ -315,6 +317,7 @@ export class VPSService implements vscode.Disposable {
   ) {
     this.outputChannel = vscode.window.createOutputChannel("VPS Management")
     this.disposables.push(this.outputChannel)
+    this.kiloLog.info("VPSService initialized")
 
     if (sshService) {
       this.ssh = sshService

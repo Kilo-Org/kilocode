@@ -82,6 +82,11 @@
     },
     "commands": [
       {
+        "command": "kilo-code.v4.toggleDebugMode",
+        "title": "KiloCode V4: Toggle Debug Mode",
+        "icon": "$(bug)"
+      },
+      {
         "command": "kilo-code.new.plusButtonClicked",
         "title": "New Task",
         "icon": "$(add)"
@@ -680,6 +685,16 @@
     "configuration": {
       "title": "Kilo Code",
       "properties": {
+        "kilo-code.v4.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable verbose debug logging for all V4 subsystems (SSH, VPS, Routing, Governance, Training, Memory, ZeroClaw, Workstation). Logs appear in the 'KiloCode V4' output channel."
+        },
+        "kilo-code.v4.messageTracing": {
+          "type": "boolean",
+          "default": false,
+          "description": "Log every webview ↔ extension message for V4 subsystems. Useful for debugging message contract mismatches. Requires debugMode to be enabled."
+        },
         "kilo-code.new.language": {
           "type": "string",
           "default": "",

@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ───────────────────────────────────────────────
 
@@ -172,6 +173,7 @@ const VALID_SCOPES: ReadonlySet<MemoryEntry["scope"]> = new Set(["global", "proj
 // ─── Service ─────────────────────────────────────────────
 
 export class MemoryService implements vscode.Disposable {
+  private readonly log = KiloLogger.for("MemoryService")
   private readonly maxMemoryEntries: number = 5000
   private store: MemoryStore = { entries: [], writeHistory: [], permissions: [] }
   private connection: MemoryConnection = {
@@ -214,6 +216,7 @@ export class MemoryService implements vscode.Disposable {
     this.resolveStorePath()
     this.loadStore()
     this.startPingLoop()
+    this.log.info("MemoryService initialized")
   }
 
   // ─── Connection ──────────────────────────────────────
@@ -265,18 +268,18 @@ export class MemoryService implements vscode.Disposable {
   }): MemoryEntry {
     // ── Write validation ──
     if (!params.summary || !params.summary.trim()) {
-      const msg = "[Kilo Memory] Write rejected: summary must be non-empty"
-      console.error(msg)
+      const msg = "Write rejected: summary must be non-empty"
+      this.log.error(msg)
       throw new Error(msg)
     }
     if (!VALID_FACT_TYPES.has(params.factType)) {
-      const msg = `[Kilo Memory] Write rejected: invalid factType "${params.factType}". Must be one of: ${[...VALID_FACT_TYPES].join(", ")}`
-      console.error(msg)
+      const msg = `Write rejected: invalid factType "${params.factType}". Must be one of: ${[...VALID_FACT_TYPES].join(", ")}`
+      this.log.error(msg)
       throw new Error(msg)
     }
     if (!VALID_SCOPES.has(params.scope)) {
-      const msg = `[Kilo Memory] Write rejected: invalid scope "${params.scope}". Must be one of: ${[...VALID_SCOPES].join(", ")}`
-      console.error(msg)
+      const msg = `Write rejected: invalid scope "${params.scope}". Must be one of: ${[...VALID_SCOPES].join(", ")}`
+      this.log.error(msg)
       throw new Error(msg)
     }
 
@@ -289,10 +292,11 @@ export class MemoryService implements vscode.Disposable {
         }
       }
       const evicted = this.store.entries.splice(oldestIdx, 1)[0]
-      console.warn(`[Kilo Memory] Memory limit reached (${this.maxMemoryEntries}). Evicted oldest entry: ${evicted.id}`)
+      this.log.warn(`Memory limit reached (${this.maxMemoryEntries}). Evicted oldest entry: ${evicted.id}`)
     }
 
     const project = params.project ?? this.getWorkspaceName()
+    this.log.info("Memory write", { key: params.summary, scope: params.scope })
     const entry: MemoryEntry = {
       id: this.generateId(),
       project,
@@ -335,6 +339,8 @@ export class MemoryService implements vscode.Disposable {
     const project = options?.project ?? this.getWorkspaceName()
     const limit = options?.limit ?? 20
     const projectOnly = options?.projectOnly ?? true
+
+    this.log.info("Memory recall", { query })
 
     if (!query.trim()) {
       return { query, project, results: [], status: "empty", timestamp: Date.now() }
@@ -435,6 +441,7 @@ export class MemoryService implements vscode.Disposable {
 
       this.lastSuccessfulRecall = Date.now()
       this.recordOperation(true)
+      this.log.debug("Recall results", { query, resultCount: result.results.length, status: result.status, results: result.results })
       this._onRecallCompleted.fire(result)
       return result
     } catch (err: unknown) {
@@ -494,6 +501,7 @@ export class MemoryService implements vscode.Disposable {
       this.store.permissions.push(perm)
     }
     perm.scopes[scope] = allowed
+    this.log.info("Permission changed", { agentId, scope, allowed })
     this.scheduleSave()
     this._onPermissionChanged.fire({ agentId: perm.agentId, scopes: { ...perm.scopes } })
     return { agentId: perm.agentId, scopes: { ...perm.scopes } }
@@ -519,8 +527,10 @@ export class MemoryService implements vscode.Disposable {
     }
     if (existing >= 0) {
       this.store.permissions[existing] = perm
+      this.log.info("Agent permissions updated", { agentId, scopes: perm.scopes })
     } else {
       this.store.permissions.push(perm)
+      this.log.info("Agent registered", { agentId, scopes: perm.scopes })
     }
     this.scheduleSave()
     this._onPermissionChanged.fire({ agentId: perm.agentId, scopes: { ...perm.scopes } })
@@ -792,9 +802,7 @@ export class MemoryService implements vscode.Disposable {
       this.consecutiveFailures++
       // Auto-reconnect after consecutive failures threshold
       if (this.consecutiveFailures >= this.autoReconnectThreshold) {
-        console.warn(
-          `[Kilo Memory] ${this.consecutiveFailures} consecutive failures detected, triggering auto-reconnect`,
-        )
+        this.log.warn(`${this.consecutiveFailures} consecutive failures detected, triggering auto-reconnect`)
         void this.reconnect()
       }
     }
@@ -899,7 +907,7 @@ export class MemoryService implements vscode.Disposable {
       }
       fs.writeFileSync(this.storeFilePath, JSON.stringify(this.store, null, 2), "utf-8")
     } catch (err: unknown) {
-      console.error("[Kilo Memory] Failed to save store:", err)
+      this.log.error("Failed to save store", err)
     }
   }
 
@@ -918,6 +926,7 @@ export class MemoryService implements vscode.Disposable {
 
     // Track connection events (keep last 10)
     if (prev !== conn.status) {
+      this.log.info(`Connection state changed: ${prev} -> ${conn.status}`, { endpoint: conn.endpoint, latencyMs: conn.latencyMs, error: conn.lastError })
       this.connectionHistory.push({
         type: conn.status,
         timestamp: Date.now(),

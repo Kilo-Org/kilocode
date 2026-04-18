@@ -3,6 +3,7 @@ import { execSync } from "child_process"
 import * as os from "os"
 import * as fs from "fs"
 import * as path from "path"
+import { KiloLogger } from "../KiloLogger"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,13 +61,14 @@ const LMSTUDIO_BASE = "http://localhost:1234"
 // Helpers
 // ---------------------------------------------------------------------------
 
+const svcLog = KiloLogger.for("OnboardingDiscovery")
+
 function log(msg: string): void {
-	console.log(`${LOG_PREFIX} ${msg}`)
+	svcLog.info(msg)
 }
 
 function logError(msg: string, err: unknown): void {
-	const detail = err instanceof Error ? err.message : String(err)
-	console.error(`${LOG_PREFIX} ${msg}: ${detail}`)
+	svcLog.error(msg, err)
 }
 
 /**

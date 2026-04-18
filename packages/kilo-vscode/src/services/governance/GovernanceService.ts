@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs"
 import * as crypto from "crypto"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -395,7 +396,7 @@ function tierLevel(name: AuthorityTier["name"]): number {
 		case "superadmin":
 			return 3
 		default:
-			console.warn(`[Governance] Unknown tier name: "${name}", defaulting to observer level (0)`)
+			KiloLogger.for("GovernanceService").warn(`Unknown tier name: "${name}", defaulting to observer level (0)`)
 			return 0
 	}
 }
@@ -403,6 +404,7 @@ function tierLevel(name: AuthorityTier["name"]): number {
 // ─── Service ─────────────────────────────────────────────
 
 export class GovernanceService implements vscode.Disposable {
+	private readonly log = KiloLogger.for("GovernanceService")
 	private state: GovernanceState
 	private storagePath: string
 	private saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -422,6 +424,7 @@ export class GovernanceService implements vscode.Disposable {
 		this.storagePath = path.join(kiloDir, "governance.json")
 		this.state = this.load(kiloDir)
 		this.seedDefaults()
+		this.log.info("GovernanceService initialized", { storagePath: this.storagePath })
 	}
 
 	// ── Persistence ────────────────────────────────────
@@ -444,7 +447,7 @@ export class GovernanceService implements vscode.Disposable {
 				}
 			}
 		} catch (err) {
-			console.warn("[Governance] Failed to load state, using defaults:", err)
+			this.log.warn("Failed to load state, using defaults", err)
 		}
 		// Ensure .kilo directory exists for first-time save
 		if (!fs.existsSync(kiloDir)) {
@@ -488,11 +491,13 @@ export class GovernanceService implements vscode.Disposable {
 		for (const defaultAction of DEFAULT_DANGEROUS_ACTIONS) {
 			if (!this.state.dangerousActions.some((a) => a.id === defaultAction.id)) {
 				this.state.dangerousActions.push({ ...defaultAction })
+				this.log.debug("Seeded default dangerous action", { id: defaultAction.id, name: defaultAction.name })
 				changed = true
 			}
 		}
 
 		if (changed) {
+			this.log.info("Defaults seeded into governance state")
 			this.scheduleSave()
 		}
 	}
@@ -514,7 +519,7 @@ export class GovernanceService implements vscode.Disposable {
 			}
 			fs.writeFileSync(this.storagePath, JSON.stringify(this.state, null, 2), "utf-8")
 		} catch (err) {
-			console.error("[Governance] Failed to persist state:", err)
+			this.log.error("Failed to persist state", err)
 		}
 	}
 
@@ -526,6 +531,7 @@ export class GovernanceService implements vscode.Disposable {
 	// ── Snapshot ────────────────────────────────────────
 
 	getSnapshot(): GovernanceState {
+		this.log.debug("Snapshot requested")
 		return JSON.parse(JSON.stringify(this.state))
 	}
 
@@ -546,6 +552,7 @@ export class GovernanceService implements vscode.Disposable {
 	}
 
 	setUserTier(user: string, tierName: AuthorityTier["name"], assignedBy: string): void {
+		this.log.info("Authority tier changed", { userId: user, newTier: tierName, assignedBy })
 		const existing = this.state.tierAssignments.findIndex((a) => a.user === user)
 		const assignment: TierAssignment = {
 			user,
@@ -678,6 +685,7 @@ export class GovernanceService implements vscode.Disposable {
 		if (idx < 0) return undefined
 
 		const record = this.state.pendingApprovals[idx]
+		this.log.info("Action approved", { approvalId, approvedBy, action: record.actionDescription, riskLevel: record.riskLevel })
 		record.status = "approved"
 		record.approvedBy = approvedBy
 		record.reason = reason
@@ -703,6 +711,7 @@ export class GovernanceService implements vscode.Disposable {
 		if (idx < 0) return undefined
 
 		const record = this.state.pendingApprovals[idx]
+		this.log.info("Action rejected", { approvalId, rejectedBy, action: record.actionDescription, riskLevel: record.riskLevel, reason })
 		record.status = "rejected"
 		record.approvedBy = rejectedBy
 		record.reason = reason
@@ -877,6 +886,7 @@ export class GovernanceService implements vscode.Disposable {
 			id: generateId(),
 			...action,
 		}
+		this.log.info("New dangerous action registered", { id: entry.id, name: entry.name, severity: entry.severity, minimumTier: entry.minimumTier })
 		this.state.dangerousActions.push(entry)
 
 		this.addAuditEntry({
@@ -1114,6 +1124,7 @@ export class GovernanceService implements vscode.Disposable {
 	// ── Subsystem Registration ─────────────────────────
 
 	registerSubsystem(name: string, status: "active" | "degraded" | "inactive"): void {
+		this.log.debug("Subsystem registration", { name, status })
 		const entry: RegisteredSubsystem = {
 			name,
 			status,

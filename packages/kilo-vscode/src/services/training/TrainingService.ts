@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as fs from "fs"
 import * as path from "path"
 import { execFile } from "child_process"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -213,12 +214,14 @@ export class TrainingService implements vscode.Disposable {
   private readonly maxDatasetSizeBytes: number = 10 * 1024 * 1024 * 1024 // 10 GB
   private readonly _onStateChange = new vscode.EventEmitter<void>()
   public readonly onStateChange = this._onStateChange.event
+  private readonly log = KiloLogger.for("TrainingService")
 
   constructor(private readonly context: vscode.ExtensionContext) {
     const folders = vscode.workspace.workspaceFolders
     this.workspaceRoot = folders?.[0]?.uri.fsPath ?? ""
     this.disposables.push(this._onStateChange)
     this.loadState()
+    this.log.info("TrainingService initialized", { workspaceRoot: this.workspaceRoot })
   }
 
   // ─── Persistence ────────────────────────────────────────
@@ -234,7 +237,7 @@ export class TrainingService implements vscode.Disposable {
         this.jobs = state.jobs ?? []
       }
     } catch (err) {
-      console.warn("[Kilo Training] Failed to load state:", err)
+      this.log.warn("Failed to load state", err)
     }
   }
 
@@ -252,7 +255,7 @@ export class TrainingService implements vscode.Disposable {
       }
       fs.writeFileSync(filePath, JSON.stringify(state, null, 2), "utf8")
     } catch (err) {
-      console.warn("[Kilo Training] Failed to save state:", err)
+      this.log.warn("Failed to save state", err)
     }
   }
 
@@ -747,7 +750,7 @@ export class TrainingService implements vscode.Disposable {
         job.logs.push(
           `[${new Date().toISOString()}] Job auto-cancelled: exceeded timeout of ${job.resourceLimits.timeoutMinutes} minutes`
         )
-        console.warn(`[Kilo Training] Job ${job.id} ("${job.name}") timed out after ${job.resourceLimits.timeoutMinutes} minutes`)
+        this.log.warn(`Job timed out`, { jobId: job.id, name: job.name, timeoutMinutes: job.resourceLimits.timeoutMinutes })
         this.stopJobTimer(job.id)
         this.jobTimeoutTimers.delete(job.id)
         this.emitChange()
@@ -778,7 +781,7 @@ export class TrainingService implements vscode.Disposable {
         { timeout: 10000 },
         (error, stdout, stderr) => {
           if (error) {
-            console.warn("[Kilo Training] nvidia-smi failed:", error.message)
+            this.log.warn("nvidia-smi failed", { error: error.message })
             // Try to get driver/CUDA info from plain nvidia-smi
             this.gpuCache = []
             resolve([])

@@ -2,6 +2,7 @@ import * as fs from "fs"
 import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
+import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ──────────────────────────────────────────────
 
@@ -115,10 +116,12 @@ export class SSHService implements vscode.Disposable {
   private readonly errorLog: SSHError[] = []
   private static readonly MAX_ERROR_LOG = 50
   private readonly errorListeners = new Set<(error: SSHError) => void>()
+  private readonly kiloLog = KiloLogger.for("SSHService")
 
   constructor(private readonly ctx: vscode.ExtensionContext) {
     this.outputChannel = vscode.window.createOutputChannel("KiloCode SSH")
     this.disposables.push(this.outputChannel)
+    this.kiloLog.info("SSHService initialized")
 
     // Watch for terminal close events to update session state
     const terminalCloseWatcher = vscode.window.onDidCloseTerminal((closedTerminal) => {
@@ -1141,6 +1144,8 @@ export class SSHService implements vscode.Disposable {
   private log(message: string): void {
     const timestamp = new Date().toISOString().slice(11, 23)
     this.outputChannel.appendLine(`[${timestamp}] ${message}`)
+    // Also forward to centralized KiloLogger for unified V4 output
+    this.kiloLog.info(message)
   }
 
   // ─── Disposal ───────────────────────────────────────────

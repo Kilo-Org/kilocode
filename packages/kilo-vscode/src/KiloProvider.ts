@@ -1,5 +1,6 @@
 import * as path from "path"
 import * as vscode from "vscode"
+import { KiloLogger } from "./services/KiloLogger"
 import { buildPreviewPath, getPreviewCommand, getPreviewDir, parseImage, trimEntries } from "./image-preview"
 import { isAbsolutePath } from "./path-utils"
 import type {
@@ -642,6 +643,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
+      // V4 message tracing — log every inbound webview message when tracing is enabled
+      if (KiloLogger.isMessageTracing) {
+        KiloLogger.for("KiloProvider").trace("in", message.type as string, message)
+      }
       try {
       switch (message.type) {
         case "webviewReady":
@@ -1119,6 +1124,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
 
         // ─── V4 Subsystem Message Routing ───────────────────────────────
+        // Message tracing: log every V4 message when enabled
         // SSH
         case "requestSSHProfiles":
           if (this.sshService) this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
