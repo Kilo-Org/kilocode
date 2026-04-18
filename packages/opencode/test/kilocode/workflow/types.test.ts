@@ -49,6 +49,7 @@ describe("PlanTask", () => {
     expect(result.files).toEqual([])
     expect(result.verification).toEqual([])
     expect(result.estimatedComplexity).toBe("medium")
+    expect(result.escalationDepth).toBe(0)
   })
 })
 
@@ -66,13 +67,15 @@ describe("PlanChallenge", () => {
     const result = PlanChallenge.parse({
       planId: "01",
       verdict: "revise",
-      concerns: [{
-        severity: "critical",
-        category: "file-conflict",
-        description: "Tasks 01-02 and 01-03 both modify auth.ts in wave 1",
-        suggestedChange: "Move 01-03 to wave 2",
-        affectedTasks: ["01-02", "01-03"],
-      }],
+      concerns: [
+        {
+          severity: "critical",
+          category: "file-conflict",
+          description: "Tasks 01-02 and 01-03 both modify auth.ts in wave 1",
+          suggestedChange: "Move 01-03 to wave 2",
+          affectedTasks: ["01-02", "01-03"],
+        },
+      ],
       alternativeApproach: "Consider using existing auth middleware",
       summary: "File conflict in wave 1",
     })
@@ -81,18 +84,22 @@ describe("PlanChallenge", () => {
     expect(result.alternativeApproach).toBeDefined()
   })
   test("validates concern categories", () => {
-    expect(() => PlanChallenge.parse({
-      planId: "01",
-      verdict: "revise",
-      concerns: [{
-        severity: "critical",
-        category: "invalid-category",
-        description: "x",
-        suggestedChange: "y",
-        affectedTasks: [],
-      }],
-      summary: "x",
-    })).toThrow()
+    expect(() =>
+      PlanChallenge.parse({
+        planId: "01",
+        verdict: "revise",
+        concerns: [
+          {
+            severity: "critical",
+            category: "invalid-category",
+            description: "x",
+            suggestedChange: "y",
+            affectedTasks: [],
+          },
+        ],
+        summary: "x",
+      }),
+    ).toThrow()
   })
 })
 
@@ -137,9 +144,7 @@ describe("WorkflowState", () => {
       currentStage: "build",
       activeWave: 2,
       totalWaves: 3,
-      activeTasks: [
-        { id: "01-02", role: "senior", status: "in_progress" },
-      ],
+      activeTasks: [{ id: "01-02", role: "senior", status: "in_progress" }],
       lastUpdated: "2026-04-06T14:30:00Z",
     })
     expect(result.currentStage).toBe("build")

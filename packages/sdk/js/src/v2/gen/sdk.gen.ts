@@ -19,9 +19,32 @@ import type {
   Config as Config3,
   ConfigGetResponses,
   ConfigProvidersResponses,
+  ConfigTeamPresetsResponses,
+  ConfigTeamValidateResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
   ConfigWarningsResponses,
+  DevilcodeRemoveAgentErrors,
+  DevilcodeRemoveAgentResponses,
+  DevilcodeRemoveSkillErrors,
+  DevilcodeRemoveSkillResponses,
+  DevilcodeSessionImportMessageErrors,
+  DevilcodeSessionImportMessageResponses,
+  DevilcodeSessionImportPartErrors,
+  DevilcodeSessionImportPartResponses,
+  DevilcodeSessionImportProjectErrors,
+  DevilcodeSessionImportProjectResponses,
+  DevilcodeSessionImportSessionErrors,
+  DevilcodeSessionImportSessionResponses,
+  DevilcodeWorkflowEventsResponses,
+  DevilcodeWorkflowLessonsResponses,
+  DevilcodeWorkflowLocksResponses,
+  DevilcodeWorkflowPlansErrors,
+  DevilcodeWorkflowPlansResponses,
+  DevilcodeWorkflowReviewErrors,
+  DevilcodeWorkflowReviewResponses,
+  DevilcodeWorkflowStatusErrors,
+  DevilcodeWorkflowStatusResponses,
   EnhancePromptEnhanceErrors,
   EnhancePromptEnhanceResponses,
   EventSubscribeResponses,
@@ -39,6 +62,7 @@ import type {
   FileListResponses,
   FilePartInput,
   FilePartSource,
+  FileReadErrors,
   FileReadResponses,
   FileStatusResponses,
   FindFilesResponses,
@@ -52,35 +76,26 @@ import type {
   GlobalEventResponses,
   GlobalHealthResponses,
   InstanceDisposeResponses,
-  DevilClawChatCredentialsResponses,
-  DevilClawStatusResponses,
-  DevilCloudSessionGetErrors,
-  DevilCloudSessionGetResponses,
-  DevilCloudSessionImportErrors,
-  DevilCloudSessionImportResponses,
-  DevilCloudSessionsErrors,
-  DevilCloudSessionsResponses,
-  DevilcodeRemoveAgentErrors,
-  DevilcodeRemoveAgentResponses,
-  DevilcodeRemoveSkillErrors,
-  DevilcodeRemoveSkillResponses,
-  DevilcodeSessionImportMessageErrors,
-  DevilcodeSessionImportMessageResponses,
-  DevilcodeSessionImportPartErrors,
-  DevilcodeSessionImportPartResponses,
-  DevilcodeSessionImportProjectErrors,
-  DevilcodeSessionImportProjectResponses,
-  DevilcodeSessionImportSessionErrors,
-  DevilcodeSessionImportSessionResponses,
-  DevilFimErrors,
-  DevilFimResponses,
-  DevilModesResponses,
-  DevilNotificationsErrors,
-  DevilNotificationsResponses,
-  DevilOrganizationSetErrors,
-  DevilOrganizationSetResponses,
-  DevilProfileErrors,
-  DevilProfileResponses,
+  KiloClawChatCredentialsErrors,
+  KiloClawChatCredentialsResponses,
+  KiloClawStatusErrors,
+  KiloClawStatusResponses,
+  KiloCloudSessionGetErrors,
+  KiloCloudSessionGetResponses,
+  KiloCloudSessionImportErrors,
+  KiloCloudSessionImportResponses,
+  KiloCloudSessionsErrors,
+  KiloCloudSessionsResponses,
+  KiloFimErrors,
+  KiloFimResponses,
+  KiloModesErrors,
+  KiloModesResponses,
+  KiloNotificationsErrors,
+  KiloNotificationsResponses,
+  KiloOrganizationSetErrors,
+  KiloOrganizationSetResponses,
+  KiloProfileErrors,
+  KiloProfileResponses,
   LspStatusResponses,
   McpAddErrors,
   McpAddResponses,
@@ -143,6 +158,7 @@ import type {
   QuestionReplyErrors,
   QuestionReplyResponses,
   RemoteDisableResponses,
+  RemoteEnableErrors,
   RemoteEnableResponses,
   RemoteStatusResponses,
   SessionAbortErrors,
@@ -778,6 +794,75 @@ export class Pty extends HeyApiClient {
   }
 }
 
+export class Team extends HeyApiClient {
+  /**
+   * Validate team config
+   *
+   * Validate a team configuration payload without persisting it.
+   */
+  public validate<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: unknown
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<ConfigTeamValidateResponses, unknown, ThrowOnError>({
+      url: "/config/team/validate",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * List team presets
+   *
+   * Return built-in team presets for Team Composer.
+   */
+  public presets<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigTeamPresetsResponses, unknown, ThrowOnError>({
+      url: "/config/team/presets",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Config2 extends HeyApiClient {
   /**
    * Get configuration
@@ -904,6 +989,11 @@ export class Config2 extends HeyApiClient {
       ...options,
       ...params,
     })
+  }
+
+  private _team?: Team
+  get team(): Team {
+    return (this._team ??= new Team({ client: this.client }))
   }
 }
 
@@ -2498,9 +2588,9 @@ export class Part extends HeyApiClient {
 
 export class Permission extends HeyApiClient {
   /**
-   * Respond to permission
+   * Respond to permission [DEPRECATED]
    *
-   * Approve or deny a permission request from the AI assistant.
+   * DEPRECATED: Use /permission/:permissionID instead. This endpoint will be removed on 2025-06-01. Approve or deny a permission request from the AI assistant.
    *
    * @deprecated
    */
@@ -2627,6 +2717,36 @@ export class Permission extends HeyApiClient {
   }
 
   /**
+   * List pending permissions
+   *
+   * Get all pending permission requests across all sessions.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<PermissionListResponses, unknown, ThrowOnError>({
+      url: "/permission",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
    * Allow everything
    *
    * Enable or disable allowing all permissions without prompts.
@@ -2668,36 +2788,6 @@ export class Permission extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
-    })
-  }
-
-  /**
-   * List pending permissions
-   *
-   * Get all pending permission requests across all sessions.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<PermissionListResponses, unknown, ThrowOnError>({
-      url: "/permission",
-      ...options,
-      ...params,
     })
   }
 }
@@ -3029,7 +3119,7 @@ export class Remote extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<RemoteEnableResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).post<RemoteEnableResponses, RemoteEnableErrors, ThrowOnError>({
       url: "/remote/enable",
       ...options,
       ...params,
@@ -3191,7 +3281,7 @@ export class SessionImport extends HeyApiClient {
   /**
    * Insert project for session import
    *
-   * Insert or update a project row used by legacy session import.
+   * Insert or update a project row used by legacy session import. Supports idempotency via Idempotency-Key header.
    */
   public project<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3254,7 +3344,7 @@ export class SessionImport extends HeyApiClient {
   /**
    * Insert session for session import
    *
-   * Insert or update a session row used by legacy session import.
+   * Insert or update a session row used by legacy session import. Supports idempotency via Idempotency-Key header.
    */
   public session<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3349,7 +3439,7 @@ export class SessionImport extends HeyApiClient {
   /**
    * Insert message for session import
    *
-   * Insert or update a message row used by legacy session import.
+   * Insert or update a message row used by legacy session import. Supports idempotency via Idempotency-Key header.
    */
   public message<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3441,7 +3531,7 @@ export class SessionImport extends HeyApiClient {
   /**
    * Insert part for session import
    *
-   * Insert or update a part row used by legacy session import.
+   * Insert or update a part row used by legacy session import. Supports idempotency via Idempotency-Key header.
    */
   public part<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3571,11 +3661,205 @@ export class SessionImport extends HeyApiClient {
   }
 }
 
+export class Workflow extends HeyApiClient {
+  /**
+   * Get workflow status
+   *
+   * Returns the current WorkflowState (stage, phase, active tasks). Returns { initialized: false } when no .planning/ directory exists.
+   */
+  public status<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      DevilcodeWorkflowStatusResponses,
+      DevilcodeWorkflowStatusErrors,
+      ThrowOnError
+    >({
+      url: "/devilcode/workflow/status",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get plans for current phase
+   *
+   * Returns PlanTask[] for the current workflow phase. Returns [] when workflow is not initialized.
+   */
+  public plans<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      DevilcodeWorkflowPlansResponses,
+      DevilcodeWorkflowPlansErrors,
+      ThrowOnError
+    >({
+      url: "/devilcode/workflow/plans",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get review verdict for current phase
+   *
+   * Returns ReviewVerdict for the current phase. Returns 404 when no review exists.
+   */
+  public review<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      DevilcodeWorkflowReviewResponses,
+      DevilcodeWorkflowReviewErrors,
+      ThrowOnError
+    >({
+      url: "/devilcode/workflow/review",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get active file locks
+   *
+   * Returns FileLock[] from the lock manager. Returns [] when workflow is not initialized.
+   */
+  public locks<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<DevilcodeWorkflowLocksResponses, unknown, ThrowOnError>({
+      url: "/devilcode/workflow/locks",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get recent workflow events
+   *
+   * Returns the last 50 WorkflowEvent entries from the append-only event log.
+   */
+  public events<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<DevilcodeWorkflowEventsResponses, unknown, ThrowOnError>({
+      url: "/devilcode/workflow/events",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get captured lessons
+   *
+   * Returns all Lesson entries from the lesson store.
+   */
+  public lessons<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<DevilcodeWorkflowLessonsResponses, unknown, ThrowOnError>({
+      url: "/devilcode/workflow/lessons",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Devilcode extends HeyApiClient {
   /**
    * Remove a skill
    *
-   * Remove a skill by deleting its directory from disk and clearing it from cache.
+   * Remove a skill by deleting its directory from disk and clearing it from cache. This operation is permanent and cannot be undone.
    */
   public removeSkill<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3597,24 +3881,26 @@ export class Devilcode extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<DevilcodeRemoveSkillResponses, DevilcodeRemoveSkillErrors, ThrowOnError>(
-      {
-        url: "/devilcode/skill/remove",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
+    return (options?.client ?? this.client).post<
+      DevilcodeRemoveSkillResponses,
+      DevilcodeRemoveSkillErrors,
+      ThrowOnError
+    >({
+      url: "/devilcode/skill/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
       },
-    )
+    })
   }
 
   /**
    * Remove a custom agent
    *
-   * Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.
+   * Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state. Native agents cannot be removed. This operation is permanent.
    */
   public removeAgent<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3636,23 +3922,30 @@ export class Devilcode extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<DevilcodeRemoveAgentResponses, DevilcodeRemoveAgentErrors, ThrowOnError>(
-      {
-        url: "/devilcode/agent/remove",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
+    return (options?.client ?? this.client).post<
+      DevilcodeRemoveAgentResponses,
+      DevilcodeRemoveAgentErrors,
+      ThrowOnError
+    >({
+      url: "/devilcode/agent/remove",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
       },
-    )
+    })
   }
 
   private _sessionImport?: SessionImport
   get sessionImport(): SessionImport {
     return (this._sessionImport ??= new SessionImport({ client: this.client }))
+  }
+
+  private _workflow?: Workflow
+  get workflow(): Workflow {
+    return (this._workflow ??= new Workflow({ client: this.client }))
   }
 }
 
@@ -3682,7 +3975,7 @@ export class Organization extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).post<DevilOrganizationSetResponses, DevilOrganizationSetErrors, ThrowOnError>(
+    return (options?.client ?? this.client).post<KiloOrganizationSetResponses, KiloOrganizationSetErrors, ThrowOnError>(
       {
         url: "/kilo/organization",
         ...options,
@@ -3723,7 +4016,7 @@ export class Session3 extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilCloudSessionGetResponses, DevilCloudSessionGetErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloCloudSessionGetResponses, KiloCloudSessionGetErrors, ThrowOnError>({
       url: "/kilo/cloud/session/{id}",
       ...options,
       ...params,
@@ -3756,8 +4049,8 @@ export class Session3 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      DevilCloudSessionImportResponses,
-      DevilCloudSessionImportErrors,
+      KiloCloudSessionImportResponses,
+      KiloCloudSessionImportErrors,
       ThrowOnError
     >({
       url: "/kilo/cloud/session/import",
@@ -3803,7 +4096,7 @@ export class Claw extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilClawStatusResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloClawStatusResponses, KiloClawStatusErrors, ThrowOnError>({
       url: "/kilo/claw/status",
       ...options,
       ...params,
@@ -3833,7 +4126,11 @@ export class Claw extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilClawChatCredentialsResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<
+      KiloClawChatCredentialsResponses,
+      KiloClawChatCredentialsErrors,
+      ThrowOnError
+    >({
       url: "/kilo/claw/chat-credentials",
       ...options,
       ...params,
@@ -3841,7 +4138,7 @@ export class Claw extends HeyApiClient {
   }
 }
 
-export class Devil extends HeyApiClient {
+export class Kilo extends HeyApiClient {
   /**
    * Get Devil Gateway profile
    *
@@ -3865,7 +4162,7 @@ export class Devil extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilProfileResponses, DevilProfileErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloProfileResponses, KiloProfileErrors, ThrowOnError>({
       url: "/kilo/profile",
       ...options,
       ...params,
@@ -3895,7 +4192,7 @@ export class Devil extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilModesResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloModesResponses, KiloModesErrors, ThrowOnError>({
       url: "/kilo/modes",
       ...options,
       ...params,
@@ -3935,7 +4232,7 @@ export class Devil extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).sse.post<DevilFimResponses, DevilFimErrors, ThrowOnError>({
+    return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
       url: "/kilo/fim",
       ...options,
       ...params,
@@ -3970,7 +4267,7 @@ export class Devil extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilNotificationsResponses, DevilNotificationsErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloNotificationsResponses, KiloNotificationsErrors, ThrowOnError>({
       url: "/kilo/notifications",
       ...options,
       ...params,
@@ -4006,7 +4303,7 @@ export class Devil extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<DevilCloudSessionsResponses, DevilCloudSessionsErrors, ThrowOnError>({
+    return (options?.client ?? this.client).get<KiloCloudSessionsResponses, KiloCloudSessionsErrors, ThrowOnError>({
       url: "/kilo/cloud-sessions",
       ...options,
       ...params,
@@ -4169,7 +4466,7 @@ export class File extends HeyApiClient {
   /**
    * Read file
    *
-   * Read the content of a specified file.
+   * Read the content of a specified file. Returns JSON for text files, appropriate Content-Type for binary files.
    */
   public read<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4191,7 +4488,7 @@ export class File extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<FileReadResponses, unknown, ThrowOnError>({
+    return (options?.client ?? this.client).get<FileReadResponses, FileReadErrors, ThrowOnError>({
       url: "/file/content",
       ...options,
       ...params,
@@ -5380,9 +5677,9 @@ export class DevilClient extends HeyApiClient {
     return (this._devilcode ??= new Devilcode({ client: this.client }))
   }
 
-  private _kilo?: Devil
-  get kilo(): Devil {
-    return (this._kilo ??= new Devil({ client: this.client }))
+  private _kilo?: Kilo
+  get kilo(): Kilo {
+    return (this._kilo ??= new Kilo({ client: this.client }))
   }
 
   private _find?: Find

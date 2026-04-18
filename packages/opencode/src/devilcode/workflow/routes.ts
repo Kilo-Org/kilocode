@@ -16,6 +16,7 @@ import { Log } from "../../util/log"
 import z from "zod"
 
 const log = Log.create({ service: "workflow.routes" })
+const InternalError = z.object({ error: z.string() })
 
 function isENOENT(e: unknown): e is { code: "ENOENT" } {
   return typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "ENOENT"
@@ -39,6 +40,14 @@ export const WorkflowRoutes = lazy(() =>
             content: {
               "application/json": {
                 schema: resolver(z.union([WorkflowState, UninitializedStatus])),
+              },
+            },
+          },
+          500: {
+            description: "Workflow status read failed",
+            content: {
+              "application/json": {
+                schema: resolver(InternalError),
               },
             },
           },
@@ -73,6 +82,14 @@ export const WorkflowRoutes = lazy(() =>
             content: {
               "application/json": {
                 schema: resolver(PlanTask.array()),
+              },
+            },
+          },
+          500: {
+            description: "Workflow plans read failed",
+            content: {
+              "application/json": {
+                schema: resolver(InternalError),
               },
             },
           },

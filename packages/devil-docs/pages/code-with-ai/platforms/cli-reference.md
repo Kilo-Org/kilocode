@@ -18,7 +18,7 @@ Options:
   --port         port to listen on  [number] [default: 0]
   --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
   --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --mdns-domain  custom domain name for mDNS service (default: devil.local)  [string] [default: "devil.local"]
   --cors         additional domains to allow for CORS  [array] [default: []]
   --cwd          working directory  [string] [default: "."]
 ```
@@ -126,7 +126,7 @@ Options:
       --port         port to listen on  [number] [default: 0]
       --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
       --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --mdns-domain  custom domain name for mDNS service (default: devil.local)  [string] [default: "devil.local"]
       --cors         additional domains to allow for CORS  [array] [default: []]
   -m, --model        model to use in the format of provider/model  [string]
   -c, --continue     continue the last session  [boolean]
@@ -153,7 +153,7 @@ Options:
   -s, --session     session id to continue  [string]
       --fork        fork the session when continuing (use with --continue or --session)  [boolean]
       --cloud-fork  fetch session from cloud and continue locally (use with --session)  [boolean]
-  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -p, --password    basic auth password (defaults to DEVIL_SERVER_PASSWORD)  [string]
 ```
 
 ## kilo run
@@ -179,7 +179,7 @@ Options:
   -f, --file        file(s) to attach to message  [array]
       --title       title for the session (uses truncated prompt if no value provided)  [string]
       --attach      attach to a running opencode server (e.g., http://localhost:4096)  [string]
-  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -p, --password    basic auth password (defaults to DEVIL_SERVER_PASSWORD)  [string]
       --dir         directory to run in, path on remote server if attaching  [string]
       --port        port for the local server (defaults to random port if no value provided)  [number]
       --variant     model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
@@ -640,7 +640,7 @@ Options:
   --port         port to listen on  [number] [default: 0]
   --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
   --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --mdns-domain  custom domain name for mDNS service (default: devil.local)  [string] [default: "devil.local"]
   --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
@@ -736,6 +736,8 @@ Options:
       --version    Show version number  [boolean]
   -n, --max-count  limit to N most recent sessions  [number]
       --format     output format  [string] [choices: "table", "json"] [default: "table"]
+  -a, --all        list sessions from all projects  [boolean] [default: false]
+  -s, --search     filter sessions by title  [string]
 ```
 
 ### kilo session delete
@@ -800,6 +802,29 @@ Options:
   --version  Show version number  [boolean]
 ```
 
+## kilo config
+
+```
+configuration tools
+
+Commands:
+  kilo config check  check configuration for warnings and errors
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo config check
+
+```
+check configuration for warnings and errors
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
 ## kilo help
 
 ```
@@ -813,4 +838,14 @@ Options:
   --version  Show version number  [boolean]
   --all      show help for all commands  [boolean] [default: false]
   --format   output format  [string] [choices: "md", "text"] [default: "md"]
+```
+
+## kilo completion
+
+```
+generate shell completion script
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```

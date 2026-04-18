@@ -97,6 +97,9 @@ export function createDevilRoutes(deps: DevilRoutesDeps) {
   const Balance = z.object({
     balance: z.number(),
   })
+  const SimpleError = z.object({
+    error: z.string(),
+  })
 
   const ProfileWithBalance = z.object({
     profile: Profile,
@@ -271,6 +274,30 @@ export function createDevilRoutes(deps: DevilRoutesDeps) {
                     ),
                   }),
                 ),
+              },
+            },
+          },
+          400: {
+            description: "No organization selected",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
+              },
+            },
+          },
+          401: {
+            description: "Missing or invalid Devil Gateway credentials",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
+              },
+            },
+          },
+          502: {
+            description: "Devil Gateway modes lookup failed",
+            content: {
+              "application/json": {
+                schema: resolver(SimpleError),
               },
             },
           },

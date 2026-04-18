@@ -134,11 +134,14 @@ export const SettingsTeam: Component = () => {
   onMount(async () => {
     try {
       const response = await fetch("/config/team/presets")
-      if (!response.ok) return
+      if (!response.ok) {
+        console.warn("team preset fetch failed", { status: response.status })
+        return
+      }
       const data = (await response.json()) as PresetEntry[]
       if (Array.isArray(data) && data.length > 0) setPresets(data)
-    } catch {
-      // Keep fallback when route unavailable.
+    } catch (err) {
+      console.warn("team preset fetch failed", err)
     }
   })
   // devilcode_change end
@@ -153,7 +156,7 @@ export const SettingsTeam: Component = () => {
 
   const setTeam = (next: TeamConfig) => {
     globalSync.set("config", ((prev: any) => ({ ...prev, team: next })) as any)
-    void globalSync.updateConfig(({ team: next } as any))
+    void globalSync.updateConfig({ team: next } as any)
   }
 
   return (

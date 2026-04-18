@@ -87,11 +87,7 @@ export namespace Server {
       if (ports.includes(port)) return input
       return
     }
-    if (
-      input === "tauri://localhost" ||
-      input === "http://tauri.localhost" ||
-      input === "https://tauri.localhost"
-    )
+    if (input === "tauri://localhost" || input === "http://tauri.localhost" || input === "https://tauri.localhost")
       return input
     if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
       return input
@@ -111,7 +107,8 @@ export namespace Server {
       const origin = corsOrigin(c.req.header("origin"))
       if (!origin) return
       res.headers.set("Access-Control-Allow-Origin", origin)
-      res.headers.set("Vary", "Origin")
+      const vary = res.headers.get("Vary")
+      res.headers.set("Vary", vary ? `${vary}, Origin` : "Origin")
     },
   })
 
@@ -142,19 +139,6 @@ export namespace Server {
             status: 500,
           })
         })
-        .use((c, next) => {
-          // Allow CORS preflight requests to succeed without auth.
-          // Browser clients sending Authorization headers will preflight with OPTIONS.
-          // devilcode_change - audit H1: tradeoff documented. OPTIONS preflight cannot carry the
-          // basic-auth header (browsers strip it before sending preflight), so blocking OPTIONS
-          // would break all browser clients. Mitigations: rate-limit middleware (audit C7) still
-          // applies; CORS origin allowlist gates which origins can preflight at all (see below).
-          if (c.req.method === "OPTIONS") return next()
-          const password = Flag.DEVIL_SERVER_PASSWORD
-          if (!password) return next()
-          const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
-          return basicAuth({ username, password })(c, next)
-        })
         // devilcode_change start - Rate limiting (audit C7). Disable via DEVIL_DISABLE_RATE_LIMIT=1.
         .use(async (c, next) => {
           if (Flag.DEVIL_DISABLE_RATE_LIMIT) return next()
@@ -170,6 +154,20 @@ export namespace Server {
           return _rateLimitMiddleware(c, next)
         })
         // devilcode_change end
+        .use((c, next) => {
+          // Allow CORS preflight requests to succeed without auth.
+          // Browser clients sending Authorization headers will preflight with OPTIONS.
+          // devilcode_change - audit H1: tradeoff documented. OPTIONS preflight cannot carry the
+          // basic-auth header (browsers strip it before sending preflight), so blocking OPTIONS
+          // would break all browser clients. Mitigations: the rate limiter (audit C7) runs ahead
+          // of auth for non-OPTIONS requests; CORS origin allowlist gates which origins can
+          // preflight at all (see below).
+          if (c.req.method === "OPTIONS") return next()
+          const password = Flag.DEVIL_SERVER_PASSWORD
+          if (!password) return next()
+          const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
+          return basicAuth({ username, password })(c, next)
+        })
         // devilcode_change start - Request body size limit: 10MB
         .use(async (c, next) => {
           const contentLength = c.req.header("content-length")

@@ -2,20 +2,17 @@ import { describe, it, expect, mock, beforeEach } from "bun:test"
 import type { PlanTask, ActiveTask, TaskResult } from "@/devilcode/workflow/types"
 import type { WorkflowState } from "@/devilcode/workflow/types"
 import type { TeamConfig } from "@/devilcode/team/config"
+import { MAX_ESCALATION_DEPTH } from "@/devilcode/workflow/escalation"
 
 // Mock dependencies
-const mockSessionCreate = mock(() =>
-  Promise.resolve({ id: "session-001", slug: "test-session" }),
-)
-const mockSessionPrompt = mock(() =>
-  Promise.resolve({ info: { role: "assistant" } }),
-)
+const mockSessionCreate = mock(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
+const mockSessionPrompt = mock(() => Promise.resolve({ info: { role: "assistant" } }))
 const mockWorktreeCreate = mock(() =>
   Promise.resolve({ name: "brave-cabin", branch: "opencode/brave-cabin", directory: "/tmp/worktree-1" }),
 )
 const mockWorktreeRemove = mock(() => Promise.resolve())
-const mockInstanceProvide = mock(
-  ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+const mockInstanceProvide = mock(({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) =>
+  Promise.resolve(fn()),
 )
 const mockInstanceDispose = mock(() => Promise.resolve())
 
@@ -73,6 +70,7 @@ function makeTask(overrides: Partial<PlanTask>): PlanTask {
     files: overrides.files ?? [],
     verification: overrides.verification ?? [],
     description: overrides.description ?? "Do the thing",
+    escalationDepth: overrides.escalationDepth,
   }
 }
 
@@ -84,9 +82,7 @@ describe("BuildRunner", () => {
     mockWorktreeRemove.mockReset()
     mockInstanceProvide.mockReset()
     mockInstanceDispose.mockReset()
-    mockSessionCreate.mockImplementation(() =>
-      Promise.resolve({ id: "session-001", slug: "test-session" }),
-    )
+    mockSessionCreate.mockImplementation(() => Promise.resolve({ id: "session-001", slug: "test-session" }))
     mockWorktreeCreate.mockImplementation(() =>
       Promise.resolve({
         name: "brave-cabin",
@@ -95,8 +91,8 @@ describe("BuildRunner", () => {
       }),
     )
     mockWorktreeRemove.mockImplementation(() => Promise.resolve())
-    mockInstanceProvide.mockImplementation(
-      ({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) => Promise.resolve(fn()),
+    mockInstanceProvide.mockImplementation(({ fn }: { directory?: string; fn: () => Promise<unknown> | unknown }) =>
+      Promise.resolve(fn()),
     )
     mockInstanceDispose.mockImplementation(() => Promise.resolve())
   })
@@ -109,11 +105,7 @@ describe("BuildRunner", () => {
       onOutput: () => {},
     })
 
-    const tasks = [
-      makeTask({ id: "t1", wave: 2 }),
-      makeTask({ id: "t2", wave: 1 }),
-      makeTask({ id: "t3", wave: 1 }),
-    ]
+    const tasks = [makeTask({ id: "t1", wave: 2 }), makeTask({ id: "t2", wave: 1 }), makeTask({ id: "t3", wave: 1 })]
 
     const waves = runner.groupWaves(tasks)
     expect([...waves.keys()]).toEqual([1, 2])
@@ -182,10 +174,7 @@ describe("BuildRunner", () => {
       }),
     )
 
-    const tasks = [
-      makeTask({ id: "t1", wave: 1 }),
-      makeTask({ id: "t2", wave: 1 }),
-    ]
+    const tasks = [makeTask({ id: "t1", wave: 1 }), makeTask({ id: "t2", wave: 1 })]
     await runner.executeWave(tasks)
 
     expect(mockWorktreeCreate).toHaveBeenCalledTimes(2)
@@ -376,10 +365,7 @@ describe("BuildRunner", () => {
     let call = 0
     mockSessionPrompt.mockImplementation(() => {
       call++
-      const text =
-        call === 1
-          ? "Escalating to senior: this needs architecture review."
-          : "Resolved successfully."
+      const text = call === 1 ? "Escalating to senior: this needs architecture review." : "Resolved successfully."
       return Promise.resolve({
         info: { role: "assistant", finish: "end-turn" },
         parts: [{ type: "text", text }],
@@ -444,13 +430,19 @@ describe("BuildRunner", () => {
       }),
     )
 
-    const results = await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+    const results = await runner.executeWave([
+      makeTask({
+        id: "t1",
+        role: "worker",
+        wave: 1,
+        escalationDepth: MAX_ESCALATION_DEPTH,
+      }),
+    ])
 
-    // Worker (depth 0) -> escalate -> senior (depth 1). Senior escalates back to senior;
-    // self-target short-circuit returns escalated without further re-dispatch (also bounded
-    // by MAX_ESCALATION_DEPTH for non-self chains).
+    // Already at the maximum depth, so the runner should return the escalated result
+    // immediately without spawning a follow-up task.
     expect(results[0]?.status).toBe("escalated")
-    expect(mockSessionPrompt).toHaveBeenCalledTimes(2)
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(1)
   })
   // devilcode_change end
 
@@ -473,10 +465,7 @@ describe("BuildRunner", () => {
     )
 
     runner.requestPause()
-    const results = await runner.executeAll([
-      makeTask({ id: "t1", wave: 1 }),
-      makeTask({ id: "t2", wave: 2 }),
-    ])
+    const results = await runner.executeAll([makeTask({ id: "t1", wave: 1 }), makeTask({ id: "t2", wave: 2 })])
 
     expect(results.map((result) => result.taskId)).toEqual(["t1"])
     expect(paused).toEqual([1])

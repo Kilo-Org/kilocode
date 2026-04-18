@@ -19,10 +19,6 @@ env:
   BUN_TEST_TIMEOUT: 120000
   FORCE_COLOR: 1
 
-env:
-  BUN_TEST_TIMEOUT: 120000
-  FORCE_COLOR: 1
-
 jobs:
   unit:
     name: unit tests

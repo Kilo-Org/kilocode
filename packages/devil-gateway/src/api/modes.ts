@@ -40,7 +40,7 @@ export type OrganizationModeConfig = z.infer<typeof OrganizationModeConfigSchema
 export type OrganizationMode = z.infer<typeof OrganizationModeSchema>
 
 /**
- * In-memory cache for organization modes, keyed by organizationId.
+ * In-memory cache for organization modes, keyed by organization + credential scope.
  */
 const cache = new Map<string, { modes: OrganizationMode[]; timestamp: number }>()
 const TTL = 5 * 60 * 1000 // 5 minutes
@@ -75,7 +75,8 @@ export async function fetchOrganizationModesResult(
     return { ok: true, modes: [] }
   }
 
-  const cached = cache.get(organizationId)
+  const key = `${organizationId}:${token}`
+  const cached = cache.get(key)
   if (cached && Date.now() - cached.timestamp < TTL) {
     return { ok: true, modes: cached.modes }
   }
@@ -104,7 +105,7 @@ export async function fetchOrganizationModesResult(
     }
 
     const modes = parsed.data.modes
-    cache.set(organizationId, { modes, timestamp: Date.now() })
+    cache.set(key, { modes, timestamp: Date.now() })
     return { ok: true, modes }
   } catch (err) {
     console.warn("[Devil Gateway] Error fetching organization modes:", err)

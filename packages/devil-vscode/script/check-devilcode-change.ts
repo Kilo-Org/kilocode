@@ -2,17 +2,15 @@
 // script (the original `! grep -rn ... | grep -v ...` chain only works under bash/grep and
 // silently passes on Windows/PowerShell because the binaries are missing).
 //
-// Behavior: scan packages/devil-vscode/ and packages/kilo-ui/ (when present) for any
-// devilcode-change marker outside excluded paths. Documentation references that wrap the
-// literal in backticks are ignored. Any other occurrence is reported and the script exits 1.
+// Behavior: scan all packages/* except opencode/ for any devilcode-change marker outside
+// excluded paths. Documentation references that wrap the literal in backticks are ignored.
+// Any other occurrence is reported and the script exits 1.
 
-import { readdir, readFile, stat } from "node:fs/promises"
+import { readdir, readFile } from "node:fs/promises"
 import path from "node:path"
 
-const ROOTS = [
-  path.resolve(import.meta.dir, ".."), // devil-vscode
-  path.resolve(import.meta.dir, "..", "..", "kilo-ui"), // optional sibling package
-]
+const ROOT = path.resolve(import.meta.dir, "..", "..", "..")
+const PACKAGES = path.join(ROOT, "packages")
 
 const EXCLUDED_DIRS = new Set(["node_modules", "dist", "out", ".turbo", ".vscode-test"])
 const EXCLUDED_FILES = new Set(["package.json", "package-lock.json", "bun.lock", "bun.lockb"])
@@ -37,45 +35,45 @@ const SELF_FILE = path.resolve(import.meta.dir, "check-devilcode-change.ts")
 
 type Finding = { file: string; line: number; text: string }
 
-async function exists(p: string): Promise<boolean> {
-  try {
-    await stat(p)
-    return true
-  } catch {
-    return false
-  }
+async function roots() {
+  const entries = await readdir(PACKAGES, { withFileTypes: true })
+  return entries
+    .filter((entry) => entry.isDirectory() && entry.name !== "opencode")
+    .map((entry) => path.join(PACKAGES, entry.name))
 }
 
 async function* walk(dir: string): AsyncGenerator<string> {
-  let entries: Awaited<ReturnType<typeof readdir>> = []
   try {
-    entries = await readdir(dir, { withFileTypes: true })
-  } catch {
-    return
-  }
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      if (EXCLUDED_DIRS.has(entry.name)) continue
-      yield* walk(full)
-    } else if (entry.isFile()) {
+    const entries = await readdir(dir, { withFileTypes: true })
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        if (EXCLUDED_DIRS.has(entry.name)) continue
+        yield* walk(full)
+        continue
+      }
+      if (!entry.isFile()) continue
       if (EXCLUDED_FILES.has(entry.name)) continue
       const ext = path.extname(entry.name).toLowerCase()
       if (EXCLUDED_EXTS.has(ext)) continue
       if (path.resolve(full) === SELF_FILE) continue
       yield full
     }
+  } catch (err) {
+    console.warn(`check-devilcode-change: failed to read ${dir}:`, err)
+    return
   }
 }
 
 async function scan(root: string): Promise<Finding[]> {
-  if (!(await exists(root))) return []
+  if (!(await Bun.file(root).exists())) return []
   const findings: Finding[] = []
   for await (const file of walk(root)) {
     let content: string
     try {
       content = await readFile(file, "utf8")
-    } catch {
+    } catch (err) {
+      console.warn(`check-devilcode-change: failed to read ${file}:`, err)
       continue
     }
     if (!content.includes(MARKER)) continue
@@ -95,7 +93,7 @@ async function scan(root: string): Promise<Finding[]> {
 
 async function main() {
   const all: Finding[] = []
-  for (const root of ROOTS) {
+  for (const root of await roots()) {
     all.push(...(await scan(root)))
   }
   if (all.length === 0) {

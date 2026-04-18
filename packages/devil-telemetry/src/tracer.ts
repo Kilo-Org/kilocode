@@ -18,13 +18,11 @@ export namespace TracerSetup {
     platform: string
     editorName?: string
     vscodeVersion?: string
-  }): Tracer {
+  }): Tracer | null {
     if (tracer) return tracer
 
     const client = Client.getClient()
-    if (!client) {
-      throw new Error("PostHog client not initialized. Call Client.init() first.")
-    }
+    if (!client) return null
 
     exporter = new PostHogSpanExporter(client, {
       appName: options.appName,

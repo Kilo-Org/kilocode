@@ -56,6 +56,7 @@ function makeTask(overrides: Partial<PlanTask>): PlanTask {
     files: overrides.files ?? [],
     verification: overrides.verification ?? [],
     description: overrides.description ?? "Do the thing",
+    escalationDepth: overrides.escalationDepth,
   }
 }
 
@@ -168,6 +169,67 @@ describe("BuildRunner concurrency integration", () => {
     ])
 
     expect(getConcurrencyManager().getActiveCount("worker")).toBe(0)
+  })
+
+  it("releases the source slot before escalating to another role", async () => {
+    const { getConcurrencyManager } = await import("@/devilcode/team/concurrency")
+    getConcurrencyManager().reset()
+    const seen: number[] = []
+    const runner = new BuildRunner({
+      teamConfig: {
+        enabled: true,
+        roles: {
+          senior: {
+            displayName: "Senior",
+            provider: "openai",
+            model: "gpt-5.4",
+            effort: "high" as const,
+            tier: 2,
+            canDelegate: ["worker"],
+            maxConcurrent: 1,
+            capabilities: [],
+          },
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-5.4-mini",
+            effort: "default" as const,
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 1,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical" as const,
+          defaultRole: "worker",
+          escalationEnabled: true,
+          parentRole: "senior",
+        },
+      },
+      onTaskStart: () => {},
+      onTaskComplete: (_taskId, result) => {
+        if (result.status === "escalated") {
+          seen.push(getConcurrencyManager().getActiveCount("worker"))
+        }
+      },
+      onOutput: () => {},
+    })
+
+    let call = 0
+    mockSessionPrompt.mockImplementation(() => {
+      call++
+      return Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [{ type: "text", text: call === 1 ? "Escalating to senior: blocked." : "Done" }],
+      })
+    })
+
+    await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+
+    expect(seen).toEqual([0])
+    expect(getConcurrencyManager().getActiveCount("worker")).toBe(0)
+    expect(getConcurrencyManager().getActiveCount("senior")).toBe(0)
   })
   // devilcode_change end
 

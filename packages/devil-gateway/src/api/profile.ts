@@ -1,4 +1,5 @@
 import { select } from "@clack/prompts"
+import { z } from "zod"
 import type { DevilcodeProfile, Organization, DevilcodeBalance } from "../types.js"
 import { DEVIL_API_BASE, DEFAULT_MODEL, DEFAULT_FREE_MODEL } from "./constants.js"
 
@@ -42,9 +43,11 @@ export const getDevilProfile = fetchProfile
 
 // devilcode_change start - audit OB4: discriminated balance result so callers can surface
 // auth/transport failures to the user instead of silently rendering null.
-export type FetchBalanceResult =
-  | { ok: true; balance: DevilcodeBalance }
-  | { ok: false; status?: number; error: string }
+export type FetchBalanceResult = { ok: true; balance: DevilcodeBalance } | { ok: false; status?: number; error: string }
+
+const BalanceResponse = z.object({
+  balance: z.number().optional(),
+})
 
 /**
  * Fetch user balance from Devil API.
@@ -69,8 +72,13 @@ export async function fetchBalanceResult(token: string, organizationId?: string)
       return { ok: false, status: response.status, error: `upstream returned ${response.status}` }
     }
 
-    const data = (await response.json()) as { balance?: number }
-    return { ok: true, balance: { balance: data.balance ?? 0 } }
+    const parsed = BalanceResponse.safeParse(await response.json())
+    if (!parsed.success) {
+      console.warn("Balance response validation failed:", parsed.error.format())
+      return { ok: false, error: "response validation failed" }
+    }
+
+    return { ok: true, balance: { balance: parsed.data.balance ?? 0 } }
   } catch (error) {
     console.warn("Error fetching balance:", error)
     return { ok: false, error: error instanceof Error ? error.message : String(error) }

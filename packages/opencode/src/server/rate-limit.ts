@@ -1,5 +1,6 @@
 // devilcode_change - Bun-native rate limiter middleware (replaces hono-rate-limiter)
 import type { Context, Next } from "hono"
+import { getBunServer } from "hono/bun"
 import { Log } from "../util/log"
 
 const log = Log.create({ service: "rate-limit" })
@@ -30,11 +31,27 @@ type Bucket = {
   resetAt: number
 }
 
-const DEFAULT_KEY = (c: Context) =>
-  c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
-  c.req.header("x-real-ip") ||
-  c.req.header("cf-connecting-ip") ||
-  "unknown"
+function loopback(address: string) {
+  return address === "127.0.0.1" || address === "::1" || address === "::ffff:127.0.0.1" || address === "0:0:0:0:0:0:0:1"
+}
+
+function localKey(c: Context, address?: string, port?: number) {
+  return [
+    address ?? "local",
+    port ? String(port) : "-",
+    c.req.header("x-kilo-directory") ?? "-",
+    c.req.header("origin") ?? "-",
+    c.req.header("user-agent")?.slice(0, 128) ?? "-",
+  ].join("|")
+}
+
+const DEFAULT_KEY = (c: Context) => {
+  const server = getBunServer(c)
+  const info = server?.requestIP?.(c.req.raw)
+  if (!info?.address) return localKey(c)
+  if (loopback(info.address)) return localKey(c, info.address, info.port)
+  return info.address
+}
 
 /**
  * Fixed-window rate limiter. Tracks per-key counters in-process.
@@ -60,17 +77,19 @@ export function rateLimit(options: RateLimitOptions) {
   }
   // Bun supports unref(); avoid keeping the process alive solely for sweeps.
   const interval = setInterval(sweep, Math.max(options.windowMs, 30_000))
-  if (typeof (interval as any).unref === "function") (interval as any).unref()
+  if ("unref" in interval && typeof interval.unref === "function") interval.unref()
 
   return async function rateLimitMiddleware(c: Context, next: Next) {
     if (options.shouldApply && !options.shouldApply(c)) return next()
     const key = keyOf(c)
     const t = now()
-    let bucket = buckets.get(key)
-    if (!bucket || bucket.resetAt <= t) {
-      bucket = { count: 0, resetAt: t + options.windowMs }
-      buckets.set(key, bucket)
-    }
+    const bucket = (() => {
+      const found = buckets.get(key)
+      if (found && found.resetAt > t) return found
+      const fresh = { count: 0, resetAt: t + options.windowMs }
+      buckets.set(key, fresh)
+      return fresh
+    })()
     bucket.count++
 
     const remaining = Math.max(0, options.limit - bucket.count)

@@ -6,12 +6,7 @@ import { Log } from "@/util/log"
 import { resolveTaskModel, TeamConcurrencyError } from "../team/router"
 import { getConcurrencyManager } from "../team/concurrency"
 import { effortToProviderOptions } from "../team/effort"
-import {
-  detectEscalation,
-  createEscalatedResult,
-  resolveEscalationTarget,
-  MAX_ESCALATION_DEPTH,
-} from "./escalation"
+import { detectEscalation, createEscalatedResult, resolveEscalationTarget, MAX_ESCALATION_DEPTH } from "./escalation"
 import { groupByWave } from "./executor"
 import type { PlanTask, TaskResult } from "./types"
 import type { TeamConfig } from "../team/config"
@@ -43,7 +38,9 @@ export type BuildRunnerOptions = {
  * Allows read access everywhere, write access only to task files,
  * and bash/command execution for verification commands.
  */
-export function buildPermissions(taskFiles: string[]): Array<{ permission: string; action: "allow" | "deny"; pattern: string }> {
+export function buildPermissions(
+  taskFiles: string[],
+): Array<{ permission: string; action: "allow" | "deny"; pattern: string }> {
   const perms: Array<{ permission: string; action: "allow" | "deny"; pattern: string }> = [
     { permission: "read", action: "allow", pattern: "*" },
     { permission: "bash", action: "allow", pattern: "*" },
@@ -116,9 +113,7 @@ export class BuildRunner {
     }
 
     try {
-      const results = await Promise.all(
-        tasks.map((task) => this.executeTask(task, needsWorktrees, true)),
-      )
+      const results = await Promise.all(tasks.map((task) => this.executeTask(task, needsWorktrees, true)))
       return results
     } finally {
       for (const a of acquired) concurrency.release(a.role, a.taskId)
@@ -185,9 +180,7 @@ export class BuildRunner {
       if (this.options.lockManager && task.files.length > 0) {
         const conflicts = await this.options.lockManager.checkConflicts(task.files)
         if (conflicts.length > 0) {
-          const conflictMsg = conflicts
-            .map((c) => `${c.taskId} holds lock on: ${c.files.join(", ")}`)
-            .join("; ")
+          const conflictMsg = conflicts.map((c) => `${c.taskId} holds lock on: ${c.files.join(", ")}`).join("; ")
           log.info("file conflict detected", { taskId: task.id, conflicts: conflictMsg })
           throw new Error(`File conflict: ${conflictMsg}`)
         }
@@ -206,10 +199,7 @@ export class BuildRunner {
       // devilcode_change start - audit MA1+MA3: derive parent from team config; skip hierarchy
       // check when re-dispatching an escalated task (escalation target is acting as a new top-level
       // executor, not a child of the original parent).
-      const parentRole =
-        (task.escalationDepth ?? 0) > 0
-          ? undefined
-          : this.options.teamConfig?.routing.parentRole
+      const parentRole = (task.escalationDepth ?? 0) > 0 ? undefined : this.options.teamConfig?.routing.parentRole
       const resolved = resolveTaskModel({
         subagentType: task.role,
         teamConfig: this.options.teamConfig,
@@ -318,6 +308,9 @@ export class BuildRunner {
               depth: depth + 1,
               reason: target.reason,
             })
+            if (slotsPreAcquired && resolved && roleConfig) {
+              concurrency.release(resolved.role, task.id)
+            }
             this.options.onTaskComplete(task.id, escalatedResult)
             const followUp: PlanTask = {
               ...task,
@@ -361,12 +354,14 @@ export class BuildRunner {
             log.error("lesson save failed", { taskId: task.id, error: String(e) })
           })
           if (this.options.eventLogger) {
-            await this.options.eventLogger.log({
-              eventType: "lesson_captured",
-              taskId: task.id,
-              role: task.role,
-              message: `Lesson captured: ${lesson.title}`,
-            }).catch(() => {})
+            await this.options.eventLogger
+              .log({
+                eventType: "lesson_captured",
+                taskId: task.id,
+                role: task.role,
+                message: `Lesson captured: ${lesson.title}`,
+              })
+              .catch(() => {})
           }
           log.info("lesson captured from failure", { taskId: task.id, lessonId: lesson.id })
         }
@@ -389,11 +384,13 @@ export class BuildRunner {
           log.error("lock release failed", { taskId: task.id, error: String(e) })
         })
         if (this.options.eventLogger) {
-          await this.options.eventLogger.log({
-            eventType: "files_unlocked",
-            taskId: task.id,
-            message: `Released locks for task ${task.id}`,
-          }).catch(() => {})
+          await this.options.eventLogger
+            .log({
+              eventType: "files_unlocked",
+              taskId: task.id,
+              message: `Released locks for task ${task.id}`,
+            })
+            .catch(() => {})
         }
       }
       // Clean up worktree if we created one

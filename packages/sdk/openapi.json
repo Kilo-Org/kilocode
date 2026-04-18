@@ -106,7 +106,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -175,7 +175,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -227,7 +227,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -422,7 +422,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -432,7 +432,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -562,7 +562,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -656,7 +656,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -713,7 +713,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -796,7 +796,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -855,7 +855,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -945,7 +945,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -968,6 +968,246 @@
           {
             "lang": "js",
             "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.config.update({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/team/validate": {
+      "post": {
+        "operationId": "config.team.validate",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Validate team config",
+        "description": "Validate a team configuration payload without persisting it.",
+        "responses": {
+          "200": {
+            "description": "Validation status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean"
+                    },
+                    "errors": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["valid", "errors"]
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.config.team.validate({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/config/team/presets": {
+      "get": {
+        "operationId": "config.team.presets",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List team presets",
+        "description": "Return built-in team presets for Team Composer.",
+        "responses": {
+          "200": {
+            "description": "Team presets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "icon": {
+                        "type": "string"
+                      },
+                      "team": {
+                        "type": "object",
+                        "properties": {
+                          "enabled": {
+                            "default": false,
+                            "type": "boolean"
+                          },
+                          "roles": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "object",
+                              "properties": {
+                                "displayName": {
+                                  "type": "string"
+                                },
+                                "provider": {
+                                  "type": "string"
+                                },
+                                "model": {
+                                  "type": "string"
+                                },
+                                "effort": {
+                                  "default": "default",
+                                  "type": "string",
+                                  "enum": ["max", "xhigh", "high", "medium", "low", "default"]
+                                },
+                                "tier": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "canDelegate": {
+                                  "default": [],
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "maxConcurrent": {
+                                  "default": 3,
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "capabilities": {
+                                  "default": [],
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": ["displayName", "provider", "model", "tier"]
+                            }
+                          },
+                          "routing": {
+                            "type": "object",
+                            "properties": {
+                              "strategy": {
+                                "default": "hierarchical",
+                                "type": "string",
+                                "enum": ["hierarchical", "flat"]
+                              },
+                              "defaultRole": {
+                                "type": "string"
+                              },
+                              "escalationEnabled": {
+                                "default": true,
+                                "type": "boolean"
+                              },
+                              "parentRole": {
+                                "type": "string"
+                              },
+                              "reviewEscalationRole": {
+                                "type": "string"
+                              }
+                            },
+                            "required": ["defaultRole"]
+                          },
+                          "reactions": {
+                            "default": [],
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "trigger": {
+                                  "type": "string",
+                                  "enum": ["ci-failed", "review-requested", "approved-and-green", "agent-stuck"]
+                                },
+                                "auto": {
+                                  "default": false,
+                                  "type": "boolean"
+                                },
+                                "action": {
+                                  "type": "string",
+                                  "enum": ["send-to-agent", "notify", "escalate"]
+                                },
+                                "targetRole": {
+                                  "type": "string"
+                                },
+                                "retries": {
+                                  "default": 0,
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "escalateAfterMinutes": {
+                                  "type": "integer",
+                                  "exclusiveMinimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": ["trigger", "action"]
+                            }
+                          }
+                        },
+                        "required": ["roles", "routing"]
+                      }
+                    },
+                    "required": ["id", "name", "description", "team"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.config.team.presets({\n  ...\n})"
           }
         ]
       }
@@ -1023,7 +1263,7 @@
         "x-codeSamples": [
           {
             "lang": "js",
-            "source": "import { createKiloClient } from \"@devilcode/sdk\n\nconst client = createKiloClient()\nawait client.config.warnings({\n  ...\n})"
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.config.warnings({\n  ...\n})"
           }
         ]
       }
@@ -1120,7 +1360,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1187,7 +1427,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1238,7 +1478,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1377,7 +1617,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1428,7 +1668,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1528,7 +1768,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1588,7 +1828,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1659,7 +1899,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1721,7 +1961,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1796,7 +2036,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -1822,7 +2062,8 @@
             "in": "query",
             "name": "directory",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 500
             },
             "description": "Filter sessions by project directory"
           },
@@ -1837,7 +2078,9 @@
             "in": "query",
             "name": "projectID",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "description": "Filter sessions by project ID"
           },
@@ -1861,7 +2104,9 @@
             "in": "query",
             "name": "start",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "description": "Filter sessions updated on or after this timestamp (milliseconds since epoch)"
           },
@@ -1869,7 +2114,9 @@
             "in": "query",
             "name": "cursor",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
             },
             "description": "Return sessions updated before this timestamp (milliseconds since epoch)"
           },
@@ -1877,7 +2124,8 @@
             "in": "query",
             "name": "search",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 200
             },
             "description": "Filter sessions by title (case-insensitive)"
           },
@@ -1885,7 +2133,9 @@
             "in": "query",
             "name": "limit",
             "schema": {
-              "type": "number"
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
             },
             "description": "Maximum number of sessions to return"
           },
@@ -2078,7 +2328,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2159,7 +2409,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2220,7 +2470,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2230,7 +2480,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2288,7 +2538,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2298,7 +2548,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2355,7 +2605,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2365,7 +2615,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2451,7 +2701,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2461,7 +2711,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2524,7 +2774,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2534,7 +2784,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2594,7 +2844,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2604,7 +2854,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2750,7 +3000,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2760,7 +3010,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2819,7 +3069,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2829,7 +3079,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -2887,7 +3137,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -2897,7 +3147,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3018,7 +3268,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3028,7 +3278,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3132,7 +3382,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3142,7 +3392,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3212,7 +3462,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3222,7 +3472,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3303,6 +3553,7 @@
                     }
                   },
                   "parts": {
+                    "maxItems": 100,
                     "type": "array",
                     "items": {
                       "anyOf": [
@@ -3322,7 +3573,8 @@
                     }
                   }
                 },
-                "required": ["parts"]
+                "required": ["parts"],
+                "additionalProperties": false
               }
             }
           }
@@ -3398,7 +3650,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3408,7 +3660,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3475,7 +3727,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3485,7 +3737,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3562,7 +3814,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3572,7 +3824,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3647,7 +3899,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3657,7 +3909,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3719,7 +3971,7 @@
             "description": "Prompt accepted"
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3729,7 +3981,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -3810,6 +4062,7 @@
                     }
                   },
                   "parts": {
+                    "maxItems": 100,
                     "type": "array",
                     "items": {
                       "anyOf": [
@@ -3829,7 +4082,8 @@
                     }
                   }
                 },
-                "required": ["parts"]
+                "required": ["parts"],
+                "additionalProperties": false
               }
             }
           }
@@ -3896,7 +4150,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -3906,7 +4160,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4029,7 +4283,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4039,7 +4293,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4128,7 +4382,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4138,7 +4392,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4217,7 +4471,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4227,7 +4481,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4280,9 +4534,9 @@
             "required": true
           }
         ],
-        "summary": "Respond to permission",
+        "summary": "Respond to permission [DEPRECATED]",
         "deprecated": true,
-        "description": "Approve or deny a permission request from the AI assistant.",
+        "description": "DEPRECATED: Use /permission/:permissionID instead. This endpoint will be removed on 2025-06-01. Approve or deny a permission request from the AI assistant.",
         "responses": {
           "200": {
             "description": "Permission processed successfully",
@@ -4295,7 +4549,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4305,7 +4559,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4435,7 +4689,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4445,7 +4699,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4523,7 +4777,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4533,7 +4787,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4614,6 +4868,88 @@
           {
             "lang": "js",
             "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.permission.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/permission/allow-everything": {
+      "post": {
+        "operationId": "permission.allowEverything",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Allow everything",
+        "description": "Enable or disable allowing all permissions without prompts.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found - resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enable": {
+                    "type": "boolean"
+                  },
+                  "requestID": {
+                    "type": "string"
+                  },
+                  "sessionID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["enable"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.permission.allowEverything({\n  ...\n})"
           }
         ]
       }
@@ -4703,7 +5039,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4713,7 +5049,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -4791,7 +5127,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -4801,7 +5137,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -5194,7 +5530,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5270,7 +5606,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5335,17 +5671,43 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "boolean"
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["ok"]
                 }
               }
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Telemetry backend unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean",
+                      "const": false
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["ok", "error"]
                 }
               }
             }
@@ -5359,7 +5721,8 @@
                 "properties": {
                   "event": {
                     "description": "Event name",
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 100
                   },
                   "properties": {
                     "description": "Event properties",
@@ -5420,6 +5783,22 @@
                     }
                   },
                   "required": ["enabled", "connected"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized — Devil session ingest credentials missing or invalid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
                 }
               }
             }
@@ -5572,7 +5951,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5656,7 +6035,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5711,7 +6090,7 @@
           }
         ],
         "summary": "Insert project for session import",
-        "description": "Insert or update a project row used by legacy session import.",
+        "description": "Insert or update a project row used by legacy session import. Supports idempotency via Idempotency-Key header.",
         "responses": {
           "200": {
             "description": "Project import result",
@@ -5736,7 +6115,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5744,6 +6123,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Duplicate request - idempotency key already processed"
           }
         },
         "requestBody": {
@@ -5827,7 +6209,7 @@
           }
         ],
         "summary": "Insert session for session import",
-        "description": "Insert or update a session row used by legacy session import.",
+        "description": "Insert or update a session row used by legacy session import. Supports idempotency via Idempotency-Key header.",
         "responses": {
           "200": {
             "description": "Session import result",
@@ -5852,7 +6234,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -5860,6 +6242,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Duplicate request - idempotency key already processed"
           }
         },
         "requestBody": {
@@ -5994,7 +6379,7 @@
           }
         ],
         "summary": "Insert message for session import",
-        "description": "Insert or update a message row used by legacy session import.",
+        "description": "Insert or update a message row used by legacy session import. Supports idempotency via Idempotency-Key header.",
         "responses": {
           "200": {
             "description": "Message import result",
@@ -6019,7 +6404,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -6027,6 +6412,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Duplicate request - idempotency key already processed"
           }
         },
         "requestBody": {
@@ -6228,7 +6616,7 @@
           }
         ],
         "summary": "Insert part for session import",
-        "description": "Insert or update a part row used by legacy session import.",
+        "description": "Insert or update a part row used by legacy session import. Supports idempotency via Idempotency-Key header.",
         "responses": {
           "200": {
             "description": "Part import result",
@@ -6253,7 +6641,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -6261,6 +6649,9 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Duplicate request - idempotency key already processed"
           }
         },
         "requestBody": {
@@ -6536,6 +6927,587 @@
         ]
       }
     },
+    "/devilcode/workflow/status": {
+      "get": {
+        "operationId": "devilcode.workflow.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get workflow status",
+        "description": "Returns the current WorkflowState (stage, phase, active tasks). Returns { initialized: false } when no .planning/ directory exists.",
+        "responses": {
+          "200": {
+            "description": "Workflow status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "project": {
+                          "type": "string"
+                        },
+                        "currentPhase": {
+                          "type": "string"
+                        },
+                        "currentStage": {
+                          "type": "string",
+                          "enum": ["plan", "challenge", "contract", "build", "review", "ship", "retro"]
+                        },
+                        "activeWave": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "totalWaves": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "activeTasks": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "role": {
+                                "type": "string"
+                              },
+                              "status": {
+                                "type": "string",
+                                "enum": ["pending", "in_progress", "completed", "escalated", "blocked", "failed"]
+                              }
+                            },
+                            "required": ["id", "role", "status"]
+                          }
+                        },
+                        "lastUpdated": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["project", "currentPhase", "currentStage", "lastUpdated"]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "initialized": {
+                          "type": "boolean",
+                          "const": false
+                        }
+                      },
+                      "required": ["initialized"]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Workflow status read failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/devilcode/workflow/plans": {
+      "get": {
+        "operationId": "devilcode.workflow.plans",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get plans for current phase",
+        "description": "Returns PlanTask[] for the current workflow phase. Returns [] when workflow is not initialized.",
+        "responses": {
+          "200": {
+            "description": "Plan tasks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "wave": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "dependsOn": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "estimatedComplexity": {
+                        "default": "medium",
+                        "type": "string",
+                        "enum": ["low", "medium", "high"]
+                      },
+                      "files": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "verification": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "escalationDepth": {
+                        "default": 0,
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": ["id", "title", "role", "wave", "description"]
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Workflow plans read failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.plans({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/devilcode/workflow/review": {
+      "get": {
+        "operationId": "devilcode.workflow.review",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get review verdict for current phase",
+        "description": "Returns ReviewVerdict for the current phase. Returns 404 when no review exists.",
+        "responses": {
+          "200": {
+            "description": "Review verdict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "verdict": {
+                      "type": "string",
+                      "enum": ["pass", "fail", "escalate"]
+                    },
+                    "cycle": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "findings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "severity": {
+                            "type": "string",
+                            "enum": ["blocker", "warning", "suggestion"]
+                          },
+                          "category": {
+                            "type": "string",
+                            "enum": [
+                              "security",
+                              "correctness",
+                              "performance",
+                              "type-safety",
+                              "test-coverage",
+                              "style",
+                              "architecture",
+                              "compatibility"
+                            ]
+                          },
+                          "file": {
+                            "type": "string"
+                          },
+                          "line": {
+                            "type": "number"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "suggestedFix": {
+                            "type": "string"
+                          },
+                          "suggestedRole": {
+                            "type": "string"
+                          },
+                          "verificationCommand": {
+                            "type": "string"
+                          }
+                        },
+                        "required": ["id", "severity", "category", "file", "description"]
+                      }
+                    },
+                    "blockerCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "warningCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "suggestionCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "verdict",
+                    "cycle",
+                    "findings",
+                    "blockerCount",
+                    "warningCount",
+                    "suggestionCount",
+                    "summary"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No review found for the current phase"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.review({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/devilcode/workflow/locks": {
+      "get": {
+        "operationId": "devilcode.workflow.locks",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get active file locks",
+        "description": "Returns FileLock[] from the lock manager. Returns [] when workflow is not initialized.",
+        "responses": {
+          "200": {
+            "description": "Active file locks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "files": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "lockedAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["taskId", "role", "files", "lockedAt"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.locks({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/devilcode/workflow/events": {
+      "get": {
+        "operationId": "devilcode.workflow.events",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get recent workflow events",
+        "description": "Returns the last 50 WorkflowEvent entries from the append-only event log.",
+        "responses": {
+          "200": {
+            "description": "Recent workflow events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "eventType": {
+                        "type": "string"
+                      },
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "role": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "durationMs": {
+                        "type": "number"
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      },
+                      "timestamp": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["eventType", "message"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.events({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/devilcode/workflow/lessons": {
+      "get": {
+        "operationId": "devilcode.workflow.lessons",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get captured lessons",
+        "description": "Returns all Lesson entries from the lesson store.",
+        "responses": {
+          "200": {
+            "description": "Captured lessons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "scope": {
+                        "type": "string",
+                        "enum": ["global", "project"]
+                      },
+                      "category": {
+                        "type": "string",
+                        "enum": ["code_pattern", "command_failure", "review_failure", "infra_timeout"]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "trigger": {
+                        "type": "string"
+                      },
+                      "resolution": {
+                        "type": "string"
+                      },
+                      "files": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "confidence": {
+                        "default": 0.5,
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "hitCount": {
+                        "default": 1,
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "scope", "category", "title", "trigger", "resolution", "createdAt"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createDevilClient } from \"@devilcode/sdk\n\nconst client = createDevilClient()\nawait client.devilcode.workflow.lessons({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/devilcode/skill/remove": {
       "post": {
         "operationId": "devilcode.removeSkill",
@@ -6556,10 +7528,29 @@
           }
         ],
         "summary": "Remove a skill",
-        "description": "Remove a skill by deleting its directory from disk and clearing it from cache.",
+        "description": "Remove a skill by deleting its directory from disk and clearing it from cache. This operation is permanent and cannot be undone.",
+        "tags": ["Devil Code"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "location": {
+                    "description": "Absolute path to the skill directory",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  }
+                },
+                "required": ["location"]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Skill removed",
+            "description": "Skill removed successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -6569,27 +7560,12 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
                 }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "location": {
-                    "type": "string"
-                  }
-                },
-                "required": ["location"]
               }
             }
           }
@@ -6622,10 +7598,29 @@
           }
         ],
         "summary": "Remove a custom agent",
-        "description": "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.",
+        "description": "Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state. Native agents cannot be removed. This operation is permanent.",
+        "tags": ["Devil Code"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "description": "Name of the custom agent",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": ["name"]
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Agent removed",
+            "description": "Agent removed successfully",
             "content": {
               "application/json": {
                 "schema": {
@@ -6635,27 +7630,12 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
                 }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": ["name"]
               }
             }
           }
@@ -6743,6 +7723,25 @@
                         }
                       ]
                     },
+                    "balanceError": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "number"
+                            },
+                            "error": {
+                              "type": "string"
+                            }
+                          },
+                          "required": ["error"]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
                     "currentOrgId": {
                       "anyOf": [
                         {
@@ -6760,11 +7759,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -6811,11 +7820,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -6970,6 +7989,54 @@
                 }
               }
             }
+          },
+          "400": {
+            "description": "No organization selected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid Devil Gateway credentials",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Devil Gateway modes lookup failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["error"]
+                }
+              }
+            }
           }
         },
         "x-codeSamples": [
@@ -7045,11 +8112,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -7159,11 +8236,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -7215,8 +8302,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -7265,7 +8362,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -7274,8 +8371,18 @@
               }
             }
           },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -7410,6 +8517,16 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
           }
         },
         "x-codeSamples": [
@@ -7470,6 +8587,16 @@
                       "type": "null"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -7581,11 +8708,21 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
                 }
               }
             }
@@ -7911,7 +9048,7 @@
           }
         ],
         "summary": "Read file",
-        "description": "Read the content of a specified file.",
+        "description": "Read the content of a specified file. Returns JSON for text files, appropriate Content-Type for binary files.",
         "responses": {
           "200": {
             "description": "File content",
@@ -7919,6 +9056,32 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/FileContent"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid input parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found - resource does not exist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
                 }
               }
             }
@@ -8060,7 +9223,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8151,7 +9314,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8161,7 +9324,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -8225,7 +9388,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -8284,7 +9447,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8294,7 +9457,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -8369,7 +9532,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8379,7 +9542,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -8526,7 +9689,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8838,7 +10001,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -8972,7 +10135,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -9045,7 +10208,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -9055,7 +10218,7 @@
             }
           },
           "404": {
-            "description": "Not found",
+            "description": "Not found - resource does not exist",
             "content": {
               "application/json": {
                 "schema": {
@@ -9386,7 +10549,7 @@
             }
           },
           "400": {
-            "description": "Bad request",
+            "description": "Bad request - invalid input parameters",
             "content": {
               "application/json": {
                 "schema": {
@@ -9801,6 +10964,93 @@
               }
             },
             "required": ["directory"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "PermissionRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^per.*"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "permission": {
+            "type": "string"
+          },
+          "patterns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "always": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tool": {
+            "type": "object",
+            "properties": {
+              "messageID": {
+                "type": "string"
+              },
+              "callID": {
+                "type": "string"
+              }
+            },
+            "required": ["messageID", "callID"]
+          }
+        },
+        "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"]
+      },
+      "Event.permission.asked": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "permission.asked"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/PermissionRequest"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.permission.replied": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "permission.replied"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "requestID": {
+                "type": "string"
+              },
+              "reply": {
+                "type": "string",
+                "enum": ["once", "always", "reject"]
+              }
+            },
+            "required": ["sessionID", "requestID", "reply"]
           }
         },
         "required": ["type", "properties"]
@@ -10508,6 +11758,9 @@
             "required": ["providerID", "modelID"]
           },
           "command": {
+            "type": "string"
+          },
+          "teamRole": {
             "type": "string"
           }
         },
@@ -11247,93 +12500,6 @@
               }
             },
             "required": ["sessionID", "messageID", "partID"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "PermissionRequest": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^per.*"
-          },
-          "sessionID": {
-            "type": "string",
-            "pattern": "^ses.*"
-          },
-          "permission": {
-            "type": "string"
-          },
-          "patterns": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "metadata": {
-            "type": "object",
-            "propertyNames": {
-              "type": "string"
-            },
-            "additionalProperties": {}
-          },
-          "always": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "tool": {
-            "type": "object",
-            "properties": {
-              "messageID": {
-                "type": "string"
-              },
-              "callID": {
-                "type": "string"
-              }
-            },
-            "required": ["messageID", "callID"]
-          }
-        },
-        "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"]
-      },
-      "Event.permission.asked": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "permission.asked"
-          },
-          "properties": {
-            "$ref": "#/components/schemas/PermissionRequest"
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.permission.replied": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "permission.replied"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              },
-              "requestID": {
-                "type": "string"
-              },
-              "reply": {
-                "type": "string",
-                "enum": ["once", "always", "reject"]
-              }
-            },
-            "required": ["sessionID", "requestID", "reply"]
           }
         },
         "required": ["type", "properties"]
@@ -12388,6 +13554,12 @@
             "$ref": "#/components/schemas/Event.server.instance.disposed"
           },
           {
+            "$ref": "#/components/schemas/Event.permission.asked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.permission.replied"
+          },
+          {
             "$ref": "#/components/schemas/Event.server.connected"
           },
           {
@@ -12419,12 +13591,6 @@
           },
           {
             "$ref": "#/components/schemas/Event.message.part.removed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.permission.asked"
-          },
-          {
-            "$ref": "#/components/schemas/Event.permission.replied"
           },
           {
             "$ref": "#/components/schemas/Event.session.status"
@@ -13573,6 +14739,128 @@
                 "maximum": 9007199254740991
               }
             }
+          },
+          "team": {
+            "description": "Multi-model team configuration for hierarchical agent dispatch",
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "default": false,
+                "type": "boolean"
+              },
+              "roles": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "effort": {
+                      "default": "default",
+                      "type": "string",
+                      "enum": ["max", "xhigh", "high", "medium", "low", "default"]
+                    },
+                    "tier": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "canDelegate": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "maxConcurrent": {
+                      "default": 3,
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "capabilities": {
+                      "default": [],
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": ["displayName", "provider", "model", "tier"]
+                }
+              },
+              "routing": {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "default": "hierarchical",
+                    "type": "string",
+                    "enum": ["hierarchical", "flat"]
+                  },
+                  "defaultRole": {
+                    "type": "string"
+                  },
+                  "escalationEnabled": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "parentRole": {
+                    "type": "string"
+                  },
+                  "reviewEscalationRole": {
+                    "type": "string"
+                  }
+                },
+                "required": ["defaultRole"]
+              },
+              "reactions": {
+                "default": [],
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "trigger": {
+                      "type": "string",
+                      "enum": ["ci-failed", "review-requested", "approved-and-green", "agent-stuck"]
+                    },
+                    "auto": {
+                      "default": false,
+                      "type": "boolean"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": ["send-to-agent", "notify", "escalate"]
+                    },
+                    "targetRole": {
+                      "type": "string"
+                    },
+                    "retries": {
+                      "default": 0,
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "escalateAfterMinutes": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["trigger", "action"]
+                }
+              }
+            },
+            "required": ["roles", "routing"]
           }
         },
         "additionalProperties": false
@@ -13580,23 +14868,45 @@
       "BadRequestError": {
         "type": "object",
         "properties": {
-          "data": {},
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
           "errors": {
             "type": "array",
             "items": {
               "type": "object",
-              "propertyNames": {
-                "type": "string"
+              "properties": {
+                "message": {
+                  "description": "Human-readable error message",
+                  "type": "string"
+                },
+                "code": {
+                  "description": "Error code for programmatic handling",
+                  "type": "string"
+                },
+                "field": {
+                  "description": "Field that caused the error (for validation errors)",
+                  "type": "string"
+                },
+                "details": {
+                  "description": "Additional error context",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
               },
-              "additionalProperties": {}
+              "required": ["message"]
             }
           },
-          "success": {
-            "type": "boolean",
-            "const": false
+          "data": {
+            "description": "Always null on error responses",
+            "type": "null"
           }
         },
-        "required": ["data", "errors", "success"]
+        "required": ["success", "errors", "data"]
       },
       "OAuth": {
         "type": "object",
@@ -13668,21 +14978,46 @@
       "NotFoundError": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "const": "NotFoundError"
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "resource": {
+                  "description": "Type of resource that was not found",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "ID of the resource that was not found",
+                  "type": "string"
+                },
+                "details": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": ["message"]
+            }
           },
           "data": {
-            "type": "object",
-            "properties": {
-              "message": {
-                "type": "string"
-              }
-            },
-            "required": ["message"]
+            "description": "Always null on error responses",
+            "type": "null"
           }
         },
-        "required": ["name", "data"]
+        "required": ["success", "errors", "data"]
       },
       "Model": {
         "type": "object",
@@ -14336,7 +15671,8 @@
             "additionalProperties": {}
           }
         },
-        "required": ["type", "text"]
+        "required": ["type", "text"],
+        "additionalProperties": false
       },
       "FilePartInput": {
         "type": "object",
@@ -14361,7 +15697,8 @@
             "$ref": "#/components/schemas/FilePartSource"
           }
         },
-        "required": ["type", "mime", "url"]
+        "required": ["type", "mime", "url"],
+        "additionalProperties": false
       },
       "AgentPartInput": {
         "type": "object",
@@ -14396,7 +15733,8 @@
             "required": ["value", "start", "end"]
           }
         },
-        "required": ["type", "name"]
+        "required": ["type", "name"],
+        "additionalProperties": false
       },
       "SubtaskPartInput": {
         "type": "object",
@@ -14431,9 +15769,13 @@
           },
           "command": {
             "type": "string"
+          },
+          "teamRole": {
+            "type": "string"
           }
         },
-        "required": ["type", "prompt", "description", "agent"]
+        "required": ["type", "prompt", "description", "agent"],
+        "additionalProperties": false
       },
       "ProviderAuthMethod": {
         "type": "object",
@@ -14479,6 +15821,49 @@
           }
         },
         "required": ["url", "method", "instructions"]
+      },
+      "UnauthorizedError": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "const": false
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "description": "Human-readable error message",
+                  "type": "string"
+                },
+                "code": {
+                  "description": "Error code for programmatic handling",
+                  "type": "string"
+                },
+                "field": {
+                  "description": "Field that caused the error (for validation errors)",
+                  "type": "string"
+                },
+                "details": {
+                  "description": "Additional error context",
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {}
+                }
+              },
+              "required": ["message"]
+            }
+          },
+          "data": {
+            "description": "Always null on error responses",
+            "type": "null"
+          }
+        },
+        "required": ["success", "errors", "data"]
       },
       "Symbol": {
         "type": "object",

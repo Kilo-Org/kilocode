@@ -68,7 +68,6 @@ export const RemoteRoutes = lazy(() =>
               },
             },
           },
-          401: unauthorizedResponse,
         },
       }),
       async (c) => {
@@ -91,7 +90,6 @@ export const RemoteRoutes = lazy(() =>
               },
             },
           },
-          401: unauthorizedResponse,
         },
       }),
       async (c) => {

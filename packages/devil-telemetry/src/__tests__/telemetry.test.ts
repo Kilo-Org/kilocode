@@ -1,7 +1,8 @@
-import { describe, test, expect, beforeEach } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { Identity } from "../identity.js"
 import { TelemetryEvent } from "../events.js"
 import { PostHogSpanExporter } from "../otel-exporter.js"
+import { TracerSetup } from "../tracer.js"
 import { ExportResultCode } from "@opentelemetry/core"
 import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
 import type { PostHog } from "posthog-node"
@@ -195,5 +196,31 @@ describe("PostHogSpanExporter", () => {
     // Since SENSITIVE_ATTRIBUTES is not exported, we verify through behavior
     // by ensuring the exporter handles these attributes correctly
     expect(sensitivePatterns.length).toBe(17)
+  })
+})
+
+describe("TracerSetup", () => {
+  const env = process.env.DEVIL_POSTHOG_API_KEY
+
+  afterEach(async () => {
+    await TracerSetup.shutdown()
+    if (env === undefined) {
+      delete process.env.DEVIL_POSTHOG_API_KEY
+      return
+    }
+    process.env.DEVIL_POSTHOG_API_KEY = env
+  })
+
+  test("returns null when PostHog is not configured", () => {
+    delete process.env.DEVIL_POSTHOG_API_KEY
+
+    expect(
+      TracerSetup.init({
+        version: "1.0.0",
+        enabled: false,
+        appName: "test",
+        platform: "test",
+      }),
+    ).toBeNull()
   })
 })

@@ -14,7 +14,7 @@ export const PlanTask = z.object({
   verification: z.array(z.string()).default([]),
   description: z.string(),
   // devilcode_change - audit MA3: track escalation depth to bound re-dispatch recursion.
-  escalationDepth: z.number().int().min(0).default(0).optional(),
+  escalationDepth: z.number().int().min(0).default(0),
 })
 export type PlanTask = z.infer<typeof PlanTask>
 

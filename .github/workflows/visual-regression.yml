@@ -398,4 +398,3 @@ jobs:
           name: visual-regression-vscode-results
           path: packages/devil-vscode/test-results/
           retention-days: 7
-          retention-days: 7

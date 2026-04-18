@@ -8,4 +8,4 @@ await $`bun dev generate > ../sdk/openapi.json`.cwd("packages/opencode")
 
 await $`bun ./script/generate-cli-docs.ts`
 
-await $`./script/format.ts`
+await $`bun ./script/format.ts packages/devil-docs/markdoc/partials/cli-commands-table.md packages/devil-docs/pages/code-with-ai/platforms/cli-reference.md packages/sdk/openapi.json`

@@ -1,6 +1,7 @@
 // devilcode_change - audit C7
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
+import { basicAuth } from "hono/basic-auth"
 import { rateLimit, type RateLimitOptions } from "../../src/server/rate-limit"
 
 function makeApp(opts: Partial<RateLimitOptions>) {
@@ -81,5 +82,24 @@ describe("rateLimit middleware", () => {
 
     expect(res.status).toBe(429)
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:3000")
+  })
+
+  test("throttles repeated failed basic-auth attempts when limiter runs first", async () => {
+    const app = new Hono()
+      .use(
+        rateLimit({
+          limit: 1,
+          windowMs: 60_000,
+          keyGenerator: () => "auth",
+        }),
+      )
+      .use((c, next) => basicAuth({ username: "kilo", password: "secret" })(c, next))
+    app.get("/x", (c) => c.text("ok"))
+
+    const first = await app.request("/x")
+    const second = await app.request("/x")
+
+    expect(first.status).toBe(401)
+    expect(second.status).toBe(429)
   })
 })
