@@ -1637,30 +1637,32 @@ export type ExtensionMessage =
 export interface V4SubsystemMessage {
   type:
     // SSH
-    | "sshProfiles" | "sshSessions" | "sshProfilesLoaded" | "sshSessionsUpdated"
+    | "sshProfilesLoaded" | "sshSessionsUpdated"
     | "sshConnectionStatus" | "sshFilesListed" | "sshLogOutput" | "sshLogTailingStopped"
     | "sshFilePreviewResult" | "sshErrors" | "sshError"
     // VPS
     | "vpsServersLoaded" | "vpsServerAdded" | "vpsServerUpdated" | "vpsServerRemoved"
-    | "vpsMetrics" | "vpsMetricsLoaded" | "vpsServiceStatus" | "vpsServicesLoaded"
-    | "vpsDockerContainers" | "vpsContainersLoaded" | "vpsDeployHistory" | "vpsDeployHistoryLoaded"
-    | "vpsBackupStatus" | "vpsReverseProxyConfigs" | "vpsReverseProxyTestResult"
+    | "vpsMetricsLoaded" | "vpsServicesLoaded"
+    | "vpsContainersLoaded" | "vpsDeployHistoryLoaded"
+    | "vpsBackupStatus" | "vpsReverseProxyConfigsLoaded" | "vpsReverseProxyTestResult"
+    | "vpsDeployPreflightFailed"
     // ZeroClaw
-    | "zeroClawTasks" | "zeroClawTaskSubmitted" | "zeroClawTasksLoaded" | "zeroClawTaskUpdated"
-    | "zeroClawTaskRetried" | "zeroClawHistory" | "zeroClawHistoryLoaded"
+    | "zeroClawTasksLoaded" | "zeroClawTaskSubmitted" | "zeroClawTaskUpdated"
+    | "zeroClawTaskRetried" | "zeroClawHistoryLoaded"
     | "zeroClawTaskResult" | "zeroClawArtifacts"
     // Routing
-    | "routingState" | "routingTraces" | "routingHealth"
+    | "routingProvidersLoaded" | "routingTracesLoaded" | "routingHealthLoaded"
+    | "routingConfigLoaded" | "routingTestResult" | "routingKeyConfigured"
     // Memory
-    | "memoryStatus" | "memoryStatusLoaded" | "memoryRecallResults" | "memoryRecallResult"
-    | "memoryWriteConfirmed" | "memoryWriteResult" | "memoryHistory" | "memoryHistoryLoaded"
+    | "memoryStatusLoaded" | "memoryRecallResult"
+    | "memoryWriteResult" | "memoryHistoryLoaded"
     | "memoryConnectionChanged" | "memoryPermissionChanged"
     | "memoryHealthChanged" | "memoryDiagnosticResult" | "memoryRecallTracesLoaded"
     // Training
-    | "trainingState" | "trainingComparison" | "trainingExportComplete"
+    | "trainingState" | "trainingCompareResult" | "trainingExportComplete"
     | "trainingDatasetRegistered" | "trainingDatasetValidated" | "trainingDatasetRemoved"
     | "trainingJobLaunched" | "trainingJobUpdated" | "trainingJobRemoved"
-    | "trainingGPUDetected" | "trainingCompareResult"
+    | "trainingGPUDetected" | "trainingBrowsePathResult"
     // Governance
     | "governanceState" | "governanceAuditLog" | "governanceAuditExport"
     // Workstation
@@ -2712,7 +2714,7 @@ export interface V4SubsystemRequest {
     | "sshProfileSave" | "sshProfileDelete" | "sshConnect" | "sshDisconnect"
     | "sshOpenTerminal" | "sshBrowseFiles" | "sshFileOpen" | "sshFileDownload" | "sshFileUpload" | "sshTailLogs"
     | "sshFilePreview" | "sshGetErrors" | "sshClearErrors" | "sshFileDiff" | "sshFileSaveRemote"
-    | "requestVPSServers"
+    | "requestVPSServers" | "requestVpsServers"
     | "vpsServerAdd" | "vpsServerRemove" | "vpsRefreshMetrics"
     | "vpsServiceAction" | "vpsDockerAction" | "vpsDeploy" | "vpsRollback" | "vpsBackup"
     | "vpsGetReverseProxyConfigs" | "vpsAddReverseProxyConfig" | "vpsRemoveReverseProxyConfig" | "vpsTestReverseProxyConfig"

@@ -1080,26 +1080,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // ─── V4 Subsystem Message Routing ───────────────────────────────
         // SSH
         case "requestSSHProfiles":
-          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          if (this.sshService) this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
           break
         case "requestSSHSessions":
-          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          if (this.sshService) this.postMessage({ type: "sshSessionsUpdated", sessions: this.sshService.getSessionSnapshots() } as never)
           break
         case "sshProfileSave":
           await this.sshService?.saveProfile(message.profile)
-          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          if (this.sshService) this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
           break
         case "sshProfileDelete":
           await this.sshService?.deleteProfile(message.profileName)
-          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          if (this.sshService) this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
           break
         case "sshConnect":
           await this.sshService?.connect(message.profileName)
-          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          if (this.sshService) this.postMessage({ type: "sshSessionsUpdated", sessions: this.sshService.getSessionSnapshots() } as never)
           break
         case "sshDisconnect":
           this.sshService?.disconnect(message.profileName)
-          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          if (this.sshService) this.postMessage({ type: "sshSessionsUpdated", sessions: this.sshService.getSessionSnapshots() } as never)
           break
         case "sshOpenTerminal":
           await this.sshService?.connect(message.profileName)
@@ -1141,6 +1141,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         // VPS
         case "requestVPSServers":
+        case "requestVpsServers":
         case "vpsServerAdd":
         case "vpsServerRemove":
         case "vpsRefreshMetrics":
@@ -1149,6 +1150,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "vpsDeploy":
         case "vpsRollback":
         case "vpsBackup":
+        case "vpsGetReverseProxyConfigs":
+        case "vpsAddReverseProxyConfig":
+        case "vpsRemoveReverseProxyConfig":
+        case "vpsTestReverseProxyConfig":
           if (this.vpsService) {
             await this.vpsService.handleMessage(message, (msg) => this.postMessage(msg as never))
           }
@@ -1156,92 +1161,123 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
         // ZeroClaw
         case "requestZeroClawTasks":
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
           break
         case "zeroClawSubmitTask":
           if (this.zeroClawService) {
             const submitted = this.zeroClawService.submit(message.task)
-            this.postMessage({ type: "zeroClawTaskSubmitted", taskId: submitted.taskId, tasks: this.zeroClawService.getAllTasks() } as never)
+            this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
+            this.postMessage({ type: "zeroClawTaskUpdated", task: submitted } as never)
           }
           break
         case "zeroClawCancelTask":
           this.zeroClawService?.cancel(message.taskId)
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
           break
         case "zeroClawRetryTask":
           if (this.zeroClawService) {
-            this.zeroClawService.retry(message.taskId)
-            this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+            const retried = this.zeroClawService.retry(message.taskId)
+            this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
+            if (retried) this.postMessage({ type: "zeroClawTaskRetried", newTask: retried } as never)
           }
           break
         case "zeroClawApproveTask":
           this.zeroClawService?.approve(message.taskId, message.approver ?? "operator")
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
           break
         case "zeroClawRejectTask":
           this.zeroClawService?.reject(message.taskId, message.reason ?? "rejected")
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
           break
         case "zeroClawGetHistory":
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawHistory", history: this.zeroClawService.getHistory() } as never)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawHistoryLoaded", tasks: this.zeroClawService.getHistory() } as never)
+          break
+        case "zeroClawGetTaskResult":
+          if (this.zeroClawService) {
+            const result = this.zeroClawService.getTaskResult(message.taskId)
+            this.postMessage({ type: "zeroClawTaskResult", result } as never)
+          }
+          break
+        case "zeroClawCollectArtifacts":
+          if (this.zeroClawService) {
+            const artifacts = await this.zeroClawService.collectArtifacts(message.taskId)
+            this.postMessage({ type: "zeroClawArtifacts", artifacts } as never)
+          }
           break
 
         // Routing
         case "requestRoutingState":
-          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          if (this.routingService) {
+            this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
+            this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
+            this.postMessage({ type: "routingHealthLoaded", health: this.routingService.getHealthSummary(), providers: this.routingService.getProviders() } as never)
+            this.postMessage({ type: "routingTracesLoaded", traces: this.routingService.getTraces() } as never)
+          }
           break
         case "routingTestProvider":
           if (this.routingService) {
-            await this.routingService.testProvider(message.providerId)
-            this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+            const testSuccess = await this.routingService.testProvider(message.providerId)
+            this.postMessage({ type: "routingTestResult", providerId: message.providerId, success: !!testSuccess } as never)
+            this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
+            this.postMessage({ type: "routingHealthLoaded", health: this.routingService.getHealthSummary(), providers: this.routingService.getProviders() } as never)
           }
           break
         case "routingConfigureKey":
           this.routingService?.configureApiKey(message.providerId, !!message.apiKey)
-          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          if (this.routingService) {
+            this.postMessage({ type: "routingKeyConfigured", providerId: message.providerId, configured: !!message.apiKey } as never)
+            this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
+          }
           break
         case "routingSetRole":
           this.routingService?.setRole(message.providerId, message.role, message.enabled)
-          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          if (this.routingService) this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
           break
         case "routingSetMode":
           this.routingService?.setMode(message.mode)
+          if (this.routingService) this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
           break
         case "routingSetFallbackOrder":
           this.routingService?.setFallbackOrder(message.order)
+          if (this.routingService) this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
           break
         case "routingGetTraces":
-          if (this.routingService) this.postMessage({ type: "routingTraces", traces: this.routingService.getTraces() } as never)
+          if (this.routingService) this.postMessage({ type: "routingTracesLoaded", traces: this.routingService.getTraces() } as never)
           break
         case "routingGetHealth":
-          if (this.routingService) this.postMessage({ type: "routingHealth", health: this.routingService.getHealthSummary() } as never)
+          if (this.routingService) this.postMessage({ type: "routingHealthLoaded", health: this.routingService.getHealthSummary(), providers: this.routingService.getProviders() } as never)
           break
 
         // Memory
         case "memoryGetStatus":
-          if (this.memoryService) this.postMessage({ type: "memoryStatus", ...this.memoryService.getStatus() } as never)
+          if (this.memoryService) this.postMessage({ type: "memoryStatusLoaded", ...this.memoryService.getStatus() } as never)
           break
         case "memoryRecall":
           if (this.memoryService) {
             const results = this.memoryService.recall(message.query, message.project)
-            this.postMessage({ type: "memoryRecallResults", results } as never)
+            this.postMessage({ type: "memoryRecallResult", results } as never)
           }
           break
         case "memoryWrite":
           if (this.memoryService) {
             this.memoryService.writeMemory(message.entry)
-            this.postMessage({ type: "memoryWriteConfirmed" } as never)
+            this.postMessage({ type: "memoryWriteResult", success: true } as never)
           }
           break
         case "memoryReconnect":
           await this.memoryService?.reconnect()
-          if (this.memoryService) this.postMessage({ type: "memoryStatus", ...this.memoryService.getStatus() } as never)
+          if (this.memoryService) {
+            const status = this.memoryService.getStatus()
+            this.postMessage({ type: "memoryStatusLoaded", ...status } as never)
+            this.postMessage({ type: "memoryConnectionChanged", connection: status.connection } as never)
+          }
           break
         case "memoryGetHistory":
-          if (this.memoryService) this.postMessage({ type: "memoryHistory", history: this.memoryService.getWriteHistory() } as never)
+          if (this.memoryService) this.postMessage({ type: "memoryHistoryLoaded", records: this.memoryService.getWriteHistory() } as never)
           break
         case "memorySetPermission":
           this.memoryService?.setPermission(message.agentId, message.scope, message.allowed)
+          if (this.memoryService) this.postMessage({ type: "memoryPermissionChanged", permission: { agentId: message.agentId, scope: message.scope, allowed: message.allowed } } as never)
           break
         case "memoryRunDiagnostics":
           if (this.memoryService) {
@@ -1282,6 +1318,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.trainingService?.pauseJob(message.jobId)
           if (this.trainingService) this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
           break
+        case "trainingResumeJob":
+          if (this.trainingService) {
+            this.trainingService.resumeJob(message.jobId)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingCancelJob":
+          if (this.trainingService) {
+            this.trainingService.cancelJob(message.jobId)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingRemoveDataset":
+          if (this.trainingService) {
+            this.trainingService.removeDataset(message.datasetId)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingBrowsePath":
+          if (this.trainingService) {
+            const chosen = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: true, canSelectMany: false, openLabel: "Select training data" })
+            if (chosen?.[0]) this.postMessage({ type: "trainingBrowsePathResult", path: chosen[0].fsPath } as never)
+          }
+          break
         case "trainingResumeCheckpoint":
           if (this.trainingService) {
             this.trainingService.resumeFromCheckpoint(message.jobId, message.checkpointId)
@@ -1291,7 +1351,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "trainingCompareRuns":
           if (this.trainingService) {
             const comparison = this.trainingService.compareRuns(message.jobIds?.[0], message.jobIds?.[1])
-            this.postMessage({ type: "trainingComparison", comparison } as never)
+            this.postMessage({ type: "trainingCompareResult", comparison } as never)
           }
           break
         case "trainingExportModel":

@@ -58,6 +58,7 @@ export function activate(context: vscode.ExtensionContext) {
   const hermesClient = new HermesClient(context, hermesStatus.getConfig())
   hermesStatus.setClient(hermesClient)
   const hermesPipeline = new HermesPipeline(context, hermesStatus, hermesClient)
+  context.subscriptions.push(hermesPipeline)
   registerHermesCommands(context, hermesStatus, hermesClient, hermesPipeline)
 
   // Create V4 subsystem services.
