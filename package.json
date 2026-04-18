@@ -126,7 +126,8 @@
     "fastify": ">=5.8.3",
     "diff": "8.0.4",
     "dompurify": "3.3.3",
-    "happy-dom": ">=20.8.9"
+    "happy-dom": ">=20.8.9",
+    "openai": "4.77.0"
   },
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
