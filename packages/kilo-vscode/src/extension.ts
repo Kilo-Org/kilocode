@@ -17,6 +17,9 @@ import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { RemoteStatusService } from "./services/RemoteStatusService"
+import { HermesClient, HermesPipeline, HermesStatusService, buildPreset, HERMES_PROVIDER_ID } from "./services/hermes"
+import { registerHermesCommands } from "./commands/hermes"
+import type { KiloClient } from "@kilocode/sdk/v2"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -39,6 +42,52 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(remoteService)
   connectionService.setRemoteService(remoteService)
 
+  // Create Hermes pipeline services (disabled by default; zero cost when off).
+  // See docs/KILOCODE-HERMES-ZEROCLAW-PIPELINE.md for architecture.
+  const hermesStatus = new HermesStatusService(context)
+  context.subscriptions.push(hermesStatus)
+  const hermesClient = new HermesClient(context, hermesStatus.getConfig())
+  hermesStatus.setClient(hermesClient)
+  const hermesPipeline = new HermesPipeline(context, hermesStatus, hermesClient)
+  registerHermesCommands(context, hermesStatus, hermesClient, hermesPipeline)
+
+  // Sync the Hermes provider preset into the CLI backend config on toggle.
+  // Runs once on toggle and once on each CLI reconnect (in case Hermes was
+  // already enabled before the backend started).
+  const syncHermesPreset = async (client: KiloClient, enabled: boolean, baseUrl: string) => {
+    try {
+      const globalCfg = (await client.global.config.get({ throwOnError: true })).data ?? {}
+      const disabled: string[] = (globalCfg as { disabled_providers?: string[] }).disabled_providers ?? []
+      if (enabled) {
+        const preset = buildPreset(baseUrl)
+        const nextDisabled = disabled.filter((id) => id !== HERMES_PROVIDER_ID)
+        await client.global.config.update(
+          { config: { provider: { [HERMES_PROVIDER_ID]: preset as unknown as Record<string, unknown> }, disabled_providers: nextDisabled } },
+          { throwOnError: true },
+        )
+        console.log("[Kilo Hermes] Provider preset written to CLI config")
+      } else {
+        if (disabled.includes(HERMES_PROVIDER_ID)) return
+        await client.global.config.update(
+          { config: { disabled_providers: [...disabled, HERMES_PROVIDER_ID] } },
+          { throwOnError: true },
+        )
+        console.log("[Kilo Hermes] Provider preset disabled in CLI config")
+      }
+    } catch (err) {
+      console.warn("[Kilo Hermes] syncHermesPreset failed (non-fatal):", err)
+    }
+  }
+
+  hermesStatus.onChange(async (cfg) => {
+    try {
+      const client = connectionService.getClient()
+      await syncHermesPreset(client, cfg.enabled, cfg.baseUrl)
+    } catch {
+      // CLI not yet connected — will be applied on next connectionService onStateChange
+    }
+  })
+
   // Re-register browser automation MCP server on CLI backend reconnect, configure telemetry,
   // set remote service client, and reload autocomplete so it picks up the now-available backend connection.
   const unsubscribeStateChange = connectionService.onStateChange((state) => {
@@ -56,6 +105,9 @@ export function activate(context: vscode.ExtensionContext) {
         remoteService.setClient(null)
       }
       AutocompleteServiceManager.getInstance()?.load()
+      // Apply Hermes preset if it was toggled on before the CLI connected.
+      const hermesCfg = hermesStatus.getConfig()
+      void syncHermesPreset(connectionService.getClient(), hermesCfg.enabled, hermesCfg.baseUrl)
     } else {
       remoteService.clearState()
       remoteService.setClient(null)

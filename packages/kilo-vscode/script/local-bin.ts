@@ -49,12 +49,14 @@ async function isDirty(): Promise<boolean> {
 }
 
 async function isStale(): Promise<boolean> {
-  if (await isDirty()) return true
   const hash = await cliSourceHash()
   if (!hash) return false // can't determine — assume fresh
   try {
     const stored = (await Bun.file(versionFile).text()).trim()
-    return stored !== hash
+    if (stored !== hash) return true
+    // Only treat dirty working tree as stale when the version file doesn't
+    // match — avoids unnecessary rebuilds for unrelated uncommitted changes.
+    return false
   } catch {
     return true // no version file — treat as stale
   }

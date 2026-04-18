@@ -1,4 +1,15 @@
-import { Component, createSignal, createMemo, createEffect, on, Switch, Match, Show, onMount, onCleanup } from "solid-js"
+import {
+  Component,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  Switch,
+  Match,
+  Show,
+  onMount,
+  onCleanup,
+} from "solid-js"
 import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
@@ -32,6 +43,7 @@ import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import type { Part, TextPart } from "./types/messages"
 import { speak, stop as stopSpeech, ensureAudioReady } from "./utils/speech-playback"
 import { filterTextForSpeech, detectSentiment } from "./utils/speech-text-filter"
 import { SpeechProviderRegistry } from "./data/speech-providers"
@@ -240,60 +252,90 @@ const AppContent: Component = () => {
       setSpeechSettings(msg.settings)
     }
   })
-  onCleanup(unsubSpeech)
+
+  // Fallback: retry speech settings request if no response within 3 seconds
+  // (matches the pattern used for agents and MCP status in SessionProvider)
+  const speechFallback = setTimeout(() => {
+    if (speechSettings() === null) {
+      vscode.postMessage({ type: "requestSpeechSettings" })
+    }
+  }, 3000)
+
+  // Also retry once extension signals it's fully initialized
+  const unsubReady = vscode.onMessage((msg: ExtensionMessage) => {
+    if (msg.type !== "extensionDataReady") return
+    if (speechSettings() === null) {
+      vscode.postMessage({ type: "requestSpeechSettings" })
+    }
+  })
+
+  onCleanup(() => {
+    unsubSpeech()
+    unsubReady()
+    clearTimeout(speechFallback)
+  })
 
   // Watch for busy → idle transition to auto-speak
+  // The outer effect tracks session status to detect busy→idle transitions.
+  // The inner effect tracks speechSettings and triggers speak when settings are loaded
+  // (handles the race where settings arrive after the first idle transition).
   createEffect(
     on(
       () => session.status(),
       (newStatus, prevStatus) => {
         if (prevStatus !== "busy" || newStatus !== "idle") return
         const ss = speechSettings()
-        if (!ss?.enabled || !ss?.autoSpeak) return
+        if (!ss) return // settings not loaded yet, inner effect will handle when they load
 
-        const provider = SpeechProviderRegistry.get(ss.provider ?? "browser")
-        if (!provider) return
-        if (provider.requiresApiKey && !getApiKeyForProvider(ss, provider.id)) return
+        // Inner effect: track settings changes and speak when they're loaded
+        createEffect(() => {
+          const settings = speechSettings()
+          if (!settings?.enabled || !settings?.autoSpeak) return
 
-        const id = session.currentSessionID()
-        if (!id) return
-        const msgs = session.messages()
-        if (!msgs.length) return
+          const provider = SpeechProviderRegistry.get(settings.provider ?? "browser")
+          if (!provider) return
+          if (provider.requiresApiKey && !getApiKeyForProvider(settings, provider.id)) return
 
-        const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant")
-        if (!lastAssistant || lastAssistant.id === lastSpokenMessageId) return
-        lastSpokenMessageId = lastAssistant.id
+          const id = session.currentSessionID()
+          if (!id) return
+          const msgs = session.messages()
+          if (!msgs.length) return
 
-        const parts = session.allParts()[lastAssistant.id] ?? []
-        const rawText = parts
-          .filter((p: SDKPart) => p.type === "text")
-          .map((p: SDKPart) => (p as unknown as { text: string }).text)
-          .join(" ")
-          .trim()
-        if (!rawText) return
+          const lastAssistant = [...msgs].reverse().find((m) => m.role === "assistant")
+          if (!lastAssistant || lastAssistant.id === lastSpokenMessageId) return
+          lastSpokenMessageId = lastAssistant.id
 
-        // 25-rule text filter: strips code, tool artifacts, identifiers, markdown, enforces length cap
-        const textContent = filterTextForSpeech(rawText)
-        if (!textContent) return
+          const parts: Part[] = session.allParts()[lastAssistant.id] ?? []
+          const rawText = parts
+            .filter((p): p is TextPart => p.type === "text")
+            .map((p) => p.text)
+            .join(" ")
+            .trim()
+          if (!rawText) return
 
-        // Sentiment-based pitch/rate adjustment
-        const sentiment = detectSentiment(textContent)
+          // 25-rule text filter: strips code, tool artifacts, identifiers, markdown, enforces length cap
+          const textContent = filterTextForSpeech(rawText)
+          if (!textContent) return
 
-        ensureAudioReady()
-        speak(textContent, provider, {
-          region: ss.azure?.region,
-          apiKey: getApiKeyForProvider(ss, provider.id),
-          voiceId: ss.azure.voiceId,
-          pitch: ss.tuning.pitch + sentiment.pitchModifier,
-          rate: ss.tuning.rate * sentiment.rateModifier,
-          volume: ss.tuning.volume ?? undefined,
-          style: ss.tuning.style,
-          styleDegree: ss.tuning.styleDegree,
-          emphasis: ss.tuning.emphasis,
-          pronunciations: ss.tuning.pronunciations,
-          audioFormat: ss.tuning.audioFormat,
-          globalVolume: ss.volume,
-        }).catch((err) => console.error("[Speech] Auto-speak failed:", err))
+          // Sentiment-based pitch/rate adjustment
+          const sentiment = detectSentiment(textContent)
+
+          ensureAudioReady()
+          speak(textContent, provider, {
+            region: settings.azure?.region,
+            apiKey: getApiKeyForProvider(settings, provider.id),
+            voiceId: settings.azure.voiceId,
+            pitch: settings.tuning.pitch + sentiment.pitchModifier,
+            rate: settings.tuning.rate * sentiment.rateModifier,
+            volume: settings.tuning.volume ?? undefined,
+            style: settings.tuning.style,
+            styleDegree: settings.tuning.styleDegree,
+            emphasis: settings.tuning.emphasis,
+            pronunciations: settings.tuning.pronunciations,
+            audioFormat: settings.tuning.audioFormat,
+            globalVolume: settings.volume,
+          }).catch((err) => console.error("[Speech] Auto-speak failed:", err))
+        })
       },
     ),
   )

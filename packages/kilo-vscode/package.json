@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: Azure Voice Edition",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.2.5",
+  "version": "7.2.6",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -325,6 +325,26 @@
       {
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.hermes.toggle",
+        "title": "Hermes: Toggle Pipeline",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.hermes.setApiKey",
+        "title": "Hermes: Set API Key",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.hermes.clearApiKey",
+        "title": "Hermes: Clear API Key",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.hermes.testConnection",
+        "title": "Hermes: Test Bridge Connection",
         "category": "Kilo Code"
       }
     ],
@@ -798,12 +818,12 @@
         },
         "kilo-code.new.speech.enabled": {
           "type": "boolean",
-          "default": false,
-          "description": "Enable Azure Voice Studio for text-to-speech responses"
+          "default": true,
+          "description": "Enable text-to-speech for assistant replies"
         },
         "kilo-code.new.speech.autoSpeak": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Automatically speak assistant replies when they complete"
         },
         "kilo-code.new.speech.volume": {
@@ -816,7 +836,11 @@
         "kilo-code.new.speech.interactionMode": {
           "type": "string",
           "default": "assist",
-          "enum": ["assist", "conversation", "minimal"],
+          "enum": [
+            "assist",
+            "conversation",
+            "minimal"
+          ],
           "description": "How voice responses work during your session"
         },
         "kilo-code.new.speech.interruptOnType": {
@@ -865,13 +889,16 @@
         },
         "kilo-code.new.speech.tuning.rate": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "minimum": 0.5,
-          "maximum": 2.0,
+          "maximum": 2,
           "description": "Speech rate/speed (0.5x to 2.0x)"
         },
         "kilo-code.new.speech.tuning.volume": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "default": null,
           "description": "Per-voice volume override (null = use global)"
         },
@@ -882,9 +909,9 @@
         },
         "kilo-code.new.speech.tuning.styleDegree": {
           "type": "number",
-          "default": 1.0,
+          "default": 1,
           "minimum": 0.5,
-          "maximum": 2.0,
+          "maximum": 2,
           "description": "Style intensity (0.5x to 2.0x)"
         },
         "kilo-code.new.speech.tuning.sentencePause": {
@@ -904,7 +931,12 @@
         "kilo-code.new.speech.tuning.emphasis": {
           "type": "string",
           "default": "moderate",
-          "enum": ["none", "reduced", "moderate", "strong"],
+          "enum": [
+            "none",
+            "reduced",
+            "moderate",
+            "strong"
+          ],
           "description": "Word emphasis level"
         },
         "kilo-code.new.speech.tuning.pronunciations": {
@@ -929,12 +961,16 @@
         },
         "kilo-code.new.speech.favorites.starredVoices": {
           "type": "array",
-          "default": ["en-GB-MaisieNeural"],
+          "default": [
+            "en-GB-MaisieNeural"
+          ],
           "description": "Starred favorite voices"
         },
         "kilo-code.new.speech.favorites.order": {
           "type": "array",
-          "default": ["en-GB-MaisieNeural"],
+          "default": [
+            "en-GB-MaisieNeural"
+          ],
           "description": "Display order of favorites"
         },
         "kilo-code.new.speech.presets": {
@@ -946,7 +982,14 @@
           "type": "string",
           "default": "browser",
           "description": "Active speech provider",
-          "enum": ["browser", "azure", "google", "openai", "elevenlabs", "polly"]
+          "enum": [
+            "browser",
+            "azure",
+            "google",
+            "openai",
+            "elevenlabs",
+            "polly"
+          ]
         },
         "kilo-code.new.speech.google.apiKey": {
           "type": "string",
@@ -977,6 +1020,36 @@
           "type": "string",
           "default": "us-east-1",
           "description": "AWS region for Amazon Polly"
+        },
+        "kilo-code.new.hermes.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Route tasks through the Hermes orchestration pipeline (KiloCode \u2192 Hermes \u2192 ZeroClaw). Disabled by default; zero cost when off."
+        },
+        "kilo-code.new.hermes.baseUrl": {
+          "type": "string",
+          "default": "http://187.77.30.206:18789",
+          "description": "Hermes Bridge API base URL. POST /tasks, GET /tasks/{id}/events, and GET /health are served from this root."
+        },
+        "kilo-code.new.hermes.approvalMode": {
+          "type": "string",
+          "default": "auto-low",
+          "enum": [
+            "auto-all",
+            "auto-low",
+            "manual"
+          ],
+          "enumDescriptions": [
+            "Auto-approve all task risk tiers (not recommended)",
+            "Auto-approve low-risk only; medium/high require manual approval",
+            "Require manual approval for every task"
+          ],
+          "description": "Which Hermes task risk tiers to auto-approve."
+        },
+        "kilo-code.new.hermes.workspaceScopeOnly": {
+          "type": "boolean",
+          "default": true,
+          "description": "Restrict Hermes execution to the current VS Code workspace folder."
         }
       }
     }

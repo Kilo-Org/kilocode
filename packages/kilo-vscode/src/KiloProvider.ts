@@ -32,11 +32,13 @@ import {
   resolveContextDirectory,
   resolveWorkspaceDirectory,
   mergeFileSearchResults,
+  buildTelemetryProperties,
+  mapAgent,
   type SessionRefreshContext,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
-import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
-import { getWorkspaceRoot } from "./review-utils"
+import { GitStatsPoller } from "./agent-manager/GitStatsPoller"
+import { buildStatsPolling } from "./kilo-provider/stats-polling"
 import { MarketplaceService, type MarketplaceItem, type RemoveResult } from "./services/marketplace"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
@@ -98,25 +100,11 @@ import {
   saveCustomProvider as saveCustomProviderAction,
 } from "./provider-actions"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
-import type { Agent } from "@kilocode/sdk/v2/client"
 
 type KiloProviderOptions = {
   projectDirectory?: string | null
   slimEditMetadata?: boolean
 }
-
-// Helper to map agent data to the subset of fields sent to the webview
-const mapAgent = (a: Agent) => ({
-  name: a.name,
-  displayName: a.displayName,
-  description: a.description,
-  mode: a.mode,
-  native: a.native,
-  hidden: a.hidden,
-  color: a.color,
-  deprecated: a.deprecated,
-  permission: a.permission,
-})
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
@@ -230,11 +218,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   setRemoteService(service: RemoteStatusService): void {
     this.remoteService = service
-    this.unsubscribeRemote = service.onChange(() => this.sendRemoteStatus())
-  }
-  private sendRemoteStatus(): void {
-    const s = this.remoteService?.getState()
-    if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
+    this.unsubscribeRemote = service.onChange(() => {
+      const s = this.remoteService?.getState()
+      if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
+    })
   }
   private focusSession(id?: string): void {
     if (id) this.connectionService.registerFocused(this.instanceId, id)
@@ -252,15 +239,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   getTelemetryProperties(): Record<string, unknown> {
-    return {
-      appName: "kilo-code",
-      appVersion: this.extensionVersion,
-      platform: "vscode",
-      editorName: vscode.env.appName,
-      vscodeVersion: vscode.version,
-      machineId: vscode.env.machineId,
-      vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
-    }
+    return buildTelemetryProperties(this.extensionVersion)
   }
 
   /**
@@ -356,7 +335,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const reconcile = this.sessionStatusMap.size === 0
       void this.seedSessionStatusMap(reconcile)
 
-      this.sendRemoteStatus()
+      const rs = this.remoteService?.getState()
+      if (rs) this.postMessage({ type: "remoteStatus", enabled: rs.enabled, connected: rs.connected })
     }
 
     // legacy-migration start
@@ -433,7 +413,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.add(session.id)
     this.postMessage({
       type: "sessionCreated",
-      session: this.sessionToWebview(session),
+      session: sessionToWebview(session),
     })
   }
 
@@ -824,28 +804,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         }
-        case "chatCompletionAccepted": this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength); break
-        case "deleteSession": await this.handleDeleteSession(message.sessionID); break
-        case "renameSession": await this.handleRenameSession(message.sessionID, message.title); break
+        case "chatCompletionAccepted":
+          this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
+          break
+        case "deleteSession":
+          await this.handleDeleteSession(message.sessionID)
+          break
+        case "renameSession":
+          await this.handleRenameSession(message.sessionID, message.title)
+          break
         case "toggleRemote":
         case "setRemoteEnabled":
         case "requestRemoteStatus":
           this.remoteService
             ?.handleMessage(message.type, message.enabled)
             .then((s) => {
-              if (s) this.sendRemoteStatus()
+              if (s) { const r = this.remoteService?.getState(); if (r) this.postMessage({ type: "remoteStatus", enabled: r.enabled, connected: r.connected }) }
             })
             .catch((err) => console.error("[Kilo New] remote message failed:", err))
           break
         case "updateSetting":
           await this.handleUpdateSetting(message.key, message.value)
           break
-        case "requestBrowserSettings": this.sendBrowserSettings(); break
-        case "requestClaudeCompatSetting": this.sendClaudeCompatSetting(); break
-        case "requestNotificationSettings": this.sendNotificationSettings(); break
-        case "requestSpeechSettings": this.sendSpeechSettings(); break
-        case "validateAzureKey": this.validateAzureKey(message.apiKey, message.region); break
-        case "requestTimelineSetting": this.sendTimelineSetting(); break
+        case "requestBrowserSettings":
+          this.sendBrowserSettings()
+          break
+        case "requestClaudeCompatSetting":
+          this.sendClaudeCompatSetting()
+          break
+        case "requestNotificationSettings":
+          this.sendNotificationSettings()
+          break
+        case "requestSpeechSettings":
+          this.sendSpeechSettings()
+          break
+        case "validateAzureKey":
+          this.validateAzureKey(message.apiKey, message.region)
+          break
+        case "requestTimelineSetting":
+          this.sendTimelineSetting()
+          break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
             console.error("[Kilo New] fetchAndSendNotifications failed:", e),
@@ -1218,10 +1216,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private sessionToWebview(session: Session) {
-    return sessionToWebview(session)
-  }
-
   /**
    * Handle creating a new session.
    */
@@ -1245,7 +1239,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Notify webview of the new session
       this.postMessage({
         type: "sessionCreated",
-        session: this.sessionToWebview(this.currentSession!),
+        session: sessionToWebview(this.currentSession!),
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to create session:", error)
@@ -1512,7 +1506,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (this.currentSession?.id === sessionID) {
         this.currentSession = updated
       }
-      this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(updated) })
+      this.postMessage({ type: "sessionUpdated", session: sessionToWebview(updated) })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to rename session:", error)
       this.postMessage({
@@ -2186,14 +2180,77 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   private sendSpeechSettings(): void {
-    const s = vscode.workspace.getConfiguration("kilo-code.new.speech"), g = <T>(k: string, d: T) => s.get<T>(k, d)
-    this.postMessage({ type: "speechSettingsLoaded", settings: { enabled: g("enabled", false), autoSpeak: g("autoSpeak", false), volume: g("volume", 80), interactionMode: g("interactionMode", "assist"), interruptOnType: g("interruptOnType", true), debugMode: g("debugMode", false), sentimentIntensity: g("sentimentIntensity", 70), multiVoiceMode: g("multiVoiceMode", false), provider: g("provider", "browser"), azure: { apiKey: g("azure.apiKey", ""), region: g("azure.region", "westus"), voiceId: g("azure.voiceId", "en-GB-MaisieNeural") }, google: { apiKey: g("google.apiKey", "") }, openai: { apiKey: g("openai.apiKey", "") }, elevenlabs: { apiKey: g("elevenlabs.apiKey", "") }, polly: { accessKeyId: g("polly.accessKeyId", ""), secretAccessKey: g("polly.secretAccessKey", ""), region: g("polly.region", "us-east-1") }, tuning: { pitch: g("tuning.pitch", 0), rate: g("tuning.rate", 1.0), volume: g<number | null>("tuning.volume", null), style: g("tuning.style", "default"), styleDegree: g("tuning.styleDegree", 1.0), sentencePause: g("tuning.sentencePause", 250), paragraphBreak: g("tuning.paragraphBreak", 500), emphasis: g("tuning.emphasis", "moderate"), pronunciations: g("tuning.pronunciations", []), audioFormat: g("tuning.audioFormat", "audio-24khz-48kbitrate-mono-mp3") }, favorites: { starredVoices: g("favorites.starredVoices", ["en-GB-MaisieNeural"]), presets: g("favorites.presets", []), order: g("favorites.order", ["en-GB-MaisieNeural"]) }, presets: g("presets", []) } })
+    const s = vscode.workspace.getConfiguration("kilo-code.new.speech"),
+      g = <T>(k: string, d: T) => s.get<T>(k, d)
+    const azureKey = g("azure.apiKey", "")
+    const providerInspect = s.inspect<string>("provider")
+    const explicitProvider = providerInspect?.globalValue ?? providerInspect?.workspaceValue // kilocode_change
+    const provider = explicitProvider ?? (azureKey ? "azure" : "browser") // kilocode_change: smart-default to azure when key is configured
+    this.postMessage({
+      type: "speechSettingsLoaded",
+      settings: {
+        enabled: g("enabled", true),
+        autoSpeak: g("autoSpeak", true),
+        volume: g("volume", 80),
+        interactionMode: g("interactionMode", "assist"),
+        interruptOnType: g("interruptOnType", true),
+        debugMode: g("debugMode", false),
+        sentimentIntensity: g("sentimentIntensity", 70),
+        multiVoiceMode: g("multiVoiceMode", false),
+        provider,
+        azure: {
+          apiKey: azureKey,
+          region: g("azure.region", "westus"),
+          voiceId: g("azure.voiceId", "en-GB-MaisieNeural"),
+        },
+        google: { apiKey: g("google.apiKey", "") },
+        openai: { apiKey: g("openai.apiKey", "") },
+        elevenlabs: { apiKey: g("elevenlabs.apiKey", "") },
+        polly: {
+          accessKeyId: g("polly.accessKeyId", ""),
+          secretAccessKey: g("polly.secretAccessKey", ""),
+          region: g("polly.region", "us-east-1"),
+        },
+        tuning: {
+          pitch: g("tuning.pitch", 0),
+          rate: g("tuning.rate", 1.0),
+          volume: g<number | null>("tuning.volume", null),
+          style: g("tuning.style", "default"),
+          styleDegree: g("tuning.styleDegree", 1.0),
+          sentencePause: g("tuning.sentencePause", 250),
+          paragraphBreak: g("tuning.paragraphBreak", 500),
+          emphasis: g("tuning.emphasis", "moderate"),
+          pronunciations: g("tuning.pronunciations", []),
+          audioFormat: g("tuning.audioFormat", "audio-24khz-48kbitrate-mono-mp3"),
+        },
+        favorites: {
+          starredVoices: g("favorites.starredVoices", ["en-GB-MaisieNeural"]),
+          presets: g("favorites.presets", []),
+          order: g("favorites.order", ["en-GB-MaisieNeural"]),
+        },
+        presets: g("presets", []),
+      },
+    })
   }
   private async validateAzureKey(apiKey: string, region: string): Promise<void> {
     try {
-      const resp = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, { method: "POST", headers: { "Ocp-Apim-Subscription-Key": apiKey, "Content-Type": "application/ssml+xml", "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3" }, body: `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='en-GB-MaisieNeural'>test</voice></speak>` })
-      this.postMessage(resp.ok ? { type: "azureKeyValidationResult", valid: true } : { type: "azureKeyValidationResult", valid: false, error: `HTTP ${resp.status}: ${resp.statusText}` })
-    } catch (e: any) { this.postMessage({ type: "azureKeyValidationResult", valid: false, error: e.message ?? "Network error" }) }
+      const resp = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": apiKey,
+          "Content-Type": "application/ssml+xml",
+          "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+        },
+        body: `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='en-US'><voice name='en-GB-MaisieNeural'>test</voice></speak>`,
+      })
+      this.postMessage(
+        resp.ok
+          ? { type: "azureKeyValidationResult", valid: true }
+          : { type: "azureKeyValidationResult", valid: false, error: `HTTP ${resp.status}: ${resp.statusText}` },
+      )
+    } catch (e: any) {
+      this.postMessage({ type: "azureKeyValidationResult", valid: false, error: e.message ?? "Network error" })
+    }
   }
 
   private sendTimelineSetting(): void {
@@ -2288,7 +2345,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (draftID) this.contextSessionID = session.id
       this.postMessage({
         type: "sessionCreated",
-        session: this.sessionToWebview(session),
+        session: sessionToWebview(session),
         draftID,
       })
     }
@@ -3246,27 +3303,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private startStatsPolling(): void {
     this.statsPoller?.stop()
     this.statsGitOps?.dispose()
-    const git = new GitOps({ log: () => {} })
-    this.statsGitOps = git
-    this.statsPoller = new GitStatsPoller({
-      getWorktrees: () => [],
-      getWorkspaceRoot: () => getWorkspaceRoot(),
+    const handle = buildStatsPolling({
       getClient: () => this.connectionService.getClient(),
-      git,
-      onStats: () => {},
-      onLocalStats: (stats: LocalStats) => {
-        const msg = {
-          type: "worktreeStatsLoaded" as const,
-          files: stats.files,
-          additions: stats.additions,
-          deletions: stats.deletions,
-        }
+      onMessage: (msg) => {
         this.cachedStats = msg
         this.postMessage(msg)
       },
-      log: () => {},
     })
-    this.statsPoller.setEnabled(true)
+    this.statsGitOps = handle.git
+    this.statsPoller = handle.poller
   }
 
   /**

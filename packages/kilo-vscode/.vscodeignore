@@ -1,27 +1,23 @@
-.vscode/**
-.vscode-test/**
-out/**
-node_modules/**
-src/**
-webview-ui/**
-script/**
-.gitignore
-.yarnrc
-.npmrc
-esbuild.js
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
-**/.vscode-test.*
-AGENTS.md
-.prettierignore
-.env
-.env.*
+# Whitelist-based exclusion: start by excluding everything, then re-include what is needed.
+**
 
-# Include dist/ directory for compiled extension (production)
+# Root files
+!LICENSE.txt
+!package.json
+!readme.md
+!changelog.md
+!bunfig.toml
+
+# Extension assets
+!assets/**
+
+# CLI binary
+!bin/kilo.exe
+!bin/kilo
+!bin/.cli-version
+
+# Compiled extension + webview
 !dist/**
 
-# Include bin/ directory for CLI binary (production)
-!bin/**
+# Hermes + other docs shipped with extension
+!docs/**

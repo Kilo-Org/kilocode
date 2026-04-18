@@ -1,3 +1,4 @@
+import * as vscode from "vscode"
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
 import type { CloudSessionMessage } from "./services/cli-backend/types"
 
@@ -482,3 +483,29 @@ export function mergeFileSearchResults(input: {
   const seen = new Set(tabs)
   return [...tabs, ...input.backend.filter((p) => !seen.has(p))]
 }
+
+/** Build standard telemetry property bag for the extension. */
+export function buildTelemetryProperties(extensionVersion: string): Record<string, unknown> {
+  return {
+    appName: "kilo-code",
+    appVersion: extensionVersion,
+    platform: "vscode",
+    editorName: vscode.env.appName,
+    vscodeVersion: vscode.version,
+    machineId: vscode.env.machineId,
+    vscodeIsTelemetryEnabled: vscode.env.isTelemetryEnabled,
+  }
+}
+
+/** Map an SDK Agent to the subset of fields sent to the webview. */
+export const mapAgent = (a: Agent) => ({
+  name: a.name,
+  displayName: a.displayName,
+  description: a.description,
+  mode: a.mode,
+  native: a.native,
+  hidden: a.hidden,
+  color: a.color,
+  deprecated: a.deprecated,
+  permission: a.permission,
+})
