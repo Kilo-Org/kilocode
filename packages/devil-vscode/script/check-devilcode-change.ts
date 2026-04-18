@@ -78,14 +78,13 @@ async function scan(root: string): Promise<Finding[]> {
     }
     if (!content.includes(MARKER)) continue
     const lines = content.split(/\r?\n/)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]
+    for (const [idx, line] of lines.entries()) {
       if (!line.includes(MARKER)) continue
       // Documentation references write the literal as `devilcode_change` (backticks).
       // Treat every other occurrence as a real marker that should not exist outside opencode.
       const docRef = line.includes("`devilcode_change`")
       if (docRef && !line.replace(/`devilcode_change`/g, "").includes(MARKER)) continue
-      findings.push({ file, line: i + 1, text: line.trim() })
+      findings.push({ file, line: idx + 1, text: line.trim() })
     }
   }
   return findings

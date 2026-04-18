@@ -45,8 +45,12 @@ function localKey(c: Context, address?: string, port?: number) {
   ].join("|")
 }
 
+type BunServerLike = {
+  requestIP?: (req: Request) => { address: string; family: string; port: number } | null
+}
+
 const DEFAULT_KEY = (c: Context) => {
-  const server = getBunServer(c)
+  const server = getBunServer<BunServerLike>(c)
   const info = server?.requestIP?.(c.req.raw)
   if (!info?.address) return localKey(c)
   if (loopback(info.address)) return localKey(c, info.address, info.port)

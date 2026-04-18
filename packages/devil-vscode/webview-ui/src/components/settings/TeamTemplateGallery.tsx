@@ -60,8 +60,9 @@ const fallbackPresets: TeamPreset[] = [
 const TeamTemplateGallery: Component<TeamTemplateGalleryProps> = (props) => {
   const language = useLanguage()
   // Audit MA6: prefer server preset list (single source of truth); fall back to the static
-  // gallery only when the route is unavailable (e.g. storybook).
-  const [presets, setPresets] = createSignal<TeamPreset[]>([])
+  // gallery only when the route is unavailable (e.g. storybook). Seed with fallbackPresets so
+  // the gallery is never blank while the fetch is in flight.
+  const [presets, setPresets] = createSignal<TeamPreset[]>(fallbackPresets)
 
   onMount(async () => {
     try {
