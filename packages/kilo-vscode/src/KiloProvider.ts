@@ -10,6 +10,7 @@ import type {
   TextPartInput,
   FilePartInput,
   Config,
+  Agent,
 } from "@kilocode/sdk/v2/client"
 import { type KiloConnectionService, type KilocodeNotification, ServerStartupError } from "./services/cli-backend"
 import type { EditorContext } from "./services/cli-backend/types"

@@ -1,6 +1,6 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { GitOps } from "../agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "../agent-manager/GitStatsPoller"
+import { diffSummary as localDiffSummary } from "../agent-manager/local-diff"
 import { getWorkspaceRoot } from "../review-utils"
 
 export interface WorktreeStatsMessage {
@@ -16,8 +16,6 @@ export interface StatsPollingHandle {
 }
 
 export interface StatsPollingDeps {
-  /** Resolve the current CLI client. */
-  getClient: () => KiloClient
   /** Called with the webview message built from a new local-stats snapshot. */
   onMessage: (msg: WorktreeStatsMessage) => void
 }
@@ -47,7 +45,7 @@ export function buildStatsPolling(deps: StatsPollingDeps): StatsPollingHandle {
   const poller = new GitStatsPoller({
     getWorktrees: () => [],
     getWorkspaceRoot: () => getWorkspaceRoot(),
-    getClient: deps.getClient,
+    localDiff: (dir, base) => localDiffSummary(git, dir, base),
     git,
     onStats: () => {},
     onLocalStats: (stats) => deps.onMessage(mapLocalStats(stats)),
