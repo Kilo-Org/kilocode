@@ -209,7 +209,7 @@ export class BuildRunner {
       const parentRole =
         (task.escalationDepth ?? 0) > 0
           ? undefined
-          : this.options.teamConfig?.routing.parentRole ?? this.options.teamConfig?.routing.defaultRole
+          : this.options.teamConfig?.routing.parentRole
       const resolved = resolveTaskModel({
         subagentType: task.role,
         teamConfig: this.options.teamConfig,

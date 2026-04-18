@@ -15,6 +15,12 @@ export type RateLimitOptions = {
   shouldApply?: (c: Context) => boolean
   /** Standardized rate-limit response headers (draft-6). Defaults to true. */
   standardHeaders?: boolean
+  /** Optional callback to append headers or observability when a request is rejected. */
+  onRejected?: (
+    c: Context,
+    res: Response,
+    info: { key: string; count: number; limit: number; resetAt: number; now: number },
+  ) => void | Promise<void>
   /** Optional clock injection for tests. */
   now?: () => number
 }
@@ -79,7 +85,21 @@ export function rateLimit(options: RateLimitOptions) {
       if (headers) {
         c.header("Retry-After", String(Math.ceil((bucket.resetAt - t) / 1000)))
       }
-      return c.json({ error: "Too Many Requests" }, 429)
+      const res = new Response(JSON.stringify({ error: "Too Many Requests" }), {
+        status: 429,
+        headers: new Headers({
+          ...Object.fromEntries(c.res.headers.entries()),
+          "Content-Type": "application/json; charset=UTF-8",
+        }),
+      })
+      await options.onRejected?.(c, res, {
+        key,
+        count: bucket.count,
+        limit: options.limit,
+        resetAt: bucket.resetAt,
+        now: t,
+      })
+      return res
     }
 
     return next()

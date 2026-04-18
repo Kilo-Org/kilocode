@@ -64,11 +64,12 @@ export namespace Log {
     if (options.level) currentLevel = options.level
     cleanup(Global.Path.log)
     if (options.print) return
+    await fs.mkdir(Global.Path.log, { recursive: true })
     logpath = path.join(
       Global.Path.log,
       options.dev ? "dev.log" : new Date().toISOString().split(".")[0].replace(/:/g, "") + ".log",
     )
-    await fs.truncate(logpath).catch((err) => {
+    await fs.writeFile(logpath, "").catch((err) => {
       console.error("failed to truncate log file", { err, logpath })
     })
     // devilcode_change start - use rotating-file-stream to cap log files at 50 MB

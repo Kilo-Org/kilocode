@@ -73,11 +73,46 @@ export namespace Server {
   let _url: URL | undefined
   let _corsWhitelist: string[] = []
 
+  function corsOrigin(input?: string) {
+    if (!input) return
+
+    const ports = [3000, 5173, 8080, 4096]
+    if (input.startsWith("http://localhost:")) {
+      const port = parseInt(input.split(":")[2], 10)
+      if (ports.includes(port)) return input
+      return
+    }
+    if (input.startsWith("http://127.0.0.1:")) {
+      const port = parseInt(input.split(":")[2], 10)
+      if (ports.includes(port)) return input
+      return
+    }
+    if (
+      input === "tauri://localhost" ||
+      input === "http://tauri.localhost" ||
+      input === "https://tauri.localhost"
+    )
+      return input
+    if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
+      return input
+    }
+    if (_corsWhitelist.includes(input)) {
+      return input
+    }
+    return
+  }
+
   // devilcode_change - shared rate limiter instance (audit C7)
   const _rateLimitMiddleware = rateLimit({
     windowMs: Flag.DEVIL_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000,
     limit: Flag.DEVIL_RATE_LIMIT_MAX ?? 100,
     standardHeaders: true,
+    onRejected(c, res) {
+      const origin = corsOrigin(c.req.header("origin"))
+      if (!origin) return
+      res.headers.set("Access-Control-Allow-Origin", origin)
+      res.headers.set("Vary", "Origin")
+    },
   })
 
   export function url(): URL {
@@ -173,38 +208,7 @@ export namespace Server {
         // devilcode_change start - CORS whitelist with specific localhost ports only
         .use(
           cors({
-            origin(input) {
-              if (!input) return
-
-              // Only allow specific localhost ports: 3000, 5173, 8080, 4096
-              const allowedPorts = [3000, 5173, 8080, 4096]
-              if (input.startsWith("http://localhost:")) {
-                const port = parseInt(input.split(":")[2], 10)
-                if (allowedPorts.includes(port)) return input
-                return
-              }
-              if (input.startsWith("http://127.0.0.1:")) {
-                const port = parseInt(input.split(":")[2], 10)
-                if (allowedPorts.includes(port)) return input
-                return
-              }
-              if (
-                input === "tauri://localhost" ||
-                input === "http://tauri.localhost" ||
-                input === "https://tauri.localhost"
-              )
-                return input
-
-              // *.opencode.ai (https only, adjust if needed)
-              if (/^https:\/\/([a-z0-9-]+\.)*opencode\.ai$/.test(input)) {
-                return input
-              }
-              if (_corsWhitelist.includes(input)) {
-                return input
-              }
-
-              return
-            },
+            origin: corsOrigin,
           }),
         )
         // devilcode_change end

@@ -1,15 +1,17 @@
 // devilcode_change - audit C7
 import { describe, expect, test } from "bun:test"
 import { Hono } from "hono"
-import { rateLimit } from "../../src/server/rate-limit"
+import { rateLimit, type RateLimitOptions } from "../../src/server/rate-limit"
 
-function makeApp(opts: { limit?: number; windowMs?: number; now?: () => number }) {
+function makeApp(opts: Partial<RateLimitOptions>) {
   let t = 0
   const app = new Hono().use(
     rateLimit({
       limit: opts.limit ?? 3,
       windowMs: opts.windowMs ?? 60_000,
       keyGenerator: (c) => c.req.header("x-test-key") ?? "anon",
+      onRejected: opts.onRejected,
+      shouldApply: opts.shouldApply,
       now: opts.now ?? (() => t),
     }),
   )
@@ -65,5 +67,19 @@ describe("rateLimit middleware", () => {
     now += 6_000
     const r3 = await app.request("/x", { headers: { "x-test-key": "k" } })
     expect(r3.status).toBe(200)
+  })
+
+  test("preserves custom rejection headers on 429 responses", async () => {
+    const { app } = makeApp({
+      limit: 1,
+      onRejected(_c, res) {
+        res.headers.set("Access-Control-Allow-Origin", "http://localhost:3000")
+      },
+    })
+    await app.request("/x", { headers: { "x-test-key": "k1", origin: "http://localhost:3000" } })
+    const res = await app.request("/x", { headers: { "x-test-key": "k1", origin: "http://localhost:3000" } })
+
+    expect(res.status).toBe(429)
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("http://localhost:3000")
   })
 })

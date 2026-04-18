@@ -281,6 +281,57 @@ describe("BuildRunner", () => {
     })
   })
 
+  it("allows top-level default-role tasks without an explicit parent role", async () => {
+    const runner = new BuildRunner({
+      teamConfig: {
+        enabled: true,
+        roles: {
+          lead: {
+            displayName: "Lead",
+            provider: "openai",
+            model: "gpt-5.4",
+            effort: "high",
+            tier: 1,
+            canDelegate: ["worker"],
+            maxConcurrent: 1,
+            capabilities: [],
+          },
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-5.4-mini",
+            effort: "medium",
+            tier: 2,
+            canDelegate: [],
+            maxConcurrent: 2,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "lead",
+          escalationEnabled: true,
+        },
+      },
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [],
+      }),
+    )
+
+    const results = await runner.executeWave([makeTask({ id: "t-top", role: "lead", wave: 1 })])
+
+    expect(results[0]?.status).toBe("completed")
+    const call = (mockSessionPrompt.mock.calls as Array<Array<Record<string, unknown>>>)[0]
+    expect(call?.[0]?.agent).toBe("lead")
+  })
+
   // devilcode_change start - audit MA3: re-dispatch escalated tasks to resolved target role.
   it("re-dispatches escalated tasks to the resolved target role", async () => {
     const completed: Array<{ taskId: string; status: string }> = []
