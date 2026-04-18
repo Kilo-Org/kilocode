@@ -88,8 +88,13 @@ export const WorkflowRoutes = lazy(() =>
           if (!state.currentPhase) return c.json([] as PlanTask[])
           const plans = await manager.readAllPlans(state.currentPhase)
           return c.json(plans)
-        } catch {
-          return c.json([] as PlanTask[])
+        } catch (e) {
+          // devilcode_change - audit N5: distinguish "no plans yet" (ENOENT) from real disk errors.
+          if (isENOENT(e)) {
+            return c.json([] as PlanTask[])
+          }
+          log.error("workflow plans read failed", { error: e })
+          return c.json({ error: "Internal error" }, 500)
         }
       },
     )

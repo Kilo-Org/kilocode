@@ -1,7 +1,7 @@
 import { Button } from "@opencode-ai/ui/button"
 import { Card } from "@opencode-ai/ui/card"
 import { Switch } from "@opencode-ai/ui/switch"
-import { type Component, For, Show } from "solid-js"
+import { type Component, For, Show, createSignal, onMount } from "solid-js"
 import { useLanguage } from "@/context/language"
 import { useGlobalSync } from "@/context/global-sync"
 
@@ -27,7 +27,11 @@ type TeamConfig = {
   }
 }
 
-const presets: { id: string; name: string; description: string; team: TeamConfig }[] = [
+// devilcode_change start - audit MA6: hardcoded presets are now a fallback only.
+// Real source of truth is the server's `/config/team/presets` endpoint.
+type PresetEntry = { id: string; name: string; description: string; team: TeamConfig }
+
+const fallbackPresets: PresetEntry[] = [
   {
     id: "solo",
     name: "Solo Enhanced",
@@ -120,9 +124,24 @@ const presets: { id: string; name: string; description: string; team: TeamConfig
   },
 ]
 
+// devilcode_change end
+
 export const SettingsTeam: Component = () => {
   const language = useLanguage()
   const globalSync = useGlobalSync()
+  // devilcode_change start - audit MA6: server-first preset fetch with hardcoded fallback.
+  const [presets, setPresets] = createSignal<PresetEntry[]>(fallbackPresets)
+  onMount(async () => {
+    try {
+      const response = await fetch("/config/team/presets")
+      if (!response.ok) return
+      const data = (await response.json()) as PresetEntry[]
+      if (Array.isArray(data) && data.length > 0) setPresets(data)
+    } catch {
+      // Keep fallback when route unavailable.
+    }
+  })
+  // devilcode_change end
 
   const current = () => (globalSync.data.config as any).team as TeamConfig | undefined
   const team = () =>
@@ -165,7 +184,7 @@ export const SettingsTeam: Component = () => {
             <div class="text-12-regular text-text-weak">{language.t("settings.team.templates.description")}</div>
           </div>
           <div class="p-4 flex flex-col gap-4">
-            <For each={presets}>
+            <For each={presets()}>
               {(preset) => (
                 <div class="flex items-center justify-between gap-4">
                   <div>

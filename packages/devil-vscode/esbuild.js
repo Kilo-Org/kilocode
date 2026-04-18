@@ -150,6 +150,11 @@ function createBrowserWebviewContext(entryPoint, outfile) {
     platform: "browser",
     outfile,
     logLevel: "silent",
+    // Audit N7: inject build-time DEV flag so debug logs are tree-shaken
+    // out of production webview bundles. See webview-ui/src/utils/debug-log.ts.
+    define: {
+      __DEV__: production ? "false" : "true",
+    },
     loader: {
       ".woff": "file",
       ".woff2": "file",

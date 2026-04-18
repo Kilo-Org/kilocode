@@ -40,12 +40,19 @@ export async function fetchProfile(token: string): Promise<DevilcodeProfile> {
  */
 export const getDevilProfile = fetchProfile
 
+// devilcode_change start - audit OB4: discriminated balance result so callers can surface
+// auth/transport failures to the user instead of silently rendering null.
+export type FetchBalanceResult =
+  | { ok: true; balance: DevilcodeBalance }
+  | { ok: false; status?: number; error: string }
+
 /**
- * Fetch user balance from Devil API
- * @param token - Authentication token
- * @param organizationId - Optional organization ID for team balance
+ * Fetch user balance from Devil API.
+ *
+ * Discriminated result: success carries balance; failure carries upstream status + reason.
+ * Use {@link fetchBalance} for the legacy null-on-error behavior.
  */
-export async function fetchBalance(token: string, organizationId?: string): Promise<DevilcodeBalance | null> {
+export async function fetchBalanceResult(token: string, organizationId?: string): Promise<FetchBalanceResult> {
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -59,16 +66,26 @@ export async function fetchBalance(token: string, organizationId?: string): Prom
 
     if (!response.ok) {
       console.warn(`Failed to fetch balance: ${response.status}`)
-      return null
+      return { ok: false, status: response.status, error: `upstream returned ${response.status}` }
     }
 
     const data = (await response.json()) as { balance?: number }
-    return { balance: data.balance ?? 0 }
+    return { ok: true, balance: { balance: data.balance ?? 0 } }
   } catch (error) {
     console.warn("Error fetching balance:", error)
-    return null
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
 }
+
+/**
+ * Backwards-compatible helper that flattens errors to null. Prefer
+ * {@link fetchBalanceResult} so callers can act on auth/transport failures.
+ */
+export async function fetchBalance(token: string, organizationId?: string): Promise<DevilcodeBalance | null> {
+  const r = await fetchBalanceResult(token, organizationId)
+  return r.ok ? r.balance : null
+}
+// devilcode_change end
 
 /**
  * Alias for compatibility with existing code

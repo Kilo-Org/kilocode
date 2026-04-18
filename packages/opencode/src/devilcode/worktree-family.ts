@@ -5,7 +5,11 @@ import { git } from "../util/git"
 
 export namespace WorktreeFamily {
   export async function list() {
-    if (Instance.project.vcs !== "git") {
+    // devilcode_change - audit (build snapshot): Instance.project may be undefined when called
+    // from contexts that did not bootstrap the project (e.g. integration tests on Windows).
+    // Treat missing project metadata as "non-git" rather than throwing.
+    const project = (Instance as { project?: { vcs?: string } }).project
+    if (!project || project.vcs !== "git") {
       return [Filesystem.resolve(Instance.directory)]
     }
 

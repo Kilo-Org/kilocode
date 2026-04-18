@@ -6,7 +6,12 @@ import { Log } from "@/util/log"
 import { resolveTaskModel, TeamConcurrencyError } from "../team/router"
 import { getConcurrencyManager } from "../team/concurrency"
 import { effortToProviderOptions } from "../team/effort"
-import { detectEscalation, createEscalatedResult } from "./escalation"
+import {
+  detectEscalation,
+  createEscalatedResult,
+  resolveEscalationTarget,
+  MAX_ESCALATION_DEPTH,
+} from "./escalation"
 import { groupByWave } from "./executor"
 import type { PlanTask, TaskResult } from "./types"
 import type { TeamConfig } from "../team/config"
@@ -76,15 +81,50 @@ export class BuildRunner {
     return groupByWave(tasks)
   }
 
+  // devilcode_change start - audit MA5: pre-acquire all role slots before parallel execution
+  // to prevent TOCTOU oversubscription (Promise.all evaluating capacity then racing to acquire).
   async executeWave(tasks: PlanTask[]): Promise<TaskResult[]> {
     const needsWorktrees = tasks.length > 1
     log.info("executeWave", { taskCount: tasks.length, needsWorktrees })
 
-    const results = await Promise.all(
-      tasks.map((task) => this.executeTask(task, needsWorktrees)),
-    )
-    return results
+    // Group tasks by their resolved role for batch capacity check.
+    const teamConfig = this.options.teamConfig
+    const concurrency = getConcurrencyManager()
+    const acquired: Array<{ role: string; taskId: string }> = []
+
+    if (teamConfig?.enabled) {
+      const byRole = new Map<string, PlanTask[]>()
+      for (const task of tasks) {
+        const role = teamConfig.roles[task.role] ? task.role : undefined
+        if (!role) continue
+        if (!byRole.has(role)) byRole.set(role, [])
+        byRole.get(role)!.push(task)
+      }
+
+      for (const [role, group] of byRole) {
+        const max = teamConfig.roles[role].maxConcurrent
+        if (concurrency.getActiveCount(role) + group.length > max) {
+          // Roll back any slots already taken in this wave before throwing.
+          for (const a of acquired) concurrency.release(a.role, a.taskId)
+          throw new TeamConcurrencyError({ role, maxConcurrent: max })
+        }
+        for (const task of group) {
+          concurrency.acquire(role, task.id)
+          acquired.push({ role, taskId: task.id })
+        }
+      }
+    }
+
+    try {
+      const results = await Promise.all(
+        tasks.map((task) => this.executeTask(task, needsWorktrees, true)),
+      )
+      return results
+    } finally {
+      for (const a of acquired) concurrency.release(a.role, a.taskId)
+    }
   }
+  // devilcode_change end
 
   async executeAll(tasks: PlanTask[]): Promise<TaskResult[]> {
     this.paused = false
@@ -131,7 +171,9 @@ export class BuildRunner {
     return allResults
   }
 
-  private async executeTask(task: PlanTask, useWorktree: boolean): Promise<TaskResult> {
+  // devilcode_change - audit MA5: slotsPreAcquired skips per-task acquire/release when the wave
+  // batch path has already reserved capacity (avoids double-acquire and double-release).
+  private async executeTask(task: PlanTask, useWorktree: boolean, slotsPreAcquired = false): Promise<TaskResult> {
     let worktree: Worktree.Info | undefined
     try {
       if (useWorktree) {
@@ -161,16 +203,25 @@ export class BuildRunner {
         log.info("files locked", { taskId: task.id, files: task.files })
       }
 
+      // devilcode_change start - audit MA1+MA3: derive parent from team config; skip hierarchy
+      // check when re-dispatching an escalated task (escalation target is acting as a new top-level
+      // executor, not a child of the original parent).
+      const parentRole =
+        (task.escalationDepth ?? 0) > 0
+          ? undefined
+          : this.options.teamConfig?.routing.parentRole ?? this.options.teamConfig?.routing.defaultRole
       const resolved = resolveTaskModel({
         subagentType: task.role,
         teamConfig: this.options.teamConfig,
-        parentRole: "orchestrator",
+        parentRole,
       })
+      // devilcode_change end
 
       // Check concurrency capacity before proceeding
       const concurrency = getConcurrencyManager()
       const roleConfig = resolved ? this.options.teamConfig?.roles[resolved.role] : undefined
-      if (resolved && roleConfig) {
+      // devilcode_change start - audit MA5: skip when slot already reserved at wave level.
+      if (resolved && roleConfig && !slotsPreAcquired) {
         if (!concurrency.hasCapacity(resolved.role, roleConfig.maxConcurrent)) {
           throw new TeamConcurrencyError({
             role: resolved.role,
@@ -178,6 +229,7 @@ export class BuildRunner {
           })
         }
       }
+      // devilcode_change end
 
       const taskPrompt = [
         BUILD_PROMPT,
@@ -219,7 +271,8 @@ export class BuildRunner {
       }
 
       // Acquire concurrency slot before execution
-      if (resolved && roleConfig) {
+      // devilcode_change - audit MA5: only acquire here when wave path did not pre-acquire.
+      if (resolved && roleConfig && !slotsPreAcquired) {
         concurrency.acquire(resolved.role, task.id)
       }
 
@@ -239,7 +292,8 @@ export class BuildRunner {
           : await run()
       } finally {
         // Release concurrency slot after execution (always, even on error)
-        if (resolved && roleConfig) {
+        // devilcode_change - audit MA5: matched release happens at wave level when pre-acquired.
+        if (resolved && roleConfig && !slotsPreAcquired) {
           concurrency.release(resolved.role, task.id)
         }
       }
@@ -250,6 +304,32 @@ export class BuildRunner {
       const escalationSignal = detectEscalation(output)
       if (escalationSignal.detected) {
         const escalatedResult = createEscalatedResult(task.id, output, escalationSignal, task.files)
+        // devilcode_change start - audit MA3: resolve target role and re-dispatch instead of merely tagging.
+        const teamConfig = this.options.teamConfig
+        const escalationEnabled = teamConfig?.routing.escalationEnabled !== false
+        const depth = task.escalationDepth ?? 0
+        if (teamConfig && escalationEnabled && depth < MAX_ESCALATION_DEPTH) {
+          const target = resolveEscalationTarget(task.role, escalationSignal, teamConfig)
+          if (target && target.role !== task.role) {
+            log.info("re-dispatching escalated task", {
+              taskId: task.id,
+              from: task.role,
+              to: target.role,
+              depth: depth + 1,
+              reason: target.reason,
+            })
+            this.options.onTaskComplete(task.id, escalatedResult)
+            const followUp: PlanTask = {
+              ...task,
+              role: target.role,
+              escalationDepth: depth + 1,
+              title: `${task.title} (escalated to ${target.role})`,
+              description: `${task.description}\n\n--- Escalated from ${task.role} ---\nReason: ${target.reason}\nOriginal output:\n${output.slice(0, 1000)}`,
+            }
+            return await this.executeTask(followUp, useWorktree)
+          }
+        }
+        // devilcode_change end
         this.options.onTaskComplete(task.id, escalatedResult)
         return escalatedResult
       }

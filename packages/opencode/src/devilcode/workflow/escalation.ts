@@ -98,6 +98,9 @@ export function resolveEscalationTarget(
   return undefined
 }
 
+// devilcode_change - audit MA3: bound re-dispatch recursion to prevent infinite loops.
+export const MAX_ESCALATION_DEPTH = 2
+
 /**
  * Creates an escalated TaskResult from detection
  */

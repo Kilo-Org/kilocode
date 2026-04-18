@@ -1,6 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 import type { PlanTask, ActiveTask, TaskResult } from "@/devilcode/workflow/types"
 import type { WorkflowState } from "@/devilcode/workflow/types"
+import type { TeamConfig } from "@/devilcode/team/config"
 
 // Mock dependencies
 const mockSessionCreate = mock(() =>
@@ -248,8 +249,9 @@ describe("BuildRunner", () => {
             capabilities: [],
           },
         },
+        // devilcode_change - audit MA1: flat strategy avoids the hierarchy check for top-level dispatch.
         routing: {
-          strategy: "hierarchical",
+          strategy: "flat",
           defaultRole: "worker",
           escalationEnabled: true,
         },
@@ -278,6 +280,128 @@ describe("BuildRunner", () => {
       },
     })
   })
+
+  // devilcode_change start - audit MA3: re-dispatch escalated tasks to resolved target role.
+  it("re-dispatches escalated tasks to the resolved target role", async () => {
+    const completed: Array<{ taskId: string; status: string }> = []
+    const teamConfig: TeamConfig = {
+      enabled: true,
+      roles: {
+        senior: {
+          displayName: "Senior",
+          provider: "openai",
+          model: "gpt-5.4",
+          effort: "high",
+          tier: 2,
+          canDelegate: ["worker"],
+          maxConcurrent: 1,
+          capabilities: [],
+        },
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: [],
+        },
+      },
+      routing: {
+        strategy: "hierarchical" as const,
+        defaultRole: "worker",
+        escalationEnabled: true,
+        parentRole: "senior",
+      },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: (taskId, result) => completed.push({ taskId, status: result.status }),
+      onOutput: () => {},
+    })
+
+    let call = 0
+    mockSessionPrompt.mockImplementation(() => {
+      call++
+      const text =
+        call === 1
+          ? "Escalating to senior: this needs architecture review."
+          : "Resolved successfully."
+      return Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [{ type: "text", text }],
+      })
+    })
+
+    const results = await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(2)
+    const promptCalls = mockSessionPrompt.mock.calls as Array<Array<Record<string, unknown>>>
+    expect(promptCalls[0]?.[0]?.agent).toBe("worker")
+    expect(promptCalls[1]?.[0]?.agent).toBe("senior")
+    // Final result for the original task id reflects the escalated re-dispatch outcome.
+    expect(results[0]?.status).toBe("completed")
+    // Two onTaskComplete calls: original (escalated) + re-dispatched (completed).
+    expect(completed.map((c) => c.status)).toEqual(["escalated", "completed"])
+  })
+
+  it("stops re-dispatching once MAX_ESCALATION_DEPTH is hit", async () => {
+    const teamConfig: TeamConfig = {
+      enabled: true,
+      roles: {
+        senior: {
+          displayName: "Senior",
+          provider: "openai",
+          model: "gpt-5.4",
+          effort: "high",
+          tier: 2,
+          canDelegate: ["worker"],
+          maxConcurrent: 1,
+          capabilities: [],
+        },
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: [],
+        },
+      },
+      routing: {
+        strategy: "hierarchical" as const,
+        defaultRole: "worker",
+        escalationEnabled: true,
+        parentRole: "senior",
+      },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    mockSessionPrompt.mockImplementation(() =>
+      Promise.resolve({
+        info: { role: "assistant", finish: "end-turn" },
+        parts: [{ type: "text", text: "Escalating to senior: still stuck." }],
+      }),
+    )
+
+    const results = await runner.executeWave([makeTask({ id: "t1", role: "worker", wave: 1 })])
+
+    // Worker (depth 0) -> escalate -> senior (depth 1). Senior escalates back to senior;
+    // self-target short-circuit returns escalated without further re-dispatch (also bounded
+    // by MAX_ESCALATION_DEPTH for non-self chains).
+    expect(results[0]?.status).toBe("escalated")
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(2)
+  })
+  // devilcode_change end
 
   it("stops after the current wave when pause is requested", async () => {
     const paused: number[] = []

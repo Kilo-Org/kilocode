@@ -49,7 +49,7 @@ const SessionList: Component<SessionListProps> = (props) => {
   const [renameValue, setRenameValue] = createSignal("")
 
   onMount(() => {
-    console.log("[Devil New] SessionList mounted, loading sessions")
+    // Audit N7: dropped DEV-only console.log; loadSessions has its own logging.
     session.loadSessions()
   })
 

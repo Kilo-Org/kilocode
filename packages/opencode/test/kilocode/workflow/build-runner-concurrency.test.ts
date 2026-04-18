@@ -97,6 +97,80 @@ describe("BuildRunner concurrency integration", () => {
     expect(manager.getActiveCount("worker")).toBe(0)
   })
 
+  // devilcode_change start - audit MA5: wave-level pre-acquire prevents oversubscription.
+  it("rejects wave that would exceed role maxConcurrent", async () => {
+    const { getConcurrencyManager } = await import("@/devilcode/team/concurrency")
+    getConcurrencyManager().reset()
+    const teamConfig = {
+      enabled: true,
+      roles: {
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default" as const,
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: [],
+        },
+      },
+      routing: { strategy: "flat" as const, defaultRole: "worker", escalationEnabled: true },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    const tasks = [
+      makeTask({ id: "t1", role: "worker", wave: 1 }),
+      makeTask({ id: "t2", role: "worker", wave: 1 }),
+      makeTask({ id: "t3", role: "worker", wave: 1 }),
+    ]
+    await expect(runner.executeWave(tasks)).rejects.toThrow(TeamConcurrencyError)
+    // No SessionPrompt issued — fail-fast before any task starts.
+    expect(mockSessionPrompt).toHaveBeenCalledTimes(0)
+    // Slots should be cleanly released after rejection.
+    expect(getConcurrencyManager().getActiveCount("worker")).toBe(0)
+  })
+
+  it("releases pre-acquired slots after wave completes", async () => {
+    const { getConcurrencyManager } = await import("@/devilcode/team/concurrency")
+    getConcurrencyManager().reset()
+    const teamConfig = {
+      enabled: true,
+      roles: {
+        worker: {
+          displayName: "Worker",
+          provider: "openai",
+          model: "gpt-5.4-mini",
+          effort: "default" as const,
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 5,
+          capabilities: [],
+        },
+      },
+      routing: { strategy: "flat" as const, defaultRole: "worker", escalationEnabled: true },
+    }
+    const runner = new BuildRunner({
+      teamConfig,
+      onTaskStart: () => {},
+      onTaskComplete: () => {},
+      onOutput: () => {},
+    })
+
+    await runner.executeWave([
+      makeTask({ id: "t1", role: "worker", wave: 1 }),
+      makeTask({ id: "t2", role: "worker", wave: 1 }),
+    ])
+
+    expect(getConcurrencyManager().getActiveCount("worker")).toBe(0)
+  })
+  // devilcode_change end
+
   it("handles disabled team config without concurrency checks", async () => {
     const runner = new BuildRunner({
       teamConfig: undefined,

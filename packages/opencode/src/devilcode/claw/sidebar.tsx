@@ -13,7 +13,10 @@ import { Show } from "solid-js"
 import { useTheme } from "@tui/context/theme"
 import type { ClawStatus } from "./types"
 
-function dot(status: string | null | undefined, theme: any): string {
+// devilcode_change - audit N2: theme is the OpenTUI Theme (RGBA fields). The concrete RGBA
+// class is private to @tui internals; tightening here cascades into many test fixtures.
+// Tracked: replace `any` once @tui/context/theme exports its Theme type publicly.
+function dot(status: string | null | undefined, theme: any): any {
   if (!status) return theme.textMuted
   if (status === "running") return theme.success
   if (status === "starting" || status === "restarting") return theme.warning

@@ -2,12 +2,12 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { Log } from "../util/log"
 import { describeRoute, generateSpecs, validator, resolver, openAPIRouteHandler } from "hono-openapi"
-import { Hono, type Context } from "hono" // devilcode_change - added Context type
+import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { streamSSE } from "hono/streaming"
 import { basicAuth } from "hono/basic-auth"
-// Rate limiting - to be implemented
-// import { rateLimiter } from "hono-rate-limiter"
+// devilcode_change - Bun-native rate limiter (replaces hono-rate-limiter)
+import { rateLimit } from "./rate-limit"
 import z from "zod"
 import { Provider } from "../provider/provider"
 import { NamedError } from "@opencode-ai/util/error"
@@ -73,6 +73,13 @@ export namespace Server {
   let _url: URL | undefined
   let _corsWhitelist: string[] = []
 
+  // devilcode_change - shared rate limiter instance (audit C7)
+  const _rateLimitMiddleware = rateLimit({
+    windowMs: Flag.DEVIL_RATE_LIMIT_WINDOW_MS ?? 15 * 60 * 1000,
+    limit: Flag.DEVIL_RATE_LIMIT_MAX ?? 100,
+    standardHeaders: true,
+  })
+
   export function url(): URL {
     return _url ?? new URL("http://localhost:4096")
   }
@@ -103,21 +110,30 @@ export namespace Server {
         .use((c, next) => {
           // Allow CORS preflight requests to succeed without auth.
           // Browser clients sending Authorization headers will preflight with OPTIONS.
+          // devilcode_change - audit H1: tradeoff documented. OPTIONS preflight cannot carry the
+          // basic-auth header (browsers strip it before sending preflight), so blocking OPTIONS
+          // would break all browser clients. Mitigations: rate-limit middleware (audit C7) still
+          // applies; CORS origin allowlist gates which origins can preflight at all (see below).
           if (c.req.method === "OPTIONS") return next()
           const password = Flag.DEVIL_SERVER_PASSWORD
           if (!password) return next()
           const username = Flag.DEVIL_SERVER_USERNAME ?? "kilo" // devilcode_change
           return basicAuth({ username, password })(c, next)
         })
-        // devilcode_change start - Rate limiting: 100 requests per 15 minutes per IP (disabled - hono-rate-limiter not available)
-        // .use(
-        //   rateLimiter({
-        //     windowMs: 15 * 60 * 1000, // 15 minutes
-        //     limit: 100,
-        //     standardHeaders: "draft-6",
-        //     keyGenerator: (c: Context) => c.req.header("x-forwarded-for") || c.req.header("x-real-ip") || "unknown",
-        //   }),
-        // )
+        // devilcode_change start - Rate limiting (audit C7). Disable via DEVIL_DISABLE_RATE_LIMIT=1.
+        .use(async (c, next) => {
+          if (Flag.DEVIL_DISABLE_RATE_LIMIT) return next()
+          // Skip preflight + health/log/telemetry to avoid throttling internal traffic.
+          const path = c.req.path
+          if (
+            c.req.method === "OPTIONS" ||
+            path === "/global/health" ||
+            path === "/log" ||
+            path === "/telemetry/capture"
+          )
+            return next()
+          return _rateLimitMiddleware(c, next)
+        })
         // devilcode_change end
         // devilcode_change start - Request body size limit: 10MB
         .use(async (c, next) => {

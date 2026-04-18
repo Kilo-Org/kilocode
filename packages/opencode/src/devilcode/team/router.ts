@@ -39,9 +39,13 @@ export function resolveTaskModel(input: {
   if (!role) return undefined
 
   // 3. Enforce hierarchy (skip for flat strategy or top-level dispatch)
+  // devilcode_change - audit MA1: throw on missing parent role instead of silently skipping the check.
   if (teamConfig.routing.strategy === "hierarchical" && parentRole) {
     const parentRoleDef = teamConfig.roles[parentRole]
-    if (parentRoleDef && !parentRoleDef.canDelegate.includes(subagentType)) {
+    if (!parentRoleDef) {
+      throw new TeamDelegationError({ parentRole, targetRole: subagentType })
+    }
+    if (!parentRoleDef.canDelegate.includes(subagentType)) {
       throw new TeamDelegationError({ parentRole, targetRole: subagentType })
     }
   }

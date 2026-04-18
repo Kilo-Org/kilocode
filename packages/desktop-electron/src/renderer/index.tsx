@@ -294,7 +294,7 @@ render(() => {
 // Gate component that waits for the server to be ready
 function ServerGate(props: { children: (data: Accessor<ServerReadyData>) => JSX.Element }) {
   const [serverData] = createResource(() => window.api.awaitInitialization(() => undefined))
-  console.log({ serverData })
+  // devilcode_change - audit N8: removed object dump that fired on every render.
   if (serverData.state === "errored") throw serverData.error
 
   return (

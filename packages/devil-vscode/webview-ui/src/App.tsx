@@ -22,6 +22,7 @@ import { ChatView } from "./components/chat"
 import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
+import { debugLog } from "./utils/debug-log"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -186,27 +187,27 @@ const AppContent: Component = () => {
     const handler = (event: MessageEvent) => {
       const message = event.data
       if (message?.type === "action" && message.action) {
-        console.log("[Devil New] App: 🎬 action:", message.action)
+        debugLog("[Devil New] App: 🎬 action:", message.action)
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
-        console.log("[Devil New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        debugLog("[Devil New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
-        console.log("[Devil New] App: ☁️ openCloudSession:", message.sessionId)
+        debugLog("[Devil New] App: ☁️ openCloudSession:", message.sessionId)
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
-        console.log("[Devil New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        debugLog("[Devil New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
         setCurrentView("subAgentViewer")
       }
       // legacy-migration: state-driven migration wizard
       if (message?.type === "migrationState") {
-        console.log("[Devil New] App: 🔄 migrationState:", message.needed)
+        debugLog("[Devil New] App: 🔄 migrationState:", message.needed)
         setMigrationNeeded(message.needed)
       }
     }

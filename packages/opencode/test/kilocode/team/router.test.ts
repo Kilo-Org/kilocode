@@ -169,6 +169,38 @@ describe("team router", () => {
       expect(result).toBeDefined()
     })
 
+    // devilcode_change - audit MA1: throw when parentRole missing from roles instead of silently skipping.
+    it("throws when parentRole is hierarchical but missing from roles", () => {
+      const teamConfig: TeamConfig = {
+        enabled: true,
+        roles: {
+          worker: {
+            displayName: "Worker",
+            provider: "openai",
+            model: "gpt-3.5",
+            effort: "low",
+            tier: 1,
+            canDelegate: [],
+            maxConcurrent: 5,
+            capabilities: [],
+          },
+        },
+        routing: {
+          strategy: "hierarchical",
+          defaultRole: "worker",
+          escalationEnabled: true,
+        },
+      }
+
+      expect(() =>
+        resolveTaskModel({
+          subagentType: "worker",
+          teamConfig,
+          parentRole: "orchestrator", // not in roles
+        }),
+      ).toThrow(TeamDelegationError)
+    })
+
     it("skips hierarchy check when no parent role", () => {
       const teamConfig: TeamConfig = {
         enabled: true,

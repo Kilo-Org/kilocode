@@ -21,7 +21,15 @@ export const TelemetryRoutes = lazy(() =>
           description: "Event captured",
           content: {
             "application/json": {
-              schema: resolver(z.boolean()),
+              schema: resolver(z.object({ ok: z.boolean() })),
+            },
+          },
+        },
+        502: {
+          description: "Telemetry backend unavailable",
+          content: {
+            "application/json": {
+              schema: resolver(z.object({ ok: z.literal(false), error: z.string() })),
             },
           },
         },
@@ -37,12 +45,15 @@ export const TelemetryRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
+      // devilcode_change start - audit N4: surface telemetry failures to caller instead of always reporting success.
       try {
         Telemetry.track(body.event as any, body.properties)
+        return c.json({ ok: true })
       } catch (err) {
         log.error("telemetry failed", { error: err, event: body.event })
+        return c.json({ ok: false as const, error: err instanceof Error ? err.message : "telemetry failed" }, 502)
       }
-      return c.json(true)
+      // devilcode_change end
     },
   ),
 )

@@ -59,16 +59,23 @@ const fallbackPresets: TeamPreset[] = [
 
 const TeamTemplateGallery: Component<TeamTemplateGalleryProps> = (props) => {
   const language = useLanguage()
-  const [presets, setPresets] = createSignal<TeamPreset[]>(fallbackPresets)
+  // Audit MA6: prefer server preset list (single source of truth); fall back to the static
+  // gallery only when the route is unavailable (e.g. storybook).
+  const [presets, setPresets] = createSignal<TeamPreset[]>([])
 
   onMount(async () => {
     try {
       const response = await fetch("/config/team/presets")
-      if (!response.ok) return
+      if (!response.ok) {
+        console.warn("[Devil New] team presets endpoint returned", response.status)
+        setPresets(fallbackPresets)
+        return
+      }
       const data = (await response.json()) as TeamPreset[]
-      if (Array.isArray(data) && data.length > 0) setPresets(data)
-    } catch {
-      // Keep fallback presets when route is unavailable in the webview host.
+      setPresets(Array.isArray(data) && data.length > 0 ? data : fallbackPresets)
+    } catch (e) {
+      console.warn("[Devil New] team presets fetch failed:", e)
+      setPresets(fallbackPresets)
     }
   })
 

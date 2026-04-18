@@ -85,6 +85,60 @@ describe("routeFix", () => {
   })
 })
 
+// devilcode_change - audit MA2: routeFix must not assume "senior" exists.
+describe("routeFix without senior role", () => {
+  const noSeniorConfig: TeamConfig = {
+    enabled: true,
+    roles: {
+      lead: {
+        displayName: "Lead",
+        provider: "a",
+        model: "m",
+        effort: "high",
+        tier: 2,
+        canDelegate: ["builder"],
+        maxConcurrent: 1,
+        capabilities: [],
+      },
+      builder: {
+        displayName: "Builder",
+        provider: "a",
+        model: "m",
+        effort: "default",
+        tier: 1,
+        canDelegate: [],
+        maxConcurrent: 3,
+        capabilities: [],
+      },
+    },
+    routing: {
+      strategy: "hierarchical",
+      defaultRole: "builder",
+      escalationEnabled: true,
+      reviewEscalationRole: "lead",
+    },
+  }
+
+  test("uses configured reviewEscalationRole for security", () => {
+    const f: ReviewFinding = { id: "R-S1", severity: "blocker", category: "security", file: "a.ts", description: "x" }
+    expect(routeFix(f, noSeniorConfig)).toBe("lead")
+  })
+
+  test("uses configured reviewEscalationRole for correctness blockers", () => {
+    const f: ReviewFinding = { id: "R-S2", severity: "blocker", category: "correctness", file: "a.ts", description: "x" }
+    expect(routeFix(f, noSeniorConfig)).toBe("lead")
+  })
+
+  test("falls back to defaultRole when no senior and no reviewEscalationRole", () => {
+    const cfg: TeamConfig = {
+      ...noSeniorConfig,
+      routing: { strategy: "hierarchical", defaultRole: "builder", escalationEnabled: true },
+    }
+    const f: ReviewFinding = { id: "R-S3", severity: "blocker", category: "architecture", file: "a.ts", description: "x" }
+    expect(routeFix(f, cfg)).toBe("builder")
+  })
+})
+
 describe("triageFindings", () => {
   test("separates blockers from non-blockers", () => {
     const findings: ReviewFinding[] = [
