@@ -125,8 +125,10 @@ export class RoutingService implements vscode.Disposable {
   private healthTimer: ReturnType<typeof setInterval> | undefined
   private retryBudgetTimer: ReturnType<typeof setInterval> | undefined
   private readonly listeners = new Set<() => void>()
+  private readonly secrets: vscode.SecretStorage
 
-  constructor() {
+  constructor(context: vscode.ExtensionContext) {
+    this.secrets = context.secrets
     this.config = {
       mode: "auto",
       fallbackOrder: ["claude", "minimax", "siliconflow", "ollama", "lmstudio"],
@@ -282,17 +284,36 @@ export class RoutingService implements vscode.Disposable {
     this.notifyListeners()
   }
 
-  configureApiKey(providerId: string, configured: boolean): void {
+  /**
+   * Configure an API key for a provider.
+   * Pass the actual key string to store it in VS Code SecretStorage,
+   * or pass undefined/empty to clear it.
+   */
+  async configureApiKey(providerId: string, apiKey: string | undefined): Promise<void> {
     const provider = this.providers.get(providerId)
     if (!provider) return
 
-    provider.apiKeyConfigured = configured
-    if (configured && provider.status === "unconfigured") {
-      provider.status = "healthy"
-    } else if (!configured) {
+    const secretKey = `kilo-routing-key-${providerId}`
+
+    if (apiKey && apiKey.trim().length > 0) {
+      // Store the real API key in VS Code's secure secret storage
+      await this.secrets.store(secretKey, apiKey.trim())
+      provider.apiKeyConfigured = true
+      if (provider.status === "unconfigured") {
+        provider.status = "healthy"
+      }
+    } else {
+      // Clear the stored key
+      await this.secrets.delete(secretKey)
+      provider.apiKeyConfigured = false
       provider.status = "unconfigured"
     }
     this.notifyListeners()
+  }
+
+  /** Retrieve a stored API key from SecretStorage (for health checks / API calls). */
+  async getApiKey(providerId: string): Promise<string | undefined> {
+    return this.secrets.get(`kilo-routing-key-${providerId}`)
   }
 
   // ── Routing ──────────────────────────────────────────────
@@ -561,13 +582,17 @@ export class RoutingService implements vscode.Disposable {
 
   // ── Health Checks ────────────────────────────────────────
 
+  /**
+   * Test a provider by making a real HTTP request.
+   * - Local providers: GET to localhost endpoint
+   * - Cloud providers: lightweight API call with stored key
+   */
   async testProvider(providerId: string): Promise<boolean> {
     const provider = this.providers.get(providerId)
     if (!provider) return false
 
     provider.lastHealthCheck = Date.now()
 
-    // Local providers: check if they respond (simulated)
     const isLocal = providerId === "ollama" || providerId === "lmstudio"
 
     if (!isLocal && !provider.apiKeyConfigured) {
@@ -576,11 +601,9 @@ export class RoutingService implements vscode.Disposable {
       return false
     }
 
-    // Simulate a health check. In production this would make an actual
-    // HTTP request to the provider's health endpoint.
     try {
-      // For local providers, attempt a lightweight localhost ping
       if (isLocal) {
+        // Local providers: ping localhost
         const port = providerId === "ollama" ? 11434 : 1234
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 3000)
@@ -607,17 +630,103 @@ export class RoutingService implements vscode.Disposable {
         return false
       }
 
-      // Cloud providers: would normally validate the API key.
-      // Mark healthy if key is configured.
-      provider.status = "healthy"
-      if (provider.circuitBreaker === "open") {
-        provider.circuitBreaker = "half-open"
+      // Cloud providers: make a real API call to validate the key
+      const apiKey = await this.getApiKey(providerId)
+      if (!apiKey) {
+        provider.status = "unconfigured"
+        provider.apiKeyConfigured = false
+        this.notifyListeners()
+        return false
+      }
+
+      const healthy = await this.testCloudProvider(providerId, apiKey, provider.apiBase)
+      if (healthy) {
+        provider.status = "healthy"
+        if (provider.circuitBreaker === "open") {
+          provider.circuitBreaker = "half-open"
+        }
+      } else {
+        provider.status = "degraded"
       }
       this.notifyListeners()
-      return true
+      return healthy
     } catch {
       provider.status = "offline"
       this.notifyListeners()
+      return false
+    }
+  }
+
+  /**
+   * Make a real lightweight API call to a cloud provider to validate connectivity and key.
+   * Each provider has a different health check endpoint:
+   * - Claude: GET /v1/models (Anthropic list models)
+   * - MiniMax: POST /v1/text/chatcompletion (lightweight ping)
+   * - SiliconFlow: GET /v1/models
+   */
+  private async testCloudProvider(providerId: string, apiKey: string, apiBase?: string): Promise<boolean> {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 5000)
+
+    try {
+      let url: string
+      let headers: Record<string, string>
+      let method = "GET"
+
+      switch (providerId) {
+        case "claude":
+          url = `${apiBase ?? "https://api.anthropic.com/v1"}/models`
+          headers = {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          }
+          break
+        case "minimax":
+          // MiniMax: list models endpoint
+          url = `${apiBase ?? "https://api.minimax.chat/v1"}/models`
+          headers = {
+            "Authorization": `Bearer ${apiKey}`,
+          }
+          break
+        case "siliconflow":
+          url = `${apiBase ?? "https://api.siliconflow.com/v1"}/models`
+          headers = {
+            "Authorization": `Bearer ${apiKey}`,
+          }
+          break
+        default:
+          // Unknown cloud provider — try generic OpenAI-compatible /models endpoint
+          url = `${apiBase ?? "https://api.openai.com/v1"}/models`
+          headers = {
+            "Authorization": `Bearer ${apiKey}`,
+          }
+          break
+      }
+
+      const res = await fetch(url, {
+        method,
+        headers,
+        signal: controller.signal,
+      }).catch(() => undefined)
+
+      clearTimeout(timeout)
+
+      if (!res) return false
+
+      // 200 = healthy, 401 = bad key (still reachable), 403 = key valid but insufficient perms
+      if (res.ok) return true
+      if (res.status === 401 || res.status === 403) {
+        // Key is invalid or insufficient — provider is reachable but key is bad
+        console.warn(`[RoutingService] Provider ${providerId} returned ${res.status} — API key may be invalid`)
+        return false
+      }
+      // 429 (rate limited) or 5xx (server error) — provider is reachable but degraded
+      if (res.status === 429 || res.status >= 500) {
+        return true // Provider exists but is temporarily impaired
+      }
+      return false
+    } catch {
+      clearTimeout(timeout)
       return false
     }
   }

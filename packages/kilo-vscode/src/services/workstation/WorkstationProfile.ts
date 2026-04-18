@@ -8,6 +8,10 @@
  */
 
 import * as vscode from "vscode"
+import * as os from "os"
+import { execSync } from "child_process"
+import * as fs from "fs"
+import * as path from "path"
 
 // ─── Interfaces ────────────────────────────────────────────
 
@@ -187,7 +191,220 @@ export class WorkstationProfileService implements vscode.Disposable {
   private profile: WorkstationConfig
 
   constructor() {
+    // Load config overrides first, then detect real hardware
     this.profile = this.loadProfile()
+    // Overlay real hardware detection on top of config/defaults
+    this.detectAndApplyHardware()
+    // Scan model directories for real entries
+    this.scanModelDirectories()
+  }
+
+  // ─── Real Hardware Detection ─────────────────────────────
+
+  /** Detect actual CPU, RAM, platform, and GPU from the system. */
+  private detectAndApplyHardware(): void {
+    try {
+      // CPU detection
+      const cpus = os.cpus()
+      if (cpus.length > 0) {
+        this.profile.hardware.cpuClass = this.classifyCpu(cpus[0].model, cpus.length)
+        this.profile.hardware.platform = `${os.arch()}_${os.platform()}`
+      }
+
+      // RAM detection
+      const totalMemBytes = os.totalmem()
+      const totalMemGb = Math.round(totalMemBytes / (1024 * 1024 * 1024))
+      this.profile.hardware.ramGb = totalMemGb
+
+      // GPU detection via nvidia-smi
+      const gpu = this.detectGpu()
+      if (gpu) {
+        this.profile.hardware.gpu = gpu
+        this.profile.limits.maxGpuMemoryMb = gpu.vramGb * 1024
+      }
+
+      // Update capabilities based on detected hardware
+      this.profile.capabilities.canRunLargeModels = totalMemGb >= 32 && (this.profile.hardware.gpu.vramGb >= 8)
+      this.profile.capabilities.supportsLocalTraining = this.profile.hardware.gpu.vramGb >= 8
+      this.profile.capabilities.supportsParallelAgents = cpus.length >= 8 && totalMemGb >= 32
+
+      // Estimate max context based on RAM + VRAM
+      if (totalMemGb >= 128 && this.profile.hardware.gpu.vramGb >= 24) {
+        this.profile.capabilities.maxContextEstimate = "128k"
+      } else if (totalMemGb >= 64 && this.profile.hardware.gpu.vramGb >= 12) {
+        this.profile.capabilities.maxContextEstimate = "64k"
+      } else if (totalMemGb >= 32) {
+        this.profile.capabilities.maxContextEstimate = "32k"
+      } else {
+        this.profile.capabilities.maxContextEstimate = "8k"
+      }
+
+      // Update limits based on detected resources
+      const cpuCount = cpus.length
+      this.profile.limits.maxParallelJobs = Math.max(1, Math.floor(cpuCount / 4))
+      this.profile.limits.maxMemoryPerJobGb = Math.max(4, Math.floor(totalMemGb / 4))
+
+      console.log(`[Workstation] Detected: ${cpus[0]?.model ?? "unknown CPU"} (${cpuCount} cores), ${totalMemGb}GB RAM, GPU: ${this.profile.hardware.gpu.model} (${this.profile.hardware.gpu.vramGb}GB VRAM)`)
+    } catch (err) {
+      console.warn("[Workstation] Hardware detection failed, using config defaults:", err)
+    }
+  }
+
+  /** Detect GPU using nvidia-smi (NVIDIA) or fall back to config defaults. */
+  private detectGpu(): GpuSpec | undefined {
+    // Try NVIDIA GPU first
+    try {
+      const output = execSync(
+        "nvidia-smi --query-gpu=name,memory.total --format=csv,noheader,nounits",
+        { timeout: 5000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+      ).trim()
+
+      if (output) {
+        const firstLine = output.split("\n")[0]
+        const parts = firstLine.split(",").map((s: string) => s.trim())
+        if (parts.length >= 2) {
+          const model = parts[0].replace(/\s+/g, "_")
+          const vramMb = parseInt(parts[1], 10)
+          const vramGb = Math.round(vramMb / 1024)
+          return { model, vramGb: vramGb > 0 ? vramGb : 0 }
+        }
+      }
+    } catch {
+      // nvidia-smi not available or no NVIDIA GPU
+    }
+
+    // Try AMD GPU on Windows via PowerShell
+    if (os.platform() === "win32") {
+      try {
+        const output = execSync(
+          'powershell -Command "Get-CimInstance Win32_VideoController | Select-Object -First 1 -ExpandProperty Name"',
+          { timeout: 5000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+        ).trim()
+
+        if (output && output.length > 0) {
+          const vramOutput = execSync(
+            'powershell -Command "(Get-CimInstance Win32_VideoController | Select-Object -First 1).AdapterRAM"',
+            { timeout: 5000, encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] },
+          ).trim()
+
+          const vramBytes = parseInt(vramOutput, 10)
+          const vramGb = vramBytes > 0 ? Math.round(vramBytes / (1024 * 1024 * 1024)) : 0
+          return { model: output.replace(/\s+/g, "_"), vramGb }
+        }
+      } catch {
+        // PowerShell WMI query failed
+      }
+    }
+
+    return undefined
+  }
+
+  /** Classify CPU tier based on model name and core count. */
+  private classifyCpu(model: string, coreCount: number): string {
+    const lower = model.toLowerCase()
+    if (lower.includes("threadripper") || lower.includes("epyc") || lower.includes("xeon")) {
+      return "workstation"
+    }
+    if (lower.includes("ryzen 9") || lower.includes("i9") || coreCount >= 16) {
+      return "high_end_desktop"
+    }
+    if (lower.includes("ryzen 7") || lower.includes("i7") || coreCount >= 8) {
+      return "mid_desktop"
+    }
+    if (lower.includes("ryzen 5") || lower.includes("i5") || coreCount >= 6) {
+      return "mid_range"
+    }
+    return "entry"
+  }
+
+  // ─── Model Directory Scanning ────────────────────────────
+
+  /** Scan configured model directories and build real library entries. */
+  private scanModelDirectories(): void {
+    const entries: ModelLibraryEntry[] = []
+    let totalSizeGb = 0
+
+    const scanDir = (dirPath: string, category: ModelCategory, provider: ModelLibraryEntry["provider"], description: string) => {
+      try {
+        if (!fs.existsSync(dirPath)) return
+        const sizeGb = this.estimateDirectorySize(dirPath)
+        totalSizeGb += sizeGb
+        entries.push({
+          category,
+          path: dirPath,
+          estimatedSizeGb: sizeGb,
+          provider,
+          description: `${description} (${sizeGb.toFixed(1)}GB detected)`,
+        })
+      } catch {
+        // Directory not accessible — skip
+      }
+    }
+
+    // Scan LM Studio models
+    scanDir(this.profile.modelLibrary.lmStudioModelsPath, "llm", "lmstudio", "LM Studio model library")
+
+    // Scan Ollama models
+    scanDir(this.profile.modelLibrary.ollamaModelsPath, "llm", "ollama", "Ollama model library")
+
+    // Scan LoRA directory
+    scanDir(this.profile.modelLibrary.loraPath, "lora", "standalone", "LoRA adapters")
+
+    // Scan ComfyUI models
+    scanDir(this.profile.modelLibrary.comfyuiModelsPath, "comfyui", "comfyui", "ComfyUI models")
+
+    // Scan media model subdirectories
+    const mediaBase = this.profile.modelLibrary.mediaModelsPath
+    if (fs.existsSync(mediaBase)) {
+      const mediaDirs: Array<{ sub: string; cat: ModelCategory; desc: string }> = [
+        { sub: "TTS", cat: "tts", desc: "Text-to-speech models" },
+        { sub: "STT", cat: "stt", desc: "Speech-to-text models" },
+        { sub: "Image", cat: "image", desc: "Image generation models" },
+        { sub: "Video", cat: "video", desc: "Video generation models" },
+        { sub: "Music", cat: "music", desc: "Music generation models" },
+        { sub: "Voice", cat: "voice_clone", desc: "Voice cloning models" },
+      ]
+      for (const { sub, cat, desc } of mediaDirs) {
+        scanDir(path.join(mediaBase, sub), cat, "standalone", desc)
+      }
+    }
+
+    // Only overwrite if we found real directories
+    if (entries.length > 0) {
+      this.profile.modelLibrary.entries = entries
+      this.profile.modelLibrary.totalEstimatedSizeGb = Math.round(totalSizeGb)
+      console.log(`[Workstation] Scanned ${entries.length} model directories, total ${Math.round(totalSizeGb)}GB`)
+    }
+  }
+
+  /**
+   * Estimate directory size in GB by summing file sizes in the top two levels.
+   * Uses a shallow scan (depth 2) to avoid long delays on huge trees.
+   */
+  private estimateDirectorySize(dirPath: string): number {
+    let totalBytes = 0
+    try {
+      const items = fs.readdirSync(dirPath, { withFileTypes: true })
+      for (const item of items) {
+        const fullPath = path.join(dirPath, item.name)
+        try {
+          if (item.isFile()) {
+            totalBytes += fs.statSync(fullPath).size
+          } else if (item.isDirectory()) {
+            // One level deeper
+            const subItems = fs.readdirSync(fullPath, { withFileTypes: true })
+            for (const sub of subItems) {
+              if (sub.isFile()) {
+                try {
+                  totalBytes += fs.statSync(path.join(fullPath, sub.name)).size
+                } catch { /* skip inaccessible */ }
+              }
+            }
+          }
+        } catch { /* skip inaccessible */ }
+      }
+    } catch { /* directory not readable */ }
+    return totalBytes / (1024 * 1024 * 1024)
   }
 
   /** Load profile from VS Code settings, falling back to defaults. */
@@ -361,9 +578,11 @@ export class WorkstationProfileService implements vscode.Disposable {
     return this.profile.localAI.lmStudio.enabled || this.profile.localAI.ollama.enabled
   }
 
-  /** Reload profile from settings (e.g. after user changes config). */
+  /** Reload profile from settings and re-detect hardware (e.g. after user changes config). */
   reload(): void {
     this.profile = this.loadProfile()
+    this.detectAndApplyHardware()
+    this.scanModelDirectories()
   }
 
   dispose(): void {

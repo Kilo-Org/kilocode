@@ -403,8 +403,8 @@ const RoutingTab: Component = () => {
 
   // ── Initial Data Fetch ───────────────────────────────────
   createEffect(() => {
-    vscode.postMessage({ type: "routingGetHealth" } as never)
-    vscode.postMessage({ type: "routingGetTraces" } as never)
+    // Request the full routing state (providers, config, health, traces) on tab open
+    vscode.postMessage({ type: "requestRoutingState" } as never)
   })
 
   // ── Actions ──────────────────────────────────────────────

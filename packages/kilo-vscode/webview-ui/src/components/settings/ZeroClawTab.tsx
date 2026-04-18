@@ -952,6 +952,11 @@ const ZeroClawTab: Component = () => {
 				if (msg.tasks) setTasks(msg.tasks)
 				break
 			}
+			case "zeroClawError": {
+				const errMsg = (msg as unknown as { error: string }).error
+				console.error("[ZeroClaw]", errMsg)
+				break
+			}
 		}
 	})
 

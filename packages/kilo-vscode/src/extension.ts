@@ -72,7 +72,7 @@ export function activate(context: vscode.ExtensionContext) {
   const zeroClawService = new ZeroClawService(context)
   context.subscriptions.push(zeroClawService)
 
-  const routingService = new RoutingService()
+  const routingService = new RoutingService(context)
   context.subscriptions.push(routingService)
 
   const memoryService = new MemoryService(context)

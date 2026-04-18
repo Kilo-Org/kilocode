@@ -688,7 +688,8 @@ export class ZeroClawService implements vscode.Disposable {
 
 	/**
 	 * Best-effort rollback when a task fails mid-execution.
-	 * Records changed files and logs the rollback attempt.
+	 * Uses git to restore modified files to their pre-execution state.
+	 * Falls back to logging if git is unavailable or the project isn't a git repo.
 	 */
 	private rollbackTask(taskId: string): void {
 		const task = this.tasks.get(taskId)
@@ -696,16 +697,70 @@ export class ZeroClawService implements vscode.Disposable {
 
 		this.appendLog(taskId, "[ZeroClaw] Attempting rollback of failed task")
 
-		if (task.changedFiles.length > 0) {
-			this.appendLog(
-				taskId,
-				`[ZeroClaw] Files modified before failure: ${task.changedFiles.join(", ")}`,
-			)
-		} else {
-			this.appendLog(taskId, "[ZeroClaw] No changed files recorded for rollback")
+		if (task.changedFiles.length === 0) {
+			this.appendLog(taskId, "[ZeroClaw] No changed files recorded — nothing to rollback")
+			return
 		}
 
-		this.appendLog(taskId, "[ZeroClaw] Rollback attempted (best-effort)")
+		this.appendLog(taskId, `[ZeroClaw] Files to rollback: ${task.changedFiles.join(", ")}`)
+
+		// Attempt git-based rollback in the task's project directory
+		const { execSync } = require("child_process") as typeof import("child_process")
+		const cwd = task.projectPath || undefined
+
+		try {
+			// First check if this is a git repo
+			execSync("git rev-parse --is-inside-work-tree", { cwd, timeout: 5000, stdio: "pipe" })
+		} catch {
+			this.appendLog(taskId, "[ZeroClaw] Project is not a git repository — cannot rollback via git")
+			this.appendLog(taskId, `[ZeroClaw] Manual rollback required for: ${task.changedFiles.join(", ")}`)
+			return
+		}
+
+		let restoredCount = 0
+		let failedCount = 0
+
+		for (const filePath of task.changedFiles) {
+			try {
+				// Use git checkout to restore the file to its last committed state
+				// Escape the file path for shell safety
+				const safePath = filePath.replace(/"/g, '\\"')
+				execSync(`git checkout -- "${safePath}"`, { cwd, timeout: 10000, stdio: "pipe" })
+				restoredCount++
+				this.appendLog(taskId, `[ZeroClaw] Restored: ${filePath}`)
+			} catch (err) {
+				failedCount++
+				const msg = err instanceof Error ? err.message : String(err)
+				this.appendLog(taskId, `[ZeroClaw] Failed to restore ${filePath}: ${msg}`)
+			}
+		}
+
+		// Also clean up any untracked files that were created during execution
+		try {
+			const statusOutput = execSync("git status --porcelain", { cwd, timeout: 10000, encoding: "utf-8" })
+			const untrackedLines = statusOutput.split("\n").filter((line: string) => line.startsWith("?? "))
+			for (const line of untrackedLines) {
+				const untrackedPath = line.slice(3).trim()
+				// Only clean untracked files within the task's workspace scope
+				const inScope = task.workspaceScope.length === 0 || task.workspaceScope.some((scope) => untrackedPath.startsWith(scope))
+				if (inScope) {
+					try {
+						const fs = require("fs") as typeof import("fs")
+						const path = require("path") as typeof import("path")
+						const fullPath = path.resolve(cwd ?? ".", untrackedPath)
+						fs.unlinkSync(fullPath)
+						restoredCount++
+						this.appendLog(taskId, `[ZeroClaw] Removed untracked: ${untrackedPath}`)
+					} catch {
+						// Best-effort: ignore untracked file cleanup failures
+					}
+				}
+			}
+		} catch {
+			// Best-effort: ignore git status failures
+		}
+
+		this.appendLog(taskId, `[ZeroClaw] Rollback complete: ${restoredCount} restored, ${failedCount} failed`)
 	}
 
 	/**

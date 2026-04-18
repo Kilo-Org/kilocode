@@ -1219,8 +1219,10 @@ export class VPSService implements vscode.Disposable {
         try {
           const serverData = message.server as VPSServer
           if (!serverData?.id) throw new Error("Invalid server data: missing id")
+          // Check if server exists BEFORE adding/updating to determine response type
+          const existingServer = this.getServers().find(s => s.id === serverData.id)
+          const isUpdate = !!existingServer
           const server = await this.addOrUpdateServer(serverData)
-          const isUpdate = (message.server as VPSServer).id === server.id
           postToWebview({
             type: isUpdate ? "vpsServerUpdated" : "vpsServerAdded",
             server,

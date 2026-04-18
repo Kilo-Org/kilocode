@@ -283,6 +283,43 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trainingService = services.training
     this.governanceService = services.governance
     this.workstationProfile = services.workstation
+
+    // Bridge SSH service events to the webview
+    if (services.ssh && typeof services.ssh.onChange === "function") {
+      services.ssh.onChange((event: Record<string, unknown>) => {
+        switch (event.type) {
+          case "connectionStatus":
+            this.postMessage({ type: "sshConnectionStatus", profileName: event.profileName, status: event.status, error: event.error } as never)
+            break
+          case "filesListed":
+            this.postMessage({ type: "sshFilesListed", path: event.path, entries: event.entries } as never)
+            break
+          case "logOutput":
+            this.postMessage({ type: "sshLogOutput", lines: event.lines } as never)
+            break
+          case "logTailingStopped":
+            this.postMessage({ type: "sshLogTailingStopped" } as never)
+            break
+          case "sshError":
+            this.postMessage({ type: "sshError", error: event.error } as never)
+            break
+        }
+      })
+    }
+
+    // Bridge ZeroClaw status events to webview
+    if (services.zeroClaw) {
+      services.zeroClaw.onStatusChange((event) => {
+        this.postMessage({ type: "zeroClawTaskUpdated", task: event.task } as never)
+      })
+    }
+
+    // Bridge routing state changes
+    if (services.routing) {
+      services.routing.onChange(() => {
+        this.postMessage({ type: "routingProvidersLoaded", providers: services.routing.getProviders() } as never)
+      })
+    }
   }
   private focusSession(id?: string): void {
     this.streams.focus(id)
@@ -1103,10 +1140,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.sshService) this.postMessage({ type: "sshSessionsUpdated", sessions: this.sshService.getSessionSnapshots() } as never)
           break
         case "sshOpenTerminal":
-          await this.sshService?.connect(message.profileName)
+          await this.sshService?.openTerminal(message.profileName)
           break
         case "sshBrowseFiles":
-          await this.sshService?.listFiles(message.profileName, message.path ?? "/")
+          if (this.sshService) {
+            const fileEntries = await this.sshService.listFiles(message.profileName, message.path ?? "/")
+            this.postMessage({ type: "sshFilesListed", path: message.path ?? "/", entries: fileEntries ?? [] } as never)
+          }
           break
         case "sshFileOpen":
           await this.sshService?.openRemoteFile(message.profileName, message.remotePath)
@@ -1167,7 +1207,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "zeroClawSubmitTask":
           if (this.zeroClawService) {
             try {
-              const submitted = this.zeroClawService.submit(message.task)
+              // Tab sends fields at top level (description, projectPath, riskLevel, etc.)
+              const submission = message.task ?? {
+                description: message.description,
+                projectPath: message.projectPath,
+                riskLevel: message.riskLevel,
+                workspaceScope: message.workspaceScope,
+                networkPolicy: message.networkPolicy,
+                writePolicy: message.writePolicy,
+                limits: message.limits,
+              }
+              const submitted = this.zeroClawService.submit(submission)
               this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
               this.postMessage({ type: "zeroClawTaskUpdated", task: submitted } as never)
             } catch (err) {
@@ -1236,8 +1286,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           }
           break
         case "routingConfigureKey":
-          this.routingService?.configureApiKey(message.providerId, !!message.apiKey)
           if (this.routingService) {
+            // Pass the actual API key string to SecretStorage — not just a boolean
+            await this.routingService.configureApiKey(message.providerId, message.apiKey ?? undefined)
             this.postMessage({ type: "routingKeyConfigured", providerId: message.providerId, configured: !!message.apiKey } as never)
             this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
           }
@@ -1247,8 +1298,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.routingService) this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
           break
         case "routingSetMode":
-          this.routingService?.setMode(message.mode)
-          if (this.routingService) this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
+          // This message type is overloaded: it can carry mode, privacyMode, or costThreshold
+          if (this.routingService) {
+            if (message.mode) this.routingService.setMode(message.mode)
+            if (message.privacyMode) this.routingService.setPrivacyMode(message.privacyMode)
+            if (message.costThreshold !== undefined) this.routingService.setCostThreshold(message.costThreshold)
+            this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
+          }
           break
         case "routingSetFallbackOrder":
           this.routingService?.setFallbackOrder(message.order)
@@ -1268,18 +1324,29 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "memoryRecall":
           if (this.memoryService) {
             try {
-              const results = this.memoryService.recall(message.query, { project: message.project })
-              this.postMessage({ type: "memoryRecallResult", results } as never)
+              const recallResult = this.memoryService.recall(message.query, { project: message.project })
+              // Tab expects flat properties: results (array), status, query — not nested RecallResult
+              this.postMessage({ type: "memoryRecallResult", results: recallResult.results, status: recallResult.status, query: recallResult.query, project: recallResult.project, timestamp: recallResult.timestamp } as never)
             } catch (err) {
-              this.postMessage({ type: "memoryRecallResult", results: { query: message.query ?? "", project: message.project, results: [], status: "failed", timestamp: Date.now() } } as never)
+              this.postMessage({ type: "memoryRecallResult", results: [], status: "failed", query: message.query ?? "", project: message.project, timestamp: Date.now() } as never)
             }
           }
           break
         case "memoryWrite":
           if (this.memoryService) {
             try {
-              this.memoryService.writeMemory(message.entry)
+              // Tab sends individual fields (summary, content, factType, scope, project)
+              const writeEntry = message.entry ?? {
+                summary: message.summary,
+                content: message.content,
+                factType: message.factType,
+                scope: message.scope,
+                project: message.project,
+              }
+              this.memoryService.writeMemory(writeEntry)
               this.postMessage({ type: "memoryWriteResult", success: true } as never)
+              // Refresh history after successful write
+              this.postMessage({ type: "memoryHistoryLoaded", records: this.memoryService.getWriteHistory() } as never)
             } catch (err) {
               this.postMessage({ type: "memoryWriteResult", success: false, error: err instanceof Error ? err.message : "Write failed" } as never)
             }
@@ -1297,8 +1364,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.memoryService) this.postMessage({ type: "memoryHistoryLoaded", records: this.memoryService.getWriteHistory() } as never)
           break
         case "memorySetPermission":
-          this.memoryService?.setPermission(message.agentId, message.scope, message.allowed)
-          if (this.memoryService) this.postMessage({ type: "memoryPermissionChanged", permission: { agentId: message.agentId, scope: message.scope, allowed: message.allowed } } as never)
+          if (this.memoryService) {
+            const updatedPerm = this.memoryService.setPermission(message.agentId, message.scope, message.allowed)
+            // Tab expects full AgentPermission with { agentId, scopes: { global, project, task } }
+            this.postMessage({ type: "memoryPermissionChanged", permission: updatedPerm ?? { agentId: message.agentId, scopes: { global: message.scope === "global" ? message.allowed : false, project: message.scope === "project" ? message.allowed : false, task: message.scope === "task" ? message.allowed : false } } } as never)
+          }
           break
         case "memoryRunDiagnostics":
           if (this.memoryService) {
@@ -1324,19 +1394,37 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "trainingRegisterDataset":
           if (this.trainingService) {
             this.trainingService.registerDataset(message.name, message.sourcePath, message.format)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            const allDs = this.trainingService.getDatasets()
+            const newDs = allDs[allDs.length - 1]
+            // Tab expects trainingDatasetRegistered to clear the form
+            this.postMessage({ type: "trainingDatasetRegistered", dataset: newDs } as never)
+            this.postMessage({ type: "trainingState", datasets: allDs, jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
           }
           break
         case "trainingValidateDataset":
           if (this.trainingService) {
             await this.trainingService.validateDataset(message.datasetId)
+            const validated = this.trainingService.getDatasets().find(d => d.id === message.datasetId)
+            // Tab expects trainingDatasetValidated to clear the validating spinner
+            if (validated) this.postMessage({ type: "trainingDatasetValidated", dataset: validated } as never)
             this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
           }
           break
         case "trainingLaunchJob":
           if (this.trainingService) {
             try {
-              this.trainingService.launchJob(message.config)
+              // Tab sends individual fields (name, preset, datasetId, etc.), not message.config
+              const jobConfig = message.config ?? {
+                name: message.name,
+                preset: message.preset,
+                datasetId: message.datasetId,
+                target: message.target,
+                hyperparams: message.hyperparams,
+                resourceLimits: message.resourceLimits,
+              }
+              this.trainingService.launchJob(jobConfig)
+              const launched = this.trainingService.getJobs().at(-1)
+              this.postMessage({ type: "trainingJobLaunched", job: launched } as never)
               this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
             } catch (err) {
               this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Launch failed" } as never)
@@ -1392,7 +1480,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "trainingCompareRuns":
           if (this.trainingService) {
             try {
-              const comparison = this.trainingService.compareRuns(message.jobIds?.[0], message.jobIds?.[1])
+              // Tab sends { jobIdA, jobIdB } as individual fields
+              const idA = message.jobIdA ?? message.jobIds?.[0]
+              const idB = message.jobIdB ?? message.jobIds?.[1]
+              const comparison = this.trainingService.compareRuns(idA, idB)
               this.postMessage({ type: "trainingCompareResult", comparison } as never)
             } catch (err) {
               this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Comparison failed" } as never)
@@ -1402,7 +1493,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "trainingExportModel":
           if (this.trainingService) {
             try {
-              const exportResult = await this.trainingService.exportModel(message.exportOptions)
+              // Tab sends { jobId, format } as individual fields
+              const exportOpts = message.exportOptions ?? {
+                jobId: message.jobId,
+                format: message.format,
+                quantization: message.quantization,
+                outputPath: message.outputPath,
+                includeTokenizer: message.includeTokenizer ?? true,
+                includeConfig: message.includeConfig ?? true,
+                includeReadme: message.includeReadme ?? true,
+                mergeAdapter: message.mergeAdapter ?? false,
+              }
+              const exportResult = await this.trainingService.exportModel(exportOpts)
               this.postMessage({ type: "trainingExportComplete", exportResult } as never)
             } catch (err) {
               this.postMessage({ type: "trainingError", error: err instanceof Error ? err.message : "Export failed" } as never)
@@ -1412,13 +1514,26 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "trainingDetectGPU":
           if (this.trainingService) {
             await this.trainingService.detectGPUs()
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+            const detectedGpus = this.trainingService.getCachedGPUs()
+            // Tab expects trainingGPUDetected to clear the detecting state
+            this.postMessage({ type: "trainingGPUDetected", gpus: detectedGpus } as never)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: detectedGpus } as never)
           }
           break
 
         // Governance
+        // Helper to send governance state to the webview (wrap in state property for tab)
         case "requestGovernanceState":
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+        case "governanceGetAuditLog":
+          if (this.governanceService) {
+            const snapshot = this.governanceService.getSnapshot()
+            // Tab reads msg.state, so wrap the snapshot in a state property
+            this.postMessage({ type: "governanceState", state: snapshot } as never)
+            // Also send audit log if explicitly requested
+            if (message.type === "governanceGetAuditLog") {
+              this.postMessage({ type: "governanceState", state: snapshot } as never)
+            }
+          }
           break
         case "governanceSetTier": {
           const validTiers = ["observer", "operator", "admin", "superadmin"]
@@ -1426,37 +1541,58 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.postMessage({ type: "governanceError", error: `Invalid tier: "${message.tier}". Must be one of: ${validTiers.join(", ")}` } as never)
             break
           }
-          this.governanceService?.setUserTier(message.userId, message.tier, message.assignedBy ?? "operator")
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          // Tab sends { user }, not { userId }
+          const userId = message.userId ?? message.user
+          this.governanceService?.setUserTier(userId, message.tier, message.assignedBy ?? "operator")
+          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           break
         }
         case "governanceApproveAction":
-          this.governanceService?.approveAction(message.actionId, message.approver, message.reason)
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          // Tab sends { approvalId, approvedBy }, not { actionId, approver }
+          this.governanceService?.approveAction(
+            message.actionId ?? message.approvalId,
+            message.approver ?? message.approvedBy ?? "operator",
+            message.reason,
+          )
+          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           break
         case "governanceRejectAction":
-          this.governanceService?.rejectAction(message.actionId, message.approver, message.reason)
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          // Tab sends { approvalId, rejectedBy }, not { actionId, approver }
+          this.governanceService?.rejectAction(
+            message.actionId ?? message.approvalId,
+            message.approver ?? message.rejectedBy ?? "operator",
+            message.reason,
+          )
+          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           break
         case "governanceAddDangerousAction":
-          this.governanceService?.addDangerousAction(message.action)
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          // Tab sends individual fields (name, description, minimumTier, requiresApproval), not message.action
+          this.governanceService?.addDangerousAction(message.action ?? {
+            name: message.name,
+            description: message.description,
+            severity: message.severity ?? "warning",
+            minimumTier: message.minimumTier,
+            requiresApproval: message.requiresApproval ?? true,
+            blocked: message.blocked ?? false,
+          })
+          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           break
         case "governanceToggleBlock":
           this.governanceService?.toggleActionBlock(message.actionId, message.blocked)
-          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
-          break
-        case "governanceGetAuditLog":
-          if (this.governanceService) this.postMessage({ type: "governanceAuditLog", log: this.governanceService.getAuditLog(message.filters) } as never)
+          if (this.governanceService) this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           break
         case "governanceCreateVerdict":
           if (this.governanceService) {
             this.governanceService.createReleaseVerdict(message.scope, message.criticalDefects ?? 0, message.highDefects ?? 0, message.riskSummary ?? "", message.rollbackPlan ?? "", message.decision ?? "pass")
-            this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+            this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
           }
           break
         case "governanceExportAudit":
-          if (this.governanceService) this.postMessage({ type: "governanceAuditExport", data: this.governanceService.getAuditLog() } as never)
+          if (this.governanceService) {
+            const auditData = this.governanceService.getAuditLog()
+            this.postMessage({ type: "governanceAuditExport", data: auditData } as never)
+            this.postMessage({ type: "governanceState", state: this.governanceService.getSnapshot() } as never)
+          }
           break
 
         // ── Workstation Profile ──────────────────────────

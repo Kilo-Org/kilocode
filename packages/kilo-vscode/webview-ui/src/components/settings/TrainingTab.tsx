@@ -302,9 +302,11 @@ const TrainingTab: Component = () => {
   const unsubscribe = vscode.onMessage((message) => {
     switch (message.type) {
       case "trainingState": {
-        const data = message as { type: string; datasets: Dataset[]; jobs: TrainingJob[] }
+        const data = message as { type: string; datasets: Dataset[]; jobs: TrainingJob[]; gpus?: GPUInfo[] }
         setDatasets(data.datasets ?? [])
         setJobs(data.jobs ?? [])
+        // Also process GPUs from trainingState responses
+        if (data.gpus) setGpus(data.gpus)
         break
       }
       case "trainingDatasetRegistered": {
@@ -357,6 +359,21 @@ const TrainingTab: Component = () => {
       case "trainingDatasetRemoved": {
         const id = message.datasetId as string
         setDatasets((prev) => prev.filter((d) => d.id !== id))
+        break
+      }
+      case "trainingBrowsePathResult": {
+        // Populate the path field from the OS file picker
+        const data = message as { path: string }
+        if (data.path) setRegPath(data.path)
+        break
+      }
+      case "trainingError": {
+        // Display error to user via console (could be enhanced with a toast)
+        const data = message as { error: string }
+        console.error("[Training]", data.error)
+        setDetectingGPU(false)
+        setExporting(false)
+        setValidatingId(null)
         break
       }
     }

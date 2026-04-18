@@ -297,14 +297,23 @@ const GovernanceTab: Component = () => {
 
 	const unsub = onMessage((msg) => {
 		if (msg.type === "governanceState") {
-			setState(msg.state as GovernanceState)
+			// KiloProvider sends { type: "governanceState", state: {...} }
+			const s = (msg as unknown as { state: GovernanceState }).state
+			if (s) setState(s)
+		}
+		if (msg.type === "governanceError") {
+			console.error("[Governance]", (msg as unknown as { error: string }).error)
+		}
+		if (msg.type === "governanceAuditExport") {
+			const data = (msg as unknown as { data: unknown }).data
+			console.log("[Governance] Audit export:", data)
 		}
 	})
 	onCleanup(unsub)
 
-	// Request initial state
+	// Request initial state — use requestGovernanceState to get full snapshot
 	createEffect(() => {
-		postMessage({ type: "governanceGetAuditLog" } as never)
+		postMessage({ type: "requestGovernanceState" } as never)
 	})
 
 	// ── Section toggle ─────────────────────────────────

@@ -104,7 +104,7 @@ const Settings: Component<SettingsProps> = (props) => {
         variant="settings"
         value={active()}
         onChange={onTabChange}
-        style={{ flex: 1, overflow: "hidden" }}
+        style={{ flex: 1, "min-height": 0, overflow: "hidden" }}
       >
         <Tabs.List>
           <Tabs.Trigger value="models">
