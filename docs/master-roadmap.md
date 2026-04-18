@@ -2,7 +2,7 @@
 
 > **Branch:** feat/azure-voice-studio
 > **Last updated:** 2026-04-18
-> **Status:** Active Development
+> **Status:** Phase 2 core complete, Phase 3 debug mode complete, verification passed
 
 ---
 
@@ -31,7 +31,21 @@ All 8 V4 subsystem tabs were visual-only — buttons rendered but clicked nothin
 
 ---
 
-## Phase 2: Auto-Discovery & Onboarding (IN PROGRESS)
+## Phase 2: Auto-Discovery & Onboarding (COMPLETED — core services)
+
+### Completed
+- [x] OnboardingDiscoveryService: auto-detect Ollama, LM Studio, GPU, SSH config, hardware, Hermes
+- [x] Governance defaults pre-seeded: 8 dangerous actions, risk behaviors, seedDefaults on init
+- [x] SSH config auto-import from ~/.ssh/config
+- [x] Discovery wired into extension activation (background, non-blocking)
+- [x] Governance snapshot enrichment (checklist, releaseReadiness, rollbackReady)
+- [x] SSH browse double-send fix (event relay handles sshFilesListed)
+- [x] 4-agent independent verification: all 8 tabs fully wired
+
+### Remaining (for full wizard UX)
+- [ ] One-click onboarding wizard UI
+- [ ] Speech voice enumeration (browser speechSynthesis)
+- [ ] Hermes/Shiba auto-detect integration
 
 ### Principle
 Tabs should auto-populate with real detected data on first open. Users should never face blank forms when the system can discover the information automatically. Only ask for what can't be detected.
@@ -137,14 +151,17 @@ Step 6: Auto-Populate Tabs
 
 ---
 
-## Phase 3: Debug Mode & External Tool Integration
+## Phase 3: Debug Mode & External Tool Integration (PARTIALLY COMPLETED)
 
-### Debug Mode Toggle
-Add a debug mode that enables:
-- Verbose logging for all V4 services
-- Real-time event streaming
-- Message contract tracing (log every webview↔extension message)
-- Performance metrics per operation
+### Debug Mode Toggle (COMPLETED)
+- [x] KiloLogger: centralized structured logging service
+- [x] VS Code OutputChannel "KiloCode V4" for all V4 subsystem logs
+- [x] `kilo-code.v4.debugMode` setting — verbose logging for all services
+- [x] `kilo-code.v4.messageTracing` setting — logs every webview↔extension message
+- [x] "KiloCode V4: Toggle Debug Mode" command (palette + programmatic)
+- [x] Per-service timing via log.time() for performance tracking
+- [x] All 8 V4 services + KiloProvider + OnboardingDiscovery integrated
+- [x] Auto-reveals Output channel when debug mode enabled
 
 ### External Tool Integration
 Enable Claude Desktop, Windsurf, and other AI agents to connect to KiloCode for:
@@ -202,3 +219,6 @@ User requests a small project → routing selects provider → execution runs �
 | `14fb4e936` | 1 | 6-pass audit documented |
 | `ed8a5dcfc` | 1 | 20+ message contract mismatches fixed |
 | `2c9216797` | 1 | TypeScript cast fix |
+| `788d918db` | 2 | OnboardingDiscoveryService, governance defaults, SSH import |
+| `546feea50` | 2/3 | KiloLogger + debug mode toggle for all V4 subsystems |
+| `a438fd8ae` | 2 | SSH browse double-send fix + governance snapshot enrichment |
