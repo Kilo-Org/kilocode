@@ -234,6 +234,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
 
+  // V4 subsystem services — set via setV4Services() after construction.
+  private sshService: import("./services/ssh").SSHService | null = null
+  private vpsService: import("./services/vps").VPSService | null = null
+  private zeroClawService: import("./services/zeroclaw").ZeroClawService | null = null
+  private routingService: import("./services/routing").RoutingService | null = null
+  private memoryService: import("./services/memory").MemoryService | null = null
+  private trainingService: import("./services/training").TrainingService | null = null
+  private governanceService: import("./services/governance").GovernanceService | null = null
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
@@ -252,6 +261,25 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const s = this.remoteService?.getState()
       if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
     })
+  }
+
+  /** Inject V4 subsystem services so message routing can reach them. */
+  setV4Services(services: {
+    ssh: import("./services/ssh").SSHService
+    vps: import("./services/vps").VPSService
+    zeroClaw: import("./services/zeroclaw").ZeroClawService
+    routing: import("./services/routing").RoutingService
+    memory: import("./services/memory").MemoryService
+    training: import("./services/training").TrainingService
+    governance: import("./services/governance").GovernanceService
+  }): void {
+    this.sshService = services.ssh
+    this.vpsService = services.vps
+    this.zeroClawService = services.zeroClaw
+    this.routingService = services.routing
+    this.memoryService = services.memory
+    this.trainingService = services.training
+    this.governanceService = services.governance
   }
   private focusSession(id?: string): void {
     this.streams.focus(id)
@@ -1045,6 +1073,244 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           })
           break
         }
+
+        // ─── V4 Subsystem Message Routing ───────────────────────────────
+        // SSH
+        case "requestSSHProfiles":
+          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          break
+        case "requestSSHSessions":
+          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          break
+        case "sshProfileSave":
+          await this.sshService?.saveProfile(message.profile)
+          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          break
+        case "sshProfileDelete":
+          await this.sshService?.deleteProfile(message.profileName)
+          if (this.sshService) this.postMessage({ type: "sshProfiles", profiles: this.sshService.getProfiles() } as never)
+          break
+        case "sshConnect":
+          await this.sshService?.connect(message.profileName)
+          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          break
+        case "sshDisconnect":
+          this.sshService?.disconnect(message.profileName)
+          if (this.sshService) this.postMessage({ type: "sshSessions", sessions: this.sshService.getSessionSnapshots() } as never)
+          break
+        case "sshOpenTerminal":
+          await this.sshService?.connect(message.profileName)
+          break
+        case "sshBrowseFiles":
+          await this.sshService?.listFiles(message.profileName, message.path ?? "/")
+          break
+        case "sshFileOpen":
+          await this.sshService?.openRemoteFile(message.profileName, message.remotePath)
+          break
+        case "sshFileDownload":
+          await this.sshService?.downloadFile(message.profileName, message.remotePath)
+          break
+        case "sshFileUpload":
+          await this.sshService?.uploadFile(message.profileName, message.remotePath)
+          break
+        case "sshTailLogs":
+          if (message.action === "stop") this.sshService?.stopLogTail(message.profileName)
+          else this.sshService?.startLogTail(message.profileName, message.service)
+          break
+
+        // VPS
+        case "requestVPSServers":
+        case "vpsServerAdd":
+        case "vpsServerRemove":
+        case "vpsRefreshMetrics":
+        case "vpsServiceAction":
+        case "vpsDockerAction":
+        case "vpsDeploy":
+        case "vpsRollback":
+        case "vpsBackup":
+          if (this.vpsService) {
+            await this.vpsService.handleMessage(message, (msg) => this.postMessage(msg as never))
+          }
+          break
+
+        // ZeroClaw
+        case "requestZeroClawTasks":
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          break
+        case "zeroClawSubmitTask":
+          if (this.zeroClawService) {
+            const submitted = this.zeroClawService.submit(message.task)
+            this.postMessage({ type: "zeroClawTaskSubmitted", taskId: submitted.taskId, tasks: this.zeroClawService.getAllTasks() } as never)
+          }
+          break
+        case "zeroClawCancelTask":
+          this.zeroClawService?.cancel(message.taskId)
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          break
+        case "zeroClawRetryTask":
+          if (this.zeroClawService) {
+            this.zeroClawService.retry(message.taskId)
+            this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          }
+          break
+        case "zeroClawApproveTask":
+          this.zeroClawService?.approve(message.taskId, message.approver ?? "operator")
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          break
+        case "zeroClawRejectTask":
+          this.zeroClawService?.reject(message.taskId, message.reason ?? "rejected")
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawTasks", tasks: this.zeroClawService.getAllTasks() } as never)
+          break
+        case "zeroClawGetHistory":
+          if (this.zeroClawService) this.postMessage({ type: "zeroClawHistory", history: this.zeroClawService.getHistory() } as never)
+          break
+
+        // Routing
+        case "requestRoutingState":
+          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          break
+        case "routingTestProvider":
+          if (this.routingService) {
+            await this.routingService.testProvider(message.providerId)
+            this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          }
+          break
+        case "routingConfigureKey":
+          this.routingService?.configureApiKey(message.providerId, !!message.apiKey)
+          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          break
+        case "routingSetRole":
+          this.routingService?.setRole(message.providerId, message.role, message.enabled)
+          if (this.routingService) this.postMessage({ type: "routingState", providers: this.routingService.getProviders(), config: this.routingService.getConfig(), health: this.routingService.getHealthSummary() } as never)
+          break
+        case "routingSetMode":
+          this.routingService?.setMode(message.mode)
+          break
+        case "routingSetFallbackOrder":
+          this.routingService?.setFallbackOrder(message.order)
+          break
+        case "routingGetTraces":
+          if (this.routingService) this.postMessage({ type: "routingTraces", traces: this.routingService.getTraces() } as never)
+          break
+        case "routingGetHealth":
+          if (this.routingService) this.postMessage({ type: "routingHealth", health: this.routingService.getHealthSummary() } as never)
+          break
+
+        // Memory
+        case "memoryGetStatus":
+          if (this.memoryService) this.postMessage({ type: "memoryStatus", ...this.memoryService.getStatus() } as never)
+          break
+        case "memoryRecall":
+          if (this.memoryService) {
+            const results = this.memoryService.recall(message.query, message.project)
+            this.postMessage({ type: "memoryRecallResults", results } as never)
+          }
+          break
+        case "memoryWrite":
+          if (this.memoryService) {
+            this.memoryService.writeMemory(message.entry)
+            this.postMessage({ type: "memoryWriteConfirmed" } as never)
+          }
+          break
+        case "memoryReconnect":
+          await this.memoryService?.reconnect()
+          if (this.memoryService) this.postMessage({ type: "memoryStatus", ...this.memoryService.getStatus() } as never)
+          break
+        case "memoryGetHistory":
+          if (this.memoryService) this.postMessage({ type: "memoryHistory", history: this.memoryService.getWriteHistory() } as never)
+          break
+        case "memorySetPermission":
+          this.memoryService?.setPermission(message.agentId, message.scope, message.allowed)
+          break
+
+        // Training
+        case "requestTrainingState":
+        case "trainingGetJobs":
+          if (this.trainingService) this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          break
+        case "trainingRegisterDataset":
+          if (this.trainingService) {
+            this.trainingService.registerDataset(message.name, message.sourcePath, message.format)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingValidateDataset":
+          if (this.trainingService) {
+            await this.trainingService.validateDataset(message.datasetId)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingLaunchJob":
+          if (this.trainingService) {
+            this.trainingService.launchJob(message.config)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingPauseJob":
+          this.trainingService?.pauseJob(message.jobId)
+          if (this.trainingService) this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          break
+        case "trainingResumeCheckpoint":
+          if (this.trainingService) {
+            this.trainingService.resumeFromCheckpoint(message.jobId, message.checkpointId)
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+        case "trainingCompareRuns":
+          if (this.trainingService) {
+            const comparison = this.trainingService.compareRuns(message.jobIds?.[0], message.jobIds?.[1])
+            this.postMessage({ type: "trainingComparison", comparison } as never)
+          }
+          break
+        case "trainingExportModel":
+          if (this.trainingService) {
+            await this.trainingService.exportModel(message.exportOptions)
+            this.postMessage({ type: "trainingExportComplete", jobId: message.exportOptions?.jobId } as never)
+          }
+          break
+        case "trainingDetectGPU":
+          if (this.trainingService) {
+            await this.trainingService.detectGPUs()
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          }
+          break
+
+        // Governance
+        case "requestGovernanceState":
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceSetTier":
+          this.governanceService?.setUserTier(message.userId, message.tier, message.assignedBy ?? "operator")
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceApproveAction":
+          this.governanceService?.approveAction(message.actionId, message.approver, message.reason)
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceRejectAction":
+          this.governanceService?.rejectAction(message.actionId, message.approver, message.reason)
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceAddDangerousAction":
+          this.governanceService?.addDangerousAction(message.action)
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceToggleBlock":
+          this.governanceService?.toggleActionBlock(message.actionId, message.blocked)
+          if (this.governanceService) this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          break
+        case "governanceGetAuditLog":
+          if (this.governanceService) this.postMessage({ type: "governanceAuditLog", log: this.governanceService.getAuditLog(message.filters) } as never)
+          break
+        case "governanceCreateVerdict":
+          if (this.governanceService) {
+            this.governanceService.createReleaseVerdict(message.scope, message.criticalDefects ?? 0, message.highDefects ?? 0, message.riskSummary ?? "", message.rollbackPlan ?? "", message.decision ?? "pass")
+            this.postMessage({ type: "governanceState", ...this.governanceService.getSnapshot() } as never)
+          }
+          break
+        case "governanceExportAudit":
+          if (this.governanceService) this.postMessage({ type: "governanceAuditExport", data: this.governanceService.getAuditLog() } as never)
+          break
       }
     })
   }

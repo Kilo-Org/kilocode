@@ -1,0 +1,750 @@
+import * as vscode from "vscode"
+
+// ─── Types ───────────────────────────────────────────────
+
+export interface ProviderConfig {
+  id: string
+  name: string
+  apiKeyConfigured: boolean
+  roles: string[]
+  status: "healthy" | "degraded" | "offline" | "unconfigured"
+  lastHealthCheck?: number
+  circuitBreaker: "closed" | "open" | "half-open"
+  requestCount: number
+  failureCount: number
+  estimatedCost: number
+  wrongRoleBlocks: number
+}
+
+export interface RouteDecision {
+  taskType: string
+  riskLevel: string
+  primaryProvider: string
+  fallbackProvider?: string
+  reason: string
+  timestamp: number
+  success: boolean
+  fallbackUsed: boolean
+  trace: RouteTraceStep[]
+}
+
+export interface RouteTraceStep {
+  step: string
+  provider?: string
+  result: "selected" | "skipped" | "blocked" | "failed"
+  reason: string
+  timestamp: number
+}
+
+export interface RouteRequest {
+  taskType:
+    | "contract"
+    | "architecture"
+    | "audit"
+    | "execution"
+    | "fallback_test"
+    | "local_private"
+    | "memory_check"
+    | "training_orchestration"
+  riskLevel: "low" | "medium" | "high"
+  privacyMode: "local_preferred" | "cloud_ok"
+  requiredCapabilities: string[]
+}
+
+export interface RoutingConfig {
+  mode: "auto" | "manual"
+  fallbackOrder: string[]
+  privacyMode: "local_preferred" | "cloud_ok"
+  costThreshold: number
+}
+
+export interface HealthSummary {
+  providers: ProviderConfig[]
+  totalRequests: number
+  totalFailures: number
+  totalCost: number
+  totalWrongRoleBlocks: number
+}
+
+// ─── Constants ───────────────────────────────────────────
+
+const ROLE_CONTRACTS = "Contract Writing"
+const ROLE_ARCHITECTURE = "Architecture"
+const ROLE_AUDITS = "Audits"
+const ROLE_RELEASE = "Release Verdicts"
+const ROLE_EXECUTION = "Execution Worker"
+const ROLE_FALLBACK = "Fallback"
+const ROLE_LOCAL = "Local/Private"
+
+const ALL_ROLES = [
+  ROLE_CONTRACTS,
+  ROLE_ARCHITECTURE,
+  ROLE_AUDITS,
+  ROLE_RELEASE,
+  ROLE_EXECUTION,
+  ROLE_FALLBACK,
+  ROLE_LOCAL,
+]
+
+const TASK_TO_ROLES: Record<string, string[]> = {
+  contract: [ROLE_CONTRACTS],
+  architecture: [ROLE_ARCHITECTURE],
+  audit: [ROLE_AUDITS],
+  execution: [ROLE_EXECUTION],
+  fallback_test: [ROLE_FALLBACK],
+  local_private: [ROLE_LOCAL],
+  memory_check: [ROLE_EXECUTION, ROLE_LOCAL],
+  training_orchestration: [ROLE_EXECUTION, ROLE_ARCHITECTURE],
+}
+
+/** Cost per request (estimated, in USD) */
+const PROVIDER_COST: Record<string, number> = {
+  claude: 0.003,
+  minimax: 0.001,
+  siliconflow: 0.0005,
+  ollama: 0,
+  lmstudio: 0,
+}
+
+const CIRCUIT_BREAKER_FAILURE_THRESHOLD = 5
+const CIRCUIT_BREAKER_RECOVERY_MS = 30_000
+const MAX_TRACE_ENTRIES = 25
+
+// ─── Service ─────────────────────────────────────────────
+
+export class RoutingService implements vscode.Disposable {
+  private providers: Map<string, ProviderConfig> = new Map()
+  private traces: RouteDecision[] = []
+  private config: RoutingConfig
+  private circuitTimers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+  private healthTimer: ReturnType<typeof setInterval> | undefined
+  private readonly listeners = new Set<() => void>()
+
+  constructor() {
+    this.config = {
+      mode: "auto",
+      fallbackOrder: ["claude", "minimax", "siliconflow", "ollama", "lmstudio"],
+      privacyMode: "cloud_ok",
+      costThreshold: 10.0,
+    }
+    this.initializeProviders()
+    this.healthTimer = setInterval(() => {
+      void this.runHealthChecks()
+    }, 60_000)
+  }
+
+  // ── Provider Initialization ──────────────────────────────
+
+  private initializeProviders(): void {
+    const defaults: Array<{
+      id: string
+      name: string
+      roles: string[]
+    }> = [
+      {
+        id: "claude",
+        name: "Claude",
+        roles: [ROLE_CONTRACTS, ROLE_AUDITS, ROLE_ARCHITECTURE, ROLE_RELEASE],
+      },
+      {
+        id: "minimax",
+        name: "MiniMax",
+        roles: [ROLE_EXECUTION],
+      },
+      {
+        id: "siliconflow",
+        name: "SiliconFlow",
+        roles: [ROLE_FALLBACK],
+      },
+      {
+        id: "ollama",
+        name: "Ollama",
+        roles: [ROLE_LOCAL, ROLE_EXECUTION],
+      },
+      {
+        id: "lmstudio",
+        name: "LM Studio",
+        roles: [ROLE_LOCAL],
+      },
+    ]
+
+    for (const def of defaults) {
+      this.providers.set(def.id, {
+        id: def.id,
+        name: def.name,
+        apiKeyConfigured: false,
+        roles: def.roles,
+        status: "unconfigured",
+        lastHealthCheck: undefined,
+        circuitBreaker: "closed",
+        requestCount: 0,
+        failureCount: 0,
+        estimatedCost: 0,
+        wrongRoleBlocks: 0,
+      })
+    }
+
+    // Local providers do not require API keys
+    const ollama = this.providers.get("ollama")!
+    ollama.status = "offline"
+    const lmstudio = this.providers.get("lmstudio")!
+    lmstudio.status = "offline"
+  }
+
+  // ── Public API ───────────────────────────────────────────
+
+  getProviders(): ProviderConfig[] {
+    return Array.from(this.providers.values())
+  }
+
+  getProvider(id: string): ProviderConfig | undefined {
+    return this.providers.get(id)
+  }
+
+  getTraces(): RouteDecision[] {
+    return [...this.traces]
+  }
+
+  getConfig(): RoutingConfig {
+    return { ...this.config }
+  }
+
+  getHealthSummary(): HealthSummary {
+    const providers = this.getProviders()
+    return {
+      providers,
+      totalRequests: providers.reduce((s, p) => s + p.requestCount, 0),
+      totalFailures: providers.reduce((s, p) => s + p.failureCount, 0),
+      totalCost: providers.reduce((s, p) => s + p.estimatedCost, 0),
+      totalWrongRoleBlocks: providers.reduce((s, p) => s + p.wrongRoleBlocks, 0),
+    }
+  }
+
+  getAllRoles(): string[] {
+    return [...ALL_ROLES]
+  }
+
+  // ── Configuration ────────────────────────────────────────
+
+  setMode(mode: "auto" | "manual"): void {
+    this.config.mode = mode
+    this.notifyListeners()
+  }
+
+  setFallbackOrder(order: string[]): void {
+    // Validate all IDs exist
+    const valid = order.filter((id) => this.providers.has(id))
+    this.config.fallbackOrder = valid
+    this.notifyListeners()
+  }
+
+  setPrivacyMode(mode: "local_preferred" | "cloud_ok"): void {
+    this.config.privacyMode = mode
+    this.notifyListeners()
+  }
+
+  setCostThreshold(threshold: number): void {
+    this.config.costThreshold = Math.max(0, threshold)
+    this.notifyListeners()
+  }
+
+  setRole(providerId: string, role: string, enabled: boolean): void {
+    const provider = this.providers.get(providerId)
+    if (!provider) return
+
+    if (enabled && !provider.roles.includes(role)) {
+      provider.roles.push(role)
+    } else if (!enabled) {
+      provider.roles = provider.roles.filter((r) => r !== role)
+    }
+    this.notifyListeners()
+  }
+
+  configureApiKey(providerId: string, configured: boolean): void {
+    const provider = this.providers.get(providerId)
+    if (!provider) return
+
+    provider.apiKeyConfigured = configured
+    if (configured && provider.status === "unconfigured") {
+      provider.status = "healthy"
+    } else if (!configured) {
+      provider.status = "unconfigured"
+    }
+    this.notifyListeners()
+  }
+
+  // ── Routing ──────────────────────────────────────────────
+
+  route(request: RouteRequest): RouteDecision {
+    const trace: RouteTraceStep[] = []
+    const now = Date.now()
+
+    // Determine which roles satisfy this task
+    const requiredRoles = TASK_TO_ROLES[request.taskType] ?? [ROLE_EXECUTION]
+
+    trace.push({
+      step: "resolve_roles",
+      result: "selected",
+      reason: `Task "${request.taskType}" requires roles: ${requiredRoles.join(", ")}`,
+      timestamp: now,
+    })
+
+    // Build candidate list from providers that have at least one matching role
+    const candidates = this.buildCandidateList(request, requiredRoles, trace, now)
+
+    // Select primary provider
+    const primary = candidates[0]
+    if (!primary) {
+      const decision = this.recordDecision({
+        taskType: request.taskType,
+        riskLevel: request.riskLevel,
+        primaryProvider: "none",
+        reason: "No available provider for the required roles",
+        timestamp: now,
+        success: false,
+        fallbackUsed: false,
+        trace,
+      })
+      return decision
+    }
+
+    // Select fallback provider (next candidate after primary)
+    const fallback = candidates.length > 1 ? candidates[1] : undefined
+
+    trace.push({
+      step: "select_primary",
+      provider: primary.id,
+      result: "selected",
+      reason: `Primary provider selected: ${primary.name}`,
+      timestamp: Date.now(),
+    })
+
+    if (fallback) {
+      trace.push({
+        step: "select_fallback",
+        provider: fallback.id,
+        result: "selected",
+        reason: `Fallback provider: ${fallback.name}`,
+        timestamp: Date.now(),
+      })
+    }
+
+    // Track the request
+    primary.requestCount++
+    primary.estimatedCost += PROVIDER_COST[primary.id] ?? 0
+
+    const decision = this.recordDecision({
+      taskType: request.taskType,
+      riskLevel: request.riskLevel,
+      primaryProvider: primary.id,
+      fallbackProvider: fallback?.id,
+      reason: this.buildReason(primary, request, requiredRoles),
+      timestamp: now,
+      success: true,
+      fallbackUsed: false,
+      trace,
+    })
+
+    this.notifyListeners()
+    return decision
+  }
+
+  /**
+   * Report that a provider request succeeded. Closes circuit breaker
+   * if it was half-open.
+   */
+  reportSuccess(providerId: string): void {
+    const provider = this.providers.get(providerId)
+    if (!provider) return
+
+    if (provider.circuitBreaker === "half-open") {
+      provider.circuitBreaker = "closed"
+      provider.failureCount = 0
+      const timer = this.circuitTimers.get(providerId)
+      if (timer) {
+        clearTimeout(timer)
+        this.circuitTimers.delete(providerId)
+      }
+    }
+    this.notifyListeners()
+  }
+
+  /**
+   * Report that a provider request failed. Opens circuit breaker
+   * after CIRCUIT_BREAKER_FAILURE_THRESHOLD consecutive failures.
+   */
+  reportFailure(providerId: string): void {
+    const provider = this.providers.get(providerId)
+    if (!provider) return
+
+    provider.failureCount++
+
+    if (provider.failureCount >= CIRCUIT_BREAKER_FAILURE_THRESHOLD) {
+      this.openCircuitBreaker(providerId)
+    }
+
+    // If degradation threshold reached (but not fully open yet)
+    if (
+      provider.failureCount >= Math.ceil(CIRCUIT_BREAKER_FAILURE_THRESHOLD / 2) &&
+      provider.circuitBreaker === "closed"
+    ) {
+      provider.status = "degraded"
+    }
+
+    this.notifyListeners()
+  }
+
+  /**
+   * Execute a fallback: route again excluding the failed provider.
+   * Returns the new decision with fallbackUsed=true.
+   */
+  executeFallback(
+    originalDecision: RouteDecision,
+    failedProviderId: string,
+  ): RouteDecision {
+    this.reportFailure(failedProviderId)
+
+    // Find original trace entry count
+    const trace: RouteTraceStep[] = [
+      ...originalDecision.trace,
+      {
+        step: "fallback_trigger",
+        provider: failedProviderId,
+        result: "failed",
+        reason: `Provider ${failedProviderId} failed, triggering fallback`,
+        timestamp: Date.now(),
+      },
+    ]
+
+    const fallbackId = originalDecision.fallbackProvider
+    if (!fallbackId) {
+      return this.recordDecision({
+        ...originalDecision,
+        success: false,
+        fallbackUsed: true,
+        reason: `${originalDecision.reason} | Fallback: no fallback provider available`,
+        trace,
+      })
+    }
+
+    const fallback = this.providers.get(fallbackId)
+    if (!fallback || !this.isProviderAvailable(fallback)) {
+      trace.push({
+        step: "fallback_unavailable",
+        provider: fallbackId,
+        result: "failed",
+        reason: `Fallback provider ${fallbackId} is not available`,
+        timestamp: Date.now(),
+      })
+      return this.recordDecision({
+        ...originalDecision,
+        success: false,
+        fallbackUsed: true,
+        reason: `${originalDecision.reason} | Fallback provider unavailable`,
+        trace,
+      })
+    }
+
+    fallback.requestCount++
+    fallback.estimatedCost += PROVIDER_COST[fallback.id] ?? 0
+
+    trace.push({
+      step: "fallback_execute",
+      provider: fallbackId,
+      result: "selected",
+      reason: `Routed to fallback provider: ${fallback.name}`,
+      timestamp: Date.now(),
+    })
+
+    const decision = this.recordDecision({
+      taskType: originalDecision.taskType,
+      riskLevel: originalDecision.riskLevel,
+      primaryProvider: fallbackId,
+      reason: `Fallback from ${failedProviderId} to ${fallbackId}`,
+      timestamp: Date.now(),
+      success: true,
+      fallbackUsed: true,
+      trace,
+    })
+
+    this.notifyListeners()
+    return decision
+  }
+
+  // ── Health Checks ────────────────────────────────────────
+
+  async testProvider(providerId: string): Promise<boolean> {
+    const provider = this.providers.get(providerId)
+    if (!provider) return false
+
+    provider.lastHealthCheck = Date.now()
+
+    // Local providers: check if they respond (simulated)
+    const isLocal = providerId === "ollama" || providerId === "lmstudio"
+
+    if (!isLocal && !provider.apiKeyConfigured) {
+      provider.status = "unconfigured"
+      this.notifyListeners()
+      return false
+    }
+
+    // Simulate a health check. In production this would make an actual
+    // HTTP request to the provider's health endpoint.
+    try {
+      // For local providers, attempt a lightweight localhost ping
+      if (isLocal) {
+        const port = providerId === "ollama" ? 11434 : 1234
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 3000)
+        try {
+          const res = await fetch(`http://localhost:${port}/`, {
+            method: "GET",
+            signal: controller.signal,
+          }).catch(() => undefined)
+          clearTimeout(timeout)
+          if (res && res.ok) {
+            provider.status = "healthy"
+            provider.apiKeyConfigured = true
+            if (provider.circuitBreaker === "open") {
+              provider.circuitBreaker = "half-open"
+            }
+            this.notifyListeners()
+            return true
+          }
+        } catch {
+          clearTimeout(timeout)
+        }
+        provider.status = "offline"
+        this.notifyListeners()
+        return false
+      }
+
+      // Cloud providers: would normally validate the API key.
+      // Mark healthy if key is configured.
+      provider.status = "healthy"
+      if (provider.circuitBreaker === "open") {
+        provider.circuitBreaker = "half-open"
+      }
+      this.notifyListeners()
+      return true
+    } catch {
+      provider.status = "offline"
+      this.notifyListeners()
+      return false
+    }
+  }
+
+  /** Run health checks for all configured providers. */
+  async runHealthChecks(): Promise<void> {
+    const providers = this.getProviders()
+    for (const p of providers) {
+      if (p.status !== "unconfigured") {
+        await this.testProvider(p.id)
+      }
+    }
+  }
+
+  // ── Listener Management ──────────────────────────────────
+
+  onChange(cb: () => void): () => void {
+    this.listeners.add(cb)
+    return () => this.listeners.delete(cb)
+  }
+
+  // ── Dispose ──────────────────────────────────────────────
+
+  dispose(): void {
+    if (this.healthTimer) {
+      clearInterval(this.healthTimer)
+      this.healthTimer = undefined
+    }
+    for (const timer of this.circuitTimers.values()) {
+      clearTimeout(timer)
+    }
+    this.circuitTimers.clear()
+    this.listeners.clear()
+    this.providers.clear()
+    this.traces = []
+  }
+
+  // ── Private Helpers ──────────────────────────────────────
+
+  private buildCandidateList(
+    request: RouteRequest,
+    requiredRoles: string[],
+    trace: RouteTraceStep[],
+    now: number,
+  ): ProviderConfig[] {
+    const candidates: ProviderConfig[] = []
+    const order =
+      this.config.mode === "auto"
+        ? this.config.fallbackOrder
+        : this.config.fallbackOrder
+
+    for (const pid of order) {
+      const provider = this.providers.get(pid)
+      if (!provider) continue
+
+      // Check role match
+      const hasRole = provider.roles.some((r) => requiredRoles.includes(r))
+      if (!hasRole) {
+        provider.wrongRoleBlocks++
+        trace.push({
+          step: "role_check",
+          provider: pid,
+          result: "blocked",
+          reason: `${provider.name} lacks required roles: ${requiredRoles.join(", ")}`,
+          timestamp: now,
+        })
+        continue
+      }
+
+      // Check availability
+      if (!this.isProviderAvailable(provider)) {
+        trace.push({
+          step: "availability_check",
+          provider: pid,
+          result: "skipped",
+          reason: `${provider.name} is ${provider.status} (circuit: ${provider.circuitBreaker})`,
+          timestamp: now,
+        })
+        continue
+      }
+
+      // Check privacy mode
+      if (request.privacyMode === "local_preferred") {
+        const isLocal = pid === "ollama" || pid === "lmstudio"
+        if (!isLocal && candidates.some((c) => c.id === "ollama" || c.id === "lmstudio")) {
+          trace.push({
+            step: "privacy_check",
+            provider: pid,
+            result: "skipped",
+            reason: `Privacy mode prefers local; ${provider.name} is cloud-based and a local provider is available`,
+            timestamp: now,
+          })
+          continue
+        }
+        // Prioritize local providers by inserting them at front
+        if (isLocal) {
+          candidates.unshift(provider)
+          trace.push({
+            step: "privacy_boost",
+            provider: pid,
+            result: "selected",
+            reason: `${provider.name} prioritized (local provider, privacy mode)`,
+            timestamp: now,
+          })
+          continue
+        }
+      }
+
+      // Check cost threshold
+      if (provider.estimatedCost >= this.config.costThreshold) {
+        trace.push({
+          step: "cost_check",
+          provider: pid,
+          result: "skipped",
+          reason: `${provider.name} exceeded cost threshold ($${provider.estimatedCost.toFixed(4)} >= $${this.config.costThreshold.toFixed(2)})`,
+          timestamp: now,
+        })
+        continue
+      }
+
+      // High-risk tasks prefer Claude
+      if (request.riskLevel === "high" && pid !== "claude" && this.isProviderAvailable(this.providers.get("claude"))) {
+        // Still add as candidate but not first if Claude is available
+        trace.push({
+          step: "risk_check",
+          provider: pid,
+          result: "selected",
+          reason: `${provider.name} added as candidate (high-risk task prefers Claude as primary)`,
+          timestamp: now,
+        })
+        candidates.push(provider)
+        continue
+      }
+
+      trace.push({
+        step: "candidate_add",
+        provider: pid,
+        result: "selected",
+        reason: `${provider.name} added as candidate`,
+        timestamp: now,
+      })
+      candidates.push(provider)
+    }
+
+    return candidates
+  }
+
+  private isProviderAvailable(provider: ProviderConfig | undefined): boolean {
+    if (!provider) return false
+    if (provider.status === "offline" || provider.status === "unconfigured") return false
+    if (provider.circuitBreaker === "open") return false
+    return true
+  }
+
+  private openCircuitBreaker(providerId: string): void {
+    const provider = this.providers.get(providerId)
+    if (!provider) return
+
+    provider.circuitBreaker = "open"
+    provider.status = "offline"
+
+    // Clear any existing recovery timer
+    const existing = this.circuitTimers.get(providerId)
+    if (existing) clearTimeout(existing)
+
+    // After recovery timeout, move to half-open
+    const timer = setTimeout(() => {
+      const p = this.providers.get(providerId)
+      if (p && p.circuitBreaker === "open") {
+        p.circuitBreaker = "half-open"
+        p.status = "degraded"
+        this.notifyListeners()
+      }
+      this.circuitTimers.delete(providerId)
+    }, CIRCUIT_BREAKER_RECOVERY_MS)
+
+    this.circuitTimers.set(providerId, timer)
+  }
+
+  private buildReason(
+    provider: ProviderConfig,
+    request: RouteRequest,
+    roles: string[],
+  ): string {
+    const parts: string[] = []
+
+    if (request.riskLevel === "high") {
+      parts.push("high-risk task")
+    }
+
+    parts.push(`role match: ${roles.join(", ")}`)
+
+    if (request.privacyMode === "local_preferred") {
+      const isLocal = provider.id === "ollama" || provider.id === "lmstudio"
+      parts.push(isLocal ? "local provider (privacy mode)" : "cloud provider (no local available)")
+    }
+
+    return `Selected ${provider.name}: ${parts.join("; ")}`
+  }
+
+  private recordDecision(decision: RouteDecision): RouteDecision {
+    this.traces.unshift(decision)
+    if (this.traces.length > MAX_TRACE_ENTRIES) {
+      this.traces = this.traces.slice(0, MAX_TRACE_ENTRIES)
+    }
+    return decision
+  }
+
+  private notifyListeners(): void {
+    for (const cb of this.listeners) {
+      try {
+        cb()
+      } catch {
+        // Swallow listener errors to avoid breaking the service loop
+      }
+    }
+  }
+}

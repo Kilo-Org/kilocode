@@ -1055,6 +1055,80 @@
           "type": "boolean",
           "default": true,
           "description": "Restrict Hermes execution to the current VS Code workspace folder."
+        },
+        "kilo-code.new.ssh.profiles": {
+          "type": "array",
+          "default": [],
+          "description": "Saved SSH connection profiles for remote server management."
+        },
+        "kilo-code.new.vps.servers": {
+          "type": "array",
+          "default": [],
+          "description": "Registered VPS/infrastructure server inventory."
+        },
+        "kilo-code.new.zeroclaw.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ZeroClaw risk-based execution engine."
+        },
+        "kilo-code.new.zeroclaw.autoApproveLevel": {
+          "type": "string",
+          "default": "low",
+          "enum": ["none", "low", "medium", "all"],
+          "enumDescriptions": [
+            "Manual approval for all tasks",
+            "Auto-approve low-risk only",
+            "Auto-approve low and medium risk",
+            "Auto-approve all (not recommended)"
+          ],
+          "description": "Which ZeroClaw risk levels to auto-approve."
+        },
+        "kilo-code.new.routing.mode": {
+          "type": "string",
+          "default": "auto",
+          "enum": ["auto", "manual"],
+          "enumDescriptions": [
+            "Automatically route to best provider by role and availability",
+            "Manually select provider for each request"
+          ],
+          "description": "Provider routing mode."
+        },
+        "kilo-code.new.routing.privacyMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prefer local providers (Ollama, LM Studio) over cloud for privacy-sensitive tasks."
+        },
+        "kilo-code.new.routing.costThreshold": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "description": "Maximum estimated cost per request (USD). Providers exceeding this are skipped."
+        },
+        "kilo-code.new.memory.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Shiba memory for cross-session fact recall."
+        },
+        "kilo-code.new.memory.endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Shiba memory service endpoint URL. Leave empty for local-only memory."
+        },
+        "kilo-code.new.training.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the Training & GPU subsystem for local/remote model fine-tuning."
+        },
+        "kilo-code.new.governance.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable governance, approval gates, and audit logging for dangerous actions."
+        },
+        "kilo-code.new.governance.defaultTier": {
+          "type": "string",
+          "default": "Operator",
+          "enum": ["Observer", "Operator", "Admin", "SuperAdmin"],
+          "description": "Default authority tier for the current user."
         }
       }
     }

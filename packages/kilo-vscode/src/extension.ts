@@ -20,6 +20,13 @@ import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 import { HermesClient, HermesPipeline, HermesStatusService, buildPreset, HERMES_PROVIDER_ID } from "./services/hermes"
 import { registerHermesCommands } from "./commands/hermes"
+import { SSHService } from "./services/ssh"
+import { VPSService } from "./services/vps"
+import { ZeroClawService } from "./services/zeroclaw"
+import { RoutingService } from "./services/routing"
+import { MemoryService } from "./services/memory"
+import { TrainingService } from "./services/training"
+import { GovernanceService } from "./services/governance"
 import type { KiloClient } from "@kilocode/sdk/v2"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
@@ -51,6 +58,30 @@ export function activate(context: vscode.ExtensionContext) {
   hermesStatus.setClient(hermesClient)
   const hermesPipeline = new HermesPipeline(context, hermesStatus, hermesClient)
   registerHermesCommands(context, hermesStatus, hermesClient, hermesPipeline)
+
+  // Create V4 subsystem services.
+  // Each service is self-contained, persists its own state, and implements vscode.Disposable.
+  const sshService = new SSHService(context)
+  context.subscriptions.push(sshService)
+
+  const vpsService = new VPSService(context)
+  context.subscriptions.push(vpsService)
+
+  const zeroClawService = new ZeroClawService(context)
+  context.subscriptions.push(zeroClawService)
+
+  const routingService = new RoutingService()
+  context.subscriptions.push(routingService)
+
+  const memoryService = new MemoryService(context)
+  context.subscriptions.push(memoryService)
+
+  const trainingService = new TrainingService(context)
+  context.subscriptions.push(trainingService)
+
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
+  const governanceService = new GovernanceService(workspaceRoot)
+  context.subscriptions.push(governanceService)
 
   // Sync the Hermes provider preset into the CLI backend config on toggle.
   // Runs once on toggle and once on each CLI reconnect (in case Hermes was
@@ -130,6 +161,15 @@ export function activate(context: vscode.ExtensionContext) {
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context)
   provider.setRemoteService(remoteService)
+  provider.setV4Services({
+    ssh: sshService,
+    vps: vpsService,
+    zeroClaw: zeroClawService,
+    routing: routingService,
+    memory: memoryService,
+    training: trainingService,
+    governance: governanceService,
+  })
 
   // Register the webview view provider for the sidebar.
   // retainContextWhenHidden keeps the webview alive when switching to other sidebar panels.

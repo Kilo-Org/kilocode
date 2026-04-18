@@ -1630,6 +1630,38 @@ export type ExtensionMessage =
   | RemoteStatusMessage
   | SpeechSettingsLoadedMessage
   | AzureKeyValidationResultMessage
+  // V4 subsystem messages (SSH, VPS, ZeroClaw, Routing, Memory, Training, Governance)
+  | V4SubsystemMessage
+
+/** Catch-all for V4 subsystem extension→webview messages. Each subsystem prefixes its type. */
+export interface V4SubsystemMessage {
+  type:
+    // SSH
+    | "sshProfiles" | "sshSessions" | "sshProfilesLoaded" | "sshSessionsUpdated"
+    | "sshConnectionStatus" | "sshFilesListed" | "sshLogOutput" | "sshLogTailingStopped"
+    // VPS
+    | "vpsServersLoaded" | "vpsServerAdded" | "vpsServerUpdated" | "vpsServerRemoved"
+    | "vpsMetrics" | "vpsMetricsLoaded" | "vpsServiceStatus" | "vpsServicesLoaded"
+    | "vpsDockerContainers" | "vpsContainersLoaded" | "vpsDeployHistory" | "vpsDeployHistoryLoaded"
+    | "vpsBackupStatus"
+    // ZeroClaw
+    | "zeroClawTasks" | "zeroClawTaskSubmitted" | "zeroClawTasksLoaded" | "zeroClawTaskUpdated"
+    | "zeroClawTaskRetried" | "zeroClawHistory" | "zeroClawHistoryLoaded"
+    // Routing
+    | "routingState" | "routingTraces" | "routingHealth"
+    // Memory
+    | "memoryStatus" | "memoryStatusLoaded" | "memoryRecallResults" | "memoryRecallResult"
+    | "memoryWriteConfirmed" | "memoryWriteResult" | "memoryHistory" | "memoryHistoryLoaded"
+    | "memoryConnectionChanged" | "memoryPermissionChanged"
+    // Training
+    | "trainingState" | "trainingComparison" | "trainingExportComplete"
+    | "trainingDatasetRegistered" | "trainingDatasetValidated" | "trainingDatasetRemoved"
+    | "trainingJobLaunched" | "trainingJobUpdated" | "trainingJobRemoved"
+    | "trainingGPUDetected" | "trainingCompareResult"
+    // Governance
+    | "governanceState" | "governanceAuditLog" | "governanceAuditExport"
+  [key: string]: unknown
+}
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2662,6 +2694,36 @@ export type WebviewMessage =
   | MoveSectionRequest
   | RequestSpeechSettingsMessage
   | ValidateAzureKeyMessage
+  // V4 subsystem messages (SSH, VPS, ZeroClaw, Routing, Memory, Training, Governance)
+  | V4SubsystemRequest
+
+/** Catch-all for V4 subsystem webview→extension messages. */
+export interface V4SubsystemRequest {
+  type:
+    | "requestSSHProfiles" | "requestSSHSessions"
+    | "sshProfileSave" | "sshProfileDelete" | "sshConnect" | "sshDisconnect"
+    | "sshOpenTerminal" | "sshBrowseFiles" | "sshFileOpen" | "sshFileDownload" | "sshFileUpload" | "sshTailLogs"
+    | "requestVPSServers"
+    | "vpsServerAdd" | "vpsServerRemove" | "vpsRefreshMetrics"
+    | "vpsServiceAction" | "vpsDockerAction" | "vpsDeploy" | "vpsRollback" | "vpsBackup"
+    | "requestZeroClawTasks"
+    | "zeroClawSubmitTask" | "zeroClawCancelTask" | "zeroClawRetryTask"
+    | "zeroClawApproveTask" | "zeroClawRejectTask" | "zeroClawGetHistory"
+    | "requestRoutingState"
+    | "routingTestProvider" | "routingConfigureKey" | "routingSetRole"
+    | "routingSetMode" | "routingSetFallbackOrder" | "routingGetTraces" | "routingGetHealth"
+    | "memoryGetStatus" | "memoryRecall" | "memoryWrite" | "memoryReconnect" | "memoryGetHistory" | "memorySetPermission"
+    | "requestTrainingState" | "trainingGetJobs"
+    | "trainingRegisterDataset" | "trainingValidateDataset" | "trainingRemoveDataset"
+    | "trainingLaunchJob" | "trainingPauseJob" | "trainingResumeJob" | "trainingCancelJob"
+    | "trainingResumeCheckpoint" | "trainingDetectGPU" | "trainingCompareRuns"
+    | "trainingExportModel" | "trainingBrowsePath"
+    | "requestGovernanceState"
+    | "governanceSetTier" | "governanceApproveAction" | "governanceRejectAction"
+    | "governanceAddDangerousAction" | "governanceToggleBlock"
+    | "governanceGetAuditLog" | "governanceCreateVerdict" | "governanceExportAudit"
+  [key: string]: unknown
+}
 
 // ============================================
 // VS Code API type
