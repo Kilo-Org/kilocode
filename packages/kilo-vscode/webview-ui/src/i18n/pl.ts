@@ -1194,6 +1194,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Dźwięk odtwarzany przy błędach",
   "settings.notifications.sound.default": "Domyślny",
   "settings.notifications.sound.none": "Brak",
+  "settings.notifications.sound.system": "Domyślny systemu",
+  "settings.notifications.testSound": "Testuj powiadomienie",
   "settings.experimental.share.title": "Tryb udostępniania",
   "settings.experimental.share.description": "Zachowanie udostępniania sesji",
   "settings.experimental.share.manual": "Ręczny",

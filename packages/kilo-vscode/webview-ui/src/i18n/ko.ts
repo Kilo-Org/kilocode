@@ -1218,6 +1218,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "오류 발생 시 재생할 소리",
   "settings.notifications.sound.default": "기본값",
   "settings.notifications.sound.none": "없음",
+  "settings.notifications.sound.system": "시스템 기본값",
+  "settings.notifications.testSound": "알림 테스트",
   "settings.experimental.share.title": "공유 모드",
   "settings.experimental.share.description": "세션 공유 동작 방식",
   "settings.experimental.share.manual": "수동",

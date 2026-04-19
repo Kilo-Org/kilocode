@@ -1198,6 +1198,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "发生错误时播放的声音",
   "settings.notifications.sound.default": "默认",
   "settings.notifications.sound.none": "无",
+  "settings.notifications.sound.system": "系统默认",
+  "settings.notifications.testSound": "测试通知",
   "settings.experimental.share.title": "分享模式",
   "settings.experimental.share.description": "会话分享行为",
   "settings.experimental.share.manual": "手动",

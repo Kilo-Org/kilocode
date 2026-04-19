@@ -1226,6 +1226,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Звук, що відтворюється при виникненні помилок",
   "settings.notifications.sound.default": "За замовчуванням",
   "settings.notifications.sound.none": "Немає",
+  "settings.notifications.sound.system": "Системний",
+  "settings.notifications.testSound": "Тестове сповіщення",
 
   "settings.experimental.share.title": "Режим публікації",
   "settings.experimental.share.description": "Як поводиться публікація сесій",

@@ -1254,6 +1254,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Son à jouer en cas d'erreur",
   "settings.notifications.sound.default": "Par défaut",
   "settings.notifications.sound.none": "Aucun",
+  "settings.notifications.sound.system": "Par défaut du système",
+  "settings.notifications.testSound": "Tester la notification",
   "settings.experimental.share.title": "Mode de partage",
   "settings.experimental.share.description": "Comportement du partage de session",
   "settings.experimental.share.manual": "Manuel",

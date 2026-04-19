@@ -1229,6 +1229,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Lyd ved fejl",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.none": "Ingen",
+  "settings.notifications.sound.system": "Systemstandard",
+  "settings.notifications.testSound": "Test notifikation",
   "settings.experimental.share.title": "Delingstilstand",
   "settings.experimental.share.description": "Adfærd for sessionsdeling",
   "settings.experimental.share.manual": "Manuel",

@@ -1233,6 +1233,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Geluid om af te spelen bij fouten",
   "settings.notifications.sound.default": "Standaard",
   "settings.notifications.sound.none": "Geen",
+  "settings.notifications.sound.system": "Systeemstandaard",
+  "settings.notifications.testSound": "Melding testen",
 
   "settings.experimental.share.title": "Deelmodus",
   "settings.experimental.share.description": "Hoe sessiedelen zich gedraagt",

@@ -1226,6 +1226,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Hata oluştuğunda çalınacak ses",
   "settings.notifications.sound.default": "Varsayılan",
   "settings.notifications.sound.none": "Yok",
+  "settings.notifications.sound.system": "Sistem varsayılanı",
+  "settings.notifications.testSound": "Bildirim test et",
 
   "settings.experimental.share.title": "Paylaşım Modu",
   "settings.experimental.share.description": "Oturum paylaşımının nasıl davranacağı",

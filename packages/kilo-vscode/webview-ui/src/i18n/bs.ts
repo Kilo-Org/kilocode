@@ -1236,6 +1236,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Zvuk pri greškama",
   "settings.notifications.sound.default": "Zadano",
   "settings.notifications.sound.none": "Ništa",
+  "settings.notifications.sound.system": "Sistemski zadano",
+  "settings.notifications.testSound": "Testiraj obavijest",
   "settings.experimental.share.title": "Način dijeljenja",
   "settings.experimental.share.description": "Ponašanje dijeljenja sesije",
   "settings.experimental.share.manual": "Ručno",

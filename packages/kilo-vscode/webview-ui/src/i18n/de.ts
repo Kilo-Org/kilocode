@@ -1250,6 +1250,8 @@ export const dict = {
   "settings.notifications.errorSound.description": "Ton bei Fehlern abspielen",
   "settings.notifications.sound.default": "Standard",
   "settings.notifications.sound.none": "Kein",
+  "settings.notifications.sound.system": "Systemstandard",
+  "settings.notifications.testSound": "Benachrichtigung testen",
   "settings.experimental.share.title": "Freigabemodus",
   "settings.experimental.share.description": "Verhalten der Sitzungsfreigabe",
   "settings.experimental.share.manual": "Manuell",
