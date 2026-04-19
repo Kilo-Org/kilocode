@@ -146,6 +146,14 @@ const SUPPLEMENTARY_TO_IMPLEMENTATION = new Set(["ui", "accessibility", "api", "
 // Core migration logic (MOVED from config.ts)
 // ---------------------------------------------------------------------------
 
+/**
+ * Low-level migration of a pre-parsed legacy team config shape.
+ *
+ * Requires a `LegacyTeamConfigShape` input that has already been validated
+ * via `LegacyParseTeamConfig.parse()`. External callers working with unknown
+ * JSON input should use `migrateLegacyTeamConfig(unknown)` instead — it
+ * validates the input schema before delegating here.
+ */
 export function fromLegacyTeamConfig(input: LegacyTeamConfigShape): LegacyMigrationResult {
   const errors: LegacyMigrationIssue[] = []
   const warnings: LegacyMigrationIssue[] = []

@@ -33,7 +33,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: ["worker"],
             maxConcurrent: 3,
-            capabilities: ["code-review", "architecture"],
+            capabilities: ["review"],
           },
         },
         routing: {
@@ -63,7 +63,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: ["coding"],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -98,7 +98,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: ["worker"],
             maxConcurrent: 3,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
           worker: {
             displayName: "Worker",
@@ -108,7 +108,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -148,7 +148,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: [],
             maxConcurrent: 3,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
           worker: {
             displayName: "Worker",
@@ -158,7 +158,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -190,7 +190,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -221,7 +221,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {

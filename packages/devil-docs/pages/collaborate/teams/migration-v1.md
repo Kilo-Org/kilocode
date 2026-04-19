@@ -25,7 +25,7 @@ via a one-off Bun script:
 
 ```ts
 // migrate.ts
-import { migrateLegacyTeamConfigFile } from "@devilcode/opencode/devilcode/team/migration"
+import { migrateLegacyTeamConfigFile } from "@devilcode/cli/devilcode/team/migration"
 import { readFileSync, writeFileSync } from "node:fs"
 
 const src = process.argv[2]  // e.g., ./legacy-kilo.json

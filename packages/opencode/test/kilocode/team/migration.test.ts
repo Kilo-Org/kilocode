@@ -213,6 +213,8 @@ describe("fromLegacyTeamConfig — 5 preset migrations", () => {
         expect(role.positionId).toBeDefined()
         expect(role.capabilities.length).toBeGreaterThan(0)
       }
+      // Migration output must always be enabled:false regardless of input
+      expect(result.value.enabled).toBe(false)
     }
   })
 
@@ -256,6 +258,14 @@ describe("fromLegacyTeamConfig — 5 preset migrations", () => {
       const positionIds = new Set(Object.values(result.value.roles).map((r) => r.positionId))
       expect(positionIds.has("coordinator")).toBe(true)
       expect(positionIds.has("researcher")).toBe(true)
+      // Assert canDelegate dedup: orchestrator→coordinator, both delegatees→researcher, deduped to 1 entry
+      const coordinatorRole = result.value.roles["coordinator"]
+      expect(coordinatorRole).toBeDefined()
+      if (coordinatorRole) {
+        // "deep-researcher" and "fast-scanner" both resolve to "researcher" → Set dedup → single entry
+        expect(coordinatorRole.canDelegate).toHaveLength(1)
+        expect(coordinatorRole.canDelegate[0]).toBe("researcher")
+      }
     }
   })
 })
@@ -348,7 +358,7 @@ describe("fromLegacyTeamConfig — synthetic fixtures (original)", () => {
           model: "gpt-5",
           effort: "medium",
           tier: 2,
-          capabilities: ["ui", "api"],
+          capabilities: ["ui", "api", "accessibility", "db"],
         },
       },
       routing: { strategy: "hierarchical", defaultRole: "frontend-specialist", escalationEnabled: true },
@@ -363,6 +373,8 @@ describe("fromLegacyTeamConfig — synthetic fixtures (original)", () => {
         expect(role.capabilities).toContain("implementation")
         expect(role.supplementaryCapabilities).toContain("ui")
         expect(role.supplementaryCapabilities).toContain("api")
+        expect(role.supplementaryCapabilities).toContain("accessibility")
+        expect(role.supplementaryCapabilities).toContain("db")
       }
     }
   })
@@ -410,7 +422,7 @@ describe("fromLegacyTeamConfig — synthetic fixtures (new)", () => {
     }
   })
 
-  test("parse-failure on structurally invalid JSON file", () => {
+  test("parse-failure on non-object JSON value (Zod schema rejection)", () => {
     const dir = mkdtempSync(join(tmpdir(), "migration-test-"))
     const filePath = join(dir, "bad.json")
     writeFileSync(filePath, JSON.stringify("not a team config"))
@@ -485,6 +497,102 @@ describe("fromLegacyTeamConfig — synthetic fixtures (new)", () => {
       const positionIds = new Set(Object.keys(result.value.roles))
       expect(positionIds.has("architect")).toBe(true)
       expect(positionIds.has("senior-dev")).toBe(true)
+    }
+  })
+
+  test("routing parentRole and reviewEscalationRole resolve via synonym and canonical match", () => {
+    const legacyConfig = LegacyParseTeamConfig.parse({
+      enabled: false,
+      roles: {
+        lead: {
+          displayName: "Lead",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 3,
+          capabilities: ["implementation"],
+        },
+        reviewer: {
+          displayName: "Reviewer",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "medium",
+          tier: 2,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: ["review"],
+        },
+      },
+      routing: {
+        strategy: "hierarchical",
+        defaultRole: "lead",
+        escalationEnabled: true,
+        parentRole: "lead", // synonym → "senior-dev" via POSITION_SYNONYM_MAP
+        reviewEscalationRole: "reviewer", // direct CanonicalPosition match
+      },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value.routing.parentRole).toBe("senior-dev") // synonym resolved
+      expect(result.value.routing.reviewEscalationRole).toBe("reviewer") // direct match preserved
+    }
+  })
+
+  test("two roles resolving to the same CanonicalPosition emit ambiguous-capability-mapping and merge capabilities", () => {
+    const legacyConfig = LegacyParseTeamConfig.parse({
+      enabled: false,
+      roles: {
+        "deep-researcher": {
+          displayName: "Deep Researcher",
+          provider: "kilo",
+          model: "claude-4.1-sonnet",
+          effort: "high",
+          tier: 2,
+          canDelegate: [],
+          maxConcurrent: 2,
+          capabilities: ["analysis"],
+        },
+        "fast-scanner": {
+          displayName: "Fast Scanner",
+          provider: "kilo",
+          model: "gpt-5-mini",
+          effort: "low",
+          tier: 2,
+          canDelegate: [],
+          maxConcurrent: 6,
+          capabilities: ["search"],
+        },
+        coordinator: {
+          displayName: "Coordinator",
+          provider: "kilo",
+          model: "gpt-5",
+          effort: "high",
+          tier: 1,
+          canDelegate: [],
+          maxConcurrent: 3,
+          capabilities: ["planning"],
+        },
+      },
+      routing: { strategy: "hierarchical", defaultRole: "coordinator", escalationEnabled: true },
+      reactions: [],
+    })
+    const result = fromLegacyTeamConfig(legacyConfig)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      // Both deep-researcher and fast-scanner resolve to "researcher" → collision
+      expect("researcher" in result.value.roles).toBe(true)
+      // ambiguous-capability-mapping warning must be emitted
+      const collisionWarnings = result.warnings.filter((w) => w.kind === "ambiguous-capability-mapping")
+      expect(collisionWarnings.length).toBeGreaterThan(0)
+      // Merged capabilities should be union of both roles' mappings
+      const researcherRole = result.value.roles["researcher"]!
+      expect(researcherRole.capabilities).toContain("research") // "analysis" + "search" both map to "research"
+      // Tier comes from POSITION_LIBRARY["researcher"].tier = 3 (library always wins)
+      expect(researcherRole.tier).toBe(3)
     }
   })
 })
