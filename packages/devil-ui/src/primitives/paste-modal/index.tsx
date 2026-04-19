@@ -19,8 +19,8 @@ export interface PasteModalProps {
  *             Ctrl+Enter submits; Escape cancels.
  * Terminal branch: Phase 3 stub — full multiline editor in Phase 5.
  *
- * Focus is set synchronously (not in onMount) by calling
- * `adapter.setFocusedNodeId("paste-modal-textarea")` when open prop is true.
+ * Focus is managed reactively via createEffect — `adapter.setFocusedNodeId` is called
+ * after the reactive flush whenever `open` changes (not in onMount, not synchronously).
  *
  * Controlled: caller owns `open` state.
  */

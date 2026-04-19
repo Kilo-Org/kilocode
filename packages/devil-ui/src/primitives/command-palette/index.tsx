@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { createSignal, createMemo, createEffect, For, Show, type JSX } from "solid-js"
+import { createSignal, createMemo, createEffect, untrack, For, Show, type JSX } from "solid-js"
 import type { Command, CommandScope } from "@devilcode/keybind"
 import { useRenderTarget, RenderSurface } from "../../context/render-target"
 import { useCommandRegistry } from "../../hooks/use-command-registry"
@@ -40,9 +40,12 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
 
   // Clamp selection index when results shrink (e.g. from registry mutations).
   // Prevents results()[selected()] returning undefined and Enter silently no-oping.
+  // untrack(selected) breaks the reactive self-subscription — this effect re-triggers
+  // only on results() changes, not on its own setSelected output.
   createEffect(() => {
     const len = results().length
-    if (len > 0 && selected() >= len) setSelected(len - 1)
+    const cur = untrack(selected)
+    if (len > 0 && cur >= len) setSelected(len - 1)
     else if (len === 0) setSelected(0)
   })
 
