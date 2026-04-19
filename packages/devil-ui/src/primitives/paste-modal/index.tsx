@@ -52,6 +52,9 @@ export function PasteModal(props: PasteModalProps): JSX.Element {
   }
 
   function handleKeyDown(e: KeyboardEvent): void {
+    // Stop propagation so the event does not bubble from <textarea> to <dialog>,
+    // which would cause handleSubmit/handleClose to fire twice.
+    e.stopPropagation()
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
       handleSubmit()

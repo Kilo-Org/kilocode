@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { createSignal, createMemo, For, Show, type JSX } from "solid-js"
+import { createSignal, createMemo, createEffect, For, Show, type JSX } from "solid-js"
 import type { Command, CommandScope } from "@devilcode/keybind"
 import { useRenderTarget, RenderSurface } from "../../context/render-target"
 import { useCommandRegistry } from "../../hooks/use-command-registry"
@@ -37,6 +37,14 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
   }
 
   const results = createMemo(() => registry.search(query(), props.scope))
+
+  // Clamp selection index when results shrink (e.g. from registry mutations).
+  // Prevents results()[selected()] returning undefined and Enter silently no-oping.
+  createEffect(() => {
+    const len = results().length
+    if (len > 0 && selected() >= len) setSelected(len - 1)
+    else if (len === 0) setSelected(0)
+  })
 
   function handleSelect(cmd: Command): void {
     props.onSelect?.(cmd)
