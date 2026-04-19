@@ -1,5 +1,5 @@
 import type { ReviewFinding } from "./types"
-import type { TeamConfig } from "../team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "../team/config"
 
 const ESCALATION_CATEGORIES = new Set(["security", "architecture"])
 

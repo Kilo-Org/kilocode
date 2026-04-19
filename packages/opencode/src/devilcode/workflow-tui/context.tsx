@@ -13,7 +13,7 @@ import type {
   RetroReport,
 } from "../workflow/types"
 import type { TabInfo, SessionInfo } from "./types"
-import type { TeamConfig } from "../team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "../team/config"
 import { WorkflowStateManager } from "../workflow/state"
 import { Workflow } from "../workflow"
 import { SessionBridge } from "../workflow/session-bridge"

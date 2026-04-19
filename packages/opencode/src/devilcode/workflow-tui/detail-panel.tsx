@@ -14,7 +14,7 @@ function guide(wf: ReturnType<typeof useWorkflow>) {
   if (!wf.state) {
     return {
       title: "Workflow Setup",
-      body: "Run /team init to create .planning/, then paste phase requirements below to start planning.",
+      body: "Run /team init <quickstart> to start. Available: solo-enhanced, code-review-pair, full-stack-team, ci-cd-pipeline, research-team.",
     }
   }
 

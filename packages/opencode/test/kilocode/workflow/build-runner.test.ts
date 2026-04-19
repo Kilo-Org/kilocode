@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from "bun:test"
 import type { PlanTask, ActiveTask, TaskResult } from "@/devilcode/workflow/types"
 import type { WorkflowState } from "@/devilcode/workflow/types"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
 import { MAX_ESCALATION_DEPTH } from "@/devilcode/workflow/escalation"
 
 // Mock dependencies
@@ -58,6 +58,13 @@ mock.module("@/devilcode/workflow/prompts/build.txt", () => ({
 }))
 
 const { BuildRunner } = await import("@/devilcode/workflow/build-runner")
+
+// Helper: cast legacy-shaped test fixtures to CanonicalTeamConfig.
+// BuildRunner only accesses roles/routing by property lookup — it does not re-validate the Zod
+// schema at runtime — so this is safe for behavioral testing purposes.
+function tc(o: unknown): TeamConfig {
+  return o as unknown as TeamConfig
+}
 
 function makeTask(overrides: Partial<PlanTask>): PlanTask {
   return {
@@ -224,7 +231,7 @@ describe("BuildRunner", () => {
 
   it("passes the resolved role and model into workflow task sessions", async () => {
     const runner = new BuildRunner({
-      teamConfig: {
+      teamConfig: tc({
         enabled: true,
         roles: {
           worker: {
@@ -244,7 +251,7 @@ describe("BuildRunner", () => {
           defaultRole: "worker",
           escalationEnabled: true,
         },
-      },
+      }),
       onTaskStart: () => {},
       onTaskComplete: () => {},
       onOutput: () => {},
@@ -272,7 +279,7 @@ describe("BuildRunner", () => {
 
   it("allows top-level default-role tasks without an explicit parent role", async () => {
     const runner = new BuildRunner({
-      teamConfig: {
+      teamConfig: tc({
         enabled: true,
         roles: {
           lead: {
@@ -301,7 +308,7 @@ describe("BuildRunner", () => {
           defaultRole: "lead",
           escalationEnabled: true,
         },
-      },
+      }),
       onTaskStart: () => {},
       onTaskComplete: () => {},
       onOutput: () => {},
@@ -324,7 +331,7 @@ describe("BuildRunner", () => {
   // devilcode_change start - audit MA3: re-dispatch escalated tasks to resolved target role.
   it("re-dispatches escalated tasks to the resolved target role", async () => {
     const completed: Array<{ taskId: string; status: string }> = []
-    const teamConfig: TeamConfig = {
+    const teamConfig = tc({
       enabled: true,
       roles: {
         senior: {
@@ -354,7 +361,7 @@ describe("BuildRunner", () => {
         escalationEnabled: true,
         parentRole: "senior",
       },
-    }
+    })
     const runner = new BuildRunner({
       teamConfig,
       onTaskStart: () => {},
@@ -385,7 +392,7 @@ describe("BuildRunner", () => {
   })
 
   it("stops re-dispatching once MAX_ESCALATION_DEPTH is hit", async () => {
-    const teamConfig: TeamConfig = {
+    const teamConfig = tc({
       enabled: true,
       roles: {
         senior: {
@@ -415,7 +422,7 @@ describe("BuildRunner", () => {
         escalationEnabled: true,
         parentRole: "senior",
       },
-    }
+    })
     const runner = new BuildRunner({
       teamConfig,
       onTaskStart: () => {},

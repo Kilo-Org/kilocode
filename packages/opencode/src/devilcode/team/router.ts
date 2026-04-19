@@ -1,6 +1,6 @@
 import z from "zod"
 import { NamedError } from "@opencode-ai/util/error"
-import type { TeamConfig, EffortLevel } from "./config"
+import type { CanonicalTeamConfig as TeamConfig, EffortLevel } from "./config"
 
 export const TeamDelegationError = NamedError.create(
   "TeamDelegationError",
@@ -45,7 +45,7 @@ export function resolveTaskModel(input: {
     if (!parentRoleDef) {
       throw new TeamDelegationError({ parentRole, targetRole: subagentType })
     }
-    if (!parentRoleDef.canDelegate.includes(subagentType)) {
+    if (!(parentRoleDef.canDelegate as string[]).includes(subagentType)) {
       throw new TeamDelegationError({ parentRole, targetRole: subagentType })
     }
   }

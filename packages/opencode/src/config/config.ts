@@ -24,7 +24,7 @@ import {
 } from "jsonc-parser"
 // devilcode_change end
 // devilcode_change start
-import { TeamConfig } from "@/devilcode/team/config"
+import { CanonicalTeamConfig } from "@/devilcode/team/config"
 // devilcode_change end
 import { Instance } from "../project/instance"
 import { LSPServer } from "../lsp/server"
@@ -1496,7 +1496,7 @@ export namespace Config {
         })
         .optional(),
       // devilcode_change start
-      team: TeamConfig.optional().describe("Multi-model team configuration for hierarchical agent dispatch"),
+      team: CanonicalTeamConfig.optional().describe("Multi-model team configuration for hierarchical agent dispatch"),
       // devilcode_change end
     })
     .strict()

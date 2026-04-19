@@ -10,8 +10,9 @@ import { lazy } from "../../util/lazy"
 // devilcode_change start
 import { fetchDefaultModel } from "@devilcode/kilo-gateway"
 import { Auth } from "../../auth"
-import { TeamConfig } from "../../devilcode/team/config"
-import { TEAM_PRESETS, TeamPreset } from "../../devilcode/team/presets"
+import { CanonicalTeamConfig } from "../../devilcode/team/config"
+import { loadQuickstartTemplates } from "../../devilcode/team/quickstarts"
+// NOTE: server OpenAPI spec drifts from SDK types until Phase 9. SDK is NOT regenerated this phase.
 // devilcode_change end
 
 const log = Log.create({ service: "server" })
@@ -89,7 +90,7 @@ export const ConfigRoutes = lazy(() =>
       validator("json", z.unknown()),
       async (c) => {
         const payload = c.req.valid("json")
-        const result = TeamConfig.safeParse(payload)
+        const result = CanonicalTeamConfig.safeParse(payload)
         return c.json({
           valid: result.success,
           errors: result.success ? [] : result.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
@@ -104,17 +105,17 @@ export const ConfigRoutes = lazy(() =>
         operationId: "config.team.presets",
         responses: {
           200: {
-            description: "Team presets",
+            description: "Team quickstart templates",
             content: {
               "application/json": {
-                schema: resolver(TeamPreset.array()),
+                schema: resolver(z.array(z.unknown())),
               },
             },
           },
         },
       }),
       async (c) => {
-        return c.json(TEAM_PRESETS)
+        return c.json(Object.values(loadQuickstartTemplates()))
       },
     )
     // kilocode_change start

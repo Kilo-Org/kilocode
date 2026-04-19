@@ -7,7 +7,7 @@ import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { onMount } from "solid-js"
-import { TeamConfig } from "../team/config"
+import { CanonicalTeamConfig } from "../team/config"
 import { useWorkflow } from "./context"
 import { Review } from "../review/review"
 import { Workflow } from "../workflow"
@@ -45,7 +45,7 @@ export function WorkflowCommandInput() {
   }
 
   function team() {
-    const result = TeamConfig.safeParse((sync.data.config as { team?: unknown }).team)
+    const result = CanonicalTeamConfig.safeParse((sync.data.config as { team?: unknown }).team)
     if (!result.success || !result.data.enabled) return undefined
     return result.data
   }
@@ -88,7 +88,7 @@ export function WorkflowCommandInput() {
   async function run(stage: WorkflowStageType, opts?: { phase?: string }) {
     const state = wf.state
     if (!state) {
-      throw new Error("No workflow initialized. Run /team init first.")
+      throw new Error("No workflow initialized. Run /team init <quickstart> first.")
     }
 
     const info = stage === "plan" || stage === "challenge" || stage === "review"
@@ -153,7 +153,7 @@ export function WorkflowCommandInput() {
 
     if (cmd === "next") {
       if (!wf.state) {
-        toast.show({ message: "No workflow initialized", variant: "error", duration: 2000 })
+        toast.show({ message: "No workflow initialized. Run /team init <quickstart> first.", variant: "error", duration: 2000 })
         return
       }
       await run(Workflow.resolveAction(wf.state.currentStage, "next")!)

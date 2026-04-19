@@ -21,7 +21,7 @@ export function WorkflowStatusBar() {
       <Show
         when={wf.state}
         fallback={
-          <text fg={theme.textMuted}>No workflow initialized. Run /team init to create one.</text>
+          <text fg={theme.textMuted}>{"No workflow initialized. Run /team init <quickstart> to start."}</text>
         }
       >
         {(state) => (

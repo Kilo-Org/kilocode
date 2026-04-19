@@ -43,7 +43,7 @@ mock.module("@/devilcode/workflow/prompts/build.txt", () => ({
 
 import { ConcurrencyManager } from "@/devilcode/team/concurrency"
 import { resolveTaskModel, TeamDelegationError } from "@/devilcode/team/router"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
 const { BuildRunner } = await import("@/devilcode/workflow/build-runner")
 
 function makeTask(overrides: Partial<PlanTask>): PlanTask {
@@ -60,7 +60,9 @@ function makeTask(overrides: Partial<PlanTask>): PlanTask {
   }
 }
 
-const teamConfig: TeamConfig = {
+// Legacy-keyed fixture — safe to use as unknown as TeamConfig because resolveTaskModel
+// only accesses roles/routing by property lookup without re-validating the Zod schema.
+const teamConfig = {
   enabled: true,
   roles: {
     orchestrator: {
@@ -99,7 +101,7 @@ const teamConfig: TeamConfig = {
     defaultRole: "worker",
     escalationEnabled: true,
   },
-}
+} as unknown as TeamConfig
 
 describe("Team + Workflow integration", () => {
   beforeEach(() => {

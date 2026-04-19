@@ -5,9 +5,10 @@ import {
   resolveEscalationTarget,
   createEscalatedResult,
 } from "@/devilcode/workflow/escalation"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
 
-const teamConfig: TeamConfig = {
+// Legacy-keyed fixture — safe cast; escalation functions only access roles/routing by property lookup.
+const teamConfig = {
   enabled: true,
   roles: {
     orchestrator: {
@@ -46,7 +47,7 @@ const teamConfig: TeamConfig = {
     defaultRole: "worker",
     escalationEnabled: true,
   },
-}
+} as unknown as TeamConfig
 
 describe("detectEscalation", () => {
   test("returns no escalation for normal output", () => {

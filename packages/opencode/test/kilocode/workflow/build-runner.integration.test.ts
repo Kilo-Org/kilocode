@@ -5,7 +5,7 @@ import { BuildRunner } from "@/devilcode/workflow/build-runner"
 import { WorktreeFamily } from "@/devilcode/worktree-family"
 import { Instance } from "@/project/instance"
 import type { PlanTask, TaskResult } from "@/devilcode/workflow/types"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
 import { tmpdir } from "../../fixture/fixture"
 
 describe("integration: BuildRunner with real worktrees", () => {
@@ -183,7 +183,7 @@ describe("integration: BuildRunner with real worktrees", () => {
   }, 30000)
 
   it("respects team role configuration", async () => {
-    const teamConfig: TeamConfig = {
+    const teamConfig = {
       enabled: true,
       roles: {
         worker: {
@@ -212,7 +212,7 @@ describe("integration: BuildRunner with real worktrees", () => {
         defaultRole: "worker",
         escalationEnabled: true,
       },
-    }
+    } as unknown as TeamConfig
 
     const runner = new BuildRunner({
       teamConfig,
