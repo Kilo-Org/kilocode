@@ -1,14 +1,61 @@
 # Project State
 
 ## Current Position
-- **Phase**: 2 of 10 (complete)
-- **Status**: Phase 2 complete — review passed (3 cycles)
-- **Last Activity**: Phase 2 review passed (2026-04-19)
+- **Phase**: 3 of 10 (planned, refine_cycle=2 — auto-refine limit)
+- **Status**: Phase 3 planned — 3 plans across 3 waves; 2 refine cycles applied
+- **Last Activity**: Phase 3 planning + auto-refine cycle 2 (2026-04-19)
 
 ## Progress
 ```
 [###.................] 16% — 4/25 plans complete
 ```
+
+## Phase 3 Plan Structure (planned 2026-04-19, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 03-01 devil-keybind Package Foundation | 1 | Phase 2 | Backend Architect + Senior Developer | QA Verification Specialist |
+| 03-02 devil-ui RenderTarget + Adapters + Hooks | 2 | 03-01 | Frontend Developer + Senior Developer | Backend Architect |
+| 03-03 Primitives + Storybook + Integration | 3 | 03-02 | Frontend Developer + UI Designer | QA Verification Specialist |
+
+## Phase 3 Architecture Decision
+
+- Selected **Clean** (vs Minimal / Pragmatic) after 3 parallel proposal agents — user prioritized Phase 9 zero-rework.
+- New package `packages/devil-keybind/` for pure logic (Zod schemas + registry + matcher + leader chain).
+- `packages/devil-ui/` gains `primitives/`, `adapters/{terminal,dom}.ts`, `context/render-target.tsx`, `hooks/use-command-registry.ts` + `hooks/use-prompt-history.ts`.
+- `<RenderSurface>` helper (renamed from `<Surface>` to avoid upstream collision) branches terminal vs DOM.
+- Estimated ~1,660 LOC across Phase 3.
+
+## Phase 3 Auto-Refine History
+
+- **2026-04-19 cycle 0** → spec pipeline produced `.planning/specs/03-tui-scaffolding-spec.md` (verdict PASS); 3 plan files generated.
+- **2026-04-19 cycle 1** → Pre-mortem (QA Verification Specialist) + assumption hunt (Sprint Prioritizer) returned REWORK. 8 CRITICALs fixed:
+  - Zod 4.1.8 `z.function().returns` deprecated → `CommandData` Zod + TS-only `Command` interface w/ function fields.
+  - Root `workspaces.packages: ["packages/*"]` glob auto-includes; D32 root edit DROPPED.
+  - tsconfig extends `@tsconfig/bun/tsconfig.json` (catalog-pinned).
+  - opencode missing `@devilcode/kilo-ui` dep → ADD `workspace:*`.
+  - `@opentui/*` catalog entries added; opencode flipped to `catalog:`.
+  - Workflow-tui integration fixed: wrap INSIDE `WorkflowProvider`; `WorkflowViewInner` takes no props; existing inline `command.register` untouched.
+  - devil-ui has no test runner → ship per-pkg bunfig + Bun native tests via `createRoot` harness (no `@solidjs/testing-library`).
+  - Context/hooks barrels re-export upstream `@opencode-ai/ui` via `export *` → add new symbols as EXPLICIT named exports beneath.
+  - `CommandRegistry.subscribe(listener)` added for SolidJS reactivity (no monkey-patch).
+  - OpenTUI `<textarea>` missing → paste-modal terminal branch reduced to stub + Phase-5-TODO.
+- **2026-04-19 cycle 2** → Reality Checker returned REWORK w/ 5 NEW CRITICALs:
+  - `RenderTargetAdapter.focus(nodeId)` unimplementable (OpenTUI has no imperative focus API) → declarative `focusedNodeId: Accessor<string|null>` + `setFocusedNodeId` signal; primitives use `focused={...}` JSX prop.
+  - Multiple OpenTUI versions (0.1.75 + 0.1.87) already transitively installed → add root `overrides` + `bun pm why` check before proceeding.
+  - `@devilcode/kilo-ui: "workspace:*"` inside catalog is malformed → catalog holds registry pkgs only.
+  - `Surface` name too generic; upstream `@opencode-ai/ui/context` could shadow → renamed `RenderSurface` + grep guard.
+  - DOM consumer transitive pull of `@opentui/*` risk → `createTerminalAdapter` is now async factory w/ dynamic-import; workflow-tui uses top-level await.
+  - CAUTION-1: `onMount` doesn't fire under `createRoot` → hooks subscribe synchronously in body + `onCleanup`.
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2. No further auto-refine. Outstanding risks surfaced in cycle 2 verdict are addressed in-plan; any residual non-blockers carried to execution.
+
+## Phase 3 Open Risks (documented, not blocking execution)
+
+- Top-level `await` in opencode `workflow-tui/index.tsx` — verify Bun startup + tsgo accept it; fallback to `createResource` wrapper documented in Plan 03-03 Task 3.
+- Transitive `@opentui/core@0.1.75` deduping depends on identifying the upstream pinner via `bun pm why`; Plan 03-02 Step 1c makes this a hard gate.
+- Storybook terminal spike is pre-authorized INFEASIBLE; if spike unexpectedly succeeds, primitive terminal stories can be added opportunistically.
+- Playwright cross-platform baselines: Linux-only generation; Windows dev iterations use `--update-snapshots=none`.
+- Parser corpus test asserts byte-identical parse against existing `util/keybind.ts`; any format drift surfaces at Wave 1.
 
 ## Phase 1 Results
 - Plan 01-01 (Wave 1): Capability Model & Reconciliation — Complete.
@@ -56,8 +103,16 @@
 - 3 suggestions noted (not required): OpenAPI typed schema, doc table entry, test name
 - Final: 158 team tests pass, 76 expect() calls, bun turbo typecheck clean
 
+## Phase 3 Wave 1 Results
+- Plan 03-01 (Wave 1): devil-keybind Package Foundation — Complete.
+  - packages/devil-keybind registered; schemas + registry + matcher + leader implemented
+  - 46 unit tests passing (registry / matcher / leader / parser-corpus); 79 expect() calls
+  - Zero opencode / devil-ui / SolidJS / OpenTUI dependencies
+  - bun turbo typecheck clean (13/13 tasks)
+  - Ready for Plan 03-02 consumption
+
 ## Next Action
-Run `/legion:plan 3` to plan Phase 3: TUI Scaffolding — Hybrid Interaction Primitives.
+Run `/legion:build` to execute Phase 3 Wave 2: Plan 03-02 — devil-ui RenderTarget + Adapters + Hooks.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
