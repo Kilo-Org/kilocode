@@ -418,7 +418,7 @@ describe("fromLegacyTeamConfig — synthetic fixtures (new)", () => {
     if (!result.ok) {
       const parseFailures = result.errors.filter((e) => e.kind === "parse-failure")
       expect(parseFailures.length).toBeGreaterThan(0)
-      expect(parseFailures[0]!.roleId).toBe("<root>")
+      expect(parseFailures[0]?.roleId).toBe("<root>")
     }
   })
 
@@ -497,6 +497,8 @@ describe("fromLegacyTeamConfig — synthetic fixtures (new)", () => {
       const positionIds = new Set(Object.keys(result.value.roles))
       expect(positionIds.has("architect")).toBe(true)
       expect(positionIds.has("senior-dev")).toBe(true)
+      expect(result.value.roles["architect"]?.positionId).toBe("architect")
+      expect(result.value.roles["senior-dev"]?.positionId).toBe("senior-dev")
     }
   })
 
@@ -591,8 +593,15 @@ describe("fromLegacyTeamConfig — synthetic fixtures (new)", () => {
       // Merged capabilities should be union of both roles' mappings
       const researcherRole = result.value.roles["researcher"]!
       expect(researcherRole.capabilities).toContain("research") // "analysis" + "search" both map to "research"
+      // If merge ran: tier = Math.min(2, 2) = 2, but library default is 3.
+      // migration.ts Path B uses libraryEntry.tier for the merged role (line ~237).
+      // The POSITION_LIBRARY["researcher"].tier is 3, so after merge tier = 3.
+      // The collision warning being present proves the merge branch was entered.
+      expect(collisionWarnings[0]?.value).toBe("researcher") // merge target was "researcher"
       // Tier comes from POSITION_LIBRARY["researcher"].tier = 3 (library always wins)
       expect(researcherRole.tier).toBe(3)
+      // Non-colliding coordinator role must survive the merge
+      expect("coordinator" in result.value.roles).toBe(true)
     }
   })
 })
@@ -638,7 +647,7 @@ describe("migrateLegacyTeamConfigFile", () => {
     if (!result.ok) {
       const parseFailures = result.errors.filter((e) => e.kind === "parse-failure")
       expect(parseFailures.length).toBeGreaterThan(0)
-      expect(parseFailures[0]!.roleId).toBe("<root>")
+      expect(parseFailures[0]?.roleId).toBe("<root>")
     }
   })
 
