@@ -4,3 +4,5 @@ export * from "./create-auto-scroll"
 export { CommandRegistryProvider, useCommandRegistry } from "./use-command-registry"
 export { usePromptHistory, createMemoryStore } from "./use-prompt-history"
 export type { PromptHistoryStore } from "./use-prompt-history"
+// Phase 4: team validation hook
+export { useTeamValidation, type TeamValidationResult } from "./use-team-validation"
