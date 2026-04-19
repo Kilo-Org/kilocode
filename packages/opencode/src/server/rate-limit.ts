@@ -50,7 +50,15 @@ type BunServerLike = {
 }
 
 const DEFAULT_KEY = (c: Context) => {
-  const server = getBunServer<BunServerLike>(c)
+  // getBunServer throws when request dispatched without a bound Bun server
+  // (e.g. Server.App().fetch(req) from the TUI worker). Degrade to local key.
+  const server = (() => {
+    try {
+      return getBunServer<BunServerLike>(c)
+    } catch {
+      return undefined
+    }
+  })()
   const info = server?.requestIP?.(c.req.raw)
   if (!info?.address) return localKey(c)
   if (loopback(info.address)) return localKey(c, info.address, info.port)

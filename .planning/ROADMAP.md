@@ -152,7 +152,7 @@
 |-------|-------|-----------|--------|
 | 1. Foundation | 2 | 2 | Complete |
 | 2. Preset Migration | 2 | 2 | Complete ✓ Reviewed |
-| 3. TUI Scaffolding | 3 | 0 | Not started |
+| 3. TUI Scaffolding | 3 | 1 | In Progress (wave 1 complete) |
 | 4. Team Builder Views | 3 | 0 | Not started |
 | 5. Runtime Cockpit | 3 | 0 | Not started |
 | 6. Export/Import | 2 | 0 | Not started |
@@ -160,4 +160,4 @@
 | 8. Registry | 3 | 0 | Not started |
 | 9. VS Code + Telemetry | 3 | 0 | Not started |
 | 10. Live Editing + Polish | 2 | 0 | Not started |
-| **Total** | **25** | **4** | **In Progress** |
+| **Total** | **25** | **5** | **In Progress** |

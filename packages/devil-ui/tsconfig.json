@@ -11,7 +11,8 @@
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["@types/bun"]
   },
   "include": ["src/**/*", ".storybook/**/*"]
 }

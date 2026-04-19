@@ -86,11 +86,28 @@
     "./icons/file-type": "./src/components/file-icons/types.ts",
     "./icons/app": "./src/components/app-icons/types.ts",
     "./fonts/*": "./src/assets/fonts/*",
-    "./audio/*": "./src/assets/audio/*"
+    "./audio/*": "./src/assets/audio/*",
+    "./context/render-target": "./src/context/render-target.tsx",
+    "./adapters": "./src/adapters/index.ts",
+    "./adapters/dom": "./src/adapters/dom.ts",
+    "./adapters/terminal": "./src/adapters/terminal.ts",
+    "./hooks/use-command-registry": "./src/hooks/use-command-registry.tsx",
+    "./hooks/use-prompt-history": "./src/hooks/use-prompt-history.ts",
+    "./primitives": "./src/primitives/index.ts"
   },
   "peerDependencies": {
     "@opencode-ai/ui": "workspace:*",
-    "solid-js": "catalog:"
+    "solid-js": "catalog:",
+    "@opentui/solid": "0.1.87",
+    "@opentui/core": "0.1.87"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/solid": {
+      "optional": true
+    },
+    "@opentui/core": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
@@ -106,13 +123,17 @@
     "vite-plugin-solid": "2.11.10"
   },
   "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test:visual": "playwright test",
     "test:visual:update": "playwright test --update-snapshots"
   },
   "dependencies": {
+    "@devilcode/keybind": "workspace:*",
     "@kobalte/core": "0.13.11",
+    "fuzzysort": "catalog:",
     "@opencode-ai/util": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/lifecycle": "0.1.2",

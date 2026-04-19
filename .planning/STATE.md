@@ -111,8 +111,18 @@
   - bun turbo typecheck clean (13/13 tasks)
   - Ready for Plan 03-02 consumption
 
+## Phase 3 Wave 2 Results
+- Plan 03-02 (Wave 2): devil-ui RenderTarget + Adapters + Hooks — Complete.
+  - RenderTarget context + provider + RenderSurface helper shipped
+  - Terminal adapter (OpenTUI peer-dep, async factory) + DOM adapter (no OpenTUI) shipped
+  - use-command-registry + use-prompt-history hooks + tests passing
+  - @opentui/solid single version (0.1.87) verified via bun pm why
+  - opencode gains @devilcode/keybind workspace dep
+  - typecheck / knip / check-devilcode-change all green
+  - Plan 03-03 primitives can be assembled on top
+
 ## Next Action
-Run `/legion:build` to execute Phase 3 Wave 2: Plan 03-02 — devil-ui RenderTarget + Adapters + Hooks.
+Run `/legion:build` to execute Phase 3 Wave 3: Plan 03-03 — Primitives + Storybook + Integration.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
