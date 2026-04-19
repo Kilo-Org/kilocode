@@ -2,8 +2,8 @@
 
 ## Phases
 
-- [x] Phase 1: Foundation — Canonical Library & Capability Model
-- [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup
+- [x] Phase 1: Foundation — Canonical Library & Capability Model ✓ Review passed
+- [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup ✓ Review passed
 - [ ] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives
 - [ ] Phase 4: Team Builder Views
 - [ ] Phase 5: Runtime Cockpit Redesign
@@ -151,7 +151,7 @@
 | Phase | Plans | Completed | Status |
 |-------|-------|-----------|--------|
 | 1. Foundation | 2 | 2 | Complete |
-| 2. Preset Migration | 2 | 2 | Complete |
+| 2. Preset Migration | 2 | 2 | Complete ✓ Reviewed |
 | 3. TUI Scaffolding | 3 | 0 | Not started |
 | 4. Team Builder Views | 3 | 0 | Not started |
 | 5. Runtime Cockpit | 3 | 0 | Not started |

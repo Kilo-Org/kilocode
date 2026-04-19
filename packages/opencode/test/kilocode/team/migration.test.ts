@@ -657,7 +657,7 @@ describe("migrateLegacyTeamConfigFile", () => {
     if (!result.ok) {
       const parseFailures = result.errors.filter((e) => e.kind === "parse-failure")
       expect(parseFailures.length).toBeGreaterThan(0)
-      expect(parseFailures[0]!.roleId).toBe("<root>")
+      expect(parseFailures[0]?.roleId).toBe("<root>")
     }
   })
 })
