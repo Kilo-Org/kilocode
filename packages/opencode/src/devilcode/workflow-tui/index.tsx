@@ -1,5 +1,5 @@
 // packages/opencode/src/devilcode/workflow-tui/index.tsx
-import { createResource, Show } from "solid-js"
+import { createResource, createSignal, Show } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { useRoute } from "@tui/context/route"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -7,20 +7,31 @@ import { useSDK } from "@tui/context/sdk"
 import { Toast } from "@tui/ui/toast"
 import { createTerminalAdapter } from "@devilcode/kilo-ui/adapters/terminal"
 import { RenderTargetProvider } from "@devilcode/kilo-ui/context/render-target"
-import { CommandRegistryProvider } from "@devilcode/kilo-ui/hooks/use-command-registry"
+import { CommandRegistryProvider, useCommandRegistry } from "@devilcode/kilo-ui/hooks/use-command-registry"
 import { WorkflowProvider } from "./context"
 import { WorkflowStatusBar } from "./status-bar"
 import { TaskPanel } from "./task-panel"
 import { DetailPanel } from "./detail-panel"
 import { WorkflowCommandInput } from "./command-input"
+import { TeamBuilderProvider } from "./views/team-builder-context"
+import { TeamBuilderView } from "./views/team-builder-view"
+import { registerTeamBuilderCommands } from "./views/team-builder-commands"
+import { useTeamBuilder } from "./views/team-builder-context"
 
 function WorkflowViewInner() {
   const route = useRoute()
   const command = useCommandDialog()
+  const registry = useCommandRegistry()
+  const builder = useTeamBuilder()
+  const [mode, setMode] = createSignal<"workflow" | "team-builder">("workflow")
 
   useKeyboard((evt) => {
     if (evt.name === "escape") {
-      route.back()
+      if (mode() === "team-builder") {
+        setMode("workflow")
+      } else {
+        route.back()
+      }
       evt.preventDefault()
       evt.stopPropagation()
     }
@@ -37,23 +48,37 @@ function WorkflowViewInner() {
     },
   ])
 
+  // Register team-builder commands; cleanup on component disposal
+  const cleanupTeamCmds = registerTeamBuilderCommands(registry.register.bind(registry), builder, {
+    openBuilder: () => setMode("team-builder"),
+  })
+  // onCleanup is not available here (WorkflowViewInner is always mounted), but
+  // the registry itself is torn down when CommandRegistryProvider unmounts.
+  void cleanupTeamCmds
+
   return (
     <box flexDirection="column" flexGrow={1}>
-      <WorkflowStatusBar />
-      <box flexDirection="row" flexGrow={1} minHeight={0}>
-        <TaskPanel />
-        <box
-          border={["left"]}
-          borderColor={"#333333"}
-          flexGrow={1}
-          flexDirection="column"
-          minHeight={0}
-        >
-          <DetailPanel />
-        </box>
-      </box>
-      <WorkflowCommandInput />
-      <Toast />
+      <Show when={mode() === "team-builder"} fallback={
+        <>
+          <WorkflowStatusBar />
+          <box flexDirection="row" flexGrow={1} minHeight={0}>
+            <TaskPanel />
+            <box
+              border={["left"]}
+              borderColor={"#333333"}
+              flexGrow={1}
+              flexDirection="column"
+              minHeight={0}
+            >
+              <DetailPanel />
+            </box>
+          </box>
+          <WorkflowCommandInput />
+          <Toast />
+        </>
+      }>
+        <TeamBuilderView />
+      </Show>
     </box>
   )
 }
@@ -70,7 +95,9 @@ export function WorkflowView() {
         {(adapter) => (
           <RenderTargetProvider adapter={adapter()}>
             <CommandRegistryProvider>
-              <WorkflowViewInner />
+              <TeamBuilderProvider>
+                <WorkflowViewInner />
+              </TeamBuilderProvider>
             </CommandRegistryProvider>
           </RenderTargetProvider>
         )}
