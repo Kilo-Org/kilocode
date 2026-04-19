@@ -1,0 +1,83 @@
+{
+  "id": "solo-enhanced",
+  "name": "Solo Enhanced",
+  "description": "Single senior developer with research, review, coordination, and release support.",
+  "icon": "sparkles",
+  "team": {
+    "enabled": true,
+    "roles": {
+      "senior-dev": {
+        "displayName": "Lead Engineer",
+        "positionId": "senior-dev",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["researcher", "reviewer", "release-engineer", "coordinator"],
+        "maxConcurrent": 3,
+        "capabilities": ["implementation", "design"],
+        "supplementaryCapabilities": []
+      },
+      "researcher": {
+        "displayName": "Research Scout",
+        "positionId": "researcher",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "low",
+        "tier": 3,
+        "canDelegate": [],
+        "maxConcurrent": 4,
+        "capabilities": ["research"],
+        "supplementaryCapabilities": ["summaries"]
+      },
+      "coordinator": {
+        "displayName": "Coordinator",
+        "positionId": "coordinator",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "medium",
+        "tier": 1,
+        "canDelegate": ["senior-dev", "researcher", "reviewer", "release-engineer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "retrospective"],
+        "supplementaryCapabilities": []
+      },
+      "reviewer": {
+        "displayName": "Reviewer",
+        "positionId": "reviewer",
+        "provider": "kilo",
+        "model": "claude-4.1-sonnet",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["review"],
+        "supplementaryCapabilities": []
+      },
+      "release-engineer": {
+        "displayName": "Release Engineer",
+        "positionId": "release-engineer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["release"],
+        "supplementaryCapabilities": []
+      }
+    },
+    "routing": {
+      "strategy": "hierarchical",
+      "defaultRole": "senior-dev",
+      "escalationEnabled": true
+    },
+    "reactions": []
+  },
+  "_meta": {
+    "migratedFrom": "TEAM_PRESETS[0]",
+    "addedRoles": ["coordinator", "reviewer", "release-engineer"],
+    "tierOverrides": ["lead→senior-dev preserves tier 1 (library default)"],
+    "notes": "Legacy 'lead' maps to senior-dev (tier 1). Legacy 'research' maps to researcher (tier 3 per library). Added coordinator for plan/challenge/retro stages, reviewer for review stage, release-engineer for ship stage. Legacy 'summaries' capability has no canonical synonym and is preserved in supplementaryCapabilities on researcher."
+  }
+}

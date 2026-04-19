@@ -1,0 +1,83 @@
+{
+  "id": "code-review-pair",
+  "name": "Code Review Pair",
+  "description": "Coder + reviewer for feature delivery with quality checks and full workflow coverage.",
+  "icon": "shield-check",
+  "team": {
+    "enabled": true,
+    "roles": {
+      "senior-dev": {
+        "displayName": "Coder",
+        "positionId": "senior-dev",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["reviewer", "coordinator", "architect", "release-engineer"],
+        "maxConcurrent": 3,
+        "capabilities": ["implementation", "design"],
+        "supplementaryCapabilities": ["testing"]
+      },
+      "reviewer": {
+        "displayName": "Reviewer",
+        "positionId": "reviewer",
+        "provider": "kilo",
+        "model": "claude-4.1-sonnet",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["review"],
+        "supplementaryCapabilities": ["risk-analysis"]
+      },
+      "coordinator": {
+        "displayName": "Coordinator",
+        "positionId": "coordinator",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "medium",
+        "tier": 1,
+        "canDelegate": ["senior-dev", "reviewer", "architect", "release-engineer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "retrospective"],
+        "supplementaryCapabilities": []
+      },
+      "architect": {
+        "displayName": "Architect",
+        "positionId": "architect",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["senior-dev", "reviewer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "design"],
+        "supplementaryCapabilities": []
+      },
+      "release-engineer": {
+        "displayName": "Release Engineer",
+        "positionId": "release-engineer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["release"],
+        "supplementaryCapabilities": []
+      }
+    },
+    "routing": {
+      "strategy": "hierarchical",
+      "defaultRole": "senior-dev",
+      "escalationEnabled": true
+    },
+    "reactions": []
+  },
+  "_meta": {
+    "migratedFrom": "TEAM_PRESETS[1]",
+    "addedRoles": ["coordinator", "architect", "release-engineer"],
+    "tierOverrides": ["legacy coder (tier 1) → senior-dev (tier 1): tier preserved intentionally. Migration helper maps 'coder' to 'developer' (tier 2); this quickstart overrides to senior-dev to match the original tier-1 lead intent."],
+    "notes": "Legacy 'coder' was tier 1 with implementation+tests. Mapped to senior-dev (tier 1) to preserve primary-agent semantics — using developer (tier 2) would demote the lead. Added coordinator for plan/challenge/retro stages, architect for contract stage, release-engineer for ship stage. 'risk-analysis' and 'tests' preserved in supplementaryCapabilities."
+  }
+}

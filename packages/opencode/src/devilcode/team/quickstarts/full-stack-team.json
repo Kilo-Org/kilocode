@@ -1,0 +1,95 @@
+{
+  "id": "full-stack-team",
+  "name": "Full Stack Team",
+  "description": "Architect delegating to frontend, backend, and reviewer specialists with full workflow coverage.",
+  "icon": "layers",
+  "team": {
+    "enabled": true,
+    "roles": {
+      "architect": {
+        "displayName": "Architect",
+        "positionId": "architect",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["frontend-specialist", "backend-specialist", "reviewer", "coordinator", "release-engineer"],
+        "maxConcurrent": 4,
+        "capabilities": ["planning", "design"],
+        "supplementaryCapabilities": []
+      },
+      "frontend-specialist": {
+        "displayName": "Frontend Developer",
+        "positionId": "frontend-specialist",
+        "provider": "kilo",
+        "model": "claude-4.1-sonnet",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": ["reviewer"],
+        "maxConcurrent": 3,
+        "capabilities": ["implementation"],
+        "supplementaryCapabilities": ["ui", "accessibility"]
+      },
+      "backend-specialist": {
+        "displayName": "Backend Developer",
+        "positionId": "backend-specialist",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": ["reviewer"],
+        "maxConcurrent": 3,
+        "capabilities": ["implementation"],
+        "supplementaryCapabilities": ["api", "db"]
+      },
+      "reviewer": {
+        "displayName": "Reviewer",
+        "positionId": "reviewer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "low",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["review"],
+        "supplementaryCapabilities": []
+      },
+      "coordinator": {
+        "displayName": "Coordinator",
+        "positionId": "coordinator",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "medium",
+        "tier": 1,
+        "canDelegate": ["architect", "frontend-specialist", "backend-specialist", "reviewer", "release-engineer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "retrospective"],
+        "supplementaryCapabilities": []
+      },
+      "release-engineer": {
+        "displayName": "Release Engineer",
+        "positionId": "release-engineer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["release"],
+        "supplementaryCapabilities": []
+      }
+    },
+    "routing": {
+      "strategy": "hierarchical",
+      "defaultRole": "architect",
+      "escalationEnabled": true
+    },
+    "reactions": []
+  },
+  "_meta": {
+    "migratedFrom": "TEAM_PRESETS[2]",
+    "addedRoles": ["coordinator", "release-engineer"],
+    "tierOverrides": [],
+    "notes": "Legacy 'architect' (tier 1) maps directly. 'frontend-dev' maps to frontend-specialist (tier 2), 'backend-dev' to backend-specialist (tier 2). 'ui', 'accessibility', 'api', 'db' preserved in supplementaryCapabilities on their respective roles (canonical implementation is injected). Added coordinator for plan/challenge/retro stages; added release-engineer for ship stage. Contract stage covered by architect's design capability."
+  }
+}
