@@ -153,11 +153,11 @@
 | 1. Foundation | 2 | 2 | Complete |
 | 2. Preset Migration | 2 | 2 | Complete ✓ Reviewed |
 | 3. TUI Scaffolding | 3 | 3 | Complete ✓ Reviewed |
-| 4. Team Builder Views | 3 | 0 | Not started |
+| 4. Team Builder Views | 3 | 3 | Complete (pending review) |
 | 5. Runtime Cockpit | 3 | 0 | Not started |
 | 6. Export/Import | 2 | 0 | Not started |
 | 7. Configurable DAG | 2 | 0 | Not started |
 | 8. Registry | 3 | 0 | Not started |
 | 9. VS Code + Telemetry | 3 | 0 | Not started |
 | 10. Live Editing + Polish | 2 | 0 | Not started |
-| **Total** | **25** | **7** | **In Progress** |
+| **Total** | **25** | **10** | **In Progress** |

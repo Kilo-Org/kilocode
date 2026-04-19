@@ -1,14 +1,55 @@
 # Project State
 
 ## Current Position
-- **Phase**: 3 of 10 (complete)
-- **Status**: Phase 3 complete — review passed after 3 cycles (2026-04-19)
-- **Last Activity**: Phase 3 review passed (2026-04-19)
+- **Phase**: 4 of 10 (executed, pending review)
+- **Status**: Phase 4 complete — all 3 plans executed successfully (2026-04-19)
+- **Last Activity**: Phase 4 execution complete (2026-04-19)
 
 ## Progress
 ```
-[#####...............] 28% — 7/25 plans complete
+[########............] 40% — 10/25 plans complete (Phase 4 executed, 3/3 plans pass)
 ```
+
+## Phase 4 Plan Structure (planned 2026-04-19, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 04-01 Foundations: TeamRepository + useTeamValidation + StageCoverageIndicator | 1 | Phase 3 | Backend Architect + Senior Developer | QA Verification Specialist |
+| 04-02 Reusable Components: RosterTable + PositionPicker (devil-ui) | 2 | 04-01 | Frontend Developer + UI Designer | QA Verification Specialist |
+| 04-03 Composition: TeamBuilderProvider + view + commands + integration tests | 3 | 04-01, 04-02 | Frontend Developer + Senior Developer | QA Verification Specialist |
+
+## Phase 4 Architecture Decision
+
+- Selected **Clean** (vs Minimal / Pragmatic) after 3 parallel proposal agents — user prioritized Phase 9 zero-rework (matches Phase 3 decision).
+- Persistence seam via `TeamRepository` interface in `team/repository.ts` (Phase 6 ships additional implementations).
+- Reusable components in `devil-ui/components/` + `devil-ui/primitives/` + `devil-ui/hooks/` so Phase 9 webview imports unchanged.
+- `useTeamValidation()` hook delegates to existing `CanonicalTeamConfig` `superRefine` — single source of truth.
+- TeamBuilderProvider parallel to WorkflowProvider (NOT nested) — Phase 5 cockpit redesign isolation.
+- Spec written to `.planning/specs/04-team-builder-views-spec.md` (gather → research → write → critique → assess complete).
+- Estimated ~1,300 LOC source + ~700 LOC tests across Phase 4.
+
+## Phase 4 Auto-Refine History
+
+- **2026-04-19 cycle 0** → Spec pipeline produced `.planning/specs/04-team-builder-views-spec.md` (Medium-Complex rating). 3 plan files generated. Plan 04-01 (Wave 1), 04-02 (Wave 2), 04-03 (Wave 3).
+- **2026-04-19 cycle 1** → Pre-Mortem (read-only Explore) returned **REWORK**; Assumption Hunt returned **CAUTION**. 5 fixes applied:
+  - `WorkflowStage._type` → `z.infer<typeof WorkflowStage>` (Zod v4.1.8 dropped `._type` accessor) in Plan 04-01 Task 2.
+  - `createDOMAdapter` → `createDomAdapter` (lowercase 'm' per actual export name) in Plan 04-01 Task 3 + Plan 04-02 Tasks 1+2.
+  - Added Task 0 to Plan 04-02 — wires `"./components": "./src/components/index.ts"` exports map entry in `devil-ui/package.json` + creates barrel; existing exports map had no `./components` subpath.
+  - Removed `category: "Team"` from Plan 04-03 commands — `CommandData` Zod schema has no `category` field.
+  - Removed `keybind: null` — `Keybind.optional()` rejects null; field omitted instead.
+- **2026-04-19 cycle 2** → Cycle-2 Explore agent verified all 5 cycle-1 fixes held. 1 new CRITICAL surfaced + 9 CAUTIONs/INFOs verified safe:
+  - `import z from "zod"` → `import { z, type ZodIssue } from "zod"` (devil-ui tsconfig defaults to `esModuleInterop=false`; named import only).
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2 with surgical cycle-2 edit folded in. Verdict: **PASS** after fix. No further auto-refine.
+
+## Phase 4 Open Risks (documented, not blocking execution)
+
+- **devil-ui → opencode/team import edge** (OQ-1 from spec): `useTeamValidation` imports `CanonicalTeamConfig` from `@devilcode/cli/devilcode/team/config`. New cross-package edge. Phase 9 may extract shared types package if friction surfaces. devil-ui must declare `@devilcode/cli` workspace dep (verify in Plan 04-01 Task 2 execution).
+- **`bun install` sequencing in Plan 04-02 Task 0**: package.json edit requires `bun install` BEFORE Tasks 1+2 typecheck — Task 0 verification commands include the install gate.
+- **Knip "unused export" risk**: Wave 2 outputs (RosterTable/PositionPicker) consumed only by Wave 3 — knip runs after all plans complete; expected behavior, not blocking.
+- **Component test harness reuse**: Plan 04-02 Tasks 1+2 mount JSX trees via Phase 3 `withRoot` hook harness. Fallback to structural smoke tests if direct DOM assertions infeasible (Phase 3 precedent at `test/devilcode/workflow-tui/index.smoke.test.ts`).
+- **`startBuild` return type wrap**: `WorkflowViewState.startBuild` returns `Promise<TaskResult[]>`; team-builder wraps in `.then(() => undefined)` for `Promise<void>` API. Intentional narrowing.
+- **`<input>`/`<button>`/`<select>` JSX in opencode TUI tree**: Phase 3 paste-modal already uses native HTML elements in DOM branch successfully. Phase 4 follows same convention.
+
 
 ## Phase 3 Plan Structure (planned 2026-04-19, refine_cycle=2)
 
@@ -147,7 +188,7 @@
 - Final: 46 keybind tests + 15 hook tests + 7 smoke tests pass; bun turbo typecheck clean
 
 ## Next Action
-Run /legion:plan 4 to plan the next phase (Team Builder Views).
+Run `/legion:review` to verify Phase 4: Team Builder Views.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
