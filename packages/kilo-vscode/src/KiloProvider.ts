@@ -264,6 +264,30 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
+  /**
+   * Broadcast discovery completion to the webview so tabs can auto-refresh
+   * their state (SSH profiles, providers, GPUs) once background discovery finishes.
+   */
+  broadcastDiscoveryComplete(result: unknown): void {
+    this.postMessage({ type: "discoveryComplete", result } as never)
+    // Also push fresh state for each affected subsystem
+    if (this.sshService) {
+      this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
+    }
+    if (this.routingService) {
+      this.postMessage({
+        type: "routingProvidersLoaded",
+        providers: this.routingService.getProviders(),
+      } as never)
+    }
+    if (this.trainingService) {
+      this.postMessage({
+        type: "trainingGPUDetected",
+        gpus: this.trainingService.getCachedGPUs(),
+      } as never)
+    }
+  }
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly connectionService: KiloConnectionService,
@@ -1145,7 +1169,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Message tracing: log every V4 message when enabled
         // SSH
         case "requestSSHProfiles":
-          if (this.sshService) this.postMessage({ type: "sshProfilesLoaded", profiles: this.sshService.getProfiles() } as never)
+          if (this.sshService) {
+            let profiles = this.sshService.getProfiles()
+            // Auto-import from ~/.ssh/config if list is empty (first-run UX)
+            if (profiles.length === 0) {
+              try {
+                const imported = await this.sshService.importFromSSHConfig()
+                if (imported.length > 0) {
+                  console.log(`[KiloProvider] Lazy-imported ${imported.length} SSH profiles on tab request`)
+                  profiles = this.sshService.getProfiles()
+                }
+              } catch (err) {
+                console.warn("[KiloProvider] SSH lazy-import failed:", err)
+              }
+            }
+            this.postMessage({ type: "sshProfilesLoaded", profiles } as never)
+          }
           break
         case "requestSSHSessions":
           if (this.sshService) this.postMessage({ type: "sshSessionsUpdated", sessions: this.sshService.getSessionSnapshots() } as never)
@@ -1304,10 +1343,21 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Routing
         case "requestRoutingState":
           if (this.routingService) {
+            // Send current state immediately
             this.postMessage({ type: "routingProvidersLoaded", providers: this.routingService.getProviders() } as never)
             this.postMessage({ type: "routingConfigLoaded", config: this.routingService.getConfig() } as never)
             this.postMessage({ type: "routingHealthLoaded", health: this.routingService.getHealthSummary(), providers: this.routingService.getProviders() } as never)
             this.postMessage({ type: "routingTracesLoaded", traces: this.routingService.getTraces() } as never)
+            // Kick off a background health re-check for local providers so Ollama/LM Studio
+            // show "healthy" within seconds of tab open (non-blocking — results stream in)
+            const routing = this.routingService
+            void Promise.all([
+              routing.testProvider("ollama").catch(() => false),
+              routing.testProvider("lmstudio").catch(() => false),
+            ]).then(() => {
+              this.postMessage({ type: "routingProvidersLoaded", providers: routing.getProviders() } as never)
+              this.postMessage({ type: "routingHealthLoaded", health: routing.getHealthSummary(), providers: routing.getProviders() } as never)
+            })
           }
           break
         case "routingTestProvider":
@@ -1422,7 +1472,20 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         // Training
         case "requestTrainingState":
         case "trainingGetJobs":
-          if (this.trainingService) this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: this.trainingService.getCachedGPUs() } as never)
+          if (this.trainingService) {
+            const cached = this.trainingService.getCachedGPUs()
+            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: cached } as never)
+            // If no GPUs cached yet, kick off auto-detect in background so the tab auto-populates
+            if (cached.length === 0) {
+              const training = this.trainingService
+              void training.detectGPUs().then((gpus) => {
+                this.postMessage({ type: "trainingGPUDetected", gpus } as never)
+                this.postMessage({ type: "trainingState", datasets: training.getDatasets(), jobs: training.getJobs(), gpus } as never)
+              }).catch((err) => {
+                console.warn("[KiloProvider] Auto GPU detect failed:", err)
+              })
+            }
+          }
           break
         case "trainingRegisterDataset":
           if (this.trainingService) {
@@ -1546,11 +1609,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "trainingDetectGPU":
           if (this.trainingService) {
-            await this.trainingService.detectGPUs()
-            const detectedGpus = this.trainingService.getCachedGPUs()
-            // Tab expects trainingGPUDetected to clear the detecting state
-            this.postMessage({ type: "trainingGPUDetected", gpus: detectedGpus } as never)
-            this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: detectedGpus } as never)
+            try {
+              await this.trainingService.detectGPUs()
+              const detectedGpus = this.trainingService.getCachedGPUs()
+              // Always post trainingGPUDetected (even if empty array) so the tab clears its "Detecting..." state
+              this.postMessage({ type: "trainingGPUDetected", gpus: detectedGpus ?? [] } as never)
+              this.postMessage({ type: "trainingState", datasets: this.trainingService.getDatasets(), jobs: this.trainingService.getJobs(), gpus: detectedGpus ?? [] } as never)
+            } catch (err) {
+              const msg = err instanceof Error ? err.message : String(err)
+              console.error("[KiloProvider] trainingDetectGPU failed:", msg)
+              // Send both trainingError and trainingGPUDetected (empty) so the tab clears detecting state
+              this.postMessage({ type: "trainingError", error: `GPU detection failed: ${msg}` } as never)
+              this.postMessage({ type: "trainingGPUDetected", gpus: [] } as never)
+            }
+          } else {
+            // No training service — still clear the detecting state
+            this.postMessage({ type: "trainingGPUDetected", gpus: [] } as never)
           }
           break
 

@@ -140,6 +140,11 @@ export class RoutingService implements vscode.Disposable {
       retryBudget: 5,
     }
     this.initializeProviders()
+    // Run initial health check immediately so Ollama/LM Studio don't stay stuck on "offline"
+    // if they're actually running. Delayed by 1s to let extension activation finish.
+    setTimeout(() => {
+      void this.runHealthChecks().catch((err) => this.log.warn("Initial health check failed", err))
+    }, 1000)
     this.healthTimer = setInterval(() => {
       void this.runHealthChecks()
     }, 60_000)

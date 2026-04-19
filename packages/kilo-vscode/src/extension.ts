@@ -236,6 +236,7 @@ export function activate(context: vscode.ExtensionContext) {
         result.providers.ollama.available ? "Ollama" : "",
         result.providers.lmstudio.available ? "LM Studio" : "",
         result.gpu.detected ? result.gpu.name : "No GPU",
+        `SSH hosts: ${result.sshProfiles.length}`,
       )
 
       // Auto-test local providers that discovery found available
@@ -250,6 +251,21 @@ export function activate(context: vscode.ExtensionContext) {
       if (result.gpu.detected && trainingService) {
         await trainingService.detectGPUs().catch(() => {})
       }
+
+      // CRITICAL: Import SSH profiles from ~/.ssh/config into SSHService
+      // so the SSH tab shows real profiles instead of empty list
+      try {
+        const importedProfiles = await sshService.importFromSSHConfig()
+        if (importedProfiles.length > 0) {
+          console.log(`[Kilo New] Auto-imported ${importedProfiles.length} SSH profiles from ~/.ssh/config`)
+        }
+      } catch (err) {
+        console.warn("[Kilo New] SSH auto-import failed (non-fatal):", err)
+      }
+
+      // Notify all open webviews that discovery is complete so they can refresh
+      // Provider will broadcast to all registered webviews (sidebar + tab panels)
+      provider.broadcastDiscoveryComplete?.(result)
     }).catch((err) => {
       console.warn("[Kilo New] Background discovery failed (non-fatal):", err)
     })

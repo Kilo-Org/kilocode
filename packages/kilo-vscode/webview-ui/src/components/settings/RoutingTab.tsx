@@ -412,6 +412,14 @@ const RoutingTab: Component = () => {
   const testConnection = (pid: string) => {
     setTestingProvider(pid)
     vscode.postMessage({ type: "routingTestProvider", providerId: pid } as never)
+    // Safety timeout: if backend never responds (hung fetch, network issue),
+    // clear the "Testing..." state after 15 seconds so the button becomes clickable again.
+    setTimeout(() => {
+      if (testingProvider() === pid) {
+        console.warn("[RoutingTab] Test timeout for", pid, "— clearing testing state")
+        setTestingProvider(null)
+      }
+    }, 15000)
   }
 
   const configureKey = (pid: string) => {
