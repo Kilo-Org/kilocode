@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs"
+import * as os from "os"
 import { KiloLogger } from "../KiloLogger"
 
 // ─── Types ───────────────────────────────────────────────
@@ -217,6 +218,13 @@ export class MemoryService implements vscode.Disposable {
     this.loadStore()
     this.startPingLoop()
     this.log.info("MemoryService initialized")
+
+    // Auto-attach to Hermes/Shiba endpoint after a short delay so activation is not blocked.
+    setTimeout(() => {
+      void this.autoConnect().catch((err: unknown) => {
+        this.log.error("autoConnect failed", err)
+      })
+    }, 500)
   }
 
   // ─── Connection ──────────────────────────────────────
@@ -254,6 +262,153 @@ export class MemoryService implements vscode.Disposable {
     }
 
     return this.getConnection()
+  }
+
+  /**
+   * Discover and attach to a Memory (Hermes/Shiba) endpoint automatically.
+   *
+   * Resolution order:
+   *   1. `<workspaceRoot>/.kilo/hermes.json`
+   *   2. `<workspaceRoot>/.kilo/shiba.json`
+   *   3. `~/.kilo/hermes.json`
+   *   4. `~/.kilo/shiba.json`
+   *   5. Default: http://localhost:7002
+   *
+   * Each config file may contain an `endpoint` (or `url`) string. The resolved
+   * endpoint is probed with a `GET /health` (and a bare `GET /` fallback) with
+   * a 2-second timeout. If the probe succeeds the connection transitions to
+   * "connected"; otherwise it is left in its previous state and the error is
+   * recorded.
+   */
+  async autoConnect(): Promise<{ connected: boolean; endpoint: string; error?: string }> {
+    const defaultEndpoint = "http://localhost:7002"
+    let endpoint = defaultEndpoint
+    let source = "default"
+
+    try {
+      const candidates = this.buildConfigCandidatePaths()
+      for (const candidate of candidates) {
+        try {
+          if (!fs.existsSync(candidate)) continue
+          const raw = fs.readFileSync(candidate, "utf-8")
+          const parsed = JSON.parse(raw) as { endpoint?: unknown; url?: unknown }
+          const configured =
+            typeof parsed.endpoint === "string"
+              ? parsed.endpoint
+              : typeof parsed.url === "string"
+                ? parsed.url
+                : undefined
+          if (configured && configured.trim().length > 0) {
+            endpoint = configured.trim()
+            source = candidate
+            this.log.info("autoConnect: discovered endpoint in config", { path: candidate, endpoint })
+            break
+          }
+        } catch (err: unknown) {
+          this.log.warn("autoConnect: failed to parse memory config", {
+            path: candidate,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          // Try the next candidate
+        }
+      }
+
+      if (source === "default") {
+        this.log.info("autoConnect: no hermes.json/shiba.json found, using default endpoint", { endpoint })
+      }
+
+      const started = Date.now()
+      const probe = await this.probeEndpoint(endpoint, 2000)
+      const latencyMs = Date.now() - started
+
+      if (probe.ok) {
+        this.setConnection({
+          status: "connected",
+          endpoint,
+          lastPing: Date.now(),
+          latencyMs,
+          lastError: undefined,
+        })
+        this.log.info("autoConnect: connected to memory endpoint", { endpoint, latencyMs, source })
+        return { connected: true, endpoint }
+      }
+
+      const errorMsg = probe.error ?? "Health check failed"
+      this.log.warn("autoConnect: health check failed, leaving connection state unchanged", {
+        endpoint,
+        error: errorMsg,
+        latencyMs,
+      })
+      return { connected: false, endpoint, error: errorMsg }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      this.log.error("autoConnect: unexpected error", { endpoint, error: errorMsg })
+      return { connected: false, endpoint, error: errorMsg }
+    }
+  }
+
+  /** Build an ordered list of candidate paths for hermes.json / shiba.json. */
+  private buildConfigCandidatePaths(): string[] {
+    const candidates: string[] = []
+    const fileNames = ["hermes.json", "shiba.json"]
+
+    try {
+      const folders = vscode.workspace.workspaceFolders
+      if (folders && folders.length > 0) {
+        const wsRoot = folders[0].uri.fsPath
+        for (const name of fileNames) {
+          candidates.push(path.join(wsRoot, ".kilo", name))
+        }
+      }
+    } catch (err: unknown) {
+      this.log.warn("autoConnect: failed to resolve workspace candidates", err)
+    }
+
+    try {
+      const home = os.homedir()
+      if (home) {
+        for (const name of fileNames) {
+          candidates.push(path.join(home, ".kilo", name))
+        }
+      }
+    } catch (err: unknown) {
+      this.log.warn("autoConnect: failed to resolve home candidates", err)
+    }
+
+    return candidates
+  }
+
+  /** Probe an HTTP endpoint for a health check. Resolves with ok=false on any failure. */
+  private async probeEndpoint(endpoint: string, timeoutMs: number): Promise<{ ok: boolean; error?: string }> {
+    // Normalize endpoint
+    const base = endpoint.replace(/\/$/, "")
+    const healthUrl = `${base}/health`
+
+    const tryOne = async (url: string): Promise<{ ok: boolean; error?: string }> => {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), timeoutMs)
+      try {
+        const res = await fetch(url, { method: "GET", signal: controller.signal })
+        return { ok: res.ok }
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { ok: false, error: msg }
+      } finally {
+        clearTimeout(timer)
+      }
+    }
+
+    try {
+      const first = await tryOne(healthUrl)
+      if (first.ok) return first
+      // Fall back to the root URL in case /health is not implemented
+      const second = await tryOne(base)
+      if (second.ok) return second
+      return { ok: false, error: first.error ?? second.error ?? "Endpoint unreachable" }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return { ok: false, error: msg }
+    }
   }
 
   // ─── Memory Write ────────────────────────────────────

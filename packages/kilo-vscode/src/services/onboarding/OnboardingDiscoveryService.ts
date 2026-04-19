@@ -43,6 +43,23 @@ export interface DiscoveryResult {
 	hermes: {
 		configFound: boolean
 		endpoint?: string
+		reachable?: boolean
+		version?: string
+		error?: string
+	}
+	shiba: {
+		configFound: boolean
+		endpoint?: string
+		reachable?: boolean
+		connectedAgents?: string[]
+		error?: string
+	}
+	zeroClaw: {
+		configFound: boolean
+		endpoint?: string
+		reachable?: boolean
+		defaultScope: string
+		error?: string
 	}
 	timestamp: number
 }
@@ -54,8 +71,12 @@ export interface DiscoveryResult {
 const CACHE_KEY = "kilocode.discoveryResult"
 const LOG_PREFIX = "[Onboarding]"
 const FETCH_TIMEOUT_MS = 3_000
+const PROBE_TIMEOUT_MS = 2_000
 const OLLAMA_BASE = "http://localhost:11434"
 const LMSTUDIO_BASE = "http://localhost:1234"
+const HERMES_DEFAULT_ENDPOINT = "http://localhost:7001"
+const SHIBA_DEFAULT_ENDPOINT = "http://localhost:7002"
+const ZEROCLAW_DEFAULT_ENDPOINT = "http://localhost:7003"
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -86,11 +107,71 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
 	}
 }
 
+/**
+ * Extract a human-readable error message from an unknown error value.
+ */
+function errorMessage(err: unknown): string {
+	if (err instanceof Error) {
+		return err.message
+	}
+	if (typeof err === "string") {
+		return err
+	}
+	try {
+		return JSON.stringify(err)
+	} catch {
+		return String(err)
+	}
+}
+
+/**
+ * Locate a `.kilo/<filename>` config file, preferring the current workspace
+ * and falling back to the user's home directory. Returns the absolute path
+ * if found, or `undefined` otherwise.
+ */
+function resolveKiloConfigPath(filename: string): string | undefined {
+	const candidates: string[] = []
+
+	const workspaceFolders = vscode.workspace.workspaceFolders
+	if (workspaceFolders && workspaceFolders.length > 0) {
+		candidates.push(path.join(workspaceFolders[0].uri.fsPath, ".kilo", filename))
+	}
+	candidates.push(path.join(os.homedir(), ".kilo", filename))
+
+	for (const candidate of candidates) {
+		try {
+			if (fs.existsSync(candidate)) {
+				return candidate
+			}
+		} catch {
+			// Ignore individual access errors and keep probing.
+		}
+	}
+	return undefined
+}
+
+/**
+ * Read and parse a JSON config file, returning `undefined` on any failure.
+ */
+function readJsonConfig<T>(configPath: string): T | undefined {
+	try {
+		const raw = fs.readFileSync(configPath, "utf-8")
+		return JSON.parse(raw) as T
+	} catch (err) {
+		logError(`Failed to parse config at ${configPath}`, err)
+		return undefined
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Default (empty) result
 // ---------------------------------------------------------------------------
 
 function emptyResult(): DiscoveryResult {
+	const workspaceFolders = vscode.workspace.workspaceFolders
+	const defaultScope =
+		workspaceFolders && workspaceFolders.length > 0 ? workspaceFolders[0].uri.fsPath : ""
+
 	return {
 		providers: {
 			ollama: { available: false, models: [] },
@@ -107,6 +188,8 @@ function emptyResult(): DiscoveryResult {
 			arch: os.arch(),
 		},
 		hermes: { configFound: false },
+		shiba: { configFound: false },
+		zeroClaw: { configFound: false, defaultScope },
 		timestamp: Date.now(),
 	}
 }
@@ -138,13 +221,16 @@ export class OnboardingDiscoveryService implements vscode.Disposable {
 	async runFullDiscovery(): Promise<DiscoveryResult> {
 		log("Starting full discovery...")
 		try {
-			const [providers, gpu, sshProfiles, hardware, hermes] = await Promise.all([
-				this.discoverLocalProviders(),
-				this.detectGPU(),
-				this.importSSHConfig(),
-				this.detectHardware(),
-				this.detectHermes(),
-			])
+			const [providers, gpu, sshProfiles, hardware, hermes, shiba, zeroClaw] =
+				await Promise.all([
+					this.discoverLocalProviders(),
+					this.detectGPU(),
+					this.importSSHConfig(),
+					this.detectHardware(),
+					this.probeHermes(),
+					this.probeShiba(),
+					this.probeZeroClaw(),
+				])
 
 			const result: DiscoveryResult = {
 				providers,
@@ -158,6 +244,8 @@ export class OnboardingDiscoveryService implements vscode.Disposable {
 				},
 				hardware,
 				hermes,
+				shiba,
+				zeroClaw,
 				timestamp: Date.now(),
 			}
 
@@ -457,30 +545,165 @@ export class OnboardingDiscoveryService implements vscode.Disposable {
 	}
 
 	/**
-	 * Look for a Hermes config file in the current workspace.
+	 * Legacy Hermes detector. Kept as a thin wrapper over `probeHermes()` so
+	 * existing callers that only inspect `configFound` continue to work.
 	 */
 	private async detectHermes(): Promise<DiscoveryResult["hermes"]> {
-		try {
-			const workspaceFolders = vscode.workspace.workspaceFolders
-			if (!workspaceFolders || workspaceFolders.length === 0) {
-				return { configFound: false }
+		return this.probeHermes()
+	}
+
+	/**
+	 * Deep-probe Hermes: locate the config file (workspace or home), resolve
+	 * the endpoint, hit `/health` with a 2s timeout, and report status.
+	 */
+	private async probeHermes(): Promise<DiscoveryResult["hermes"]> {
+		const configPath = resolveKiloConfigPath("hermes.json")
+		let configFound = false
+		let endpoint = HERMES_DEFAULT_ENDPOINT
+
+		if (configPath) {
+			const parsed = readJsonConfig<{ endpoint?: string }>(configPath)
+			configFound = true
+			if (parsed?.endpoint && typeof parsed.endpoint === "string") {
+				endpoint = parsed.endpoint
 			}
-
-			const root = workspaceFolders[0].uri.fsPath
-			const configPath = path.join(root, ".kilo", "hermes.json")
-
-			if (!fs.existsSync(configPath)) {
-				return { configFound: false }
-			}
-
-			const raw = fs.readFileSync(configPath, "utf-8")
-			const json = JSON.parse(raw) as { endpoint?: string }
-
 			log(`Hermes config found at ${configPath}`)
-			return { configFound: true, endpoint: json.endpoint }
+		}
+
+		try {
+			const res = await fetchWithTimeout(`${endpoint}/health`, PROBE_TIMEOUT_MS)
+			if (!res.ok) {
+				const error = `Hermes /health returned HTTP ${res.status}`
+				log(error)
+				return { configFound, endpoint, reachable: false, error }
+			}
+
+			let version: string | undefined
+			try {
+				const body = await res.text()
+				if (body.startsWith("{")) {
+					const json = JSON.parse(body) as { version?: string }
+					version = typeof json.version === "string" ? json.version : undefined
+				}
+			} catch {
+				// /health returned non-JSON; ignore version extraction.
+			}
+
+			log(`Hermes reachable at ${endpoint}${version ? ` (v${version})` : ""}`)
+			return { configFound, endpoint, reachable: true, version }
 		} catch (err) {
-			logError("Hermes config detection failed", err)
-			return { configFound: false }
+			const error = errorMessage(err)
+			logError(`Hermes probe failed at ${endpoint}`, err)
+			return { configFound, endpoint, reachable: false, error }
+		}
+	}
+
+	/**
+	 * Deep-probe Shiba: locate the config file, resolve endpoint, hit
+	 * `/health` with 2s timeout, and report reachable/connected agents.
+	 */
+	private async probeShiba(): Promise<DiscoveryResult["shiba"]> {
+		const configPath = resolveKiloConfigPath("shiba.json")
+		let configFound = false
+		let endpoint = SHIBA_DEFAULT_ENDPOINT
+
+		if (configPath) {
+			const parsed = readJsonConfig<{ endpoint?: string }>(configPath)
+			configFound = true
+			if (parsed?.endpoint && typeof parsed.endpoint === "string") {
+				endpoint = parsed.endpoint
+			}
+			log(`Shiba config found at ${configPath}`)
+		}
+
+		try {
+			const res = await fetchWithTimeout(`${endpoint}/health`, PROBE_TIMEOUT_MS)
+			if (!res.ok) {
+				const error = `Shiba /health returned HTTP ${res.status}`
+				log(error)
+				return { configFound, endpoint, reachable: false, error }
+			}
+
+			let connectedAgents: string[] | undefined
+			try {
+				const body = await res.text()
+				if (body.startsWith("{")) {
+					const json = JSON.parse(body) as {
+						connectedAgents?: unknown
+						agents?: unknown
+					}
+					const raw = json.connectedAgents ?? json.agents
+					if (Array.isArray(raw)) {
+						connectedAgents = raw
+							.map((entry) => {
+								if (typeof entry === "string") {
+									return entry
+								}
+								if (entry && typeof entry === "object") {
+									const rec = entry as { id?: unknown; name?: unknown }
+									if (typeof rec.id === "string") return rec.id
+									if (typeof rec.name === "string") return rec.name
+								}
+								return undefined
+							})
+							.filter((v): v is string => typeof v === "string")
+					}
+				}
+			} catch {
+				// /health returned non-JSON; ignore agent extraction.
+			}
+
+			log(
+				`Shiba reachable at ${endpoint}` +
+					(connectedAgents ? ` (${connectedAgents.length} agent(s))` : ""),
+			)
+			return { configFound, endpoint, reachable: true, connectedAgents }
+		} catch (err) {
+			const error = errorMessage(err)
+			logError(`Shiba probe failed at ${endpoint}`, err)
+			return { configFound, endpoint, reachable: false, error }
+		}
+	}
+
+	/**
+	 * Deep-probe ZeroClaw: locate the config file, resolve endpoint, hit
+	 * `/health` with 2s timeout, and attach the current workspace folder as
+	 * the default scope.
+	 */
+	private async probeZeroClaw(): Promise<DiscoveryResult["zeroClaw"]> {
+		const workspaceFolders = vscode.workspace.workspaceFolders
+		const defaultScope =
+			workspaceFolders && workspaceFolders.length > 0
+				? workspaceFolders[0].uri.fsPath
+				: ""
+
+		const configPath = resolveKiloConfigPath("zeroclaw.json")
+		let configFound = false
+		let endpoint = ZEROCLAW_DEFAULT_ENDPOINT
+
+		if (configPath) {
+			const parsed = readJsonConfig<{ endpoint?: string }>(configPath)
+			configFound = true
+			if (parsed?.endpoint && typeof parsed.endpoint === "string") {
+				endpoint = parsed.endpoint
+			}
+			log(`ZeroClaw config found at ${configPath}`)
+		}
+
+		try {
+			const res = await fetchWithTimeout(`${endpoint}/health`, PROBE_TIMEOUT_MS)
+			if (!res.ok) {
+				const error = `ZeroClaw /health returned HTTP ${res.status}`
+				log(error)
+				return { configFound, endpoint, reachable: false, defaultScope, error }
+			}
+
+			log(`ZeroClaw reachable at ${endpoint}`)
+			return { configFound, endpoint, reachable: true, defaultScope }
+		} catch (err) {
+			const error = errorMessage(err)
+			logError(`ZeroClaw probe failed at ${endpoint}`, err)
+			return { configFound, endpoint, reachable: false, defaultScope, error }
 		}
 	}
 }

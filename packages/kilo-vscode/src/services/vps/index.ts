@@ -9,3 +9,6 @@ export type {
   ReverseProxyConfig,
   ReverseProxyTestResult,
 } from "./VPSService"
+
+export { VPSInventoryProbe } from "./VPSInventoryProbe"
+export type { ServerInventory } from "./VPSInventoryProbe"

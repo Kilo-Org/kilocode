@@ -1325,7 +1325,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.zeroClawService) this.postMessage({ type: "zeroClawTasksLoaded", tasks: this.zeroClawService.getAllTasks() } as never)
           break
         case "zeroClawGetHistory":
-          if (this.zeroClawService) this.postMessage({ type: "zeroClawHistoryLoaded", tasks: this.zeroClawService.getHistory() } as never)
+          if (this.zeroClawService) {
+            try {
+              this.postMessage({ type: "zeroClawHistoryLoaded", tasks: this.zeroClawService.getHistory() } as never)
+              // Also bootstrap the tab with a default task context so the form can pre-populate on mount.
+              const defaultContext = this.zeroClawService.getDefaultTaskContext()
+              this.postMessage({ type: "zeroClawContext", context: defaultContext } as never)
+            } catch (err: unknown) {
+              const errMsg = err instanceof Error ? err.message : String(err)
+              this.postMessage({ type: "zeroClawError", error: `zeroClawGetHistory failed: ${errMsg}` } as never)
+            }
+          }
           break
         case "zeroClawGetTaskResult":
           if (this.zeroClawService) {
@@ -1746,6 +1756,22 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           if (this.discoveryService) {
             const result = await this.discoveryService.runFullDiscovery()
             this.postMessage({ type: "discoveryResult", result } as never)
+            this.postMessage({ type: "discoveryComplete", result } as never)
+          } else {
+            // Discovery service not available — send empty result so wizard doesn't hang
+            this.postMessage({ type: "discoveryError", error: "Discovery service not initialized" } as never)
+          }
+          break
+        case "markOnboardingComplete":
+          if (this.extensionContext) {
+            await this.extensionContext.globalState.update("kilocode.profile.onboardingComplete", true)
+            this.postMessage({ type: "onboardingCompleted" } as never)
+          }
+          break
+        case "resetOnboarding":
+          if (this.extensionContext) {
+            await this.extensionContext.globalState.update("kilocode.profile.onboardingComplete", false)
+            this.postMessage({ type: "onboardingReset" } as never)
           }
           break
       }

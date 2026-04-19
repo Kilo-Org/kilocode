@@ -289,6 +289,42 @@ export class ZeroClawService implements vscode.Disposable {
 		return this.getAllTasks().slice(0, limit)
 	}
 
+	/**
+	 * Build a safe default task context for pre-populating the ZeroClaw tab's
+	 * submission form. Values are derived from the active workspace folder.
+	 */
+	getDefaultTaskContext(): {
+		projectPath: string
+		workspaceScope: string
+		riskLevel: "low"
+		networkPolicy: "none"
+		writePolicy: "workspace-only"
+		limits: { maxSeconds: number; maxFilesChanged: number }
+		templates: Array<{ name: string; description: string; command: string }>
+	} {
+		let workspaceFsPath = ""
+		try {
+			workspaceFsPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? ""
+		} catch (err: unknown) {
+			this.log.warn("getDefaultTaskContext: failed to resolve workspace", err)
+			workspaceFsPath = ""
+		}
+
+		return {
+			projectPath: workspaceFsPath,
+			workspaceScope: workspaceFsPath,
+			riskLevel: "low" as const,
+			networkPolicy: "none" as const,
+			writePolicy: "workspace-only" as const,
+			limits: { maxSeconds: 300, maxFilesChanged: 20 },
+			templates: [
+				{ name: "Format project", description: "Run formatter across all files", command: "" },
+				{ name: "Run tests", description: "Run test suite", command: "npm test" },
+				{ name: "Type check", description: "Run TypeScript typecheck", command: "tsc --noEmit" },
+			],
+		}
+	}
+
 	// ─── Result & Artifact API ─────────────────────────────
 
 	/**

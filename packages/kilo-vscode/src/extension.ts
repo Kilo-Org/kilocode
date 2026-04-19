@@ -7,7 +7,7 @@ import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
 import { SubAgentViewerProvider } from "./SubAgentViewerProvider"
 import { EXTENSION_DISPLAY_NAME } from "./constants"
-import { KiloConnectionService } from "./services/cli-backend"
+import { KiloConnectionService, HealthRecoveryService } from "./services/cli-backend"
 import { registerAutocompleteProvider } from "./services/autocomplete"
 import { ensureBackendForAutocomplete } from "./services/autocomplete/ensure-backend"
 import { AutocompleteServiceManager } from "./services/autocomplete/AutocompleteServiceManager"
@@ -53,10 +53,30 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
+  // Register onboarding wizard command — allows re-running wizard anytime
+  context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.v4.runOnboardingWizard", async () => {
+      await context.globalState.update("kilocode.profile.onboardingComplete", false)
+      vscode.window.showInformationMessage(
+        "KiloCode: Onboarding wizard will open on next sidebar view.",
+      )
+    }),
+  )
+
   const telemetry = TelemetryProxy.getInstance()
 
   // Create shared connection service (one server for all webviews)
   const connectionService = new KiloConnectionService(context)
+
+  // Create CLI backend health recovery service — monitors CLI, auto-reconnects with backoff,
+  // exposes status bar indicator. Fixes the "CLI Server: Error" state with no auto-recovery.
+  try {
+    const healthRecovery = new HealthRecoveryService(connectionService, context)
+    healthRecovery.start()
+    context.subscriptions.push(healthRecovery)
+  } catch (err) {
+    extLog.warn("Failed to start CLI HealthRecoveryService", err)
+  }
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)

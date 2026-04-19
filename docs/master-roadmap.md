@@ -1,214 +1,368 @@
-# KiloCode v7.2.14+ Master Roadmap
+# KiloCode v7.2.14+ Master Roadmap — Auto-Population Engine
 
 > **Branch:** feat/azure-voice-studio
 > **Last updated:** 2026-04-18
-> **Status:** Phase 2 core complete, Phase 3 debug mode complete, verification passed
+> **Status:** Phase 2 in progress — building the filler system that populates every tab
+> **Remotes in sync:** local ↔ Ghenghis/kilocode ↔ AiDave71/kilocode at `f01fad53f`
 
 ---
 
-## Phase 1: Wiring Integrity (COMPLETED)
+## Core Insight
 
-All 8 V4 subsystem tabs were visual-only — buttons rendered but clicked nothing. Root cause: 20+ message contract mismatches between webview tabs and KiloProvider handlers.
+**"You built the destination tabs, but not the system that fills them."**
 
-### Completed Fixes
-- [x] Training: launch, GPU detect, compare, export, register, validate — all property name mismatches fixed
-- [x] Memory: write, recall, permission — response shape mismatches fixed
-- [x] Governance: ALL handlers (setTier, approve, reject, addAction, state wrapping)
-- [x] Routing: routingSetMode overload dispatching (mode, privacyMode, costThreshold)
-- [x] ZeroClaw: submit spread-vs-object mismatch
-- [x] SSH: event bridge (5 event types), openTerminal, browseFiles
-- [x] VPS: add/update detection
-- [x] RoutingService: real API key storage in VS Code SecretStorage
-- [x] RoutingService: real HTTP health checks for cloud providers
-- [x] ZeroClawService: real git-based rollback (git checkout on changed files)
-- [x] WorkstationProfile: real hardware detection (os.cpus, os.totalmem, nvidia-smi, model directory scanning)
+Every tab (Providers, SSH, VPS, Training, Memory, ZeroClaw, Governance, Speech) is a destination UI.
+The missing system is the **Auto-Population + Discovery Orchestrator** that:
 
-### Verification
-- TypeScript passes across all 17 packages
-- esbuild production build: 5 bundles clean
-- VSIX packaged: kilo-code-7.2.14.vsix (65MB, 137 files)
-- Pushed to github.com/AiDave71/kilocode.git
+1. Runs on startup and probes every local service, config file, and hardware device
+2. Caches everything it finds in `workspaceState`
+3. Pushes results into each V4 service so tabs open *already filled*
+4. Asks the user only for what can't be detected (API keys, passwords)
+5. Validates every populated value with a real connection test
 
 ---
 
-## Phase 2: Auto-Discovery & Onboarding (COMPLETED — core services)
+## The 12 Gaps (full inventory)
 
-### Completed
-- [x] OnboardingDiscoveryService: auto-detect Ollama, LM Studio, GPU, SSH config, hardware, Hermes
-- [x] Governance defaults pre-seeded: 8 dangerous actions, risk behaviors, seedDefaults on init
-- [x] SSH config auto-import from ~/.ssh/config
-- [x] Discovery wired into extension activation (background, non-blocking)
-- [x] Governance snapshot enrichment (checklist, releaseReadiness, rollbackReady)
-- [x] SSH browse double-send fix (event relay handles sshFilesListed)
-- [x] 4-agent independent verification: all 8 tabs fully wired
+### Gap 1: First-run Discovery Service ✅ IN PROGRESS
+**Status:** `OnboardingDiscoveryService` exists, covers providers/GPU/SSH/hardware. Still missing: speech voices, Hermes, Shiba, ZeroClaw endpoints, CLI backend health, known_hosts.
 
-### Remaining (for full wizard UX)
-- [ ] One-click onboarding wizard UI
-- [ ] Speech voice enumeration (browser speechSynthesis)
-- [ ] Hermes/Shiba auto-detect integration
+### Gap 2: Setup Wizard / Onboarding Flow ⏳ PENDING
+**Status:** Backend handlers exist (`requestDiscoveryResult`, `triggerDiscovery`), but no wizard UI component. Tabs never display "Here's what we found" review screen.
 
-### Principle
-Tabs should auto-populate with real detected data on first open. Users should never face blank forms when the system can discover the information automatically. Only ask for what can't be detected.
+### Gap 3: Secure Secret/Profile Layer ⚠️ PARTIAL
+**Status:** `RoutingService` uses `context.secrets` for API keys. Still missing: dedicated `SecureProfileService` that owns the split, unified across SSH passwords, cloud keys, Azure TTS key, Hermes tokens, etc.
 
-### Architecture
+### Gap 4: Real Provider Auto-Detection ✅ COMPLETED
+**Status:** `f01fad53f` — initial health check 1s after startup, background re-check on tab open, 15-second safety timeout on "Testing…" state. Ollama/LM Studio now show "healthy" automatically.
 
-#### OnboardingDiscoveryService
-New service that runs on extension activation:
+### Gap 5: Real GPU Detection ✅ COMPLETED
+**Status:** `f01fad53f` — `trainingGetJobs` auto-triggers `detectGPUs()` on tab mount if cache is empty. `trainingDetectGPU` now wrapped in try/catch with error recovery. "Detecting…" always clears.
 
-```
-OnboardingDiscoveryService
-├── discoverLocalProviders()     → ping Ollama + LM Studio
-├── detectGPU()                  → nvidia-smi / Win32_VideoController
-├── importSSHConfig()            → parse ~/.ssh/config
-├── enumerateVoices()            → browser speechSynthesis.getVoices()
-├── detectHermesConfig()         → check Hermes/Shiba local config
-├── classifyCapabilities()       → what can each tab auto-fill?
-└── getDiscoveryResult()         → structured result for all tabs
-```
+### Gap 6: SSH Config Import ✅ COMPLETED
+**Status:** `f01fad53f` — `requestSSHProfiles` lazy-imports from `~/.ssh/config` if profile list is empty. `extension.ts` also calls it after discovery. Still missing: `known_hosts` parser, Hermes remote info, server inventory import.
 
-#### SecureProfileService
-Strict split between secrets and config:
+### Gap 7: VPS Safe Inventory Probe ⏳ PENDING
+**Status:** Backend `VPSService.addOrUpdate` exists, but no "probe on SSH connect" pipeline. Needs a safe read-only command set to auto-collect hostname, distro, uptime, CPU, RAM, disk, Docker, services, public IP.
 
-| Storage | What goes here | API |
-|---------|---------------|-----|
-| `context.secrets` | API keys, passwords, tokens, sensitive endpoints | SecretStorage.store/get/delete |
-| `globalState` | Provider selections, role matrix, UI preferences | ExtensionContext.globalState |
-| `workspaceState` | Project-specific settings, last detection results | ExtensionContext.workspaceState |
-| VS Code config | Non-sensitive endpoints, labels, voice selections | workspace.getConfiguration |
+### Gap 8: Memory Auto-Attach (Hermes/Shiba) ⏳ PENDING
+**Status:** `OnboardingDiscoveryService.detectHermes()` reads `.kilo/hermes.json`. Missing: automatic endpoint ping, connect-on-discovery, prefill endpoint/state/history, import known agent IDs.
 
-### Per-Tab Auto-Discovery
+### Gap 9: ZeroClaw Context Bootstrap ⏳ PENDING
+**Status:** `ZeroClawService.submit()` works but tab form is blank. Missing: auto-fill current workspace path, default scope, task templates, detected safe defaults, previously used presets.
 
-#### 2.1 Provider Routing
-- **Auto-detect:** Ollama at localhost:11434, LM Studio at localhost:1234
-- **Auto-populate:** Provider status (healthy/offline), available local models
-- **Ask user:** Cloud API keys (Claude, MiniMax, SiliconFlow) — only when enabled
-- **Store:** Keys in SecretStorage, selections in config
+### Gap 10: Governance Default Seeding ✅ COMPLETED
+**Status:** `788d918db` — 8 dangerous actions pre-seeded (vps_deploy, ssh_root_access, training_launch, etc.), 3 default risk behaviors, `seedDefaults()` runs on init. Still missing: release checklist template, rollback template, authority tier pre-population.
 
-#### 2.2 Speech
-- **Auto-detect:** Browser/system voices via speechSynthesis.getVoices()
-- **Auto-populate:** Voice list, default voice, locale suggestions
-- **Ask user:** Azure TTS key (optional, for cloud voices)
-- **Store:** Azure key in SecretStorage, voice preferences in config
+### Gap 11: CLI Backend Health Recovery ⏳ PENDING
+**Status:** About page shows "CLI Server: Error". `KiloConnectionService` exists but has no auto-recovery logic. Missing: health retry loop, status bar indicator, clear error messaging, auto-restart button.
 
-#### 2.3 SSH & Remote
-- **Auto-detect:** Parse ~/.ssh/config for hosts, identities, jump hosts
-- **Auto-populate:** SSH profiles from config, connection status
-- **Ask user:** Passwords (only if key auth isn't available), confirmation before testing
-- **Store:** Passwords in SecretStorage, profiles in workspaceState
+### Gap 12: Migration-as-Onboarding ⏳ PENDING
+**Status:** Export/Import/Legacy-migration UI exists. Missing: on first run, offer to import from these sources to pre-populate tabs.
 
-#### 2.4 VPS & Infra
-- **Auto-detect:** From SSH profiles — run safe read-only inventory commands
-- **Auto-populate:** Server name, distro, uptime, CPU, RAM, disk, Docker, services
-- **Ask user:** Nothing if SSH profiles work; confirmation before first scan
-- **Store:** Server inventory in workspaceState
+---
 
-#### 2.5 Memory (Shiba)
-- **Auto-detect:** Hermes/Shiba local config, endpoint, connection state
-- **Auto-populate:** Connection status, project scope, recent history
-- **Ask user:** Custom endpoint if not auto-detected
-- **Store:** Endpoint in config, tokens in SecretStorage
-
-#### 2.6 Training & GPU
-- **Auto-detect:** GPU via nvidia-smi, VRAM, CUDA, local model paths
-- **Auto-populate:** GPU summary, recommended training mode, safe presets
-- **Ask user:** Nothing for local training; remote GPU credentials if needed
-- **Store:** Detection cache in workspaceState
-
-#### 2.7 Governance
-- **Auto-detect:** Nothing (policy-driven, not hardware-driven)
-- **Pre-seed:** Default authority tiers, default dangerous actions, approval thresholds
-- **Ask user:** Customization only
-- **Store:** Governance state in workspaceState
-
-#### 2.8 ZeroClaw
-- **Auto-detect:** Git availability, workspace scope
-- **Pre-seed:** Default task limits, default policies
-- **Ask user:** Task details only when submitting
-- **Store:** Execution history in workspaceState
-
-### Onboarding Wizard Flow
+## Architecture: The Auto-Population Engine
 
 ```
-Step 1: Local Discovery (automatic, ~5 seconds)
-  → Detect Ollama, LM Studio, GPU, SSH config, browser voices
-
-Step 2: Review Screen
-  → "Here's what we found" — each item: Accept / Edit / Skip
-
-Step 3: Missing Secrets (only if user enables cloud providers)
-  → Claude key, MiniMax key, SiliconFlow key, Azure TTS key
-
-Step 4: Save Securely
-  → Secrets → context.secrets
-  → Everything else → config/globalState/workspaceState
-
-Step 5: Automated Connection Tests
-  → Provider health checks, SSH test, Shiba ping, GPU detect
-
-Step 6: Auto-Populate Tabs
-  → Tabs open with real data, not empty scaffolds
+┌─────────────────────────────────────────────────────────────────┐
+│                      Extension Activation                       │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│           EnvironmentProbeService (NEW)                         │
+│  Ultra-fast synchronous probes (<100ms total):                  │
+│  • Platform, arch, Node version, VS Code version                │
+│  • CPU cores, RAM, free disk                                    │
+│  • File existence: ~/.ssh/config, ~/.ssh/known_hosts            │
+│  • File existence: .kilo/hermes.json, .kilo/shiba.json          │
+│  • Workspace folder, git repo detected?                         │
+│  • CLI backend running? (check connection state)                │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│       OnboardingDiscoveryService (ENHANCED)                     │
+│  Async network/process probes (<5s total):                      │
+│  • Ollama ping localhost:11434 → list models                    │
+│  • LM Studio ping localhost:1234 → list models                  │
+│  • GPU via nvidia-smi (10s timeout, fallback to PowerShell)     │
+│  • SSH config parse → profile list                              │
+│  • known_hosts parse → server suggestions                       │
+│  • Hermes endpoint probe → connection state                     │
+│  • Shiba endpoint probe → connection state                      │
+│  • ZeroClaw endpoint probe → connection state                   │
+│  • Browser speech voices enumeration (webview side)             │
+│  • Saved API keys load from SecretStorage                       │
+│  • Cloud provider health ping if keys exist                     │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│       SecureProfileService (NEW)                                │
+│  Unified secret/profile manager with strict split:              │
+│  • SecretStorage: API keys, passwords, tokens                   │
+│  • globalState: provider choices, role matrix, voice prefs      │
+│  • workspaceState: per-project settings, discovery cache        │
+│  • VS Code config: non-sensitive endpoints, labels              │
+│  • Type-safe wrappers per subsystem                             │
+│  • Migration handler from legacy KV store                       │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Tab Hydration Pipeline                       │
+│  Results push into V4 services:                                 │
+│  ✓ RoutingService.providers updated with health status          │
+│  ✓ TrainingService.gpuCache populated                           │
+│  ✓ SSHService.profiles hydrated from config                     │
+│  ✓ VPSService queues probe for each reachable SSH host          │
+│  ✓ MemoryService.connectionState = "connected"                  │
+│  ✓ ZeroClawService.defaultScope = current workspace             │
+│  ✓ GovernanceService.checklist = default template               │
+│  ✓ SpeechService.voices = enumerated system voices              │
+└────────────────────────────┬────────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Onboarding Wizard (NEW)                       │
+│  First-run only — triggered if no globalState.onboardingDone:   │
+│  Step 1: Show discovery results with Accept/Edit/Skip           │
+│  Step 2: Prompt for missing API keys (only enabled providers)   │
+│  Step 3: Confirm before any remote test (SSH, cloud)            │
+│  Step 4: Store secrets in SecretStorage, rest in state          │
+│  Step 5: Run validation tests, show green/red status            │
+│  Step 6: Open Providers tab with live data                      │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Phase 3: Debug Mode & External Tool Integration (PARTIALLY COMPLETED)
+## Phase-by-Phase Implementation Plan
 
-### Debug Mode Toggle (COMPLETED)
-- [x] KiloLogger: centralized structured logging service
-- [x] VS Code OutputChannel "KiloCode V4" for all V4 subsystem logs
-- [x] `kilo-code.v4.debugMode` setting — verbose logging for all services
-- [x] `kilo-code.v4.messageTracing` setting — logs every webview↔extension message
-- [x] "KiloCode V4: Toggle Debug Mode" command (palette + programmatic)
-- [x] Per-service timing via log.time() for performance tracking
-- [x] All 8 V4 services + KiloProvider + OnboardingDiscovery integrated
-- [x] Auto-reveals Output channel when debug mode enabled
+### Phase 1: Provider auto-discovery + secure keys ✅ DONE
+- [x] Ollama/LM Studio background health probe
+- [x] Initial health check on startup (1s after activation)
+- [x] Lazy re-check when tab opens
+- [x] Safety timeout on "Testing…" state
+- [x] SecretStorage integration for cloud keys
+- [ ] Cloud provider background ping if keys saved (pending)
+- [ ] Unified `SecureProfileService` API (pending)
 
-### External Tool Integration
-Enable Claude Desktop, Windsurf, and other AI agents to connect to KiloCode for:
-- Real-time code editing via MCP
-- Debug data streaming
-- Service health monitoring
-- Governance audit access
+### Phase 2: GPU/workstation detection ✅ DONE
+- [x] nvidia-smi with PowerShell fallback
+- [x] Auto-detect on tab mount if cache empty
+- [x] Workstation profile merge (os.cpus, os.totalmem)
+- [x] Model directory scanning
+- [ ] CUDA availability check (partial — driver version parsed)
+- [ ] Local training capability detection (pending)
+
+### Phase 3: SSH import + VPS inventory probe ⚠️ PARTIAL
+- [x] ~/.ssh/config parser with deduplication
+- [x] Lazy import on tab open
+- [x] Startup import after discovery
+- [ ] `~/.ssh/known_hosts` parser
+- [ ] VPS safe-probe pipeline (hostname, distro, uptime, CPU, RAM, disk, Docker)
+- [ ] Auto-run inventory when SSH profile connects successfully
+
+### Phase 4: Hermes/Shiba/ZeroClaw auto-attach ⏳ TODO
+- [ ] Hermes config discovery (`.kilo/hermes.json`, env vars, default ports)
+- [ ] Shiba endpoint probe with fallback ports
+- [ ] ZeroClaw endpoint probe
+- [ ] Auto-connect on discovery success
+- [ ] Import known agent IDs from Hermes
+- [ ] ZeroClaw default scope = current workspace
+- [ ] Task templates pre-seeded
+
+### Phase 5: Governance default seeding ✅ DONE
+- [x] 8 dangerous actions pre-seeded
+- [x] 3 risk behaviors (auto-execute, with-logging, block-until-approved)
+- [x] `seedDefaults()` idempotent backfill
+- [ ] Release checklist template (pending)
+- [ ] Rollback checklist template (pending)
+- [ ] Authority tier pre-population (pending)
+
+### Phase 6: One-click onboarding wizard ⏳ TODO
+- [ ] `OnboardingWizard.tsx` multi-step component
+- [ ] `firstRun` flag in globalState
+- [ ] Auto-open on activation if flag unset
+- [ ] Step 1: Discovery results review
+- [ ] Step 2: Missing secrets prompt
+- [ ] Step 3: Validation tests with live status
+- [ ] Step 4: Tab hydration completion
+- [ ] Manually triggerable from command palette
+
+### Phase 7: CLI Backend Health Recovery ⏳ TODO
+- [ ] `CLIHealthService`: monitors connection, exposes state
+- [ ] Status bar indicator (green/yellow/red)
+- [ ] Auto-retry with exponential backoff
+- [ ] Clear error messaging (not just "Error")
+- [ ] "Restart Backend" command
+- [ ] About page shows diagnostic info
+
+### Phase 8: Migration-as-Onboarding ⏳ TODO
+- [ ] First-run wizard offers "Import from previous version"
+- [ ] Parse legacy KV store for providers, SSH, routing
+- [ ] Import Export/Import bundles during onboarding
+- [ ] Migration path from `kilo.old.json` to new SecureProfileService
 
 ---
 
-## Phase 4: E2E Proof Workflows
+## Data Models
 
-### Workflow 1: Zero-Config Local Bring-Up
-Fresh install → auto-detect Ollama + LM Studio + GPU + browser voices → Providers, Speech, and Training tabs show real data without any manual input.
+### DiscoveryResult (enhanced)
+```typescript
+interface DiscoveryResult {
+  timestamp: number
+  environment: {
+    platform: string
+    arch: string
+    nodeVersion: string
+    vscodeVersion: string
+    workspaceRoot: string
+    gitRepo: boolean
+  }
+  providers: {
+    ollama: { available: boolean; models: string[]; version?: string; port: number }
+    lmstudio: { available: boolean; models: string[]; apiBase: string }
+    claude: { keyConfigured: boolean; healthy?: boolean; lastCheck?: number }
+    minimax: { keyConfigured: boolean; healthy?: boolean; lastCheck?: number }
+    siliconflow: { keyConfigured: boolean; healthy?: boolean; lastCheck?: number }
+  }
+  gpu: {
+    detected: boolean
+    count: number
+    devices: Array<{ name: string; vramGb: number; cudaVersion?: string; driverVersion?: string }>
+  }
+  hardware: {
+    cpu: { model: string; cores: number; tier: string }
+    ramGb: number
+    diskFreeGb?: number
+  }
+  ssh: {
+    configFound: boolean
+    knownHostsFound: boolean
+    profiles: SSHProfileSuggestion[]
+    knownHosts: string[]
+  }
+  memory: {
+    hermes: { configFound: boolean; endpoint?: string; reachable?: boolean }
+    shiba: { configFound: boolean; endpoint?: string; reachable?: boolean }
+  }
+  zeroClaw: {
+    endpoint?: string
+    reachable?: boolean
+    defaultScope: string
+  }
+  speech: {
+    browserVoicesAvailable: boolean
+    voiceCount: number
+    systemDefaultLocale?: string
+  }
+  cliBackend: {
+    running: boolean
+    pid?: number
+    baseUrl?: string
+    errorCount: number
+    lastError?: string
+  }
+}
+```
 
-### Workflow 2: Minimal Secret Onboarding
-User pastes one cloud API key → SecretStorage stores it → provider health validates → route matrix becomes live.
+### SecureProfileService API
+```typescript
+class SecureProfileService {
+  // Secrets (encrypted)
+  async setApiKey(provider: string, key: string): Promise<void>
+  async getApiKey(provider: string): Promise<string | undefined>
+  async deleteApiKey(provider: string): Promise<void>
+  async setSshPassword(profileName: string, password: string): Promise<void>
+  async getSshPassword(profileName: string): Promise<string | undefined>
+  async setToken(service: string, token: string): Promise<void>
+  async getToken(service: string): Promise<string | undefined>
 
-### Workflow 3: SSH/VPS Import
-User approves SSH config import → system tests connections → VPS inventory auto-populates.
+  // Non-secret profile data
+  setProviderChoice(role: string, providerId: string): void
+  getProviderChoice(role: string): string | undefined
+  setVoicePreference(voiceId: string, favorite: boolean): void
+  getVoicePreferences(): VoicePreferences
+  setRoutingPreferences(prefs: RoutingPrefs): void
+  getRoutingPreferences(): RoutingPrefs
+  setWorkstationProfile(profile: WorkstationProfile): void
+  getWorkstationProfile(): WorkstationProfile | undefined
 
-### Workflow 4: Memory Attach
-Hermes/Shiba config discovered → Memory tab shows connected state, recall works, write history populates.
+  // Migration
+  async migrateFromLegacy(): Promise<MigrationReport>
+  async exportBundle(): Promise<EncryptedBundle>
+  async importBundle(bundle: EncryptedBundle): Promise<void>
 
-### Workflow 5: Full Operational Test
-User requests a small project → routing selects provider → execution runs → memory writes → speech announces result → governance logs the action.
+  // Masking for UI (never returns the actual secret)
+  async getMaskedApiKey(provider: string): Promise<string>  // e.g. "sk-...abc1"
+}
+```
+
+---
+
+## E2E Test Matrix
+
+### Workflow 1: Zero-Config Local Bring-Up ✅ NOW WORKING
+1. Fresh install, no API keys saved
+2. Ollama running locally on :11434
+3. nvidia-smi available
+4. `~/.ssh/config` has 2 hosts
+5. **Expected:** Open Providers → Ollama shows "healthy" within 2s
+6. **Expected:** Open Training → GPU Resources shows real GPU data
+7. **Expected:** Open SSH & Remote → 2 imported profiles visible
+
+### Workflow 2: Minimal Secret Onboarding ⏳ PARTIAL
+1. User pastes Claude API key
+2. Key stored in SecretStorage
+3. **Expected:** Claude provider shows "healthy" after test (works)
+4. **Expected:** Route matrix auto-enables Claude for Contract/Arch/Audit/Release roles (pending wizard)
+
+### Workflow 3: SSH/VPS Import ⏳ PARTIAL
+1. User approves SSH profiles import (works)
+2. User clicks "Connect" on a profile (works)
+3. **Expected:** VPS inventory auto-runs probe on successful connect (pending Phase 3)
+4. **Expected:** VPS tab shows hostname, distro, uptime (pending)
+
+### Workflow 4: Memory Attach ⏳ PENDING
+1. Hermes config exists at `.kilo/hermes.json`
+2. **Expected:** Memory tab shows "connected" state on open (pending Phase 4)
+3. **Expected:** Recent write history auto-populated (pending)
+4. **Expected:** Known agent IDs pre-listed (pending)
+
+### Workflow 5: Full Operational Test ⏳ PENDING
+1. User types "create a small Python script"
+2. Routing selects Claude (contract role)
+3. Execution dispatches to MiniMax
+4. Memory writes the action
+5. Speech announces completion
+6. Governance logs the action
+7. **Expected:** All 6 subsystems coordinate with zero manual config
+8. **Required for release confidence** — pending all phases complete
 
 ---
 
 ## Implementation Priority
 
-| Priority | Component | Effort | Impact |
-|----------|-----------|--------|--------|
-| 1 | OnboardingDiscoveryService | Medium | All tabs auto-populate |
-| 2 | Provider auto-discovery (Ollama/LM Studio) | Low | Routing tab works immediately |
-| 3 | GPU auto-detect on Training tab open | Low | Training tab shows real GPU |
-| 4 | SSH config import | Medium | SSH + VPS tabs work from existing config |
-| 5 | Governance defaults pre-seed | Low | Governance tab usable immediately |
-| 6 | Speech voice enumeration | Low | Speech tab shows real voices |
-| 7 | One-click onboarding wizard | High | First-time UX transformation |
-| 8 | Debug mode toggle | Medium | Developer experience |
-| 9 | External tool integration | High | Cross-tool ecosystem |
-| 10 | Full E2E proof | Medium | Release confidence |
+| Priority | Component | Phase | Estimated Effort | User Impact |
+|----------|-----------|-------|------------------|-------------|
+| 1 | SecureProfileService | 1 | Medium | Unifies all secrets, unblocks wizard |
+| 2 | EnvironmentProbeService | 1 | Low | Fast startup data for wizard |
+| 3 | OnboardingDiscoveryService enhancements (Speech, Hermes, Shiba, ZeroClaw) | 1+4 | Medium | Covers remaining tabs |
+| 4 | VPS safe-probe pipeline | 3 | Medium | VPS tab becomes useful |
+| 5 | Memory auto-attach | 4 | Low | Memory tab works out of box |
+| 6 | ZeroClaw context bootstrap | 4 | Low | Task form pre-filled |
+| 7 | CLI Backend health recovery | 7 | Medium | Fixes "CLI Server: Error" |
+| 8 | Onboarding Wizard UI | 6 | High | First-run UX transformation |
+| 9 | Migration-as-Onboarding | 8 | Medium | Smoother upgrade path |
+| 10 | Governance checklist templates | 5 | Low | Release workflow readiness |
 
 ---
 
-## Commits
+## Commits (chronological)
 
 | Commit | Phase | Description |
 |--------|-------|-------------|
@@ -222,3 +376,22 @@ User requests a small project → routing selects provider → execution runs �
 | `788d918db` | 2 | OnboardingDiscoveryService, governance defaults, SSH import |
 | `546feea50` | 2/3 | KiloLogger + debug mode toggle for all V4 subsystems |
 | `a438fd8ae` | 2 | SSH browse double-send fix + governance snapshot enrichment |
+| `0e49370d4` | 2 | Roadmap documentation update |
+| `995ffd40f` | — | Merged 231 upstream commits (bedrock/vertex SDKs, Anthropic SDK 3.0.71, OpenCode v1.4.4) |
+| `c331514d1` | — | Added missing onboarding/index.ts barrel export |
+| `f01fad53f` | 1+2 | **AUTO-POPULATE FIX**: Ollama startup health check, GPU try/catch, SSH lazy-import, Testing timeout safety, discoveryComplete broadcast |
+
+---
+
+## What "Complete" Means
+
+A tab is not complete when the UI exists. A tab is complete when:
+
+1. ✅ It auto-discovers what it can
+2. ✅ It asks for only the missing minimum
+3. ✅ It stores sensitive data securely (SecretStorage)
+4. ✅ It runs a real validation test
+5. ✅ It displays real user data
+6. ✅ It handles failure states honestly
+
+**No tab should open empty when data exists to populate it.**

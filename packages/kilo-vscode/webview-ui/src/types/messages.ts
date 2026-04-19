@@ -1648,7 +1648,7 @@ export interface V4SubsystemMessage {
     | "vpsDeployPreflightFailed"
     // ZeroClaw
     | "zeroClawTasksLoaded" | "zeroClawTaskSubmitted" | "zeroClawTaskUpdated"
-    | "zeroClawTaskRetried" | "zeroClawHistoryLoaded"
+    | "zeroClawTaskRetried" | "zeroClawHistoryLoaded" | "zeroClawContext"
     | "zeroClawTaskResult" | "zeroClawArtifacts" | "zeroClawError"
     // Routing
     | "routingProvidersLoaded" | "routingTracesLoaded" | "routingHealthLoaded"
@@ -2743,6 +2743,8 @@ export interface V4SubsystemRequest {
     | "workstationGetModelLibrary" | "workstationGetModelsByCategory"
     | "workstationHasLoRAs" | "workstationHasLocalTTS" | "workstationHasLocalSTT"
     | "workstationReload"
+    // Onboarding / Discovery
+    | "requestDiscoveryResult" | "triggerDiscovery" | "markOnboardingComplete" | "resetOnboarding"
   [key: string]: unknown
 }
 
