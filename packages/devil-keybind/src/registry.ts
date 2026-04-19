@@ -27,6 +27,15 @@ export function createCommandRegistry(): CommandRegistry {
     }
   }
 
+  function getAllByScopeLocal(s: CommandScope): Command[] {
+    const result: Command[] = []
+    for (const cmd of commands.values()) {
+      if (cmd.hidden) continue
+      if (cmd.scope === s || cmd.scope === "global") result.push(cmd)
+    }
+    return result
+  }
+
   return {
     register(cmd: Command): () => void {
       // Validate the serializable subset via Zod. Spreading strips function fields.
@@ -40,7 +49,9 @@ export function createCommandRegistry(): CommandRegistry {
       notify()
 
       return () => {
-        this.unregister(cmd.id)
+        if (commands.delete(cmd.id)) {
+          notify()
+        }
       }
     },
 
@@ -55,19 +66,12 @@ export function createCommandRegistry(): CommandRegistry {
     },
 
     getAllByScope(scope: CommandScope): Command[] {
-      const result: Command[] = []
-      for (const cmd of commands.values()) {
-        if (cmd.hidden) continue
-        if (cmd.scope === scope || cmd.scope === "global") {
-          result.push(cmd)
-        }
-      }
-      return result
+      return getAllByScopeLocal(scope)
     },
 
     search(query: string, scope?: CommandScope): Command[] {
       const candidates =
-        scope !== undefined ? this.getAllByScope(scope) : [...commands.values()].filter((c) => !c.hidden)
+        scope !== undefined ? getAllByScopeLocal(scope) : [...commands.values()].filter((c) => !c.hidden)
       return searchCommands(query, candidates)
     },
 

@@ -104,6 +104,35 @@ describe("createCommandRegistry", () => {
       dispose()
     })
   })
+
+  it("registering a workflow-scope command triggers subscribe callback", () => {
+    withRoot((dispose) => {
+      // Arrange
+      const registry = createCommandRegistry()
+      let callCount = 0
+      const unsub = registry.subscribe(() => { callCount++ })
+
+      // Act — register a non-global command
+      registry.register({
+        id: "workflow.test",
+        title: "Workflow Test",
+        scope: "workflow",
+        aliases: [],
+        hideKeywords: [],
+        hidden: false,
+      })
+
+      // Assert — subscribe fires for all scopes, not just global
+      expect(callCount).toBe(1)
+
+      // Also verify search returns the workflow command when scoped
+      const results = registry.search("", "workflow")
+      expect(results.some(c => c.id === "workflow.test")).toBe(true)
+
+      unsub()
+      dispose()
+    })
+  })
 })
 
 describe("createKeybindRegistry", () => {

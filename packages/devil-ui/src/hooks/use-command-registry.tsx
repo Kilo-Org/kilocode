@@ -46,7 +46,12 @@ export function CommandRegistryProvider(props: CommandRegistryProviderProps): JS
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export interface UseCommandRegistryResult {
-  /** Reactive snapshot of all non-hidden commands in "global" scope. */
+  /**
+   * Reactive accessor — value contains only global-scope commands, but SolidJS tracks it as a
+   * dependency for all registry mutations (any scope). Primitives that need scope-specific
+   * commands should call `registry.search("", scope)` inside a `createMemo` after reading
+   * `entries()` to establish the reactive dependency.
+   */
   entries: Accessor<Command[]>
   /** Register a command. Returns an unregister function. */
   register(cmd: Command): () => void
@@ -79,6 +84,11 @@ export function useCommandRegistry(): UseCommandRegistryResult {
   // Subscribe synchronously — NOT inside onMount.
   const [entries, setEntries] = createSignal<Command[]>(ctx.commands.getAllByScope("global"))
   const unsub = ctx.commands.subscribe(() => {
+    // Deliberately spreads into a new array on every registry mutation — including mutations in
+    // non-global scopes — so that any SolidJS primitive tracking `entries()` re-runs whenever
+    // the registry changes, regardless of which scope was affected. The value itself is
+    // intentionally limited to "global" commands; callers that need a different scope should
+    // read `entries()` (to subscribe) and then call `registry.search("", scope)` for the data.
     setEntries([...ctx.commands.getAllByScope("global")])
   })
   onCleanup(unsub)

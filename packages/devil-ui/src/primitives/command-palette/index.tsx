@@ -125,11 +125,16 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
         >
           <For each={results()}>
             {(cmd, i) => (
+              /* PHASE-5-TODO: `cmd.enabled?.()` is evaluated below for aria-disabled and click
+                 guard, but disabled items are intentionally kept visible in the list so users
+                 can see what commands exist. Full visual polish (e.g. cursor: not-allowed,
+                 skip-over with keyboard) is deferred to Phase 5. */
               <li
                 id={`cmd-option-${cmd.id}`}
                 role="option"
                 aria-selected={i() === selected()}
-                onClick={() => handleSelect(cmd)}
+                aria-disabled={cmd.enabled?.() === false ? "true" : undefined}
+                onClick={() => (cmd.enabled?.() ?? true) && handleSelect(cmd)}
                 onMouseEnter={() => setSelected(i())}
                 style={{
                   display: "flex",
@@ -148,7 +153,13 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
                 <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
                   <span
                     class="cmd-title"
-                    style={{ "font-weight": i() === selected() ? "600" : "400" }}
+                    style={{
+                      "font-weight": i() === selected() ? "600" : "400",
+                      color:
+                        cmd.enabled?.() === false
+                          ? "var(--color-subtext, #a6adc8)"
+                          : undefined,
+                    }}
                   >
                     {cmd.title}
                   </span>

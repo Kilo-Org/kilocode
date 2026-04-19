@@ -28,11 +28,6 @@ export function PasteModal(props: PasteModalProps): JSX.Element {
   const adapter = useRenderTarget()
   const [text, setText] = createSignal("")
 
-  // Set focus synchronously on component init — NOT in onMount.
-  if (props.open) {
-    adapter.setFocusedNodeId("paste-modal-textarea")
-  }
-
   // Track open changes to update focus declaratively.
   createEffect(() => {
     if (props.open) {
