@@ -4,7 +4,7 @@
 
 - [x] Phase 1: Foundation — Canonical Library & Capability Model ✓ Review passed
 - [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup ✓ Review passed
-- [~] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives (executed — review pending)
+- [x] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives ✓ Review passed
 - [ ] Phase 4: Team Builder Views
 - [ ] Phase 5: Runtime Cockpit Redesign
 - [ ] Phase 6: Team Export/Import & Persistence Layer
@@ -152,7 +152,7 @@
 |-------|-------|-----------|--------|
 | 1. Foundation | 2 | 2 | Complete |
 | 2. Preset Migration | 2 | 2 | Complete ✓ Reviewed |
-| 3. TUI Scaffolding | 3 | 2 | In Progress (wave 2 complete) |
+| 3. TUI Scaffolding | 3 | 3 | Complete ✓ Reviewed |
 | 4. Team Builder Views | 3 | 0 | Not started |
 | 5. Runtime Cockpit | 3 | 0 | Not started |
 | 6. Export/Import | 2 | 0 | Not started |
@@ -160,4 +160,4 @@
 | 8. Registry | 3 | 0 | Not started |
 | 9. VS Code + Telemetry | 3 | 0 | Not started |
 | 10. Live Editing + Polish | 2 | 0 | Not started |
-| **Total** | **25** | **6** | **In Progress** |
+| **Total** | **25** | **7** | **In Progress** |
