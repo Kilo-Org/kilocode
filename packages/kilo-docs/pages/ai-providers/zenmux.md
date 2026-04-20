@@ -31,7 +31,7 @@ ZenMux provides a unified API gateway to access multiple AI models from differen
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add ZenMux and enter your API key.
 
-The extension stores this in your `kilo.json` config file. You can also edit the config file directly u{2014} see the **CLI** tab for the file format.
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
 
 {% /tab %}
 {% tab label="CLI" %}
