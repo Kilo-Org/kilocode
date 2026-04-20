@@ -18,13 +18,12 @@ export const InstanceBootstrap = Effect.gen(function* () {
   yield* Plugin.Service.use((svc) => svc.init())
   // kilocode_change start - bootstrap Kilo session ingest/remote subscriptions instead of ShareNext
   yield* Effect.promise(() => KiloSessions.init()).pipe(Effect.forkDetach)
+  yield* Effect.all(
+    [LSP.Service, Format.Service, File.Service, FileWatcher.Service, Vcs.Service, Snapshot.Service].map((s) =>
+      Effect.forkDetach(s.use((i) => i.init())),
+  ),
   // kilocode_change end
-  yield* Format.Service.use((svc) => svc.init()).pipe(Effect.forkDetach)
-  yield* LSP.Service.use((svc) => svc.init())
-  yield* File.Service.use((svc) => svc.init()).pipe(Effect.forkDetach)
-  yield* FileWatcher.Service.use((svc) => svc.init()).pipe(Effect.forkDetach)
-  yield* Vcs.Service.use((svc) => svc.init()).pipe(Effect.forkDetach)
-  yield* Snapshot.Service.use((svc) => svc.init()).pipe(Effect.forkDetach)
+  )
 
   yield* Bus.Service.use((svc) =>
     svc.subscribeCallback(Command.Event.Executed, async (payload) => {

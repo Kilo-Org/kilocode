@@ -99,5 +99,6 @@ export namespace SessionStatus {
 
   export const list = () => runPromise((svc) => svc.list())
   export const get = (sessionID: SessionID) => runPromise((svc) => svc.get(sessionID))
+  export const set = (sessionID: SessionID, status: Info) => runPromise((svc) => svc.set(sessionID, status))
   // kilocode_change end
 }

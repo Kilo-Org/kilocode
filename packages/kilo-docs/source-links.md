@@ -11,6 +11,8 @@
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
 - <https://app.kilo.ai/claw>
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/UpgradeView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx -->
 - <https://app.kilo.ai/config.json>
@@ -91,6 +93,7 @@
 - <https://kilo.ai/install>
   <!-- packages/opencode/src/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
 - <https://kilo.ai/support>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
