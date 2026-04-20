@@ -1,6 +1,8 @@
 import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
+import { registerDisposer } from "../../effect/instance-registry"
 import { Identifier } from "../../id/id"
+import { Instance } from "../../project/instance"
 import { Log } from "../../util/log"
 import z from "zod"
 
@@ -72,16 +74,31 @@ export namespace Suggestion {
     ),
   }
 
-  // kilocode_change - Instance.state() removed in v1.4.4; use module-level state
-  // (request IDs are globally unique so instance scoping is not needed)
   const pending: Record<
     string,
     {
+      directory: string
       info: Request
       resolve: (action: Action) => void
-      reject: (error: any) => void
+      reject: (error: Error) => void
     }
   > = {}
+
+  registerDisposer((directory) => {
+    for (const [id, entry] of Object.entries(pending)) {
+      if (entry.directory !== directory) continue
+      delete pending[id]
+      log.info("dismissed", { requestID: id })
+      Bus.publish(Event.Dismissed, {
+        sessionID: entry.info.sessionID,
+        requestID: entry.info.id,
+      }).catch((err) => {
+        log.warn("dismiss publish failed", { requestID: id, err })
+      })
+      entry.reject(new DismissedError())
+    }
+    return Promise.resolve()
+  })
 
   export async function show(input: {
     sessionID: string
@@ -92,6 +109,7 @@ export namespace Suggestion {
   }): Promise<Action> {
     const s = { pending }
     const id = Identifier.ascending("suggestion")
+    const directory = Instance.directory
 
     log.info("shown", { id, actions: input.actions.length })
 
@@ -105,6 +123,7 @@ export namespace Suggestion {
         tool: input.tool,
       }
       s.pending[id] = {
+        directory,
         info,
         resolve,
         reject,

@@ -6,6 +6,8 @@ import { SuggestTool } from "../../../src/kilocode/suggestion/tool"
 import { Tool } from "../../../src/tool/tool"
 import { Truncate } from "../../../src/tool/truncate"
 import { Agent } from "../../../src/agent/agent"
+import { Instance } from "../../../src/project/instance"
+import { tmpdir } from "../../fixture/fixture"
 
 const toolRuntime = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
 
@@ -72,6 +74,38 @@ describe("tool.suggest", () => {
     expect(result.title).toBe("Suggestion dismissed")
     expect(result.output).toBe("User dismissed the suggestion.")
     expect(result.metadata.dismissed).toBe(true)
+  })
+
+  test("removes abort listener when instance disposal dismisses suggestion", async () => {
+    show.mockRestore()
+    const tool = await initTool()
+    const ctl = new AbortController()
+    const remove = spyOn(ctl.signal, "removeEventListener")
+
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const run = toolRuntime.runPromise(
+          tool.execute(
+            {
+              suggest: "Run review?",
+              actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+            },
+            { ...ctx, abort: ctl.signal } as any,
+          ),
+        )
+
+        while ((await Suggestion.list()).length === 0) await new Promise((resolve) => setTimeout(resolve, 1))
+        await Instance.disposeAll()
+
+        const result = await run
+        expect(result.metadata.dismissed).toBe(true)
+        expect(remove).toHaveBeenCalledTimes(1)
+      },
+    })
+
+    remove.mockRestore()
   })
 
   test("resolves command template for slash-command action prompt", async () => {

@@ -74,6 +74,32 @@ describe("suggestion", () => {
     })
   })
 
+  test("disposeAll rejects pending suggestions and clears them", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const first = Suggestion.show({
+          sessionID: "ses_test",
+          text: "Review changes?",
+          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        }).catch((err) => err)
+        const second = Suggestion.show({
+          sessionID: "ses_test",
+          text: "Run tests?",
+          actions: [{ label: "Run", prompt: "Run tests" }],
+        }).catch((err) => err)
+
+        expect(await Suggestion.list()).toHaveLength(2)
+        await Instance.disposeAll()
+
+        expect(await first).toBeInstanceOf(Suggestion.DismissedError)
+        expect(await second).toBeInstanceOf(Suggestion.DismissedError)
+        expect(await Suggestion.list()).toEqual([])
+      },
+    })
+  })
+
   test("dismissAll clears all pending suggestions for the target session", async () => {
     await using tmp = await tmpdir({ git: true })
     await Instance.provide({
