@@ -774,11 +774,11 @@ export const SessionRoutes = lazy(() =>
             }),
           )
         }
-        // kilocode_change end
         await Session.removeMessage({
           sessionID: params.sessionID,
           messageID: params.messageID,
         })
+        // kilocode_change end
         return c.json(true)
       },
     )

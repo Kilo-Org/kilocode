@@ -1520,18 +1520,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  /**
-   * Handle deleting a session.
-   */
   private async handleDeleteSession(sessionID: string): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
-      return
-    }
-
+    if (!this.client) return this.postMessage({ type: "error", message: "Not connected to CLI backend" })
     try {
-      const workspaceDir = this.getWorkspaceDirectory(sessionID)
-      await this.client.session.delete({ sessionID, directory: workspaceDir }, { throwOnError: true })
+      const dir = this.getWorkspaceDirectory(sessionID)
+      await this.client.session.delete({ sessionID, directory: dir }, { throwOnError: true })
       this.trackedSessionIds.delete(sessionID)
       this.streams.drop(sessionID)
       this.syncedChildSessions.delete(sessionID)
@@ -1545,57 +1538,34 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "sessionDeleted", sessionID })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to delete session:", error)
-      this.postMessage({
-        type: "error",
-        message: getErrorMessage(error) || "Failed to delete session",
-      })
+      this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to delete session" })
     }
   }
 
   private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
-      return
-    }
-
+    if (!this.client) return this.postMessage({ type: "error", message: "Not connected to CLI backend" })
     try {
       const dir = this.getWorkspaceDirectory(sessionID)
       await this.client.session.deleteMessage({ sessionID, messageID, directory: dir }, { throwOnError: true })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
-      this.postMessage({
-        type: "error",
-        message: getErrorMessage(error) || "Failed to delete message",
-        sessionID,
-      })
+      this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to delete message", sessionID })
     }
   }
 
-  /**
-   * Handle renaming a session.
-   */
   private async handleRenameSession(sessionID: string, title: string): Promise<void> {
-    if (!this.client) {
-      this.postMessage({ type: "error", message: "Not connected to CLI backend" })
-      return
-    }
-
+    if (!this.client) return this.postMessage({ type: "error", message: "Not connected to CLI backend" })
     try {
-      const workspaceDir = this.getWorkspaceDirectory(sessionID)
+      const dir = this.getWorkspaceDirectory(sessionID)
       const { data: updated } = await this.client.session.update(
-        { sessionID, directory: workspaceDir, title },
+        { sessionID, directory: dir, title },
         { throwOnError: true },
       )
-      if (this.currentSession?.id === sessionID) {
-        this.currentSession = updated
-      }
+      if (this.currentSession?.id === sessionID) this.currentSession = updated
       this.postMessage({ type: "sessionUpdated", session: this.sessionToWebview(updated) })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to rename session:", error)
-      this.postMessage({
-        type: "error",
-        message: getErrorMessage(error) || "Failed to rename session",
-      })
+      this.postMessage({ type: "error", message: getErrorMessage(error) || "Failed to rename session" })
     }
   }
 
