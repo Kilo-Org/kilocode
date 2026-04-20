@@ -851,7 +851,6 @@ describe("AutocompleteInlineCompletionProvider", () => {
       }),
       getModelName: vi.fn().mockReturnValue("test-model"),
       getProviderDisplayName: vi.fn().mockReturnValue("test-provider"),
-      supportsFim: vi.fn().mockReturnValue(true),
       hasValidCredentials: vi.fn().mockReturnValue(true), // Default to true for tests
     } as unknown as AutocompleteModel
     mockCostTrackingCallback = vi.fn() as CostTrackingCallback
