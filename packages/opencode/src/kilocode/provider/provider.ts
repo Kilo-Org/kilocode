@@ -69,7 +69,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(
-          pickBy(cfg.variants, (v) => !v.disabled),
+          pickBy(cfg.variants, (v) => !!v && !v.disabled),
           (v) => omit(v, ["disabled"]),
         )
       : {},
