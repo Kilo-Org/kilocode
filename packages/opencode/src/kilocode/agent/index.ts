@@ -19,7 +19,7 @@ import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 // Safe bash commands that don't need user approval.
 // Read-only commands are shared between the full and read-only allowlists.
 // Mutating commands are only in the full allowlist (not read-only).
-// Linux/macOS-specific commands are gated behind a platform check.
+// Windows falls back to asking for every bash command.
 const readonly: Record<string, "allow"> = {
   // read-only / informational
   "cat *": "allow",
@@ -72,12 +72,15 @@ const posix: Record<string, "allow"> = {
   "uname *": "allow",
 }
 
-export const bash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "ask",
-  ...readonly,
-  ...mutating,
-  ...(process.platform !== "win32" ? posix : {}),
-}
+export const bash: Record<string, "allow" | "ask" | "deny"> =
+  process.platform === "win32"
+    ? { "*": "ask" }
+    : {
+        "*": "ask",
+        ...readonly,
+        ...mutating,
+        ...posix,
+      }
 
 // Read-only bash commands for ask/plan agents.
 // Unknown commands are DENIED (not "ask") because these agents must never modify the filesystem.
