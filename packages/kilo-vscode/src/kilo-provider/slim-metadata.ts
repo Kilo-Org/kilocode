@@ -172,6 +172,10 @@ const slimmers: Record<string, (state: Record<string, unknown>) => Record<string
   multiedit: slimMultiedit,
   write: slimWrite,
   bash: slimBash,
+  webfetch: slimOutput,
+  websearch: slimOutput,
+  codesearch: slimOutput,
+  task: slimOutput,
 }
 
 /** Strip heavy metadata from a single tool part; pass-through for non-tool parts. */
@@ -185,9 +189,15 @@ export function slimPart<T>(part: T): T {
   if (typeof tool !== "string") return part
 
   const fn = slimmers[tool]
-  if (!fn) return part
-
   const state = obj.state
+  if (!fn) {
+    // Fallback for MCP and other unknown tools: slim large output fields
+    if (isObj(state) && typeof state.output === "string" && state.output.length > OUTPUT_CAP) {
+      return { ...obj, state: slimOutput(state) } as T
+    }
+    return part
+  }
+
   if (!isObj(state)) return part
 
   return { ...obj, state: fn(state) } as T

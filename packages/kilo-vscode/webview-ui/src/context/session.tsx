@@ -932,6 +932,29 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     batch(() => {
+      // Evict previous session's messages and parts when switching sessions
+      // to prevent unbounded memory growth across session switches.
+      if (mode === "replace") {
+        const prevId = currentSessionID()
+        if (prevId && prevId !== sessionID) {
+          const oldMsgs = store.messages[prevId] ?? []
+          const oldMsgIds = oldMsgs.map((m) => m.id)
+          for (const id of oldMsgIds) stash.remove(id)
+          setStore(
+            "parts",
+            produce((parts) => {
+              for (const id of oldMsgIds) delete parts[id]
+            }),
+          )
+          setStore(
+            "messages",
+            produce((messages) => {
+              delete messages[prevId]
+            }),
+          )
+        }
+      }
+
       setLoaded((prev) => {
         if (prev.has(sessionID)) return prev
         const next = new Set(prev)
@@ -1370,16 +1393,39 @@ export const SessionProvider: ParentComponent = (props) => {
       // Sessions whose worktree directories failed to list are preserved —
       // their absence is transient, not a real deletion.
       const ids = new Set(loaded.map((s) => s.id))
+      // Collect removed session IDs to clean up their messages and parts
+      const removedIds: string[] = []
       setStore(
         "sessions",
         produce((sessions) => {
           for (const id of Object.keys(sessions)) {
             if (id.startsWith("cloud:")) continue
             if (kept?.has(id)) continue
-            if (!ids.has(id)) delete sessions[id]
+            if (!ids.has(id)) {
+              removedIds.push(id)
+              delete sessions[id]
+            }
           }
         }),
       )
+      // Clean up messages and parts for removed sessions
+      for (const removedId of removedIds) {
+        const oldMsgs = store.messages[removedId] ?? []
+        const oldMsgIds = oldMsgs.map((m) => m.id)
+        for (const id of oldMsgIds) stash.remove(id)
+        setStore(
+          "parts",
+          produce((parts) => {
+            for (const id of oldMsgIds) delete parts[id]
+          }),
+        )
+        setStore(
+          "messages",
+          produce((messages) => {
+            delete messages[removedId]
+          }),
+        )
+      }
       for (const s of loaded) {
         setStore("sessions", s.id, s)
       }

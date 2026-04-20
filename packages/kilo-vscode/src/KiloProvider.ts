@@ -1325,6 +1325,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ): Promise<void> {
     const mode = options.mode ?? "replace"
     if (mode !== "prepend") {
+      // Prune previous session from tracked set on session switch to prevent
+      // unbounded growth. Keep child/synced sessions as they may still be active.
+      if (mode === "replace") {
+        const prevId = this.contextSessionID
+        if (prevId && prevId !== sessionID && !this.syncedChildSessions.has(prevId)) {
+          this.trackedSessionIds.delete(prevId)
+        }
+      }
       this.trackedSessionIds.add(sessionID)
       this.focusSession(sessionID)
       this.contextSessionID = sessionID
