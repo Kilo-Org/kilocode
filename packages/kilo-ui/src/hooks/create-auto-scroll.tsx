@@ -52,7 +52,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
     lastInteraction = performance.now()
   }
 
-  const recentlyInteracted = () => performance.now() - lastInteraction < USER_INTERACTION_GRACE_MS
+  const recentlyInteracted = () =>
+    lastInteraction > 0 && performance.now() - lastInteraction < USER_INTERACTION_GRACE_MS
 
   const scrollToBottomNow = (behavior: ScrollBehavior) => {
     const el = scroll
