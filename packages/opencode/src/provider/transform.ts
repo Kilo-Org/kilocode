@@ -41,8 +41,10 @@ export namespace ProviderTransform {
         return "google"
       case "@ai-sdk/gateway":
         return "gateway"
-      case "@ai-sdk/alibaba": // kilocode_change
+      // kilocode_change start
+      case "@ai-sdk/alibaba":
         return "alibaba"
+      // kilocode_change end
       case "@openrouter/ai-sdk-provider":
       case "@kilocode/kilo-gateway": // kilocode_change
         return "openrouter"
@@ -713,12 +715,14 @@ export namespace ProviderTransform {
           ]),
         )
 
+      // kilocode_change start
       case "@ai-sdk/alibaba":
         // https://sdk.vercel.ai/providers/ai-sdk-providers/alibaba
         return {
           high: { enableThinking: true, thinkingBudget: 16000 },
           max: { enableThinking: true, thinkingBudget: 31999 },
         }
+      // kilocode_change end
 
       case "@ai-sdk/mistral":
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/mistral
