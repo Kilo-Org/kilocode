@@ -1891,8 +1891,8 @@ const AgentManagerContent: Component = () => {
   const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
     const msg = { type: "agentManager.forkSession" as const, sessionId, ...(messageId ? { messageId } : {}) }
-    if (sel === LOCAL) return vscode.postMessage(msg)
-    if (sel) vscode.postMessage({ ...msg, worktreeId: sel })
+    if (!sel || sel === LOCAL) return vscode.postMessage(msg)
+    vscode.postMessage({ ...msg, worktreeId: sel })
   }
   const handleCloseTab = (sessionId: string) => {
     const pending = isPending(sessionId)
