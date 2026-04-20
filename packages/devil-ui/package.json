@@ -94,7 +94,16 @@
     "./hooks/use-command-registry": "./src/hooks/use-command-registry.tsx",
     "./hooks/use-prompt-history": "./src/hooks/use-prompt-history.ts",
     "./primitives": "./src/primitives/index.ts",
-    "./components": "./src/components/index.ts"
+    "./components": "./src/components/index.ts",
+    "./context/density": "./src/context/density.tsx",
+    "./hooks/use-density": "./src/hooks/use-density.tsx",
+    "./hooks/use-first-run": "./src/hooks/use-first-run.tsx",
+    "./hooks/use-stage-position": "./src/hooks/use-stage-position.tsx",
+    "./primitives/density-toggle": "./src/primitives/density-toggle/index.tsx",
+    "./primitives/stage-position-badge": "./src/primitives/stage-position-badge/index.tsx",
+    "./primitives/detail-panel": "./src/primitives/detail-panel/index.tsx",
+    "./primitives/tab-group": "./src/primitives/tab-group/index.tsx",
+    "./primitives/onboarding-wizard": "./src/primitives/onboarding-wizard/index.tsx"
   },
   "peerDependencies": {
     "@opencode-ai/ui": "workspace:*",
