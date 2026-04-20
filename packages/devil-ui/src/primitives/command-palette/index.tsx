@@ -30,12 +30,20 @@ function TerminalCommandPalette(props: CommandPaletteProps): JSX.Element {
     return registry.search(query(), props.scope)
   })
 
-  // Dynamic require to avoid @opentui static import at module level (CONVENTIONS.md §3)
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useKeyboard } = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
-  useKeyboard((evt) => {
-    if (evt.key === "Escape") props.onClose()
-  }, {})
+  // Dynamic require — avoids @opentui static import at module level (CONVENTIONS.md §3)
+  let useKeyboard: ((cb: (evt: { key: string }) => void, opts?: unknown) => void) | undefined
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const opentui = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
+    useKeyboard = opentui.useKeyboard
+  } catch {
+    // @opentui/solid not available — skip keyboard in test/DOM environments (CONVENTIONS.md §3)
+  }
+  if (useKeyboard) {
+    useKeyboard((evt) => {
+      if (evt.key === "Escape") props.onClose()
+    }, {})
+  }
 
   const summary = createMemo(() => {
     const items = results()
