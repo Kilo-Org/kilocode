@@ -6,7 +6,7 @@
 - [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup ✓ Review passed
 - [x] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives ✓ Review passed
 - [x] Phase 4: Team Builder Views ✓ Review passed
-- [ ] Phase 5: Runtime Cockpit Redesign
+- [x] Phase 5: Runtime Cockpit Redesign (pending review)
 - [ ] Phase 6: Team Export/Import & Persistence Layer
 - [ ] Phase 7: Configurable Workflow DAG
 - [ ] Phase 8: Team Registry & Marketplace
@@ -154,10 +154,10 @@
 | 2. Preset Migration | 2 | 2 | Complete ✓ Reviewed |
 | 3. TUI Scaffolding | 3 | 3 | Complete ✓ Reviewed |
 | 4. Team Builder Views | 3 | 3 | Complete (pending review) |
-| 5. Runtime Cockpit | 3 | 0 | Not started |
+| 5. Runtime Cockpit | 3 | 3 | Complete (pending review) |
 | 6. Export/Import | 2 | 0 | Not started |
 | 7. Configurable DAG | 2 | 0 | Not started |
 | 8. Registry | 3 | 0 | Not started |
 | 9. VS Code + Telemetry | 3 | 0 | Not started |
 | 10. Live Editing + Polish | 2 | 0 | Not started |
-| **Total** | **25** | **10** | **In Progress** |
+| **Total** | **25** | **13** | **In Progress** |

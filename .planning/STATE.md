@@ -1,13 +1,13 @@
 # Project State
 
 ## Current Position
-- **Phase**: 5 of 10 (planned)
-- **Status**: Phase 5 planned — 3 plans across 3 waves (refine_cycle=2, verdict CAUTION accepted)
-- **Last Activity**: Phase 5 planning complete (2026-04-19)
+- **Phase**: 5 of 10 (executed)
+- **Status**: Phase 5 complete — 3 plans across 3 waves (all waves executed, ready for /legion:review)
+- **Last Activity**: Phase 5 execution complete (2026-04-19)
 
 ## Progress
 ```
-[##########..........] 50% — 10/25 plans complete (Phase 5 PLANNED, ready for /legion:build)
+[#############.......] 52% — 13/25 plans complete (Phase 5 EXECUTED, run /legion:review)
 ```
 
 ## Phase 5 Plan Structure (planned 2026-04-19, refine_cycle=2)
@@ -265,8 +265,35 @@
 - Carry-forward to Phase 5: TerminalStub eager-fallback documentation, selectRole overlay contract, provider action test coverage (Bun/@opentui constraint)
 - Final: 80 tests pass (65 Phase-4 + 15 pre-existing), 0 fail; typecheck clean
 
+## Phase 5 Wave Results
+
+### Wave 1 Results
+- Plan 05-01 (Wave 1): Foundations — Complete.
+  - 5 devil-ui primitives: DensityProvider+Toggle, StagePositionBadge, DetailPanel, TabGroup (render-prop pattern)
+  - 3 hooks: useDensity, useDensityOptional, useStagePosition; useFirstRun
+  - detailpanel flex fix (minWidth:0) codified as layout invariant
+  - devil-ui package.json exports-map extended with 9 new subpaths
+
+### Wave 2 Results
+- Plan 05-02 (Wave 2): Unstubs + OnboardingWizard — Complete.
+  - CommandPalette, HelpOverlay, FooterBar, PasteModal terminal stubs replaced with real implementations
+  - OnboardingWizard primitive shipped (wizard + team-review step with RosterTable readOnly)
+  - Phase 4 carry-forwards: closeOverlays() signal list, lazy Show fallback, CONVENTIONS.md
+  - RosterTable gains readOnly prop
+
+### Wave 3 Results
+- Plan 05-03 (Wave 3): Cockpit Composition — Complete.
+  - Config.Info.workflow schema extension (density, firstRunComplete, autoCompactFired)
+  - WorkflowViewState extended: density/firstRunComplete state + setDensity/markFirstRunComplete actions
+  - Auto-compact createEffect: fires once on first completed task, persists autoCompactFired (R3-05)
+  - runtime-cockpit.tsx created; status-bar.tsx, detail-panel.tsx, tabs/tab-bar.tsx deleted
+  - index.tsx rewritten as 3-mode router (onboarding|workflow|team-builder) with DensityProvider
+  - OnboardingWizard wired: teamRepo.saveTeam (R3-03); startBuild fire-and-forget (R3-04)
+  - /density command added to command-input.tsx
+  - 64 new integration tests across 4 files; all structural (R3-14, R3-15)
+
 ## Next Action
-Run `/legion:build` to execute Phase 5: Runtime Cockpit Redesign.
+Run `/legion:review` to review Phase 5: Runtime Cockpit Redesign.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
