@@ -16,7 +16,7 @@ import type { EditorContext } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
 import { buildWebviewHtml } from "./utils"
-import { EXTENSION_DISPLAY_NAME } from "./constants"
+import { panelTitle } from "./kilo-provider/tab-title"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
@@ -442,18 +442,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
-  private static readonly MAX_TAB_TITLE = 50
-
-  /** Update the VS Code editor tab title from the current session title, truncated. */
   private updatePanelTitle(): void {
     if (!this.panel) return
-    const title = this.currentSession?.title
-    if (!title || /^(New|Child) session - \d{4}-/.test(title)) {
-      this.panel.title = EXTENSION_DISPLAY_NAME
-      return
-    }
-    this.panel.title =
-      title.length > KiloProvider.MAX_TAB_TITLE ? title.substring(0, KiloProvider.MAX_TAB_TITLE - 1) + "…" : title
+    this.panel.title = panelTitle(this.currentSession?.title)
   }
 
   /**
