@@ -18,7 +18,6 @@ import { Permission } from "@/permission"
 // kilocode_change start - import base prompt for display in agent settings
 import PROMPT_ANTHROPIC from "../session/prompt/anthropic.txt"
 // kilocode_change end
-import { PermissionNext } from "@/permission/next"
 import { NamedError } from "@opencode-ai/util/error" // kilocode_change
 import { Glob } from "../util/glob" // kilocode_change
 import { mergeDeep, pipe, sortBy, values } from "remeda"
