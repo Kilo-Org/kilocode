@@ -2,6 +2,7 @@ package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
+import kotlinx.coroutines.runBlocking
 
 class AppWatchingTest : SessionModelTestBase() {
 
@@ -15,5 +16,29 @@ class AppWatchingTest : SessionModelTestBase() {
 
         assertTrue(events.any { it is SessionEvent.AppChanged })
         assertEquals(KiloAppStatusDto.READY, m.chat.app.status)
+    }
+
+    fun `test restart reconnect keeps single app state collector`() = runBlocking {
+        app.connect()
+        flush()
+        assertEquals(1, appRpc.collectors.get())
+
+        app.restart()
+        app.connect()
+        flush()
+
+        assertEquals(1, appRpc.collectors.get())
+    }
+
+    fun `test reinstall reconnect keeps single app state collector`() = runBlocking {
+        app.connect()
+        flush()
+        assertEquals(1, appRpc.collectors.get())
+
+        app.reinstall()
+        app.connect()
+        flush()
+
+        assertEquals(1, appRpc.collectors.get())
     }
 }

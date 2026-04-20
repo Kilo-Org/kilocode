@@ -12,6 +12,7 @@ import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +38,7 @@ class KiloAppService internal constructor(
     }
 
     private val started = AtomicBoolean(false)
+    private var collector: Job? = null
 
     /** CLI version string from the last successful health check, or null if unknown. */
     @Volatile
@@ -57,8 +59,9 @@ class KiloAppService internal constructor(
 
     fun connect() {
         if (!started.compareAndSet(false, true)) return
+        collector?.cancel()
         cs.launch { call { connect() } }
-        cs.launch {
+        collector = cs.launch {
             val api = rpc
             if (api != null) api.state().collect { _state.value = it }
             else durable { KiloAppRpcApi.getInstance().state().collect { _state.value = it } }
@@ -77,6 +80,8 @@ class KiloAppService internal constructor(
     suspend fun restart() {
         LOG.info("restart: resetting state and sending RPC")
         started.set(false)
+        collector?.cancelAndJoin()
+        collector = null
         version = null
         call { restart() }
         LOG.info("restart: RPC returned — backend restart complete")
@@ -86,6 +91,8 @@ class KiloAppService internal constructor(
     suspend fun reinstall() {
         LOG.info("reinstall: resetting state and sending RPC")
         started.set(false)
+        collector?.cancelAndJoin()
+        collector = null
         version = null
         call { reinstall() }
         LOG.info("reinstall: RPC returned — backend reinstall complete")
