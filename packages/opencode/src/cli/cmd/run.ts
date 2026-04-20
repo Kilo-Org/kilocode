@@ -394,6 +394,13 @@ export const RunCommand = cmd({
         action: "deny",
         pattern: "*",
       },
+      // kilocode_change start - `suggest` has no UI in `kilo run`, so deny it up-front
+      {
+        permission: "suggest",
+        action: "deny",
+        pattern: "*",
+      },
+      // kilocode_change end
     ]
 
     function title() {
