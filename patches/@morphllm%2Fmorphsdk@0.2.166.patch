@@ -1,0 +1,84 @@
+diff --git a/dist/chunk-F3NCFNUX.js b/dist/chunk-F3NCFNUX.js
+index 3713c1a..5abfdd8 100644
+--- a/dist/chunk-F3NCFNUX.js
++++ b/dist/chunk-F3NCFNUX.js
+@@ -1,21 +1,13 @@
+ // logger.ts
+ var MorphLogger = class {
+   enabled;
+-  fileStream;
+-  /** Resolves once the file stream is initialized (or immediately if no file logging). */
++  file;
++  /** Resolves immediately because file logging opens no persistent stream. */
+   ready;
+   constructor() {
+     this.enabled = typeof process !== "undefined" && (process.env.MORPH_DEBUG === "1" || !!process.env.MORPH_LOG_FILE);
+-    this.fileStream = null;
+-    const f = typeof process !== "undefined" ? process.env.MORPH_LOG_FILE : void 0;
+-    if (f) {
+-      this.ready = import("fs").then((fs) => {
+-        this.fileStream = fs.createWriteStream(f, { flags: "a" });
+-      }).catch(() => {
+-      });
+-    } else {
+-      this.ready = Promise.resolve();
+-    }
++    this.file = typeof process !== "undefined" ? process.env.MORPH_LOG_FILE : void 0;
++    this.ready = Promise.resolve();
+   }
+   debug(component, msg, data) {
+     this._log("debug", component, msg, data);
+@@ -40,7 +32,10 @@ var MorphLogger = class {
+     const ts = (/* @__PURE__ */ new Date()).toISOString();
+     const prefix = `[${ts}] [${level.toUpperCase()}] [${component}]`;
+     console.error(data ? `${prefix} ${msg} ${JSON.stringify(data)}` : `${prefix} ${msg}`);
+-    this.fileStream?.write(JSON.stringify({ ts, level, component, msg, ...data && { data } }) + "\n");
++    if (this.file) {
++      const line = JSON.stringify({ ts, level, component, msg, ...data && { data } }) + "\n";
++      void import("fs").then((fs) => fs.promises.appendFile(this.file, line)).catch(() => void 0);
++    }
+   }
+ };
+ var logger = new MorphLogger();
+diff --git a/dist/tools/warp_grep/client.cjs b/dist/tools/warp_grep/client.cjs
+index c4575d9..41e290b 100644
+--- a/dist/tools/warp_grep/client.cjs
++++ b/dist/tools/warp_grep/client.cjs
+@@ -1190,21 +1190,13 @@ var import_path3 = __toESM(require("path"), 1);
+ // logger.ts
+ var MorphLogger = class {
+   enabled;
+-  fileStream;
+-  /** Resolves once the file stream is initialized (or immediately if no file logging). */
++  file;
++  /** Resolves immediately because file logging opens no persistent stream. */
+   ready;
+   constructor() {
+     this.enabled = typeof process !== "undefined" && (process.env.MORPH_DEBUG === "1" || !!process.env.MORPH_LOG_FILE);
+-    this.fileStream = null;
+-    const f = typeof process !== "undefined" ? process.env.MORPH_LOG_FILE : void 0;
+-    if (f) {
+-      this.ready = import("fs").then((fs4) => {
+-        this.fileStream = fs4.createWriteStream(f, { flags: "a" });
+-      }).catch(() => {
+-      });
+-    } else {
+-      this.ready = Promise.resolve();
+-    }
++    this.file = typeof process !== "undefined" ? process.env.MORPH_LOG_FILE : void 0;
++    this.ready = Promise.resolve();
+   }
+   debug(component, msg, data) {
+     this._log("debug", component, msg, data);
+@@ -1229,7 +1221,10 @@ var MorphLogger = class {
+     const ts = (/* @__PURE__ */ new Date()).toISOString();
+     const prefix = `[${ts}] [${level.toUpperCase()}] [${component}]`;
+     console.error(data ? `${prefix} ${msg} ${JSON.stringify(data)}` : `${prefix} ${msg}`);
+-    this.fileStream?.write(JSON.stringify({ ts, level, component, msg, ...data && { data } }) + "\n");
++    if (this.file) {
++      const line = JSON.stringify({ ts, level, component, msg, ...data && { data } }) + "\n";
++      void import("fs").then((fs) => fs.promises.appendFile(this.file, line)).catch(() => void 0);
++    }
+   }
+ };
+ var logger = new MorphLogger();
