@@ -23,6 +23,9 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { Question } from "@/question"
+import { Permission } from "@/permission"
+import { withTimeout } from "@/util/timeout"
 
 export namespace KiloSessions {
   export const Event = {
@@ -153,6 +156,25 @@ export namespace KiloSessions {
   let remoteSeq = 0
   const focused = new Set<string>()
   const opened = new Set<string>()
+  const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
+  const STATUS_TIMEOUT_MS = 3_000
+
+  async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
+    const permissions = (await Permission.list()).filter((p) => p.sessionID === sessionID)
+    if (permissions.length > 0) return "permission"
+
+    const questions = (await Question.list()).filter((q) => q.sessionID === sessionID)
+    if (questions.length > 0) return "question"
+
+    const status = await SessionStatus.get(SessionID.make(sessionID))
+    if (status.type === "offline") return "retry"
+    return status.type
+  }
+
+  async function deriveAndSyncStatus(sessionID: string) {
+    const status = await withTimeout(deriveStatus(sessionID), STATUS_TIMEOUT_MS)
+    await ingest.sync(sessionID, [{ type: "session_status", data: { status } }])
+  }
 
   export async function init() {
     if (ingestDisabled) return
@@ -225,6 +247,45 @@ export namespace KiloSessions {
     Bus.subscribe(Session.Event.TurnClose, async (evt) => {
       await ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }])
     })
+
+    // Session status changes (busy/idle/retry), question lifecycle, permission lifecycle.
+    const syncStatus = (evt: { properties: { sessionID: string } }) => {
+      const sessionID = evt.properties.sessionID
+      const current = statusSyncs.get(sessionID)
+      if (current?.running) {
+        current.dirty = true
+        return
+      }
+
+      const state = current ?? { running: false, dirty: false }
+      statusSyncs.set(sessionID, state)
+
+      const fail = (error: unknown) => {
+        const dirty = state.dirty
+        statusSyncs.delete(sessionID)
+        log.error("status sync failed", { sessionID, error: String(error) })
+        if (dirty) syncStatus(evt)
+      }
+
+      const loop = async () => {
+        state.running = true
+        state.dirty = false
+        await deriveAndSyncStatus(sessionID)
+        if (state.dirty) {
+          void loop().catch(fail)
+          return
+        }
+        statusSyncs.delete(sessionID)
+      }
+
+      void loop().catch(fail)
+    }
+    Bus.subscribe(SessionStatus.Event.Status, syncStatus)
+    Bus.subscribe(Question.Event.Asked, syncStatus)
+    Bus.subscribe(Question.Event.Replied, syncStatus)
+    Bus.subscribe(Question.Event.Rejected, syncStatus)
+    Bus.subscribe(Permission.Event.Asked, syncStatus)
+    Bus.subscribe(Permission.Event.Replied, syncStatus)
 
     const cfg = await Config.getGlobal()
     if (remoteEnabled || cfg.remote_control)
@@ -565,6 +626,10 @@ export namespace KiloSessions {
       {
         type: "model",
         data: models,
+      },
+      {
+        type: "session_status",
+        data: { status: await deriveStatus(sessionId) },
       },
     ])
   }

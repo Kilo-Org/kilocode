@@ -92,6 +92,11 @@
         "icon": "$(circuit-board)"
       },
       {
+        "command": "kilo-code.new.kiloClawOpen",
+        "title": "KiloClaw",
+        "icon": "$(comment-discussion)"
+      },
+      {
         "command": "kilo-code.new.marketplaceButtonClicked",
         "title": "Marketplace",
         "icon": "$(extensions)"
@@ -361,18 +366,23 @@
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.marketplaceButtonClicked",
+          "command": "kilo-code.new.kiloClawOpen",
           "group": "navigation@3",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.profileButtonClicked",
+          "command": "kilo-code.new.marketplaceButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
+          "when": "view == kilo-code.SidebarProvider"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@6",
           "when": "view == kilo-code.SidebarProvider"
         }
       ],
@@ -879,6 +889,7 @@
     "quick-lru": "^7.0.0",
     "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
+    "stream-chat": "9.38.0",
     "uri-js": "^4.4.1",
     "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",

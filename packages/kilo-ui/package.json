@@ -62,6 +62,7 @@
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
+    "./text-shimmer": "./src/components/text-shimmer.tsx",
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",

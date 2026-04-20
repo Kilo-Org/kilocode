@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
+import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
 import { DiffViewerProvider } from "./DiffViewerProvider"
 import { DiffVirtualProvider } from "./DiffVirtualProvider"
 import { SettingsEditorProvider } from "./SettingsEditorProvider"
@@ -95,6 +96,10 @@ export function activate(context: vscode.ExtensionContext) {
   if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
   ensureCommandsSkipShell(skip)
 
+  // Create KiloClaw chat provider for editor panel
+  const kiloClawProvider = new KiloClawProvider(context.extensionUri, connectionService)
+  context.subscriptions.push(kiloClawProvider)
+
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
   const agentManagerProvider = new AgentManagerProvider(agentManagerHost, connectionService)
@@ -113,6 +118,16 @@ export function activate(context: vscode.ExtensionContext) {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
         })
         agentManagerProvider.deserializePanel(ctx)
+        return Promise.resolve()
+      },
+    }),
+  )
+
+  // Register serializer so KiloClaw panel restores when VS Code restarts
+  context.subscriptions.push(
+    vscode.window.registerWebviewPanelSerializer(KiloClawProvider.viewType, {
+      deserializeWebviewPanel(panel: vscode.WebviewPanel) {
+        kiloClawProvider.restorePanel(panel)
         return Promise.resolve()
       },
     }),
@@ -211,6 +226,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.marketplaceButtonClicked", (directory?: string) => {
       settingsEditorProvider.openPanel("marketplace", undefined, directory)
+    }),
+    vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
+      kiloClawProvider.openPanel()
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       const tab = activeTabProvider()
