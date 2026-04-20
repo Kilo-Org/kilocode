@@ -1973,6 +1973,57 @@ describe("AutocompleteInlineCompletionProvider", () => {
       expect(callCount).toBe(1)
     })
 
+    it("should reuse slow leading-edge request when user types forward before it completes", async () => {
+      // Mock the model with a slow response that takes 500ms
+      let callCount = 0
+      let resolvers: Array<() => void> = []
+      vi.mocked(mockModel.generateFimResponse).mockImplementation(async (_prefix, _suffix, onChunk) => {
+        callCount++
+        // Simulate a slow FIM response — wait for manual resolution
+        await new Promise<void>((resolve) => {
+          resolvers.push(resolve)
+        })
+        if (onChunk) {
+          onChunk("console.log('test');")
+        }
+        return {
+          cost: 0.01,
+          inputTokens: 100,
+          outputTokens: 50,
+          cacheWriteTokens: 0,
+          cacheReadTokens: 0,
+        }
+      })
+
+      // First request: leading edge fires immediately for "const x = 1"
+      const doc1 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
+      const pos1 = new vscode.Position(0, 11)
+      const promise1 = provider.provideInlineCompletionItems(doc1, pos1, mockContext, mockToken)
+
+      // Leading edge should have started the request immediately
+      expect(callCount).toBe(1)
+
+      // User types "c" while the leading-edge request is still in-flight
+      const doc2 = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1c\nconst y = 2")
+      const pos2 = new vscode.Position(0, 12)
+      const promise2 = provider.provideInlineCompletionItems(doc2, pos2, mockContext, mockToken)
+
+      // The second request should NOT have triggered a new FIM call —
+      // it should reuse the leading-edge pending request since the prefix
+      // extends and the suffix is unchanged
+      expect(callCount).toBe(1)
+
+      // Now resolve the FIM response
+      resolvers[0]()
+      await vi.advanceTimersByTimeAsync(500)
+
+      await promise1
+      await promise2
+
+      // Only one FIM request should have been made total
+      expect(callCount).toBe(1)
+    })
+
     it("should NOT reuse pending request when suffix changes", async () => {
       // Mock the model to track call count
       let callCount = 0

@@ -1,4 +1,4 @@
-import { Component, createSignal, createMemo, createEffect, For, Show } from "solid-js"
+import { Component, createSignal, createMemo, createEffect, For, Show, onCleanup } from "solid-js"
 import { Select } from "@kilocode/kilo-ui/select"
 import { TextField } from "@kilocode/kilo-ui/text-field"
 import { Card } from "@kilocode/kilo-ui/card"
@@ -6,10 +6,12 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { Switch } from "@kilocode/kilo-ui/switch"
 
 import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import type { AgentInfo, SkillInfo } from "../../types/messages"
 import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
@@ -48,10 +50,22 @@ const AgentBehaviourTab: Component = () => {
   const { config, updateConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
+  const vscode = useVSCode()
   const [activeSubtab, setActiveSubtab] = createSignal<SubtabId>("agents")
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
+  const [claudeCompat, setClaudeCompat] = createSignal(false)
+  const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
+
+  // Load the VS Code setting for Claude Code compatibility
+  vscode.postMessage({ type: "requestClaudeCompatSetting" })
+  const unsubClaudeCompat = vscode.onMessage((msg) => {
+    if (msg.type === "claudeCompatSettingLoaded") {
+      setClaudeCompat(msg.enabled)
+    }
+  })
+  onCleanup(unsubClaudeCompat)
 
   // Agent view state
   const [agentView, setAgentView] = createSignal<AgentView>("list")
@@ -68,7 +82,12 @@ const AgentBehaviourTab: Component = () => {
   })
 
   const agentNames = createMemo(() => {
-    const names = session.agents().map((a) => a.name)
+    // Exclude server-side hidden internal modes (compaction, title, summary)
+    // from the list. Config-only agents are still added below.
+    const names = session
+      .allAgents()
+      .filter((a) => !a.hidden)
+      .map((a) => a.name)
     // Also include any agents from config that might not be in the agent list
     const agents = Object.keys(config().agent ?? {})
     for (const name of agents) {
@@ -79,10 +98,15 @@ const AgentBehaviourTab: Component = () => {
     return names.sort()
   })
 
-  const defaultAgentOptions = createMemo<SelectOption[]>(() => [
-    { value: "", label: language.t("common.default") },
-    ...agentNames().map((name) => ({ value: name, label: name })),
-  ])
+  // Default-agent picker must only show visible primary agents (not subagents
+  // or hidden modes) since the CLI rejects those as default_agent values.
+  const defaultAgentOptions = createMemo<SelectOption[]>(() => {
+    const visible = session.agents().map((a) => a.name)
+    return [
+      { value: "", label: language.t("common.default") },
+      ...visible.map((name) => ({ value: name, label: name })),
+    ]
+  })
 
   const instructions = () => config().instructions ?? []
 
@@ -171,7 +195,7 @@ const AgentBehaviourTab: Component = () => {
     ))
   }
 
-  const removableModes = createMemo(() => session.agents().filter((a) => !a.native))
+  const removableModes = createMemo(() => session.allAgents().filter((a) => !a.native))
 
   const confirmRemoveMode = (agent: AgentInfo) => {
     dialog.show(() => (
@@ -300,6 +324,9 @@ const AgentBehaviourTab: Component = () => {
             <Button variant="ghost" size="small" onClick={triggerImport}>
               {language.t("settings.agentBehaviour.importMode")}
             </Button>
+            <Button variant="ghost" size="small" onClick={browse}>
+              {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+            </Button>
             <Button variant="secondary" size="small" onClick={() => setAgentView("create")}>
               {language.t("settings.agentBehaviour.createMode")}
             </Button>
@@ -337,11 +364,12 @@ const AgentBehaviourTab: Component = () => {
           <Card style={{ "margin-bottom": "12px" }}>
             <For each={agentNames()}>
               {(name, index) => {
-                const agent = () => session.agents().find((a) => a.name === name)
+                const agent = () => session.allAgents().find((a) => a.name === name)
                 const isCustom = () => !agent()?.native
                 const agentCfg = () => config().agent?.[name] ?? {}
                 const disabled = () => agentCfg().disable ?? false
                 const hidden = () => agentCfg().hidden ?? false
+                const deprecated = () => agent()?.deprecated ?? false
                 return (
                   <div
                     style={{
@@ -378,6 +406,19 @@ const AgentBehaviourTab: Component = () => {
                             custom
                           </span>
                         </Show>
+                        <Show when={agent()?.mode === "subagent"}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--bg-subtle-base, var(--vscode-badge-background))",
+                              color: "var(--text-weak-base, var(--vscode-badge-foreground))",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.subagent")}
+                          </span>
+                        </Show>
                         <Show when={hidden()}>
                           <span
                             style={{
@@ -402,6 +443,19 @@ const AgentBehaviourTab: Component = () => {
                             }}
                           >
                             {language.t("settings.agentBehaviour.badge.disabled")}
+                          </span>
+                        </Show>
+                        <Show when={deprecated()}>
+                          <span
+                            style={{
+                              "font-size": "10px",
+                              padding: "1px 5px",
+                              "border-radius": "3px",
+                              background: "var(--vscode-editorWarning-foreground, #cca700)",
+                              color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                            }}
+                          >
+                            {language.t("settings.agentBehaviour.badge.deprecated")}
                           </span>
                         </Show>
                       </div>
@@ -478,6 +532,31 @@ const AgentBehaviourTab: Component = () => {
       setExpanded((prev) => ({ ...prev, [name]: !prev[name] }))
     }
 
+    const statusColor = (name: string) => {
+      const s = session.mcpStatus()[name]?.status
+      if (s === "connected") return "var(--vscode-testing-iconPassed, #4caf50)"
+      if (s === "failed") return "var(--vscode-testing-iconFailed, #f44336)"
+      if (s === "needs_auth" || s === "needs_client_registration")
+        return "var(--vscode-editorWarning-foreground, #ff9800)"
+      if (s === "disabled") return "var(--vscode-disabledForeground, #888)"
+      return "var(--vscode-disabledForeground, #888)"
+    }
+
+    const statusLabel = (name: string) => {
+      const s = session.mcpStatus()[name]?.status
+      if (!s) return ""
+      const key = {
+        connected: "mcp.status.connected",
+        failed: "mcp.status.failed",
+        needs_auth: "mcp.status.needs_auth",
+        disabled: "mcp.status.disabled",
+        needs_client_registration: "mcp.status.needs_registration",
+      }[s]
+      return key ? language.t(key) : s
+    }
+
+    const isConnected = (name: string) => session.mcpStatus()[name]?.status === "connected"
+
     if (editingMcp()) {
       return (
         <McpEditView
@@ -493,6 +572,18 @@ const AgentBehaviourTab: Component = () => {
 
     return (
       <div>
+        <div
+          style={{
+            display: "flex",
+            "align-items": "center",
+            "justify-content": "flex-end",
+            "margin-bottom": "8px",
+          }}
+        >
+          <Button variant="secondary" size="small" onClick={browse}>
+            {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+          </Button>
+        </div>
         <Show
           when={mcpEntries().length > 0}
           fallback={
@@ -513,6 +604,12 @@ const AgentBehaviourTab: Component = () => {
               {([name, mcp], index) => {
                 const open = () => expanded()[name] ?? false
                 const env = () => Object.entries(mcp.environment ?? mcp.env ?? {})
+                const error = () => {
+                  const s = session.mcpStatus()[name]
+                  if (s?.status === "failed") return s.error
+                  if (s?.status === "needs_client_registration") return s.error
+                  return undefined
+                }
                 return (
                   <div
                     style={{
@@ -540,6 +637,16 @@ const AgentBehaviourTab: Component = () => {
                             toggle(name)
                           }}
                         />
+                        {/* Status dot */}
+                        <div
+                          style={{
+                            width: "6px",
+                            height: "6px",
+                            "border-radius": "50%",
+                            "background-color": statusColor(name),
+                            "flex-shrink": "0",
+                          }}
+                        />
                         <div style={{ "font-weight": "500" }}>{name}</div>
                         <span
                           style={{
@@ -547,10 +654,26 @@ const AgentBehaviourTab: Component = () => {
                             color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
                           }}
                         >
-                          {mcp.url ? "remote" : "stdio"}
+                          {statusLabel(name) || (mcp.url ? "remote" : "stdio")}
                         </span>
                       </div>
-                      <div style={{ display: "flex", gap: "4px" }}>
+                      <div style={{ display: "flex", gap: "4px", "align-items": "center" }}>
+                        <div onClick={(e: MouseEvent) => e.stopPropagation()}>
+                          <Switch
+                            checked={isConnected(name)}
+                            disabled={session.mcpLoading() === name}
+                            onChange={() => {
+                              if (isConnected(name)) {
+                                session.disconnectMcp(name)
+                              } else {
+                                session.connectMcp(name)
+                              }
+                            }}
+                            hideLabel
+                          >
+                            {name}
+                          </Switch>
+                        </div>
                         <IconButton
                           size="small"
                           variant="ghost"
@@ -571,6 +694,20 @@ const AgentBehaviourTab: Component = () => {
                         />
                       </div>
                     </div>
+
+                    {/* Error message */}
+                    <Show when={error()}>
+                      <div
+                        style={{
+                          "padding-left": "28px",
+                          "padding-bottom": "4px",
+                          "font-size": "11px",
+                          color: "var(--vscode-errorForeground)",
+                        }}
+                      >
+                        {error()}
+                      </div>
+                    </Show>
 
                     {/* Expandable detail */}
                     <Show when={open()}>
@@ -636,16 +773,6 @@ const AgentBehaviourTab: Component = () => {
                             )}
                           </For>
                         </Show>
-                        <Show when={mcp.enabled === false}>
-                          <div
-                            style={{
-                              "margin-top": "4px",
-                              color: "var(--vscode-errorForeground)",
-                            }}
-                          >
-                            {language.t("settings.agentBehaviour.mcpDetail.disabled")}
-                          </div>
-                        </Show>
                       </div>
                     </Show>
                   </div>
@@ -660,6 +787,18 @@ const AgentBehaviourTab: Component = () => {
 
   const renderSkillsSubtab = () => (
     <div>
+      <div
+        style={{
+          display: "flex",
+          "align-items": "center",
+          "justify-content": "flex-end",
+          "margin-bottom": "8px",
+        }}
+      >
+        <Button variant="secondary" size="small" onClick={browse}>
+          {language.t("settings.agentBehaviour.mcpBrowseMarketplace")}
+        </Button>
+      </div>
       {/* Discovered skills */}
       <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>
         {language.t("settings.agentBehaviour.discoveredSkills")}
@@ -696,10 +835,12 @@ const AgentBehaviourTab: Component = () => {
                     }}
                   >
                     <div>{skill.description}</div>
-                    <div>{skill.location}</div>
+                    {skill.location !== "builtin" && <div>{skill.location}</div>}
                   </div>
                 </div>
-                <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
+                {skill.location !== "builtin" && (
+                  <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
+                )}
               </div>
             )}
           </For>
@@ -888,10 +1029,41 @@ const AgentBehaviourTab: Component = () => {
               >
                 {path}
               </span>
-              <IconButton size="small" variant="ghost" icon="close" onClick={() => removeInstruction(index())} />
+              <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                <IconButton
+                  size="small"
+                  variant="ghost"
+                  icon="pencil-line"
+                  onClick={() => vscode.postMessage({ type: "openFile", filePath: path })}
+                />
+                <IconButton size="small" variant="ghost" icon="close" onClick={() => removeInstruction(index())} />
+              </div>
             </div>
           )}
         </For>
+      </Card>
+
+      {/* Claude Code compatibility */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.agentBehaviour.claudeCompat.heading")}
+      </h4>
+      <Card>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.claudeCompat.title")}
+          description={language.t("settings.agentBehaviour.claudeCompat.description")}
+          last
+        >
+          <Switch
+            checked={claudeCompat()}
+            onChange={(checked: boolean) => {
+              setClaudeCompat(checked)
+              vscode.postMessage({ type: "updateSetting", key: "claudeCodeCompat", value: checked })
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.claudeCompat.title")}
+          </Switch>
+        </SettingsRow>
       </Card>
     </div>
   )

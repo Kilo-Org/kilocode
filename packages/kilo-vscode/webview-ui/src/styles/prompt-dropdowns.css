@@ -1,0 +1,138 @@
+/* ============================================
+   File Mention Dropdown
+   ============================================ */
+
+.file-mention-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.file-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  min-width: 0;
+}
+
+.file-mention-item--active {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.file-mention-icon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.file-mention-name {
+  flex-shrink: 0;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.file-mention-dir {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
+  font-size: 11px;
+  text-align: right;
+}
+
+.file-mention-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+/* ============================================
+   Slash Command Dropdown
+   ============================================ */
+
+.slash-command-dropdown {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--vscode-editorWidget-background, var(--vscode-input-background));
+  border: 1px solid var(--vscode-editorWidget-border, var(--vscode-input-border));
+  border-radius: 4px;
+  overflow: hidden;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.slash-command-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--vscode-foreground);
+  min-width: 0;
+}
+
+.slash-command-item--active {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.slash-command-name {
+  flex-shrink: 0;
+  font-weight: 500;
+  font-family: var(--vscode-editor-font-family, monospace);
+}
+
+.slash-command-desc {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.slash-command-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--vscode-descriptionForeground);
+  text-align: center;
+}
+
+.slash-command-separator {
+  height: 1px;
+  margin: 4px 10px;
+  background: var(--vscode-editorWidget-border, var(--vscode-input-border));
+  opacity: 0.5;
+}
+
+.slash-command-group-label {
+  padding: 4px 10px 2px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.7;
+}

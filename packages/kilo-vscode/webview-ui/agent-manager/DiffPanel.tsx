@@ -12,6 +12,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
@@ -22,6 +23,7 @@ import {
 } from "./review-annotations"
 import { LONG_DIFF_MARKER_FILE_COUNT, initialOpenFiles, isLargeDiffFile } from "./diff-open-policy"
 import { DiffEndMarker } from "./DiffEndMarker"
+import { treeOrder } from "./file-tree-utils"
 
 // --- Data model ---
 
@@ -39,7 +41,9 @@ interface DiffPanelProps {
   onClose: () => void
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
-  onOpenFile?: (relativePath: string) => void
+  onOpenFile?: (relativePath: string, line?: number) => void
+  onRevertFile?: (file: string) => void
+  revertingFiles?: Set<string>
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -66,6 +70,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // key changes (different worktree) we re-expand. Within the same key,
   // only pruning happens so the user's manual collapse state is preserved.
   let initializedKey: string | undefined
+
+  // Reorder diffs to match the file-tree's depth-first visual order so
+  // scrolling through the accordion matches the tree grouping.
+  const sorted = createMemo(() => treeOrder(props.diffs))
 
   const comments = () => props.comments
   const setComments = (next: ReviewComment[]) => props.onCommentsChange(next)
@@ -302,6 +310,11 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     sendAllToChat()
   }
 
+  const handleExpandAll = () => {
+    const allOpen = open().length === props.diffs.length
+    setOpen(allOpen ? [] : props.diffs.map((d) => d.file))
+  }
+
   const totals = createMemo(() => ({
     files: props.diffs.length,
     additions: props.diffs.reduce((sum, diff) => sum + diff.additions, 0),
@@ -349,6 +362,28 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           </Show>
         </div>
         <div class="am-diff-header-actions">
+          <Show when={props.diffs.length > 0}>
+            <Tooltip
+              value={
+                open().length === props.diffs.length
+                  ? t("ui.sessionReview.collapseAll")
+                  : t("ui.sessionReview.expandAll")
+              }
+              placement="bottom"
+            >
+              <IconButton
+                icon="chevron-grabber-vertical"
+                size="small"
+                variant="ghost"
+                label={
+                  open().length === props.diffs.length
+                    ? t("ui.sessionReview.collapseAll")
+                    : t("ui.sessionReview.expandAll")
+                }
+                onClick={handleExpandAll}
+              />
+            </Tooltip>
+          </Show>
           <Show when={props.onExpand}>
             <Tooltip value={t("command.review.toggle")} placement="bottom">
               <IconButton
@@ -380,7 +415,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       <Show when={props.diffs.length > 0}>
         <div class="am-diff-content" data-component="session-review" ref={scroller}>
           <Accordion multiple value={open()} onChange={setOpen}>
-            <For each={props.diffs}>
+            <For each={sorted()}>
               {(diff) => {
                 const isAdded = () => diff.status === "added"
                 const isDeleted = () => diff.status === "deleted"
@@ -393,11 +428,19 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                     <StickyAccordionHeader>
                       <Accordion.Trigger>
                         <div data-slot="session-review-trigger-content">
-                          <div data-slot="session-review-file-info">
+                          <div
+                            data-slot="session-review-file-info"
+                            draggable={true}
+                            onDragStart={(e: DragEvent) => {
+                              e.dataTransfer?.setData(KILO_FILE_PATH_MIME, diff.file)
+                              e.dataTransfer?.setData("text/plain", diff.file)
+                              e.stopPropagation()
+                            }}
+                          >
                             <FileIcon node={{ path: diff.file, type: "file" }} />
                             <div data-slot="session-review-file-name-container">
                               <Show when={diff.file.includes("/")}>
-                                <span data-slot="session-review-directory">{getDirectory(diff.file)}</span>
+                                <span data-slot="session-review-directory">{`\u2066${getDirectory(diff.file)}\u2069`}</span>
                               </Show>
                               <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
                               <Show when={fileCommentCount() > 0}>
@@ -440,6 +483,22 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
+                            <Show when={props.onRevertFile}>
+                              <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
+                                <IconButton
+                                  icon="discard"
+                                  size="small"
+                                  variant="ghost"
+                                  class="am-diff-revert-btn"
+                                  label={t("agentManager.diff.revertFile")}
+                                  disabled={props.revertingFiles?.has(diff.file) ?? false}
+                                  onClick={(e: MouseEvent) => {
+                                    e.stopPropagation()
+                                    props.onRevertFile?.(diff.file)
+                                  }}
+                                />
+                              </Tooltip>
+                            </Show>
                             <span data-slot="session-review-diff-chevron">
                               <Icon name="chevron-down" size="small" />
                             </span>
@@ -470,6 +529,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             renderAnnotation={buildAnnotation}
                             enableGutterUtility={true}
                             onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                            onLineNumberClick={(event) => {
+                              if (event.annotationSide === "deletions") return
+                              props.onOpenFile?.(diff.file, event.lineNumber)
+                            }}
                           />
                         </Show>
                       </Show>

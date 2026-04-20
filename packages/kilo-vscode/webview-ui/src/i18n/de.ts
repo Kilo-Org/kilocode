@@ -82,11 +82,11 @@ export const dict = {
   "command.session.undo.description": "Letzte Nachricht rückgängig machen",
   "command.session.redo": "Wiederherstellen",
   "command.session.redo.description": "Letzte rückgängig gemachte Nachricht wiederherstellen",
-  "revert.banner.count_one": "{{count}} message reverted",
-  "revert.banner.count_other": "{{count}} messages reverted",
-  "revert.banner.redo": "Redo",
-  "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.count_one": "{{count}} Nachricht zurückgesetzt",
+  "revert.banner.count_other": "{{count}} Nachrichten zurückgesetzt",
+  "revert.banner.redo": "Wiederholen",
+  "revert.banner.redo.all": "Alle wiederholen",
+  "revert.banner.hint": "Sende eine neue Nachricht, um dies dauerhaft zu machen",
   "revert.disabled.agentBusy": "Warten bis der Agent fertig ist",
   "command.session.compact": "Sitzung komprimieren",
   "command.session.compact.description": "Sitzung zusammenfassen, um die Kontextgröße zu reduzieren",
@@ -169,6 +169,9 @@ export const dict = {
   "model.tag.free": "Kostenlos",
   "model.tag.latest": "Neueste",
   "model.group.recommended": "Empfohlen",
+  "model.group.favorites": "Favoriten",
+  "model.favorite.add": "Zu Favoriten hinzufügen",
+  "model.favorite.remove": "Aus Favoriten entfernen",
 
   "model.provider.anthropic": "Anthropic",
   "model.provider.openai": "OpenAI",
@@ -272,6 +275,7 @@ export const dict = {
   "mcp.status.connected": "verbunden",
   "mcp.status.failed": "fehlgeschlagen",
   "mcp.status.needs_auth": "benötigt Authentifizierung",
+  "mcp.status.needs_registration": "Client-Registrierung erforderlich",
   "mcp.status.disabled": "deaktiviert",
 
   "dialog.fork.empty": "Keine Nachrichten zum Abzweigen vorhanden",
@@ -306,7 +310,7 @@ export const dict = {
 
   "dialog.project.edit.title": "Projekt bearbeiten",
   "dialog.project.edit.name": "Name",
-  "dialog.project.edit.icon": "Icon",
+  "dialog.project.edit.icon": "Symbol",
   "dialog.project.edit.icon.alt": "Projekt-Icon",
   "dialog.project.edit.icon.hint": "Klicken oder Bild ziehen",
   "dialog.project.edit.icon.recommended": "Empfohlen: 128x128px",
@@ -604,7 +608,7 @@ export const dict = {
 
   "settings.general.section.appearance": "Erscheinungsbild",
   "settings.general.section.notifications": "Systembenachrichtigungen",
-  "settings.general.section.updates": "Updates",
+  "settings.general.section.updates": "Aktualisierungen",
   "settings.general.section.sounds": "Soundeffekte",
 
   "settings.general.row.language.title": "Sprache",
@@ -760,10 +764,53 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Anzeigename",
+  "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.variants.label": "Varianten",
+  "provider.custom.models.variants.add": "Variante hinzufügen",
+  "provider.custom.models.variants.remove": "Variante entfernen",
+  "provider.custom.models.variants.name.label": "Name",
+  "provider.custom.models.variants.name.placeholder": "z.B. thinking",
+  "provider.custom.models.variants.option.unset": "(nicht festgelegt)",
+  "provider.custom.models.variants.enableThinking.label": "Nachdenken aktivieren (z.B. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Art des Nachdenkens (z.B. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Nachdenken über Chat-Vorlagenargumente aktivieren (z.B. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Reasoning-Aufwand",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
+  "provider.custom.models.fetch": "Modelle abrufen",
+  "provider.custom.models.fetching": "Abrufen\u2026",
+  "provider.custom.models.fetch.error": "Modelle konnten nicht abgerufen werden: {{error}}",
+  "provider.custom.models.fetch.authError":
+    "Authentifizierung fehlgeschlagen. Überprüfen Sie den API-Schlüssel oben und versuchen Sie es erneut.",
+  "provider.custom.models.fetch.empty": "Keine Modelle auf diesem Server gefunden.",
+  "provider.custom.models.fetch.added": "{{count}} Modell(e) hinzugefügt.",
+  "provider.custom.models.fetch.allExist": "Alle abgerufenen Modelle sind bereits hinzugefügt.",
+  "provider.custom.models.fetch.selectAll": "Alle auswählen",
+  "provider.custom.models.fetch.deselectAll": "Alle abwählen",
+  "provider.custom.models.fetch.found": "{{count}} Modelle gefunden",
+  "provider.custom.models.fetch.showing": "{{shown}} von {{total}} angezeigt",
+  "provider.custom.models.fetch.search": "Modelle suchen\u2026",
+  "provider.custom.models.fetch.add": "{{count}} Modell(e) hinzufügen",
+  "provider.custom.edit.title": "Anbieter bearbeiten",
   "provider.custom.headers.label": "Header (optional)",
-  "provider.custom.headers.key.label": "Header",
+  "provider.custom.headers.key.label": "Kopfzeile",
   "provider.custom.headers.key.placeholder": "Header-Name",
   "provider.custom.headers.value.label": "Wert",
   "provider.custom.headers.value.placeholder": "value",
@@ -838,7 +885,7 @@ export const dict = {
   "session.showHistory": "Verlauf anzeigen",
   "session.search.placeholder": "Sitzungen suchen...",
   "session.empty": "Noch keine Sitzungen. Klicke + um eine neue Unterhaltung zu starten.",
-  "session.tab.local": "Local",
+  "session.tab.local": "Lokal",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Nur dieses Repository",
   "session.cloud.import": "Aus der Cloud importieren",
@@ -915,7 +962,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
   "settings.browser.title": "Browser",
-  "settings.checkpoints.title": "Checkpoints",
+  "settings.checkpoints.title": "Prüfpunkte",
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.notifications.title": "Benachrichtigungen",
@@ -929,10 +976,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
   "session.messages.scrollToBottom": "Nach unten scrollen",
+  "session.messages.initializing": "Initialisierung...",
+  "session.messages.taskStarting": "Wird gestartet...",
   "session.status.writingResponse": "Antwort wird geschrieben…",
   "session.status.retry": "Erneuter Versuch…",
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
+  "session.status.offline": "Netzwerk getrennt — Verbindung wird wiederhergestellt...",
+
+  "ui.sessionTurn.cancel": "Abbrechen",
+  "ui.sessionTurn.status.thinking": "Denke nach...",
+  "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
 
@@ -942,6 +996,8 @@ export const dict = {
   "prompt.placeholder.default": "Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)",
 
   "context.usage.sessionCost": "Sitzungskosten",
+  "context.usage.olderSessions": "{{count}} ältere Sitzungen",
+  "context.stats.thisSession": "Diese Sitzung",
 
   "time.justNow": "gerade eben",
   "time.minutesAgo": "vor {{count}} Min.",
@@ -971,11 +1027,30 @@ export const dict = {
     "Bei Abrechnungs- oder Kontofragen wenden Sie sich an den Kundensupport unter",
   "settings.aboutKiloCode.resetSettings.title": "Einstellungen zurücksetzen",
   "settings.aboutKiloCode.resetSettings.description":
-    "Alle Kilo Code-Erweiterungseinstellungen auf Standardwerte zurücksetzen. Dies hat keinen Einfluss auf die CLI- oder Backend-Konfiguration.",
+    "Dies setzt nur VS Code-erweiterungsspezifische Einstellungen auf ihre Standardwerte zurück. Einstellungen, die mit der CLI geteilt werden, wie Modi und Regeln für die automatische Genehmigung, werden in der CLI-Konfiguration gespeichert und nicht zurückgesetzt.",
   "settings.aboutKiloCode.resetSettings.button": "Alle Einstellungen zurücksetzen",
+  "settings.aboutKiloCode.settingsTransfer.title": "Einstellungen übertragen",
+  "settings.aboutKiloCode.settingsTransfer.description":
+    "Exportieren oder importieren Sie Ihre Einstellungen, um sie zwischen VS Code-Instanzen zu übertragen.",
+  "settings.aboutKiloCode.exportSettings": "Exportieren",
+  "settings.aboutKiloCode.importSettings": "Importieren",
+  "settings.aboutKiloCode.importSettings.invalidJson":
+    "Ungültige JSON-Datei. Bitte wählen Sie eine gültige Einstellungsdatei aus.",
+  "settings.aboutKiloCode.importSettings.invalidConfig": "Die Datei enthält keine gültigen Kilo-Einstellungen.",
+  "settings.aboutKiloCode.importSettings.tooLarge":
+    "Die Datei ist zu groß. Einstellungsdateien müssen kleiner als 1 MB sein.",
+  "settings.aboutKiloCode.importSettings.newerVersion":
+    "Diese Datei wurde mit einer neueren Version von Kilo exportiert. Einige Einstellungen werden möglicherweise ignoriert.",
+  "settings.aboutKiloCode.importSettings.success":
+    "Einstellungen importiert. Überprüfen Sie die obigen Änderungen und klicken Sie dann auf Speichern.",
+
+  "settings.aboutKiloCode.telemetry.title": "Telemetrie",
+  "settings.aboutKiloCode.telemetry.description":
+    'Die Telemetrie wird durch die integrierte Telemetrie-Einstellung von VS Code gesteuert. Um sie zu deaktivieren, gehen Sie zu Einstellungen > Telemetrie > Telemetrie-Stufe und setzen Sie diese auf "off". Starten Sie VS Code neu, um die Änderung zu übernehmen.',
+  "settings.aboutKiloCode.telemetry.openSettings": "Telemetrie-Einstellungen öffnen",
 
   "settings.agentBehaviour.subtab.modes": "Modi",
-  "settings.agentBehaviour.subtab.agents": "Agents",
+  "settings.agentBehaviour.subtab.agents": "Agenten",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-Server",
   "settings.agentBehaviour.subtab.rules": "Regeln",
   "settings.agentBehaviour.subtab.workflows": "Workflows",
@@ -1043,6 +1118,14 @@ export const dict = {
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
+  "settings.experimental.remote.title": "Remote-Steuerung",
+  "settings.experimental.remote.description":
+    "Aktivieren Sie die Remote-Steuerung von Sitzungen über Kilo Cloud. Dies betrifft auch CLIs auf diesem Computer.",
+  "settings.experimental.remote.current": "Aktueller Status:",
+  "settings.experimental.remote.startup": "Automatisch beim Start aktivieren:",
+  "settings.experimental.remote.active": "Aktiv",
+  "settings.experimental.remote.inactive": "Inaktiv",
+  "settings.experimental.remote.hint": "Verwende /remote im Chat zum Umschalten",
   "settings.experimental.toolToggles": "Werkzeug-Schalter",
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
@@ -1066,6 +1149,7 @@ export const dict = {
   "settings.agentBehaviour.disable.description": "Diesen Agent vollständig deaktivieren — er wird nirgends angezeigt",
   "settings.agentBehaviour.badge.hidden": "versteckt",
   "settings.agentBehaviour.badge.disabled": "deaktiviert",
+  "settings.agentBehaviour.badge.deprecated": "Veraltet",
   "settings.agentBehaviour.discoveredSkills": "Erkannte Skills",
   "settings.agentBehaviour.noSkillsFound":
     "Keine Skills gefunden. Fügen Sie unten Skill-Ordnerpfade oder URLs hinzu, um Skills verfügbar zu machen.",
@@ -1101,9 +1185,20 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "System-Prompt",
   "settings.agentBehaviour.editMode.save": "Fertig",
   "settings.agentBehaviour.editMode.back": "Zurück zur Liste",
-  "settings.agentBehaviour.editMode.native": "Eingebauter Modus (schreibgeschützte Definition)",
+  "settings.agentBehaviour.editMode.native":
+    "Dies ist ein integrierter Modus. Seine Basisdefinition kann nicht geändert werden, aber Sie können unten Überschreibungen konfigurieren.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
+  "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
+  "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
+  "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",
+  "settings.agentBehaviour.permissions.col.tool": "Werkzeug",
+  "settings.agentBehaviour.permissions.col.pattern": "Muster",
+  "settings.agentBehaviour.permissions.col.action": "Aktion",
+  "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
+  "settings.agentBehaviour.permissions.hint":
+    "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1135,12 +1230,17 @@ export const dict = {
     "Regeln sind Anweisungsdateien, die das Verhalten des Agenten steuern. Sie werden in den System-Prompt für jede Konversation eingebunden. Fügen Sie unten Dateipfade hinzu, um zusätzliche Regeln einzubinden.",
   "settings.agentBehaviour.instructionFiles": "Zusätzliche Anweisungsdateien",
   "settings.agentBehaviour.instructionFiles.description": "Pfade zu zusätzlichen Anweisungsdateien im System-Prompt",
+  "settings.agentBehaviour.claudeCompat.heading": "Claude Code-Kompatibilität",
+  "settings.agentBehaviour.claudeCompat.title": "Claude Code-Dateien laden",
+  "settings.agentBehaviour.claudeCompat.description":
+    "Lädt CLAUDE.md-Anweisungen und Skills aus Ihrem Claude Code-Konfigurationsverzeichnis in Sitzungen. Aktivieren Sie dies, wenn Kilo Ihre Claude Code-Anweisungen und Skills verwenden soll. Neustart erforderlich.",
   "settings.agentBehaviour.mcpDetail.command": "Befehl",
   "settings.agentBehaviour.mcpDetail.args": "Argumente",
   "settings.agentBehaviour.mcpDetail.env": "Umgebung",
   "settings.agentBehaviour.mcpDetail.disabled": "Dieser Server ist deaktiviert.",
+  "settings.agentBehaviour.mcpBrowseMarketplace": "Marketplace durchsuchen",
   "settings.agentBehaviour.mcpEmpty":
-    "Keine MCP-Server konfiguriert. Bearbeiten Sie die opencode-Konfigurationsdatei, um MCP-Server hinzuzufügen.",
+    "Keine MCP-Server konfiguriert. Fügen Sie MCP-Server in kilo.jsonc hinzu oder bitten Sie den Agenten, sie hinzuzufügen.",
   "settings.agentBehaviour.workflowsPlaceholder":
     "Workflows werden über Workflow-Dateien in Ihrem Arbeitsbereich verwaltet.",
   "settings.agentBehaviour.workflows.description":
@@ -1196,6 +1296,17 @@ export const dict = {
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
   "settings.context.watcherPatterns.description": "Glob-Muster für Dateien, die der Watcher ignorieren soll",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Benutzerdefinierten prompt verwenden",
+  "settings.commitMessage.override.description":
+    "Den Standard-prompt für die commit message überschreiben. Wenn diese Option aktiviert ist, ersetzt Ihr benutzerdefinierter prompt den integrierten prompt für conventional commits vollständig.",
+  "settings.commitMessage.prompt.title": "Benutzerdefinierter prompt",
+  "settings.commitMessage.prompt.description":
+    "System-prompt, der beim Generieren von commit messages an die KI gesendet wird. Dies ersetzt den Standard-prompt vollständig.",
+  "settings.commitMessage.prompt.placeholder":
+    "z. B. Generiere commit messages auf Spanisch nach dem conventional commits Format. Gib NUR die commit message zurück.",
+
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
   "settings.display.layout.title": "Layout",
@@ -1229,7 +1340,6 @@ export const dict = {
 
   // Screen 1 — What's New
   "migration.whatsNew.title": "Neuigkeiten in Kilo Code",
-  "migration.whatsNew.badge": "Beta",
   "migration.whatsNew.subtitle":
     "Wir haben die Erweiterung auf einer schnelleren, effizienteren Grundlage neu aufgebaut.",
   "migration.whatsNew.features.performance.title": "Schnellere Agentenleistung",
@@ -1237,13 +1347,14 @@ export const dict = {
     "Parallele Werkzeugaufrufe und Unteragenten lassen Ihren Agenten mehr gleichzeitig erledigen — so verbringen Sie weniger Zeit mit Warten und mehr Zeit mit Ergebnissen.",
   "migration.whatsNew.features.interface.title": "Optimierte Oberfläche",
   "migration.whatsNew.features.interface.detail": "Weniger Ablenkungen, einfacher und schneller zu lesen.",
-  "migration.whatsNew.features.agentManager.title": "Agent Manager",
+  "migration.whatsNew.features.agentManager.title": "Agentenverwaltung",
   "migration.whatsNew.features.agentManager.detail":
     "Eine einheitliche Oberfläche zum parallelen Ausführen mehrerer Agenten, jeweils in einem eigenen Worktree — Fortschritt überwachen, Kontext wechseln und Änderungen an einem Ort überprüfen.",
   "migration.whatsNew.features.foundation.title": "Gemeinsame Grundlage",
   "migration.whatsNew.features.foundation.detail":
     "Ein kleiner, effizienter Kern über alle Kilo-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
   "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
+  "migration.whatsNew.docsLink": "Neuigkeiten & häufige Fragen",
   "migration.whatsNew.continue": "Weiter",
 
   // Screen 2 — Migrate Settings
@@ -1256,7 +1367,6 @@ export const dict = {
   "migration.migrate.chatHistoryDesc": "Nicht kompatibel mit der neuen Architektur",
   "migration.migrate.button": "Einstellungen migrieren",
   "migration.migrate.skip": "Überspringen",
-  "migration.migrate.back": "Zurück",
   "migration.migrate.keysDetected": "{{count}} Schlüssel erkannt",
   "migration.migrate.serversConfigured": "{{count}} Server konfiguriert",
   "migration.migrate.modesFound": "{{count}} Modus/Modi gefunden",
@@ -1277,6 +1387,41 @@ export const dict = {
   "migration.complete.cleanupDescription":
     "Dadurch werden die alten Einstellungen aus dem VS Code-Speicher entfernt. Sie können diese Migration danach nicht erneut ausführen.",
   "migration.complete.done": "Fertig",
+  "migration.migrate.sessionsDetected": "{{count}} Sitzungen erkannt",
+  "migration.error.sessionFailed": "Sitzungsmigration fehlgeschlagen",
+  "migration.error.continue": "Weiter",
+  "migration.error.action.copy": "Kopieren",
+  "migration.error.toast.copied": "Fehler in die Zwischenablage kopiert",
+
+  "migration.sessionSummary.title": "Zusammenfassung:",
+  "migration.sessionSummary.copy": "Bericht kopieren",
+  "migration.sessionSummary.toast.copied": "Bericht kopiert",
+  "migration.sessionSummary.successful": "Erfolgreich",
+  "migration.sessionSummary.skipped": "Übersprungen",
+  "migration.sessionSummary.alreadyMigrated": "Bereits migriert",
+  "migration.sessionSummary.errored": "Fehlgeschlagen",
+  "migration.sessionSummary.none": "Keine",
+  "migration.forceReimport.title": "Erneuten Import erzwingen",
+  "migration.forceReimport.description":
+    "Ein erneuter Import von {{target}} überschreibt diese und löscht alle neuen Nachrichten, die in diesen Sitzungen bereits erstellt wurden.",
+  "migration.forceReimport.target.one": "diese Sitzung",
+  "migration.forceReimport.target.many": "diese {{count}} Sitzungen",
+  "migration.forceReimport.button": "Erneuten Import erzwingen",
+  "migration.forceReimport.all": "Alle erneut importieren",
+  "migration.forceReimport.proceed": "Fortfahren",
+  "migration.forceReimport.toast.started": "Erneuter Import gestartet",
+  "migration.running.title": "Migration läuft",
+  "migration.running.description.line1": "Sie sind dabei abzuschließen, während noch Sitzungen migriert werden.",
+  "migration.running.description.line2": "Wenn Sie jetzt gehen, bleiben einige Sitzungen möglicherweise unvollständig.",
+  "migration.running.stay": "Bleiben",
+  "migration.running.proceed": "Fortfahren",
+  "migration.sessionProgress.preparing": "Sitzung wird vorbereitet",
+  "migration.sessionProgress.storing": "Sitzung wird gespeichert",
+  "migration.sessionProgress.skipped": "Sitzung übersprungen",
+  "migration.sessionProgress.header": "Migriere {{current}} von {{total}}",
+  "migration.sessionFormat.unknownDate": "Unbekanntes Datum",
+  "migration.sessionFormat.unknown": "Unbekannt",
+  "migration.sessionFormat.unknownError": "Unbekannter Fehler",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1290,8 +1435,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
-  "notifications.action.previous": "Previous",
-  "notifications.action.next": "Next",
-  "notifications.action.close": "Close",
-  "notifications.action.tryModel": "Try model",
+  "settings.saveBar.saving": "Speichern…",
+  "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
+  "notifications.action.next": "Weiter",
+  "notifications.action.close": "Schließen",
+  "notifications.action.tryModel": "{{model}} ausprobieren",
+  "notifications.action.tryModelGeneric": "Modell ausprobieren",
 } satisfies Partial<Record<Keys, string>>

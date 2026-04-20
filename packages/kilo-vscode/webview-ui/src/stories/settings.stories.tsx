@@ -11,6 +11,7 @@ import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
+import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig } from "../types/messages"
 
 const meta: Meta = {
@@ -62,6 +63,7 @@ export const AgentBehaviourAgents: Story = {
     const session = {
       ...mockSessionValue({ id: "agents-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -86,6 +88,7 @@ export const AgentBehaviourEditCustomMode: Story = {
     const session = {
       ...mockSessionValue({ id: "edit-mode-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -178,6 +181,7 @@ export const AgentBehaviourWorkflows: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -200,6 +204,7 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
     const session = {
       ...mockSessionValue({ id: "workflows-empty-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],
@@ -216,6 +221,73 @@ export const AgentBehaviourWorkflowsEmpty: Story = {
   },
 }
 
+export const McpEditViewLocal: Story = {
+  name: "McpEditView — local server (stdio)",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            filesystem: {
+              type: "local",
+              command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "/home/user"],
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="filesystem" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const McpEditViewLocalWithEnv: Story = {
+  name: "McpEditView — local server with env vars",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            "my-mcp": {
+              type: "local",
+              command: ["node", "dist/index.js"],
+              environment: { API_KEY: "sk-abc123", NODE_ENV: "production" },
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="my-mcp" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const McpEditViewRemote: Story = {
+  name: "McpEditView — remote server (SSE)",
+  render: () => (
+    <StoryProviders
+      config={
+        {
+          mcp: {
+            "remote-mcp": {
+              type: "remote",
+              url: "https://mcp.example.com/sse",
+            },
+          },
+        } as any
+      }
+    >
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <McpEditView name="remote-mcp" onBack={noop} onRemove={noop} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const ModeEditExport: Story = {
   name: "ModeEditView — export button",
   render: () => {
@@ -230,6 +302,7 @@ export const ModeEditExport: Story = {
     const session = {
       ...mockSessionValue({ id: "export-story", status: "idle" }),
       agents: () => MOCK_AGENTS,
+      allAgents: () => MOCK_AGENTS,
       removeMode: noop,
       removeMcp: noop,
       skills: () => [],

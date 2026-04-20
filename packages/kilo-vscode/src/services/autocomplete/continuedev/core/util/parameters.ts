@@ -1,4 +1,4 @@
-import { TabAutocompleteOptions } from "../index.js"
+import type { TabAutocompleteOptions } from "../index.js"
 
 export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   disable: false,
@@ -28,5 +28,3 @@ export const DEFAULT_AUTOCOMPLETE_OPTS: TabAutocompleteOptions = {
   experimental_includeDiff: true,
   experimental_enableStaticContextualization: false,
 }
-
-export const COUNT_COMPLETION_REJECTED_AFTER = 10_000

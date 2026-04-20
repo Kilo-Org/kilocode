@@ -1,5 +1,11 @@
 module.exports = [
   {
+    source: "/docs/contributing/cline-to-kilo-migration",
+    destination: "/docs/contributing",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/contributing/architecture/model-provider-blocklist",
     destination: "/docs/collaborate/enterprise/model-access-controls",
     basePath: false,
@@ -138,7 +144,7 @@ module.exports = [
   },
   {
     source: "/docs/basic-usage/using-modes",
-    destination: "/docs/code-with-ai/agents/using-modes",
+    destination: "/docs/code-with-ai/agents/using-agents",
     basePath: false,
     permanent: true,
   },
@@ -685,7 +691,13 @@ module.exports = [
   },
   {
     source: "/docs/advanced-usage/free-and-budget-models",
-    destination: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/code-with-ai/agents/free-and-budget-models",
+    destination: "/docs/getting-started/using-kilo-for-free",
     basePath: false,
     permanent: true,
   },
@@ -804,6 +816,22 @@ module.exports = [
   {
     source: "/docs/contributing/architecture/vercel-ai-gateway",
     destination: "/docs/contributing/architecture/features",
+    basePath: false,
+    permanent: true,
+  },
+  {
+    source: "/docs/code-with-ai/agents/using-modes",
+    destination: "/docs/code-with-ai/agents/using-agents",
+    basePath: false,
+    permanent: true,
+  },
+
+  // ============================================
+  // KILOCLAW
+  // ============================================
+  {
+    source: "/docs/kiloclaw/suggested-configuration",
+    destination: "/docs/kiloclaw/end-to-end",
     basePath: false,
     permanent: true,
   },

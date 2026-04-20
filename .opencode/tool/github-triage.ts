@@ -1,7 +1,19 @@
 /// <reference path="../env.d.ts" />
-// import { Octokit } from "@octokit/rest"
 import { tool } from "@kilocode/plugin"
-import DESCRIPTION from "./github-triage.txt"
+const TEAM = {
+  desktop: ["adamdotdevin", "iamdavidhill", "Brendonovich", "nexxeln"],
+  zen: ["fwang", "MrMushrooooom"],
+  tui: ["thdxr", "kommander", "rekram1-node"],
+  core: ["thdxr", "rekram1-node", "jlongster"],
+  docs: ["R44VC0RP"],
+  windows: ["Hona"],
+} as const
+
+const ASSIGNEES = [...new Set(Object.values(TEAM).flat())]
+
+function pick<T>(items: readonly T[]) {
+  return items[Math.floor(Math.random() * items.length)]!
+}
 
 function getIssueNumber(): number {
   const issue = parseInt(process.env.ISSUE_NUMBER ?? "", 10)
@@ -26,7 +38,12 @@ async function githubFetch(endpoint: string, options: RequestInit = {}) {
 }
 
 export default tool({
-  description: DESCRIPTION,
+  description: `Use this tool to assign and/or label a GitHub issue.
+
+Choose labels and assignee using the current triage policy and ownership rules.
+Pick the most fitting labels for the issue and assign one owner.
+
+If unsure, choose the team/section with the most overlap with the issue and assign a member from that team at random.`,
   args: {
     assignee: tool.schema
       .enum(["thdxr", "adamdotdevin", "rekram1-node", "fwang", "jayair", "kommander"])

@@ -11,6 +11,7 @@ import { Component, createSignal, onCleanup, For, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
+import { useLanguage } from "../../context/language"
 import type { AgentInfo } from "../../types/messages"
 
 /** Format an agent for display. Uses displayName if available, otherwise title-cases the slug. */
@@ -38,6 +39,7 @@ export interface ModeSwitcherBaseProps {
 export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
   const [focused, setFocused] = createSignal(-1)
+  const language = useLanguage()
   let listRef: HTMLDivElement | undefined
 
   // Listen for slash command trigger
@@ -132,7 +134,22 @@ export const ModeSwitcherBase: Component<ModeSwitcherBaseProps> = (props) => {
                   onClick={() => pick(agent.name)}
                   onFocus={() => setFocused(i())}
                 >
-                  <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
+                  <div style={{ display: "flex", "align-items": "center", gap: "6px" }}>
+                    <span class="mode-switcher-item-name">{formatAgentLabel(agent)}</span>
+                    <Show when={agent.deprecated}>
+                      <span
+                        style={{
+                          "font-size": "10px",
+                          padding: "1px 5px",
+                          "border-radius": "3px",
+                          background: "var(--vscode-editorWarning-foreground, #cca700)",
+                          color: "var(--vscode-editorWarning-foreground-text, #1e1e1e)",
+                        }}
+                      >
+                        {language.t("settings.agentBehaviour.badge.deprecated")}
+                      </span>
+                    </Show>
+                  </div>
                   <Show when={agent.description}>
                     <span class="mode-switcher-item-desc">{agent.description}</span>
                   </Show>

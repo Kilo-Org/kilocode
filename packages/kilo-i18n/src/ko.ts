@@ -67,4 +67,6 @@ export const dict = {
   "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
   "marketplace.warning.installAnyway": "그래도 설치",
   "marketplace.warning.cancel": "취소",
+  "marketplace.contribute.prompt": "스킬, 모드 또는 MCP 서버가 없나요?",
+  "marketplace.contribute.cta": "GitHub에서 기여하기",
 }

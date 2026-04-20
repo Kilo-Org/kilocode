@@ -251,6 +251,13 @@ export const PROVIDER_MAP: Record<string, ProviderMapping> = {
     key: "syntheticApiKey",
     name: "Synthetic",
   },
+  apertis: {
+    id: "apertis",
+    key: "apertisApiKey",
+    name: "Apertis",
+    modelField: "apertisModelId",
+    urlField: "apertisBaseUrl",
+  },
   "openai-codex": {
     id: "openai",
     key: "",
@@ -295,7 +302,6 @@ export const UNSUPPORTED_PROVIDERS = new Set([
   "virtual-quota-fallback",
   "glama",
   "roo",
-  "apertis",
 ])
 
 /** Built-in default mode slugs that should not be migrated */

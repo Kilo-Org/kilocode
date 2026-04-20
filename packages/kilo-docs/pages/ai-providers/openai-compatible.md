@@ -14,6 +14,9 @@ This document focuses on setting up providers _other than_ the official OpenAI A
 
 ## General Configuration
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 The key to using an OpenAI-compatible provider is to configure two main settings:
 
 1.  **Base URL:** This is the API endpoint for the provider. It will _not_ be `https://api.openai.com/v1` (that's for the official OpenAI API).
@@ -33,6 +36,96 @@ You'll find these settings in the Kilo Code settings panel (click the {% codicon
   - Computer Use
   - Input Price
   - Output Price
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+1. Open **Settings** (gear icon) and go to the **Providers** tab.
+2. Scroll to the bottom and click **Custom provider**.
+
+![Custom provider button](/docs/img/custom-models/custom-provider-button.png)
+
+3. Fill in the custom provider dialog:
+
+![Custom provider configuration dialog](/docs/img/custom-models/custom-provider-details.png)
+
+- **Provider ID** — A unique identifier (e.g., `my-provider`).
+- **Display name** — A human-readable name shown in the UI.
+- **Base URL** — The provider's OpenAI-compatible API endpoint (e.g., `https://api.your-provider.com/v1`). Kilo auto-fetches available models when a valid URL is entered.
+- **API key** — Your API key. Optional — leave empty if authentication is handled via headers.
+- **Models** — Add models manually or select from the auto-fetched list.
+- **Headers** (optional) — Custom HTTP headers as key-value pairs.
+
+4. Click **Submit** to save. The provider's models appear in the model picker.
+
+For additional model configuration (token limits, tool calling, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab or the [Custom Models](/docs/code-with-ai/agents/custom-models) guide.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Define a custom provider in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`). The provider key (e.g., `"vllm"`) is your chosen identifier — it can be any name you like.
+
+You must define at least one model. Setting `name` and `limit` (context window and max output tokens) is recommended so the agent can manage context correctly:
+
+```jsonc
+{
+  "provider": {
+    "vllm": {
+      "models": {
+        "qwen35": {
+          "name": "Qwen 3.5",
+          "limit": {
+            "context": 262144,
+            "output": 16384,
+          },
+        },
+      },
+      "options": {
+        "apiKey": "none",
+        "baseURL": "http://my.url:8000/v1",
+      },
+    },
+  },
+}
+```
+
+Then set your default model using the `provider-id/model-id` format:
+
+```jsonc
+{
+  "model": "vllm/qwen35",
+}
+```
+
+**Configuration fields:**
+
+- **`models`** — A map of model IDs to model definitions. Each model should include a `name` and `limit` with `context` and `output` token counts. If `limit.context` or `limit.output` is omitted, it defaults to `0`, which limits context management.
+- **`options.baseURL`** — The base URL of your OpenAI-compatible API endpoint.
+- **`options.apiKey`** — Your API key. Use any non-empty string (e.g., `"none"`) if the provider doesn't require authentication.
+
+You can also set the API key via an environment variable instead of putting it in the config file. Use the `env` field to specify which variable to read:
+
+```jsonc
+{
+  "provider": {
+    "my-provider": {
+      "env": ["MY_PROVIDER_API_KEY"],
+      "models": {
+        "my-model": {
+          "name": "My Model",
+          "limit": { "context": 128000, "output": 4096 },
+        },
+      },
+      "options": {
+        "baseURL": "https://api.my-provider.com/v1",
+      },
+    },
+  },
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ### Full Endpoint URL Support
 

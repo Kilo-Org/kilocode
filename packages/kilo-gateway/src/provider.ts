@@ -4,7 +4,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { KiloProvider, KiloProviderOptions } from "./types.js"
 import { getKiloUrlFromToken, getApiKey } from "./auth/token.js"
-import { buildKiloHeaders, DEFAULT_HEADERS } from "./headers.js"
+import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { KILO_API_BASE, ANONYMOUS_API_KEY } from "./api/constants.js"
 
 /**
@@ -39,7 +39,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
 
   // Merge custom headers with defaults
   const customHeaders = {
-    ...DEFAULT_HEADERS,
+    ...getDefaultHeaders(),
     ...buildKiloHeaders(undefined, {
       kilocodeOrganizationId: options.kilocodeOrganizationId,
       kilocodeTesterWarningsDisabledUntil: undefined,
@@ -84,8 +84,11 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     languageModel(modelId) {
       return openrouter(modelId)
     },
-    textEmbeddingModel(modelId) {
+    embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
+    },
+    rerankingModel(modelId: string): never {
+      throw new Error(`Reranking model not supported: ${modelId}`)
     },
     imageModel(modelId) {
       return openrouter.imageModel(modelId)

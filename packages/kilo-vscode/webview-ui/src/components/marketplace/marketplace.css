@@ -77,9 +77,39 @@
 }
 
 .marketplace-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 32px 16px;
   text-align: center;
   color: var(--text-weak);
-  padding: 24px;
+}
+
+.marketplace-empty-message {
+  font-size: 13px;
+}
+
+/* Contribute CTA (footer + inside empty state) */
+
+.marketplace-contribute {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 0;
+  margin-top: 12px;
+  border-top: 1px solid var(--border-base, var(--vscode-widget-border, transparent));
+  color: var(--text-weak);
+  font-size: 12px;
+}
+
+/* Inside the empty state, drop the border — message is already the lead-in. */
+.marketplace-empty .marketplace-contribute {
+  border-top: none;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 /* Grid */

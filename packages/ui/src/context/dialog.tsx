@@ -12,6 +12,7 @@ import {
   type JSX,
 } from "solid-js"
 import { Dialog as Kobalte } from "@kobalte/core/dialog"
+import { makeEventListener } from "@solid-primitives/event-listener"
 
 type DialogElement = () => JSX.Element
 
@@ -30,6 +31,7 @@ function init() {
   const [active, setActive] = createSignal<Active | undefined>()
   const timer = { current: undefined as ReturnType<typeof setTimeout> | undefined }
   const lock = { value: false }
+  const hasPopover = () => !!document.querySelector('[data-component="popover-content"]')
 
   onCleanup(() => {
     if (timer.current === undefined) return
@@ -63,13 +65,13 @@ function init() {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return
+      if (hasPopover()) return
       close()
       event.preventDefault()
       event.stopPropagation()
     }
 
-    window.addEventListener("keydown", onKeyDown, true)
-    onCleanup(() => window.removeEventListener("keydown", onKeyDown, true))
+    makeEventListener(window, "keydown", onKeyDown, { capture: true })
   })
 
   const show = (element: DialogElement, owner: Owner, onClose?: () => void) => {

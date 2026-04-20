@@ -12,7 +12,8 @@ export function DialogAgent() {
       return {
         value: item.name,
         title: item.displayName ?? item.name, // kilocode_change
-        description: item.native ? "native" : item.description,
+        description:
+          [item.deprecated && "deprecated", item.native && "native"].filter(Boolean).join(", ") || item.description,
       }
     }),
   )

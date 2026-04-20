@@ -6,18 +6,33 @@
  *   2. Migrate     — grouped selection, live in-place progress, cleanup
  */
 
-import { Component, Show, createSignal, onMount, onCleanup, JSX } from "solid-js"
+import { Show, createSignal, onMount, onCleanup } from "solid-js"
+import type { Component, JSX } from "solid-js"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
+import SessionMigrationProgress, { type SessionMigrationProgressState } from "./SessionMigrationProgress"
+import SessionMigrationSummary from "./SessionMigrationSummary"
+import ForceReimportDialog from "./ForceReimportDialog"
+import RunningMigrationDialog from "./RunningMigrationDialog"
+import {
+  createSessionItem,
+  createSessionSummary,
+  updateSessionSummary,
+  type SessionSummaryState,
+} from "./session-migration-summary-state"
 import type {
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
+  MigrationSessionInfo,
   MigrationResultItem,
   MigrationAutoApprovalSelections,
   LegacySettings,
   LegacyMigrationDataMessage,
   LegacyMigrationProgressMessage,
+  LegacyMigrationSessionProgressMessage,
   LegacyMigrationCompleteMessage,
 } from "../../types/messages"
 import "./migration.css"
@@ -153,7 +168,7 @@ const WarningSvg = (): JSX.Element => (
 // ---------------------------------------------------------------------------
 
 type Screen = "whats-new" | "migrate"
-type MigratePhase = "selecting" | "migrating" | "done"
+type MigratePhase = "selecting" | "migrating" | "error" | "done"
 
 interface ProgressEntry {
   item: string
@@ -173,6 +188,7 @@ export interface MigrationWizardProps {
 
 const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const vscode = useVSCode()
+  const dialog = useDialog()
   const language = useLanguage()
 
   const [screen, setScreen] = createSignal<Screen>("whats-new")
@@ -182,6 +198,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const [providers, setProviders] = createSignal<MigrationProviderInfo[]>([])
   const [mcpServers, setMcpServers] = createSignal<MigrationMcpServerInfo[]>([])
   const [customModes, setCustomModes] = createSignal<MigrationCustomModeInfo[]>([])
+  const [sessions, setSessions] = createSignal<MigrationSessionInfo[]>([])
   const [defaultModel, setDefaultModel] = createSignal<{ provider: string; model: string } | undefined>(undefined)
   const [legacySettings, setLegacySettings] = createSignal<LegacySettings | undefined>(undefined)
 
@@ -189,6 +206,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   const [migrateProviders, setMigrateProviders] = createSignal(true)
   const [migrateMcpServers, setMigrateMcpServers] = createSignal(true)
   const [migrateModes, setMigrateModes] = createSignal(true)
+  const [migrateSessions, setMigrateSessions] = createSignal(true)
   const [migrateDefaultModel, setMigrateDefaultModel] = createSignal(true)
   const [migrateAutoApproval, setMigrateAutoApproval] = createSignal(true)
   const [migrateLanguage, setMigrateLanguage] = createSignal(true)
@@ -197,6 +215,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
   // Progress tracking
   const [progressEntries, setProgressEntries] = createSignal<ProgressEntry[]>([])
   const [results, setResults] = createSignal<MigrationResultItem[]>([])
+  const [sessionProgress, setSessionProgress] = createSignal<SessionMigrationProgressState | undefined>(undefined)
+  const [sessionSummary, setSessionSummary] = createSignal<SessionSummaryState>(createSessionSummary())
+  const [running, setRunning] = createSignal(false)
 
   // Cleanup preference
   const [clearLegacyData, setClearLegacyData] = createSignal(false)
@@ -213,6 +234,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         setProviders(data.providers)
         setMcpServers(data.mcpServers)
         setCustomModes(data.customModes)
+        setSessions(data.sessions ?? [])
         setDefaultModel(data.defaultModel)
         setLegacySettings(data.settings)
 
@@ -220,6 +242,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         setMigrateProviders(data.providers.some((p) => p.supported && p.hasApiKey))
         setMigrateMcpServers(data.mcpServers.length > 0)
         setMigrateModes(data.customModes.length > 0)
+        setMigrateSessions((data.sessions?.length ?? 0) > 0)
         setMigrateDefaultModel(Boolean(data.defaultModel))
 
         const s = data.settings
@@ -247,7 +270,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           const existing = prev.findIndex((e) => e.item === update.item)
           const entry: ProgressEntry = {
             item: update.item,
-            group: existing >= 0 ? prev[existing].group : update.item,
+            group: existing >= 0 ? prev[existing]?.group || update.item : update.item,
             status: update.status,
             message: update.message,
           }
@@ -255,10 +278,29 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         })
       }
 
+      if (msg?.type === "legacyMigrationSessionProgress") {
+        const update = msg as LegacyMigrationSessionProgressMessage
+        setSessionSummary((prev) =>
+          updateSessionSummary(prev, createSessionItem(update.session, update.error), update.phase),
+        )
+        setSessionProgress({
+          session: update.session,
+          index: update.index,
+          total: update.total,
+          phase: update.phase,
+          error: update.error,
+        })
+      }
+
       if (msg?.type === "legacyMigrationComplete") {
         const complete = msg as LegacyMigrationCompleteMessage
         setResults(complete.results)
-        setPhase("done")
+        setRunning(false)
+        const hasErrors = complete.results.some((r) => r.status === "error")
+        setPhase(hasErrors ? "error" : "done")
+        if (!hasErrors) {
+          vscode.postMessage({ type: "loadSessions" })
+        }
       }
     }
 
@@ -318,6 +360,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         const mode = customModes().find((m) => m.slug === slug)
         return { item: mode?.name ?? slug, group: "customModes", status: "pending" as const }
       }),
+      ...(migrateSessions()
+        ? sessions().map((session) => ({ item: session.id, group: "sessions", status: "pending" as const }))
+        : []),
       ...(migrateDefaultModel() && defaultModel()
         ? [{ item: "Default model", group: "defaultModel", status: "pending" as const }]
         : []),
@@ -348,6 +393,9 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     ]
 
     setProgressEntries(entries)
+    setSessionSummary(createSessionSummary())
+    setSessionProgress(undefined)
+    setRunning(true)
     setPhase("migrating")
 
     vscode.postMessage({
@@ -356,6 +404,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         providers: selectedProviderNames,
         mcpServers: selectedMcpNames,
         customModes: selectedModesSlugs,
+        sessions: migrateSessions() ? sessions().map((session) => ({ id: session.id })) : [],
         defaultModel: migrateDefaultModel(),
         settings: {
           autoApproval,
@@ -366,7 +415,64 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     })
   }
 
+  const handleForceReimport = (ids: string[]) => {
+    dialog.show(() => (
+      <ForceReimportDialog
+        count={ids.length}
+        onConfirm={() => {
+          setRunning(true)
+          setPhase("migrating")
+          setSessionProgress(undefined)
+          setResults((prev) => prev.filter((item) => item.category !== "session"))
+          setProgressEntries((prev) => {
+            const keep = prev.filter((item) => item.group !== "sessions")
+            const next = ids.map((id) => ({ item: id, group: "sessions", status: "pending" as const }))
+            return [...keep, ...next]
+          })
+          vscode.postMessage({
+            type: "startLegacyMigration",
+            selections: {
+              providers: [],
+              mcpServers: [],
+              customModes: [],
+              sessions: ids.map((id) => ({ id, force: true })),
+              defaultModel: false,
+              settings: {
+                autoApproval: {
+                  commandRules: false,
+                  readPermission: false,
+                  writePermission: false,
+                  executePermission: false,
+                  mcpPermission: false,
+                  taskPermission: false,
+                },
+                language: false,
+                autocomplete: false,
+              },
+            },
+          })
+          showToast({ variant: "success", title: language.t("migration.forceReimport.toast.started") })
+        }}
+      />
+    ))
+  }
+
   const handleDone = () => {
+    if (running()) {
+      dialog.show(() => (
+        <RunningMigrationDialog
+          onConfirm={() => {
+            vscode.postMessage({ type: "finalizeLegacyMigration" })
+            if (clearLegacyData()) {
+              vscode.postMessage({ type: "clearLegacyData" })
+            }
+            props.onComplete()
+          }}
+        />
+      ))
+      return
+    }
+    vscode.postMessage({ type: "finalizeLegacyMigration" })
     if (clearLegacyData()) {
       vscode.postMessage({ type: "clearLegacyData" })
     }
@@ -398,11 +504,13 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   const hasLanguageData = () => Boolean(legacySettings()?.language)
   const hasAutocompleteData = () => Boolean(legacySettings()?.autocomplete)
+  const hasSessions = () => sessions().length > 0
 
   const hasAnySelection = () =>
     (migrateProviders() && supportedProviderCount() > 0) ||
     (migrateMcpServers() && mcpServers().length > 0) ||
     (migrateModes() && customModes().length > 0) ||
+    (migrateSessions() && hasSessions()) ||
     (migrateDefaultModel() && Boolean(defaultModel())) ||
     (migrateAutoApproval() && hasAnyAutoApprovalData()) ||
     (migrateLanguage() && hasLanguageData()) ||
@@ -412,6 +520,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
     supportedProviderCount() === 0 &&
     mcpServers().length === 0 &&
     customModes().length === 0 &&
+    !hasSessions() &&
     !defaultModel() &&
     !hasAnyAutoApprovalData() &&
     !hasLanguageData() &&
@@ -419,17 +528,23 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   // Group-level status for progress display
   const groupStatus = (group: string): ProgressEntry["status"] => {
-    const entries = progressEntries().filter((e) => e.group === group)
+    const entries = progressEntries().filter((entry) => entry.group === group)
     if (entries.length === 0) return "pending"
-    if (entries.some((e) => e.status === "error")) return "error"
-    if (entries.some((e) => e.status === "warning")) return "warning"
-    if (entries.every((e) => e.status === "success")) return "success"
-    if (entries.some((e) => e.status === "migrating")) return "migrating"
+    if (group === "sessions" && running()) {
+      if (entries.some((entry) => entry.status === "migrating" || entry.status === "pending")) return "migrating"
+    }
+    if (entries.some((entry) => entry.status === "error")) return "error"
+    if (entries.some((entry) => entry.status === "warning")) return "warning"
+    if (entries.every((entry) => entry.status === "success")) return "success"
+    if (entries.some((entry) => entry.status === "migrating")) return "migrating"
     return "pending"
   }
 
-  const successCount = () => results().filter((r) => r.status === "success").length
+  const successCount = () => results().filter((result) => result.status === "success").length
   const totalCount = () => results().length
+  const groupMessage = (group: string) =>
+    progressEntries().find((entry) => entry.group === group && entry.status === "error")?.message
+  const sessionIconSpinning = () => phase() === "migrating" && migrateSessions() && hasSessions()
 
   // ---------------------------------------------------------------------------
   // Status icon renderer
@@ -437,17 +552,18 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
 
   const StatusIcon = (gProps: { group: string }): JSX.Element => {
     const status = () => groupStatus(gProps.group)
+    const spinning = () => (gProps.group === "sessions" ? sessionIconSpinning() : status() === "migrating")
     return (
       <>
-        <Show when={status() === "pending"}>
+        <Show when={status() === "pending" && !spinning()}>
           <div class="migration-wizard__status-icon migration-wizard__status-icon--pending" />
         </Show>
-        <Show when={status() === "migrating"}>
+        <Show when={spinning()}>
           <div class="migration-wizard__status-icon">
             <div class="migration-wizard__spinner" />
           </div>
         </Show>
-        <Show when={status() === "success"}>
+        <Show when={status() === "success" && !spinning()}>
           <div class="migration-wizard__status-icon migration-wizard__status-icon--success">
             <SuccessCheckSvg />
           </div>
@@ -477,10 +593,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
         <div class={screen() === "whats-new" ? "migration-wizard__screen--active" : "migration-wizard__screen--hidden"}>
           <div class="migration-wizard__header">
             <KiloLogo />
-            <h1>
-              {language.t("migration.whatsNew.title")}{" "}
-              <span class="migration-wizard__badge">{language.t("migration.whatsNew.badge")}</span>
-            </h1>
+            <h1>{language.t("migration.whatsNew.title")}</h1>
             <p>{language.t("migration.whatsNew.subtitle")}</p>
           </div>
 
@@ -527,8 +640,11 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
           </div>
 
           <div class="migration-wizard__blog-link">
-            <a href="https://blog.kilo.ai/we-completely-rebuilt-the-kilo-vs-code-extension">
+            <a href="https://blog.kilo.ai/p/new-kilo-for-vs-code-is-live">
               {language.t("migration.whatsNew.blogLink")} <span>&rarr;</span>
+            </a>
+            <a href="https://kilo.ai/docs/code-with-ai/platforms/vscode/whats-new">
+              {language.t("migration.whatsNew.docsLink")} <span>&rarr;</span>
             </a>
           </div>
 
@@ -653,6 +769,37 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                 </div>
               </Show>
 
+              <Show when={hasSessions()}>
+                <div class="migration-wizard__item">
+                  <Show when={phase() === "selecting"} fallback={<StatusIcon group="sessions" />}>
+                    <label class="migration-wizard__checkbox">
+                      <input
+                        type="checkbox"
+                        checked={migrateSessions()}
+                        onChange={(e) => setMigrateSessions(e.currentTarget.checked)}
+                      />
+                      <span class="migration-wizard__checkmark">
+                        <CheckmarkSvg />
+                      </span>
+                    </label>
+                  </Show>
+                  <div class="migration-wizard__item-text">
+                    <div class="label">{language.t("migration.migrate.chatHistory")}</div>
+                    <div class="desc">
+                      {language.t("migration.migrate.sessionsDetected", { count: String(sessions().length) })}
+                    </div>
+                    <Show when={migrateSessions() && phase() !== "selecting" && sessionProgress()}>
+                      <Show
+                        when={sessionProgress()?.phase === "summary"}
+                        fallback={<SessionMigrationProgress progress={sessionProgress()!} />}
+                      >
+                        <SessionMigrationSummary summary={sessionSummary()} onForce={handleForceReimport} />
+                      </Show>
+                    </Show>
+                  </div>
+                </div>
+              </Show>
+
               {/* Default Model */}
               <Show when={Boolean(defaultModel())}>
                 <div class="migration-wizard__item">
@@ -737,21 +884,8 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                 </div>
               </Show>
 
-              {/* Divider + Cannot be migrated */}
-              <div class="migration-wizard__divider" />
-              <div class="migration-wizard__section-label">{language.t("migration.migrate.cannotMigrate")}</div>
-              <div class="migration-wizard__item migration-wizard__item--disabled">
-                <label class="migration-wizard__checkbox">
-                  <input type="checkbox" disabled />
-                  <span class="migration-wizard__checkmark" />
-                </label>
-                <div class="migration-wizard__item-text">
-                  <div class="label">{language.t("migration.migrate.chatHistory")}</div>
-                  <div class="desc">{language.t("migration.migrate.chatHistoryDesc")}</div>
-                </div>
-              </div>
-
               {/* Cleanup option after done */}
+              {/*
               <Show when={phase() === "done"}>
                 <div class="migration-wizard__divider" />
                 <div class="migration-wizard__item migration-wizard__item--clickable">
@@ -771,6 +905,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   </div>
                 </div>
               </Show>
+              */}
             </div>
           </Show>
 
@@ -783,7 +918,7 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
                   class="migration-wizard__btn migration-wizard__btn--ghost"
                   onClick={() => setScreen("whats-new")}
                 >
-                  {language.t("migration.migrate.back")}
+                  {language.t("common.goBack")}
                 </button>
                 <button type="button" class="migration-wizard__btn migration-wizard__btn--ghost" onClick={handleSkip}>
                   {language.t("migration.migrate.skip")}
@@ -800,6 +935,18 @@ const MigrationWizard: Component<MigrationWizardProps> = (props) => {
               <Show when={phase() === "migrating"}>
                 <button type="button" class="migration-wizard__btn migration-wizard__btn--primary" disabled>
                   {language.t("migration.migrate.button")}
+                </button>
+              </Show>
+              <Show when={phase() === "error"}>
+                <button
+                  type="button"
+                  class="migration-wizard__btn migration-wizard__btn--primary"
+                  onClick={() => {
+                    vscode.postMessage({ type: "loadSessions" })
+                    setPhase("done")
+                  }}
+                >
+                  {language.t("migration.error.continue")}
                 </button>
               </Show>
               <Show when={phase() === "done"}>
