@@ -90,7 +90,7 @@ describe("fetchMessagePage / cursor fallback", () => {
   })
 
   it("synthesized cursor round-trips through the server's before parameter", async () => {
-    // First page: server strips header, items fill limit → cursor synthesized.
+    // First page: server strips header, items fill limit -> cursor synthesized.
     // Next page request uses that cursor and returns more items.
     const { client, calls } = mockClient([
       {
@@ -114,5 +114,54 @@ describe("fetchMessagePage / cursor fallback", () => {
       before: first.cursor,
     })
     expect(calls[1]?.before).toBe(first.cursor)
+  })
+
+  it("keeps all fetched older messages when filling a partial assistant turn", async () => {
+    const { client, calls } = mockClient([
+      {
+        items: [message("m4", "assistant", 40), message("m5", "user", 50)],
+        cursor: "c1",
+      },
+      {
+        items: [message("m1", "user", 10), message("m2", "assistant", 20), message("m3", "user", 30)],
+        cursor: "c2",
+      },
+    ])
+
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 3,
+    })
+
+    expect(calls.map((call) => call.before)).toEqual([undefined, "c1"])
+    expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4", "m5"])
+    expect(page.cursor).toBe("c2")
+  })
+
+  it("continues fetching until a partial assistant turn reaches the first user message", async () => {
+    const { client, calls } = mockClient([
+      {
+        items: [message("m4", "assistant", 40), message("m5", "user", 50)],
+        cursor: "c1",
+      },
+      {
+        items: [message("m2", "assistant", 20), message("m3", "user", 30)],
+        cursor: "c2",
+      },
+      {
+        items: [message("m1", "user", 10)],
+      },
+    ])
+
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 2,
+    })
+
+    expect(calls.map((call) => call.before)).toEqual([undefined, "c1", "c2"])
+    expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4", "m5"])
+    expect(page.cursor).toBeUndefined()
   })
 })

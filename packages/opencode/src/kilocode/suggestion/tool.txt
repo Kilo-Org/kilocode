@@ -3,6 +3,9 @@ Use this tool to suggest a local code review to the user after completing implem
 This tool is ONLY for suggesting code review. Do NOT use it to suggest running tests, committing, pushing, or any other action.
 
 Guidelines:
+- Before calling this tool, write the normal final response summarizing what changed, validation, and any caveats
+- Call this tool only after that final response text, as the final action in the turn
+- Never use this tool as a replacement for the final response summary
 - Only suggest review when you are at least 90% confident the user's request is fully addressed
 - Do not suggest review after every edit or partial implementation turn
 - Do not repeat a review suggestion that was already dismissed in this conversation

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
+import { activeUserMessageID, messageTurns, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -46,10 +46,43 @@ describe("queuedUserMessageIDs", () => {
     expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_4"])
   })
 
+  it("keeps all follow-ups queued when the active assistant arrives after them", () => {
+    const messages = [
+      user("message_1"),
+      user("message_3"),
+      user("message_4"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(queuedUserMessageIDs(messages, { type: "busy" })).toEqual(["message_3", "message_4"])
+  })
+
   it("returns no queued messages while idle", () => {
     const messages = [user("message_1"), user("message_2")]
 
     expect(queuedUserMessageIDs(messages, { type: "idle" })).toEqual([])
+  })
+})
+
+describe("messageTurns", () => {
+  it("attaches assistant output to its parent turn when queued users are newer", () => {
+    const messages = [
+      user("message_1"),
+      user("message_3"),
+      user("message_4"),
+      assistant("message_2", "message_1", { finish: "tool-calls" }),
+    ]
+
+    expect(
+      messageTurns(messages).map((turn) => ({
+        user: turn.user.id,
+        assistant: turn.assistant.map((msg) => msg.id),
+      })),
+    ).toEqual([
+      { user: "message_1", assistant: ["message_2"] },
+      { user: "message_3", assistant: [] },
+      { user: "message_4", assistant: [] },
+    ])
   })
 })
 

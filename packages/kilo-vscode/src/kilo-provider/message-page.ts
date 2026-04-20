@@ -46,17 +46,11 @@ export async function fetchMessagePage(
     return { items, cursor }
   }
 
-  const suffix = (items: Awaited<ReturnType<typeof read>>["items"]) => {
-    const index = [...items].reverse().findIndex((item) => item.info.role === "user")
-    if (index === -1) return items
-    return items.slice(items.length - index - 1)
-  }
-
   const fill = async (page: Awaited<ReturnType<typeof read>>): Promise<Awaited<ReturnType<typeof read>>> => {
     if (page.items[0]?.info.role !== "assistant") return page
     if (!page.cursor || input.signal?.aborted) return page
     const next = await read(page.cursor)
-    const items = [...suffix(next.items), ...page.items]
+    const items = [...next.items, ...page.items]
     return fill({ items, cursor: next.cursor })
   }
 

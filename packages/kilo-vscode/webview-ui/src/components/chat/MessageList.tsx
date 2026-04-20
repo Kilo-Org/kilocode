@@ -17,7 +17,7 @@ import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
 import { formatRelativeDate } from "../../utils/date"
 import { FeedbackDialog } from "./FeedbackDialog"
-import { VscodeSessionTurn, type VscodeTurn } from "./VscodeSessionTurn"
+import { VscodeSessionTurn } from "./VscodeSessionTurn"
 import { RevertBanner } from "./RevertBanner"
 import { AccountSwitcher } from "../shared/AccountSwitcher"
 import { KiloNotifications } from "./KiloNotifications"
@@ -25,7 +25,11 @@ import { WorkingIndicator } from "../shared/WorkingIndicator"
 import { QuestionDock } from "./QuestionDock"
 import { Virtualizer } from "virtua/solid"
 import { SuggestBar } from "./SuggestBar"
-import { activeUserMessageID as getActiveUserMessageID } from "../../context/session-queue"
+import {
+  activeUserMessageID as getActiveUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+} from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
 const KiloLogo = (): JSX.Element => {
@@ -79,20 +83,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
-  const turns = createMemo<VscodeTurn[]>(() => {
-    const result: VscodeTurn[] = []
-    const b = boundary()
-    for (const msg of session.messages()) {
-      if (msg.role === "user") {
-        if (b && msg.id >= b) break
-        result.push({ id: msg.id, user: msg, assistant: [] })
-        continue
-      }
-      const turn = result[result.length - 1]
-      if (turn && msg.role === "assistant") turn.assistant.push(msg)
-    }
-    return result
-  })
+  const turns = createMemo(() => messageTurns(session.messages(), boundary()))
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
@@ -102,11 +93,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
   )
 
   const activeUserID = createMemo(() => getActiveUserMessageID(session.messages(), session.statusInfo()))
+  const queuedIDs = createMemo(() => new Set(queuedUserMessageIDs(session.messages(), session.statusInfo())))
+  const visibleTurns = createMemo(() => turns().filter((turn) => !queuedIDs().has(turn.user.id)))
+  const queuedTurns = createMemo(() => turns().filter((turn) => queuedIDs().has(turn.user.id)))
 
   const activeUserIndex = createMemo(() => {
     const active = activeUserID()
     if (!active) return -1
-    return turns().findIndex((turn) => turn.user.id === active)
+    return visibleTurns().findIndex((turn) => turn.user.id === active)
   })
 
   const save = (id: string | undefined) => {
@@ -231,7 +225,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             </Show>
             <Show when={scrollEl()}>
               <Virtualizer
-                data={turns()}
+                data={visibleTurns()}
                 scrollRef={scrollEl()}
                 shift={session.messageMutation() === "prepend"}
                 overscan={6}
@@ -251,6 +245,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
+            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
             <WorkingIndicator />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>

@@ -6,6 +6,7 @@ import { SuggestTool } from "../../../src/kilocode/suggestion/tool"
 import { Tool } from "../../../src/tool/tool"
 import { Truncate } from "../../../src/tool/truncate"
 import { Agent } from "../../../src/agent/agent"
+import { SessionStatus } from "../../../src/session/status"
 
 const toolRuntime = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
 
@@ -44,15 +45,18 @@ const ctx = {
 describe("tool.suggest", () => {
   let show: ReturnType<typeof spyOn>
   let cmdGet: ReturnType<typeof spyOn>
+  let statusSet: ReturnType<typeof spyOn>
 
   beforeEach(() => {
     show = spyOn(Suggestion, "show")
     cmdGet = spyOn(Command, "get")
+    statusSet = spyOn(SessionStatus, "set").mockResolvedValue(undefined as any)
   })
 
   afterEach(() => {
     show.mockRestore()
     cmdGet.mockRestore()
+    statusSet.mockRestore()
   })
 
   test("returns dismissal result when suggestion is dismissed", async () => {
@@ -183,5 +187,87 @@ describe("tool.suggest", () => {
     expect(result.title).toBe("User accepted: Start review")
     expect(result.output).toContain("/local-review-uncommitted")
     expect(result.metadata.dismissed).toBe(false)
+  })
+
+  // Regression for https://github.com/Kilo-Org/kilocode/pull/9199: while the
+  // suggest tool is blocked on user input the session status must be flipped
+  // to idle so a session left with an open suggestion (e.g. VS Code closed
+  // mid-prompt) does not appear stuck as busy.
+  test("marks session idle while waiting for user response", async () => {
+    const tool = await initTool()
+    let resolveShow: (action: Suggestion.Action) => void = () => {}
+    show.mockReturnValueOnce(
+      new Promise<Suggestion.Action>((resolve) => {
+        resolveShow = resolve
+      }),
+    )
+
+    const pending = toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start", prompt: "do it" }],
+        },
+        ctx as any,
+      ),
+    )
+
+    // Wait for the tool to reach the await on the suggestion promise so the
+    // idle status call has been issued.
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    expect(statusSet).toHaveBeenCalledWith(ctx.sessionID, { type: "idle" })
+    expect(statusSet).not.toHaveBeenCalledWith(ctx.sessionID, { type: "busy" })
+
+    resolveShow({ label: "Start", prompt: "do it" })
+    await pending
+  })
+
+  // Regression for https://github.com/Kilo-Org/kilocode/pull/9199: once the
+  // user accepts a suggestion the session must be flipped back to busy
+  // immediately so there is no idle flash while the follow-up response is
+  // generated.
+  test("restores busy status after accept, in order (idle then busy)", async () => {
+    const tool = await initTool()
+    show.mockResolvedValueOnce({ label: "Go", prompt: "go" })
+
+    await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Go?",
+          actions: [{ label: "Go", prompt: "go" }],
+        },
+        ctx as any,
+      ),
+    )
+
+    const statuses = statusSet.mock.calls
+      .filter((call: unknown[]) => call[0] === ctx.sessionID)
+      .map((call: unknown[]) => (call[1] as { type: string }).type)
+    expect(statuses).toEqual(["idle", "busy"])
+  })
+
+  // Regression for https://github.com/Kilo-Org/kilocode/pull/9199: a dismissed
+  // suggestion leaves the session idle — the runLoop will restore busy on the
+  // next iteration, so the tool must not flip busy itself when the user
+  // walked away.
+  test("leaves session idle when suggestion is dismissed", async () => {
+    const tool = await initTool()
+    show.mockRejectedValueOnce(new Suggestion.DismissedError())
+
+    await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Go?",
+          actions: [{ label: "Go", prompt: "go" }],
+        },
+        ctx as any,
+      ),
+    )
+
+    const statuses = statusSet.mock.calls
+      .filter((call: unknown[]) => call[0] === ctx.sessionID)
+      .map((call: unknown[]) => (call[1] as { type: string }).type)
+    expect(statuses).toEqual(["idle"])
   })
 })

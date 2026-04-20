@@ -271,7 +271,7 @@ export namespace ToolRegistry {
             KiloToolRegistry.e2e() || // kilocode_change
             (input.modelID.includes("gpt-") && !input.modelID.includes("oss") && !input.modelID.includes("gpt-4"))
           if (tool.id === ApplyPatchTool.id) return usePatch
-          if (tool.id === EditTool.id || tool.id === WriteTool.id) return !usePatch
+          if (tool.id === EditTool.id) return !usePatch // kilocode_change
 
           return true
         })
