@@ -9,6 +9,7 @@ import { useToast } from "@tui/ui/toast"
 import { onMount } from "solid-js"
 import { CanonicalTeamConfig } from "../team/config"
 import { useWorkflow } from "./context"
+import type { DensityMode } from "./types"
 import { Review } from "../review/review"
 import { Workflow } from "../workflow"
 import { WorkflowStateManager } from "../workflow/state"
@@ -111,6 +112,20 @@ export function WorkflowCommandInput() {
 
     if (cmd === "back") {
       route.back()
+      return
+    }
+
+    // /density compact|expanded — toggle UI density (Phase 5)
+    if (cmd.startsWith("density")) {
+      const arg = text.slice("density".length).trim()
+      const mode: DensityMode | undefined =
+        arg === "compact" || arg === "expanded" ? arg : undefined
+      if (!mode) {
+        toast.show({ message: "Usage: density compact|expanded", variant: "warning", duration: 3000 })
+        return
+      }
+      await wf.setDensity(mode)
+      toast.show({ message: `Density set to ${mode}`, variant: "info", duration: 2000 })
       return
     }
 

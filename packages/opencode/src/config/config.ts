@@ -1498,6 +1498,16 @@ export namespace Config {
       // devilcode_change start
       team: CanonicalTeamConfig.optional().describe("Multi-model team configuration for hierarchical agent dispatch"),
       // devilcode_change end
+      // devilcode_change start - Phase 5 runtime cockpit progressive disclosure
+      workflow: z
+        .object({
+          density: z.enum(["compact", "expanded"]).optional(),
+          firstRunComplete: z.boolean().optional(),
+          autoCompactFired: z.boolean().optional(),
+        })
+        .optional()
+        .describe("Workflow TUI cockpit state (Phase 5)"),
+      // devilcode_change end
     })
     .strict()
     .meta({

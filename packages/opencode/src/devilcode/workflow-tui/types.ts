@@ -83,3 +83,5 @@ export const WORKFLOW_COMMANDS: WorkflowCommand[] = [
 export function isWorkflowCommand(input: string): input is WorkflowCommand {
   return WORKFLOW_COMMANDS.includes(input as WorkflowCommand)
 }
+
+export type DensityMode = "compact" | "expanded"

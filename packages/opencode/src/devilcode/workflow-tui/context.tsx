@@ -1,5 +1,5 @@
 // packages/opencode/src/devilcode/workflow-tui/context.tsx
-import { createContext, useContext, type ParentProps } from "solid-js"
+import { createContext, useContext, createEffect, type ParentProps } from "solid-js"
 import { createStore, produce } from "solid-js/store"
 import { onMount, onCleanup } from "solid-js"
 import type {
@@ -12,8 +12,9 @@ import type {
   ShipReport,
   RetroReport,
 } from "../workflow/types"
-import type { TabInfo, SessionInfo } from "./types"
+import type { TabInfo, SessionInfo, DensityMode } from "./types"
 import type { CanonicalTeamConfig as TeamConfig } from "../team/config"
+import { Config } from "../../config/config"
 import { WorkflowStateManager } from "../workflow/state"
 import { Workflow } from "../workflow"
 import { SessionBridge } from "../workflow/session-bridge"
@@ -43,7 +44,12 @@ export type WorkflowViewState = {
   deadlock: DeadlockResult | null
   events: WorkflowEvent[]
 
+  density: DensityMode
+  firstRunComplete: boolean
+
   // Actions
+  setDensity(mode: DensityMode): Promise<void>
+  markFirstRunComplete(): Promise<void>
   refresh(): Promise<void>
   executeStage(stage: WorkflowStage): Promise<void>
   selectTask(taskId: string): void
@@ -89,6 +95,8 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     healthAlerts: HealthAlert[]
     deadlock: DeadlockResult | null
     events: WorkflowEvent[]
+    density: DensityMode
+    firstRunComplete: boolean
   }>({
     state: undefined,
     plans: [],
@@ -110,6 +118,8 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     healthAlerts: [],
     deadlock: null,
     events: [],
+    density: "expanded" as DensityMode,
+    firstRunComplete: false,
   })
 
   const bridge = new SessionBridge({
@@ -214,7 +224,63 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     }
   }
 
-  onMount(() => {
+  // Named handlers defined before createEffect to avoid TDZ (R3-06)
+  async function handleSetDensity(mode: DensityMode): Promise<void> {
+    setStore("density", mode)
+    try {
+      const current = await Config.get()
+      await Config.update({
+        ...current,
+        workflow: { ...(current.workflow ?? {}), density: mode },
+      })
+    } catch {
+      // Persistence failure does not revert UI state
+    }
+  }
+
+  async function handleMarkFirstRunComplete(): Promise<void> {
+    setStore("firstRunComplete", true)
+    try {
+      const current = await Config.get()
+      await Config.update({
+        ...current,
+        workflow: { ...(current.workflow ?? {}), firstRunComplete: true },
+      })
+    } catch {}
+  }
+
+  // Auto-compact fires once per session when the first build task completes
+  let autoCompactFired = false
+  createEffect(() => {
+    if (autoCompactFired) return
+    if (!store.firstRunComplete) return
+    if (store.density !== "expanded") return
+    const state = store.state
+    if (!state) return
+    const anyCompleted = state.activeTasks.some((t) => t.status === "completed")
+    if (anyCompleted) {
+      autoCompactFired = true
+      void handleSetDensity("compact")
+      // Also persist the autoCompactFired flag across sessions (R3-05)
+      void (async () => {
+        try {
+          const cfg = await Config.get()
+          await Config.update({ ...cfg, workflow: { ...(cfg.workflow ?? {}), autoCompactFired: true } })
+        } catch {}
+      })()
+    }
+  })
+
+  onMount(async () => {
+    // Bootstrap density + firstRunComplete from persisted Config (R3-05)
+    try {
+      const cfg = await Config.get()
+      setStore("density", cfg.workflow?.density ?? "expanded")
+      setStore("firstRunComplete", Boolean(cfg.workflow?.firstRunComplete))
+      autoCompactFired = Boolean(cfg.workflow?.autoCompactFired)
+    } catch {
+      // Config not initialized yet — keep defaults
+    }
     refresh()
     const interval = setInterval(refresh, 5000)
     onCleanup(() => clearInterval(interval))
@@ -272,6 +338,15 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
     get events() {
       return store.events
     },
+    get density() {
+      return store.density
+    },
+    get firstRunComplete() {
+      return store.firstRunComplete
+    },
+
+    setDensity: handleSetDensity,
+    markFirstRunComplete: handleMarkFirstRunComplete,
 
     refresh,
 
