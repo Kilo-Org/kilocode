@@ -14,9 +14,12 @@ import { TaskHeader } from "../components/chat/TaskHeader"
 import { QuestionDock } from "../components/chat/QuestionDock"
 import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
+import { registerVscodeToolOverrides } from "../components/chat/VscodeToolOverrides"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+
+registerVscodeToolOverrides()
 
 const SESSION_ID = "story-session-chat-001"
 
