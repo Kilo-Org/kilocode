@@ -4,6 +4,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
+    "lib": ["ESNext", "dom", "dom.iterable"],
     "types": ["bun"],
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": false

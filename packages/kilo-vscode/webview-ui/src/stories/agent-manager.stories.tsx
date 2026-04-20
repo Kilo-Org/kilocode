@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 /**
  * Stories for Agent Manager components:
- * FileTree, DiffPanel, FullScreenDiffView, WorktreeItem
+ * FileTree, DiffPanel, FullScreenDiffView, WorktreeItem, TabBar
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
@@ -10,7 +10,11 @@ import { FileTree } from "../../agent-manager/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../agent-manager/FullScreenDiffView"
 import { WorktreeItem } from "../../agent-manager/WorktreeItem"
-import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats } from "../types/messages"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
+import type { WorktreeFileDiff, WorktreeState, WorktreeGitStats, PRStatus } from "../types/messages"
 import "../../agent-manager/agent-manager.css"
 import "../../agent-manager/agent-manager-review.css"
 
@@ -252,6 +256,152 @@ export const WorktreeItemWithStats: Story = {
   ),
 }
 
+// ---------------------------------------------------------------------------
+// PR badge mock helpers
+// ---------------------------------------------------------------------------
+
+const basePR: PRStatus = {
+  number: 8594,
+  title: "feat: add inline delete",
+  url: "https://github.com/org/repo/pull/8594",
+  state: "open",
+  review: null,
+  checks: { status: "success", total: 5, passed: 5, failed: 0, pending: 0, items: [] },
+  additions: 978,
+  deletions: 202,
+  files: 12,
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — PR badge stories
+// ---------------------------------------------------------------------------
+
+export const PRBadgeApproved: Story = {
+  name: "PR Badge — approved + checks pass",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "approved" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgePending: Story = {
+  name: "PR Badge — pending review",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "pending" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChangesRequested: Story = {
+  name: "PR Badge — changes requested",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, review: "changes_requested" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksFailing: Story = {
+  name: "PR Badge — checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeChecksPending: Story = {
+  name: "PR Badge — checks pending",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, checks: { ...basePR.checks, status: "pending", passed: 2, pending: 3 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeDraft: Story = {
+  name: "PR Badge — draft",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "draft" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeMerged: Story = {
+  name: "PR Badge — merged",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "merged" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeClosed: Story = {
+  name: "PR Badge — closed",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={{ ...basePR, state: "closed" }} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeNoReview: Story = {
+  name: "PR Badge — open, no review decision",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem {...defaultProps} stats={baseStats} pr={basePR} />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const PRBadgeApprovedChecksFailing: Story = {
+  name: "PR Badge — approved but checks failing",
+  render: () => (
+    <StoryProviders noPadding>
+      <div style={{ width: "200px" }}>
+        <WorktreeItem
+          {...defaultProps}
+          stats={baseStats}
+          pr={{ ...basePR, review: "approved", checks: { ...basePR.checks, status: "failure", passed: 3, failed: 2 } }}
+        />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+// ---------------------------------------------------------------------------
+// WorktreeItem — grouped
+// ---------------------------------------------------------------------------
+
 export const WorktreeItemGrouped: Story = {
   name: "WorktreeItem — grouped (3 versions)",
   render: () => {
@@ -297,4 +447,128 @@ export const WorktreeItemGrouped: Story = {
       </StoryProviders>
     )
   },
+}
+
+// ---------------------------------------------------------------------------
+// TabBar — renders tab bar structure matching SortableTab / SortableReviewTab
+// DOM to verify the tooltip-trigger height chain is correct.
+// ---------------------------------------------------------------------------
+
+/**
+ * Mock tab matching the real SortableTab DOM:
+ *   .am-tab-sortable > [context-menu-trigger] > [tooltip-trigger] > .am-tab
+ */
+const MockTab = (props: { title: string; active?: boolean }) => (
+  <div class="am-tab-sortable">
+    <ContextMenu>
+      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
+        <TooltipKeybind title={props.title} keybind="⌘1" placement="bottom" inactive={props.active}>
+          <div class={`am-tab ${props.active ? "am-tab-active" : ""}`}>
+            <span class="am-tab-label">{props.title}</span>
+            <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+              <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
+            </TooltipKeybind>
+          </div>
+        </TooltipKeybind>
+      </ContextMenu.Trigger>
+    </ContextMenu>
+  </div>
+)
+
+/** Mock review tab matching SortableReviewTab DOM (no ContextMenu wrapper). */
+const MockReviewTab = (props: { active?: boolean }) => (
+  <div class="am-tab-sortable">
+    <TooltipKeybind title="Toggle review" keybind="⌘⇧R" placement="bottom" inactive={props.active}>
+      <div class={`am-tab am-tab-review ${props.active ? "am-tab-active" : ""}`}>
+        <Icon name="layers" size="small" />
+        <span class="am-tab-label">Review</span>
+        <TooltipKeybind title="Close" keybind="⌘W" placement="bottom">
+          <IconButton icon="close-small" size="small" variant="ghost" label="Close" class="am-tab-close" />
+        </TooltipKeybind>
+      </div>
+    </TooltipKeybind>
+  </div>
+)
+
+export const TabBarMultipleTabs: Story = {
+  name: "TabBar — multiple tabs with active",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list">
+            <MockTab title="Implement auth" active />
+            <MockTab title="Fix button styles" />
+            <MockTab title="Add unit tests" />
+          </div>
+        </div>
+        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+        </TooltipKeybind>
+        <div class="am-tab-actions">
+          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
+            <Icon name="layers" size="small" />
+            <span class="am-diff-toggle-stats">
+              <span class="am-stat-files">4f</span>
+              <span class="am-stat-additions">+32</span>
+              <span class="am-stat-deletions">−8</span>
+            </span>
+          </button>
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const TabBarWithReviewTab: Story = {
+  name: "TabBar — with review tab",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list">
+            <MockTab title="Implement auth" />
+            <MockReviewTab active />
+          </div>
+        </div>
+        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+        </TooltipKeybind>
+        <div class="am-tab-actions">
+          <IconButton icon="expand" size="small" variant="ghost" label="Review" class="am-tab-diff-btn-active" />
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const TabBarSingleTab: Story = {
+  name: "TabBar — single active tab",
+  render: () => (
+    <StoryProviders noPadding>
+      <div class="am-tab-bar">
+        <div class="am-tab-scroll-area">
+          <div class="am-tab-list">
+            <MockTab title="PR #6966 worktree checkout" active />
+          </div>
+        </div>
+        <TooltipKeybind title="New session" keybind="⌘T" placement="bottom">
+          <IconButton icon="plus" size="small" variant="ghost" label="New session" class="am-tab-add" />
+        </TooltipKeybind>
+        <div class="am-tab-actions">
+          <button class="am-diff-toggle-btn am-diff-toggle-has-changes">
+            <Icon name="layers" size="small" />
+            <span class="am-diff-toggle-stats">
+              <span class="am-stat-files">188f</span>
+              <span class="am-stat-additions">+23625</span>
+              <span class="am-stat-deletions">−359</span>
+            </span>
+          </button>
+          <IconButton icon="console" size="small" variant="ghost" label="Terminal" />
+        </div>
+      </div>
+    </StoryProviders>
+  ),
 }

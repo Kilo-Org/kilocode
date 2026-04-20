@@ -18,6 +18,20 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 
 ## Tool Categories
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+| Category | Purpose                                    | Tool Names                                                   |
+| :------- | :----------------------------------------- | :----------------------------------------------------------- |
+| Read     | Access file content and code structure     | `read`, `glob`, `grep`                                       |
+| Edit     | Create or modify files and code            | `edit`, `multiedit`, `write`, `apply_patch`                  |
+| Execute  | Run commands and perform system operations | `bash`                                                       |
+| Web      | Fetch and search web content               | `webfetch`, `websearch`, `codesearch`                        |
+| Workflow | Manage task flow and sub-agents            | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 | Category | Purpose                                    | Tool Names                                                               |
 | :------- | :----------------------------------------- | :----------------------------------------------------------------------- |
 | Read     | Access file content and code structure     | `read_file`, `search_files`, `list_files`, `list_code_definition_names`  |
@@ -26,9 +40,28 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 | Browser  | Interact with web content                  | `browser_action`                                                         |
 | Workflow | Manage task flow and context               | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
 
+{% /tab %}
+{% /tabs %}
+
 ## Example: Using Tools
 
 Here's how a typical tool interaction works:
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+{% callout type="info" title="Tool Approval UI" %}
+When a tool is proposed, you'll see an approval prompt in the **Permission Dock** at the bottom of the chat. You can approve once, approve always (saves to config), or deny.
+{% /callout %}
+
+**User:** Create a file named `greeting.js` that logs a greeting message
+
+**Kilo Code:** (Proposes the `write` tool)
+
+The extension shows the file path and proposed content for review. Click **Approve** to execute or **Deny** to cancel.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 {% callout type="info" title="Tool Approval UI" %}
 When a tool is proposed, you'll see Save and Reject buttons along with an optional Auto-approve checkbox for trusted operations.
@@ -56,7 +89,54 @@ greet('World');
 
 **Kilo Code:** (Confirms file creation)
 
+{% /tab %}
+{% /tabs %}
+
 ## Tool Safety and Approval
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+Every tool use is subject to a permission check. The default action for any tool with no matching rule in your config is **`ask`** — meaning Kilo will pause and prompt you before executing it.
+
+**Default permissions by tool:**
+
+| Tool(s)                                      | Default                                          |
+| :------------------------------------------- | :----------------------------------------------- |
+| `read`, `glob`, `grep`, `list`               | `ask`                                            |
+| `edit`, `write`, `multiedit`, `apply_patch`  | `ask`                                            |
+| `bash`                                       | `ask` (per-command)                              |
+| `external_directory`                         | `ask` (when accessing paths outside the project) |
+| `task`                                       | `ask`                                            |
+| `webfetch`, `websearch`, `codesearch`        | `ask`                                            |
+| `todowrite`, `todoread`, `question`, `skill` | `ask`                                            |
+
+No tools are auto-approved out of the box. You must explicitly grant `allow` in your config, or approve them at runtime.
+
+**At runtime**, the **Permission Dock** floating UI in the chat panel shows each pending approval. For each tool call you can:
+
+- **Approve once** — execute this call only
+- **Approve always** — save an `allow` rule to your config so future matching calls are auto-approved
+- **Deny** — cancel the tool call
+
+To pre-configure permissions in your config file:
+
+```json
+{
+  "permission": {
+    "read": "allow",
+    "glob": "allow",
+    "grep": "allow",
+    "edit": "ask",
+    "bash": "ask"
+  }
+}
+```
+
+This safety mechanism ensures you maintain control over which files are modified, what commands are executed, and how your codebase is changed.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 Every tool use requires your explicit approval. When Kilo proposes a tool, you'll see:
 
@@ -66,7 +146,36 @@ Every tool use requires your explicit approval. When Kilo proposes a tool, you'l
 
 This safety mechanism ensures you maintain control over which files are modified, what commands are executed, and how your codebase is changed. Always review tool proposals carefully before saving them.
 
+{% /tab %}
+{% /tabs %}
+
 ## Core Tools Reference
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+| Tool Name     | Description                                            | Category |
+| :------------ | :----------------------------------------------------- | :------- |
+| `read`        | Reads file contents with line numbers                  | Read     |
+| `glob`        | Finds files by glob pattern                            | Read     |
+| `grep`        | Searches file contents with regex                      | Read     |
+| `edit`        | Makes precise text replacements in a file              | Edit     |
+| `multiedit`   | Multiple edits in a single call                        | Edit     |
+| `write`       | Creates new files or overwrites existing ones          | Edit     |
+| `apply_patch` | Applies unified diffs (used with certain models)       | Edit     |
+| `bash`        | Runs shell commands                                    | Execute  |
+| `webfetch`    | Fetches a URL                                          | Web      |
+| `websearch`   | Searches the web (Kilo/OpenRouter users)               | Web      |
+| `codesearch`  | Semantic code search (Kilo/OpenRouter users)           | Web      |
+| `question`    | Asks you a clarifying question with selectable options | Workflow |
+| `task`        | Spawns a sub-agent session                             | Workflow |
+| `todowrite`   | Creates and updates a session TODO list                | Workflow |
+| `todoread`    | Reads the current session TODO list                    | Workflow |
+| `plan`        | Enters structured planning mode                        | Workflow |
+| `skill`       | Invokes a reusable skill (Markdown instruction module) | Workflow |
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
 
 | Tool Name                    | Description                                         | Category |
 | :--------------------------- | :-------------------------------------------------- | :------- |
@@ -83,6 +192,9 @@ This safety mechanism ensures you maintain control over which files are modified
 | `attempt_completion`         | Indicates the task is complete                      | Workflow |
 | `switch_mode`                | Changes to a different operational mode             | Workflow |
 | `new_task`                   | Creates a new subtask with a specific starting mode | Workflow |
+
+{% /tab %}
+{% /tabs %}
 
 ## Learn More About Tools
 

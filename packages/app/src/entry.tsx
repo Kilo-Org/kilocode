@@ -1,6 +1,5 @@
 // @refresh reload
 
-import { iife } from "@opencode-ai/util/iife"
 import { render } from "solid-js/web"
 import { AppBaseProviders, AppInterface } from "@/app"
 import { type Platform, PlatformProvider } from "@/context/platform"
@@ -98,18 +97,18 @@ if (!(root instanceof HTMLElement) && import.meta.env.DEV) {
   throw new Error(getRootNotFoundError())
 }
 
-// kilocode_change start
-// Floating UI can call getComputedStyle with non-elements (e.g., null refs, virtual elements).
-// This happens on all platforms (WebView2 on Windows, WKWebView on macOS), not just Windows.
-const originalGetComputedStyle = window.getComputedStyle
-window.getComputedStyle = ((elt: Element, pseudoElt?: string | null) => {
-  if (!(elt instanceof Element)) {
-    // Fall back to a safe element when a non-element is passed.
-    return originalGetComputedStyle(document.documentElement, pseudoElt ?? undefined)
-  }
-  return originalGetComputedStyle(elt, pseudoElt ?? undefined)
-}) as typeof window.getComputedStyle
-// kilocode_change end
+const getCurrentUrl = () => {
+  if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
+  if (import.meta.env.DEV)
+    return `http://${import.meta.env.VITE_KILO_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_KILO_SERVER_PORT ?? "4096"}`
+  return location.origin
+}
+
+const getDefaultUrl = () => {
+  const lsDefault = readDefaultServerUrl()
+  if (lsDefault) return lsDefault
+  return getCurrentUrl()
+}
 
 const platform: Platform = {
   platform: "web",
@@ -119,26 +118,24 @@ const platform: Platform = {
   forward,
   restart,
   notify,
-  getDefaultServerUrl: async () => readDefaultServerUrl(),
-  setDefaultServerUrl: writeDefaultServerUrl,
+  getDefaultServer: async () => {
+    const stored = readDefaultServerUrl()
+    return stored ? ServerConnection.Key.make(stored) : null
+  },
+  setDefaultServer: writeDefaultServerUrl,
 }
 
-const defaultUrl = iife(() => {
-  const lsDefault = readDefaultServerUrl()
-  if (lsDefault) return lsDefault
-  if (location.hostname.includes("opencode.ai")) return "http://localhost:4096"
-  if (import.meta.env.DEV)
-    return `http://${import.meta.env.VITE_KILO_SERVER_HOST ?? "localhost"}:${import.meta.env.VITE_KILO_SERVER_PORT ?? "4096"}`
-  return location.origin
-})
-
 if (root instanceof HTMLElement) {
-  const server: ServerConnection.Http = { type: "http", http: { url: defaultUrl } }
+  const server: ServerConnection.Http = { type: "http", http: { url: getCurrentUrl() } }
   render(
     () => (
       <PlatformProvider value={platform}>
         <AppBaseProviders>
-          <AppInterface defaultServer={ServerConnection.key(server)} servers={[server]} />
+          <AppInterface
+            defaultServer={ServerConnection.Key.make(getDefaultUrl())}
+            servers={[server]}
+            disableHealthCheck
+          />
         </AppBaseProviders>
       </PlatformProvider>
     ),

@@ -74,7 +74,7 @@ Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Cli
 
 **Providing context:**
 
-The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file autocomplete suggestions, or mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -186,6 +186,12 @@ This feature streamlines the interaction when Kilo Code requires clarification, 
 
 {% callout type="tip" %}
 **Pop out to an editor tab.** If the sidebar feels cramped, pop the chat into a full editor tab for more room.
+{% /callout %}
+
+{% callout type="tip" %}
+**Move Kilo Code to the Secondary Side Bar** for a better layout. Right-click on the Kilo Code icon in the Activity Bar and select **Move To → Secondary Side Bar**. This lets you see the Explorer, Search, Source Control, etc. alongside Kilo Code.
+
+{% image src="/docs/img/move-to-secondary.png" alt="Move to Secondary Side Bar" width="600" caption="Move Kilo Code to the Secondary Side Bar for better workspace organization" /%}
 {% /callout %}
 
 {% /tab %}

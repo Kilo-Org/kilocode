@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "工作階段變更",
+  "ui.sessionReview.title.git": "Git 變更",
+  "ui.sessionReview.title.branch": "分支變更",
   "ui.sessionReview.title.lastTurn": "上一輪變更",
   "ui.sessionReview.diffStyle.unified": "整合",
   "ui.sessionReview.diffStyle.split": "拆分",
@@ -41,6 +43,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "隱藏步驟",
   "ui.sessionTurn.summary.response": "回覆",
   "ui.sessionTurn.diff.showMore": "顯示更多變更 ({{count}})",
+  "ui.sessionTurn.diffs.changed": "已變更",
+  "ui.sessionTurn.diffs.showAll": "顯示全部",
+  "ui.sessionTurn.diffs.showLess": "顯示更少",
+  "ui.sessionTurn.diffs.more": "還有 +{{count}} 個檔案",
 
   "ui.sessionTurn.retry.retrying": "重試中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}} 秒後",
@@ -51,6 +57,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "新增點數",
 
   "ui.sessionTurn.status.delegating": "正在委派工作",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "正在規劃下一步",
   "ui.sessionTurn.status.gatheringContext": "正在探索",
   "ui.sessionTurn.status.gatheredContext": "已探索",
@@ -64,7 +72,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "正在考慮下一步",
 
   "ui.messagePart.questions.dismissed": "問題已略過",
-  "ui.messagePart.compaction": "歷史已壓縮",
+  "ui.messagePart.compaction": "工作階段已壓縮",
   "ui.messagePart.context.read.one": "{{count}} 次讀取",
   "ui.messagePart.context.read.other": "{{count}} 次讀取",
   "ui.messagePart.context.search.one": "{{count}} 次搜尋",
@@ -72,6 +80,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 個清單",
   "ui.messagePart.context.list.other": "{{count}} 個清單",
   "ui.messagePart.diagnostic.error": "錯誤",
+  "ui.messagePart.mcp.input": "輸入",
+  "ui.messagePart.mcp.output": "輸出",
   "ui.messagePart.title.edit": "編輯",
   "ui.messagePart.title.write": "寫入",
   "ui.messagePart.option.typeOwnAnswer": "輸入自己的答案",
@@ -130,6 +140,8 @@ export const dict = {
   "ui.message.collapse": "收合訊息",
   "ui.message.copy": "複製",
   "ui.message.copyMessage": "複製訊息",
+  "ui.message.forkMessage": "分支到新工作階段",
+  "ui.message.revertMessage": "重設至此點",
   "ui.message.copyResponse": "複製回覆",
   "ui.message.copied": "已複製！",
   "ui.message.revert": "Revert to here",
@@ -148,4 +160,16 @@ export const dict = {
   "ui.question.multiHint": "可多選",
   "ui.question.singleHint": "選擇一個答案",
   "ui.question.custom.placeholder": "輸入你的答案...",
+
+  "ui.fileSearch.placeholder": "搜尋",
+  "ui.fileSearch.previousMatch": "上一個",
+  "ui.fileSearch.nextMatch": "下一個",
+  "ui.fileSearch.close": "關閉搜尋",
+  "ui.tool.task": "任務",
+  "ui.tool.skill": "技能",
+  "ui.basicTool.called": "呼叫了 `{{tool}}`",
+  "ui.toolErrorCard.failed": "失敗",
+  "ui.toolErrorCard.copyError": "複製錯誤",
+  "ui.message.duration.seconds": "{{count}}秒",
+  "ui.message.duration.minutesSeconds": "{{minutes}}分 {{seconds}}秒",
 } satisfies Partial<Record<Keys, string>>

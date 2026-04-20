@@ -69,4 +69,6 @@ export const dict = {
   "marketplace.warning.busyMany": "عدة جلسات تعمل وستتوقف",
   "marketplace.warning.installAnyway": "تثبيت على أي حال",
   "marketplace.warning.cancel": "إلغاء",
+  "marketplace.contribute.prompt": "هل تفتقد مهارة أو وضعًا أو خادم MCP؟",
+  "marketplace.contribute.cta": "ساهم على GitHub",
 }

@@ -18,7 +18,29 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 
 ### @-Mention Autocomplete
 
-Type `@` in the chat input followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. This is the quickest way to reference a specific file.
+Type `@` in the chat input to get autocomplete suggestions. You can mention:
+
+| Mention      | Description                                 | Example         |
+| ------------ | ------------------------------------------- | --------------- |
+| **File**     | Attach a file's contents to your message    | `@src/utils.ts` |
+| **Terminal** | Include your active VS Code terminal output | `@terminal`     |
+
+Selecting a suggestion inserts the mention and highlights it in the input. File contents and terminal output are attached as context when you send the message.
+
+### Drag and Drop
+
+You can also add file mentions by dragging and dropping:
+
+| Source                         | How                                                                                       | Result                               |
+| ------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Explorer / Editor tabs**     | Drag a file or folder from VS Code's Explorer or an editor tab into the chat input        | Inserts an `@/relative/path` mention |
+| **Multiple files**             | Drag several files at once                                                                | Inserts space-separated `@` mentions |
+| **Agent Manager diff headers** | Drag a file header from the Agent Manager's diff panel into chat                          | Inserts an `@file` mention           |
+| **Images**                     | Hold **Shift** while dragging an image file from your OS file manager into the chat input | Attaches the image                   |
+
+{% callout type="info" %}
+VS Code requires holding **Shift** when dragging files from outside the editor (e.g. Finder or Windows Explorer) into a webview. This applies to image drops — file drops from within VS Code (Explorer, editor tabs) work without Shift.
+{% /callout %}
 
 ### Automatic Editor Context
 
@@ -61,7 +83,7 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 
 In the terminal-based TUI, you can provide context in several ways:
 
-- **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions for quick file references.
+- **Type `@` for file autocomplete** — In the TUI, type `@` followed by a filename to get autocomplete suggestions. Selecting a file attaches its contents to your message. You can limit how much is included by appending a line range, e.g. `@src/utils.ts#10-50`.
 - **Mention file paths in your message** — Simply refer to files by path in your conversation text (e.g., "look at src/utils.ts") and the agent will read them.
 - **Use `kilo run -f`** — When using the non-interactive `kilo run` command, pass `-f path/to/file.ts` to explicitly include a file's contents in the context.
 - **Let the agent find files itself** — The agent has access to `glob` (find files by pattern), `grep` (search file contents), and `read` (read file contents) tools. Describe what you're looking for and it will locate the relevant code.

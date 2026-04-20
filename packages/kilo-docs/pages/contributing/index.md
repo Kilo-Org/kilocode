@@ -6,7 +6,7 @@ description: "Contribute to Kilo Code"
 # Contributing Overview
 
 {% callout type="info" %}
-**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/Kilo](https://github.com/Kilo-Org/Kilo)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to contribute to the extension or CLI, please head over to that repository.
+**New versions of the VS Code extension and CLI are being developed in [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode)** (extension at `packages/kilo-vscode`, CLI at `packages/opencode`). If you're looking to contribute to the extension or CLI, please head over to that repository.
 {% /callout %}
 
 Kilo Code is an open-source project that welcomes contributions from developers of all skill levels. This guide will help you get started with contributing to Kilo Code, whether you're fixing bugs, adding features, improving documentation, or sharing custom modes.
@@ -57,6 +57,33 @@ git checkout -b docs/your-change-description
 - Write clear, concise commit messages
 - Reference issue numbers when applicable
 - Keep commits focused on a single change
+
+### Changesets
+
+User-facing changes (features, fixes, breaking changes) require a changeset file so the update shows up in the next release notes. Run the interactive tool, or create the file by hand:
+
+```bash
+bunx changeset add
+```
+
+Or create `.changeset/<slug>.md` manually:
+
+```md
+---
+"kilo-code": minor
+---
+
+Short description of the change for the changelog.
+```
+
+Guidelines:
+
+- Use `patch` for bug fixes, `minor` for new features, `major` for breaking changes.
+- Descriptions are read by end users in release notes — keep them concise and feature-oriented. Describe **what changed from the user's perspective**, not implementation details.
+- Write in imperative mood (e.g. "Support exporting conversations as markdown" rather than "Add a new export handler that serializes session messages to .md files").
+- Changesets are consumed at release time by the `publish.yml` workflow, which generates changelog entries for the GitHub release notes.
+
+Skip the changeset only for internal refactors, CI tweaks, test-only changes, or docs that do not affect users.
 
 ### Testing Your Changes
 

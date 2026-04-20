@@ -6,7 +6,11 @@
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { LegacyMigrationData, MigrationSelections } from "../../legacy-migration/legacy-types"
+import type {
+  LegacyMigrationData,
+  MigrationSelections,
+  MigrationSessionProgress,
+} from "../../legacy-migration/legacy-types"
 import * as MigrationService from "../../legacy-migration/migration-service"
 
 /** Subset of vscode.ExtensionContext needed by migration handlers. */
@@ -28,10 +32,23 @@ export interface MigrationContext {
   readonly client: KiloClient | null
   readonly extensionContext: MigrationExtensionContext | undefined
   postMessage(msg: unknown): void
+  refreshSessions(): void
   cachedLegacyData: LegacyMigrationData | null
   migrationCheckInFlight: boolean
+  lastMigrationHadErrors?: boolean
   disposeGlobal(): Promise<void>
   broadcastComplete(): void
+}
+
+function postSessionProgress(ctx: MigrationContext, progress: MigrationSessionProgress): void {
+  ctx.postMessage({
+    type: "legacyMigrationSessionProgress",
+    session: progress.session,
+    index: progress.index,
+    total: progress.total,
+    phase: progress.phase,
+    error: progress.error,
+  })
 }
 
 /**
@@ -69,6 +86,7 @@ export async function checkAndShowMigrationWizard(ctx: MigrationContext): Promis
       providers: data.providers,
       mcpServers: data.mcpServers,
       customModes: data.customModes,
+      sessions: data.sessions,
       defaultModel: data.defaultModel,
       settings: data.settings,
     },
@@ -88,6 +106,7 @@ export async function handleRequestLegacyMigrationData(ctx: MigrationContext): P
       providers: data.providers,
       mcpServers: data.mcpServers,
       customModes: data.customModes,
+      sessions: data.sessions,
       defaultModel: data.defaultModel,
       settings: data.settings,
     },
@@ -108,27 +127,17 @@ export async function handleStartLegacyMigration(
       (item, status, message) => {
         ctx.postMessage({ type: "legacyMigrationProgress", item, status, message })
       },
+      (progress: MigrationSessionProgress) => {
+        postSessionProgress(ctx, progress)
+      },
       ctx.cachedLegacyData?.settings,
+      ctx.cachedLegacyData?.sessions,
     )
 
-    // Dispose all instances after migration
-    // Reloading the data will be handled once the server replies with a global.disposed event
-    await ctx.disposeGlobal()
-
-    // Only mark as completed if at least one item succeeded — if everything failed
-    // the user can still re-run migration via Settings → About.
-    const success = results.some((r) => r.status === "success")
-
-    if (success) {
-      await MigrationService.setMigrationStatus(
-        ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
-        "completed",
-      )
-      ctx.broadcastComplete()
-    }
-
+    ctx.lastMigrationHadErrors = results.some((item) => item.status === "error")
     ctx.postMessage({ type: "legacyMigrationComplete", results })
   } catch (error) {
+    ctx.lastMigrationHadErrors = true
     console.error("[Kilo New] KiloProvider: ❌ Migration failed", error)
     ctx.postMessage({
       type: "legacyMigrationComplete",
@@ -142,6 +151,17 @@ export async function handleStartLegacyMigration(
       ],
     })
   }
+}
+
+export async function handleFinalizeLegacyMigration(ctx: MigrationContext): Promise<void> {
+  if (!ctx.extensionContext) return
+  await ctx.disposeGlobal()
+  await MigrationService.setMigrationStatus(
+    ctx.extensionContext as Parameters<typeof MigrationService.setMigrationStatus>[0],
+    ctx.lastMigrationHadErrors ? "completed_with_errors" : "completed",
+  )
+  ctx.broadcastComplete()
+  ctx.refreshSessions()
 }
 
 /** Record that the user skipped migration and broadcast to all instances. */

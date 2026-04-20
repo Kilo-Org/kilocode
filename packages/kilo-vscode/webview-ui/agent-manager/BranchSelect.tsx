@@ -1,6 +1,6 @@
 // Reusable branch selector: search input + scrollable list with keyboard navigation
 
-import { type Component, For, Show, onMount } from "solid-js"
+import { type Component, For, Show } from "solid-js"
 import type { BranchInfo } from "../src/types/messages"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
@@ -34,10 +34,6 @@ interface BranchSelectProps {
 }
 
 export const BranchSelect: Component<BranchSelectProps> = (props) => {
-  let ref: HTMLInputElement | undefined
-
-  onMount(() => requestAnimationFrame(() => ref?.focus()))
-
   const isDefault = (branch: BranchInfo) => {
     if (props.defaultName) return branch.name === props.defaultName
     return branch.isDefault
@@ -48,7 +44,7 @@ export const BranchSelect: Component<BranchSelectProps> = (props) => {
       <div class="am-dropdown-search">
         <Icon name="magnifying-glass" size="small" />
         <input
-          ref={ref}
+          data-autofocus
           class="am-dropdown-search-input"
           type="text"
           placeholder={props.searchPlaceholder}

@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Promjene sesije",
+  "ui.sessionReview.title.git": "Git promjene",
+  "ui.sessionReview.title.branch": "Promjene grane",
   "ui.sessionReview.title.lastTurn": "Promjene u posljednjem potezu",
   "ui.sessionReview.diffStyle.unified": "Ujedinjeno",
   "ui.sessionReview.diffStyle.split": "Podijeljeno",
@@ -41,6 +43,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Sakrij korake",
   "ui.sessionTurn.summary.response": "Odgovor",
   "ui.sessionTurn.diff.showMore": "Prikaži još izmjena ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Izmijenjeno",
+  "ui.sessionTurn.diffs.showAll": "Prikaži sve",
+  "ui.sessionTurn.diffs.showLess": "Prikaži manje",
+  "ui.sessionTurn.diffs.more": "Još +{{count}} datoteka",
 
   "ui.sessionTurn.retry.retrying": "ponovni pokušaj",
   "ui.sessionTurn.retry.inSeconds": "za {{seconds}}s",
@@ -51,6 +57,8 @@ export const dict = {
   "ui.sessionTurn.error.addCredits": "Dodaj kredite",
 
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
+  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
+  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planiranje sljedećih koraka",
   "ui.sessionTurn.status.gatheringContext": "Istraživanje",
   "ui.sessionTurn.status.gatheredContext": "Istraženo",
@@ -64,7 +72,7 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Razmatranje sljedećih koraka",
 
   "ui.messagePart.questions.dismissed": "Pitanja odbačena",
-  "ui.messagePart.compaction": "Historija sažeta",
+  "ui.messagePart.compaction": "Sesija sažeta",
   "ui.messagePart.context.read.one": "{{count}} čitanje",
   "ui.messagePart.context.read.other": "{{count}} čitanja",
   "ui.messagePart.context.search.one": "{{count}} pretraga",
@@ -72,6 +80,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Greška",
+  "ui.messagePart.mcp.input": "Ulaz",
+  "ui.messagePart.mcp.output": "Izlaz",
   "ui.messagePart.title.edit": "Uredi",
   "ui.messagePart.title.write": "Napiši",
   "ui.messagePart.option.typeOwnAnswer": "Unesi svoj odgovor",
@@ -130,6 +140,8 @@ export const dict = {
   "ui.message.collapse": "Sažmi poruku",
   "ui.message.copy": "Kopiraj",
   "ui.message.copyMessage": "Kopiraj poruku",
+  "ui.message.forkMessage": "Forkaj u novu sesiju",
+  "ui.message.revertMessage": "Resetuj na ovu tačku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
   "ui.message.revert": "Revert to here",
@@ -148,4 +160,16 @@ export const dict = {
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",
   "ui.question.custom.placeholder": "Unesi svoj odgovor...",
+
+  "ui.fileSearch.placeholder": "Pronađi",
+  "ui.fileSearch.previousMatch": "Prethodno",
+  "ui.fileSearch.nextMatch": "Sljedeće",
+  "ui.fileSearch.close": "Zatvori pretragu",
+  "ui.tool.task": "Zadatak",
+  "ui.tool.skill": "Vještina",
+  "ui.basicTool.called": "Pozvan `{{tool}}`",
+  "ui.toolErrorCard.failed": "Neuspješno",
+  "ui.toolErrorCard.copyError": "Kopiraj grešku",
+  "ui.message.duration.seconds": "{{count}}s",
+  "ui.message.duration.minutesSeconds": "{{minutes}}m {{seconds}}s",
 } satisfies Partial<Record<Keys, string>>

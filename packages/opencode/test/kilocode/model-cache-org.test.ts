@@ -4,6 +4,9 @@
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
+import { Log } from "../../src/util/log"
+
+Log.init({ print: false })
 
 // Capture the options passed to fetchKiloModels
 let captured: any = undefined
@@ -23,21 +26,7 @@ mock.module("@kilocode/kilo-gateway", () => ({
   KILO_OPENROUTER_BASE: "https://api.kilo.ai/api/openrouter",
 }))
 
-// Mock BunProc and default plugins to prevent actual installations during tests
-mock.module("../../src/bun/index", () => ({
-  BunProc: {
-    install: async (pkg: string) => {
-      const lastAtIndex = pkg.lastIndexOf("@")
-      return lastAtIndex > 0 ? pkg.substring(0, lastAtIndex) : pkg
-    },
-    run: async () => {
-      throw new Error("BunProc.run should not be called in tests")
-    },
-    which: () => process.execPath,
-    InstallFailedError: class extends Error {},
-  },
-}))
-
+// Mock default plugins to prevent actual installations during tests
 const mockPlugin = () => ({})
 mock.module("opencode-copilot-auth", () => ({ default: mockPlugin }))
 mock.module("opencode-anthropic-auth", () => ({ default: mockPlugin }))

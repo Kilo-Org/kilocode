@@ -7,6 +7,24 @@ description: "Configure Kilo Code settings and preferences"
 
 The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. Both the CLI and the extension can also be configured through interactions with the agent. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
 
+## Configuring with the Agent
+
+The fastest way to change your Kilo configuration is to ask the agent to do it for you. The agent has a built-in skill that understands the full `kilo.jsonc` schema and can read, create, and update your config files directly.
+
+**Examples of things you can ask:**
+
+- "Switch my default model to Claude Sonnet"
+- "Disable the OpenAI and Groq providers"
+- "Set up an MCP server for Figma"
+- "Auto-approve all read and glob operations"
+- "Create a custom agent for code review"
+
+The agent will edit the appropriate config file (global or project-level) and explain what it changed. This works in both the CLI and VS Code extension.
+
+{% callout type="tip" %}
+This is especially useful for complex configuration like custom model definitions, MCP server setup, or permission patterns — the agent knows the correct syntax and will validate the config for you.
+{% /callout %}
+
 ## Managing Settings
 
 {% tabs %}
@@ -140,7 +158,29 @@ Use this option only if you are certain you want to remove all Kilo Code data or
 {% tabs %}
 {% tab label="VSCode" %}
 
-The extension does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Advanced options are configured via the JSONC config files that the Settings webview reads and writes. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
+The new extension exposes experimental features via the **Experimental** tab in Settings (click the gear icon {% codicon name="gear" /%} → Experimental).
+
+Available experimental toggles include:
+
+- **Share mode** — `manual`, `auto`, or `disabled` session sharing
+- **LSP integration** — expose language server diagnostics to the agent
+- **Paste summary** — summarize large clipboard pastes before including them
+- **Batch tool** — allow the agent to batch multiple tool calls in one step
+
+Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
+
+```json
+{
+  "experimental": {
+    "codebase_search": true,
+    "batch_tool": false,
+    "disable_paste_summary": false,
+    "mcp_timeout": 30000
+  }
+}
+```
+
+Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
 {% /tab %}
 {% tab label="CLI" %}

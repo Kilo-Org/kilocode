@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.1.9",
+  "version": "7.2.14",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -50,6 +50,17 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "taskDefinitions": [
+      {
+        "type": "kilo-worktree-setup",
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The setup script command to execute"
+          }
+        }
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -153,6 +164,12 @@
         "title": "Agent Manager: Focus Terminal",
         "category": "Kilo Code",
         "icon": "$(terminal)"
+      },
+      {
+        "command": "kilo-code.new.agentManager.runScript",
+        "title": "Agent Manager: Run Script",
+        "category": "Kilo Code",
+        "icon": "$(play)"
       },
       {
         "command": "kilo-code.new.agentManager.toggleDiff",
@@ -309,6 +326,11 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.takeHeapSnapshot",
+        "title": "Take Heap Snapshot",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -373,6 +395,26 @@
           "command": "kilo-code.new.openInTab",
           "group": "navigation",
           "when": "true"
+        },
+        {
+          "command": "kilo-code.new.plusButtonClicked",
+          "group": "navigation@0",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+        },
+        {
+          "command": "kilo-code.new.historyButtonClicked",
+          "group": "navigation@1",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+        },
+        {
+          "command": "kilo-code.new.profileButtonClicked",
+          "group": "navigation@2",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@3",
+          "when": "activeWebviewPanelId == kilo-code.new.TabPanel"
         }
       ],
       "editor/context": [
@@ -476,6 +518,12 @@
         "key": "ctrl+/",
         "mac": "cmd+/",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.runScript",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (isMac || !terminalFocus)"
       },
       {
         "command": "kilo-code.new.agentManager.toggleDiff",
@@ -582,12 +630,14 @@
       {
         "command": "kilo-code.new.cycleAgentMode",
         "key": "ctrl+.",
-        "mac": "cmd+."
+        "mac": "cmd+.",
+        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
-        "mac": "cmd+shift+."
+        "mac": "cmd+shift+.",
+        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
@@ -633,7 +683,8 @@
             "th",
             "bs",
             "tr",
-            "nl"
+            "nl",
+            "uk"
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
@@ -654,7 +705,8 @@
             "ภาษาไทย",
             "Bosanski",
             "Türkçe",
-            "Nederlands"
+            "Nederlands",
+            "Українська"
           ]
         },
         "kilo-code.new.model.providerID": {
@@ -681,6 +733,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable chat textarea autocomplete"
+        },
+        "kilo-code.new.claudeCodeCompat": {
+          "type": "boolean",
+          "default": false,
+          "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
         },
         "kilo-code.new.browserAutomation.enabled": {
           "type": "boolean",
@@ -738,6 +795,11 @@
             "none"
           ],
           "description": "Sound to play on errors"
+        },
+        "kilo-code.new.showTaskTimeline": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the task timeline graph in the chat header"
         }
       }
     }
@@ -789,14 +851,14 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "knip": "5.85.0",
-    "prettier": "^3.8.1",
+    "prettier": "3.6.2",
     "qrcode": "^1.5.4",
     "storybook": "10.2.10",
     "storybook-solidjs-vite": "10.0.9",
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite": "7.3.1",
+    "vite": "7.3.2",
     "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
@@ -806,7 +868,7 @@
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@thisbeyond/solid-dnd": "0.7.5",
-    "diff": "^7.0.0",
+    "diff": "8.0.4",
     "dotenv": "^16.4.7",
     "fastest-levenshtein": "^1.0.16",
     "friendly-words": "1.3.1",
@@ -815,11 +877,12 @@
     "lru-cache": "^11.0.2",
     "openai": "^4.85.4",
     "quick-lru": "^7.0.0",
-    "simple-git": "3.31.1",
+    "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
     "uri-js": "^4.4.1",
+    "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",
-    "yaml": "2.8.2",
+    "yaml": "2.8.3",
     "zod": "^3.24.2"
   }
 }
