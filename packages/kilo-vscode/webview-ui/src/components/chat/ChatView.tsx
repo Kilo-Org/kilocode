@@ -29,7 +29,6 @@ interface ChatViewProps {
   continueInWorktree?: boolean
   promptBoxId?: string
   pendingSessionID?: string
-  agentManagerContext?: string
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -230,7 +229,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
               questioning={questioning}
               boxId={props.promptBoxId}
               pendingSessionID={props.pendingSessionID}
-              agentManagerContext={props.agentManagerContext}
             />
           </Show>
         </div>

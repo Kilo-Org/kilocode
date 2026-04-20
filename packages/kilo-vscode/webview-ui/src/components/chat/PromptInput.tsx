@@ -58,7 +58,6 @@ interface PromptInputProps {
   questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
-  agentManagerContext?: string
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -69,7 +68,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const worktree = useWorktreeMode()
   const dialog = useDialog()
   const sid = () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID() ?? undefined
-  const ctx = () => props.agentManagerContext
+  const ctx = () => {
+    const id = props.boxId
+    if (!id || !id.startsWith("agent-manager:")) return undefined
+    const rest = id.slice("agent-manager:".length)
+    return rest === "unassigned" ? undefined : rest
+  }
   const hasGit = () => server.gitInstalled()
   const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
