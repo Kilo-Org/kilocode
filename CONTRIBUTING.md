@@ -98,12 +98,40 @@ There are also optional overrides for other services:
 
 > **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
 
-### Pull Request Expectations
+### Creating Issues
 
-- **Issue First Policy:** All PRs must reference an existing issue.
+If you use the GitHub web UI, issue templates will guide you through the required fields automatically. If you create issues via the `gh` CLI, API, or other tools that bypass the web UI templates, include these fields to avoid auto-closure by the compliance bot:
+
+**Bug reports** (use the Bug report template):
+- **Description** (required): Describe the bug you encountered
+- **Steps to reproduce**: How can the bug be reproduced?
+- **Screenshot and/or share link**: Visual evidence or a Kilo share link
+- **Kilo version**: Output of `kilo --version`
+- **Operating System**: Your OS name and version
+- **Terminal**: Terminal application you are using
+
+**Feature requests** (use the Feature request template):
+- **Describe the enhancement you want to request** (required): What feature or improvement?
+- **Why is this needed?**: The problem this solves or the benefit it provides
+
+### Issue First Policy
+
+All PRs must reference an existing issue. If no issue exists for your change, create one first and wait for it to be triaged before submitting a PR.
+
+### PR Titles
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) for PR titles:
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `refactor:` for code refactoring
+- `test:` for adding or updating tests
+- `chore:` for maintenance tasks
+
+### Other PR Expectations
+
 - **UI Changes:** Include screenshots or videos (before/after).
 - **Logic Changes:** Explain how you verified it works.
-- **PR Titles:** Follow conventional commit standards (`feat:`, `fix:`, `docs:`, etc.).
 
 ### Issue and PR Lifecycle
 
