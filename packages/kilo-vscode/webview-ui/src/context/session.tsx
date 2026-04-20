@@ -952,6 +952,14 @@ export const SessionProvider: ParentComponent = (props) => {
               delete messages[prevId]
             }),
           )
+          // Clear loaded flag so switching back triggers a full reload
+          // instead of showing an empty thread.
+          setLoaded((prev) => {
+            if (!prev.has(prevId)) return prev
+            const next = new Set(prev)
+            next.delete(prevId)
+            return next
+          })
         }
       }
 
@@ -1425,6 +1433,47 @@ export const SessionProvider: ParentComponent = (props) => {
             delete messages[removedId]
           }),
         )
+      }
+      // Clean ancillary state for removed sessions
+      if (removedIds.length > 0) {
+        const removedSet = new Set(removedIds)
+        setStore(
+          "todos",
+          produce((todos) => {
+            for (const id of removedIds) delete todos[id]
+          }),
+        )
+        setPages(
+          produce((map) => {
+            for (const id of removedIds) delete map[id]
+          }),
+        )
+        setStore(
+          "agentSelections",
+          produce((selections) => {
+            for (const id of removedIds) delete selections[id]
+          }),
+        )
+        setStatusMap(
+          produce((map) => {
+            for (const id of removedIds) delete map[id]
+          }),
+        )
+        setBusySinceMap(
+          produce((map) => {
+            for (const id of removedIds) delete map[id]
+          }),
+        )
+        setLoaded((prev) => {
+          let changed = false
+          for (const id of removedIds) {
+            if (prev.has(id)) { changed = true; break }
+          }
+          if (!changed) return prev
+          const next = new Set(prev)
+          for (const id of removedIds) next.delete(id)
+          return next
+        })
       }
       for (const s of loaded) {
         setStore("sessions", s.id, s)
