@@ -96,6 +96,27 @@ function assistant(sessionID: SessionID, id: MessageID, parentID: MessageID): Me
 }
 
 describe("session prompt queue", () => {
+  test("cancel-only sessions do not retain queue state", async () => {
+    const ids = [
+      SessionID.make("session_cancel_only_1"),
+      SessionID.make("session_cancel_only_2"),
+      SessionID.make("session_cancel_only_3"),
+    ]
+
+    await Promise.all(
+      ids.flatMap((id) => [
+        Effect.runPromise(KiloSessionPromptQueue.cancel(id)),
+        Effect.runPromise(KiloSessionPromptQueue.cancel(id)),
+      ]),
+    )
+
+    expect(ids.map((id) => KiloSessionPromptQueue.stats(id))).toEqual([
+      { tail: false, version: false, target: false },
+      { tail: false, version: false, target: false },
+      { tail: false, version: false, target: false },
+    ])
+  })
+
   test("scopes queued turns without moving prior assistant history", async () => {
     const sessionID = SessionID.make("session_scope")
     const one = MessageID.make("message_01")
@@ -381,6 +402,11 @@ describe("session prompt queue", () => {
             ),
           )
           expect(ids).toEqual([])
+          expect(KiloSessionPromptQueue.stats(session.id)).toEqual({
+            tail: false,
+            version: false,
+            target: false,
+          })
         },
       })
     } finally {

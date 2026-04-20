@@ -23,8 +23,21 @@ export namespace KiloSessionPromptQueue {
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
+      if (!tails.has(sessionID)) {
+        versions.delete(sessionID)
+        targets.delete(sessionID)
+        return
+      }
       versions.set(sessionID, version(sessionID) + 1)
     })
+  }
+
+  export function stats(sessionID: SessionID) {
+    return {
+      tail: tails.has(sessionID),
+      version: versions.has(sessionID),
+      target: targets.has(sessionID),
+    }
   }
 
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
