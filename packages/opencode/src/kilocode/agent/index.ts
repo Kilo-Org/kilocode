@@ -17,9 +17,10 @@ import PROMPT_ASK from "../../agent/prompt/ask.txt"
 import PROMPT_EXPLORE from "../../agent/prompt/explore.txt"
 
 // Safe bash commands that don't need user approval.
-// Only commands that cannot execute arbitrary code or subprocesses.
-export const bash: Record<string, "allow" | "ask" | "deny"> = {
-  "*": "ask",
+// Read-only commands are shared between the full and read-only allowlists.
+// Mutating commands are only in the full allowlist (not read-only).
+// Linux/macOS-specific commands are gated behind a platform check.
+const readonly: Record<string, "allow"> = {
   // read-only / informational
   "cat *": "allow",
   "head *": "allow",
@@ -37,7 +38,6 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "du *": "allow",
   "df *": "allow",
   "date *": "allow",
-  "uname *": "allow",
   "whoami *": "allow",
   "printenv *": "allow",
   "man *": "allow",
@@ -50,55 +50,42 @@ export const bash: Record<string, "allow" | "ask" | "deny"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
-  // file operations
+  // compilers (no script execution)
+  "tsc *": "allow",
+  "tsgo *": "allow",
+  // archive (cross-platform)
+  "unzip *": "allow",
+}
+
+const mutating: Record<string, "allow"> = {
   "touch *": "allow",
   "mkdir *": "allow",
   "cp *": "allow",
   "mv *": "allow",
-  // compilers (no script execution)
-  "tsc *": "allow",
-  "tsgo *": "allow",
-  // archive
+}
+
+// Linux/macOS-only commands
+const posix: Record<string, "allow"> = {
   "tar *": "allow",
-  "unzip *": "allow",
   "gzip *": "allow",
   "gunzip *": "allow",
+  "uname *": "allow",
+}
+
+export const bash: Record<string, "allow" | "ask" | "deny"> = {
+  "*": "ask",
+  ...readonly,
+  ...mutating,
+  ...(process.platform !== "win32" ? posix : {}),
 }
 
 // Read-only bash commands for ask/plan agents.
 // Unknown commands are DENIED (not "ask") because these agents must never modify the filesystem.
+// Mutating commands (touch, mkdir, cp, mv) are intentionally excluded.
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
-  // read-only / informational
-  "cat *": "allow",
-  "head *": "allow",
-  "tail *": "allow",
-  "less *": "allow",
-  "ls *": "allow",
-  "tree *": "allow",
-  "pwd *": "allow",
-  "echo *": "allow",
-  "wc *": "allow",
-  "which *": "allow",
-  "type *": "allow",
-  "file *": "allow",
-  "diff *": "allow",
-  "du *": "allow",
-  "df *": "allow",
-  "date *": "allow",
-  "uname *": "allow",
-  "whoami *": "allow",
-  "printenv *": "allow",
-  "man *": "allow",
-  // text processing (stdout only, no file modification)
-  "grep *": "allow",
-  "rg *": "allow",
-  "ag *": "allow",
-  "sort *": "allow",
-  "uniq *": "allow",
-  "cut *": "allow",
-  "tr *": "allow",
-  "jq *": "allow",
+  ...readonly,
+  ...(process.platform !== "win32" ? posix : {}),
   // git — allowlist of read-only subcommands, deny everything else
   "git *": "deny",
   "git log *": "allow",
