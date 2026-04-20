@@ -1,11 +1,9 @@
-import type { KiloClient } from "@kilocode/sdk/v2/client"
 import { captureGitChangesContext } from "./git-changes-context"
 import { resolveGitChangesTarget } from "./git-changes-target"
 
 type Interceptor = (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
 
 type Context = {
-  client: KiloClient | null
   workspaceDir: (sessionID: string | undefined) => string
   post: (message: unknown) => void
   error: (error: unknown) => string
@@ -26,7 +24,6 @@ export async function interceptMessage(
   await captureGitChangesContext({
     requestId: typeof resolved.requestId === "string" ? resolved.requestId : "",
     dir: typeof resolved.contextDirectory === "string" ? resolved.contextDirectory : dir,
-    client: ctx.client,
     base: typeof resolved.gitChangesBase === "string" ? resolved.gitChangesBase : undefined,
     post: ctx.post,
     error: ctx.error,

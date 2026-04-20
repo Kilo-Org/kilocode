@@ -56,6 +56,27 @@ describe("getGitChangesContext", () => {
     })
   })
 
+  it("includes base diffs with patches", async () => {
+    await repo(async (dir) => {
+      await fs.writeFile(path.join(dir, "base.txt"), "before\n")
+      git(dir, ["add", "base.txt"])
+      git(dir, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "base"])
+      await fs.writeFile(path.join(dir, "base.txt"), "after\n")
+      git(dir, ["add", "base.txt"])
+      git(dir, ["-c", "user.name=Kilo", "-c", "user.email=kilo@example.com", "commit", "-m", "change"])
+      await fs.writeFile(path.join(dir, "new.txt"), "new\n")
+
+      const result = await getGitChangesContext(dir, "HEAD~1")
+      expect(result.content).toContain("Base: HEAD~1")
+      expect(result.content).toContain("M\tbase.txt")
+      expect(result.content).toContain("A\tnew.txt")
+      expect(result.content).toContain("diff --git a/base.txt b/base.txt")
+      expect(result.content).toContain("+after")
+      expect(result.content).toContain("diff --git a/new.txt b/new.txt")
+      expect(result.content).toContain("+new")
+    })
+  })
+
   it("includes untracked file contents as patches", async () => {
     await repo(async (dir) => {
       await fs.mkdir(path.join(dir, "src"))

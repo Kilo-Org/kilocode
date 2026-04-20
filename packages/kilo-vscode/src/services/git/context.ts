@@ -15,23 +15,32 @@ type Result = {
   error?: string
 }
 
-export async function getGitChangesContext(dir: string): Promise<{ content: string; truncated: boolean }> {
+export async function getGitChangesContext(
+  dir: string,
+  base?: string,
+): Promise<{ content: string; truncated: boolean }> {
   const probe = await run(["rev-parse", "--is-inside-work-tree"], dir, SMALL)
   if (probe.error) return done(dir, `Unable to read git changes: ${probe.error}`)
   if (probe.code !== 0 || probe.out.trim() !== "true") return done(dir, "Not a git repository.")
 
   const head = await run(["rev-parse", "--verify", "HEAD"], dir, SMALL)
   if (head.error) return done(dir, `Unable to read git changes: ${head.error}`)
+  if (base && head.code === 0) return await against(dir, base)
+  return await local(dir, head.code === 0)
+}
 
+async function local(dir: string, born: boolean): Promise<{ content: string; truncated: boolean }> {
   const [status, diff, untracked] = await Promise.all([
     run(["status", "--short"], dir, SMALL),
-    changes(dir, head.code === 0),
+    changes(dir, born),
     run(["ls-files", "--others", "--exclude-standard", "-z"], dir, SMALL),
   ])
   const fail = status.error ?? diff.error ?? untracked.error
   if (fail) return done(dir, `Unable to read git changes: ${fail}`)
-  if (status.code !== 0) return done(dir, `Unable to read git status:\n${output(status)}`.trim())
+  if (status.code !== 0 && !status.truncated) return done(dir, `Unable to read git status:\n${output(status)}`.trim())
   if (diff.code !== 0 && !diff.truncated) return done(dir, `Unable to read git diff:\n${output(diff)}`.trim())
+  if (untracked.code !== 0 && !untracked.truncated)
+    return done(dir, `Unable to read untracked files:\n${output(untracked)}`.trim())
 
   const extra = await untrackedDiff(dir, untracked.out)
   const body = [diff.out.trim(), extra.content.trim()].filter(Boolean).join("\n\n")
@@ -44,6 +53,47 @@ export async function getGitChangesContext(dir: string): Promise<{ content: stri
     `Working directory: ${dir}\n\nStatus:\n${status.out.trim() || "(empty)"}\n\nDiff:\n${body || "(empty)"}${note}`,
     truncated,
   )
+}
+
+async function against(dir: string, base: string): Promise<{ content: string; truncated: boolean }> {
+  const ancestor = await run(["merge-base", "HEAD", base], dir, SMALL)
+  if (ancestor.error) return done(dir, `Unable to resolve git base ${base}: ${ancestor.error}`)
+  if (ancestor.code !== 0) return done(dir, `Unable to resolve git base ${base}:\n${output(ancestor)}`.trim())
+
+  const ref = ancestor.out.trim()
+  const [status, diff, untracked] = await Promise.all([
+    run(["diff", "--name-status", "--no-renames", ref], dir, SMALL),
+    run(["diff", ref], dir, LIMIT),
+    run(["ls-files", "--others", "--exclude-standard", "-z"], dir, SMALL),
+  ])
+  const fail = status.error ?? diff.error ?? untracked.error
+  if (fail) return done(dir, `Unable to read git changes: ${fail}`)
+  if (status.code !== 0 && !status.truncated)
+    return done(dir, `Unable to read changed files:\n${output(status)}`.trim())
+  if (diff.code !== 0 && !diff.truncated) return done(dir, `Unable to read git diff:\n${output(diff)}`.trim())
+  if (untracked.code !== 0 && !untracked.truncated)
+    return done(dir, `Unable to read untracked files:\n${output(untracked)}`.trim())
+
+  const extra = await untrackedDiff(dir, untracked.out)
+  const files = [status.out.trim(), listed(untracked.out)].filter(Boolean).join("\n")
+  const body = [diff.out.trim(), extra.content.trim()].filter(Boolean).join("\n\n")
+  const changed = files.trim() || body.trim()
+  if (!changed) return done(dir, `Base: ${base}\n\nNo changes in worktree diff.`)
+
+  const truncated = status.truncated || diff.truncated || untracked.truncated || extra.truncated
+  const note = truncated ? "\n\nOutput truncated." : ""
+  return cap(
+    `Working directory: ${dir}\nBase: ${base}\nMerge base: ${ref}\n\nFiles:\n${files || "(empty)"}\n\nDiff:\n${body || "(empty)"}${note}`,
+    truncated,
+  )
+}
+
+function listed(raw: string): string {
+  return raw
+    .split("\0")
+    .filter(Boolean)
+    .map((file) => `A\t${file}`)
+    .join("\n")
 }
 
 async function changes(dir: string, born: boolean): Promise<Result> {
