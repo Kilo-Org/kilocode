@@ -15,8 +15,8 @@ import { type KiloConnectionService, type KilocodeNotification, ServerStartupErr
 import type { EditorContext } from "./services/cli-backend/types"
 import { FileIgnoreController } from "./services/autocomplete/shims/FileIgnoreController"
 import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocomplete/ChatTextAreaAutocomplete"
-import { buildWebviewHtml } from "./utils"
 import { panelTitle } from "./kilo-provider/tab-title"
+import { webviewHtml } from "./kilo-provider/webview-html"
 import { TelemetryProxy, type TelemetryPropertiesProvider } from "./services/telemetry"
 import {
   sessionToWebview,
@@ -392,19 +392,18 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken,
   ) {
-    // Store the webview references
     this.isWebviewReady = false
     this.webview = webviewView.webview
-
-    // Set up webview options
     webviewView.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     }
-
-    webviewView.webview.html = this._getHtmlForWebview(webviewView.webview)
+    webviewView.webview.html = webviewHtml(
+      webviewView.webview,
+      this.extensionUri,
+      this.connectionService.getServerInfo()?.port,
+    )
     this.setupWebviewMessageHandler(webviewView.webview)
-
     vscode.commands.executeCommand("setContext", "kilo-code.new.sidebarVisible", webviewView.visible)
     this.visibilityDisposable?.dispose()
     this.visibilityDisposable = webviewView.onDidChangeVisibility(() => {
@@ -418,22 +417,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
-  /**
-   * Resolve a WebviewPanel for displaying the Kilo webview in an editor tab.
-   */
   public resolveWebviewPanel(panel: vscode.WebviewPanel): void {
-    // WebviewPanel can be restored/reloaded; ensure we don't treat it as ready prematurely.
     this.isWebviewReady = false
     this.webview = panel.webview
     this.panel = panel
-
     panel.webview.options = {
       enableScripts: true,
       localResourceRoots: [this.extensionUri],
     }
-
-    panel.webview.html = this._getHtmlForWebview(panel.webview)
-
+    panel.webview.html = webviewHtml(panel.webview, this.extensionUri, this.connectionService.getServerInfo()?.port)
     this.setupWebviewMessageHandler(panel.webview)
     this.viewStateDisposable?.dispose()
     this.viewStateDisposable = panel.onDidChangeViewState(() =>
@@ -3254,17 +3246,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private getProjectDirectory(sessionId?: string): string | undefined {
     return resolveProjectDirectory(this.projectDirectory, () => this.getWorkspaceDirectory(sessionId))
-  }
-
-  private _getHtmlForWebview(webview: vscode.Webview): string {
-    return buildWebviewHtml(webview, {
-      scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.js")),
-      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "dist", "webview.css")),
-      iconsBaseUri: webview.asWebviewUri(vscode.Uri.joinPath(this.extensionUri, "assets", "icons")),
-      title: "Kilo Code",
-      port: this.connectionService.getServerInfo()?.port,
-      extraStyles: `.container { height: 100%; display: flex; flex-direction: column; height: 100vh; border-right: 1px solid var(--border-weak-base); }`,
-    })
   }
 
   // legacy-migration start -------------------------------------------------------
