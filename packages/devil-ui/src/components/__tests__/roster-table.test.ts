@@ -67,9 +67,9 @@ describe("RosterTable", () => {
     expect(SRC).not.toContain("from '@opentui/")
   })
 
-  it("uses RenderSurface for dual-branch dispatch", () => {
-    expect(SRC).toContain("RenderSurface")
+  it("uses Show + useRenderTarget for dual-branch dispatch", () => {
     expect(SRC).toContain("useRenderTarget")
+    expect(SRC).toContain('adapter.kind === "dom"')
   })
 
   it("has EffortLevel options in select element", () => {
@@ -80,5 +80,18 @@ describe("RosterTable", () => {
 
   it("has onSelectRole called on row click", () => {
     expect(SRC).toContain("onSelectRole")
+  })
+
+  it("has readOnly prop in RosterTableProps (R2-05)", () => {
+    expect(SRC).toContain("readOnly")
+    expect(SRC).toContain("readOnly?: boolean")
+  })
+
+  it("readOnly mode hides add/delete buttons and uses display spans (R2-05)", () => {
+    // When readOnly=true, data-action buttons must be hidden
+    expect(SRC).toContain("!props.readOnly")
+    // display-only cells use <span> fallback
+    expect(SRC).toContain("role.provider}")
+    expect(SRC).toContain("role.model}")
   })
 })

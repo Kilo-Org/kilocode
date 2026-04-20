@@ -37,7 +37,21 @@ export type TeamBuilderActions = {
   closePicker(): void
   openQuickstart(): void
   closeQuickstart(): void
+  /**
+   * Closes both the position picker and the quickstart overlay in a single atomic update.
+   * Useful for ESC-key handlers and "Cancel" buttons that need to dismiss any open overlay
+   * regardless of which one is currently showing.
+   *
+   * Explicitly does NOT clear selectedRole, saveError, or draft — those are content state.
+   */
+  closeOverlays(): void
   reset(): void
+  /**
+   * Sets the selectedRole in the store.
+   * Does NOT close any overlays — overlay lifecycle is owned by the overlay itself
+   * or by closeOverlays().
+   */
+  selectRole(id: string | null): void
 }
 
 export type TeamBuilderContextValue = TeamBuilderState & TeamBuilderActions
@@ -162,6 +176,12 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
       setStore("quickstartOpen", false)
     },
 
+    closeOverlays() {
+      setStore("pickerOpen", false)
+      setStore("quickstartOpen", false)
+      // Explicitly does NOT clear selectedRole, saveError, draft — those are content state.
+    },
+
     reset() {
       setStore(
         produce((s) => {
@@ -174,6 +194,10 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
           s.loadedQuickstart = null
         }),
       )
+    },
+
+    selectRole(id: string | null) {
+      setStore("selectedRole", id)
     },
   }
 

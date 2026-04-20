@@ -1,5 +1,5 @@
 /** @jsxImportSource solid-js */
-import { createMemo, For, type JSX } from "solid-js"
+import { createMemo, For, Show, type JSX } from "solid-js" // Show/For used in DOM branch; createMemo for terminal
 import type { Command, CommandScope } from "@devilcode/keybind"
 import { useRenderTarget, RenderSurface } from "../../context/render-target"
 import { useCommandRegistry } from "../../hooks/use-command-registry"
@@ -21,7 +21,7 @@ export interface FooterBarProps {
  * Keybind routing stays upstream.
  *
  * DOM branch: `<footer>` with hint `<span>` tiles.
- * Terminal branch: Phase 3 stub — full implementation in Phase 5.
+ * Terminal branch: OpenTUI `<box>` row with action chips.
  */
 export function FooterBar(props: FooterBarProps): JSX.Element {
   const adapter = useRenderTarget()
@@ -91,11 +91,13 @@ export function FooterBar(props: FooterBarProps): JSX.Element {
     </footer>
   )
 
-  const terminalBranch = (
-    <div class="terminal-stub" data-primitive="footer-bar">
-      FooterBar stub — full terminal implementation in Phase 5
-    </div>
-  )
+  const terminalSummary = createMemo(() => {
+    const hs = hints()
+    if (hs.length === 0) return ""
+    return hs.map((action) => `[${action.keybind!.binding}] ${action.title}`).join("  ")
+  })
+
+  const terminalBranch = <text>{terminalSummary()}</text>
 
   return <RenderSurface kind={adapter.kind} terminal={terminalBranch} dom={domBranch} />
 }

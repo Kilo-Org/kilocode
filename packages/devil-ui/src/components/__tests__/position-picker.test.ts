@@ -61,9 +61,9 @@ describe("PositionPicker", () => {
     expect(SRC).not.toContain("from '@opentui/")
   })
 
-  it("uses RenderSurface for dual-branch dispatch", () => {
-    expect(SRC).toContain("RenderSurface")
+  it("uses Show + useRenderTarget for dual-branch dispatch", () => {
     expect(SRC).toContain("useRenderTarget")
+    expect(SRC).toContain('adapter.kind === "dom"')
   })
 
   it("has fallback position data for 11 canonical positions", () => {

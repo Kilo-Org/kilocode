@@ -4,6 +4,53 @@ import type { Command, CommandScope } from "@devilcode/keybind"
 import { useRenderTarget, RenderSurface } from "../../context/render-target"
 import { useCommandRegistry } from "../../hooks/use-command-registry"
 
+// ─── Terminal branch ──────────────────────────────────────────────────────────
+
+/**
+ * Terminal branch for HelpOverlay — keybind grid grouped by scope.
+ * Uses useCommandRegistry (not useKeybindRegistry — does not exist).
+ * Renders as <text> summary (SVG-compatible, type-safe in solid-js DOM context).
+ * ESC → props.onClose via useKeyboard (dynamic require, CONVENTIONS.md §3).
+ */
+function TerminalHelpOverlay(props: HelpOverlayProps): JSX.Element {
+  const registry = useCommandRegistry()
+
+  const groups = createMemo(() => {
+    const cmds = registry.search("", props.scope)
+    const byScope: Record<string, Command[]> = {}
+    for (const c of cmds) {
+      if (!c.keybind) continue
+      const s = c.scope ?? "global"
+      ;(byScope[s] ??= []).push(c)
+    }
+    return Object.entries(byScope).sort(([a], [b]) => a.localeCompare(b))
+  })
+
+  // Dynamic require — avoids @opentui static import at module level (CONVENTIONS.md §3)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useKeyboard } = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
+  useKeyboard((evt) => {
+    if (evt.key === "Escape") props.onClose()
+  }, {})
+
+  const summary = createMemo(() => {
+    const gs = groups()
+    if (gs.length === 0) return "[Keyboard Shortcuts: none for this context]\n[Esc] Close"
+    const lines: string[] = ["[Keyboard Shortcuts]"]
+    for (const [scope, cmds] of gs) {
+      lines.push(`  ${scope.toUpperCase()}`)
+      for (const cmd of cmds) {
+        const kb = cmd.keybind ? cmd.keybind.binding : "—"
+        lines.push(`    ${cmd.title.padEnd(24)} ${kb}`)
+      }
+    }
+    lines.push("[Esc] Close")
+    return lines.join("\n")
+  })
+
+  return <text>{summary()}</text>
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface HelpOverlayProps {
@@ -23,7 +70,7 @@ interface CommandGroup {
  * Keybind reference overlay — displays all commands for the given scope
  * grouped by scope heading.
  * DOM branch: grouped table layout.
- * Terminal branch: Phase 3 stub — full implementation in Phase 5.
+ * Terminal branch: OpenTUI grouped keybind grid via useCommandRegistry.
  *
  * Press Escape to close.
  */
@@ -225,9 +272,7 @@ export function HelpOverlay(props: HelpOverlayProps): JSX.Element {
 
   const terminalBranch = (
     <Show when={props.open}>
-      <div class="terminal-stub" data-primitive="help-overlay">
-        HelpOverlay stub — full terminal implementation in Phase 5
-      </div>
+      <TerminalHelpOverlay {...props} />
     </Show>
   )
 

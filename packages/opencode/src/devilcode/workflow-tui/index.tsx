@@ -1,5 +1,5 @@
 // packages/opencode/src/devilcode/workflow-tui/index.tsx
-import { createResource, createSignal, Show } from "solid-js"
+import { createResource, createSignal, onCleanup, Show } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { useRoute } from "@tui/context/route"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -52,9 +52,7 @@ function WorkflowViewInner() {
   const cleanupTeamCmds = registerTeamBuilderCommands(registry.register.bind(registry), builder, {
     openBuilder: () => setMode("team-builder"),
   })
-  // onCleanup is not available here (WorkflowViewInner is always mounted), but
-  // the registry itself is torn down when CommandRegistryProvider unmounts.
-  void cleanupTeamCmds
+  onCleanup(cleanupTeamCmds)
 
   return (
     <box flexDirection="column" flexGrow={1}>

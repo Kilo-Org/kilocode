@@ -95,7 +95,7 @@ export function TeamBuilderView(): JSX.Element {
         onAdd={() => builder.openPicker()}
         selectedRole={builder.selectedRole}
         onSelectRole={(positionId) => {
-          builder.editRole(positionId, "_selected", true)
+          builder.selectRole(positionId)
         }}
       />
 

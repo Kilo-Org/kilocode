@@ -51,7 +51,11 @@ describe("useTeamValidation", () => {
       }
       const [signal] = createSignal(broken)
       const result = useTeamValidation(signal)
-      expect(result().isValid).toBe(false)
+      const r = result()
+      expect(r.isValid).toBe(false)
+      // The broken role must appear as a key in errorsByRole with at least one error
+      expect(Object.keys(r.errorsByRole)).toContain(firstRoleKey)
+      expect(r.errorsByRole[firstRoleKey]!.length).toBeGreaterThan(0)
     })
   })
 

@@ -76,8 +76,16 @@ export function createFileSystemTeamRepository(
 
     async loadTeam(id) {
       const filePath = pathFor(id)
-      const raw = JSON.parse(await fs.readFile(filePath, "utf-8"))
-      return CanonicalTeamConfig.parse({ ...raw, enabled: true })
+      let raw: unknown
+      try {
+        raw = JSON.parse(await fs.readFile(filePath, "utf-8"))
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          throw new Error(`Team "${id}" not found`)
+        }
+        throw err
+      }
+      return CanonicalTeamConfig.parse({ ...(raw as Record<string, unknown>), enabled: true })
     },
 
     async saveTeam(id, config) {
@@ -86,7 +94,7 @@ export function createFileSystemTeamRepository(
       const validated = CanonicalTeamConfig.parse({ ...config, enabled: true })
       await fs.writeFile(filePath, JSON.stringify(validated, null, 2) + "\n", "utf-8")
       const stat = await fs.stat(filePath)
-      return { id, name: id, path: filePath, updatedAt: stat.mtime.toISOString() }
+      return { id, name: (config as Record<string, unknown>).name as string ?? id, path: filePath, updatedAt: stat.mtime.toISOString() }
     },
 
     async deleteTeam(id) {

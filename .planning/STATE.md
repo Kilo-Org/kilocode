@@ -1,14 +1,82 @@
 # Project State
 
 ## Current Position
-- **Phase**: 4 of 10 (executed, pending review)
-- **Status**: Phase 4 complete — all 3 plans executed successfully (2026-04-19)
-- **Last Activity**: Phase 4 execution complete (2026-04-19)
+- **Phase**: 5 of 10 (planned)
+- **Status**: Phase 5 planned — 3 plans across 3 waves (refine_cycle=2, verdict CAUTION accepted)
+- **Last Activity**: Phase 5 planning complete (2026-04-19)
 
 ## Progress
 ```
-[########............] 40% — 10/25 plans complete (Phase 4 executed, 3/3 plans pass)
+[##########..........] 50% — 10/25 plans complete (Phase 5 PLANNED, ready for /legion:build)
 ```
+
+## Phase 5 Plan Structure (planned 2026-04-19, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 05-01 Foundations: devil-ui hooks + 4 primitives (DensityProvider/Toggle, StagePositionBadge, DetailPanel, TabGroup) | 1 | Phase 4 | Frontend Developer + Senior Developer | QA Verification Specialist |
+| 05-02 Unstubs + OnboardingWizard + Phase 4 carry-forwards (closeOverlays, lazy Show fallback, CONVENTIONS.md) | 2 | 05-01 | Frontend Developer + UX Researcher | QA Verification Specialist |
+| 05-03 Cockpit composition + progressive disclosure + integration tests (Config.Info workflow field, auto-compact persisted flag) | 3 | 05-01, 05-02 | Frontend Developer + Senior Developer | QA Verification Specialist + Backend Architect |
+
+## Phase 5 Architecture Decision
+
+- Selected **Clean** (vs Minimal / Pragmatic) after 3 parallel proposal agents — user prioritized Phase 9 zero-rework (matches Phases 3+4).
+- 5 new devil-ui primitives (OnboardingWizard, DensityProvider+Toggle, StagePositionBadge, TabGroup, DetailPanel) + 3 hooks (useDensity/useDensityOptional, useFirstRun, useStagePosition).
+- Unstub all 4 Phase 3 terminal-stub primitives (CommandPalette, HelpOverlay, FooterBar, PasteModal) in Wave 2.
+- DetailPanel primitive encodes the `detail-panel.tsx:113-115` flex fix (`<box flexGrow={1} minWidth={0}>`) as a layout invariant.
+- TabGroup render-prop children pattern (NOT Slot compound API) — `<TabGroup>{(tab) => <Component/>}</TabGroup>`.
+- Density persistence: `Config.Info.workflow = {density, firstRunComplete, autoCompactFired}` schema extension (Plan 05-03 Task 0); Config.update read-then-merge per Phase 2 precedent.
+- OnboardingWizard onReviewAccept uses `TeamRepository.saveTeam("default", config)` directly; `wf.startBuild(config)` fire-and-forget.
+- Auto-compact `autoCompactFired` flag persisted to Config — seeded on mount to prevent re-fire across sessions for returning users.
+- Spec written to `.planning/specs/05-runtime-cockpit-spec.md` (gather → research → write → critique → assess complete).
+- Estimated ~1,500 LOC source + ~900 LOC tests across Phase 5.
+
+## Phase 5 Auto-Refine History
+
+- **2026-04-19 cycle 0** → Spec pipeline produced `.planning/specs/05-runtime-cockpit-spec.md` (Complex rating); 3 plan files generated (05-01 Wave 1, 05-02 Wave 2, 05-03 Wave 3).
+- **2026-04-19 cycle 1** → Pre-Mortem (QA Verification Specialist) + Assumption Hunt (Sprint Prioritizer) returned **REWORK**. 14 surgical fixes applied via CYCLE 1 REFINEMENTS blocks in each plan file:
+  - R1-01: devil-ui `package.json` exports-map subpath additions (9 entries) — required for Plan 05-03 deep imports to resolve.
+  - R1-02: `useFirstRun` return-type truth corrected (object with Accessor slot, not Accessor of object).
+  - R1-03: `STAGE_CAPABILITY_REQUIREMENTS` is always single-capability — dead-code `Array.isArray` branch removed.
+  - R1-04: TabGroup slot marker-object pattern REPLACED with render-prop children `(tab) => JSX.Element`.
+  - R1-05: TabGroup terminal branch wires `useKeyboard` from `@opentui/solid` (DOM-only `document.addEventListener` was a no-op in TUI).
+  - R1-06: TabGroup DOM branch keyboard handler scoped to tablist container, not document (prevents Tab-focus break in command input).
+  - R1-07: DensityProvider test uses Phase 3 `withRoot` harness, not direct function invocation.
+  - R1-08: New `useDensityOptional()` hook — returns `Accessor<DensityContextValue> | undefined` without throwing; DetailPanel + runtime-cockpit consumers use it.
+  - R2-01: Terminal unstub marker is `<div class="terminal-stub">` — NOT "Phase 5 TODO" string; verification greps fixed.
+  - R2-02: CommandPalette terminal branch uses real `useCommandRegistry` object API (`registry.entries()` + `registry.search()`), not fake `commands()` + `searchCommands(commands, query, limit)`.
+  - R2-03: OpenTUI `<input>` event shape investigation gate added before terminal branch authoring.
+  - R2-04: HelpOverlay uses same `useCommandRegistry` (no `useKeybindRegistry` — that hook does not exist).
+  - R2-05: RosterTable gets a `readOnly` prop (Wave 2 scope expansion) — OnboardingWizard review step uses it.
+  - R2-06: Plan 05-02 task order: Task 1 (unstubs) → Task 3 (conversions + readOnly + CONVENTIONS + closeOverlays) → Task 2 (OnboardingWizard).
+  - R2-07: CONVENTIONS.md single authoritative path = `packages/devil-ui/CONVENTIONS.md`.
+  - R2-08: `closeOverlays()` explicit signal list = `pickerOpen` + `quickstartOpen` only.
+  - R3-01: `Config.Info.workflow` field schema extension (Plan 05-03 Task 0) — `.strict()` rejects unknown keys without it.
+  - R3-02: Config.update full-object read-then-merge pattern (Phase 2 precedent at workflow-commands.tsx:55-56).
+  - R3-03: OnboardingWizard uses `TeamRepository.saveTeam("default", config)` directly — NOT `builder.save("default")` (wrong signature + empty draft).
+  - R3-04: `wf.startBuild(config)` fire-and-forget via `void … .catch(...)` — never awaited.
+  - R3-05: Auto-compact `autoCompactFired` flag persisted to Config + seeded on mount.
+  - R3-06: Forward-reference resolution — density handlers declared as named functions BEFORE `createEffect` registration.
+  - R3-07: `runtime-cockpit.tsx` renders hint panel + selected-task detail box explicitly (detail-panel.tsx deletion dropped them otherwise).
+  - R3-08/09: TabGroup render-prop + deep subpath imports per R1-01.
+  - R3-10: Storybook story ID slugification.
+  - R3-11: `useDensityOptional` consumer pattern for Storybook-without-provider scenarios.
+- **2026-04-19 cycle 2** → Reality Checker returned **CAUTION**. All 9 cycle-1 verification points HELD against actual source. 3 new CRITICALs + 1 CAUTION surfaced; surgical cycle-2 edits folded:
+  - R1-10 (new): TabGroup render-prop invoked inside `<Show when={active()} keyed>{(tab) => props.children(tab)}</Show>` reactive scope — prevents frozen one-shot invocation.
+  - R3-13 (new): `teamRepo = createFileSystemTeamRepository()` instantiated inside `WorkflowView` component body, NOT at module scope (Instance.state AsyncLocalStorage honor).
+  - R3-14 (new): onboarding.integration.test.ts asserts pre-build state only (Config persisted + mode transition); does NOT invoke real `wf.startBuild`. Optional `WorkflowProviderProps.services` seam if structural insufficient.
+  - R3-15 (new): Playwright snapshot branch conditional on `STORYBOOK_CI=1` env var; structural min-width:0 assertion is always-required authoritative path.
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2 with surgical cycle-2 edits folded in. Verdict: **CAUTION** accepted. No further auto-refine.
+
+## Phase 5 Open Risks (documented, not blocking execution)
+
+- **OpenTUI `<input>` event contract unverified** (R2-03) — Plan 05-02 Task 1 execution MUST inspect `@opentui/solid` types before authoring terminal branch onInput handlers. Fallback: ref-based imperative read on ESC/Ctrl+D.
+- **PasteModal single-line limitation** (OpenTUI has no `<textarea>`) — documented in CONVENTIONS.md; multi-line via system paste only; deferred to Phase 6+ or upstream PR.
+- **Config.Info schema extension risk** (R3-01) — adding `workflow` field to `.strict()` object does NOT reject existing configs lacking the field (optional), but new migration tests should confirm before merge.
+- **Playwright visual regression** (R3-15) — SKIPPABLE until Storybook wired into CI; structural min-width:0 assertion is always-authoritative.
+- **TabGroup keyboard focus scoping** (R1-05+R1-06) — DOM branch scopes to tablist container; terminal branch uses OpenTUI `useKeyboard`. If cross-scope routing surfaces issues (Phase 3 carry-forward #4 provider action test constraint), structural tests fall back to source introspection.
+- **RosterTable readOnly expansion** (R2-05) — Plan 05-02 scope includes Phase 4 file modification; requires additional tests in existing `roster-table.test.ts`.
+- **OnboardingWizard test coverage under Bun/@opentui constraint** (Phase 4 carry-forward #3) — full reactive action coverage not achievable; structural smoke tests authoritative.
 
 ## Phase 4 Plan Structure (planned 2026-04-19, refine_cycle=2)
 
@@ -187,8 +255,18 @@
 - 3 informational findings noted (Phase 5 carry-forward for terminal stubs)
 - Final: 46 keybind tests + 15 hook tests + 7 smoke tests pass; bun turbo typecheck clean
 
+## Phase 4 Review Results
+- Review passed after 3 cycles (2026-04-19)
+- Panel: QA Verification Specialist · Frontend Developer · Test Results Analyzer · Senior Developer
+- 1 blocker fixed (cycle 1: `selectRole` action missing — `onSelectRole` wrote to wrong state field)
+- 2 cycle-2 blockers fixed (TS2698 spread on `unknown`; ARIA regression from `role="option"` removal)
+- 1 cycle-3 blocker fixed (TS2554: `toBe` called with 2 args — Bun expect API)
+- 14 cycle-1 warnings fixed: onCleanup registration, ENOENT domain error, saveTeam name field, Show-pattern lazy instantiation (×2), aria-invalid string, focus-on-open, ARIA role/scope fixes (×3), test coverage gaps (×3), quickstart try/catch
+- Carry-forward to Phase 5: TerminalStub eager-fallback documentation, selectRole overlay contract, provider action test coverage (Bun/@opentui constraint)
+- Final: 80 tests pass (65 Phase-4 + 15 pre-existing), 0 fail; typecheck clean
+
 ## Next Action
-Run `/legion:review` to verify Phase 4: Team Builder Views.
+Run `/legion:build` to execute Phase 5: Runtime Cockpit Redesign.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`

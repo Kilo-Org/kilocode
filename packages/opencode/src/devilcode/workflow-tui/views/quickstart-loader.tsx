@@ -11,7 +11,12 @@ export type QuickstartLoaderProps = {
 
 export function QuickstartLoader(props: QuickstartLoaderProps): JSX.Element {
   const builder = useTeamBuilder()
-  const templates = loadQuickstartTemplates()
+  let templates: ReturnType<typeof loadQuickstartTemplates>
+  try {
+    templates = loadQuickstartTemplates()
+  } catch {
+    templates = {} as ReturnType<typeof loadQuickstartTemplates>
+  }
 
   return (
     <Show when={props.open}>
@@ -68,6 +73,7 @@ export function QuickstartLoader(props: QuickstartLoaderProps): JSX.Element {
           <For each={QUICKSTART_IDS}>
             {(id) => {
               const tpl = templates[id]
+              if (!tpl) return null
               return (
                 <button
                   data-quickstart-id={id}

@@ -5,7 +5,7 @@
 - [x] Phase 1: Foundation — Canonical Library & Capability Model ✓ Review passed
 - [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup ✓ Review passed
 - [x] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives ✓ Review passed
-- [ ] Phase 4: Team Builder Views
+- [x] Phase 4: Team Builder Views ✓ Review passed
 - [ ] Phase 5: Runtime Cockpit Redesign
 - [ ] Phase 6: Team Export/Import & Persistence Layer
 - [ ] Phase 7: Configurable Workflow DAG

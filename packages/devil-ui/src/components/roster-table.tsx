@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 import { For, Show, type JSX } from "solid-js"
-import { useRenderTarget, RenderSurface } from "../context/render-target"
+import { useRenderTarget } from "../context/render-target"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,6 +41,11 @@ export type RosterTableProps = {
   onAdd(): void
   selectedRole?: string | null
   onSelectRole?(positionId: string): void
+  /**
+   * When true, renders display-only cells (no input/select elements),
+   * hides "Add Position" and "Delete" buttons, and suppresses onEdit/onDelete/onAdd calls.
+   */
+  readOnly?: boolean
 }
 
 // ─── DOM Branch ───────────────────────────────────────────────────────────────
@@ -56,6 +61,7 @@ function DomRosterTable(props: RosterTableProps): JSX.Element {
     >
       <table
         class="roster-table"
+        aria-label="Team roster"
         style={{
           width: "100%",
           "border-collapse": "collapse",
@@ -70,22 +76,22 @@ function DomRosterTable(props: RosterTableProps): JSX.Element {
               "border-bottom": "1px solid var(--color-border, #444)",
             }}
           >
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Position
             </th>
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Provider
             </th>
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Model
             </th>
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Effort
             </th>
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Delegates-to
             </th>
-            <th style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
+            <th scope="col" style={{ padding: "8px 12px", "text-align": "left", "font-weight": "600" }}>
               Capabilities
             </th>
           </tr>
@@ -136,95 +142,115 @@ function DomRosterTable(props: RosterTableProps): JSX.Element {
 
                   {/* Provider column */}
                   <td style={{ padding: "8px 12px" }}>
-                    <input
-                      type="text"
-                      value={role.provider}
-                      onInput={(e) => props.onEdit(positionId, "provider", e.currentTarget.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        background: "var(--color-input-bg, rgba(255,255,255,0.05))",
-                        border: "1px solid var(--color-border, #444)",
-                        "border-radius": "4px",
-                        color: "var(--color-text, #cdd6f4)",
-                        padding: "4px 8px",
-                        "font-size": "12px",
-                        width: "100%",
-                        "min-width": "80px",
-                      }}
-                    />
+                    <Show
+                      when={!props.readOnly}
+                      fallback={<span style={{ "font-size": "12px", color: "var(--color-text, #cdd6f4)" }}>{role.provider}</span>}
+                    >
+                      <input
+                        type="text"
+                        value={role.provider}
+                        onInput={(e) => props.onEdit(positionId, "provider", e.currentTarget.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: "var(--color-input-bg, rgba(255,255,255,0.05))",
+                          border: "1px solid var(--color-border, #444)",
+                          "border-radius": "4px",
+                          color: "var(--color-text, #cdd6f4)",
+                          padding: "4px 8px",
+                          "font-size": "12px",
+                          width: "100%",
+                          "min-width": "80px",
+                        }}
+                      />
+                    </Show>
                   </td>
 
                   {/* Model column */}
                   <td style={{ padding: "8px 12px" }}>
-                    <input
-                      type="text"
-                      value={role.model}
-                      onInput={(e) => props.onEdit(positionId, "model", e.currentTarget.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        background: "var(--color-input-bg, rgba(255,255,255,0.05))",
-                        border: "1px solid var(--color-border, #444)",
-                        "border-radius": "4px",
-                        color: "var(--color-text, #cdd6f4)",
-                        padding: "4px 8px",
-                        "font-size": "12px",
-                        width: "100%",
-                        "min-width": "120px",
-                      }}
-                    />
+                    <Show
+                      when={!props.readOnly}
+                      fallback={<span style={{ "font-size": "12px", color: "var(--color-text, #cdd6f4)" }}>{role.model}</span>}
+                    >
+                      <input
+                        type="text"
+                        value={role.model}
+                        onInput={(e) => props.onEdit(positionId, "model", e.currentTarget.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: "var(--color-input-bg, rgba(255,255,255,0.05))",
+                          border: "1px solid var(--color-border, #444)",
+                          "border-radius": "4px",
+                          color: "var(--color-text, #cdd6f4)",
+                          padding: "4px 8px",
+                          "font-size": "12px",
+                          width: "100%",
+                          "min-width": "120px",
+                        }}
+                      />
+                    </Show>
                   </td>
 
                   {/* Effort column */}
                   <td style={{ padding: "8px 12px" }}>
-                    <select
-                      value={role.effort as string}
-                      onChange={(e) => props.onEdit(positionId, "effort", e.currentTarget.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{
-                        background: "var(--color-input-bg, rgba(255,255,255,0.05))",
-                        border: "1px solid var(--color-border, #444)",
-                        "border-radius": "4px",
-                        color: "var(--color-text, #cdd6f4)",
-                        padding: "4px 8px",
-                        "font-size": "12px",
-                      }}
+                    <Show
+                      when={!props.readOnly}
+                      fallback={<span style={{ "font-size": "12px", color: "var(--color-text, #cdd6f4)" }}>{role.effort as string}</span>}
                     >
-                      <For each={EFFORT_LEVELS}>
-                        {(level) => (
-                          <option value={level} selected={role.effort === level}>
-                            {level}
-                          </option>
-                        )}
-                      </For>
-                    </select>
+                      <select
+                        value={role.effort as string}
+                        onChange={(e) => props.onEdit(positionId, "effort", e.currentTarget.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: "var(--color-input-bg, rgba(255,255,255,0.05))",
+                          border: "1px solid var(--color-border, #444)",
+                          "border-radius": "4px",
+                          color: "var(--color-text, #cdd6f4)",
+                          padding: "4px 8px",
+                          "font-size": "12px",
+                        }}
+                      >
+                        <For each={EFFORT_LEVELS}>
+                          {(level) => (
+                            <option value={level} selected={role.effort === level}>
+                              {level}
+                            </option>
+                          )}
+                        </For>
+                      </select>
+                    </Show>
                   </td>
 
                   {/* Delegates-to column */}
                   <td style={{ padding: "8px 12px" }}>
-                    <input
-                      type="text"
-                      value={role.canDelegate.join(", ")}
-                      onInput={(e) => {
-                        const raw = e.currentTarget.value
-                        const parsed = raw
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean)
-                        props.onEdit(positionId, "canDelegate", parsed)
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      placeholder="comma-separated positions"
-                      style={{
-                        background: "var(--color-input-bg, rgba(255,255,255,0.05))",
-                        border: "1px solid var(--color-border, #444)",
-                        "border-radius": "4px",
-                        color: "var(--color-text, #cdd6f4)",
-                        padding: "4px 8px",
-                        "font-size": "12px",
-                        width: "100%",
-                        "min-width": "120px",
-                      }}
-                    />
+                    <Show
+                      when={!props.readOnly}
+                      fallback={<span style={{ "font-size": "12px", color: "var(--color-text, #cdd6f4)" }}>{role.canDelegate.join(", ")}</span>}
+                    >
+                      <input
+                        type="text"
+                        value={role.canDelegate.join(", ")}
+                        onInput={(e) => {
+                          const raw = e.currentTarget.value
+                          const parsed = raw
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                          props.onEdit(positionId, "canDelegate", parsed)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        placeholder="comma-separated positions"
+                        style={{
+                          background: "var(--color-input-bg, rgba(255,255,255,0.05))",
+                          border: "1px solid var(--color-border, #444)",
+                          "border-radius": "4px",
+                          color: "var(--color-text, #cdd6f4)",
+                          padding: "4px 8px",
+                          "font-size": "12px",
+                          width: "100%",
+                          "min-width": "120px",
+                        }}
+                      />
+                    </Show>
                   </td>
 
                   {/* Capabilities column — non-editable chips (Phase 4) */}
@@ -252,29 +278,31 @@ function DomRosterTable(props: RosterTableProps): JSX.Element {
                     </div>
                   </td>
 
-                  {/* Delete button — not counted as a column */}
-                  <td style={{ padding: "8px 4px" }}>
-                    <button
-                      data-action="delete"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        props.onDelete(positionId)
-                      }}
-                      title={`Remove ${role.displayName}`}
-                      style={{
-                        background: "transparent",
-                        border: "1px solid var(--color-border, #444)",
-                        "border-radius": "4px",
-                        color: "var(--color-subtext, #a6adc8)",
-                        cursor: "pointer",
-                        padding: "2px 6px",
-                        "font-size": "14px",
-                        "line-height": "1",
-                      }}
-                    >
-                      ×
-                    </button>
-                  </td>
+                  {/* Delete button — hidden in readOnly mode */}
+                  <Show when={!props.readOnly}>
+                    <td style={{ padding: "8px 4px" }}>
+                      <button
+                        data-action="delete"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          props.onDelete(positionId)
+                        }}
+                        title={`Remove ${role.displayName}`}
+                        style={{
+                          background: "transparent",
+                          border: "1px solid var(--color-border, #444)",
+                          "border-radius": "4px",
+                          color: "var(--color-subtext, #a6adc8)",
+                          cursor: "pointer",
+                          padding: "2px 6px",
+                          "font-size": "14px",
+                          "line-height": "1",
+                        }}
+                      >
+                        ×
+                      </button>
+                    </td>
+                  </Show>
                 </tr>
               )
             }}
@@ -296,23 +324,25 @@ function DomRosterTable(props: RosterTableProps): JSX.Element {
           </Show>
         </tbody>
       </table>
-      <div style={{ padding: "8px 12px" }}>
-        <button
-          data-action="add"
-          onClick={() => props.onAdd()}
-          style={{
-            background: "var(--color-accent-subtle, rgba(137,180,250,0.1))",
-            border: "1px solid var(--color-accent, rgba(137,180,250,0.4))",
-            "border-radius": "4px",
-            color: "var(--color-accent-text, #89b4fa)",
-            cursor: "pointer",
-            padding: "6px 14px",
-            "font-size": "13px",
-          }}
-        >
-          + Add Position
-        </button>
-      </div>
+      <Show when={!props.readOnly}>
+        <div style={{ padding: "8px 12px" }}>
+          <button
+            data-action="add"
+            onClick={() => props.onAdd()}
+            style={{
+              background: "var(--color-accent-subtle, rgba(137,180,250,0.1))",
+              border: "1px solid var(--color-accent, rgba(137,180,250,0.4))",
+              "border-radius": "4px",
+              color: "var(--color-accent-text, #89b4fa)",
+              cursor: "pointer",
+              padding: "6px 14px",
+              "font-size": "13px",
+            }}
+          >
+            + Add Position
+          </button>
+        </div>
+      </Show>
     </div>
   )
 }
@@ -339,7 +369,10 @@ function TerminalStub(props: { roles: Record<string, RosterRole> }): JSX.Element
  */
 export function RosterTable(props: RosterTableProps): JSX.Element {
   const adapter = useRenderTarget()
-  const domBranch = <DomRosterTable {...props} />
-  const terminalBranch = <TerminalStub roles={props.roles} />
-  return <RenderSurface kind={adapter.kind} terminal={terminalBranch} dom={domBranch} />
+  return (
+    // @ts-expect-error — SolidJS 1.9.x types Show.fallback as JSX.Element; lazy thunk required (CONVENTIONS.md §1)
+    <Show when={adapter.kind === "dom"} fallback={() => <TerminalStub roles={props.roles} />}>
+      <DomRosterTable {...props} />
+    </Show>
+  )
 }

@@ -58,7 +58,7 @@ function DomBranch(props: {
             <span
               data-stage={stage}
               data-missing={isMissing ? "true" : "false"}
-              aria-invalid={isMissing}
+              aria-invalid={isMissing ? "true" : "false"}
               style={{
                 display: "inline-flex",
                 "align-items": "center",

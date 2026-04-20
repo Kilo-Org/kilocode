@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 import { createSignal, createMemo, createEffect, untrack, For, Show, type JSX } from "solid-js"
 import fuzzysort from "fuzzysort"
-import { useRenderTarget, RenderSurface } from "../context/render-target"
+import { useRenderTarget } from "../context/render-target"
 
 // ─── POSITION_LIBRARY lazy loader ─────────────────────────────────────────────
 // @devilcode/cli is NOT listed in devil-ui's package.json dependencies.
@@ -141,6 +141,7 @@ export type PositionPickerProps = {
 // ─── DOM Branch ───────────────────────────────────────────────────────────────
 
 function DomPositionPicker(props: PositionPickerProps): JSX.Element {
+  let searchInput: HTMLInputElement | undefined
   const [query, setQuery] = createSignal("")
   const [selectedIndex, setSelectedIndex] = createSignal(0)
 
@@ -168,6 +169,10 @@ function DomPositionPicker(props: PositionPickerProps): JSX.Element {
   createEffect(() => {
     const len = results().length
     setSelectedIndex((i) => Math.min(untrack(() => i), Math.max(0, len - 1)))
+  })
+
+  createEffect(() => {
+    if (props.open && searchInput) searchInput.focus()
   })
 
   function handleKeyDown(e: KeyboardEvent): void {
@@ -221,6 +226,7 @@ function DomPositionPicker(props: PositionPickerProps): JSX.Element {
     >
       <div style={{ "border-bottom": "1px solid var(--color-border, #444)" }}>
         <input
+          ref={(el) => { searchInput = el }}
           type="search"
           placeholder="Search positions..."
           value={query()}
@@ -262,7 +268,7 @@ function DomPositionPicker(props: PositionPickerProps): JSX.Element {
             <button
               id={`pos-option-${entry.id}`}
               role="option"
-              aria-selected={i() === selectedIndex()}
+              aria-selected={i() === selectedIndex() ? "true" : "false"}
               onClick={() => {
                 props.onSelect(entry.id)
                 props.onClose()
@@ -365,7 +371,10 @@ function TerminalStub(): JSX.Element {
  */
 export function PositionPicker(props: PositionPickerProps): JSX.Element {
   const adapter = useRenderTarget()
-  const domBranch = <DomPositionPicker {...props} />
-  const terminalBranch = <TerminalStub />
-  return <RenderSurface kind={adapter.kind} terminal={terminalBranch} dom={domBranch} />
+  return (
+    // @ts-expect-error — SolidJS 1.9.x types Show.fallback as JSX.Element; lazy thunk required (CONVENTIONS.md §1)
+    <Show when={adapter.kind === "dom"} fallback={() => <TerminalStub />}>
+      <DomPositionPicker {...props} />
+    </Show>
+  )
 }

@@ -14,12 +14,48 @@ export interface CommandPaletteProps {
   placeholder?: string
 }
 
+// ─── Terminal branch ──────────────────────────────────────────────────────────
+
+/**
+ * Terminal branch for CommandPalette — fuzzy command search.
+ * Uses useKeyboard (dynamic require, CONVENTIONS.md §3) for ESC → onClose.
+ * Renders summary text using <text> (SVG-compatible, type-safe in solid-js DOM context).
+ */
+function TerminalCommandPalette(props: CommandPaletteProps): JSX.Element {
+  const [query, setQuery] = createSignal("")
+  const registry = useCommandRegistry()
+
+  const results = createMemo(() => {
+    registry.entries() // subscribe to mutations
+    return registry.search(query(), props.scope)
+  })
+
+  // Dynamic require to avoid @opentui static import at module level (CONVENTIONS.md §3)
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useKeyboard } = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
+  useKeyboard((evt) => {
+    if (evt.key === "Escape") props.onClose()
+  }, {})
+
+  const summary = createMemo(() => {
+    const items = results()
+    if (items.length === 0) return `[Commands: "${query()}" — no matches]`
+    const lines = items.slice(0, 10).map((cmd) => {
+      const kb = cmd.keybind ? ` [${cmd.keybind.binding}]` : ""
+      return `  • ${cmd.title}${kb}`
+    })
+    return [`[Commands: "${query()}"]`, ...lines, `[Esc] Close`].join("\n")
+  })
+
+  return <text>{summary()}</text>
+}
+
 // ─── CommandPalette ───────────────────────────────────────────────────────────
 
 /**
  * Fuzzy-searchable command palette modal.
  * DOM branch: full interactive input + listbox.
- * Terminal branch: Phase 3 stub — full implementation in Phase 5.
+ * Terminal branch: OpenTUI box/text layout with useCommandRegistry search.
  *
  * Focus is set synchronously (not in onMount) by calling
  * `adapter.setFocusedNodeId("command-palette-input")` on component init.
@@ -136,10 +172,6 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
         >
           <For each={results()}>
             {(cmd, i) => (
-              /* PHASE-5-TODO: `cmd.enabled?.()` is evaluated below for aria-disabled and click
-                 guard, but disabled items are intentionally kept visible in the list so users
-                 can see what commands exist. Full visual polish (e.g. cursor: not-allowed,
-                 skip-over with keyboard) is deferred to Phase 5. */
               <li
                 id={`cmd-option-${cmd.id}`}
                 role="option"
@@ -221,9 +253,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
 
   const terminalBranch = (
     <Show when={props.open}>
-      <div class="terminal-stub" data-primitive="command-palette">
-        CommandPalette stub — full terminal implementation in Phase 5
-      </div>
+      <TerminalCommandPalette {...props} />
     </Show>
   )
 
