@@ -40,15 +40,29 @@ function mkResult(items: unknown[]) {
 function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
+  getDeferred?: Deferred<{ data: unknown }>
+  statusDeferred?: Deferred<{ data: Record<string, unknown> }>
   deleteDeferred?: Deferred<unknown>
 }) {
   const calls: { before?: string; limit?: number }[] = []
+  const gets: (AbortSignal | undefined)[] = []
+  const stats: (AbortSignal | undefined)[] = []
   return {
     calls,
+    gets,
+    stats,
     session: {
       list: async () => ({ data: [] }),
-      get: async () => ({ data: null }),
-      status: async () => ({ data: {} }),
+      get: async (_params: unknown, opts?: { signal?: AbortSignal }) => {
+        gets.push(opts?.signal)
+        if (options?.getDeferred) return options.getDeferred.promise
+        return { data: null }
+      },
+      status: async (_params: unknown, opts?: { signal?: AbortSignal }) => {
+        stats.push(opts?.signal)
+        if (options?.statusDeferred) return options.statusDeferred.promise
+        return { data: {} }
+      },
       messages: async (params: { before?: string; limit?: number }) => {
         calls.push({ before: params.before, limit: params.limit })
         if (options?.messagesDeferred) return options.messagesDeferred.promise
@@ -150,7 +164,7 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
   })
 
   it("throttles repeat focus-mode reconciles within 1s", async () => {
-    // Regression: rapid session tab switching (A→B→A) used to stack up one
+    // Regression: rapid session tab switching (A->B->A) used to stack up one
     // reconcile fetch per click, each doing a full-page fetch + 80-message
     // reactive-store reconcile. A 1s throttle kills the redundant work while
     // still catching SSE drops on normal use patterns.
@@ -161,9 +175,47 @@ describe("KiloProvider.handleLoadMessages / focus mode freshness", () => {
     await internal.handleLoadMessages("s1", { mode: "focus" })
     const callsAfterFirst = client.calls.length
 
-    // Second focus within the throttle window — no fetch should happen.
+    // Second focus within the throttle window - no fetch should happen.
     await internal.handleLoadMessages("s1", { mode: "focus" })
     expect(client.calls.length).toBe(callsAfterFirst)
+  })
+
+  it("sets the focus reconcile throttle before the fetch resolves", async () => {
+    const messages = defer<{ data: unknown[]; response: { headers: Headers } }>()
+    const client = createClient({ messagesDeferred: messages })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+
+    const first = internal.handleLoadMessages("s1", { mode: "focus" })
+    const second = internal.handleLoadMessages("s1", { mode: "focus" })
+
+    expect(client.calls).toHaveLength(1)
+    messages.resolve(mkResult([mkMessage("m1", "user", 1)]))
+    await Promise.all([first, second])
+  })
+
+  it("dedupes and aborts focus metadata refreshes", async () => {
+    const get = defer<{ data: unknown }>()
+    const status = defer<{ data: Record<string, unknown> }>()
+    const client = createClient({
+      getDeferred: get,
+      statusDeferred: status,
+      messagesData: [mkMessage("m1", "user", 1)],
+    })
+    const { internal } = makeProvider(client)
+    internal.trackedSessionIds.add("s1")
+
+    const load = internal.handleLoadMessages("s1", { mode: "focus" })
+    await internal.handleLoadMessages("s1", { mode: "focus" })
+
+    expect(client.gets).toHaveLength(1)
+    expect(client.stats).toHaveLength(1)
+    await internal.handleDeleteSession("s1")
+    expect(client.gets[0]?.aborted).toBe(true)
+    expect(client.stats[0]?.aborted).toBe(true)
+    get.resolve({ data: null })
+    status.resolve({ data: {} })
+    await load
   })
 
   it("does not post messagesLoaded on focus when the session is no longer tracked", async () => {

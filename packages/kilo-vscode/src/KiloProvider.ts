@@ -179,6 +179,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private loadMessagesAbort: AbortController | null = null
   /** Per-session last focus-mode reconcile timestamp — throttles rapid tab switching. */
   private lastReconciledAt = new Map<string, number>()
+  private reconcileLoads = new Map<string, Promise<void>>()
+  private lastDetailsAt = new Map<string, number>()
+  private detailLoads = new Map<string, { abort: AbortController; promise: Promise<void> }>()
   /** Set when refreshSessions() is called before the client is ready.
    *  Cleared and retried once the connection transitions to "connected". */
   private pendingSessionRefresh = false
@@ -1290,20 +1293,23 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /** Non-blocking: refresh session metadata + status for the webview after switching. */
-  private refreshSessionDetails(sessionID: string, dir: string, signal?: AbortSignal): void {
+  private async refreshSessionDetails(sessionID: string, dir: string, signal?: AbortSignal): Promise<void> {
     if (!this.client) return
-    this.client.session
-      .get({ sessionID, directory: dir })
+    this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
+    const get = this.client.session
+      .get({ sessionID, directory: dir }, { signal })
       .then((r) => {
         if (r.data && !signal?.aborted) {
           this.currentSession = r.data
           this.contextSessionID = r.data.id
         }
       })
-      .catch((e: unknown) => console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e))
-    this.postMessage({ type: "workspaceDirectoryChanged", directory: this.getWorkspaceDirectory(sessionID) })
-    this.client.session
-      .status({ directory: dir })
+      .catch((e: unknown) => {
+        if (signal?.aborted) return
+        console.warn("[Kilo New] KiloProvider: getSession failed (non-critical):", e)
+      })
+    const status = this.client.session
+      .status({ directory: dir }, { signal })
       .then((r) => {
         if (!r.data || signal?.aborted) return
         for (const [sid, info] of Object.entries(r.data) as [string, SessionStatus][]) {
@@ -1316,7 +1322,24 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           })
         }
       })
-      .catch((e: unknown) => console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", e))
+      .catch((e: unknown) => {
+        if (signal?.aborted) return
+        console.error("[Kilo New] KiloProvider: Failed to fetch session statuses:", e)
+      })
+    await Promise.all([get, status])
+  }
+
+  private refreshFocusSessionDetails(sessionID: string, dir: string): void {
+    const now = Date.now()
+    if (now - (this.lastDetailsAt.get(sessionID) ?? 0) < 1000) return
+    const load = this.detailLoads.get(sessionID)
+    if (load) return
+    const abort = new AbortController()
+    this.lastDetailsAt.set(sessionID, now)
+    const promise = this.refreshSessionDetails(sessionID, dir, abort.signal).finally(() => {
+      if (this.detailLoads.get(sessionID)?.promise === promise) this.detailLoads.delete(sessionID)
+    })
+    this.detailLoads.set(sessionID, { abort, promise })
   }
 
   private async handleLoadMessages(
@@ -1335,21 +1358,47 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     const dir = this.getWorkspaceDirectory(sessionID)
     if (mode === "focus") {
-      this.refreshSessionDetails(sessionID, dir)
+      this.refreshFocusSessionDetails(sessionID, dir)
       // Reconcile tail so SSE drops self-heal. Throttled to skip rapid tab-switching bursts.
-      if (Date.now() - (this.lastReconciledAt.get(sessionID) ?? 0) < 1000) return
-      await this.handleLoadMessages(sessionID, { mode: "reconcile", limit: options.limit ?? MESSAGE_PAGE_LIMIT })
+      const now = Date.now()
+      if (now - (this.lastReconciledAt.get(sessionID) ?? 0) < 1000) return
+      this.lastReconciledAt.set(sessionID, now)
+      await this.loadReconcile(sessionID, dir, { limit: options.limit ?? MESSAGE_PAGE_LIMIT })
       return
     }
+    if (mode === "reconcile") {
+      await this.loadReconcile(sessionID, dir, options)
+      return
+    }
+    await this.fetchMessages(sessionID, dir, mode, options)
+  }
+
+  private loadReconcile(sessionID: string, dir: string, options: { before?: string; limit?: number }): Promise<void> {
+    const load = this.reconcileLoads.get(sessionID)
+    if (load) return load
+    const promise = this.fetchMessages(sessionID, dir, "reconcile", options).finally(() => {
+      if (this.reconcileLoads.get(sessionID) === promise) this.reconcileLoads.delete(sessionID)
+    })
+    this.reconcileLoads.set(sessionID, promise)
+    return promise
+  }
+
+  private async fetchMessages(
+    sessionID: string,
+    dir: string,
+    mode: MessageLoadMode,
+    options: { before?: string; limit?: number },
+  ): Promise<void> {
     // Replace competes for the spinner and cancels earlier loads; prepend/reconcile run in parallel.
     const abort = mode === "replace" ? new AbortController() : undefined
     if (abort) {
       this.loadMessagesAbort?.abort()
       this.loadMessagesAbort = abort
-      this.refreshSessionDetails(sessionID, dir, abort.signal)
+      void this.refreshSessionDetails(sessionID, dir, abort.signal)
     }
+    if (mode === "reconcile") this.lastReconciledAt.set(sessionID, Date.now())
     try {
-      const page = await fetchMessagePage(this.client, {
+      const page = await fetchMessagePage(this.client!, {
         sessionID,
         workspaceDir: dir,
         limit: options.limit ?? MESSAGE_PAGE_LIMIT,
@@ -1371,7 +1420,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       // Authoritative snapshot: drop queued deltas. Prepend is older history
       // and must not clobber live deltas.
       if (mode === "replace" || mode === "reconcile") this.streams.drop(sessionID)
-      if (mode === "reconcile") this.lastReconciledAt.set(sessionID, Date.now())
       this.postMessage({
         type: "messagesLoaded",
         sessionID,
@@ -1534,6 +1582,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.syncedChildSessions.delete(sessionID)
       this.sessionDirectories.delete(sessionID)
       this.lastReconciledAt.delete(sessionID)
+      this.lastDetailsAt.delete(sessionID)
+      this.detailLoads.get(sessionID)?.abort.abort()
+      this.detailLoads.delete(sessionID)
+      this.reconcileLoads.delete(sessionID)
       this.connectionService.pruneSession(sessionID)
       if (this.currentSession?.id === sessionID) {
         this.currentSession = null
@@ -3339,10 +3391,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.isWebviewReady = false
     this.promptRecoveryQueued = false
     clearNetworkWaits(this.trackedSessionIds)
+    this.loadMessagesAbort?.abort()
+    for (const load of this.detailLoads.values()) load.abort.abort()
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
     this.sessionStatusMap.clear()
+    this.lastReconciledAt.clear()
+    this.lastDetailsAt.clear()
+    this.detailLoads.clear()
+    this.reconcileLoads.clear()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()
     this.marketplace?.dispose()

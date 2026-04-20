@@ -32,6 +32,8 @@ import {
 } from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
+const MAX_POSITIONS = 50
+
 const KiloLogo = (): JSX.Element => {
   const iconsBaseUri = (window as { ICONS_BASE_URI?: string }).ICONS_BASE_URI || ""
   const isLight =
@@ -81,6 +83,18 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
+  const prune = (keep?: Set<string>) => {
+    if (keep) {
+      for (const id of positions.keys()) {
+        if (!keep.has(id)) positions.delete(id)
+      }
+    }
+    while (positions.size > MAX_POSITIONS) {
+      const id = positions.keys().next().value
+      if (!id) return
+      positions.delete(id)
+    }
+  }
 
   const boundary = () => session.revert()?.messageID
   const turns = createMemo(() => messageTurns(session.messages(), boundary()))
@@ -106,7 +120,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const save = (id: string | undefined) => {
     const el = scrollEl()
     if (!id || !el) return
+    positions.delete(id)
     positions.set(id, { top: el.scrollTop, userScrolled: autoScroll.userScrolled() })
+    prune()
   }
 
   const maybeLoadOlder = () => {
@@ -133,6 +149,13 @@ export const MessageList: Component<MessageListProps> = (props) => {
       setPendingRestore(id)
     }),
   )
+
+  createEffect(() => {
+    const ids = new Set(session.sessions().map((s) => s.id))
+    const id = session.currentSessionID()
+    if (id) ids.add(id)
+    prune(ids)
+  })
 
   createEffect(() => {
     const id = pendingRestore()
