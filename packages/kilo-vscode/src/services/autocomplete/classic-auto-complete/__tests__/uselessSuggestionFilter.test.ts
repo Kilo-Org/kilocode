@@ -6,7 +6,6 @@ describe("postprocessAutocompleteSuggestion", () => {
       suggestion: "hello",
       prefix: "hello",
       suffix: "",
-      model: "",
     })
 
     expect(result).toBeUndefined()
@@ -15,51 +14,28 @@ describe("postprocessAutocompleteSuggestion", () => {
   it("filters suggestions that rewrite the line above (continuedev postprocessCompletion behavior)", () => {
     const prefix = "function test() {\n  return true\n  "
     const suggestion = "return true"
-    const result = postprocessAutocompleteSuggestion({ suggestion, prefix, suffix: "", model: "" })
+    const result = postprocessAutocompleteSuggestion({ suggestion, prefix, suffix: "" })
     expect(result).toBeUndefined()
   })
 
-  describe("model-specific postprocessing", () => {
+  describe("postprocessing", () => {
     it("removes markdown code fences", () => {
       const suggestion = "```javascript\nconst x = 1\n```"
       const result = postprocessAutocompleteSuggestion({
         suggestion,
         prefix: "",
         suffix: "",
-        model: "gpt-4",
       })
       expect(result).toBe("const x = 1")
     })
 
-    it("handles Codestral-specific quirks", () => {
-      // Codestral sometimes adds extra leading space
+    it("strips an extra leading space Codestral sometimes emits", () => {
       const result = postprocessAutocompleteSuggestion({
         suggestion: " test",
         prefix: "const x = ",
         suffix: "\n",
-        model: "codestral",
       })
       expect(result).toBe("test")
-    })
-
-    it("handles Mercury/Granite prefix duplication", () => {
-      const result = postprocessAutocompleteSuggestion({
-        suggestion: "const x = 42",
-        prefix: "const x = ",
-        suffix: "",
-        model: "granite-20b",
-      })
-      expect(result).toBe("42")
-    })
-
-    it("handles Gemini/Gemma file separator", () => {
-      const result = postprocessAutocompleteSuggestion({
-        suggestion: "const x = 1<|file_separator|>",
-        prefix: "",
-        suffix: "",
-        model: "gemini-pro",
-      })
-      expect(result).toBe("const x = 1")
     })
   })
 
@@ -70,7 +46,6 @@ describe("postprocessAutocompleteSuggestion", () => {
         suggestion: repetitive,
         prefix: "",
         suffix: "",
-        model: "",
       })
       expect(result).toBeUndefined()
     })
@@ -81,7 +56,6 @@ describe("postprocessAutocompleteSuggestion", () => {
         suggestion: normal,
         prefix: "",
         suffix: "",
-        model: "",
       })
       expect(result).toBe(normal)
     })

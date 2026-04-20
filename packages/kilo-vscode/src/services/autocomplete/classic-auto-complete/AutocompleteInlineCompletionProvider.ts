@@ -238,7 +238,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     suggestionText: string,
     prefix: string,
     suffix: string,
-    model: AutocompleteModel,
     telemetryContext: AutocompleteContext,
     languageId?: string,
   ): FillInAtCursorSuggestion {
@@ -251,7 +250,6 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       suggestion: suggestionText,
       prefix,
       suffix,
-      model: model.getModelName() || "",
       languageId,
     })
 
@@ -584,9 +582,9 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
 
     try {
-      // Curry processSuggestion with prefix, suffix, model, telemetry context, and languageId
+      // Curry processSuggestion with prefix, suffix, telemetry context, and languageId
       const curriedProcessSuggestion = (text: string) =>
-        this.processSuggestion(text, prefix, suffix, this.model, telemetryContext, languageId)
+        this.processSuggestion(text, prefix, suffix, telemetryContext, languageId)
 
       const result = await this.fimPromptBuilder.getFromFIM(
         this.model,

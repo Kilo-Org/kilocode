@@ -133,20 +133,17 @@ function normalizeToCompleteLine(params: AutocompleteSuggestion): AutocompleteSu
  * @param params.suggestion - The suggested text to insert
  * @param params.prefix - The text before the cursor position
  * @param params.suffix - The text after the cursor position
- * @param params.model - The model string (e.g., "codestral", "qwen3", etc.)
  * @param params.languageId - Optional language ID for language-specific filtering
  * @returns The processed suggestion text, or undefined if it should be filtered out
  */
 export function postprocessAutocompleteSuggestion(
   params: AutocompleteSuggestion & {
-    model: string
     languageId?: string
   },
 ): string | undefined {
   // First, run through the continuedev postprocessing pipeline
   const processedSuggestion = postprocessCompletion({
     completion: params.suggestion,
-    llm: { model: params.model },
     prefix: params.prefix,
     suffix: params.suffix,
   })

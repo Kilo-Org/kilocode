@@ -116,7 +116,6 @@ describe("postprocessAutocompleteSuggestion", () => {
       suggestion: "return x",
       prefix: "function foo() {\n  return x",
       suffix: "",
-      model: "codestral",
     })
     expect(result).toBeUndefined()
   })
@@ -126,7 +125,6 @@ describe("postprocessAutocompleteSuggestion", () => {
       suggestion: "  return x + y;",
       prefix: "function add(x, y) {\n",
       suffix: "\n}",
-      model: "codestral",
     })
     expect(result).toBe("  return x + y;")
   })
@@ -136,7 +134,6 @@ describe("postprocessAutocompleteSuggestion", () => {
       suggestion: "",
       prefix: "const x = ",
       suffix: "",
-      model: "gpt-4",
     })
     expect(result).toBeUndefined()
   })

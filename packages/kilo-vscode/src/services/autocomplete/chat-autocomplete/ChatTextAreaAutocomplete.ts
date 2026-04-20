@@ -191,7 +191,6 @@ TASK: Complete the user's message naturally.
       suggestion: removePrefixOverlap(suggestion, userText),
       prefix: userText,
       suffix: "",
-      model: this.model.getModelName() ?? "unknown",
     })
     if (cleaned === undefined) return ""
     return finalizeChatSuggestion(cleaned)
