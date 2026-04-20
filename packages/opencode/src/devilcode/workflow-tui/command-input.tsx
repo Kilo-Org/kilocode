@@ -171,7 +171,11 @@ export function WorkflowCommandInput() {
         toast.show({ message: "No workflow initialized. Run /team init <quickstart> first.", variant: "error", duration: 2000 })
         return
       }
-      await run(Workflow.resolveAction(wf.state.currentStage, "next")!)
+      try {
+        await run(Workflow.resolveAction(wf.state.currentStage, "next")!)
+      } catch (err) {
+        toast.show({ message: error(err), variant: "error", duration: 4000 })
+      }
       return
     }
 

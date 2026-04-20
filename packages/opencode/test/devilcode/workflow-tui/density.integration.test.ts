@@ -91,8 +91,10 @@ describe("density.integration — auto-compact effect", () => {
   })
 
   it("named handler functions declared BEFORE createEffect (R3-06 — no TDZ)", () => {
+    // Verify handleSetDensity declaration appears before createEffect registration
+    // (not before the variable declaration line, which would be trivially true)
     const handlerPos = contextSrc.indexOf("async function handleSetDensity")
-    const effectPos = contextSrc.indexOf("let autoCompactFired")
+    const effectPos = contextSrc.indexOf("createEffect(")
     expect(handlerPos).toBeGreaterThan(0)
     expect(effectPos).toBeGreaterThan(handlerPos)
   })

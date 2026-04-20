@@ -246,7 +246,10 @@ export function WorkflowProvider(props: ParentProps & { directory: string }) {
         ...current,
         workflow: { ...(current.workflow ?? {}), firstRunComplete: true },
       })
-    } catch {}
+    } catch (err) {
+      // Log persistence failure — UI stays updated but onboarding will repeat next session
+      console.error("[workflow] markFirstRunComplete: Config.update failed — firstRunComplete not persisted", err)
+    }
   }
 
   // Auto-compact fires once per session when the first build task completes

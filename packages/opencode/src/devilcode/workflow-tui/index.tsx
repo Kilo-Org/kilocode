@@ -122,6 +122,32 @@ function WorkflowViewInner() {
   )
 }
 
+/**
+ * Adapter-aware shell — named component so useWorkflow() resolves in the
+ * correct reactive owner (inside WorkflowProvider, not at WorkflowView root).
+ * Must NOT be inlined as an anonymous Show-children accessor; SolidJS context
+ * propagates through Owner chains, and a named component keeps the boundary
+ * explicit and verifiable at call sites.
+ */
+function WorkflowViewShell(props: { adapter: Awaited<ReturnType<typeof createTerminalAdapter>> }) {
+  const wf = useWorkflow()
+  return (
+    <RenderTargetProvider adapter={props.adapter}>
+      <CommandRegistryProvider>
+        {/* DensityProvider wraps the cockpit — initial from store, onPersist → Config */}
+        <DensityProvider
+          initial={wf.density}
+          onPersist={(d) => void wf.setDensity(d)}
+        >
+          <TeamBuilderProvider>
+            <WorkflowViewInner />
+          </TeamBuilderProvider>
+        </DensityProvider>
+      </CommandRegistryProvider>
+    </RenderTargetProvider>
+  )
+}
+
 export function WorkflowView() {
   const sdk = useSDK()
   const [terminalAdapter] = createResource(createTerminalAdapter)
@@ -129,25 +155,7 @@ export function WorkflowView() {
   return (
     <WorkflowProvider directory={sdk.directory!}>
       <Show when={terminalAdapter()}>
-        {(adapter) => {
-          // useWorkflow() is safe here — WorkflowProvider wraps the outer tree
-          const wf = useWorkflow()
-          return (
-            <RenderTargetProvider adapter={adapter()}>
-              <CommandRegistryProvider>
-                {/* DensityProvider wraps the cockpit — initial from store, onPersist → Config */}
-                <DensityProvider
-                  initial={wf.density}
-                  onPersist={(d) => void wf.setDensity(d)}
-                >
-                  <TeamBuilderProvider>
-                    <WorkflowViewInner />
-                  </TeamBuilderProvider>
-                </DensityProvider>
-              </CommandRegistryProvider>
-            </RenderTargetProvider>
-          )
-        }}
+        {(adapter) => <WorkflowViewShell adapter={adapter()} />}
       </Show>
     </WorkflowProvider>
   )

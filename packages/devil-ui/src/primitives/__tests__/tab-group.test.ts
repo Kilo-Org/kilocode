@@ -76,9 +76,12 @@ describe("TabGroup module structure", () => {
     expect(SRC).toContain("tabs.find")
   })
 
-  it("terminal branch implements keyboard shortcuts (Tab and digit keys)", () => {
-    // Tab navigation
+  it("terminal branch implements keyboard shortcuts (Tab, Shift+Tab, and digit keys)", () => {
+    // Tab navigation (forward)
     expect(SRC).toContain('evt.name === "tab"')
+    // Shift+Tab backward navigation — terminal uses evt.shift, DOM uses ev.shiftKey
+    expect(SRC).toContain("evt.shift")
+    expect(SRC).toContain("ev.shiftKey")
     // Digit shortcuts (1-9)
     expect(SRC).toContain('[1-9]')
   })

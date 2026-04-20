@@ -175,7 +175,7 @@ export function CommandPalette(props: CommandPaletteProps): JSX.Element {
               <li
                 id={`cmd-option-${cmd.id}`}
                 role="option"
-                aria-selected={i() === selected()}
+                aria-selected={i() === selected() ? "true" : "false"}
                 aria-disabled={cmd.enabled?.() === false ? "true" : undefined}
                 onClick={() => (cmd.enabled?.() ?? true) && handleSelect(cmd)}
                 onMouseEnter={() => setSelected(i())}

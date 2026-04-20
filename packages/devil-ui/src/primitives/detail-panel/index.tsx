@@ -81,9 +81,13 @@ function TerminalBranch(props: Pick<DetailPanelProps, "title" | "body">): JSX.El
 // DOM branch
 // ---------------------------------------------------------------------------
 
-function DomBranch(props: DetailPanelProps & { isCompact: boolean }): JSX.Element {
-  const padValue = props.isCompact ? "6px 10px" : "10px 16px"
-  const fontSizeValue = props.isCompact ? "13px" : "14px"
+function DomBranch(props: DetailPanelProps): JSX.Element {
+  // Call useDensityOptional() directly so density changes after mount are reactive.
+  // Receiving isCompact as a frozen boolean prop breaks fine-grained reactivity.
+  const densityCtx = useDensityOptional()
+  const isCompact = () => densityCtx?.()?.density === "compact"
+  const padValue = () => (isCompact() ? "6px 10px" : "10px 16px")
+  const fontSizeValue = () => (isCompact() ? "13px" : "14px")
 
   return (
     <details
@@ -101,8 +105,8 @@ function DomBranch(props: DetailPanelProps & { isCompact: boolean }): JSX.Elemen
       <summary
         style={{
           cursor: "pointer",
-          padding: padValue,
-          "font-size": fontSizeValue,
+          padding: padValue(),
+          "font-size": fontSizeValue(),
           "font-weight": "600",
           background: "#1a1a1a",
           "border-bottom": "1px solid #333",
@@ -118,8 +122,8 @@ function DomBranch(props: DetailPanelProps & { isCompact: boolean }): JSX.Elemen
       </summary>
       <div
         style={{
-          padding: padValue,
-          "font-size": fontSizeValue,
+          padding: padValue(),
+          "font-size": fontSizeValue(),
           "line-height": "1.5",
           "white-space": "pre-wrap",
           "word-break": "break-word",
@@ -138,9 +142,6 @@ function DomBranch(props: DetailPanelProps & { isCompact: boolean }): JSX.Elemen
 
 export function DetailPanel(props: DetailPanelProps): JSX.Element {
   const target = useRenderTarget()
-  const densityCtx = useDensityOptional()
-
-  const isCompact = (): boolean => densityCtx?.()?.density === "compact"
 
   // fallback cast: SolidJS 1.9.x types fallback as JSX.Element but lazy thunk is required by plan.
   return (
@@ -148,7 +149,8 @@ export function DetailPanel(props: DetailPanelProps): JSX.Element {
       when={target.kind === "dom"}
       fallback={(() => <TerminalBranch title={props.title} body={props.body} />) as unknown as JSX.Element}
     >
-      <DomBranch {...props} isCompact={isCompact()} />
+      {/* DomBranch calls useDensityOptional() internally for reactivity */}
+      <DomBranch {...props} />
     </Show>
   )
 }

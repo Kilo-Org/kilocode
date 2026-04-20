@@ -38,6 +38,10 @@ export function RuntimeCockpit() {
     wf.plans.find((p) => p.id === wf.selectedTask),
   )
 
+  // Cache tab info by id — avoids creating a wf.tabs subscription inside the
+  // render-prop's reactive scope (R3-08). Re-memos only when tabs array changes.
+  const tabInfoById = createMemo(() => new Map(wf.tabs.map((t) => [t.id, t])))
+
   return (
     <box flexDirection="column" flexGrow={1} minWidth={0} minHeight={0}>
       {/* ── Header row: phase/wave + stage position badge ─────────────────── */}
@@ -139,8 +143,8 @@ export function RuntimeCockpit() {
             density={density?.()?.density}
           >
             {(tab) => {
-              // Look up kind from wf.tabs — TabDescriptor has no kind field but TabInfo does
-              const info = wf.tabs.find((t) => t.id === tab.id)
+              // tabInfoById() is a stable Map memo — no per-render wf.tabs subscription
+              const info = tabInfoById().get(tab.id)
               switch (info?.kind) {
                 case "plan":
                   return <PlanTab />

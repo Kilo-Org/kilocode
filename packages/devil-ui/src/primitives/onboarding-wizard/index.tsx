@@ -373,11 +373,19 @@ function TerminalOnboardingWizard(props: OnboardingWizardProps): JSX.Element {
   const validation: Accessor<TeamValidationResult> = useTeamValidation(draft)
 
   // Dynamic require — avoids @opentui static import at module level (CONVENTIONS.md §3)
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { useKeyboard } = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
-  useKeyboard((evt) => {
-    if (evt.key === "Escape") props.onCancel()
-  }, {})
+  let useKeyboard: ((cb: (evt: { key: string }) => void, opts?: unknown) => void) | undefined
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const opentui = require("@opentui/solid") as { useKeyboard: (cb: (evt: { key: string }) => void, opts?: unknown) => void }
+    useKeyboard = opentui.useKeyboard
+  } catch {
+    // @opentui/solid not available — skip keyboard in test/DOM environments (CONVENTIONS.md §3)
+  }
+  if (useKeyboard) {
+    useKeyboard((evt) => {
+      if (evt.key === "Escape") props.onCancel()
+    }, {})
+  }
 
   async function handlePick(id: string): Promise<void> {
     setLoadError(null)

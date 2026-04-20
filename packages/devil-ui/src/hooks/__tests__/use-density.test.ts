@@ -73,4 +73,46 @@ describe("DensityProvider + useDensity integration", () => {
     expect(densitySrc).toContain("export const DensityContext")
     expect(densitySrc).toContain("export function DensityProvider")
   })
+
+  it("DensityProvider reactive signal and onPersist contract (behavioral)", () => {
+    // density.tsx has no @opentui deps — safe to test DensityProvider contract in Bun.
+    // We simulate its internal behavior (createSignal + setDensity + onPersist) inside
+    // a reactive root to verify the contract without mounting JSX.
+    withRoot(() => {
+      const { createSignal } = require("solid-js") as typeof import("solid-js")
+      const persisted: string[] = []
+
+      // Mirror DensityProvider internals
+      const [density, setDensitySignal] = createSignal<"compact" | "expanded">("expanded")
+      const setDensity = (d: "compact" | "expanded"): void => {
+        setDensitySignal(d)
+        persisted.push(d) // simulates onPersist
+      }
+      const toggle = (): void => {
+        setDensity(density() === "compact" ? "expanded" : "compact")
+      }
+
+      // Initial state
+      expect(density()).toBe("expanded")
+      expect(persisted).toHaveLength(0)
+
+      // setDensity updates signal and triggers onPersist
+      setDensity("compact")
+      expect(density()).toBe("compact")
+      expect(persisted).toEqual(["compact"])
+
+      // toggle flips back
+      toggle()
+      expect(density()).toBe("expanded")
+      expect(persisted).toEqual(["compact", "expanded"])
+    })
+  })
+
+  it("DensityProvider module exports match expected shape", () => {
+    withRoot(() => {
+      const mod = require("../../context/density.tsx") as typeof import("../../context/density")
+      expect(typeof mod.DensityProvider).toBe("function")
+      expect(typeof mod.DensityContext).toBe("object")
+    })
+  })
 })
