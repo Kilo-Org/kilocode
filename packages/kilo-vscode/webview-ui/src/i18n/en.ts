@@ -437,6 +437,9 @@ export const dict = {
   "error.promotionLimit.description":
     "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later.",
   "error.promotionLimit.action": "Sign Up",
+  "error.trinityFreeDiscontinued.title": "Trinity Large Thinking (free) has been discontinued",
+  "error.trinityFreeDiscontinued.description":
+    "The free version of Trinity Large Thinking has been discontinued. You can continue using the paid version or switch to Kilo Auto Free.",
 
   "error.chain.unknown": "Unknown error",
   "error.chain.causedBy": "Caused by:",

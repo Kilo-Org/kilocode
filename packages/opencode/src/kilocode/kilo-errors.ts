@@ -3,6 +3,7 @@ import type { NamedError } from "@opencode-ai/util/error"
 export const KILO_ERROR_CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  TRINITY_FREE_DISCONTINUED: "TRINITY_FREE_DISCONTINUED",
 } as const
 
 export type KiloErrorCode = (typeof KILO_ERROR_CODES)[keyof typeof KILO_ERROR_CODES]
@@ -26,6 +27,8 @@ export function kiloErrorTitle(code: KiloErrorCode): string {
       return "You need to sign in to use this model"
     case KILO_ERROR_CODES.PROMOTION_MODEL_LIMIT_REACHED:
       return "You need to sign up to keep going"
+    case KILO_ERROR_CODES.TRINITY_FREE_DISCONTINUED:
+      return "Trinity Large Thinking (free) has been discontinued"
   }
 }
 
@@ -38,6 +41,8 @@ export function kiloErrorDescription(code: KiloErrorCode): string {
       return "Sign in or create an account to access over 500 models, use credits at cost, or bring your own key."
     case KILO_ERROR_CODES.PROMOTION_MODEL_LIMIT_REACHED:
       return "Sign up for free to continue and explore 500 other models. Takes 2 minutes, no credit card required. Or come back later."
+    case KILO_ERROR_CODES.TRINITY_FREE_DISCONTINUED:
+      return "The free version of Trinity Large Thinking has been discontinued. You can continue using the paid version or switch to Kilo Auto Free."
   }
 }
 
@@ -57,6 +62,16 @@ export function showKiloErrorToast(
     message: kiloErrorDescription(code),
     duration: 5000,
   })
+}
+
+/** Model IDs that have been discontinued */
+export const DISCONTINUED_FREE_MODELS = ["arcee-ai/trinity-large-thinking:free"] as const
+
+/**
+ * Check if a model ID is a discontinued free model.
+ */
+export function isDiscontinuedFreeModel(modelID: string): boolean {
+  return (DISCONTINUED_FREE_MODELS as readonly string[]).includes(modelID)
 }
 
 /**

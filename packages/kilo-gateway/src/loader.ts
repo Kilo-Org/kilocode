@@ -1,5 +1,8 @@
 import type { CustomLoaderResult, ProviderInfo } from "./types.js"
 
+/** Model IDs that have been discontinued and should be filtered out */
+const DISCONTINUED_MODELS = ["arcee-ai/trinity-large-thinking:free"] as const
+
 /**
  * Custom loader function for the kilo provider
  *
@@ -19,6 +22,13 @@ export async function kiloCustomLoader(provider: ProviderInfo): Promise<CustomLo
     return {
       autoload: false,
       options: hasKey ? {} : { apiKey: "anonymous" },
+    }
+  }
+
+  // Remove discontinued models
+  for (const id of DISCONTINUED_MODELS) {
+    if (provider.models[id]) {
+      delete provider.models[id]
     }
   }
 

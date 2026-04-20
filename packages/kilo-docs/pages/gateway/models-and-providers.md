@@ -63,10 +63,13 @@ Several models are available at no cost, subject to rate limits:
 | `bytedance-seed/dola-seed-2.0-pro:free`  | ByteDance Dola Seed 2.0 Pro    |
 | `x-ai/grok-code-fast-1:optimized:free`   | xAI Grok Code Fast 1 Optimized |
 | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super 120B   |
-| `arcee-ai/trinity-large-thinking:free`   | Arcee Trinity Large            |
 | `openrouter/free`                        | Best available free model      |
 
 Free models are available to both authenticated and anonymous users. Anonymous users are rate-limited to 200 requests per hour per IP address.
+
+{% callout type="info" title="Trinity Large Thinking (free) discontinued" %}
+The free version of Trinity Large Thinking has been discontinued. You can continue using the paid version (`arcee-ai/trinity-large-thinking`) or switch to Kilo Auto Free (`kilo-auto/free`).
+{% /callout %}
 
 {% callout type="warning" title="Nemotron 3 Super Free (NVIDIA free endpoints)" %}
 Provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf). Trial use only — not for production or sensitive data. Prompts and outputs are logged by NVIDIA to improve its models and services. Do not submit personal or confidential data.

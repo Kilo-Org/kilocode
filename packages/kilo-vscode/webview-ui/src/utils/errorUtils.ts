@@ -45,6 +45,7 @@ export function unwrapError(message: string): string {
 const errorCodes = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",
   PROMOTION_MODEL_LIMIT_REACHED: "PROMOTION_MODEL_LIMIT_REACHED",
+  TRINITY_FREE_DISCONTINUED: "TRINITY_FREE_DISCONTINUED",
 } as const
 
 export interface ParsedError {
@@ -95,4 +96,9 @@ export function isUnauthorizedPromotionLimitError(parsed: ParsedError | null): b
   return (
     (parsed.statusCode === 401 || parsed.statusCode === 429) && parsed.code === errorCodes.PROMOTION_MODEL_LIMIT_REACHED
   )
+}
+
+export function isTrinityFreeDiscontinuedError(parsed: ParsedError | null): boolean {
+  if (!parsed) return false
+  return parsed.code === errorCodes.TRINITY_FREE_DISCONTINUED
 }

@@ -2,6 +2,7 @@ import path from "path"
 import os from "os"
 import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { isDiscontinuedFreeModel, kiloErrorDescription, KILO_ERROR_CODES } from "@/kilocode/kilo-errors" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
@@ -909,6 +910,21 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         modelID: ModelID,
         sessionID: SessionID,
       ) {
+        // kilocode_change start — check for discontinued free models before lookup
+        if (isDiscontinuedFreeModel(modelID)) {
+          yield* bus.publish(Session.Event.Error, {
+            sessionID,
+            error: new NamedError.Unknown({
+              message: kiloErrorDescription(KILO_ERROR_CODES.TRINITY_FREE_DISCONTINUED),
+            }).toObject(),
+          })
+          throw new Provider.ModelNotFoundError({
+            providerID,
+            modelID,
+            suggestions: ["arcee-ai/trinity-large-thinking", "kilo-auto/free"],
+          })
+        }
+        // kilocode_change end
         const exit = yield* provider.getModel(providerID, modelID).pipe(Effect.exit)
         if (Exit.isSuccess(exit)) return exit.value
         const err = Cause.squash(exit.cause)

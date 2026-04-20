@@ -1,6 +1,7 @@
 import { AccountServiceError, AccountTransportError } from "@/account"
 import { ConfigMarkdown } from "@/config/markdown"
 import { errorFormat } from "@/util/error"
+import { isDiscontinuedFreeModel, kiloErrorDescription, KILO_ERROR_CODES } from "@/kilocode/kilo-errors" // kilocode_change
 import { Config } from "../config/config"
 import { MCP } from "../mcp"
 import { Provider } from "../provider/provider"
@@ -14,6 +15,11 @@ export function FormatError(input: unknown) {
   }
   if (Provider.ModelNotFoundError.isInstance(input)) {
     const { providerID, modelID, suggestions } = input.data
+    // kilocode_change start — specific message for discontinued free models
+    if (isDiscontinuedFreeModel(modelID)) {
+      return kiloErrorDescription(KILO_ERROR_CODES.TRINITY_FREE_DISCONTINUED)
+    }
+    // kilocode_change end
     return [
       `Model not found: ${providerID}/${modelID}`,
       ...(Array.isArray(suggestions) && suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),

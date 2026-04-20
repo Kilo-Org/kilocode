@@ -8,6 +8,7 @@
 
 import { createKilo, type KiloProvider } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
+import { DISCONTINUED_FREE_MODELS } from "@/kilocode/kilo-errors"
 import { AiSdkProvider, Prompt } from "@/provider/models"
 import { Env } from "@/env"
 import { ProviderID, ModelID } from "@/provider/schema"
@@ -126,6 +127,11 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         if ((yield* dep.config()).provider?.["kilo"]?.options?.apiKey) return true
         return false
       })
+
+      // Remove discontinued free models
+      for (const id of DISCONTINUED_FREE_MODELS) {
+        delete input.models[id]
+      }
 
       if (!hasKey) {
         for (const [key, value] of Object.entries(input.models)) {
