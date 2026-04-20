@@ -51,7 +51,7 @@ This returns model information including pricing, context window, and supported 
 | `x-ai/grok-4`                   | xAI       | Most capable Grok model                         |
 | `x-ai/grok-code-fast-1`         | xAI       | Optimized for code tasks                        |
 | `deepseek/deepseek-v3.2`        | DeepSeek  | Strong coding and reasoning model               |
-| `moonshotai/kimi-k2.5`          | Moonshot  | Strong coding and multilingual model            |
+| `moonshotai/kimi-k2.6`          | Moonshot  | Strong coding and multilingual model            |
 | `minimax/minimax-m2.7`          | MiniMax   | High-performance MoE model                      |
 
 ### Free models

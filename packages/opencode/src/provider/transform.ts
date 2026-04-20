@@ -342,7 +342,7 @@ export namespace ProviderTransform {
     if (id.includes("glm-4.7")) return 1.0
     if (id.includes("minimax-m2")) return 1.0
     if (id.includes("kimi-k2")) {
-      // kimi-k2-thinking & kimi-k2.5 && kimi-k2p5 && kimi-k2-5
+      // kimi-k2-thinking & kimi-k2.6 && kimi-k2p6 && kimi-k2-6
       if (["thinking", "k2.", "k2p", "k2-5"].some((s) => id.includes(s))) {
         return 1.0
       }
@@ -354,7 +354,7 @@ export namespace ProviderTransform {
   export function topP(model: Provider.Model) {
     const id = model.id.toLowerCase()
     if (id.includes("qwen")) return 1
-    if (["minimax-m2", "gemini", "kimi-k2.5", "kimi-k2p5", "kimi-k2-5"].some((s) => id.includes(s))) {
+    if (["minimax-m2", "gemini", "kimi-k2.6", "kimi-k2p6", "kimi-k2-6"].some((s) => id.includes(s))) {
       return 0.95
     }
     return undefined
@@ -399,8 +399,8 @@ export namespace ProviderTransform {
       // id.includes("glm") || // kilocode_change
       id.includes("mistral") ||
       // id.includes("kimi") || // kilocode_change
-      // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
-      id.includes("k2p5") ||
+      // TODO: Remove this after models.dev data is fixed to use "kimi-k2.6" instead of "k2p6"
+      id.includes("k2p6") ||
       id.includes("qwen") ||
       id.includes("big-pickle")
     )
@@ -847,11 +847,11 @@ export namespace ProviderTransform {
       }
     }
 
-    // Enable thinking by default for kimi-k2.5/k2p5 models using anthropic SDK
+    // Enable thinking by default for kimi-k2.6/k2p6 models using anthropic SDK
     const modelId = input.model.api.id.toLowerCase()
     if (
       (input.model.api.npm === "@ai-sdk/anthropic" || input.model.api.npm === "@ai-sdk/google-vertex/anthropic") &&
-      (modelId.includes("k2p5") || modelId.includes("kimi-k2.5") || modelId.includes("kimi-k2p5"))
+      (modelId.includes("k2p6") || modelId.includes("kimi-k2.6") || modelId.includes("kimi-k2p6"))
     ) {
       result["thinking"] = {
         type: "enabled",
@@ -861,7 +861,7 @@ export namespace ProviderTransform {
 
     // Enable thinking for reasoning models on alibaba-cn (DashScope).
     // DashScope's OpenAI-compatible API requires `enable_thinking: true` in the request body
-    // to return reasoning_content. Without it, models like kimi-k2.5, qwen-plus, qwen3, qwq,
+    // to return reasoning_content. Without it, models like kimi-k2.6, qwen-plus, qwen3, qwq,
     // deepseek-r1, etc. never output thinking/reasoning tokens.
     // Note: kimi-k2-thinking is excluded as it returns reasoning_content by default.
     if (

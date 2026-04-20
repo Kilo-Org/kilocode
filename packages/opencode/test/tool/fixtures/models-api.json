@@ -73,9 +73,9 @@
         "open_weights": true,
         "limit": { "context": 131072, "output": 32768 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "kimi-k2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "kimi-k2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -2964,9 +2964,9 @@
         "cost": { "input": 0, "output": 0 },
         "limit": { "context": 128000, "output": 16384 }
       },
-      "workers-ai/@cf/moonshotai/kimi-k2.5": {
-        "id": "workers-ai/@cf/moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "workers-ai/@cf/moonshotai/kimi-k2.6": {
+        "id": "workers-ai/@cf/moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -3555,9 +3555,9 @@
         "cost": { "input": 0.1, "output": 0.1 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -4828,9 +4828,9 @@
         "open_weights": false,
         "limit": { "context": 256000, "output": 100000 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Moonshotai/Kimi-K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Moonshotai/Kimi-K2.6",
         "attachment": true,
         "reasoning": false,
         "tool_call": true,
@@ -5204,9 +5204,9 @@
         "cost": { "input": 0.09, "output": 0.6 },
         "limit": { "context": 262000, "output": 262000 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -5992,9 +5992,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
         "limit": { "context": 131072, "output": 16384 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi-K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi-K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -7024,9 +7024,9 @@
         "cost": { "input": 0.1, "output": 0.45 },
         "limit": { "context": 40960, "output": 20000 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -8573,9 +8573,9 @@
         "cost": { "input": 10, "output": 30 },
         "limit": { "context": 128000, "output": 4096 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -11001,9 +11001,9 @@
         "open_weights": false,
         "limit": { "context": 256000, "output": 0 }
       },
-      "novita/kimi-k2.5": {
-        "id": "novita/kimi-k2.5",
-        "name": "kimi-k2.5",
+      "novita/kimi-k2.6": {
+        "id": "novita/kimi-k2.6",
+        "name": "kimi-k2.6",
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
@@ -11527,9 +11527,9 @@
         "limit": { "context": 200000, "output": 64000 },
         "provider": { "npm": "@ai-sdk/anthropic" }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -11753,9 +11753,9 @@
         "limit": { "context": 204800, "output": 131072 },
         "status": "deprecated"
       },
-      "kimi-k2.5-free": {
-        "id": "kimi-k2.5-free",
-        "name": "Kimi K2.5 Free",
+      "kimi-k2.6-free": {
+        "id": "kimi-k2.6-free",
+        "name": "Kimi K2.6 Free",
         "family": "kimi-free",
         "attachment": true,
         "reasoning": true,
@@ -13425,9 +13425,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -14498,9 +14498,9 @@
         "cost": { "input": 0.5, "output": 2.4, "cache_read": 0.05, "cache_write": 0.625 },
         "limit": { "context": 200000, "input": 190000, "output": 8192 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi-K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi-K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -14516,9 +14516,9 @@
         "cost": { "input": 0.5, "output": 2.5, "reasoning": 2.5, "cache_read": 0.05, "cache_write": 0.625 },
         "limit": { "context": 256000, "input": 256000, "output": 8192 }
       },
-      "moonshotai/Kimi-K2.5-fast": {
-        "id": "moonshotai/Kimi-K2.5-fast",
-        "name": "Kimi-K2.5-fast",
+      "moonshotai/Kimi-K2.6-fast": {
+        "id": "moonshotai/Kimi-K2.6-fast",
+        "name": "Kimi-K2.6-fast",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -14815,9 +14815,9 @@
         "cost": { "input": 1, "output": 3 },
         "limit": { "context": 131072, "output": 131072 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -14858,9 +14858,9 @@
         "cost": { "input": 5, "output": 25, "cache_read": 0.5, "cache_write": 6.25 },
         "limit": { "context": 200000, "output": 64000 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi-K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi-K2.6",
         "attachment": false,
         "reasoning": true,
         "tool_call": true,
@@ -17609,9 +17609,9 @@
         "cost": { "input": 0.39, "output": 1.9, "cache_read": 0.195 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "moonshotai/Kimi-K2.5-TEE": {
-        "id": "moonshotai/Kimi-K2.5-TEE",
-        "name": "Kimi K2.5 TEE",
+      "moonshotai/Kimi-K2.6-TEE": {
+        "id": "moonshotai/Kimi-K2.6-TEE",
+        "name": "Kimi K2.6 TEE",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -17824,9 +17824,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
         "limit": { "context": 262144, "output": 32768 }
       },
-      "k2p5": {
-        "id": "k2p5",
-        "name": "Kimi K2.5",
+      "k2p6": {
+        "id": "k2p6",
+        "name": "Kimi K2.6",
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
@@ -18217,9 +18217,9 @@
         "cost": { "input": 0.574, "output": 2.294 },
         "limit": { "context": 131072, "output": 8192 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Moonshot Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Moonshot Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -18947,9 +18947,9 @@
         "cost": { "input": 0.301, "output": 1.205 },
         "limit": { "context": 204800, "output": 131072 }
       },
-      "kimi/kimi-k2.5": {
-        "id": "kimi/kimi-k2.5",
-        "name": "kimi/kimi-k2.5",
+      "kimi/kimi-k2.6": {
+        "id": "kimi/kimi-k2.6",
+        "name": "kimi/kimi-k2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -22003,9 +22003,9 @@
         "cost": { "input": 0.6, "output": 2.5 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -22159,9 +22159,9 @@
         "cost": { "input": 0, "output": 0 },
         "limit": { "context": 262000, "output": 262000 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
@@ -22830,9 +22830,9 @@
         "cost": { "input": 0.25, "output": 1 },
         "limit": { "context": 164000, "output": 164000 }
       },
-      "Pro/moonshotai/Kimi-K2.5": {
-        "id": "Pro/moonshotai/Kimi-K2.5",
-        "name": "Pro/moonshotai/Kimi-K2.5",
+      "Pro/moonshotai/Kimi-K2.6": {
+        "id": "Pro/moonshotai/Kimi-K2.6",
+        "name": "Pro/moonshotai/Kimi-K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -23936,9 +23936,9 @@
         "cost": { "input": 0.12, "output": 0.12 },
         "limit": { "context": 40960, "output": 40960 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -28041,9 +28041,9 @@
         "cost": { "input": 0.47, "output": 2, "cache_read": 0.2 },
         "limit": { "context": 131072, "output": 65535 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "MoonshotAI: Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "MoonshotAI: Kimi K2.6",
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
@@ -31336,9 +31336,9 @@
         "cost": { "input": 0.6, "output": 2.5, "cache_read": 0.15 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -32926,9 +32926,9 @@
         "cost": { "input": 0.6, "output": 2.5, "cache_read": 0.15 },
         "limit": { "context": 262000, "output": 64000 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "attachment": true,
         "reasoning": true,
         "tool_call": true,
@@ -35446,9 +35446,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
         "limit": { "context": 262144, "output": 65536 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -35945,9 +35945,9 @@
         "cost": { "input": 0.5, "output": 2 },
         "limit": { "context": 131072, "output": 32768 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -36098,9 +36098,9 @@
         "cost": { "input": 0.22, "output": 1.8 },
         "limit": { "context": 131072, "output": 65536 }
       },
-      "moonshotai.kimi-k2.5": {
-        "id": "moonshotai.kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai.kimi-k2.6": {
+        "id": "moonshotai.kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -37708,9 +37708,9 @@
         "cost": { "input": 1, "output": 3 },
         "limit": { "context": 131072, "output": 16384 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi-K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi-K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -38236,9 +38236,9 @@
         "limit": { "context": 163800, "output": 131100 },
         "status": "deprecated"
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -41010,9 +41010,9 @@
         "cost": { "input": 0.47, "output": 2, "cache_read": 0.14 },
         "limit": { "context": 216144, "output": 216144 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -41892,9 +41892,9 @@
     "name": "Synthetic",
     "doc": "https://synthetic.new/pricing",
     "models": {
-      "hf:moonshotai/Kimi-K2.5": {
-        "id": "hf:moonshotai/Kimi-K2.5",
-        "name": "Kimi K2.5",
+      "hf:moonshotai/Kimi-K2.6": {
+        "id": "hf:moonshotai/Kimi-K2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -42195,9 +42195,9 @@
         "cost": { "input": 1.25, "output": 1.25 },
         "limit": { "context": 128000, "output": 128000 }
       },
-      "hf:nvidia/Kimi-K2.5-NVFP4": {
-        "id": "hf:nvidia/Kimi-K2.5-NVFP4",
-        "name": "Kimi K2.5 (NVFP4)",
+      "hf:nvidia/Kimi-K2.6-NVFP4": {
+        "id": "hf:nvidia/Kimi-K2.6-NVFP4",
+        "name": "Kimi K2.6 (NVFP4)",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -42943,9 +42943,9 @@
         "cost": { "input": 3, "output": 15, "cache_read": 0.3 },
         "limit": { "context": 200000, "output": 8192 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -46402,9 +46402,9 @@
           "api": "https://${AZURE_RESOURCE_NAME}.services.ai.azure.com/anthropic/v1"
         }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -47934,9 +47934,9 @@
         "cost": { "input": 5, "output": 25, "cache_read": 0.5, "cache_write": 6.25 },
         "limit": { "context": 200000, "output": 32000 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -49156,9 +49156,9 @@
         "cost": { "input": 0.6, "output": 2.5, "cache_read": 0.15 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -51915,7 +51915,7 @@
       },
       "kimi-k2-5": {
         "id": "kimi-k2-5",
-        "name": "Kimi K2.5",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -52606,8 +52606,8 @@
     "name": "Vultr",
     "doc": "https://api.vultrinference.com/",
     "models": {
-      "Kimi-K2.5": {
-        "id": "Kimi-K2.5",
+      "Kimi-K2.6": {
+        "id": "Kimi-K2.6",
         "name": "Kimi K2 Instruct",
         "family": "kimi",
         "attachment": false,
@@ -59920,9 +59920,9 @@
         "cost": { "input": 2, "output": 2 },
         "limit": { "context": 128000, "input": 128000, "output": 65535 }
       },
-      "TEE/kimi-k2.5": {
-        "id": "TEE/kimi-k2.5",
-        "name": "Kimi K2.5 TEE",
+      "TEE/kimi-k2.6": {
+        "id": "TEE/kimi-k2.6",
+        "name": "Kimi K2.6 TEE",
         "family": "kimi",
         "attachment": false,
         "reasoning": false,
@@ -59965,9 +59965,9 @@
         "cost": { "input": 0.2, "output": 0.8 },
         "limit": { "context": 131072, "input": 131072, "output": 8192 }
       },
-      "TEE/kimi-k2.5-thinking": {
-        "id": "TEE/kimi-k2.5-thinking",
-        "name": "Kimi K2.5 Thinking TEE",
+      "TEE/kimi-k2.6-thinking": {
+        "id": "TEE/kimi-k2.6-thinking",
+        "name": "Kimi K2.6 Thinking TEE",
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
@@ -60295,9 +60295,9 @@
         "cost": { "input": 0.3, "output": 1.2 },
         "limit": { "context": 256000, "input": 256000, "output": 262144 }
       },
-      "moonshotai/kimi-k2.5": {
-        "id": "moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "moonshotai/kimi-k2.6": {
+        "id": "moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": false,
@@ -60310,9 +60310,9 @@
         "cost": { "input": 0.3, "output": 1.9 },
         "limit": { "context": 256000, "input": 256000, "output": 65536 }
       },
-      "moonshotai/kimi-k2.5:thinking": {
-        "id": "moonshotai/kimi-k2.5:thinking",
-        "name": "Kimi K2.5 Thinking",
+      "moonshotai/kimi-k2.6:thinking": {
+        "id": "moonshotai/kimi-k2.6:thinking",
+        "name": "Kimi K2.6 Thinking",
         "family": "kimi-thinking",
         "attachment": true,
         "reasoning": true,
@@ -61818,9 +61818,9 @@
         "cost": { "input": 0, "output": 0 },
         "limit": { "context": 128000, "output": 16384 }
       },
-      "@cf/moonshotai/kimi-k2.5": {
-        "id": "@cf/moonshotai/kimi-k2.5",
-        "name": "Kimi K2.5",
+      "@cf/moonshotai/kimi-k2.6": {
+        "id": "@cf/moonshotai/kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -63204,9 +63204,9 @@
         "cost": { "input": 0.58, "output": 2.29 },
         "limit": { "context": 131000, "output": 131000 }
       },
-      "moonshotai/Kimi-K2.5": {
-        "id": "moonshotai/Kimi-K2.5",
-        "name": "moonshotai/Kimi-K2.5",
+      "moonshotai/Kimi-K2.6": {
+        "id": "moonshotai/Kimi-K2.6",
+        "name": "moonshotai/Kimi-K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -63326,9 +63326,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0, "cache_write": 0 },
         "limit": { "context": 262144, "output": 65536 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -63793,9 +63793,9 @@
         "cost": { "input": 1.15, "output": 8, "cache_read": 0.15 },
         "limit": { "context": 262144, "output": 262144 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
@@ -63838,9 +63838,9 @@
     "name": "Fireworks AI",
     "doc": "https://fireworks.ai/docs/",
     "models": {
-      "accounts/fireworks/routers/kimi-k2p5-turbo": {
-        "id": "accounts/fireworks/routers/kimi-k2p5-turbo",
-        "name": "Kimi K2.5 Turbo",
+      "accounts/fireworks/routers/kimi-k2p6-turbo": {
+        "id": "accounts/fireworks/routers/kimi-k2p6-turbo",
+        "name": "Kimi K2.6 Turbo",
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
@@ -63855,9 +63855,9 @@
         "cost": { "input": 0, "output": 0, "cache_read": 0 },
         "limit": { "context": 256000, "output": 256000 }
       },
-      "accounts/fireworks/models/kimi-k2p5": {
-        "id": "accounts/fireworks/models/kimi-k2p5",
-        "name": "Kimi K2.5",
+      "accounts/fireworks/models/kimi-k2p6": {
+        "id": "accounts/fireworks/models/kimi-k2p6",
+        "name": "Kimi K2.6",
         "family": "kimi-thinking",
         "attachment": false,
         "reasoning": true,
@@ -64075,9 +64075,9 @@
     "name": "OpenCode Go",
     "doc": "https://opencode.ai/docs/zen",
     "models": {
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": true,
         "reasoning": true,
@@ -64297,9 +64297,9 @@
         "cost": { "input": 3, "output": 15 },
         "limit": { "context": 200000, "output": 64000 }
       },
-      "kimi-k2.5": {
-        "id": "kimi-k2.5",
-        "name": "Kimi K2.5",
+      "kimi-k2.6": {
+        "id": "kimi-k2.6",
+        "name": "Kimi K2.6",
         "family": "kimi",
         "attachment": false,
         "reasoning": true,
