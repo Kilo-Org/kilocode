@@ -222,6 +222,114 @@ describe("Session.fork child session remapping", () => {
   )
 
   test(
+    "self-referential task metadata remaps to the forked session",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const parent = await Session.create({ title: "parent" })
+          const msg = await userMsg(parent.id)
+          await Session.updatePart({
+            id: PartID.ascending(),
+            messageID: msg,
+            sessionID: parent.id,
+            type: "text",
+            text: "self task",
+          } as MessageV2.TextPart)
+          const asst = await asstMsg(parent.id, msg)
+          await Session.updatePart(
+            taskPart({
+              messageID: asst,
+              sessionID: parent.id,
+              childSessionID: parent.id,
+            }),
+          )
+
+          const forked = await Session.fork({ sessionID: parent.id })
+          const msgs = await Session.messages({ sessionID: forked.id })
+          const tools = msgs
+            .flatMap((m) => m.parts)
+            .filter((p) => p.type === "tool" && p.tool === "task") as MessageV2.ToolPart[]
+
+          expect(tools).toHaveLength(1)
+          const meta = (tools[0].state as unknown as { metadata: { sessionId: string } }).metadata
+          expect(meta.sessionId).toBe(forked.id)
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+
+  test(
+    "cyclic task metadata remaps each session once",
+    async () => {
+      await using tmp = await tmpdir({ git: true })
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const parent = await Session.create({ title: "parent" })
+          const child = await Session.create({ parentID: parent.id, title: "child" })
+
+          const parentMsg = await userMsg(parent.id)
+          await Session.updatePart({
+            id: PartID.ascending(),
+            messageID: parentMsg,
+            sessionID: parent.id,
+            type: "text",
+            text: "call child",
+          } as MessageV2.TextPart)
+          const parentAsst = await asstMsg(parent.id, parentMsg)
+          await Session.updatePart(
+            taskPart({
+              messageID: parentAsst,
+              sessionID: parent.id,
+              childSessionID: child.id,
+            }),
+          )
+
+          const childMsg = await userMsg(child.id)
+          await Session.updatePart({
+            id: PartID.ascending(),
+            messageID: childMsg,
+            sessionID: child.id,
+            type: "text",
+            text: "call parent",
+          } as MessageV2.TextPart)
+          const childAsst = await asstMsg(child.id, childMsg)
+          await Session.updatePart(
+            taskPart({
+              messageID: childAsst,
+              sessionID: child.id,
+              childSessionID: parent.id,
+            }),
+          )
+
+          const forked = await Session.fork({ sessionID: parent.id })
+          const msgs = await Session.messages({ sessionID: forked.id })
+          const tools = msgs
+            .flatMap((m) => m.parts)
+            .filter((p) => p.type === "tool" && p.tool === "task") as MessageV2.ToolPart[]
+          const id = (tools[0].state as unknown as { metadata: { sessionId: string } }).metadata.sessionId
+
+          expect(id).not.toBe(child.id)
+          const copy = await Session.get(SessionID.make(id))
+          expect(copy.id).toBe(id)
+
+          const childMsgs = await Session.messages({ sessionID: copy.id })
+          const childTools = childMsgs
+            .flatMap((m) => m.parts)
+            .filter((p) => p.type === "tool" && p.tool === "task") as MessageV2.ToolPart[]
+          const back = (childTools[0].state as unknown as { metadata: { sessionId: string } }).metadata.sessionId
+
+          expect(back).toBe(forked.id)
+        },
+      })
+    },
+    { timeout: 30000 },
+  )
+
+  test(
     "non-task tool parts are not affected",
     async () => {
       await using tmp = await tmpdir({ git: true })

@@ -304,7 +304,8 @@ export const kiloSessionFork = fn(
   async (input) => {
     const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
     const session = await runPromise((svc) => svc.fork(input))
-    await KiloSession.remapChildren(session.id)
+    const remapped = new Map<string, SessionID>([[input.sessionID, session.id]])
+    await KiloSession.remapChildren(session.id, remapped)
     return session
   },
 )

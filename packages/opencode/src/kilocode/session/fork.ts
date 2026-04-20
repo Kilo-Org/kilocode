@@ -1,3 +1,4 @@
+import { makeRuntime } from "@/effect/run-service"
 import { Session } from "@/session"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionID, PartID } from "@/session/schema"
@@ -22,7 +23,7 @@ function childID(part: MessageV2.Part): string | undefined {
  * child session references, causing SSE events and permission prompts to bleed
  * across sessions.
  */
-export async function remapChildren(sid: SessionID): Promise<void> {
+export async function remapChildren(sid: SessionID, remapped = new Map<string, SessionID>()): Promise<void> {
   const msgs = await Session.messages({ sessionID: sid })
   const refs: { part: MessageV2.ToolPart; child: string }[] = []
   for (const msg of msgs) {
@@ -33,15 +34,14 @@ export async function remapChildren(sid: SessionID): Promise<void> {
   }
   if (refs.length === 0) return
 
-  const remapped = new Map<string, SessionID>()
+  const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
   for (const ref of refs) {
     if (remapped.has(ref.child)) continue
     const exists = await Session.get(SessionID.make(ref.child)).catch(() => undefined)
     if (!exists) continue
-    // Session.fork() already calls remapChildren on the forked child,
-    // so nested subagents are handled recursively without an explicit call here.
-    const forked = await Session.fork({ sessionID: SessionID.make(ref.child) })
+    const forked = await runPromise((svc) => svc.fork({ sessionID: SessionID.make(ref.child) }))
     remapped.set(ref.child, forked.id)
+    await remapChildren(forked.id, remapped)
   }
 
   if (remapped.size === 0) return
