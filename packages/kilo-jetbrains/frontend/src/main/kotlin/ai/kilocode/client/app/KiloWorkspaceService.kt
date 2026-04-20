@@ -5,16 +5,22 @@ package ai.kilocode.client.app
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.util.Disposer
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * App-level service that manages [Workspace] instances keyed by directory.
@@ -37,7 +43,20 @@ class KiloWorkspaceService internal constructor(
         private val INIT = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
     }
 
-    private val workspaces = ConcurrentHashMap<String, Workspace>()
+    private val workspaces = ConcurrentHashMap<String, Entry>()
+
+    private class Entry(
+        val scope: CoroutineScope,
+        val workspace: Workspace,
+    ) {
+        private val refs = AtomicInteger(0)
+
+        fun retain() {
+            refs.incrementAndGet()
+        }
+
+        fun release(): Int = refs.decrementAndGet()
+    }
 
     // ------ RPC helpers ------
 
@@ -55,20 +74,42 @@ class KiloWorkspaceService internal constructor(
     // ------ Public API ------
 
     /**
-     * Get or create a [Workspace] for [directory].
+     * Get or create a [Workspace] for [directory] whose lifetime is tied to [parent].
      *
      * Synchronous — returns immediately. The workspace's [Workspace.state]
      * flow starts streaming lazily when first collected. Multiple callers
      * for the same directory share the same instance.
      */
-    fun workspace(directory: String): Workspace {
-        return workspaces.getOrPut(directory) {
-            LOG.info("Creating workspace for $directory")
-            val state = stream { state(directory) }
-                .stateIn(cs, SharingStarted.Eagerly, INIT)
-            Workspace(directory, state)
+    fun workspace(directory: String, parent: Disposable): Workspace {
+        val entry = workspaces.compute(directory) { _, current ->
+            val next = current ?: create(directory)
+            next.retain()
+            next
+        }!!
+        Disposer.register(parent) { release(directory, entry) }
+        return entry.workspace
+    }
+
+    private fun create(directory: String): Entry {
+        LOG.info("Creating workspace for $directory")
+        val job = SupervisorJob(cs.coroutineContext[Job])
+        val scope = CoroutineScope(cs.coroutineContext + job)
+        val state = stream { state(directory) }
+            .stateIn(scope, SharingStarted.WhileSubscribed(5_000), INIT)
+        return Entry(scope, Workspace(directory, state))
+    }
+
+    private fun release(directory: String, entry: Entry) {
+        workspaces.computeIfPresent(directory) { _, current ->
+            if (current !== entry) return@computeIfPresent current
+            if (current.release() > 0) return@computeIfPresent current
+            LOG.info("Disposing workspace for $directory")
+            current.scope.cancel()
+            null
         }
     }
+
+    internal fun cachedWorkspaces(): Int = workspaces.size
 
     /**
      * Resolve the real project directory from a hint path.

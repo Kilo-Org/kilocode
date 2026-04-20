@@ -61,7 +61,7 @@ abstract class SessionModelTestBase : BasePlatformTestCase() {
         sessions = KiloSessionService(project, scope, rpc)
         app = KiloAppService(scope, appRpc)
         workspaces = KiloWorkspaceService(scope, projectRpc)
-        workspace = workspaces.workspace("/test")
+        workspace = workspaces.workspace("/test", parent)
     }
 
     override fun tearDown() {
