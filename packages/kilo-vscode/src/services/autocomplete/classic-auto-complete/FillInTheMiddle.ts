@@ -6,7 +6,7 @@ import {
   FillInAtCursorSuggestion,
 } from "../types"
 import { getProcessedSnippets } from "./getProcessedSnippets"
-import { getTemplateForModel } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { compileCodestralPrefixSuffix } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { AutocompleteModel } from "../AutocompleteModel"
 
 export type { FimAutocompletePrompt, FimCompletionResult }
@@ -17,7 +17,7 @@ export class FimPromptBuilder {
   /**
    * Build complete FIM prompt with all necessary data
    */
-  async getFimPrompts(autocompleteInput: AutocompleteInput, modelName: string): Promise<FimAutocompletePrompt> {
+  async getFimPrompts(autocompleteInput: AutocompleteInput): Promise<FimAutocompletePrompt> {
     const { filepathUri, helper, snippetsWithUris, workspaceDirs } = await getProcessedSnippets(
       autocompleteInput,
       autocompleteInput.filepath,
@@ -31,20 +31,9 @@ export class FimPromptBuilder {
     const prunedPrefixRaw = helper.prunedPrefix
     const prunedSuffix = helper.prunedSuffix
 
-    const template = getTemplateForModel(modelName)
-
-    let formattedPrefix = prunedPrefixRaw
-    if (template.compilePrefixSuffix && prunedSuffix) {
-      const [compiledPrefix] = template.compilePrefixSuffix(
-        prunedPrefixRaw,
-        prunedSuffix,
-        filepathUri,
-        "", // reponame not used in our context
-        snippetsWithUris,
-        workspaceDirs,
-      )
-      formattedPrefix = compiledPrefix
-    }
+    const [formattedPrefix] = prunedSuffix
+      ? compileCodestralPrefixSuffix(prunedPrefixRaw, prunedSuffix, filepathUri, snippetsWithUris, workspaceDirs)
+      : [prunedPrefixRaw]
 
     return {
       formattedPrefix,
