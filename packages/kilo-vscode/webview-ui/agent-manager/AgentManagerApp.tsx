@@ -1888,13 +1888,12 @@ const AgentManagerContent: Component = () => {
     if (sel === LOCAL) addPendingTab()
     else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
-
-  const handleForkSession = (sessionId: string) => {
+  const handleForkSession = (sessionId: string, messageId?: string) => {
     const sel = selection()
-    if (sel === LOCAL) vscode.postMessage({ type: "agentManager.forkSession", sessionId })
-    else if (sel) vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
+    const msg = { type: "agentManager.forkSession" as const, sessionId, ...(messageId ? { messageId } : {}) }
+    if (sel === LOCAL) return vscode.postMessage(msg)
+    if (sel) vscode.postMessage({ ...msg, worktreeId: sel })
   }
-
   const handleCloseTab = (sessionId: string) => {
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
@@ -2948,6 +2947,7 @@ const AgentManagerContent: Component = () => {
                   openLocally(id)
                 }}
                 onShowHistory={() => setHistory(true)}
+                onForkMessage={readOnly() ? undefined : handleForkSession}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
                 promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}

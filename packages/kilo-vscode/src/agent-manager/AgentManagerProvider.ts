@@ -297,7 +297,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
-    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
+    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
   }
 
@@ -931,7 +931,7 @@ export class AgentManagerProvider implements Disposable {
     return null
   }
 
-  private onForkSession(sessionId: string, worktreeId?: string) {
+  private onForkSession(sessionId: string, worktreeId?: string, messageId?: string) {
     return forkSession(
       {
         getClient: () => this.connectionService.getClient(),
@@ -951,6 +951,7 @@ export class AgentManagerProvider implements Disposable {
       },
       sessionId,
       worktreeId,
+      messageId,
     )
   }
 

@@ -590,6 +590,7 @@ interface ForkSessionIn {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
 }
 
 interface AbortIn {

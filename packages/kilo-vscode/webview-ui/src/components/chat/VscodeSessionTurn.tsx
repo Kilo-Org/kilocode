@@ -55,6 +55,7 @@ export interface VscodeTurn {
 interface VscodeSessionTurnProps {
   turn: VscodeTurn
   queued?: boolean
+  onForkMessage?: (sessionId: string, messageId: string) => void
 }
 
 export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
@@ -153,6 +154,7 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
               parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
               interrupted={interrupted()}
               queued={props.queued}
+              onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
               onRevert={
                 assistantMessages().length > 0 && !session.revert()
                   ? () => {

@@ -2054,6 +2054,7 @@ export interface ForkSessionRequest {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
 }
 
 // Close (remove) a session from its worktree
