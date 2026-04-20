@@ -1,8 +1,10 @@
 // kilocode_change - new file
+import { Context, Effect, Layer } from "effect"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { Identifier } from "../id/id"
-import { Instance } from "../project/instance"
+import { InstanceState } from "@/effect/instance-state"
+import { makeRuntime } from "@/effect/run-service"
 import { Log } from "../util/log"
 import { fn } from "../util/fn"
 import { MCP } from "../mcp"
@@ -77,17 +79,37 @@ export namespace SessionNetwork {
     ),
   }
 
-  const state = Instance.state(async () => {
-    const pending: Record<
+  interface StateShape {
+    pending: Record<
       string,
       {
         info: Wait
         resolve: () => void
         reject: (e: unknown) => void
       }
-    > = {}
-    return { pending }
-  })
+    >
+  }
+
+  class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<StateShape> }>()(
+    "@kilocode/SessionNetwork.State",
+  ) {}
+
+  const stateLayer = Layer.effect(
+    StateService,
+    Effect.gen(function* () {
+      const is = yield* InstanceState.make(
+        Effect.fn("SessionNetwork.state")(function* () {
+          return { pending: {} } as StateShape
+        }),
+      )
+      return StateService.of({
+        get: () => InstanceState.get(is),
+      })
+    }),
+  )
+
+  const stateRuntime = makeRuntime(StateService, stateLayer)
+  const state = (): Promise<StateShape> => stateRuntime.runPromise((svc) => svc.get())
 
   export function code(err: unknown) {
     for (const item of chain(err)) {

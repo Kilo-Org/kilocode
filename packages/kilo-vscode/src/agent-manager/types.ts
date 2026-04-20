@@ -24,6 +24,8 @@ type SessionMode = "worktree" | "local"
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
 export type WorktreeDiffEntry = SnapshotFileDiff & {
+  before?: string
+  after?: string
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
@@ -532,6 +534,9 @@ interface PreviewImageIn {
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
+  mode?: "replace" | "prepend" | "focus"
+  before?: string
+  limit?: number
 }
 
 interface FileSourceIn {

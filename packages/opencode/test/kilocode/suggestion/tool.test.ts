@@ -1,7 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test, spyOn } from "bun:test"
+import { Effect, Layer, ManagedRuntime } from "effect"
 import { Command } from "../../../src/command"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { SuggestTool } from "../../../src/kilocode/suggestion/tool"
+import { Tool } from "../../../src/tool/tool"
+import { Truncate } from "../../../src/tool/truncate"
+import { Agent } from "../../../src/agent/agent"
+
+const toolRuntime = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
+
+async function initTool() {
+  return toolRuntime.runPromise(
+    Effect.gen(function* () {
+      const info = yield* SuggestTool
+      return yield* Tool.init(info)
+    }),
+  )
+}
 
 const ctx = {
   sessionID: "ses_test",
@@ -23,7 +38,7 @@ const ctx = {
     },
   ],
   metadata: () => {},
-  ask: async () => {},
+  ask: () => Effect.void,
 }
 
 describe("tool.suggest", () => {
@@ -41,15 +56,17 @@ describe("tool.suggest", () => {
   })
 
   test("returns dismissal result when suggestion is dismissed", async () => {
-    const tool = await SuggestTool.init()
+    const tool = await initTool()
     show.mockRejectedValueOnce(new Suggestion.DismissedError())
 
-    const result = await tool.execute(
-      {
-        suggest: "Run review?",
-        actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
-      },
-      ctx as any,
+    const result = await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        },
+        ctx as any,
+      ),
     )
 
     expect(result.title).toBe("Suggestion dismissed")
@@ -58,7 +75,7 @@ describe("tool.suggest", () => {
   })
 
   test("resolves command template for slash-command action prompt", async () => {
-    const tool = await SuggestTool.init()
+    const tool = await initTool()
     show.mockResolvedValueOnce({
       label: "Start review",
       description: "Run a local review now",
@@ -71,12 +88,14 @@ describe("tool.suggest", () => {
       hints: [],
     })
 
-    const result = await tool.execute(
-      {
-        suggest: "Run review?",
-        actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
-      },
-      ctx as any,
+    const result = await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+        },
+        ctx as any,
+      ),
     )
 
     expect(result.title).toBe("User accepted: Start review")
@@ -92,18 +111,20 @@ describe("tool.suggest", () => {
   })
 
   test("returns plain-text prompt directly for non-command actions", async () => {
-    const tool = await SuggestTool.init()
+    const tool = await initTool()
     show.mockResolvedValueOnce({
       label: "Run tests",
       prompt: "Run the test suite and fix any failures",
     })
 
-    const result = await tool.execute(
-      {
-        suggest: "Tests might need running",
-        actions: [{ label: "Run tests", prompt: "Run the test suite and fix any failures" }],
-      },
-      ctx as any,
+    const result = await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Tests might need running",
+          actions: [{ label: "Run tests", prompt: "Run the test suite and fix any failures" }],
+        },
+        ctx as any,
+      ),
     )
 
     expect(result.title).toBe("User accepted: Run tests")
@@ -114,19 +135,21 @@ describe("tool.suggest", () => {
   })
 
   test("falls back to raw prompt when command is not found", async () => {
-    const tool = await SuggestTool.init()
+    const tool = await initTool()
     show.mockResolvedValueOnce({
       label: "Unknown cmd",
       prompt: "/nonexistent-command",
     })
     cmdGet.mockResolvedValueOnce(undefined)
 
-    const result = await tool.execute(
-      {
-        suggest: "Try this?",
-        actions: [{ label: "Unknown cmd", prompt: "/nonexistent-command" }],
-      },
-      ctx as any,
+    const result = await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Try this?",
+          actions: [{ label: "Unknown cmd", prompt: "/nonexistent-command" }],
+        },
+        ctx as any,
+      ),
     )
 
     expect(result.title).toBe("User accepted: Unknown cmd")
@@ -135,7 +158,7 @@ describe("tool.suggest", () => {
   })
 
   test("falls back to raw prompt when template resolution fails", async () => {
-    const tool = await SuggestTool.init()
+    const tool = await initTool()
     show.mockResolvedValueOnce({
       label: "Start review",
       prompt: "/local-review-uncommitted",
@@ -147,12 +170,14 @@ describe("tool.suggest", () => {
       hints: [],
     })
 
-    const result = await tool.execute(
-      {
-        suggest: "Run review?",
-        actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
-      },
-      ctx as any,
+    const result = await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start review", prompt: "/local-review-uncommitted" }],
+        },
+        ctx as any,
+      ),
     )
 
     expect(result.title).toBe("User accepted: Start review")

@@ -52,7 +52,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Cost-conscious developers who want better results than free models at a fraction of frontier cost.
 
-**What it does**: Follows the same mode-based routing structure as Frontier but uses GPT 5.3 Codex — a cost-effective model with strong reasoning and coding capabilities — across all modes.
+**What it does**: Uses GPT 5.3 Codex — a cost-effective model with strong reasoning and coding capabilities — for every mode. Unlike Frontier, Balanced does not vary its underlying model by mode.
 
 **Pricing**: Paid, but significantly cheaper than Frontier.
 
@@ -62,17 +62,17 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Users who want to try Kilo without a credit card, students, hobbyists, and anyone exploring AI-assisted coding.
 
-**What it does**: Automatically maps to the best available free model(s) for each mode. As free model availability changes due to promotional periods, the mapping updates transparently. Users always get the best free option without having to track which models are currently available.
+**What it does**: Splits requests across the best available free models, weighted by a deterministic per-session hash so a given session sticks with one model. As free model availability changes due to promotional periods, the split and the underlying models are updated transparently server-side. Users always get the best free option without having to track which models are currently available.
 
 **Pricing**: Free. No credits required.
 
-**Constraints**: Free models may not provide sufficient breadth to justify different models per mode. In that case, a single model may be used for all modes. Quality will be lower than Frontier or Balanced tiers — this is a tradeoff users accept by choosing free.
+**Constraints**: Free models do not vary by mode — the same model is used for every mode within a session. Quality will be lower than Frontier or Balanced tiers — this is a tradeoff users accept by choosing free.
 
 ### Auto: Small (internal)
 
 **Who it's for**: Not user-facing. Used internally by Kilo for lightweight background tasks (session titles, commit messages, conversation summaries).
 
-**What it does**: Automatically selects the right small model for lightweight tasks. When credits are available, it uses a fast paid small model.
+**What it does**: Automatically selects the right small model for lightweight tasks. When the account has a positive balance, it uses a fast paid small model; otherwise it falls back to a free small model.
 
 **Why it matters**: Users never think about background tasks, and they shouldn't have to. Auto: Small ensures these tasks always work, always feel fast, and never waste credits on an expensive model when a cheap one will do.
 
@@ -115,8 +115,8 @@ The Kilo API at `api.kilo.ai` defines which underlying models each `kilo-auto/*`
 {
   "opencode": {
     "variants": {
-      "architect": { "model": "anthropic/claude-opus-4-6", ... },
-      "code": { "model": "anthropic/claude-sonnet-4-6", ... }
+      "architect": { "model": "anthropic/claude-opus-4.7", ... },
+      "code": { "model": "anthropic/claude-sonnet-4.6", ... }
     }
   }
 }

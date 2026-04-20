@@ -177,7 +177,7 @@ export class SdkSSEAdapter {
           if (type !== "server.heartbeat") {
             console.log("[Kilo New] SSE: 📨 Event:", type)
           }
-          this.notifyEvent(globalEvent.payload)
+          this.notifyEvent(globalEvent.payload as Event)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")

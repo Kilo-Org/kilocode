@@ -99,6 +99,37 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("accepts models with chat_template_args variant", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Thinking Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          variants: {
+            thinking: { chat_template_args: { enable_thinking: true } },
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Thinking Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            variants: {
+              thinking: { chat_template_args: { enable_thinking: true } },
+            },
+          },
+        },
+      },
+    })
+  })
+
   it("rejects unknown fields", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Bad Provider",

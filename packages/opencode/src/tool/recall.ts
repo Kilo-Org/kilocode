@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import z from "zod"
+import { Effect } from "effect"
 import { Tool } from "./tool"
 import { Instance } from "../project/instance"
 import { Locale } from "../util/locale"
@@ -7,21 +8,29 @@ import { Filesystem } from "../util/filesystem" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
-export const RecallTool = Tool.define("kilo_local_recall", {
-  description: DESCRIPTION,
-  parameters: z.object({
-    mode: z.enum(["search", "read"]).describe("'search' to find sessions by title, 'read' to get a session transcript"),
-    query: z.string().optional().describe("Search query to match against session titles (required for search mode)"),
-    sessionID: z.string().optional().describe("Session ID to read the transcript of (required for read mode)"),
-    limit: z.number().optional().describe("Maximum number of search results to return (default: 20, max: 50)"),
-  }),
-  async execute(params, ctx) {
-    if (params.mode === "search") {
-      return search(params, ctx)
-    }
-    return read(params, ctx)
-  },
+const Parameters = z.object({
+  mode: z.enum(["search", "read"]).describe("'search' to find sessions by title, 'read' to get a session transcript"),
+  query: z.string().optional().describe("Search query to match against session titles (required for search mode)"),
+  sessionID: z.string().optional().describe("Session ID to read the transcript of (required for read mode)"),
+  limit: z.number().optional().describe("Maximum number of search results to return (default: 20, max: 50)"),
 })
+
+export const RecallTool = Tool.define(
+  "kilo_local_recall",
+  Effect.gen(function* () {
+    return {
+      description: DESCRIPTION,
+      parameters: Parameters,
+      execute: (params: z.infer<typeof Parameters>, ctx: Tool.Context) =>
+        Effect.gen(function* () {
+          if (params.mode === "search") {
+            return yield* Effect.promise(() => search(params, ctx))
+          }
+          return yield* Effect.promise(() => read(params, ctx))
+        }).pipe(Effect.orDie),
+    }
+  }),
+)
 
 async function search(params: { query?: string; limit?: number }, ctx: Tool.Context) {
   if (!params.query) {

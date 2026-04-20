@@ -1,7 +1,6 @@
 import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
-import { Instance } from "../../project/instance"
 import { Log } from "../../util/log"
 import z from "zod"
 
@@ -73,20 +72,16 @@ export namespace Suggestion {
     ),
   }
 
-  const state = Instance.state(async () => {
-    const pending: Record<
-      string,
-      {
-        info: Request
-        resolve: (action: Action) => void
-        reject: (error: any) => void
-      }
-    > = {}
-
-    return {
-      pending,
+  // kilocode_change - Instance.state() removed in v1.4.4; use module-level state
+  // (request IDs are globally unique so instance scoping is not needed)
+  const pending: Record<
+    string,
+    {
+      info: Request
+      resolve: (action: Action) => void
+      reject: (error: any) => void
     }
-  })
+  > = {}
 
   export async function show(input: {
     sessionID: string
@@ -95,7 +90,7 @@ export namespace Suggestion {
     blocking?: boolean
     tool?: { messageID: string; callID: string }
   }): Promise<Action> {
-    const s = await state()
+    const s = { pending }
     const id = Identifier.ascending("suggestion")
 
     log.info("shown", { id, actions: input.actions.length })
@@ -119,7 +114,7 @@ export namespace Suggestion {
   }
 
   export async function accept(input: { requestID: string; index: number }): Promise<boolean> {
-    const s = await state()
+    const s = { pending }
     const existing = s.pending[input.requestID]
     if (!existing) {
       log.warn("accept for unknown request", { requestID: input.requestID })
@@ -150,7 +145,7 @@ export namespace Suggestion {
   }
 
   export async function dismiss(requestID: string): Promise<boolean> {
-    const s = await state()
+    const s = { pending }
     const existing = s.pending[requestID]
     if (!existing) {
       log.warn("dismiss for unknown request", { requestID })
@@ -176,7 +171,7 @@ export namespace Suggestion {
   }
 
   export async function dismissAll(sessionID: string): Promise<void> {
-    const s = await state()
+    const s = { pending }
     for (const [id, entry] of Object.entries(s.pending)) {
       if (entry.info.sessionID !== sessionID) continue
       delete s.pending[id]
@@ -190,6 +185,6 @@ export namespace Suggestion {
   }
 
   export async function list() {
-    return state().then((state) => Object.values(state.pending).map((item) => item.info))
+    return Object.values(pending).map((item) => item.info)
   }
 }

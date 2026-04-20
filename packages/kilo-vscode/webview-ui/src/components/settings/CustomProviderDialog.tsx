@@ -17,6 +17,7 @@ import { createProviderAction } from "../../utils/provider-action"
 import { MASKED_CUSTOM_PROVIDER_KEY, resolveCustomProviderKey } from "../../../../src/shared/custom-provider"
 import { ModelCard } from "./CustomProviderModelCard"
 import type {
+  ChatTemplateArgsValue,
   EnableThinkingValue,
   ModelEntry,
   ReasoningEffortValue,
@@ -149,6 +150,7 @@ function validateCustomProvider(input: ValidateArgs) {
               if (v.enableThinking !== undefined) cfg.enable_thinking = v.enableThinking
               if (v.thinking !== undefined) cfg.thinking = { type: v.thinking }
               if (v.reasoningEffort !== undefined) cfg.reasoningEffort = v.reasoningEffort
+              if (v.chatTemplateArgs !== undefined) cfg.chat_template_args = { enable_thinking: v.chatTemplateArgs }
               return [v.name.trim(), cfg]
             })
         : []
@@ -254,6 +256,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             : undefined,
         reasoningEffort:
           typeof vcfg.reasoningEffort === "string" ? (vcfg.reasoningEffort as ReasoningEffortValue) : undefined,
+        chatTemplateArgs:
+          typeof vcfg.chat_template_args === "object" && vcfg.chat_template_args !== null
+            ? ((vcfg.chat_template_args as { enable_thinking?: boolean }).enable_thinking as ChatTemplateArgsValue)
+            : undefined,
       }))
       return {
         id,
@@ -514,7 +520,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addVariant(mi: number) {
-    const blank: VariantEntry = { name: "", enableThinking: undefined, thinking: undefined, reasoningEffort: undefined }
+    const blank: VariantEntry = {
+      name: "",
+      enableThinking: undefined,
+      thinking: undefined,
+      reasoningEffort: undefined,
+      chatTemplateArgs: undefined,
+    }
     setForm("models", mi, "variants", (v) => [...v, blank])
     setErrors("models", mi, "variants", (v) => [...(v ?? []), {}])
   }
@@ -703,6 +715,9 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeVariantThinking={(vi, val) => setForm("models", i(), "variants", vi, "thinking", val)}
                   onChangeVariantReasoningEffort={(vi, val) =>
                     setForm("models", i(), "variants", vi, "reasoningEffort", val)
+                  }
+                  onChangeVariantChatTemplateArgs={(vi, val) =>
+                    setForm("models", i(), "variants", vi, "chatTemplateArgs", val)
                   }
                 />
               )}

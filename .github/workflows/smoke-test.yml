@@ -7,7 +7,7 @@
 #
 # Triggers:
 #   - workflow_dispatch: manually from Actions tab (optionally pass a CLI version)
-#   - push to main: automatically after every merge
+#   - workflow_call: from publish.yml after draft release assets are uploaded
 #
 # Required secrets:
 #   KILO_API_KEY         — Kilo Gateway key
@@ -23,13 +23,19 @@ on:
         description: "CLI version to test (e.g. 7.0.36). Leave blank for latest npm release."
         required: false
         type: string
+  workflow_call:
+    inputs:
+      cli_version:
+        description: "CLI version to test from draft release assets."
+        required: false
+        type: string
 
 concurrency:
   group: smoke-test
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write # needed to read draft release assets when called from publish.yml
 
 jobs:
   smoke-test:
@@ -71,18 +77,31 @@ jobs:
             exit 1
           fi
 
-      - name: Resolve CLI version
+      - name: Resolve CLI asset URL
         id: cli
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ inputs.cli_version }}"
-          if [[ -n "$VERSION" ]]; then
-            URL="https://github.com/Kilo-Org/kilocode/releases/download/v${VERSION}/kilo-linux-x64.tar.gz"
-            echo "cli_url=$URL" >> "$GITHUB_OUTPUT"
-            echo "::notice::Testing CLI v${VERSION} from release: $URL"
-          else
+          if [[ -z "$VERSION" ]]; then
             echo "cli_url=" >> "$GITHUB_OUTPUT"
             echo "::notice::Testing latest CLI from npm"
+            exit 0
           fi
+          # Resolve the release asset via the API so this works for draft
+          # releases too (browser /releases/download/... URLs 404 on drafts).
+          # The installer passes Accept: application/octet-stream + bearer
+          # auth, which is what the API asset endpoint expects.
+          # The tag_name filter yields at most one release and one asset,
+          # so --jq returns a single URL without needing head/pipefail games.
+          URL=$(gh api "repos/${{ github.repository }}/releases" \
+            --jq ".[] | select(.tag_name == \"v${VERSION}\") | .assets[] | select(.name == \"kilo-linux-x64.tar.gz\") | .url")
+          if [[ -z "$URL" ]]; then
+            echo "::error::asset kilo-linux-x64.tar.gz not found for v${VERSION}"
+            exit 1
+          fi
+          echo "cli_url=$URL" >> "$GITHUB_OUTPUT"
+          echo "::notice::Testing CLI v${VERSION} via asset API: $URL"
 
       - name: Run smoke test — hello-world
         env:

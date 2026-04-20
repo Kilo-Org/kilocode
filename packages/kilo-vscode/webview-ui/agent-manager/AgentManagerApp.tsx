@@ -762,20 +762,28 @@ const AgentManagerContent: Component = () => {
     return result
   })
 
-  // Sessions for the currently selected worktree (tab bar), respecting custom order if set
+  // Oldest-first sort before applyTabOrder — worktree label and tab bar must agree on "first session".
+  const sessionsForWorktree = (worktreeId: string): SessionInfo[] => {
+    const ids = new Set(
+      managedSessions()
+        .filter((ms) => ms.worktreeId === worktreeId)
+        .map((ms) => ms.id),
+    )
+    return applyTabOrder(
+      session
+        .sessions()
+        .filter((s) => ids.has(s.id))
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+      worktreeTabOrder()[worktreeId],
+    )
+  }
+
   const activeWorktreeSessions = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (!sel || sel === LOCAL) return []
-    const managed = managedSessions().filter((ms) => ms.worktreeId === sel)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session
-      .sessions()
-      .filter((s) => ids.has(s.id))
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-    return applyTabOrder(sessions, worktreeTabOrder()[sel])
+    return sessionsForWorktree(sel)
   })
 
-  // Active tab sessions: local sessions when on "local", worktree sessions otherwise
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
@@ -783,11 +791,10 @@ const AgentManagerContent: Component = () => {
     return []
   })
 
-  // Whether the selected context has zero sessions
   const contextEmpty = createMemo(() => {
     const sel = selection()
     if (sel === LOCAL) return localSessionIDs().length === 0
-    if (sel) return activeWorktreeSessions().length === 0
+    if (sel) return activeWorktreeSessions().length === 0 && managedSessions().every((ms) => ms.worktreeId !== sel)
     return false
   })
 
@@ -802,8 +809,6 @@ const AgentManagerContent: Component = () => {
     }
   })
 
-  // Scroll the sidebar to the focused item whenever selection changes (covers keyboard
-  // navigation, new worktree creation, and any other programmatic selection change).
   createEffect(() => {
     const id = selection() ?? session.currentSessionID()
     if (!id) return
@@ -813,22 +818,16 @@ const AgentManagerContent: Component = () => {
     })
   })
 
-  // Read-only mode: viewing an unassigned session (not in a worktree or local)
   const readOnly = createMemo(() => selection() === null && !!session.currentSessionID())
 
-  // Tab scroll: hidden scrollbar with fade overflow indicators
   const visibleTabId = createMemo(() =>
     reviewActive() ? REVIEW_TAB_ID : (session.currentSessionID() ?? activePendingId()),
   )
   const tabScroll = useTabScroll(activeTabs, visibleTabId)
 
-  // Display name for worktree — prefers persisted label, then first session title, then branch
   const worktreeLabel = (wt: WorktreeState): string => {
     if (wt.label) return wt.label
-    const managed = managedSessions().filter((ms) => ms.worktreeId === wt.id)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session.sessions().filter((s) => ids.has(s.id))
-    return firstOrderedTitle(sessions, worktreeTabOrder()[wt.id], wt.branch)
+    return firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
   }
 
   const worktreeSubtitle = (wt: WorktreeState): string | undefined => {
@@ -838,7 +837,6 @@ const AgentManagerContent: Component = () => {
 
   const isStaleWorktree = (worktreeId: string): boolean => staleWorktreeIds().has(worktreeId)
 
-  /** True when any session in the given ID list is actively working (busy/retry and not blocked by permissions/questions). */
   const isAnySessionBusy = (ids: string[]): boolean => {
     if (ids.length === 0) return false
     const statuses = session.allStatusMap()
@@ -1008,12 +1006,15 @@ const AgentManagerContent: Component = () => {
   const selectWorktree = (worktreeId: string) => {
     saveTabMemory()
     setSelection(worktreeId)
+    // Try rich session list first, fall back to managed session IDs when
+    // session.sessions() hasn't been populated yet for this worktree.
+    const rich = sessionsForWorktree(worktreeId)
     const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
-    const ids = new Set(managed.map((ms) => ms.id))
-    const sessions = session.sessions().filter((s) => ids.has(s.id))
     const remembered = tabMemory()[worktreeId]
-    const target = remembered ? sessions.find((s) => s.id === remembered) : undefined
-    const fallback = target ?? sessions[0]
+    const target = remembered
+      ? (rich.find((s) => s.id === remembered) ?? managed.find((ms) => ms.id === remembered))
+      : undefined
+    const fallback = target ?? rich[0] ?? managed[0]
     if (fallback) session.selectSession(fallback.id)
     else session.setCurrentSessionID(undefined)
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)

@@ -11,7 +11,7 @@ When working on complex tasks, conversations with Kilo Code can grow long and co
 
 ## The Problem: Context Window Limits
 
-Every AI model has a maximum context window - a limit on how much text it can process at once. As your conversation grows with code snippets, file contents, and back-and-forth discussions, you may approach this limit. When this happens, you might experience:
+Every AI model has a maximum context window — a limit on how much text it can process at once. As your conversation grows with code snippets, file contents, and back-and-forth discussions, you may approach this limit. When this happens, you might experience:
 
 - Slower responses as the model processes more tokens
 - Higher API costs due to increased token usage
@@ -22,47 +22,47 @@ Every AI model has a maximum context window - a limit on how much text it can pr
 
 ## The Solution: Auto-Compaction
 
-The new platform uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+Kilo Code uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
 
 - The overall goal of the session
-- Key discoveries made along the way
+- Instructions given along the way
+- Key discoveries made
 - What has been accomplished so far
-- Files that were modified
+- Relevant files and directories
 
 This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
 
-## How Compaction Works
+## How Compaction Triggers
 
-### Automatic Compaction
+### Automatic trigger
 
-Compaction triggers automatically when the conversation reaches the `usableWindow` token threshold. The full conversation history is sent to a dedicated **compaction agent**, which produces a structured summary. This happens in the background without interrupting your workflow.
+Kilo tracks the total token count for the session — input, output, and cached reads and writes — and compares it to the model's context window. Compaction runs when the total fills the window minus a reserved buffer of headroom kept free for the next turn.
+
+How the buffer is chosen depends on what the model declares. When the model advertises a separate input limit, the buffer defaults to 20,000 tokens (or the model's maximum output size, whichever is smaller). When the model only declares a single context window, Kilo instead reserves the model's full output cap — up to 32,000 tokens.
+
+Custom models that do not declare a context window are not tracked, and auto-compaction does not run for them.
 
 ### Context Pruning
 
-In addition to compaction, the system can **prune** old tool outputs to reclaim context space incrementally. Tool results older than a 40,000-token recency window are replaced with `"[Old tool result content cleared]"`. This is a lighter-weight mechanism that runs alongside full compaction.
+Between turns, Kilo also runs a lighter **prune** pass. It walks completed tool outputs outside a 40,000-token recency window and replaces them with `"[Old tool result content cleared]"`. Pruning runs incrementally so large tool outputs don't consume space forever, even before full compaction is needed.
 
 ### Manual Compaction
 
-You can also trigger compaction manually:
+You can trigger compaction at any time:
 
-- **CLI TUI**: Press `<leader>c` to compact the current session
-- **Extension Webview**: Send a `CompactRequest` message to trigger compaction
+- **Slash command**: type `/compact` in chat (also findable by typing `smol` or `condense`)
+- **Task header button**: click the compact icon in the active task header
+- **Settings**: toggle auto-compaction in **Settings → Context**
 
-{% callout type="info" %}
-There is no `/condense` chat command on the new platform. Use the keybinding or message-based invocation instead.
-{% /callout %}
+## Defaults
 
-### The Compaction Process
+| Setting               | Default                                | Effect                                                                                 |
+| --------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
+| `compaction.auto`     | `true`                                 | Automatically compact when the usable window is reached                                |
+| `compaction.prune`    | `true`                                 | Clear old tool outputs beyond the 40K recency window                                   |
+| `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
-When compaction is triggered:
-
-1. **Threshold Check**: The system detects that context usage has reached the `usableWindow` limit
-2. **Agent Summarization**: The full conversation history is sent to a dedicated compaction agent
-3. **Structured Summary**: The agent produces a summary covering the goal, discoveries, accomplishments, and modified files
-4. **Replacement**: The detailed history is replaced with the compacted summary
-5. **Continuation**: You continue working with the freed-up context space
-
-## Configuration Options
+## Configuration
 
 Compaction is configured in your `kilo.jsonc` file:
 
@@ -70,64 +70,87 @@ Compaction is configured in your `kilo.jsonc` file:
 {
   "compaction": {
     "auto": true, // Enable or disable automatic compaction
-    "reserved": 4096, // Number of tokens to reserve (keep free) after compaction
     "prune": true, // Enable pruning of old tool outputs beyond the recency window
+    "reserved": 20000, // Token buffer kept free; smaller = later trigger, larger = earlier trigger
   },
 }
 ```
 
-| Option                | Type    | Description                                                              |
-| --------------------- | ------- | ------------------------------------------------------------------------ |
-| `compaction.auto`     | boolean | Enable or disable automatic compaction when the context threshold is hit |
-| `compaction.reserved` | number  | Number of tokens to reserve after compaction                             |
-| `compaction.prune`    | boolean | Enable pruning of old tool outputs outside the 40K token recency window  |
+| Option                | Type    | Default                        | Description                                                                                                                                                                                    |
+| --------------------- | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compaction.auto`     | boolean | `true`                         | Enable or disable automatic compaction when the usable window is reached                                                                                                                       |
+| `compaction.prune`    | boolean | `true`                         | Enable pruning of old tool outputs outside the 40K token recency window                                                                                                                        |
+| `compaction.reserved` | number  | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
+
+### Use a different model for compaction
+
+Summarization can use a cheaper or larger-context model than your main agent. Configure a dedicated compaction agent:
+
+```jsonc
+{
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5",
+    },
+  },
+}
+```
+
+If no compaction agent is set, the current session's model is used.
+
+### Environment overrides
+
+| Variable                             | Effect                                            |
+| ------------------------------------ | ------------------------------------------------- |
+| `KILO_DISABLE_AUTOCOMPACT=1`         | Forces `compaction.auto = false`                  |
+| `KILO_DISABLE_PRUNE=1`               | Forces `compaction.prune = false`                 |
+| `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}
 {% tab label="CLI" %}
 
 ## The Solution: Auto-Compaction
 
-The new platform uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
+Kilo CLI uses a **Compaction** system to manage context automatically. When your conversation approaches the token limit, compaction kicks in and produces a structured summary that captures:
 
 - The overall goal of the session
-- Key discoveries made along the way
+- Instructions given along the way
+- Key discoveries made
 - What has been accomplished so far
-- Files that were modified
+- Relevant files and directories
 
 This summary replaces the earlier conversation history, freeing up context window space while maintaining continuity in your work.
 
-## How Compaction Works
+## How Compaction Triggers
 
-### Automatic Compaction
+### Automatic trigger
 
-Compaction triggers automatically when the conversation reaches the `usableWindow` token threshold. The full conversation history is sent to a dedicated **compaction agent**, which produces a structured summary. This happens in the background without interrupting your workflow.
+Kilo tracks the total token count for the session — input, output, and cached reads and writes — and compares it to the model's context window. Compaction runs when the total fills the window minus a reserved buffer of headroom kept free for the next turn.
+
+How the buffer is chosen depends on what the model declares. When the model advertises a separate input limit, the buffer defaults to 20,000 tokens (or the model's maximum output size, whichever is smaller). When the model only declares a single context window, Kilo instead reserves the model's full output cap — up to 32,000 tokens.
+
+[Custom models](/docs/code-with-ai/agents/custom-models) that do not declare a context window are not tracked, and auto-compaction does not run for them.
 
 ### Context Pruning
 
-In addition to compaction, the system can **prune** old tool outputs to reclaim context space incrementally. Tool results older than a 40,000-token recency window are replaced with `"[Old tool result content cleared]"`. This is a lighter-weight mechanism that runs alongside full compaction.
+Between turns, Kilo also runs a lighter **prune** pass. It walks completed tool outputs outside a 40,000-token recency window and replaces them with `"[Old tool result content cleared]"`. Pruning runs incrementally so large tool outputs don't consume space forever, even before full compaction is needed.
 
 ### Manual Compaction
 
-You can also trigger compaction manually:
+You can trigger compaction at any time:
 
-- **CLI TUI**: Press `<leader>c` to compact the current session
-- **Extension Webview**: Send a `CompactRequest` message to trigger compaction
+- **Slash command**: type `/compact` in the TUI (alias: `/summarize`)
+- **Keybinding**: press `<leader>c` in the TUI
 
-{% callout type="info" %}
-There is no `/condense` chat command on the new platform. Use the keybinding or message-based invocation instead.
-{% /callout %}
+## Defaults
 
-### The Compaction Process
+| Setting               | Default                                | Effect                                                                                 |
+| --------------------- | -------------------------------------- | -------------------------------------------------------------------------------------- |
+| `compaction.auto`     | `true`                                 | Automatically compact when the usable window is reached                                |
+| `compaction.prune`    | `true`                                 | Clear old tool outputs beyond the 40K recency window                                   |
+| `compaction.reserved` | `min(20,000, model_max_output_tokens)` | Token headroom kept free for the next turn — also defines the compaction trigger point |
 
-When compaction is triggered:
-
-1. **Threshold Check**: The system detects that context usage has reached the `usableWindow` limit
-2. **Agent Summarization**: The full conversation history is sent to a dedicated compaction agent
-3. **Structured Summary**: The agent produces a summary covering the goal, discoveries, accomplishments, and modified files
-4. **Replacement**: The detailed history is replaced with the compacted summary
-5. **Continuation**: You continue working with the freed-up context space
-
-## Configuration Options
+## Configuration
 
 Compaction is configured in your `kilo.jsonc` file:
 
@@ -135,17 +158,41 @@ Compaction is configured in your `kilo.jsonc` file:
 {
   "compaction": {
     "auto": true, // Enable or disable automatic compaction
-    "reserved": 4096, // Number of tokens to reserve (keep free) after compaction
     "prune": true, // Enable pruning of old tool outputs beyond the recency window
+    "reserved": 20000, // Token buffer kept free; smaller = later trigger, larger = earlier trigger
   },
 }
 ```
 
-| Option                | Type    | Description                                                              |
-| --------------------- | ------- | ------------------------------------------------------------------------ |
-| `compaction.auto`     | boolean | Enable or disable automatic compaction when the context threshold is hit |
-| `compaction.reserved` | number  | Number of tokens to reserve after compaction                             |
-| `compaction.prune`    | boolean | Enable pruning of old tool outputs outside the 40K token recency window  |
+| Option                | Type    | Default                        | Description                                                                                                                                                                                    |
+| --------------------- | ------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compaction.auto`     | boolean | `true`                         | Enable or disable automatic compaction when the usable window is reached                                                                                                                       |
+| `compaction.prune`    | boolean | `true`                         | Enable pruning of old tool outputs outside the 40K token recency window                                                                                                                        |
+| `compaction.reserved` | number  | `min(20000, model_max_output)` | Token headroom reserved for the next turn. Applies only to models that advertise a separate input limit; models with a single context window use their full output cap as the reserve instead. |
+
+### Use a different model for compaction
+
+Summarization can use a cheaper or larger-context model than your main agent. Configure a dedicated compaction agent:
+
+```jsonc
+{
+  "agent": {
+    "compaction": {
+      "model": "anthropic/claude-haiku-4-5",
+    },
+  },
+}
+```
+
+If no compaction agent is set, the current session's model is used.
+
+### Environment overrides
+
+| Variable                             | Effect                                            |
+| ------------------------------------ | ------------------------------------------------- |
+| `KILO_DISABLE_AUTOCOMPACT=1`         | Forces `compaction.auto = false`                  |
+| `KILO_DISABLE_PRUNE=1`               | Forces `compaction.prune = false`                 |
+| `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -219,17 +266,26 @@ If the condensed summary doesn't capture important details:
 
 ## Best Practices
 
-### When to Condense
+### When to Compact
 
 - **Long sessions**: If you've been working for an extended period on a complex task
 - **Before major transitions**: When switching to a different aspect of your project
-- **When prompted**: When Kilo Code suggests condensing or compaction due to context limits
+- **When approaching limits**: Run `/compact` manually before hitting the automatic trigger if you want control over _when_ the summary is produced
+
+### Tuning `compaction.reserved`
+
+On models that advertise a separate input limit, the `reserved` value is a trade-off:
+
+- **Lower value** (e.g. `10000`) → compaction triggers later, you get more turns out of the raw window, but you risk a mid-turn context overflow if a single response is larger than the buffer.
+- **Higher value** (e.g. `40000`) → compaction triggers earlier, fewer overflow errors, but shorter effective conversations between summaries.
+
+The default of `~20K` is tuned to leave room for a full-size assistant response plus tool output. The setting has no effect on models with a single context window, which always reserve their full output cap instead.
 
 ### Maintaining Context Quality
 
 - **Be specific in your initial task**: A clear task description helps create better summaries
-- **Use AGENTS.md**: Combine with [AGENTS.md](/docs/customize/agents-md) for persistent project context that doesn't need to be condensed
-- **Review the summary**: After condensing or compaction, the summary is visible in your chat history
+- **Use AGENTS.md**: Combine with [AGENTS.md](/docs/customize/agents-md) for persistent project context that doesn't need to be compacted
+- **Review the summary**: After compaction, the summary is visible in your chat history
 
 ## Related Features
 

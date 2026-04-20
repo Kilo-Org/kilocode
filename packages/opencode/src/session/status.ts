@@ -1,9 +1,9 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
 import { SessionID } from "./schema"
-import { Effect, Layer, ServiceMap } from "effect"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
+import { Effect, Layer, Context } from "effect"
 import z from "zod"
 
 export namespace SessionStatus {
@@ -57,7 +57,7 @@ export namespace SessionStatus {
     readonly set: (sessionID: SessionID, status: Info) => Effect.Effect<void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionStatus") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/SessionStatus") {}
 
   export const layer = Layer.effect(
     Service,
@@ -93,17 +93,11 @@ export namespace SessionStatus {
   )
 
   export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+
+  // kilocode_change start - legacy promise helpers for Kilo callsites
   const { runPromise } = makeRuntime(Service, defaultLayer)
 
-  export async function get(sessionID: SessionID) {
-    return runPromise((svc) => svc.get(sessionID))
-  }
-
-  export async function list() {
-    return runPromise((svc) => svc.list())
-  }
-
-  export async function set(sessionID: SessionID, status: Info) {
-    return runPromise((svc) => svc.set(sessionID, status))
-  }
+  export const list = () => runPromise((svc) => svc.list())
+  export const get = (sessionID: SessionID) => runPromise((svc) => svc.get(sessionID))
+  // kilocode_change end
 }

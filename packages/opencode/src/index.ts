@@ -128,7 +128,7 @@ let cli = yargs(args) // kilocode_change
     Heap.start()
 
     process.env.AGENT = "1"
-    process.env.KILO = "1"
+    process.env.OPENCODE = "1"
     process.env.KILO_PID = String(process.pid)
 
     Log.Default.info("opencode", {

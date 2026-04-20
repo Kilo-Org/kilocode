@@ -326,6 +326,7 @@ export function activate(context: vscode.ExtensionContext) {
         const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
         if (!match) return
         const sessionId = match[1]
+        if (!sessionId) return
         console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
         provider.openCloudSession(sessionId)

@@ -36,7 +36,7 @@ interface ExecOptions {
   stdin?: string
 }
 
-interface ExecResult {
+export interface ExecResult {
   code: number
   stdout: string
   stderr: string
@@ -471,6 +471,17 @@ export class GitOps {
     const first = lines[0]
     if (first) return [{ reason: first }]
     return [{ reason: "Patch does not apply cleanly" }]
+  }
+
+  /**
+   * Run a git command returning `{code, stdout, stderr}`. Gated by the shared
+   * semaphore and respects the dispose abort signal. Never throws — commands
+   * with non-zero exit codes resolve normally (nothrow semantics), making this
+   * suitable for callers that need to tolerate legitimate failures (e.g.
+   * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
+   */
+  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+    return this.exec(args, cwd, options)
   }
 
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {

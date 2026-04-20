@@ -1,17 +1,17 @@
 // kilocode_change - new file
 // Registers all Kilo-specific instance routes on a Hono app.
-// Called from ../../server/instance.ts before the catch-all route.
+// Called from ../../server/instance/index.ts before the UI fallback route.
 
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
-import { TelemetryRoutes } from "../../server/routes/telemetry"
+import { TelemetryRoutes } from "../../server/instance/telemetry"
 import { CommitMessageRoutes } from "./routes/commit-message"
-import { EnhancePromptRoutes } from "../../server/routes/enhance-prompt"
-import { KilocodeRoutes } from "../../server/routes/kilocode"
+import { EnhancePromptRoutes } from "../../server/instance/enhance-prompt"
+import { KilocodeRoutes } from "../../server/instance/kilocode"
 import { PermissionKilocodeRoutes } from "../permission/routes"
-import { RemoteRoutes } from "../../server/routes/remote"
-import { NetworkRoutes } from "../../server/routes/network"
+import { RemoteRoutes } from "../../server/instance/remote"
+import { NetworkRoutes } from "../../server/instance/network"
 import { SuggestionRoutes } from "../suggestion/routes"
 import { createKiloRoutes } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"

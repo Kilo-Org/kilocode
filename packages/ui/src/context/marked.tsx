@@ -1,6 +1,11 @@
 import { marked } from "marked"
 import markedKatex from "marked-katex-extension"
-import markedShiki from "marked-shiki"
+// kilocode_change: marked-shiki highlighted code blocks synchronously during
+// parse, freezing the main thread on session switches with many code blocks
+// (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
+// and hand off to deferredHighlight() in markdown.tsx for progressive Shiki.
+// This import was re-added by an upstream merge; removing it restores the
+// two-pass rendering design.
 import katex from "katex"
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
@@ -670,26 +675,10 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
         throwOnError: false,
         nonStandard: true,
       }),
-      markedShiki({
-        async highlight(code, lang) {
-          const highlighter = await getSharedHighlighter({
-            themes: ["Kilo"],
-            langs: [],
-            preferredHighlighter: "shiki-wasm",
-          })
-          if (!(lang in bundledLanguages)) {
-            lang = "text"
-          }
-          if (!highlighter.getLoadedLanguages().includes(lang)) {
-            await highlighter.loadLanguage(lang as BundledLanguage)
-          }
-          return highlighter.codeToHtml(code, {
-            lang: lang || "text",
-            theme: "Kilo",
-            tabindex: false,
-          })
-        },
-      }),
+      // kilocode_change: markedShiki removed — the custom `code` renderer
+      // above returns plain <pre><code data-lang="..."> and markdown.tsx
+      // calls deferredHighlight() after paint. Running Shiki inside parse
+      // blocks the main thread on session switches (issue #6221).
     )
     // kilocode_change end
 

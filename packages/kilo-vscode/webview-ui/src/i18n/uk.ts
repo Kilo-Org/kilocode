@@ -771,6 +771,11 @@ export const dict = {
   "provider.custom.models.variants.thinking.placeholder": "thinking",
   "provider.custom.models.variants.thinking.enabled": "enabled",
   "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Увімкнути мислення через аргументи шаблону чату (напр. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
   "provider.custom.models.variants.reasoningEffort.label": "Зусилля міркування",
   "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
   "provider.custom.models.variants.reasoningEffort.none": "none",

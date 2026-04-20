@@ -2,15 +2,15 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
 import { ProjectID } from "@/project/schema"
 import { Instance } from "@/project/instance"
 import { MessageID, SessionID } from "@/session/schema"
 import { PermissionTable } from "@/session/session.sql"
 import { Database, eq } from "@/storage/db"
 import { Log } from "@/util/log"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { Wildcard } from "@/util/wildcard"
-import { Deferred, Effect, Layer, Schema, ServiceMap } from "effect"
+import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import os from "os"
 import z from "zod"
 import { evaluate as evalRule } from "./evaluate"
@@ -157,7 +157,7 @@ export namespace Permission {
     return evalRule(permission, pattern, ...rulesets)
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Permission") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Permission") {}
 
   export const layer = Layer.effect(
     Service,
@@ -373,7 +373,7 @@ export namespace Permission {
           const entry = s.pending.get(PermissionID.make(input.requestID))
           if (entry && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
             s.pending.delete(PermissionID.make(input.requestID))
-            void Bus.publish(Event.Replied, {
+            yield* bus.publish(Event.Replied, {
               sessionID: entry.info.sessionID,
               requestID: entry.info.id,
               reply: "once",
@@ -386,7 +386,7 @@ export namespace Permission {
           if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
           if (ConfigProtection.isRequest(entry.info)) continue
           s.pending.delete(id)
-          void Bus.publish(Event.Replied, {
+          yield* bus.publish(Event.Replied, {
             sessionID: entry.info.sessionID,
             requestID: entry.info.id,
             reply: "once",
@@ -455,33 +455,6 @@ export namespace Permission {
 
   export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
 
-  export const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function ask(input: z.infer<typeof AskInput>) {
-    return runPromise((s) => s.ask(input))
-  }
-
-  export async function reply(input: z.infer<typeof ReplyInput>) {
-    return runPromise((s) => s.reply(input))
-  }
-
-  export async function list() {
-    return runPromise((s) => s.list())
-  }
-
-  // kilocode_change start
-  export async function saveAlwaysRules(input: z.infer<typeof SaveAlwaysRulesInput>) {
-    return runPromise((s) => s.saveAlwaysRules(input))
-  }
-
-  export async function allowEverything(input: z.infer<typeof AllowEverythingInput>) {
-    return runPromise((s) => s.allowEverything(input))
-  }
-
-  export async function pending(id: string) {
-    return runPromise((s) => s.pending(id))
-  }
-
   // kilocode_change start — inverse of fromConfig: convert rules back to config format
   const SCALAR_ONLY_PERMISSIONS = new Set([
     "todowrite",
@@ -515,5 +488,16 @@ export namespace Permission {
     }
     return result
   }
+  // kilocode_change end
+
+  // kilocode_change start - legacy promise helpers for Kilo callsites
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+  export const list = () => runPromise((svc) => svc.list())
+  export const ask = (input: z.infer<typeof AskInput>) => runPromise((svc) => svc.ask(input))
+  export const reply = (input: z.infer<typeof ReplyInput>) => runPromise((svc) => svc.reply(input))
+  export const saveAlwaysRules = (input: z.infer<typeof SaveAlwaysRulesInput>) =>
+    runPromise((svc) => svc.saveAlwaysRules(input))
+  export const allowEverything = (input: z.infer<typeof AllowEverythingInput>) =>
+    runPromise((svc) => svc.allowEverything(input))
   // kilocode_change end
 }

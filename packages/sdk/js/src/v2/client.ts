@@ -86,6 +86,12 @@ export function createKiloClient(config?: Config & { directory?: string; experim
       workspace: config?.experimental_workspaceID,
     }),
   )
-  const result = new KiloClient({ client })
-  return result
+  client.interceptors.response.use((response) => {
+    const contentType = response.headers.get("content-type")
+    if (contentType === "text/html")
+      throw new Error("Request is not supported by this version of OpenCode Server (Server responded with text/html)")
+
+    return response
+  })
+  return new KiloClient({ client })
 }
