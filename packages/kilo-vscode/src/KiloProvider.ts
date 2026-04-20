@@ -115,20 +115,6 @@ type KiloProviderOptions = {
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
 
-// Helper to map agent data to the subset of fields sent to the webview
-const mapAgent = (a: Agent) => ({
-  name: a.name,
-  displayName: a.displayName,
-  description: a.description,
-  mode: a.mode,
-  native: a.native,
-  hidden: a.hidden,
-  color: a.color,
-  deprecated: a.deprecated,
-  permission: a.permission,
-  model: a.model,
-})
-
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
