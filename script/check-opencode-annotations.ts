@@ -55,15 +55,11 @@ function isUpstreamMerge() {
   const out = run("git", ["log", "--format=%P%x09%s", `${base}..HEAD`])
   return out.split("\n").some((line) => {
     const [parents = "", subject = ""] = line.split("\t")
+    if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
     // Automated upstream merge script commits (script/upstream/merge.ts)
-    if (parents.includes(" ")) {
-      if (s.startsWith("merge: upstream ")) return true
-      if (s.includes("resolve merge conflict")) return true
-    }
-    // Manual upstream merge PRs typically include an upstream release commit
-    if (/^release:\s*v\d+/.test(s)) return true
-    return false
+    // For manual upstream merges, add the 'upstream-merge' label to the PR instead.
+    return s.startsWith("merge: upstream ") || s.includes("resolve merge conflict")
   })
 }
 
