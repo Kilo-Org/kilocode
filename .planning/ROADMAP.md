@@ -6,7 +6,7 @@
 - [x] Phase 2: Preset Migration & Clean-Break Schema Cleanup ✓ Review passed
 - [x] Phase 3: TUI Scaffolding — Hybrid Interaction Primitives ✓ Review passed
 - [x] Phase 4: Team Builder Views ✓ Review passed
-- [x] Phase 5: Runtime Cockpit Redesign (pending review)
+- [x] Phase 5: Runtime Cockpit Redesign ✓ Review passed
 - [ ] Phase 6: Team Export/Import & Persistence Layer
 - [ ] Phase 7: Configurable Workflow DAG
 - [ ] Phase 8: Team Registry & Marketplace
