@@ -55,6 +55,7 @@ import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-pa
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession, parseQueued } from "./kilo-provider/abort"
+import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -303,11 +304,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return slimParts(parts)
   }
 
-  /**
-   * Synchronize current extension-side state to the webview.
-   * This is primarily used after a webview refresh where early postMessage calls
-   * may have been dropped before the webview registered its message listeners.
-   */
+  private get forkCtx() {
+    return {
+      connection: this.connectionService,
+      post: (msg: { type: "error"; message: string }) => this.postMessage(msg),
+      register: (session: Session) => this.registerSession(session),
+      forked: (session: Session) => this.postMessage({ type: "sessionForked", sessionID: session.id }),
+      status: (sessionID: string) => this.sessionStatusMap.get(sessionID),
+    }
+  }
+
   private async syncWebviewState(reason: string): Promise<void> {
     const serverInfo = this.connectionService.getServerInfo()
     console.log("[Kilo New] KiloProvider: 🔄 syncWebviewState()", {
@@ -529,21 +535,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
-  /** Register the handler for "Continue in Worktree" messages from the sidebar. */
   public setContinueInWorktreeHandler(
     handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
   ): void {
     this.continueInWorktreeHandler = handler
   }
 
-  /**
-   * Attach to a webview that already has its own HTML set.
-   * Sets up message handling and connection without overriding HTML content.
-   *
-   * @param options.onBeforeMessage - Optional interceptor called before the standard handler.
-   *   Return null to consume the message (stop propagation), or return the message
-   *   (possibly transformed) to continue with standard handling.
-   */
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -555,10 +552,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
-  /**
-   * Set up the shared message handler for both sidebar and tab webviews.
-   * Handles ALL message types so tabs have full functionality.
-   */
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
     this.webviewMessageDisposable?.dispose()
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -709,6 +702,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             post: (msg) => this.postMessage(msg),
           })
           break
+        case "forkSession":
+          handleForkSession(this.forkCtx, message.sessionId, message.messageId).catch((e) =>
+            console.error("[Kilo New] handleForkSession failed:", e),
+          )
+          break
+
         case "retryConnection":
           console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")
           this.initializeConnection().catch((e) =>
@@ -1255,9 +1254,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return sessionToWebview(session)
   }
 
-  /**
-   * Handle creating a new session.
-   */
   private async handleCreateSession(): Promise<void> {
     if (!this.client) {
       this.postMessage({

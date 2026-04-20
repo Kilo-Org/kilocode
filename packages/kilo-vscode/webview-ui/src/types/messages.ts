@@ -573,6 +573,11 @@ export interface SessionCreatedMessage {
   draftID?: string
 }
 
+export interface SessionForkedMessage {
+  type: "sessionForked"
+  sessionID: string
+}
+
 export interface SessionUpdatedMessage {
   type: "sessionUpdated"
   session: SessionInfo
@@ -1527,6 +1532,7 @@ export type ExtensionMessage =
   | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
+  | SessionForkedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
@@ -2051,7 +2057,7 @@ export interface AddSessionToWorktreeRequest {
 
 // Fork an existing session (copies conversation history)
 export interface ForkSessionRequest {
-  type: "agentManager.forkSession"
+  type: "agentManager.forkSession" | "forkSession"
   sessionId: string
   worktreeId?: string
   messageId?: string
