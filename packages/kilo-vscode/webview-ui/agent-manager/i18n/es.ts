@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Bifurcar sesión",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Abrir Terminal",
+  "agentManager.tab.newOptions": "Más opciones de nueva pestaña",
+
+  "agentManager.terminal.new": "Nueva pestaña de terminal",
+  "agentManager.terminal.ended": "terminal finalizado — cierra la pestaña para descartar",
+  "agentManager.terminal.connectionError": "error de conexión del terminal",
+  "agentManager.terminal.errorTitle": "Error de terminal",
   "agentManager.setup.failed": "Error en la configuración del worktree",
   "agentManager.setup.settingUp": "Configurando worktree",
   "agentManager.setup.error.git_not_found":
