@@ -45,7 +45,7 @@ Some free models may be rate limited by the upstream provider. If you hit a rate
 
 ### Cloud Tasks
 
-Kilo's cloud services — [App Builder](/docs/code-with-ai/app-builder), [Code Reviewer](/docs/automate/code-reviews/overview), [KiloClaw](/docs/kiloclaw/overview), and others — also support free models. Select any model labeled "(free)" in the model dropdown when configuring a cloud task.
+Kilo's cloud services — [App Builder](/docs/code-with-ai/app-builder), [Code Reviewer](/docs/automate/code-reviews/overview), and others — also support free models. Select any model labeled "(free)" in the model dropdown when configuring a cloud task. [KiloClaw](/docs/kiloclaw/overview) instances also support free models — choose one during instance creation.
 
 {% callout type="tip" %}
 Available free models change over time as Kilo partners with different inference providers. Subscribe to our blog or join our [Discord](https://kilo.ai/discord) for updates.
