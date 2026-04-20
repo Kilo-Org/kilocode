@@ -111,8 +111,8 @@ If you use the GitHub web UI, issue templates will guide you through the require
 - **Terminal**: Terminal application you are using
 
 **Feature requests** (use the Feature request template):
-- **Describe the enhancement you want to request** (required): What feature or improvement?
-- **Why is this needed?**: The problem this solves or the benefit it provides
+- **Feature hasn't been suggested before** (required checkbox): Confirm you have searched existing issues
+- **Describe the enhancement you want to request** (required): What feature or improvement you want, and why
 
 ### Issue First Policy
 
