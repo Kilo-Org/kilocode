@@ -234,6 +234,7 @@ export const SuggestBarReview: Story = {
 const toolUserID = "user-msg-spacing-001"
 const toolAssistantID = "asst-msg-spacing-001"
 const queuedUserID = "user-msg-spacing-002"
+const queuedSecondID = "user-msg-spacing-003"
 const toolNow = 1_700_000_000_000
 const spacingMessages = [
   {
@@ -241,6 +242,18 @@ const spacingMessages = [
     sessionID: SESSION_ID,
     role: "user",
     time: { created: toolNow - 9000 },
+  },
+  {
+    id: queuedUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: toolNow - 1000 },
+  },
+  {
+    id: queuedSecondID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: toolNow - 500 },
   },
   {
     id: toolAssistantID,
@@ -253,12 +266,6 @@ const spacingMessages = [
     mode: "default",
     agent: "default",
     path: { cwd: "/project", root: "/project" },
-  },
-  {
-    id: queuedUserID,
-    sessionID: SESSION_ID,
-    role: "user",
-    time: { created: toolNow - 1000 },
   },
 ]
 const spacingParts = {
@@ -298,6 +305,15 @@ const spacingParts = {
       text: "ok",
     },
   ],
+  [queuedSecondID]: [
+    {
+      id: "part-user-spacing-003",
+      sessionID: SESSION_ID,
+      messageID: queuedSecondID,
+      type: "text",
+      text: "and then explain it",
+    },
+  ],
 }
 const spacingData = {
   ...defaultMockData,
@@ -306,15 +322,15 @@ const spacingData = {
 }
 
 export const MessageListToolToQueuedUserSpacing: Story = {
-  name: "MessageList — tool to queued user spacing",
+  name: "MessageList — queued users stay at bottom",
   render: () => {
     const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       messages: () => spacingMessages,
       userMessages: () => spacingMessages.filter((msg) => msg.role === "user"),
     }
     return (
-      <StoryProviders data={spacingData} sessionID={SESSION_ID} status="idle" noPadding>
+      <StoryProviders data={spacingData} sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ height: "420px", display: "flex", "flex-direction": "column" }}>
             <MessageList />
