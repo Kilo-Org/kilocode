@@ -31,6 +31,33 @@ import { Locale } from "../../util/locale"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { AppRuntime } from "@/effect/app-runtime"
 
+// Permission ruleset applied when `kilo run` creates a new session. Exported so tests can verify
+// the exact set of tools denied without having to duplicate (and potentially drift from) the literal.
+export const RUN_RULES: Permission.Ruleset = [
+  {
+    permission: "question",
+    action: "deny",
+    pattern: "*",
+  },
+  {
+    permission: "plan_enter",
+    action: "deny",
+    pattern: "*",
+  },
+  {
+    permission: "plan_exit",
+    action: "deny",
+    pattern: "*",
+  },
+  // kilocode_change start - `suggest` has no UI in `kilo run`, so deny it up-front
+  {
+    permission: "suggest",
+    action: "deny",
+    pattern: "*",
+  },
+  // kilocode_change end
+]
+
 type ToolProps<T> = {
   input: Tool.InferParameters<T>
   metadata: Tool.InferMetadata<T>
@@ -378,30 +405,7 @@ export const RunCommand = cmd({
     }
     // kilocode_change end
 
-    const rules: Permission.Ruleset = [
-      {
-        permission: "question",
-        action: "deny",
-        pattern: "*",
-      },
-      {
-        permission: "plan_enter",
-        action: "deny",
-        pattern: "*",
-      },
-      {
-        permission: "plan_exit",
-        action: "deny",
-        pattern: "*",
-      },
-      // kilocode_change start - `suggest` has no UI in `kilo run`, so deny it up-front
-      {
-        permission: "suggest",
-        action: "deny",
-        pattern: "*",
-      },
-      // kilocode_change end
-    ]
+    const rules = RUN_RULES
 
     function title() {
       if (args.title === undefined) return
