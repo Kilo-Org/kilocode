@@ -1,40 +1,67 @@
 diff --git a/dist/ghostty-web.js b/dist/ghostty-web.js
-index 7c9d64a617bbeb29d757a1acd54686e582868313..2d61098cdb77fa66cbb162897c5590f35cfcf791 100644
 --- a/dist/ghostty-web.js
 +++ b/dist/ghostty-web.js
-@@ -1285,7 +1285,7 @@ const e = class H {
+@@ -1603,7 +1603,7 @@
          continue;
        }
-       const C = g.getCodepoint();
--      C === 0 || C < 32 ? B.push(" ") : B.push(String.fromCodePoint(C));
-+      C === 0 || C < 32 || C > 1114111 || (C >= 55296 && C <= 57343) ? B.push(" ") : B.push(String.fromCodePoint(C));
+       const C = E.getCodepoint();
+-      C === 0 || C < 32 ? Q.push(" ") : Q.push(String.fromCodePoint(C));
++      C === 0 || C < 32 || C > 1114111 || C >= 55296 && C <= 57343 ? Q.push(" ") : Q.push(String.fromCodePoint(C));
      }
-     return B.join("");
+     return Q.join("");
    }
-@@ -1484,7 +1484,7 @@ class _ {
+@@ -1857,7 +1857,7 @@
+     A.flags & G.FAINT && (this.ctx.globalAlpha = 0.5);
+     const s = C, h = I + this.metrics.baseline;
+     let k;
+-    if (A.grapheme_len > 0 && ((N = this.currentBuffer) != null && N.getGraphemeString) ? k = this.currentBuffer.getGraphemeString(g, Q) : k = String.fromCodePoint(A.codepoint || 32), this.ctx.fillText(k, s, h), A.flags & G.FAINT && (this.ctx.globalAlpha = 1), A.flags & G.UNDERLINE) {
++    if (A.grapheme_len > 0 && ((N = this.currentBuffer) != null && N.getGraphemeString) ? k = this.currentBuffer.getGraphemeString(g, Q) : k = A.codepoint === 0 || A.codepoint == null || A.codepoint < 0 || A.codepoint > 1114111 || A.codepoint >= 55296 && A.codepoint <= 57343 ? " " : String.fromCodePoint(A.codepoint), this.ctx.fillText(k, s, h), A.flags & G.FAINT && (this.ctx.globalAlpha = 1), A.flags & G.UNDERLINE) {
+       const t = I + this.metrics.baseline + 2;
+       this.ctx.strokeStyle = this.ctx.fillStyle, this.ctx.lineWidth = 1, this.ctx.beginPath(), this.ctx.moveTo(C, t), this.ctx.lineTo(C + D, t), this.ctx.stroke();
+     }
+@@ -2104,7 +2104,7 @@
+       let k = "";
+       for (let N = s; N <= h; N++) {
+         const t = o[N];
+-        if (t && t.codepoint !== 0) {
++        if (t && t.codepoint !== 0 && t.codepoint <= 1114111 && !(t.codepoint >= 55296 && t.codepoint <= 57343)) {
+           let a;
+           if (t.grapheme_len > 0)
+             if (D < C)
+@@ -2321,7 +2321,7 @@
+         let D = -1;
+         if (I) {
+           for (let o = I.length - 1; o >= 0; o--)
+-            if (I[o] && I[o].codepoint !== 0 && I[o].codepoint !== 32) {
++            if (I[o] && I[o].codepoint !== 0 && I[o].codepoint !== 32 && I[o].codepoint <= 1114111 && !(I[o].codepoint >= 55296 && I[o].codepoint <= 57343)) {
+               D = o;
+               break;
+             }
+@@ -2673,19 +2673,20 @@
+     this.canvas.width = A.width * this.cols, this.canvas.height = A.height * this.rows, this.canvas.style.width = `${A.width * this.cols}px`, this.canvas.style.height = `${A.height * this.rows}px`, this.renderer.render(this.wasmTerm, !0, this.viewportY, this);
+   }
+   scheduleFontRemeasure() {
+-    if (typeof document > "u" || !("fonts" in document))
++    if (typeof document > "u" || !("fonts" in document) || typeof WeakRef > "u")
        return;
-     let J = "";
-     A.flags & U.ITALIC && (J += "italic "), A.flags & U.BOLD && (J += "bold "), this.ctx.font = `${J}${this.fontSize}px ${this.fontFamily}`, this.ctx.fillStyle = this.rgbToCSS(w, o, i), A.flags & U.FAINT && (this.ctx.globalAlpha = 0.5);
--    const s = g, F = C + this.metrics.baseline, a = String.fromCodePoint(A.codepoint || 32);
-+    const s = g, F = C + this.metrics.baseline, a = (A.codepoint === 0 || A.codepoint == null || A.codepoint < 0 || A.codepoint > 1114111 || (A.codepoint >= 55296 && A.codepoint <= 57343)) ? " " : String.fromCodePoint(A.codepoint);
-     if (this.ctx.fillText(a, s, F), A.flags & U.FAINT && (this.ctx.globalAlpha = 1), A.flags & U.UNDERLINE) {
-       const N = C + this.metrics.baseline + 2;
-       this.ctx.strokeStyle = this.ctx.fillStyle, this.ctx.lineWidth = 1, this.ctx.beginPath(), this.ctx.moveTo(g, N), this.ctx.lineTo(g + I, N), this.ctx.stroke();
-@@ -1730,7 +1730,7 @@ const L = class R {
-       let G = "";
-       for (let J = M; J <= k; J++) {
-         const s = o[J];
--        if (s && s.codepoint !== 0) {
-+        if (s && s.codepoint !== 0 && s.codepoint <= 1114111 && !(s.codepoint >= 55296 && s.codepoint <= 57343)) {
-           const F = String.fromCodePoint(s.codepoint);
-           G += F, F.trim() && (i = G.length);
-         } else
-@@ -1995,7 +1995,7 @@ const L = class R {
-     if (!Q)
-       return null;
-     const g = (w) => {
--      if (!w || w.codepoint === 0)
-+      if (!w || w.codepoint === 0 || w.codepoint > 1114111 || (w.codepoint >= 55296 && w.codepoint <= 57343))
-         return !1;
-       const o = String.fromCodePoint(w.codepoint);
-       return /[\w-]/.test(o);
+-    const A = ++this.fontLoadGeneration;
++    const A = ++this.fontLoadGeneration, Q = new WeakRef(this);
+     document.fonts.load(
+       `${this.options.fontSize}px ${this.options.fontFamily}`,
+       "Mg"
+     ), document.fonts.ready.then(() => {
+-      if (A !== this.fontLoadGeneration || !this.renderer || this.isDisposed || !this.isOpen)
++      const g = Q.deref();
++      if (!g || A !== g.fontLoadGeneration || !g.renderer || g.isDisposed || !g.isOpen)
+         return;
+-      const Q = this.renderer.getMetrics();
+-      this.renderer.remeasureFont();
+-      const g = this.renderer.getMetrics();
+-      Q.width === g.width && Q.height === g.height && Q.baseline === g.baseline || this.handleFontChange();
++      const E = g.renderer.getMetrics();
++      g.renderer.remeasureFont();
++      const C = g.renderer.getMetrics();
++      E.width === C.width && E.height === C.height && E.baseline === C.baseline || g.handleFontChange();
+     });
+   }
+   /**
