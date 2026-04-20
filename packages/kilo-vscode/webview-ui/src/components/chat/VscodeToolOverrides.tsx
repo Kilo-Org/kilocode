@@ -12,9 +12,11 @@ import { ToolRegistry } from "@kilocode/kilo-ui/message-part"
 
 /** Tools that should be open by default in the VS Code sidebar. */
 const DEFAULT_OPEN_TOOLS = ["bash"]
+const registered = new Set<string>()
 
 export function registerVscodeToolOverrides() {
   for (const name of DEFAULT_OPEN_TOOLS) {
+    if (registered.has(name)) continue
     const upstream = ToolRegistry.render(name)
     if (!upstream) continue
 
@@ -22,5 +24,6 @@ export function registerVscodeToolOverrides() {
       name,
       render: (props) => <Dynamic component={upstream} {...props} defaultOpen />,
     })
+    registered.add(name)
   }
 }
