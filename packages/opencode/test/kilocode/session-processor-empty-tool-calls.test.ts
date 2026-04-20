@@ -1,6 +1,6 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect } from "bun:test"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
@@ -16,6 +16,7 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { SessionProcessor } from "../../src/session/processor"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
+import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
 import { Log } from "../../src/util/log"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
@@ -31,7 +32,7 @@ const ref = {
 
 type Script = Stream.Stream<LLM.Event, unknown>
 
-class TestLLM extends ServiceMap.Service<
+class TestLLM extends Context.Service<
   TestLLM,
   {
     readonly reply: (...items: LLM.Event[]) => Effect.Effect<void>
@@ -82,6 +83,7 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.empty
             return item
           },
+          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ reply })),
@@ -95,9 +97,10 @@ const deps = Layer.mergeAll(
   Session.defaultLayer,
   Snapshot.defaultLayer,
   AgentSvc.defaultLayer,
-  Permission.layer,
+  Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  SessionSummary.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
@@ -172,7 +175,7 @@ describe("session processor empty tool-calls", () => {
 
           yield* handle.process(input)
           expect(handle.message.finish).toBe("stop")
-          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const parts = MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(0)
         }),
@@ -180,7 +183,7 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
-  it.effect("preserves tool-calls finish when tool parts exist", () =>
+  it.live("preserves tool-calls finish when tool parts exist", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
@@ -248,7 +251,7 @@ describe("session processor empty tool-calls", () => {
           const result = yield* handle.process(input)
           expect(handle.message.finish).toBe("tool-calls")
           expect(result).toBe("continue")
-          const parts = yield* Effect.promise(() => MessageV2.parts(msg.id))
+          const parts = MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(1)
         }),

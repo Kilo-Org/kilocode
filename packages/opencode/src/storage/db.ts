@@ -2,7 +2,7 @@ import { type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
 import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import { type SQLiteTransaction } from "drizzle-orm/sqlite-core"
 export * from "drizzle-orm"
-import { Context } from "../util/context"
+import { LocalContext } from "../util/local-context"
 import { lazy } from "../util/lazy"
 import { Global } from "../global"
 import { Log } from "../util/log"
@@ -11,6 +11,8 @@ import z from "zod"
 import path from "path"
 import { readFileSync, readdirSync, existsSync } from "fs"
 import { Flag } from "../flag/flag"
+import { CHANNEL } from "../installation/meta"
+import { InstanceState } from "@/effect/instance-state"
 import { iife } from "@/util/iife"
 import { init } from "#db"
 
@@ -119,7 +121,7 @@ export namespace Database {
 
   export type TxOrDb = Transaction | Client
 
-  const ctx = Context.create<{
+  const ctx = LocalContext.create<{
     tx: TxOrDb
     effects: (() => void | Promise<void>)[]
   }>("database")
@@ -128,7 +130,7 @@ export namespace Database {
     try {
       return callback(ctx.use().tx)
     } catch (err) {
-      if (err instanceof Context.NotFound) {
+      if (err instanceof LocalContext.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
         const result = ctx.provide({ effects, tx: Client() }, () => callback(Client()))
         for (const effect of effects) effect()
@@ -139,10 +141,11 @@ export namespace Database {
   }
 
   export function effect(fn: () => any | Promise<any>) {
+    const bound = InstanceState.bind(fn)
     try {
-      ctx.use().effects.push(fn)
+      ctx.use().effects.push(bound)
     } catch {
-      fn()
+      bound()
     }
   }
 
@@ -157,14 +160,10 @@ export namespace Database {
     try {
       return callback(ctx.use().tx)
     } catch (err) {
-      if (err instanceof Context.NotFound) {
+      if (err instanceof LocalContext.NotFound) {
         const effects: (() => void | Promise<void>)[] = []
-        const result = Client().transaction(
-          (tx: TxOrDb) => {
-            return ctx.provide({ tx, effects }, () => callback(tx))
-          },
-          { behavior: options?.behavior },
-        )
+        const txCallback = InstanceState.bind((tx: TxOrDb) => ctx.provide({ tx, effects }, () => callback(tx)))
+        const result = Client().transaction(txCallback, { behavior: options?.behavior })
         for (const effect of effects) effect()
         return result as NotPromise<T>
       }

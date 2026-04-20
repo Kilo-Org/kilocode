@@ -171,6 +171,12 @@ Tests MUST test actual implementation, do not duplicate logic into a test.
 
 [Conventional Commits](https://www.conventionalcommits.org/) with scopes matching packages: `vscode`, `cli`, `agent-manager`, `sdk`, `ui`, `i18n`, `kilo-docs`, `gateway`, `telemetry`, `desktop`. Omit scope when spanning multiple packages.
 
+## Changesets
+
+User-facing changes (features, fixes, breaking changes) require a changeset file for release notes. Run `bunx changeset add` or manually create `.changeset/<slug>.md`. Use `patch` for bug fixes, `minor` for new features, `major` for breaking changes. See `.changeset/README.md` for details.
+
+Changeset descriptions appear directly in release notes and are read by end users. Keep them concise and feature-oriented — describe **what changed from the user's perspective**, not implementation details. Write in imperative mood (e.g. "Support exporting conversations as markdown" not "Add a new export handler that serializes session messages to .md files").
+
 ## Pull Requests
 
 PR descriptions should be 2-3 lines covering **what** changed and **why**. Focus on intent and context a reviewer can't get from the diff — skip file-by-file inventories, test result summaries, and anything obvious from the code itself.
@@ -196,6 +202,8 @@ We regularly merge upstream changes from opencode. To minimize merge conflicts a
    Do not use these markers in files within directories with kilo in the name
 
 4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from opencode unless absolutely necessary.
+
+5. **Mirror new config keys to the cloud schema** - When adding a `kilocode_change` key to `Config.Info` in `packages/opencode/src/config/config.ts`, also add the matching JSON Schema entry in `apps/web/src/app/config.json/extras.ts` in the [cloud repo](https://github.com/Kilo-Org/cloud). See [CLI Config Schema](packages/kilo-docs/pages/contributing/architecture/config-schema.md) for the step-by-step.
 
 The goal is to keep our diff from upstream as small as possible, making regular merges straightforward and reducing the risk of conflicts.
 

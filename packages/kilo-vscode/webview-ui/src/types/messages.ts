@@ -3,6 +3,7 @@
  */
 
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
+import type { PartBatch, PartUpdate } from "../../../src/shared/stream-messages"
 
 // Connection states
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
@@ -37,11 +38,22 @@ export interface TextPart extends BasePart {
   text: string
 }
 
+export interface FilePartSource {
+  type: "file"
+  path: string
+  text: {
+    value: string
+    start: number
+    end: number
+  }
+}
+
 export interface FilePart extends BasePart {
   type: "file"
   mime: string
   url: string
   filename?: string
+  source?: FilePartSource
 }
 
 export interface ToolPart extends BasePart {
@@ -114,6 +126,7 @@ export interface Message {
   summary?: { title?: string; body?: string; diffs?: unknown[] } | boolean
   cost?: number
   tokens?: TokenUsage
+  finish?: string
 }
 
 // File diff info (matches Snapshot.FileDiff from CLI backend)
@@ -158,6 +171,7 @@ export interface CloudSessionInfo {
 // Permission request
 export interface PermissionFileDiff {
   file: string
+  patch?: string
   before?: string
   after?: string
   additions: number
@@ -206,6 +220,25 @@ export interface QuestionRequest {
   id: string
   sessionID: string
   questions: QuestionInfo[]
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+export interface SuggestionAction {
+  label: string
+  description?: string
+  prompt: string
+}
+
+export interface SuggestionRequest {
+  id: string
+  sessionID: string
+  text: string
+  actions: SuggestionAction[]
+  blocking?: boolean
   tool?: {
     messageID: string
     callID: string
@@ -408,6 +441,10 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
 }
 
+export interface CommitMessageConfig {
+  prompt?: string
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -429,6 +466,7 @@ export interface Config {
   formatter?: false | Record<string, unknown>
   lsp?: false | Record<string, unknown>
   compaction?: CompactionConfig
+  commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
@@ -445,6 +483,11 @@ export interface ReadyMessage {
   vscodeLanguage?: string
   languageOverride?: string
   workspaceDirectory?: string
+}
+
+export interface GitStatusMessage {
+  type: "gitStatus"
+  repo: boolean
 }
 
 export interface WorkspaceDirectoryChangedMessage {
@@ -482,13 +525,10 @@ export interface SendMessageFailedMessage {
   files?: FileAttachment[]
 }
 
-export interface PartUpdatedMessage {
-  type: "partUpdated"
-  sessionID?: string
-  messageID?: string
-  part: Part
-  delta?: PartDelta
-}
+// Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
+// webview's concrete union.
+export type PartUpdatedMessage = PartUpdate<Part>
+export type PartsUpdatedMessage = PartBatch<Part>
 
 export interface SessionStatusMessage {
   type: "sessionStatus"
@@ -549,10 +589,15 @@ export interface MessageRemovedMessage {
   messageID: string
 }
 
+export type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
+
 export interface MessagesLoadedMessage {
   type: "messagesLoaded"
   sessionID: string
   messages: Message[]
+  mode?: Exclude<MessageLoadMode, "focus">
+  cursor?: string
+  hasMore?: boolean
 }
 
 export interface MessageCreatedMessage {
@@ -563,6 +608,7 @@ export interface MessageCreatedMessage {
 export interface SessionsLoadedMessage {
   type: "sessionsLoaded"
   sessions: SessionInfo[]
+  preserveSessionIds?: string[]
 }
 
 export interface CloudSessionsLoadedMessage {
@@ -708,11 +754,30 @@ export interface ChatCompletionResultMessage {
   requestId: string
 }
 
+export interface FileSearchItem {
+  path: string
+  type: "file" | "folder"
+}
+
 export interface FileSearchResultMessage {
   type: "fileSearchResult"
   paths: string[]
+  items?: FileSearchItem[]
   dir: string
   requestId: string
+}
+
+export interface TerminalContextResultMessage {
+  type: "terminalContextResult"
+  requestId: string
+  content: string
+  truncated?: boolean
+}
+
+export interface TerminalContextErrorMessage {
+  type: "terminalContextError"
+  requestId: string
+  error: string
 }
 
 export interface QuestionRequestMessage {
@@ -727,6 +792,21 @@ export interface QuestionResolvedMessage {
 
 export interface QuestionErrorMessage {
   type: "questionError"
+  requestID: string
+}
+
+export interface SuggestionRequestMessage {
+  type: "suggestionRequest"
+  suggestion: SuggestionRequest
+}
+
+export interface SuggestionResolvedMessage {
+  type: "suggestionResolved"
+  requestID: string
+}
+
+export interface SuggestionErrorMessage {
+  type: "suggestionError"
   requestID: string
 }
 
@@ -749,6 +829,12 @@ export interface ConfigLoadedMessage {
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+}
+
+export interface ConfigUpdateFailedMessage {
+  type: "configUpdateFailed"
+  message: string
+  details?: string
 }
 
 export interface GlobalConfigLoadedMessage {
@@ -894,6 +980,18 @@ export interface PRStatus {
   files: number
 }
 
+export type RunState = "idle" | "running" | "stopping"
+
+export interface RunStatus {
+  worktreeId: string
+  state: RunState
+  exitCode?: number
+  signal?: string
+  startedAt?: string
+  finishedAt?: string
+  error?: string
+}
+
 export interface ManagedSessionState {
   id: string
   worktreeId: string | null
@@ -928,6 +1026,13 @@ export interface AgentManagerStateMessage {
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
   defaultBaseBranch?: string
+  runStatuses?: RunStatus[]
+  runScriptConfigured?: boolean
+  runScriptPath?: string
+}
+
+export interface AgentManagerRunStatusMessage extends RunStatus {
+  type: "agentManager.runStatus"
 }
 
 // Resolved keybindings for agent manager actions
@@ -1119,7 +1224,6 @@ export interface AgentManagerSendInitialMessage {
   providerID?: string
   modelID?: string
   agent?: string
-  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -1304,6 +1408,13 @@ export interface DiffViewerLoadingMessage {
   loading: boolean
 }
 
+export interface DiffViewerRevertFileResultMessage {
+  type: "diffViewer.revertFileResult"
+  file: string
+  status: "success" | "error"
+  message: string
+}
+
 export interface ClearPendingPromptsMessage {
   type: "clearPendingPrompts"
 }
@@ -1403,10 +1514,12 @@ export interface CustomProviderModelsFetchedMessage {
 
 export type ExtensionMessage =
   | ReadyMessage
+  | GitStatusMessage
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
   | PartUpdatedMessage
+  | PartsUpdatedMessage
   | SessionStatusMessage
   | SessionErrorMessage
   | PermissionRequestMessage
@@ -1436,13 +1549,19 @@ export type ExtensionMessage =
   | AutocompleteSettingsLoadedMessage
   | ChatCompletionResultMessage
   | FileSearchResultMessage
+  | TerminalContextResultMessage
+  | TerminalContextErrorMessage
   | QuestionRequestMessage
   | QuestionResolvedMessage
   | QuestionErrorMessage
+  | SuggestionRequestMessage
+  | SuggestionResolvedMessage
+  | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
+  | ConfigUpdateFailedMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
@@ -1453,6 +1572,7 @@ export type ExtensionMessage =
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
   | AgentManagerStateMessage
+  | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage
   | AgentManagerMultiVersionProgressMessage
   | AgentManagerSetSessionModelMessage
@@ -1490,6 +1610,7 @@ export type ExtensionMessage =
   | ViewSubAgentSessionMessage
   | DiffViewerDiffsMessage
   | DiffViewerLoadingMessage
+  | DiffViewerRevertFileResultMessage
   | MarketplaceDataMessage
   | MarketplaceInstallResultMessage
   | MarketplaceRemoveResultMessage
@@ -1516,6 +1637,7 @@ export interface FileAttachment {
   mime: string
   url: string
   filename?: string
+  source?: FilePartSource
 }
 
 export interface SendMessageRequest {
@@ -1534,6 +1656,7 @@ export interface SendMessageRequest {
 export interface AbortRequest {
   type: "abort"
   sessionID: string
+  queuedMessageIDs?: string[]
 }
 
 export interface RevertSessionRequest {
@@ -1567,6 +1690,9 @@ export interface ClearSessionRequest {
 export interface LoadMessagesRequest {
   type: "loadMessages"
   sessionID: string
+  mode?: MessageLoadMode
+  before?: string
+  limit?: number
 }
 
 export interface LoadSessionsRequest {
@@ -1748,6 +1874,19 @@ export interface QuestionRejectRequest {
   sessionID?: string
 }
 
+export interface SuggestionAcceptRequest {
+  type: "suggestionAccept"
+  requestID: string
+  sessionID: string
+  index: number
+}
+
+export interface SuggestionDismissRequest {
+  type: "suggestionDismiss"
+  requestID: string
+  sessionID: string
+}
+
 export interface DeleteSessionRequest {
   type: "deleteSession"
   sessionID: string
@@ -1779,6 +1918,13 @@ export interface RequestFileSearchMessage {
   type: "requestFileSearch"
   query: string
   requestId: string
+  sessionID?: string
+}
+
+export interface RequestTerminalContextMessage {
+  type: "requestTerminalContext"
+  requestId: string
+  sessionID?: string
 }
 
 export interface ChatCompletionAcceptedMessage {
@@ -1870,6 +2016,7 @@ export interface CreateWorktreeRequest {
   type: "agentManager.createWorktree"
   baseBranch?: string
   branchName?: string
+  variant?: string
 }
 
 // Delete a worktree and dissociate its sessions
@@ -1947,6 +2094,20 @@ export interface ConfigureSetupScriptRequest {
   type: "agentManager.configureSetupScript"
 }
 
+export interface ConfigureRunScriptRequest {
+  type: "agentManager.configureRunScript"
+}
+
+export interface RunScriptRequest {
+  type: "agentManager.runScript"
+  worktreeId: string
+}
+
+export interface StopRunScriptRequest {
+  type: "agentManager.stopRunScript"
+  worktreeId: string
+}
+
 // Show terminal for a session
 export interface ShowTerminalRequest {
   type: "agentManager.showTerminal"
@@ -2006,13 +2167,13 @@ export interface CreateMultiVersionRequest {
   providerID?: string
   modelID?: string
   agent?: string
-  variant?: string
   files?: FileAttachment[]
   baseBranch?: string
   branchName?: string
   // Per-version model allocations for multi-model comparison mode.
   // When set, each entry expands to `count` versions with that model.
   // Overrides `versions`, `providerID`, and `modelID`.
+  variant?: string
   modelAllocations?: ModelAllocation[]
 }
 
@@ -2363,12 +2524,15 @@ export type WebviewMessage =
   | SetLanguageRequest
   | QuestionReplyRequest
   | QuestionRejectRequest
+  | SuggestionAcceptRequest
+  | SuggestionDismissRequest
   | DeleteSessionRequest
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
   | UpdateAutocompleteSettingMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
+  | RequestTerminalContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
@@ -2399,6 +2563,9 @@ export type WebviewMessage =
   | RequestRepoInfoMessage
   | RequestStateMessage
   | ConfigureSetupScriptRequest
+  | ConfigureRunScriptRequest
+  | RunScriptRequest
+  | StopRunScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
   | OpenWorktreeRequest

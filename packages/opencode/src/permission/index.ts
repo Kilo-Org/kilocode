@@ -2,15 +2,15 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
 import { ProjectID } from "@/project/schema"
 import { Instance } from "@/project/instance"
 import { MessageID, SessionID } from "@/session/schema"
 import { PermissionTable } from "@/session/session.sql"
 import { Database, eq } from "@/storage/db"
 import { Log } from "@/util/log"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { Wildcard } from "@/util/wildcard"
-import { Deferred, Effect, Layer, Schema, ServiceMap } from "effect"
+import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import os from "os"
 import z from "zod"
 import { evaluate as evalRule } from "./evaluate"
@@ -157,11 +157,12 @@ export namespace Permission {
     return evalRule(permission, pattern, ...rulesets)
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Permission") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Permission") {}
 
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
+      const bus = yield* Bus.Service
       const state = yield* InstanceState.make<State>(
         Effect.fn("Permission.state")(function* (ctx) {
           const row = Database.use((db) =>
@@ -198,7 +199,7 @@ export namespace Permission {
         // kilocode_change end
 
         for (const pattern of request.patterns) {
-          const rule = evaluate(request.permission, pattern, ruleset, approved)
+          const rule = evaluate(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
           log.info("evaluated", { permission: request.permission, pattern, action: rule })
           if (rule.action === "deny") {
             return yield* new DeniedError({
@@ -227,8 +228,8 @@ export namespace Permission {
         log.info("asking", { id, permission: info.permission, patterns: info.patterns })
 
         const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-        s.pending.set(id, { info, ruleset, deferred }) // kilocode_change — store ruleset
-        void Bus.publish(Event.Asked, info)
+        pending.set(id, { info, ruleset, deferred }) // kilocode_change
+        yield* bus.publish(Event.Asked, info)
         return yield* Effect.ensuring(
           Deferred.await(deferred),
           Effect.sync(() => {
@@ -243,7 +244,7 @@ export namespace Permission {
         if (!existing) return
 
         pending.delete(input.requestID)
-        void Bus.publish(Event.Replied, {
+        yield* bus.publish(Event.Replied, {
           sessionID: existing.info.sessionID,
           requestID: existing.info.id,
           reply: input.reply,
@@ -258,7 +259,7 @@ export namespace Permission {
           for (const [id, item] of pending.entries()) {
             if (item.info.sessionID !== existing.info.sessionID) continue
             pending.delete(id)
-            void Bus.publish(Event.Replied, {
+            yield* bus.publish(Event.Replied, {
               sessionID: item.info.sessionID,
               requestID: item.info.id,
               reply: "reject",
@@ -290,7 +291,7 @@ export namespace Permission {
           )
           if (!ok) continue
           pending.delete(id)
-          void Bus.publish(Event.Replied, {
+          yield* bus.publish(Event.Replied, {
             sessionID: item.info.sessionID,
             requestID: item.info.id,
             reply: "always",
@@ -372,7 +373,7 @@ export namespace Permission {
           const entry = s.pending.get(PermissionID.make(input.requestID))
           if (entry && (!input.sessionID || entry.info.sessionID === input.sessionID)) {
             s.pending.delete(PermissionID.make(input.requestID))
-            void Bus.publish(Event.Replied, {
+            yield* bus.publish(Event.Replied, {
               sessionID: entry.info.sessionID,
               requestID: entry.info.id,
               reply: "once",
@@ -385,7 +386,7 @@ export namespace Permission {
           if (input.sessionID && entry.info.sessionID !== input.sessionID) continue
           if (ConfigProtection.isRequest(entry.info)) continue
           s.pending.delete(id)
-          void Bus.publish(Event.Replied, {
+          yield* bus.publish(Event.Replied, {
             sessionID: entry.info.sessionID,
             requestID: entry.info.id,
             reply: "once",
@@ -452,32 +453,7 @@ export namespace Permission {
     return result
   }
 
-  export const { runPromise } = makeRuntime(Service, layer)
-
-  export async function ask(input: z.infer<typeof AskInput>) {
-    return runPromise((s) => s.ask(input))
-  }
-
-  export async function reply(input: z.infer<typeof ReplyInput>) {
-    return runPromise((s) => s.reply(input))
-  }
-
-  export async function list() {
-    return runPromise((s) => s.list())
-  }
-
-  // kilocode_change start
-  export async function saveAlwaysRules(input: z.infer<typeof SaveAlwaysRulesInput>) {
-    return runPromise((s) => s.saveAlwaysRules(input))
-  }
-
-  export async function allowEverything(input: z.infer<typeof AllowEverythingInput>) {
-    return runPromise((s) => s.allowEverything(input))
-  }
-
-  export async function pending(id: string) {
-    return runPromise((s) => s.pending(id))
-  }
+  export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
 
   // kilocode_change start — inverse of fromConfig: convert rules back to config format
   const SCALAR_ONLY_PERMISSIONS = new Set([
@@ -512,5 +488,16 @@ export namespace Permission {
     }
     return result
   }
+  // kilocode_change end
+
+  // kilocode_change start - legacy promise helpers for Kilo callsites
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+  export const list = () => runPromise((svc) => svc.list())
+  export const ask = (input: z.infer<typeof AskInput>) => runPromise((svc) => svc.ask(input))
+  export const reply = (input: z.infer<typeof ReplyInput>) => runPromise((svc) => svc.reply(input))
+  export const saveAlwaysRules = (input: z.infer<typeof SaveAlwaysRulesInput>) =>
+    runPromise((svc) => svc.saveAlwaysRules(input))
+  export const allowEverything = (input: z.infer<typeof AllowEverythingInput>) =>
+    runPromise((svc) => svc.allowEverything(input))
   // kilocode_change end
 }

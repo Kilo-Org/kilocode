@@ -848,7 +848,7 @@ export function UserMessageDisplay(props: {
                 </span>
               </Show>
               <Show when={props.onRevert}>
-                <Tooltip value={i18n.t("ui.message.revert")} placement="right" gutter={4}>
+                <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>
                   <IconButton
                     icon="arrow-left"
                     size="normal"
@@ -858,7 +858,7 @@ export function UserMessageDisplay(props: {
                       event.stopPropagation()
                       props.onRevert?.()
                     }}
-                    aria-label={i18n.t("ui.message.revert")}
+                    aria-label={i18n.t("ui.message.revertMessage")}
                   />
                 </Tooltip>
               </Show>
@@ -1005,7 +1005,7 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
-                    <span data-slot="apply-patch-directory">{`\u202A${getDirectory(props.path)}\u202C`}</span>
+                    <span data-slot="apply-patch-directory">{`\u2066${getDirectory(props.path)}\u2069`}</span>
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
                 </div>
@@ -1026,24 +1026,84 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
 // GenericTool (upstream) does not render output; this override does.
 // When hideDetails is true, render as a row (no content), otherwise as a panel with markdown output.
 function McpTool(props: ToolProps) {
+  const i18n = useI18n()
+  const labelKeys = ["description", "query", "url", "filePath", "path", "pattern", "name"]
+  const skipKeys = new Set(labelKeys)
+
+  const subtitle = () =>
+    labelKeys
+      .map((key) => props.input?.[key])
+      .find((value): value is string => typeof value === "string" && value.length > 0)
+
+  const inputArgs = () => {
+    if (!props.input) return []
+    return Object.entries(props.input)
+      .filter(([key]) => !skipKeys.has(key))
+      .flatMap(([key, value]) => {
+        if (typeof value === "string") return [`${key}=${value}`]
+        if (typeof value === "number") return [`${key}=${value}`]
+        if (typeof value === "boolean") return [`${key}=${value}`]
+        return []
+      })
+      .slice(0, 3)
+  }
+
+  const formatted = createMemo(() => {
+    if (!props.input || Object.keys(props.input).length === 0) return ""
+    return "```json\n" + JSON.stringify(props.input, null, 2) + "\n```"
+  })
+
+  const formattedOutput = createMemo(() => {
+    if (!props.output) return undefined
+    try {
+      const parsed = JSON.parse(props.output)
+      return "```json\n" + JSON.stringify(parsed, null, 2) + "\n```"
+    } catch {
+      return props.output
+    }
+  })
+
   return (
     <Show
       when={!props.hideDetails}
-      fallback={<BasicTool hideDetails icon="mcp" status={props.status} trigger={{ title: props.tool }} />}
+      fallback={
+        <BasicTool
+          hideDetails
+          icon="mcp"
+          status={props.status}
+          trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
+        />
+      }
     >
       <BasicTool
         icon="mcp"
         status={props.status}
-        trigger={{ title: props.tool }}
+        trigger={{ title: props.tool, subtitle: subtitle(), args: inputArgs() }}
         defaultOpen={props.defaultOpen}
         forceOpen={props.forceOpen}
         locked={props.locked}
       >
-        <Show when={props.output}>
-          {(output) => (
-            <div data-component="tool-output" data-scrollable>
-              <Markdown text={output()} />
-            </div>
+        <Show when={formatted()}>
+          {(text) => (
+            <>
+              <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.input")}</div>
+              <div data-component="tool-output" data-scrollable>
+                <Markdown text={text()} />
+              </div>
+            </>
+          )}
+        </Show>
+        <Show when={formattedOutput()}>
+          {(text) => (
+            <>
+              <Show when={formatted()}>
+                <div data-slot="mcp-tool-divider" />
+              </Show>
+              <div data-slot="mcp-section-label">{i18n.t("ui.messagePart.mcp.output")}</div>
+              <div data-component="tool-output" data-scrollable>
+                <Markdown text={text()} />
+              </div>
+            </>
           )}
         </Show>
       </BasicTool>
@@ -1068,7 +1128,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
 
   return (
     <Show when={!hideQuestion()}>
-      <div data-component="tool-part-wrapper" data-tool={part.tool}>
+      <div data-component="tool-part-wrapper" data-part-type="tool" data-tool={part.tool}>
         <Switch>
           <Match when={part.state.status === "error" && part.state.error}>
             {(error) => {
@@ -1517,7 +1577,7 @@ function ToolMetaLine(props: {
     >
       <span data-slot="message-part-title-filename">{props.filename}</span>
       <Show when={props.path}>
-        <span data-slot="message-part-directory-inline">{props.path}</span>
+        <span data-slot="message-part-directory-inline">{`\u2066${props.path}\u2069`}</span>
       </Show>
       <Show when={props.changes}>{(changes) => <DiffChanges changes={changes()} />}</Show>
     </span>
@@ -2196,7 +2256,7 @@ ToolRegistry.register({
                                   <FileIcon node={{ path: file.relativePath, type: "file" }} />
                                   <div data-slot="apply-patch-file-name-container">
                                     <Show when={file.relativePath.includes("/")}>
-                                      <span data-slot="apply-patch-directory">{`\u202A${getDirectory(file.relativePath)}\u202C`}</span>
+                                      <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
                                     </Show>
 
                                     <span

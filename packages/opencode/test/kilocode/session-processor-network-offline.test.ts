@@ -1,6 +1,6 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, spyOn } from "bun:test"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
@@ -17,6 +17,7 @@ import { SessionNetwork } from "../../src/session/network"
 import { SessionProcessor } from "../../src/session/processor"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
+import { SessionSummary } from "../../src/session/summary"
 import { Snapshot } from "../../src/snapshot"
 import { Log } from "../../src/util/log"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
@@ -32,7 +33,7 @@ const ref = {
 
 type Script = Stream.Stream<LLM.Event, unknown>
 
-class TestLLM extends ServiceMap.Service<
+class TestLLM extends Context.Service<
   TestLLM,
   {
     readonly push: (stream: Script) => Effect.Effect<void>
@@ -82,6 +83,7 @@ const llm = Layer.unwrap(
             const item = queue.shift() ?? Stream.empty
             return item
           },
+          raw: () => Effect.die("raw not implemented in TestLLM"),
         }),
       ),
       Layer.succeed(TestLLM, TestLLM.of({ push })),
@@ -95,9 +97,10 @@ const deps = Layer.mergeAll(
   Session.defaultLayer,
   Snapshot.defaultLayer,
   AgentSvc.defaultLayer,
-  Permission.layer,
+  Permission.defaultLayer,
   Plugin.defaultLayer,
   Config.defaultLayer,
+  SessionSummary.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
@@ -133,10 +136,6 @@ describe("session processor network offline", () => {
           )
 
           // Auto-reply to network reconnect request
-          const statuses: unknown[] = []
-          const off = Bus.subscribe(SessionStatus.Event.Status, (event) => {
-            statuses.push(event.properties.status)
-          })
           const offAsk = Bus.subscribe(SessionNetwork.Event.Asked, (event) => {
             void SessionNetwork.reply({ requestID: event.properties.id })
           })
@@ -188,13 +187,13 @@ describe("session processor network offline", () => {
             const result = yield* handle.process(input)
             expect(result).toBe("continue")
             expect(ask).toHaveBeenCalledTimes(1)
-            expect(statuses).toContainEqual({
-              type: "offline",
-              requestID: expect.any(String),
+            // Verify the offline handler was invoked with the correct message
+            const call = ask.mock.calls[0]
+            expect(call[0]).toMatchObject({
+              sessionID: chat.id,
               message: err.message,
             })
           } finally {
-            off()
             offAsk()
             ask.mockRestore()
           }

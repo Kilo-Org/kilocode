@@ -216,6 +216,9 @@ export namespace ProviderTransform {
       copilot: {
         copilot_cache_control: { type: "ephemeral" },
       },
+      alibaba: {
+        cacheControl: { type: "ephemeral" },
+      },
     }
 
     for (const msg of unique([...system, ...final])) {
@@ -282,63 +285,19 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) {
-        continue
-      }
-      const encryptedDataSet = new Set<string>()
-      const textSet = new Set<string>()
-      for (const part of msg.content) {
-        if (!("providerOptions" in part)) continue // kilocode_change - ToolApprovalRequest lacks providerOptions
-        const openrouterProviderOptions = part.providerOptions?.openrouter as
-          | {
-              reasoning_details?: { data?: string; text?: string; signature?: string }[]
-            }
-          | undefined
-        if (!openrouterProviderOptions || !openrouterProviderOptions.reasoning_details) {
-          continue
-        }
-        openrouterProviderOptions.reasoning_details = openrouterProviderOptions.reasoning_details.filter((rd) => {
-          if (rd.data) {
-            if (!encryptedDataSet.has(rd.data)) {
-              encryptedDataSet.add(rd.data)
-              return true
-            }
-            return false
-          }
-          if (rd.text) {
-            if ((model.family === "claude" || model.id.includes("claude")) && !rd.signature) return false
-            if (!textSet.has(rd.text)) {
-              textSet.add(rd.text)
-              return true
-            }
-            return false
-          }
-          return true
-        })
-      }
-    }
-  }
-
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
 
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
-    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@openrouter/ai-sdk-provider") {
-      fixDuplicateReasoning(msgs, model)
-    }
-
     if (
       (model.providerID === "anthropic" ||
+        model.providerID === "google-vertex-anthropic" ||
         model.api.id.includes("anthropic") ||
         model.api.id.includes("claude") ||
         model.id.includes("anthropic") ||
         model.id.includes("claude") ||
-        model.api.npm === "@ai-sdk/anthropic") &&
+        model.api.npm === "@ai-sdk/anthropic" ||
+        model.api.npm === "@ai-sdk/alibaba") &&
       model.api.npm !== "@ai-sdk/gateway"
     ) {
       msgs = applyCaching(msgs, model)
@@ -346,7 +305,7 @@ export namespace ProviderTransform {
 
     // Remap providerOptions keys from stored providerID to expected SDK key
     const key = sdkKey(model.api.npm)
-    if (key && key !== model.providerID && model.api.npm !== "@ai-sdk/azure") {
+    if (key && key !== model.providerID) {
       const remap = (opts: Record<string, any> | undefined) => {
         if (!opts) return opts
         if (!(model.providerID in opts)) return opts
@@ -416,7 +375,11 @@ export namespace ProviderTransform {
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
     // kilocode_change start
-    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+    if (
+      ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
+      model.variants &&
+      Object.keys(model.variants).length > 0
+    ) {
       return model.variants
     }
     // kilocode_change end
@@ -424,10 +387,12 @@ export namespace ProviderTransform {
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
-    const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
-      model.api.id.includes(v),
-    )
-    const adaptiveEfforts = ["low", "medium", "high", "max"]
+    // kilocode_change start: add opus-4.7 (with xhigh effort)
+    const isOpus47 = ["opus-4-7", "opus-4.7"].some((v) => model.api.id.includes(v))
+    const isAnthropicAdaptive =
+      isOpus47 || ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) => model.api.id.includes(v))
+    const adaptiveEfforts = isOpus47 ? ["low", "medium", "high", "xhigh", "max"] : ["low", "medium", "high", "max"]
+    // kilocode_change end
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
@@ -435,7 +400,9 @@ export namespace ProviderTransform {
       id.includes("mistral") ||
       // id.includes("kimi") || // kilocode_change
       // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
-      id.includes("k2p5")
+      id.includes("k2p5") ||
+      id.includes("qwen") ||
+      id.includes("big-pickle")
     )
       return {}
 
@@ -541,9 +508,7 @@ export namespace ProviderTransform {
           return {}
         }
         if (model.id.includes("claude")) {
-          return {
-            thinking: { thinking_budget: 4000 },
-          }
+          return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
         }
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))
@@ -583,6 +548,11 @@ export namespace ProviderTransform {
         if (id.includes("gpt-5-") || id === "gpt-5") {
           azureEfforts.unshift("minimal")
         }
+        // kilocode_change start
+        if (model.release_date >= "2025-12-04") {
+          azureEfforts.push("xhigh")
+        }
+        // kilocode_change end
         return Object.fromEntries(
           azureEfforts.map((effort) => [
             effort,
@@ -852,7 +822,10 @@ export namespace ProviderTransform {
       result["chat_template_args"] = { enable_thinking: true }
     }
 
-    if (["zai", "zhipuai"].includes(input.model.providerID) && input.model.api.npm === "@ai-sdk/openai-compatible") {
+    if (
+      ["zai", "zhipuai"].some((id) => input.model.providerID.includes(id)) &&
+      input.model.api.npm === "@ai-sdk/openai-compatible"
+    ) {
       result["thinking"] = {
         type: "enabled",
         clear_thinking: false,
@@ -903,7 +876,16 @@ export namespace ProviderTransform {
     if (input.model.api.id.includes("gpt-5") && !input.model.api.id.includes("gpt-5-chat")) {
       if (!input.model.api.id.includes("gpt-5-pro")) {
         result["reasoningEffort"] = "medium"
-        result["reasoningSummary"] = "auto"
+        // Only inject reasoningSummary for providers that support it natively.
+        // @ai-sdk/openai-compatible proxies (e.g. LiteLLM) do not understand this
+        // parameter and return "Unknown parameter: 'reasoningSummary'".
+        if (
+          input.model.api.npm === "@ai-sdk/openai" ||
+          input.model.api.npm === "@ai-sdk/azure" ||
+          input.model.api.npm === "@ai-sdk/github-copilot"
+        ) {
+          result["reasoningSummary"] = "auto"
+        }
       }
 
       // Only set textVerbosity for non-chat gpt-5.x models
@@ -1021,6 +1003,12 @@ export namespace ProviderTransform {
     // kilocode_change end
 
     const key = sdkKey(model.api.npm) ?? model.providerID
+    // @ai-sdk/azure delegates to OpenAIChatLanguageModel which reads from
+    // providerOptions["openai"], but OpenAIResponsesLanguageModel checks
+    // "azure" first. Pass both so model options work on either code path.
+    if (model.api.npm === "@ai-sdk/azure") {
+      return { openai: options, azure: options }
+    }
     return { [key]: options }
   }
 

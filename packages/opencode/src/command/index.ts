@@ -1,13 +1,15 @@
 import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
+import type { InstanceContext } from "@/project/instance"
 import { SessionID, MessageID } from "@/session/schema"
-import { Effect, Layer, ServiceMap } from "effect"
+import { Effect, Layer, Context } from "effect"
+import { EffectLogger } from "@/effect/logger"
 import z from "zod"
 import { Config } from "../config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { localReviewCommand, localReviewUncommittedCommand } from "@/kilocode/review/command" // kilocode_change
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { Log } from "../util/log"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 import PROMPT_REVIEW from "./template/review.txt"
@@ -75,7 +77,7 @@ export namespace Command {
     readonly list: () => Effect.Effect<Info[]>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Command") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Command") {}
 
   export const layer = Layer.effect(
     Service,
@@ -84,13 +86,13 @@ export namespace Command {
       const mcp = yield* MCP.Service
       const skill = yield* Skill.Service
 
-      const init = Effect.fn("Command.state")(function* (ctx) {
+      const init = Effect.fn("Command.state")(function* (ctx: InstanceContext) {
         const cfg = yield* config.get()
         const commands: Record<string, Info> = {}
 
         commands[Default.INIT] = {
           name: Default.INIT,
-          description: "create/update AGENTS.md",
+          description: "guided AGENTS.md setup",
           source: "command",
           get template() {
             return PROMPT_INITIALIZE.replace("${path}", ctx.worktree)
@@ -134,20 +136,25 @@ export namespace Command {
             source: "mcp",
             description: prompt.description,
             get template() {
-              return new Promise<string>(async (resolve, reject) => {
-                const template = await MCP.getPrompt(
-                  prompt.client,
-                  prompt.name,
-                  prompt.arguments
-                    ? Object.fromEntries(prompt.arguments.map((argument, i) => [argument.name, `$${i + 1}`]))
-                    : {},
-                ).catch(reject)
-                resolve(
-                  template?.messages
-                    .map((message) => (message.content.type === "text" ? message.content.text : ""))
-                    .join("\n") || "",
-                )
-              })
+              return Effect.runPromise(
+                mcp
+                  .getPrompt(
+                    prompt.client,
+                    prompt.name,
+                    prompt.arguments
+                      ? Object.fromEntries(prompt.arguments.map((argument, i) => [argument.name, `$${i + 1}`]))
+                      : {},
+                  )
+                  .pipe(
+                    Effect.map(
+                      (template) =>
+                        template?.messages
+                          .map((message) => (message.content.type === "text" ? message.content.text : ""))
+                          .join("\n") || "",
+                    ),
+                    Effect.provide(EffectLogger.layer),
+                  ),
+              )
             },
             hints: prompt.arguments?.map((_, i) => `$${i + 1}`) ?? [],
           }
@@ -171,16 +178,16 @@ export namespace Command {
         }
       })
 
-      const cache = yield* InstanceState.make<State>((ctx) => init(ctx))
+      const state = yield* InstanceState.make<State>((ctx) => init(ctx))
 
       const get = Effect.fn("Command.get")(function* (name: string) {
-        const state = yield* InstanceState.get(cache)
-        return state.commands[name]
+        const s = yield* InstanceState.get(state)
+        return s.commands[name]
       })
 
       const list = Effect.fn("Command.list")(function* () {
-        const state = yield* InstanceState.get(cache)
-        return Object.values(state.commands)
+        const s = yield* InstanceState.get(state)
+        return Object.values(s.commands)
       })
 
       return Service.of({ get, list })
@@ -193,13 +200,11 @@ export namespace Command {
     Layer.provide(Skill.defaultLayer),
   )
 
+  // kilocode_change start
   const { runPromise } = makeRuntime(Service, defaultLayer)
 
   export async function get(name: string) {
     return runPromise((svc) => svc.get(name))
   }
-
-  export async function list() {
-    return runPromise((svc) => svc.list())
-  }
+  // kilocode_change end
 }

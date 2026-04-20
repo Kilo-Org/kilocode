@@ -46,6 +46,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/ingest\.kilosessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,
+  /^https?:\/\/api\.githubcopilot\.com/,
   /^https?:\/\/api\.cloudflare\.com/,
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,

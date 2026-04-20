@@ -1,7 +1,12 @@
 // kilocode_change - new file
+import { remapChildren as _remapChildren } from "./fork"
 import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
-import { Database, eq, and, gte, isNull, desc, like, inArray, lt } from "@/storage/db"
+import { Session } from "@/session"
+import { MessageID, SessionID } from "@/session/schema"
+import { makeRuntime } from "@/effect/run-service"
+import { fn } from "@/util/fn"
+import { Database, eq, and, gte, isNull, desc, like, inArray, lt, or } from "@/storage/db"
 import type { SQL } from "@/storage/db"
 import { ProjectTable } from "@/project/project.sql"
 import { ProjectID } from "@/project/schema"
@@ -79,6 +84,15 @@ export namespace KiloSession {
     return ids.length ? ids : [id]
   }
 
+  export function filters(input: { projectID: ProjectID; directory?: string }): SQL[] {
+    const dir = input.directory ? Filesystem.resolve(input.directory) : undefined
+    if (!dir) return [eq(SessionTable.project_id, input.projectID)]
+    return [
+      or(eq(SessionTable.project_id, input.projectID), eq(SessionTable.directory, dir)),
+      eq(SessionTable.directory, dir),
+    ].filter((item): item is SQL => item !== undefined)
+  }
+
   // ---------------------------------------------------------------------------
   // Provider-reported cost (OpenRouter / Kilo)
   // ---------------------------------------------------------------------------
@@ -135,6 +149,14 @@ export namespace KiloSession {
   export async function removeSession(id: string): Promise<void> {
     const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
     await KiloSessions.remove(id).catch(() => {})
+  }
+
+  export async function cleanup(id: string): Promise<void> {
+    await removeSession(id)
+    clearPlatformOverride(id)
+    const [app, state] = await Promise.all([import("@/effect/app-runtime"), import("@/session/run-state")])
+    const { SessionID } = await import("@/session/schema")
+    await app.AppRuntime.runPromise(state.SessionRunState.Service.use((svc) => svc.cancel(SessionID.make(id))))
   }
 
   // ---------------------------------------------------------------------------
@@ -273,4 +295,16 @@ export namespace KiloSession {
       yield { ...input.fromRow(row), project } as T & { project: ProjectInfo | null }
     }
   }
+
+  export const remapChildren = _remapChildren
 }
+
+export const kiloSessionFork = fn(
+  z.object({ sessionID: SessionID.zod, messageID: MessageID.zod.optional() }),
+  async (input) => {
+    const { runPromise } = makeRuntime(Session.Service, Session.defaultLayer)
+    const session = await runPromise((svc) => svc.fork(input))
+    await KiloSession.remapChildren(session.id)
+    return session
+  },
+)

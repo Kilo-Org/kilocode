@@ -5,6 +5,7 @@ import { Glob } from "../../util/glob"
 import { Truncate } from "../../tool/truncate"
 import { Config } from "../../config/config"
 import { Instance } from "../../project/instance"
+import { makeRuntime } from "@/effect/run-service"
 import { Global } from "@/global"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import z from "zod"
@@ -231,6 +232,7 @@ export function patchAgents(
         defaults,
         Permission.fromConfig({
           question: "allow",
+          suggest: "allow", // kilocode_change
           plan_exit: "allow",
           bash: readOnlyBash,
           ...kilo.mcpRules,
@@ -289,6 +291,7 @@ export function patchAgents(
       defaults,
       Permission.fromConfig({
         question: "allow",
+        suggest: "allow", // kilocode_change
         plan_enter: "allow",
       }),
       user,
@@ -312,6 +315,7 @@ export function patchAgents(
         glob: "allow",
         list: "allow",
         question: "allow",
+        suggest: "allow", // kilocode_change
         task: "allow",
         todoread: "allow",
         todowrite: "allow",
@@ -388,7 +392,8 @@ export const RemoveError = NamedError.create(
  */
 export async function remove(name: string) {
   const { Agent } = await import("../../agent/agent")
-  const agent = await Agent.get(name)
+  const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
+  const agent = await agents.runPromise((svc) => svc.get(name))
   if (!agent) throw new RemoveError({ name, message: "agent not found" })
   if (agent.native) throw new RemoveError({ name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents

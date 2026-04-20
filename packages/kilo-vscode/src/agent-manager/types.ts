@@ -7,12 +7,13 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiff } from "@kilocode/sdk/v2/client"
+import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
+import type { RunStatus } from "./run/manager"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -22,7 +23,9 @@ type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
-export type WorktreeDiffEntry = FileDiff & {
+export type WorktreeDiffEntry = SnapshotFileDiff & {
+  before?: string
+  after?: string
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
@@ -126,6 +129,9 @@ interface StateMessage {
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
   defaultBaseBranch?: string
+  runStatuses?: RunStatus[]
+  runScriptConfigured?: boolean
+  runScriptPath?: string
 }
 
 interface ErrorOutMessage {
@@ -249,6 +255,10 @@ interface ActionOutMessage {
   action: string
 }
 
+interface RunStatusMessage extends RunStatus {
+  type: "agentManager.runStatus"
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeStatsMessage
@@ -274,6 +284,7 @@ export type AgentManagerOutMessage =
   | RevertWorktreeFileResultMessage
   | PRStatusOutMessage
   | ActionOutMessage
+  | RunStatusMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -329,6 +340,20 @@ interface ForgetSessionIn {
 
 interface ConfigureSetupScriptIn {
   type: "agentManager.configureSetupScript"
+}
+
+interface ConfigureRunScriptIn {
+  type: "agentManager.configureRunScript"
+}
+
+interface RunScriptIn {
+  type: "agentManager.runScript"
+  worktreeId: string
+}
+
+interface StopRunScriptIn {
+  type: "agentManager.stopRunScript"
+  worktreeId: string
 }
 
 interface ShowTerminalIn {
@@ -509,6 +534,19 @@ interface PreviewImageIn {
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
+  mode?: "replace" | "prepend" | "focus"
+  before?: string
+  limit?: number
+}
+
+interface FileSourceIn {
+  type: "file"
+  path: string
+  text: {
+    value: string
+    start: number
+    end: number
+  }
 }
 
 interface SendMessageIn {
@@ -521,7 +559,7 @@ interface SendMessageIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
 }
 
 interface SendCommandIn {
@@ -535,7 +573,13 @@ interface SendCommandIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
+}
+
+interface RequestTerminalContextIn {
+  type: "requestTerminalContext"
+  requestId: string
+  sessionID?: string
 }
 
 interface ClearSessionIn {
@@ -551,6 +595,7 @@ interface ForkSessionIn {
 interface AbortIn {
   type: "abort"
   sessionID: string
+  queuedMessageIDs?: string[]
 }
 
 interface ContinueInWorktreeIn {
@@ -612,6 +657,9 @@ export type AgentManagerInMessage =
   | ForgetSessionIn
   | ForkSessionIn
   | ConfigureSetupScriptIn
+  | ConfigureRunScriptIn
+  | RunScriptIn
+  | StopRunScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
   | OpenWorktreeIn
@@ -647,6 +695,7 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn
   | ContinueInWorktreeIn

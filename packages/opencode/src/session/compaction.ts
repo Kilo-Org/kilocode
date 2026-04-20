@@ -9,14 +9,13 @@ import z from "zod"
 import { Token } from "../util/token"
 import { Log } from "../util/log"
 import { SessionProcessor } from "./processor"
-import { fn } from "@/util/fn"
 import { Agent } from "@/agent/agent"
 import { Plugin } from "@/plugin"
 import { Config } from "@/config/config"
 import { NotFoundError } from "@/storage/db"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { Effect, Layer, ServiceMap } from "effect"
-import { makeRuntime } from "@/effect/run-service"
+import { Effect, Layer, Context } from "effect"
+import { InstanceState } from "@/effect/instance-state"
 import { isOverflow as overflow } from "./overflow"
 
 export namespace SessionCompaction {
@@ -57,12 +56,18 @@ export namespace SessionCompaction {
     }) => Effect.Effect<void>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/SessionCompaction") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/SessionCompaction") {}
 
   export const layer: Layer.Layer<
     Service,
     never,
-    Bus.Service | Config.Service | Session.Service | Agent.Service | Plugin.Service | SessionProcessor.Service
+    | Bus.Service
+    | Config.Service
+    | Session.Service
+    | Agent.Service
+    | Plugin.Service
+    | SessionProcessor.Service
+    | Provider.Service
   > = Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -72,6 +77,7 @@ export namespace SessionCompaction {
       const agents = yield* Agent.Service
       const plugin = yield* Plugin.Service
       const processors = yield* SessionProcessor.Service
+      const provider = yield* Provider.Service
 
       const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
         tokens: MessageV2.Assistant["tokens"]
@@ -169,11 +175,9 @@ export namespace SessionCompaction {
         }
 
         const agent = yield* agents.get("compaction")
-        const model = yield* Effect.promise(() =>
-          agent.model
-            ? Provider.getModel(agent.model.providerID, agent.model.modelID)
-            : Provider.getModel(userMessage.model.providerID, userMessage.model.modelID),
-        )
+        const model = agent.model
+          ? yield* provider.getModel(agent.model.providerID, agent.model.modelID)
+          : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID)
         // Allow plugins to inject context or replace compaction prompt.
         const compacting = yield* plugin.trigger(
           "experimental.session.compacting",
@@ -184,6 +188,7 @@ export namespace SessionCompaction {
 Focus on information that would be helpful for continuing the conversation, including what we did, what we're doing, which files we're working on, and what we're going to do next.
 The summary that you construct will be used so that another agent can read it and continue the work.
 Do not call any tools. Respond only with the summary text.
+Respond in the same language as the user's messages in the conversation.
 
 When constructing the summary, try to stick to this template:
 ---
@@ -212,7 +217,8 @@ When constructing the summary, try to stick to this template:
         const prompt = compacting.prompt ?? [defaultPrompt, ...compacting.context].join("\n\n")
         const msgs = structuredClone(messages)
         yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-        const modelMessages = yield* Effect.promise(() => MessageV2.toModelMessages(msgs, model, { stripMedia: true }))
+        const modelMessages = yield* MessageV2.toModelMessagesEffect(msgs, model, { stripMedia: true })
+        const ctx = yield* InstanceState.context
         const msg: MessageV2.Assistant = {
           id: MessageID.ascending(),
           role: "assistant",
@@ -220,11 +226,11 @@ When constructing the summary, try to stick to this template:
           sessionID: input.sessionID,
           mode: "compaction",
           agent: "compaction",
-          variant: userMessage.variant,
+          variant: userMessage.model.variant,
           summary: true,
           path: {
-            cwd: Instance.directory,
-            root: Instance.worktree,
+            cwd: ctx.directory,
+            root: ctx.worktree,
           },
           cost: 0,
           tokens: {
@@ -245,23 +251,21 @@ When constructing the summary, try to stick to this template:
           sessionID: input.sessionID,
           model,
         })
-        const result = yield* processor
-          .process({
-            user: userMessage,
-            agent,
-            sessionID: input.sessionID,
-            tools: {},
-            system: [],
-            messages: [
-              ...modelMessages,
-              {
-                role: "user",
-                content: [{ type: "text", text: prompt }],
-              },
-            ],
-            model,
-          })
-          .pipe(Effect.onInterrupt(() => processor.abort()))
+        const result = yield* processor.process({
+          user: userMessage,
+          agent,
+          sessionID: input.sessionID,
+          tools: {},
+          system: [],
+          messages: [
+            ...modelMessages,
+            {
+              role: "user",
+              content: [{ type: "text", text: prompt }],
+            },
+          ],
+          model,
+        })
 
         if (result === "compact") {
           processor.message.error = new MessageV2.ContextOverflowError({
@@ -287,7 +291,6 @@ When constructing the summary, try to stick to this template:
               format: original.format,
               tools: original.tools,
               system: original.system,
-              variant: original.variant,
             })
             for (const part of replay.parts) {
               if (part.type === "compaction") continue
@@ -305,31 +308,51 @@ When constructing the summary, try to stick to this template:
           }
 
           if (!replay) {
-            const continueMsg = yield* session.updateMessage({
-              id: MessageID.ascending(),
-              role: "user",
-              sessionID: input.sessionID,
-              time: { created: Date.now() },
-              agent: userMessage.agent,
-              model: userMessage.model,
-            })
-            const text =
-              (input.overflow
-                ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
-                : "") +
-              "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
-            yield* session.updatePart({
-              id: PartID.ascending(),
-              messageID: continueMsg.id,
-              sessionID: input.sessionID,
-              type: "text",
-              synthetic: true,
-              text,
-              time: {
-                start: Date.now(),
-                end: Date.now(),
-              },
-            })
+            const info = yield* provider.getProvider(userMessage.model.providerID)
+            if (
+              (yield* plugin.trigger(
+                "experimental.compaction.autocontinue",
+                {
+                  sessionID: input.sessionID,
+                  agent: userMessage.agent,
+                  model: yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID),
+                  provider: {
+                    source: info.source,
+                    info,
+                    options: info.options,
+                  },
+                  message: userMessage,
+                  overflow: input.overflow === true,
+                },
+                { enabled: true },
+              )).enabled
+            ) {
+              const continueMsg = yield* session.updateMessage({
+                id: MessageID.ascending(),
+                role: "user",
+                sessionID: input.sessionID,
+                time: { created: Date.now() },
+                agent: userMessage.agent,
+                model: userMessage.model,
+              })
+              const text =
+                (input.overflow
+                  ? "The previous request exceeded the provider's size limit due to large media attachments. The conversation was compacted and media files were removed from context. If the user was asking about attached images or files, explain that the attachments were too large to process and suggest they try again with smaller or fewer files.\n\n"
+                  : "") +
+                "Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed."
+              yield* session.updatePart({
+                id: PartID.ascending(),
+                messageID: continueMsg.id,
+                sessionID: input.sessionID,
+                type: "text",
+                synthetic: true,
+                text,
+                time: {
+                  start: Date.now(),
+                  end: Date.now(),
+                },
+              })
+            }
           }
         }
 
@@ -372,48 +395,15 @@ When constructing the summary, try to stick to this template:
     }),
   )
 
-  export const defaultLayer = Layer.unwrap(
-    Effect.sync(() =>
-      layer.pipe(
-        Layer.provide(Session.defaultLayer),
-        Layer.provide(SessionProcessor.defaultLayer),
-        Layer.provide(Agent.defaultLayer),
-        Layer.provide(Plugin.defaultLayer),
-        Layer.provide(Bus.layer),
-        Layer.provide(Config.defaultLayer),
-      ),
+  export const defaultLayer = Layer.suspend(() =>
+    layer.pipe(
+      Layer.provide(Provider.defaultLayer),
+      Layer.provide(Session.defaultLayer),
+      Layer.provide(SessionProcessor.defaultLayer),
+      Layer.provide(Agent.defaultLayer),
+      Layer.provide(Plugin.defaultLayer),
+      Layer.provide(Bus.layer),
+      Layer.provide(Config.defaultLayer),
     ),
-  )
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function isOverflow(input: { tokens: MessageV2.Assistant["tokens"]; model: Provider.Model }) {
-    return runPromise((svc) => svc.isOverflow(input))
-  }
-
-  export async function prune(input: { sessionID: SessionID }) {
-    return runPromise((svc) => svc.prune(input))
-  }
-
-  export const process = fn(
-    z.object({
-      parentID: MessageID.zod,
-      messages: z.custom<MessageV2.WithParts[]>(),
-      sessionID: SessionID.zod,
-      auto: z.boolean(),
-      overflow: z.boolean().optional(),
-    }),
-    (input) => runPromise((svc) => svc.process(input)),
-  )
-
-  export const create = fn(
-    z.object({
-      sessionID: SessionID.zod,
-      agent: z.string(),
-      model: z.object({ providerID: ProviderID.zod, modelID: ModelID.zod }),
-      auto: z.boolean(),
-      overflow: z.boolean().optional(),
-    }),
-    (input) => runPromise((svc) => svc.create(input)),
   )
 }

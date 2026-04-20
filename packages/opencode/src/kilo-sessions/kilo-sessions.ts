@@ -2,6 +2,7 @@ import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session"
+import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
@@ -533,7 +534,7 @@ export namespace KiloSessions {
     log.info("full sync", { sessionId })
 
     const session = await Session.get(SessionID.make(sessionId))
-    const diffs = await Session.diff(SessionID.make(sessionId))
+    const diffs = await SessionSummary.diff({ sessionID: SessionID.make(sessionId) })
     const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const models = await Promise.all(

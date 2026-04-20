@@ -139,15 +139,21 @@ function slimWrite(state: Record<string, unknown>): Record<string, unknown> {
   return next
 }
 
-/** bash: truncate metadata.output (up to 30KB) and state.output (up to 50KB). */
-function slimBash(state: Record<string, unknown>): Record<string, unknown> {
+/** read/list/search: keep the rendered tool details lightweight on historical loads. */
+function slimOutput(state: Record<string, unknown>): Record<string, unknown> {
   const next = { ...state }
+  if (typeof state.output === "string" && state.output.length > OUTPUT_CAP) {
+    next.output = cap(state.output)
+  }
+  return next
+}
+
+/** bash: truncate metadata.output and state.output. */
+function slimBash(state: Record<string, unknown>): Record<string, unknown> {
+  const next = slimOutput(state)
   const meta = state.metadata
   if (isObj(meta) && typeof meta.output === "string" && meta.output.length > OUTPUT_CAP) {
     next.metadata = { ...meta, output: cap(meta.output) }
-  }
-  if (typeof state.output === "string" && (state.output as string).length > OUTPUT_CAP) {
-    next.output = cap(state.output)
   }
   return next
 }
@@ -157,6 +163,10 @@ function slimBash(state: Record<string, unknown>): Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 const slimmers: Record<string, (state: Record<string, unknown>) => Record<string, unknown>> = {
+  read: slimOutput,
+  list: slimOutput,
+  glob: slimOutput,
+  grep: slimOutput,
   edit: slimEdit,
   apply_patch: slimPatch,
   multiedit: slimMultiedit,

@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Zmiany w sesji",
+  "ui.sessionReview.title.git": "Zmiany Git",
+  "ui.sessionReview.title.branch": "Zmiany w gałęzi",
   "ui.sessionReview.title.lastTurn": "Zmiany z ostatniej tury",
   "ui.sessionReview.diffStyle.unified": "Ujednolicony",
   "ui.sessionReview.diffStyle.split": "Podzielony",
@@ -36,6 +38,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Ukryj kroki",
   "ui.sessionTurn.summary.response": "Odpowiedź",
   "ui.sessionTurn.diff.showMore": "Pokaż więcej zmian ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Zmieniono",
+  "ui.sessionTurn.diffs.showAll": "Pokaż wszystko",
+  "ui.sessionTurn.diffs.showLess": "Pokaż mniej",
+  "ui.sessionTurn.diffs.more": "+{{count}} więcej plików",
 
   "ui.sessionTurn.retry.retrying": "ponawianie",
   "ui.sessionTurn.retry.inSeconds": "za {{seconds}}s",
@@ -69,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} listy",
   "ui.messagePart.diagnostic.error": "Błąd",
+  "ui.messagePart.mcp.input": "Wejście",
+  "ui.messagePart.mcp.output": "Wyjście",
   "ui.messagePart.title.edit": "Edycja",
   "ui.messagePart.title.write": "Pisanie",
   "ui.messagePart.option.typeOwnAnswer": "Wpisz własną odpowiedź",

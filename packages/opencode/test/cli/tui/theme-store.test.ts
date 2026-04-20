@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test"
+import { Log } from "../../../src/util/log"
+
+Log.init({ print: false })
 
 const { DEFAULT_THEMES, allThemes, addTheme, hasTheme, resolveTheme } = await import(
   "../../../src/cli/cmd/tui/context/theme"

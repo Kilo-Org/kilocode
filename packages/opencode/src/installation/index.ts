@@ -1,7 +1,6 @@
-import { Effect, Layer, Schema, ServiceMap, Stream } from "effect"
+import { Effect, Layer, Schema, Context, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
-import { makeRuntime } from "@/effect/run-service"
 import { withTransientReadRetry } from "@/util/effect-http-client"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import path from "path"
@@ -9,12 +8,7 @@ import z from "zod"
 import { BusEvent } from "@/bus/bus-event"
 import { Flag } from "../flag/flag"
 import { Log } from "../util/log"
-
-// kilocode_change - renamed build-time globals
-declare global {
-  const KILO_VERSION: string
-  const KILO_CHANNEL: string
-}
+import { CHANNEL as channel, VERSION as version } from "./meta"
 
 import semver from "semver"
 
@@ -61,8 +55,8 @@ export namespace Installation {
     })
   export type Info = z.infer<typeof Info>
 
-  export const VERSION = typeof KILO_VERSION === "string" ? KILO_VERSION : "local"
-  export const CHANNEL = typeof KILO_CHANNEL === "string" ? KILO_CHANNEL : "local"
+  export const VERSION = version
+  export const CHANNEL = channel
   export const USER_AGENT = `kilo/${CHANNEL}/${VERSION}/${Flag.KILO_CLIENT}` // kilocode_change
 
   export function isPreview() {
@@ -96,7 +90,7 @@ export namespace Installation {
     readonly upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
   }
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Installation") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Installation") {}
 
   export const layer: Layer.Layer<Service, never, HttpClient.HttpClient | ChildProcessSpawner.ChildProcessSpawner> =
     Layer.effect(
@@ -349,22 +343,4 @@ export namespace Installation {
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
   )
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function info(): Promise<Info> {
-    return runPromise((svc) => svc.info())
-  }
-
-  export async function method(): Promise<Method> {
-    return runPromise((svc) => svc.method())
-  }
-
-  export async function latest(installMethod?: Method): Promise<string> {
-    return runPromise((svc) => svc.latest(installMethod))
-  }
-
-  export async function upgrade(m: Method, target: string): Promise<void> {
-    return runPromise((svc) => svc.upgrade(m, target))
-  }
 }

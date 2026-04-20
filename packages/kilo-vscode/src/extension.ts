@@ -16,6 +16,7 @@ import { TelemetryProxy } from "./services/telemetry"
 import { registerCommitMessageService } from "./services/commit-message"
 import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } from "./services/code-actions"
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
+import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
@@ -86,11 +87,13 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   )
 
-  // Ensure Agent Manager keybindings work when a VS Code terminal has focus.
+  // Ensure Agent Manager navigation keybindings work when a VS Code terminal has focus.
   // The terminal intercepts all keystrokes unless the command is listed in
   // terminal.integrated.commandsToSkipShell, which only contains built-in
   // commands by default.
-  ensureCommandsSkipShell(["kilo-code.new.agentManagerOpen", "kilo-code.new.agentManager.showTerminal"])
+  const skip = ["kilo-code.new.agentManagerOpen", "kilo-code.new.agentManager.showTerminal"]
+  if (process.platform === "darwin") skip.push("kilo-code.new.agentManager.runScript")
+  ensureCommandsSkipShell(skip)
 
   // Create Agent Manager provider for editor panel
   const agentManagerHost = new VscodeHost(context.extensionUri, connectionService, context)
@@ -281,6 +284,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
       agentManagerProvider.showTerminalForCurrentSession()
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.runScript", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "runScript" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.toggleDiff", () => {
       agentManagerProvider.postMessage({ type: "action", action: "toggleDiff" })
     }),
@@ -320,6 +326,7 @@ export function activate(context: vscode.ExtensionContext) {
         const match = uri.path.match(/^\/kilocode\/s\/([a-zA-Z0-9_-]+)$/)
         if (!match) return
         const sessionId = match[1]
+        if (!sessionId) return
         console.log("[Kilo New] URI handler: opening cloud session:", sessionId)
         await vscode.commands.executeCommand(`${KiloProvider.viewType}.focus`)
         provider.openCloudSession(sessionId)
@@ -356,6 +363,8 @@ export function activate(context: vscode.ExtensionContext) {
       return [...dirs]
     },
   )
+
+  registerHeapSnapshot(context, connectionService)
 
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
   registerCodeActions(context, provider, agentManagerProvider)

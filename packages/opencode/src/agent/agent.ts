@@ -9,19 +9,20 @@ import { Auth } from "../auth"
 import { ProviderTransform } from "../provider/transform"
 
 import PROMPT_GENERATE from "./generate.txt"
+import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
-import { Global } from "@/global"
-import path from "path"
+import { Global } from "@/global" // kilocode_change
+import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
+import path from "path" // kilocode_change
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
-import { Effect, ServiceMap, Layer } from "effect"
+import { Effect, Context, Layer } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { makeRuntime } from "@/effect/run-service"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 
 export namespace Agent {
@@ -70,20 +71,29 @@ export namespace Agent {
 
   type State = Omit<Interface, "generate">
 
-  export class Service extends ServiceMap.Service<Service, Interface>()("@opencode/Agent") {}
+  export class Service extends Context.Service<Service, Interface>()("@opencode/Agent") {}
 
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
       const config = yield* Config.Service
       const auth = yield* Auth.Service
+      const plugin = yield* Plugin.Service
       const skill = yield* Skill.Service
+      const provider = yield* Provider.Service
 
       const state = yield* InstanceState.make<State>(
         Effect.fn("Agent.state")(function* (ctx) {
           const cfg = yield* config.get()
           const skillDirs = yield* skill.dirs()
-          const whitelistedDirs = [Truncate.GLOB, ...skillDirs.map((dir) => path.join(dir, "*"))]
+          // kilocode_change start - include global config dirs so agents can read them without prompting
+          const whitelistedDirs = [
+            Truncate.GLOB,
+            ...skillDirs.map((dir) => path.join(dir, "*")),
+            path.join(Global.Path.config, "*"),
+            ...KilocodePaths.globalDirs().map((dir) => path.join(dir, "*")),
+          ]
+          // kilocode_change end
 
           const baseDefaults = Permission.fromConfig({
             // kilocode_change: renamed from defaults
@@ -93,6 +103,7 @@ export namespace Agent {
               "*": "ask",
               ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
             },
+            suggest: "deny", // kilocode_change
             question: "deny",
             plan_enter: "deny",
             plan_exit: "deny",
@@ -121,6 +132,7 @@ export namespace Agent {
                 defaults,
                 Permission.fromConfig({
                   question: "allow",
+                  suggest: "allow", // kilocode_change
                   plan_enter: "allow",
                 }),
                 user,
@@ -352,15 +364,17 @@ export namespace Agent {
           model?: { providerID: ProviderID; modelID: ModelID }
         }) {
           const cfg = yield* config.get()
-          const model = input.model ?? (yield* Effect.promise(() => Provider.defaultModel()))
-          const resolved = yield* Effect.promise(() => Provider.getModel(model.providerID, model.modelID))
-          const language = yield* Effect.promise(() => Provider.getLanguage(resolved))
+          const model = input.model ?? (yield* provider.defaultModel())
+          const resolved = yield* provider.getModel(model.providerID, model.modelID)
+          const language = yield* provider.getLanguage(resolved)
 
           const system = [PROMPT_GENERATE]
-          yield* Effect.promise(() =>
-            Plugin.trigger("experimental.chat.system.transform", { model: resolved }, { system }),
-          )
+          yield* plugin.trigger("experimental.chat.system.transform", { model: resolved }, { system })
           const existing = yield* InstanceState.useEffect(state, (s) => s.list())
+
+          // TODO: clean this up so provider specific logic doesnt bleed over
+          const authInfo = yield* auth.get(model.providerID).pipe(Effect.orDie)
+          const isOpenaiOauth = model.providerID === "openai" && authInfo?.type === "oauth"
 
           const params = {
             // kilocode_change start - enable telemetry with custom PostHog tracer
@@ -368,12 +382,14 @@ export namespace Agent {
             // kilocode_change end
             temperature: 0.3,
             messages: [
-              ...system.map(
-                (item): ModelMessage => ({
-                  role: "system",
-                  content: item,
-                }),
-              ),
+              ...(isOpenaiOauth
+                ? []
+                : system.map(
+                    (item): ModelMessage => ({
+                      role: "system",
+                      content: item,
+                    }),
+                  )),
               {
                 role: "user",
                 content: `Create an agent configuration based on this request: \"${input.description}\".\n\nIMPORTANT: The following identifiers already exist and must NOT be used: ${existing.map((i) => i.name).join(", ")}\n  Return ONLY the JSON object, no other text, do not wrap in backticks`,
@@ -387,13 +403,12 @@ export namespace Agent {
             }),
           } satisfies Parameters<typeof generateObject>[0]
 
-          // TODO: clean this up so provider specific logic doesnt bleed over
-          const authInfo = yield* auth.get(model.providerID).pipe(Effect.orDie)
-          if (model.providerID === "openai" && authInfo?.type === "oauth") {
+          if (isOpenaiOauth) {
             return yield* Effect.promise(async () => {
               const result = streamObject({
                 ...params,
                 providerOptions: ProviderTransform.providerOptions(resolved, {
+                  instructions: system.join("\n"),
                   store: false,
                 }),
                 onError: () => {},
@@ -412,33 +427,24 @@ export namespace Agent {
   )
 
   export const defaultLayer = layer.pipe(
+    Layer.provide(Plugin.defaultLayer),
+    Layer.provide(Provider.defaultLayer),
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Skill.defaultLayer),
   )
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export async function get(agent: string) {
-    return runPromise((svc) => svc.get(agent))
-  }
-
-  export async function list() {
-    return runPromise((svc) => svc.list())
-  }
-
-  export async function defaultAgent() {
-    return runPromise((svc) => svc.defaultAgent())
-  }
-
-  export async function generate(input: { description: string; model?: { providerID: ProviderID; modelID: ModelID } }) {
-    return runPromise((svc) => svc.generate(input))
-  }
 
   // kilocode_change start - agent removal (delegated to kilocode module)
   export const RemoveError = KiloAgent.RemoveError
   export async function remove(name: string) {
     return KiloAgent.remove(name)
   }
+  // kilocode_change end
+
+  // kilocode_change start - legacy promise helpers for Kilo callsites
+  const { runPromise } = makeRuntime(Service, defaultLayer)
+  export const get = (agent: string) => runPromise((svc) => svc.get(agent))
+  export const list = () => runPromise((svc) => svc.list())
+  export const defaultAgent = () => runPromise((svc) => svc.defaultAgent())
   // kilocode_change end
 }

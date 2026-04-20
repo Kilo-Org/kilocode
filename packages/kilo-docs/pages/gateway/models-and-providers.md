@@ -41,7 +41,7 @@ This returns model information including pricing, context window, and supported 
 
 | Model ID                        | Provider  | Description                                     |
 | ------------------------------- | --------- | ----------------------------------------------- |
-| `anthropic/claude-opus-4.6`     | Anthropic | Most capable Claude model for complex reasoning |
+| `anthropic/claude-opus-4.7`     | Anthropic | Most capable Claude model for complex reasoning |
 | `anthropic/claude-sonnet-4.6`   | Anthropic | Balanced performance and cost                   |
 | `anthropic/claude-haiku-4.5`    | Anthropic | Fast and cost-effective                         |
 | `openai/gpt-5.4`                | OpenAI    | Latest GPT model                                |
@@ -76,42 +76,45 @@ Provided under the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia
 
 Kilo Auto virtual models automatically select the best underlying model based on the task type. The selection is controlled by the `x-kilocode-mode` request header.
 
+{% callout type="info" title="Underlying models can change" %}
+The mappings below reflect the current routing. The underlying models behind each `kilo-auto/*` tier are updated server-side as better options become available or as providers change pricing and availability — the tier IDs themselves remain stable.
+{% /callout %}
+
 ### `kilo-auto/frontier`
 
-Highest performance and capability for any task.
+Highest performance and capability for any task. Frontier requests are sent with medium reasoning effort and medium verbosity.
 
 | Mode                                                           | Resolved Model                |
 | -------------------------------------------------------------- | ----------------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.6`   |
+| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `anthropic/claude-opus-4.7`   |
 | `build`, `explore`, `code`                                     | `anthropic/claude-sonnet-4.6` |
-| Default (no mode specified)                                    | `anthropic/claude-sonnet-4.6` |
+| Default (no / unknown mode)                                    | `anthropic/claude-sonnet-4.6` |
 
 ### `kilo-auto/balanced`
 
-Great balance of price and capability.
-
-| Mode                                                           | Resolved Model         |
-| -------------------------------------------------------------- | ---------------------- |
-| `plan`, `general`, `architect`, `orchestrator`, `ask`, `debug` | `openai/gpt-5.3-codex` |
-| `build`, `explore`, `code`                                     | `openai/gpt-5.3-codex` |
-| Default (no mode specified)                                    | `openai/gpt-5.3-codex` |
-
-### `kilo-auto/free`
-
-Free with limited capability. No credits required.
+Great balance of price and capability. Balanced routes to the same model regardless of mode, with low reasoning effort.
 
 | Mode      | Resolved Model         |
 | --------- | ---------------------- |
-| All modes | `minimax/minimax-m2.5` |
+| All modes | `openai/gpt-5.3-codex` |
+
+### `kilo-auto/free`
+
+Free with limited capability. No credits required. Requests are split across the available free models; the mapping updates server-side as free model availability shifts.
+
+| Routing | Resolved Model                |
+| ------- | ----------------------------- |
+| 80%     | `minimax/minimax-m2.5:free`   |
+| 20%     | `stepfun/step-3.5-flash:free` |
 
 ### `kilo-auto/small`
 
-Automatically routes to a small, fast model.
+Automatically routes to a small, fast model for lightweight background tasks (session titles, commit messages, summaries).
 
-| Mode          | Resolved Model       |
-| ------------- | -------------------- |
-| Default       | `openai/gpt-5-nano`  |
-| Free fallback | `openai/gpt-oss-20b` |
+| Condition                 | Resolved Model                   |
+| ------------------------- | -------------------------------- |
+| Account has paid balance  | `google/gemma-4-31b-it`          |
+| No balance / free account | `google/gemma-4-26b-a4b-it:free` |
 
 ### Example usage
 

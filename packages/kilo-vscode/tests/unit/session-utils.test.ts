@@ -6,6 +6,7 @@ import {
   buildFamilyCosts,
   buildFamilyLabels,
   buildCostBreakdown,
+  collapseCostBreakdown,
   childID,
 } from "../../webview-ui/src/context/session-utils"
 import type { Part } from "../../webview-ui/src/types/messages"
@@ -324,5 +325,89 @@ describe("buildCostBreakdown", () => {
     ])
     const result = buildCostBreakdown("s1", costs, new Map(), "This session")
     expect(result[1].label).toBe("abcdef12")
+  })
+})
+
+// ── collapseCostBreakdown ───────────────────────────────────────────────
+
+const summary = (n: number) => `${n} older sessions`
+
+describe("collapseCostBreakdown", () => {
+  it("returns items unchanged when there is only one entry", () => {
+    const items = [{ label: "This session", cost: 0.1 }]
+    expect(collapseCostBreakdown(items, summary)).toEqual(items)
+  })
+
+  it("returns items unchanged for empty array", () => {
+    expect(collapseCostBreakdown([], summary)).toEqual([])
+  })
+
+  it("shows all children in reverse order when count is small (snapshot: few subagents)", () => {
+    const items = [
+      { label: "This session", cost: 0.1 },
+      { label: "explore", cost: 0.02 },
+      { label: "general", cost: 0.03 },
+      { label: "docs", cost: 0.01 },
+    ]
+    expect(collapseCostBreakdown(items, summary)).toEqual([
+      { label: "This session", cost: 0.1 },
+      { label: "docs", cost: 0.01 },
+      { label: "general", cost: 0.03 },
+      { label: "explore", cost: 0.02 },
+    ])
+  })
+
+  it("shows root + 8 reversed children when exactly 8 children", () => {
+    const items = [
+      { label: "This session", cost: 0.5 },
+      ...Array.from({ length: 8 }, (_, i) => ({ label: `child-${i + 1}`, cost: 0.01 * (i + 1) })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+    expect(result.length).toBe(9)
+    expect(result[0].label).toBe("This session")
+    expect(result[1].label).toBe("child-8")
+    expect(result[8].label).toBe("child-1")
+  })
+
+  it("aggregates older sessions when children exceed 8 (snapshot: many subagents)", () => {
+    const items = [
+      { label: "This session", cost: 0.5 },
+      ...Array.from({ length: 15 }, (_, i) => ({ label: `agent-${i + 1}`, cost: 0.01 * (i + 1) })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+
+    // root + 8 visible + 1 aggregated = 10 entries
+    expect(result.length).toBe(10)
+
+    // root stays first
+    expect(result[0]).toEqual({ label: "This session", cost: 0.5 })
+
+    // most recent 8 children in reverse order
+    expect(result[1].label).toBe("agent-15")
+    expect(result[2].label).toBe("agent-14")
+    expect(result[8].label).toBe("agent-8")
+
+    // aggregated summary for the 7 oldest children (agent-1 through agent-7)
+    const aggregated = result[9]
+    expect(aggregated.label).toBe("7 older sessions")
+    const expected = 0.01 + 0.02 + 0.03 + 0.04 + 0.05 + 0.06 + 0.07
+    expect(aggregated.cost).toBeCloseTo(expected)
+  })
+
+  it("aggregates with 20 children (snapshot: large count)", () => {
+    const items = [
+      { label: "This session", cost: 1.0 },
+      ...Array.from({ length: 20 }, (_, i) => ({ label: `sub-${i + 1}`, cost: 0.05 })),
+    ]
+    const result = collapseCostBreakdown(items, summary)
+
+    expect(result.length).toBe(10)
+    expect(result[0].label).toBe("This session")
+    expect(result[1].label).toBe("sub-20")
+    expect(result[8].label).toBe("sub-13")
+
+    const aggregated = result[9]
+    expect(aggregated.label).toBe("12 older sessions")
+    expect(aggregated.cost).toBeCloseTo(0.05 * 12)
   })
 })

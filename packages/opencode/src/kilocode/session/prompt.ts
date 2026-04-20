@@ -2,11 +2,13 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
+import { Cause, Exit } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session"
 import { Flag } from "@/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
+import { KiloSession } from "@/kilocode/session"
 import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
@@ -140,4 +142,23 @@ export namespace KiloSessionPrompt {
    * Used when switching from plan agent to code agent.
    */
   export const CODE_SWITCH_TEXT = CODE_SWITCH
+
+  /**
+   * Determines the close reason for a session turn.
+   * Checks for an explicit reason first (e.g. set on error during runLoop),
+   * then falls back to inspecting the Effect exit value.
+   */
+  export function resolveCloseReason(input: {
+    sessionID: string
+    closeReasons: Map<string, KiloSession.CloseReason>
+    exit: Exit.Exit<any, any>
+  }): KiloSession.CloseReason {
+    const explicit = input.closeReasons.get(input.sessionID)
+    input.closeReasons.delete(input.sessionID)
+    if (explicit) return explicit
+    if (Exit.isFailure(input.exit)) {
+      return Cause.hasInterruptsOnly(input.exit.cause) ? "interrupted" : "error"
+    }
+    return "completed"
+  }
 }

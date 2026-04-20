@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "Sessionsændringer",
+  "ui.sessionReview.title.git": "Git-ændringer",
+  "ui.sessionReview.title.branch": "Branch-ændringer",
   "ui.sessionReview.title.lastTurn": "Ændringer fra sidste tur",
   "ui.sessionReview.diffStyle.unified": "Samlet",
   "ui.sessionReview.diffStyle.split": "Opdelt",
@@ -36,6 +38,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Skjul trin",
   "ui.sessionTurn.summary.response": "Svar",
   "ui.sessionTurn.diff.showMore": "Vis flere ændringer ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Ændret",
+  "ui.sessionTurn.diffs.showAll": "Vis alle",
+  "ui.sessionTurn.diffs.showLess": "Vis færre",
+  "ui.sessionTurn.diffs.more": "+{{count}} flere filer",
 
   "ui.sessionTurn.retry.retrying": "prøver igen",
   "ui.sessionTurn.retry.inSeconds": "om {{seconds}}s",
@@ -69,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} lister",
   "ui.messagePart.diagnostic.error": "Fejl",
+  "ui.messagePart.mcp.input": "Input",
+  "ui.messagePart.mcp.output": "Output",
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",

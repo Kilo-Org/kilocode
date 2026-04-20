@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "تغييرات الجلسة",
+  "ui.sessionReview.title.git": "تغييرات Git",
+  "ui.sessionReview.title.branch": "تغييرات الفرع",
   "ui.sessionReview.title.lastTurn": "تغييرات آخر دور",
   "ui.sessionReview.diffStyle.unified": "موحد",
   "ui.sessionReview.diffStyle.split": "منقسم",
@@ -37,6 +39,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "إخفاء الخطوات",
   "ui.sessionTurn.summary.response": "استجابة",
   "ui.sessionTurn.diff.showMore": "إظهار المزيد من التغييرات ({{count}})",
+  "ui.sessionTurn.diffs.changed": "تم التغيير",
+  "ui.sessionTurn.diffs.showAll": "إظهار الكل",
+  "ui.sessionTurn.diffs.showLess": "إظهار أقل",
+  "ui.sessionTurn.diffs.more": "+{{count}} ملفات أخرى",
 
   "ui.sessionTurn.retry.retrying": "إعادة المحاولة",
   "ui.sessionTurn.retry.inSeconds": "خلال {{seconds}} ثواني",
@@ -70,6 +76,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} قائمة",
   "ui.messagePart.context.list.other": "{{count}} قوائم",
   "ui.messagePart.diagnostic.error": "خطأ",
+  "ui.messagePart.mcp.input": "الإدخال",
+  "ui.messagePart.mcp.output": "الإخراج",
   "ui.messagePart.title.edit": "تحرير",
   "ui.messagePart.title.write": "كتابة",
   "ui.messagePart.option.typeOwnAnswer": "اكتب إجابتك الخاصة",

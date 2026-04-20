@@ -122,6 +122,20 @@ export class KiloConnectionService {
   }
 
   /**
+   * Get the shared SDK client, auto-connecting if not yet started.
+   * Accepts an optional directory to use as the workspace root; falls back
+   * to the first VS Code workspace folder. Throws if neither is available
+   * or if the connection fails.
+   */
+  async getClientAsync(dir?: string): Promise<KiloClient> {
+    if (this.client) return this.client
+    const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!root) throw new Error("No workspace folder open")
+    await this.connect(root)
+    return this.client!
+  }
+
+  /**
    * Get server info (port). Returns null if not connected.
    */
   getServerInfo(): { port: number } | null {
@@ -195,6 +209,17 @@ export class KiloConnectionService {
       return
     }
     this.messageSessionIdsByMessageId.set(messageId, sessionId)
+  }
+
+  /**
+   * Remove all messageID → sessionID entries for a given session.
+   * Called when a session is deleted or otherwise pruned so the map
+   * does not grow unbounded over the extension lifetime.
+   */
+  pruneSession(sessionId: string): void {
+    for (const [mid, sid] of this.messageSessionIdsByMessageId) {
+      if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
+    }
   }
 
   /**
@@ -380,6 +405,7 @@ export class KiloConnectionService {
           if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
+      await drainSuggestions(this.client, dir)
       await drainNetworkWaits(this.client, dir)
     }
     for (const listener of this.clearPendingPromptsListeners) {
@@ -606,5 +632,16 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+}
+
+async function drainSuggestions(client: KiloClient, directory: string): Promise<void> {
+  const { data, error: err } = await client.suggestion.list({ directory })
+  if (err) throw new Error(`Failed to list suggestions for ${directory}: ${String(err)}`)
+  if (data) {
+    for (const s of data) {
+      const { error } = await client.suggestion.dismiss({ requestID: s.id, directory })
+      if (error) throw new Error(`Failed to dismiss suggestion ${s.id}: ${String(error)}`)
+    }
   }
 }

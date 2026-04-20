@@ -21,10 +21,8 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  *
  * NOTE on event coalescing:
  * The app batches rapid events into 16 ms windows before flushing to the UI.
- * We don't do that here because `postMessage()` to the webview already acts as
- * an implicit async buffer. If profiling shows the webview is overwhelmed by
- * high-frequency events, adding a similar coalescing queue here would be a
- * straightforward improvement.
+ * This adapter preserves raw SSE order for all subscribers; webview providers
+ * coalesce high-frequency part updates before calling `postMessage()`.
  */
 export class SdkSSEAdapter {
   private readonly handlers = new Set<SSEEventHandler>()
@@ -179,7 +177,7 @@ export class SdkSSEAdapter {
           if (type !== "server.heartbeat") {
             console.log("[Kilo New] SSE: 📨 Event:", type)
           }
-          this.notifyEvent(globalEvent.payload)
+          this.notifyEvent(globalEvent.payload as Event)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
