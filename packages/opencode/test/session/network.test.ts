@@ -134,4 +134,25 @@ describe("session.network", () => {
       },
     })
   })
+
+  test("instance disposal rejects pending ask and clears wait", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const { promise } = await SessionNetwork.ask({
+          sessionID: "ses_test",
+          message: "Connection refused",
+          abort: new AbortController().signal,
+        })
+        const err = promise.catch((e: unknown) => e)
+        expect(await SessionNetwork.list()).toHaveLength(1)
+
+        await Instance.disposeAll()
+
+        expect(await err).toBeInstanceOf(SessionNetwork.DisposedError)
+        expect(await SessionNetwork.list()).toHaveLength(0)
+      },
+    })
+  })
 })

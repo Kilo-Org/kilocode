@@ -86,6 +86,7 @@ export namespace SessionNetwork {
         info: Wait
         resolve: () => void
         reject: (e: unknown) => void
+        dispose: () => void
       }
     >
   }
@@ -99,7 +100,22 @@ export namespace SessionNetwork {
     Effect.gen(function* () {
       const is = yield* InstanceState.make(
         Effect.fn("SessionNetwork.state")(function* () {
-          return { pending: {} } as StateShape
+          const s: StateShape = { pending: {} }
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              const pending = Object.entries(s.pending)
+              for (const [id, req] of pending) {
+                delete s.pending[id]
+                req.dispose()
+                Bus.publish(Event.Rejected, {
+                  sessionID: req.info.sessionID,
+                  requestID: req.info.id,
+                })
+                req.reject(new DisposedError())
+              }
+            }),
+          )
+          return s
         }),
       )
       return StateService.of({
@@ -191,7 +207,7 @@ export namespace SessionNetwork {
     const promise = new Promise<void>((resolve, reject) => {
       const onAbort = () => {
         if (!s.pending[id]) return
-        input.abort.removeEventListener("abort", onAbort)
+        cleanup()
         delete s.pending[id]
         Bus.publish(Event.Rejected, {
           sessionID: input.sessionID,
@@ -199,16 +215,18 @@ export namespace SessionNetwork {
         })
         reject(new DOMException("Aborted", "AbortError"))
       }
+      const cleanup = () => input.abort.removeEventListener("abort", onAbort)
       s.pending[id] = {
         info,
         resolve: () => {
-          input.abort.removeEventListener("abort", onAbort)
+          cleanup()
           resolve()
         },
         reject: (err) => {
-          input.abort.removeEventListener("abort", onAbort)
+          cleanup()
           reject(err)
         },
+        dispose: cleanup,
       }
       input.abort.addEventListener("abort", onAbort, { once: true })
       if (input.abort.aborted) {
@@ -303,6 +321,12 @@ export namespace SessionNetwork {
   export class RejectedError extends Error {
     constructor() {
       super("Network reconnect was rejected")
+    }
+  }
+
+  export class DisposedError extends Error {
+    constructor() {
+      super("Network reconnect was cancelled by instance disposal")
     }
   }
 }
