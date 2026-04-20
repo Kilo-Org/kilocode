@@ -55,6 +55,7 @@ const verbose = argv.includes("--verbose")
 const concurrency = opt("concurrency", os.cpus().length)
 const timeout = opt("timeout", 30000)
 const deadline = opt("file-timeout", 300000)
+const tail = 64 * 1024
 
 const valued = new Set(["--concurrency", "--timeout", "--file-timeout"])
 const patterns = argv.filter((arg, i) => {
@@ -102,11 +103,19 @@ type Result = {
   timedout: boolean
 }
 
+type Capture = {
+  full: string
+  tail: string
+  file: string
+}
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
-const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
+const tmpdir = path.join(os.tmpdir(), `opencode-test-runner-${process.pid}`)
+const xmldir = ci ? path.join(tmpdir, "junit") : ""
+await fs.mkdir(tmpdir, { recursive: true })
 if (ci) await fs.mkdir(xmldir, { recursive: true })
 
 const counter = { done: 0 }
@@ -119,6 +128,7 @@ const pad = String(files.length).length
 async function run(file: string): Promise<Result> {
   const target = path.join("test", file)
   const cmd = ["bun", "test", target, "--timeout", String(timeout)]
+  const slug = file.replace(/[/\\:]/g, "_")
 
   if (ci) {
     const name = file.replace(/[/\\]/g, "_") + ".xml"
@@ -139,17 +149,20 @@ async function run(file: string): Promise<Result> {
     proc.kill()
   }, deadline)
 
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+  const [out, err, code] = await Promise.all([
+    capture(proc.stdout, path.join(tmpdir, `${slug}.stdout`)),
+    capture(proc.stderr, path.join(tmpdir, `${slug}.stderr`)),
     proc.exited,
   ])
+  const passed = code === 0
+  const stdout = await output(out, passed)
+  const stderr = await output(err, passed)
 
   clearTimeout(timer)
 
   return {
     file,
-    passed: code === 0,
+    passed,
     code,
     stdout,
     stderr,
@@ -250,12 +263,10 @@ console.log(
 // JUnit XML merge (CI mode)
 // ---------------------------------------------------------------------------
 
-if (ci) {
-  await merge()
-  await fs.rm(xmldir, { recursive: true, force: true }).catch((err) => {
-    console.error("cleanup failed:", err)
-  })
-}
+if (ci) await merge()
+await fs.rm(tmpdir, { recursive: true, force: true }).catch((err) => {
+  console.error("cleanup failed:", err)
+})
 
 process.exit(failures.length > 0 ? 1 : 0)
 
@@ -263,72 +274,144 @@ process.exit(failures.length > 0 ? 1 : 0)
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function merge() {
-  const dir = path.join(root, ".artifacts", "unit")
-  await fs.mkdir(dir, { recursive: true })
+async function capture(stream: ReadableStream<Uint8Array> | null, file: string): Promise<Capture> {
+  const ring = {
+    value: "",
+    push(text: string) {
+      const next = this.value + text
+      this.value = next.length > tail ? next.slice(-tail) : next
+    },
+  }
+  const chunks: string[] = []
+  const sink = verbose ? undefined : await fs.open(file, "w")
+  const reader = stream?.getReader()
+  const decoder = new TextDecoder()
+  const write = async (text: string) => {
+    if (!text) return
+    ring.push(text)
+    if (verbose) chunks.push(text)
+    await sink?.write(text)
+  }
 
-  const suites: string[] = []
-  const counts = { tests: 0, failures: 0, errors: 0 }
-
-  for (const file of files) {
-    const name = file.replace(/[/\\]/g, "_") + ".xml"
-    const fpath = path.join(xmldir, name)
-    const found = await Bun.file(fpath).exists()
-
-    if (found) {
-      const content = await Bun.file(fpath).text()
-      const extracted = extract(content)
-      if (extracted) {
-        suites.push(extracted)
-        counts.tests += attr(extracted, "tests")
-        counts.failures += attr(extracted, "failures")
-        counts.errors += attr(extracted, "errors")
-        continue
+  try {
+    if (reader) {
+      for (;;) {
+        const chunk = await reader.read()
+        if (chunk.done) break
+        await write(decoder.decode(chunk.value, { stream: true }))
       }
     }
+    await write(decoder.decode())
+    return { full: chunks.join(""), tail: ring.value, file }
+  } finally {
+    await sink?.close()
+  }
+}
 
-    // No valid XML produced - generate synthetic entry for failed files
-    const result = results.find((r) => r.file === file)
-    if (!result || result.passed) continue
+async function output(cap: Capture, passed: boolean) {
+  if (verbose) return cap.full
+  if (passed) return cap.tail
+  return Bun.file(cap.file).text()
+}
 
-    const secs = (result.duration / 1000).toFixed(3)
-    const msg = result.timedout
-      ? `Test file timed out after ${deadline / 1000}s`
-      : `Test process exited with code ${result.code}`
-    const detail = esc((result.stderr || result.stdout || msg).slice(0, 10000))
+async function copy(out: Awaited<ReturnType<typeof fs.open>>, file: string) {
+  const reader = Bun.file(file).stream().getReader()
+  for (;;) {
+    const chunk = await reader.read()
+    if (chunk.done) break
+    await out.write(chunk.value)
+  }
+}
 
-    suites.push(
-      `  <testsuite name="${esc(file)}" tests="1" failures="1" errors="0" time="${secs}">\n` +
+async function merge() {
+  const dir = path.join(root, ".artifacts", "unit")
+  const body = path.join(tmpdir, "suites.xml")
+  await fs.mkdir(dir, { recursive: true })
+
+  const counts = { tests: 0, failures: 0, errors: 0 }
+  const suites = await fs.open(body, "w")
+
+  try {
+    for (const file of files) {
+      const name = file.replace(/[/\\]/g, "_") + ".xml"
+      const fpath = path.join(xmldir, name)
+      const found = await Bun.file(fpath).exists()
+
+      if (found) {
+        const content = await Bun.file(fpath).text()
+        const extracted = extract(content)
+        if (extracted) {
+          await suites.write(extracted + "\n")
+          counts.tests += attr(content, "tests")
+          counts.failures += attr(content, "failures")
+          counts.errors += attr(content, "errors")
+          continue
+        }
+      }
+
+      // No valid XML produced - generate synthetic entry for failed files
+      const result = results.find((r) => r.file === file)
+      if (!result || result.passed) continue
+
+      const secs = (result.duration / 1000).toFixed(3)
+      const msg = result.timedout
+        ? `Test file timed out after ${deadline / 1000}s`
+        : `Test process exited with code ${result.code}`
+      const detail = esc((result.stderr || result.stdout || msg).slice(0, 10000))
+      const suite =
+        `  <testsuite name="${esc(file)}" tests="1" failures="1" errors="0" time="${secs}">\n` +
         `    <testcase name="${esc(file)}" classname="${esc(file)}" time="${secs}">\n` +
         `      <failure message="${esc(msg)}">${detail}</failure>\n` +
         `    </testcase>\n` +
-        `  </testsuite>`,
-    )
-    counts.tests++
-    counts.failures++
+        `  </testsuite>`
+
+      await suites.write(suite + "\n")
+      counts.tests++
+      counts.failures++
+    }
+  } finally {
+    await suites.close()
   }
 
-  const body = [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    `<testsuites tests="${counts.tests}" failures="${counts.failures}" errors="${counts.errors}" time="${elapsed.toFixed(3)}">`,
-    ...suites,
-    "</testsuites>",
-    "",
-  ].join("\n")
-
-  await Bun.write(path.join(dir, "junit.xml"), body)
+  const junit = await fs.open(path.join(dir, "junit.xml"), "w")
+  try {
+    await junit.write(
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        `<testsuites tests="${counts.tests}" failures="${counts.failures}" errors="${counts.errors}" time="${elapsed.toFixed(3)}">\n`,
+    )
+    await copy(junit, body)
+    await junit.write("</testsuites>\n")
+  } finally {
+    await junit.close()
+  }
 }
 
 function extract(content: string, from = 0): string {
-  const open = "<testsuite"
+  const root = content.indexOf("<testsuites", from)
+  const start = root === -1 ? -1 : content.indexOf(">", root)
+  const stop = root === -1 ? -1 : content.lastIndexOf("</testsuites>")
+  if (start !== -1 && stop > start) return content.slice(start + 1, stop).trim()
+
+  const open = "<testsuite "
   const close = "</testsuite>"
   const s = content.indexOf(open, from)
   if (s === -1) return ""
-  const e = content.indexOf(close, s)
+  const e = end(content, s + open.length, 1)
   if (e === -1) return ""
-  const suite = content.slice(s, e + close.length)
-  const rest = extract(content, e + close.length)
+  const suite = content.slice(s, e)
+  const rest = extract(content, e)
   return rest ? suite + "\n" + rest : suite
+}
+
+function end(content: string, from: number, depth: number): number {
+  const open = "<testsuite "
+  const close = "</testsuite>"
+  const s = content.indexOf(open, from)
+  const e = content.indexOf(close, from)
+  if (e === -1) return -1
+  if (s !== -1 && s < e) return end(content, s + open.length, depth + 1)
+  if (depth === 1) return e + close.length
+  return end(content, e + close.length, depth - 1)
 }
 
 function attr(content: string, name: string): number {
