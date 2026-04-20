@@ -1125,6 +1125,7 @@ export namespace Provider {
             }
 
             for (const [modelID, model] of Object.entries(provider.models ?? {})) {
+              if (!model) continue // kilocode_change - null entries are transient delete sentinels
               const existingModel = parsed.models[model.id ?? modelID]
               const name = iife(() => {
                 if (model.name) return model.name
@@ -1195,7 +1196,7 @@ export namespace Provider {
               }
               const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
               parsedModel.variants = mapValues(
-                pickBy(merged, (v) => !v.disabled),
+                pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
                 (v) => omit(v, ["disabled"]),
               )
               parsed.models[modelID] = parsedModel
@@ -1357,7 +1358,7 @@ export namespace Provider {
               if (configVariants && model.variants) {
                 const merged = mergeDeep(model.variants, configVariants)
                 model.variants = mapValues(
-                  pickBy(merged, (v) => !v.disabled),
+                  pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
                   (v) => omit(v, ["disabled"]),
                 )
               }

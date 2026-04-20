@@ -4,7 +4,11 @@
  */
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { validateProviderID as validateProviderIDShared } from "./shared/custom-provider"
-import { resolveCustomProviderAuth, sanitizeCustomProviderConfig } from "./shared/custom-provider"
+import {
+  resolveCustomProviderAuth,
+  sanitizeCustomProviderConfig,
+  withCustomProviderDeletions,
+} from "./shared/custom-provider"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
 
 /**
@@ -287,10 +291,12 @@ export async function saveCustomProvider(
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const disabled = globalConfig.disabled_providers ?? []
     const nextDisabled = disabled.filter((item: string) => item !== id)
+    const existing = (globalConfig.provider as Record<string, unknown> | undefined)?.[id]
+    const patch = withCustomProviderDeletions(existing, sanitized.value)
     const { data: updated } = await ctx.client.global.config.update(
       {
         config: {
-          provider: { [id]: sanitized.value },
+          provider: { [id]: patch },
           disabled_providers: nextDisabled,
         },
       },
