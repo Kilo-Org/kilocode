@@ -1,11 +1,18 @@
 import { Hono } from "hono"
 import { describeRoute, resolver, validator } from "hono-openapi"
 import z from "zod"
+import { Bus } from "@/bus"
 import { Config } from "@/config/config"
-import { PermissionNext } from "@/permission/next"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Permission } from "@/permission"
 import { Session } from "@/session"
+import { SessionID } from "@/session/schema" // kilocode_change
+import { Event } from "../../server/event"
 import { errors } from "../../server/error"
 import { lazy } from "../../util/lazy"
+
+const allowEverything = (input: z.infer<typeof Permission.AllowEverythingInput>) =>
+  AppRuntime.runPromise(Permission.Service.use((svc) => svc.allowEverything(input)))
 
 export const PermissionKilocodeRoutes = lazy(() =>
   new Hono().post(
@@ -36,40 +43,42 @@ export const PermissionKilocodeRoutes = lazy(() =>
     ),
     async (c) => {
       const body = c.req.valid("json")
-      const rules: PermissionNext.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
+      const rules: Permission.Ruleset = [{ permission: "*", pattern: "*", action: "allow" }]
 
       if (!body.enable) {
         if (body.sessionID) {
-          const session = await Session.get(body.sessionID)
+          const session = await Session.get(SessionID.make(body.sessionID))
           await Session.setPermission({
-            sessionID: body.sessionID,
+            sessionID: SessionID.make(body.sessionID),
             permission: (session.permission ?? []).filter(
               (rule) => !(rule.permission === "*" && rule.pattern === "*" && rule.action === "allow"),
             ),
           })
-          await PermissionNext.allowEverything({ enable: false, sessionID: body.sessionID })
+          await allowEverything({ enable: false, sessionID: SessionID.make(body.sessionID) })
           return c.json(true)
         }
 
         await Config.updateGlobal({ permission: { "*": { "*": null } } }, { dispose: false })
-        await PermissionNext.allowEverything({ enable: false })
+        await allowEverything({ enable: false })
+        await Bus.publish(Event.ConfigUpdated, {})
         return c.json(true)
       }
 
       if (body.sessionID) {
-        const session = await Session.get(body.sessionID)
+        const session = await Session.get(SessionID.make(body.sessionID))
         await Session.setPermission({
-          sessionID: body.sessionID,
+          sessionID: SessionID.make(body.sessionID),
           permission: [...(session.permission ?? []), ...rules],
         })
       } else {
-        await Config.updateGlobal({ permission: PermissionNext.toConfig(rules) }, { dispose: false })
+        await Config.updateGlobal({ permission: Permission.toConfig(rules) }, { dispose: false })
+        await Bus.publish(Event.ConfigUpdated, {})
       }
 
-      await PermissionNext.allowEverything({
+      await allowEverything({
         enable: true,
         requestID: body.requestID,
-        sessionID: body.sessionID,
+        sessionID: body.sessionID ? SessionID.make(body.sessionID) : undefined,
       })
 
       return c.json(true)

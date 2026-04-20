@@ -34,9 +34,12 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
 ]
-const TSX_FILE = TSX_FILES[0]
+const TSX_FILE = TSX_FILES[0]!
 const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts")
+const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
+const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
+const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -168,10 +171,22 @@ describe("Agent Manager Provider — onMessage routing", () => {
     return method!.getText()
   }
 
+  function provider(): string {
+    return fs.readFileSync(PROVIDER_FILE, "utf-8")
+  }
+
+  function diff(): string {
+    return fs.readFileSync(DIFF_CONTROLLER_FILE, "utf-8")
+  }
+
+  function importer(): string {
+    return fs.readFileSync(IMPORTER_FILE, "utf-8")
+  }
+
   // -- onMessage dispatches all expected message types -----------------------
 
-  it("onMessage handles all documented agentManager.* message types", () => {
-    const text = body("onMessage")
+  it("provider routing handles all documented agentManager.* message types", () => {
+    const text = provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -179,7 +194,12 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.addSessionToWorktree",
       "agentManager.forkSession",
       "agentManager.closeSession",
+      "agentManager.persistSession",
+      "agentManager.forgetSession",
       "agentManager.configureSetupScript",
+      "agentManager.configureRunScript",
+      "agentManager.runScript",
+      "agentManager.stopRunScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
       "agentManager.showExistingLocalTerminal",
@@ -189,20 +209,29 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.setDefaultBaseBranch",
     ]
     for (const msg of expected) {
-      expect(text, `onMessage should handle "${msg}"`).toContain(msg)
+      expect(text, `provider routing should handle "${msg}"`).toContain(msg)
     }
   })
 
-  it("onMessage handles loadMessages for terminal switching", () => {
-    const text = body("onMessage")
+  it("session routing handles loadMessages for terminal switching", () => {
+    const text = body("onSessionMessage")
     expect(text).toContain("loadMessages")
     expect(text).toContain("syncOnSessionSwitch")
   })
 
-  it("onMessage handles clearSession for SSE re-registration", () => {
-    const text = body("onMessage")
+  it("session routing handles clearSession for SSE re-registration", () => {
+    const text = body("onSessionMessage")
     expect(text).toContain("clearSession")
     expect(text).toContain("trackSession")
+  })
+
+  it("onMessage delegates to cohesive routing groups", () => {
+    const text = body("onMessage")
+    expect(text).toContain("onWorktreeMessage")
+    expect(text).toContain("onSessionMessage")
+    expect(text).toContain("onImportMessage")
+    expect(text).toContain("onDiffMessage")
+    expect(text).not.toContain("agentManager.requestState")
   })
 
   // -- onDeleteWorktree invariants -------------------------------------------
@@ -295,21 +324,35 @@ describe("Agent Manager Provider — onMessage routing", () => {
    * loading skeletons forever.
    */
   it("requestState handler calls pushEmptyState when this.state is falsy", () => {
-    const text = body("onMessage")
-    // Extract the requestState branch
-    const start = text.indexOf('"agentManager.requestState"')
-    expect(start, "requestState branch must exist").toBeGreaterThan(-1)
-    // Grab a reasonable window after the match
-    const snippet = text.slice(start, start + 600)
-    expect(snippet, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
-    expect(snippet, "must guard on this.state being falsy").toMatch(/!this\.state/)
+    const text = body("onRequestState")
+    expect(text, "must call pushEmptyState when state is absent").toContain("pushEmptyState")
+    expect(text, "must guard on this.state being falsy").toMatch(/!this\.state/)
   })
 
   it("requestState handler calls pushState when this.state is truthy", () => {
-    const text = body("onMessage")
-    const start = text.indexOf('"agentManager.requestState"')
-    const snippet = text.slice(start, start + 600)
-    expect(snippet, "must call pushState for the normal path").toContain("this.pushState()")
+    const text = body("onRequestState")
+    expect(text, "must call pushState for the normal path").toContain("this.pushState()")
+  })
+
+  it("worktree diff behavior lives in the cohesive diff controller", () => {
+    const text = diff()
+    const providerText = body("onDiffMessage")
+    expect(text).toContain("class WorktreeDiffController")
+    expect(text).toContain("buildWorktreePatch")
+    expect(text).toContain("revertFile")
+    expect(text).toContain("diffSummary")
+    expect(text).toContain("shouldStopDiffPolling")
+    expect(providerText).toContain("this.diffs")
+  })
+
+  it("worktree import behavior lives in the cohesive importer", () => {
+    const text = importer()
+    const providerText = body("onImportMessage")
+    expect(text).toContain("class WorktreeImporter")
+    expect(text).toContain("createFromPR")
+    expect(text).toContain("listExternalWorktrees")
+    expect(text).toContain("createWorktree")
+    expect(providerText).toContain("this.importer")
   })
 })
 
@@ -518,6 +561,9 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
   },
+  "run/task.ts": {
+    note: "vscode adapter for Agent Manager run scripts",
+  },
 }
 
 /**
@@ -535,7 +581,7 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
     maxLines: 2000,
-    note: "primary extraction target: break into smaller orchestrators",
+    note: "diff and import workflows are extracted into cohesive domain services; extract more orchestration next",
   },
 }
 

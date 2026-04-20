@@ -33,7 +33,6 @@
 | Using Modes                         | `basic-usage/using-modes`                                                  |
 | Orchestrator Mode                   | `basic-usage/orchestrator-mode`                                            |
 | Model Selection                     | `basic-usage/model-selection-guide`                                        |
-| Free & Budget Models                | `advanced-usage/free-and-budget-models`                                    |
 | **Features** (subheader)            |                                                                            |
 | Autocomplete                        | `basic-usage/autocomplete/index`, `basic-usage/autocomplete/mistral-setup` |
 | Code Actions                        | `features/code-actions`                                                    |

@@ -8,7 +8,7 @@ import { AttachCommand } from "../cli/cmd/tui/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
-import { AuthCommand } from "../cli/cmd/auth"
+import { ProvidersCommand } from "../cli/cmd/providers" // kilocode_change — upstream renamed auth → providers
 import { AgentCommand } from "../cli/cmd/agent"
 import { UpgradeCommand } from "../cli/cmd/upgrade"
 import { UninstallCommand } from "../cli/cmd/uninstall"
@@ -22,6 +22,7 @@ import { SessionCommand } from "../cli/cmd/session"
 import { RemoteCommand } from "../cli/cmd/remote"
 import { DbCommand } from "../cli/cmd/db"
 import { ConfigCommand as ConfigCLICommand } from "../cli/cmd/config"
+import { PluginCommand } from "../cli/cmd/plug"
 import { HelpCommand } from "./help-command"
 
 // Synthetic entry for the yargs built-in .completion() command so that
@@ -40,7 +41,7 @@ export const commands = [
   RunCommand,
   GenerateCommand,
   DebugCommand,
-  AuthCommand,
+  ProvidersCommand, // kilocode_change — upstream renamed AuthCommand → ProvidersCommand
   AgentCommand,
   UpgradeCommand,
   UninstallCommand,
@@ -54,6 +55,7 @@ export const commands = [
   RemoteCommand,
   DbCommand,
   ConfigCLICommand,
+  PluginCommand,
   HelpCommand,
   CompletionCommand,
 ]

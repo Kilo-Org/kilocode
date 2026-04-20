@@ -10,9 +10,15 @@
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "opencode#test": {
+    "@kilocode/cli#test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@kilocode/cli#test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
     },
     "@opencode-ai/app#test": {
       "dependsOn": ["^build"],
@@ -26,6 +32,11 @@
     "@kilocode/kilo-jetbrains#build": {
       "dependsOn": ["@kilocode/cli#build"],
       "outputs": ["build/distributions/**"]
+    },
+    "@opencode-ai/app#test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
     }
   }
 }

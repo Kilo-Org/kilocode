@@ -38,7 +38,6 @@ Kilo uses specialized agents to help with different tasks:
 - [**Model Selection**](/docs/code-with-ai/agents/model-selection) — Choose the right AI model for each task
 - [**Context Mentions**](/docs/code-with-ai/agents/context-mentions) — Reference files, functions, and symbols
 - [**Orchestrator Mode**](/docs/code-with-ai/agents/orchestrator-mode) — Legacy orchestration (now built into all agents)
-- [**Free & Budget Models**](/docs/code-with-ai/agents/free-and-budget-models) — Cost-effective AI options
 
 ## Features
 

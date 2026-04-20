@@ -82,7 +82,7 @@ Open issues from the [GitHub project board](https://github.com/orgs/Kilo-Org/pro
 
 | Feature                                                                                   | Remaining Work                                                               | Priority |
 | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | -------- |
-| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md)                | Fix race condition / process conflict when switching release ↔ pre-release   | P0       |
+| [Pre-Release Switch CPU Spike](error-handling/pre-release-switch-crash.md)                | Fix race condition / process conflict when switching release ↔ pre-release  | P0       |
 | [Extension View Doesn't Refresh on Update](error-handling/extension-refresh-on-update.md) | Force webview reload when extension version changes                          | P1       |
 | [Propagate CLI Errors to UI](error-handling/propagate-cli-errors-to-ui.md)                | Surface CLI stderr errors in chat or as VS Code notifications                | P1       |
 | [CLI Startup Errors](error-handling/cli-startup-errors.md)                                | Detect CLI process exit before connection; show error with details and retry | P1       |

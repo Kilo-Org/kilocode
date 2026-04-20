@@ -58,7 +58,9 @@ export function ThemeToggle() {
   if (!mounted) {
     return (
       <button className="theme-toggle" aria-label="Toggle theme" style={{ width: "32px", height: "32px" }}>
-        <span style={{ opacity: 0 }}><MoonIcon /></span>
+        <span style={{ opacity: 0 }}>
+          <MoonIcon />
+        </span>
       </button>
     )
   }

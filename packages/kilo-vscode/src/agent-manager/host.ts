@@ -38,6 +38,12 @@ export interface SessionProvider {
   trackSession(id: string): void
   refreshSessions(): void
   registerSession(session: Session): void
+  /** Recover any pending permission/question prompts for tracked sessions. */
+  recoverPendingPrompts(): void
+  /** Register a callback invoked when a plan follow-up session is adopted.
+   *  The callback receives the new session and its directory so the Agent Manager
+   *  can route it to the correct worktree instead of LOCAL. */
+  onFollowupAdopted(cb: (session: Session, directory: string) => void): void
   dispose(): void
 }
 

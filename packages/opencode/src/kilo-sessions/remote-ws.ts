@@ -6,13 +6,15 @@ export namespace RemoteWS {
   export type Options = {
     url: string
     getToken: () => Promise<string | undefined>
-    getSessions: () => SessionInfo[] | Promise<SessionInfo[]>
+    getSessions: () => Promise<{ sessions: SessionInfo[]; focused?: string[]; open?: string[] }>
     log: {
       info: (...args: any[]) => void
       error: (...args: any[]) => void
       warn: (...args: any[]) => void
     }
     onMessage?: (msg: RemoteProtocol.Inbound) => void
+    onOpen?: () => void
+    onDisconnect?: () => void
     heartbeat?: number
     /** Wraps callbacks that need to run in a specific async context (e.g. Instance.provide) */
     withContext?: <R>(fn: () => R) => Promise<R> | R
@@ -46,7 +48,7 @@ export namespace RemoteWS {
       stopHeartbeat()
       beat = setInterval(() => {
         void withContext(async () => {
-          send({ type: "heartbeat", sessions: await options.getSessions() })
+          send({ type: "heartbeat", ...(await options.getSessions()) })
         }).catch((err) => {
           options.log.error("remote-ws heartbeat failed", { error: String(err) })
         })
@@ -95,6 +97,7 @@ export namespace RemoteWS {
 
       ws.onopen = () => {
         options.log.info("remote-ws connected", { buffered: buffer.length })
+        void withContext(() => options.onOpen?.())
         backoff = 1000
         for (const msg of buffer) ws!.send(msg)
         buffer.length = 0
@@ -128,14 +131,16 @@ export namespace RemoteWS {
         ws = undefined
         stopHeartbeat()
         stopWatchdog()
+        if (closed) return
         if (event.code === 4401 || event.code === 4403 || event.code === 4409) {
           options.log.warn("remote-ws closed permanently", {
             code: event.code,
             reason: event.reason,
           })
-          options.onClose?.(event.code, event.reason)
+          void withContext(() => options.onClose?.(event.code, event.reason))
           return
         }
+        void withContext(() => options.onDisconnect?.())
         schedule()
       }
 

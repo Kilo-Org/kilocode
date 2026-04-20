@@ -1,7 +1,9 @@
+import type { ExecFileOptionsWithStringEncoding } from "child_process"
 import type { Worktree } from "./WorktreeStateManager"
 import type { PRStatus, PRCheck, PRComment, CheckStatus, AggregateCheckStatus, PRState, ReviewDecision } from "./types"
 import { execWithShellEnv } from "./shell-env"
 import { classifyPRError } from "./git-import"
+import type { Semaphore } from "./semaphore"
 
 interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
@@ -9,6 +11,8 @@ interface PRStatusPollerOptions {
   onStatus: (worktreeId: string, pr: PRStatus | null, error?: "gh_missing" | "gh_auth" | "fetch_failed") => void
   log: (...args: unknown[]) => void
   intervalMs?: number
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 const GH_PROBE_TTL = 300_000 // 5 minutes — gh installation state rarely changes at runtime
@@ -33,9 +37,21 @@ export class PRStatusPoller {
   private prCache = new Map<string, { result: PRResult | null; expires: number }>()
   private lastFullSync = 0 // timestamp of last full (all-worktree) sync
   private readonly intervalMs: number
+  private readonly semaphore: Semaphore | undefined
 
   constructor(private readonly options: PRStatusPollerOptions) {
     this.intervalMs = options.intervalMs ?? 15_000
+    this.semaphore = options.semaphore
+  }
+
+  /** Run a command through the shared concurrency gate (when configured). */
+  private shell(
+    cmd: string,
+    args: string[],
+    options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+  ): Promise<{ stdout: string; stderr: string }> {
+    const invoke = () => execWithShellEnv(cmd, args, options)
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
   setEnabled(enabled: boolean): void {
@@ -140,7 +156,7 @@ export class PRStatusPoller {
       return this.ghAvailable
     }
     try {
-      await execWithShellEnv("gh", ["--version"], { timeout: 5_000 })
+      await this.shell("gh", ["--version"], { timeout: 5_000 })
       this.ghAvailable = true
     } catch {
       this.ghAvailable = false
@@ -279,7 +295,7 @@ export class PRStatusPoller {
       if (branch) args.push(branch)
       args.push("--json", PRStatusPoller.PR_JSON_FIELDS)
 
-      const { stdout } = await execWithShellEnv("gh", args, { cwd, timeout: 15_000 })
+      const { stdout } = await this.shell("gh", args, { cwd, timeout: 15_000 })
       return parsePRResult(stdout)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -291,11 +307,11 @@ export class PRStatusPoller {
   /** Search for PRs containing the current HEAD SHA. Finds PRs when branch name/tracking ref don't match. */
   private async ghPRListBySHA(cwd: string): Promise<PRResult | null> {
     try {
-      const { stdout: sha } = await execWithShellEnv("git", ["rev-parse", "HEAD"], { cwd, timeout: 5_000 })
+      const { stdout: sha } = await this.shell("git", ["rev-parse", "HEAD"], { cwd, timeout: 5_000 })
       const head = sha.trim()
       if (!head) return null
 
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         [
           "pr",
@@ -337,7 +353,7 @@ export class PRStatusPoller {
     items: PRCheck[]
   }> {
     try {
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         ["pr", "checks", String(prNumber), "--json", "name,state,link,startedAt,completedAt"],
         { cwd, timeout: 15_000 },
@@ -375,7 +391,7 @@ export class PRStatusPoller {
     if (this.cachedRepo && this.cachedRepo.cwd === cwd) {
       return this.cachedRepo
     }
-    const { stdout } = await execWithShellEnv("gh", ["repo", "view", "--json", "owner,name"], {
+    const { stdout } = await this.shell("gh", ["repo", "view", "--json", "owner,name"], {
       cwd,
       timeout: 10_000,
     })
@@ -415,7 +431,7 @@ export class PRStatusPoller {
         }
       }`
 
-      const { stdout } = await execWithShellEnv(
+      const { stdout } = await this.shell(
         "gh",
         [
           "api",

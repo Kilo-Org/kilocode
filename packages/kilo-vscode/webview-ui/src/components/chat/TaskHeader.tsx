@@ -14,6 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
+import { collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -46,9 +47,12 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const costTooltip = createMemo(() => {
     const items = breakdown()
     if (items.length <= 1) return <span>{language.t("context.usage.sessionCost")}</span>
+    const collapsed = collapseCostBreakdown(items, (n) =>
+      language.t("context.usage.olderSessions", { count: String(n) }),
+    )
     return (
       <div style={{ "text-align": "left", "white-space": "nowrap" }}>
-        <For each={items}>{(e) => <div>{`${e.label}: ${fmt(e.cost)}`}</div>}</For>
+        <For each={collapsed}>{(e) => <div>{`${e.label}: ${fmt(e.cost)}`}</div>}</For>
       </div>
     )
   })

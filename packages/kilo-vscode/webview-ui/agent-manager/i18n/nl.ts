@@ -60,6 +60,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Open een map die een git repository bevat om worktrees te gebruiken.",
   "agentManager.setup.error.lfs_missing":
     "Deze repository gebruikt Git LFS, maar git-lfs is niet gevonden. Installeer Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Deze repository heeft nog geen commits. Maak een initiële commit voordat je worktrees gebruikt.",
   "agentManager.shortcuts.title": "Sneltoetsen",
   "agentManager.shortcuts.category.sidebar": "Zijbalk",
   "agentManager.shortcuts.category.tabs": "Tabbladen",
@@ -76,6 +78,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
   "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.runScript": "Script uitvoeren",
+  "agentManager.run.options": "Uitvoeropties",
+  "agentManager.run.configure": "Uitvoerscript configureren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager openen",
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",
@@ -115,6 +120,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Diff in-/uitschakelen",
   "agentManager.diff.openFile": "Bestand openen",
+  "agentManager.diff.revertFile": "Bestand terugzetten",
+  "agentManager.diff.revertSuccess": "Bestand teruggezet",
+  "agentManager.diff.revertError": "Terugzetten mislukt",
   "agentManager.open.button": "Openen",
   "agentManager.open.tooltip": "Open deze worktree in VS Code",
   "agentManager.apply.button": "Toepassen op lokaal",

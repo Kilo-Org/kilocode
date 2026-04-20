@@ -1,0 +1,99 @@
+/* New Task Button */
+.new-task-button-wrapper {
+  padding: 8px 12px 0;
+  container-type: inline-size;
+}
+
+.session-actions-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* All direct children share extra space equally, but start from their content size */
+.session-actions-row > * {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Tooltip wrappers fill their flex slot, buttons fill the tooltip wrapper */
+.session-actions-row > [data-component="tooltip-trigger"] {
+  display: flex;
+}
+
+.session-actions-row > [data-component="tooltip-trigger"] > [data-component="button"] {
+  flex: 1;
+}
+
+/* Diff wrapper also stretches evenly (same flex as buttons) */
+.session-diff-wrapper {
+  display: flex !important;
+}
+
+/* Diff stats badge — fills its flex slot, content centered */
+.session-diff-badge {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--vscode-editor-font-family), monospace;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+}
+
+.session-diff-badge--empty {
+  opacity: 0.5;
+}
+
+.session-diff-badge:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.session-diff-badge [data-component="icon"] {
+  opacity: 0.7;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.session-diff-add {
+  color: #34d399;
+}
+
+.session-diff-del {
+  color: #f87171;
+}
+
+/* Collapse diff stats to icon-only when truly narrow */
+@container (max-width: 300px) {
+  .session-diff-add,
+  .session-diff-del {
+    display: none;
+  }
+
+  .session-diff-badge {
+    padding: 4px 6px;
+    overflow: hidden;
+  }
+
+  /* Dot indicator on the icon when collapsed and there are changes */
+  .session-diff-badge--has-changes [data-component="icon"]::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+  }
+}

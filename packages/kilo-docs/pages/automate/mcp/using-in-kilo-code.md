@@ -7,8 +7,6 @@ description: "How to use MCP servers in Kilo Code"
 
 Model Context Protocol (MCP) extends Kilo Code's capabilities by connecting to external tools and services. This guide covers everything you need to know about using MCP with Kilo Code.
 
-{% youtube url="https://youtu.be/6O9RQoQRX8A" caption="Demonstrating MCP installation in Kilo Code" /%}
-
 ## Configuring MCP Servers
 
 {% tabs %}
@@ -74,6 +72,16 @@ MCP servers are configured under the `mcp` key in `kilo.jsonc`:
 Remote servers support OAuth 2.0 authentication. If the server supports it, Kilo Code will automatically start the OAuth flow when you connect. You can also disable OAuth with `"oauth": false`.
 
 {% /tab %}
+{% tab label="CLI" %}
+
+The CLI accepts several config filenames. The recommended file is `kilo.json`:
+
+| Scope       | Recommended Path                     | Also supported                                                 |
+| ----------- | ------------------------------------ | -------------------------------------------------------------- |
+| **Global**  | `~/.config/kilo/kilo.json`           | `kilo.jsonc`, `opencode.json`, `opencode.jsonc`, `config.json` |
+| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json`                |
+
+{% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 MCP server configurations can be managed at two levels: **global** (applies across all workspaces) and **project-level** (specific to a single project). Project-level configuration takes precedence over global settings.
@@ -86,44 +94,11 @@ MCP server configurations can be managed at two levels: **global** (applies acro
 Project-level configs can be committed to version control to share with your team.
 
 {% /tab %}
-{% tab label="CLI" %}
-
-The CLI accepts several config filenames. The recommended file is `kilo.json`:
-
-| Scope       | Recommended Path                     | Also supported                                                 |
-| ----------- | ------------------------------------ | -------------------------------------------------------------- |
-| **Global**  | `~/.config/kilo/kilo.json`           | `kilo.jsonc`, `opencode.json`, `opencode.jsonc`, `config.json` |
-| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json`                |
-
-{% /tab %}
 {% /tabs %}
 
 ## Configuration Format
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-Both global and project-level files use a JSON format with a `mcpServers` object containing named server configurations:
-
-```json
-{
-  "mcpServers": {
-    "server1": {
-      "command": "python",
-      "args": ["/path/to/server.py"],
-      "env": {
-        "API_KEY": "your_api_key"
-      },
-      "alwaysAllow": ["tool1", "tool2"],
-      "disabled": false
-    }
-  }
-}
-```
-
-_Example of MCP Server config in Kilo Code (STDIO Transport)_
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 In the VS Code extension, open **Settings → MCP** and click **Add Server** to configure a new server through the UI. You can also edit the config files directly — see the **CLI** tab for the JSON format.
@@ -146,6 +121,29 @@ Add MCP servers under the `mcp` key in your config file. Each server has a uniqu
 ```
 
 You can disable a server by setting `enabled` to `false` without removing it from your config.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+Both global and project-level files use a JSON format with a `mcpServers` object containing named server configurations:
+
+```json
+{
+  "mcpServers": {
+    "server1": {
+      "command": "python",
+      "args": ["/path/to/server.py"],
+      "env": {
+        "API_KEY": "your_api_key"
+      },
+      "alwaysAllow": ["tool1", "tool2"],
+      "disabled": false
+    }
+  }
+}
+```
+
+_Example of MCP Server config in Kilo Code (STDIO Transport)_
 
 {% /tab %}
 {% /tabs %}
@@ -174,25 +172,6 @@ For more in-depth information about how STDIO transport works, see [STDIO Transp
 STDIO configuration example:
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-```json
-{
-  "mcpServers": {
-    "local-server": {
-      "command": "node",
-      "args": ["/path/to/server.js"],
-      "env": {
-        "API_KEY": "your_api_key"
-      },
-      "alwaysAllow": ["tool1", "tool2"],
-      "disabled": false
-    }
-  }
-}
-```
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 In the VS Code extension, open **Settings → MCP**, click **Add Server**, and choose **Local (stdio)**. Fill in the command, arguments, and optional environment variables through the UI. You can also edit the config files directly — see the **CLI** tab for the JSON format.
@@ -226,6 +205,25 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `timeout`     | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+```json
+{
+  "mcpServers": {
+    "local-server": {
+      "command": "node",
+      "args": ["/path/to/server.js"],
+      "env": {
+        "API_KEY": "your_api_key"
+      },
+      "alwaysAllow": ["tool1", "tool2"],
+      "disabled": false
+    }
+  }
+}
+```
+
+{% /tab %}
 {% /tabs %}
 
 ### Streamable HTTP Transport
@@ -238,25 +236,6 @@ Used for remote servers accessed over HTTP/HTTPS:
 - Allows centralized deployment and management
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-```json
-{
-  "mcpServers": {
-    "remote-server": {
-      "type": "streamable-http",
-      "url": "https://your-server-url.com/mcp",
-      "headers": {
-        "Authorization": "Bearer your-token"
-      },
-      "alwaysAllow": ["tool3"],
-      "disabled": false
-    }
-  }
-}
-```
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 In the VS Code extension, open **Settings → MCP**, click **Add Server**, and choose **Remote (HTTP)**. Enter the server URL and optional headers through the UI. You can also edit the config files directly — see the **CLI** tab for the JSON format.
@@ -288,6 +267,25 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `enabled` | Boolean | No       | Enable or disable the MCP server on startup.                          |
 | `headers` | Object  | No       | HTTP headers to send with requests.                                   |
 | `timeout` | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+```json
+{
+  "mcpServers": {
+    "remote-server": {
+      "type": "streamable-http",
+      "url": "https://your-server-url.com/mcp",
+      "headers": {
+        "Authorization": "Bearer your-token"
+      },
+      "alwaysAllow": ["tool3"],
+      "disabled": false
+    }
+  }
+}
+```
 
 {% /tab %}
 {% /tabs %}
@@ -326,6 +324,68 @@ SSE configuration example:
 ## Managing MCP Servers
 
 {% tabs %}
+{% tab label="VSCode" %}
+
+In the VS Code extension, manage MCP servers from **Settings → MCP**:
+
+- **Add a server**: Click **Add Server** and fill in the details
+- **Enable/disable**: Toggle a server on or off without removing its configuration
+- **Delete**: Remove a server from the list
+
+The extension also supports the `{env:VARIABLE_NAME}` syntax in config files to reference environment variables (see the **CLI** tab for details).
+
+{% /tab %}
+{% tab label="CLI" %}
+
+### CLI Commands
+
+| Command           | Description                     |
+| ----------------- | ------------------------------- |
+| `kilo mcp list`   | List all configured MCP servers |
+| `kilo mcp add`    | Add an MCP server               |
+| `kilo mcp auth`   | Authenticate with an MCP server |
+| `kilo mcp logout` | Log out from an MCP server      |
+| `kilo mcp debug`  | Debug an MCP server connection  |
+
+### Enabling or Disabling a Server
+
+Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.
+
+You can also edit your config directly. Set `enabled` to `false` to disable a server without deleting it, or `true` to enable it again:
+
+```json
+{
+  "mcp": {
+    "my-server": {
+      "type": "local",
+      "command": ["npx", "-y", "my-mcp-command"],
+      "enabled": false
+    }
+  }
+}
+```
+
+Run `kilo mcp list` to verify the server status.
+
+### Environment Variables
+
+Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
+
+```json
+{
+  "mcp": {
+    "my-server": {
+      "type": "remote",
+      "url": "https://mcp.example.com/mcp",
+      "headers": {
+        "Authorization": "Bearer {env:MY_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+{% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 ### Editing MCP Settings Files
@@ -357,50 +417,6 @@ You can edit both global and project-level MCP configuration files directly from
 1. Press the {% codicon name="activate" /%} toggle switch next to the MCP server to enable/disable it
 
 {% /tab %}
-{% tab label="VSCode" %}
-
-In the VS Code extension, manage MCP servers from **Settings → MCP**:
-
-- **Add a server**: Click **Add Server** and fill in the details
-- **Enable/disable**: Toggle a server on or off without removing its configuration
-- **Delete**: Remove a server from the list
-
-The extension also supports the `{env:VARIABLE_NAME}` syntax in config files to reference environment variables (see the **CLI** tab for details).
-
-{% /tab %}
-{% tab label="CLI" %}
-
-### CLI Commands
-
-| Command           | Description                     |
-| ----------------- | ------------------------------- |
-| `kilo mcp list`   | List all configured MCP servers |
-| `kilo mcp add`    | Add an MCP server               |
-| `kilo mcp auth`   | Authenticate with an MCP server |
-| `kilo mcp logout` | Log out from an MCP server      |
-| `kilo mcp debug`  | Debug an MCP server connection  |
-
-Inside the interactive TUI, use the `/mcps` slash command to toggle MCP servers on or off.
-
-### Environment Variables
-
-Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variables:
-
-```json
-{
-  "mcp": {
-    "my-server": {
-      "type": "remote",
-      "url": "https://mcp.example.com/mcp",
-      "headers": {
-        "Authorization": "Bearer {env:MY_API_KEY}"
-      }
-    }
-  }
-}
-```
-
-{% /tab %}
 {% /tabs %}
 
 ### Network Timeout
@@ -409,6 +425,11 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 {% tab label="VSCode" %}
 
 Set the `timeout` field (in milliseconds) in the server's config entry. The default is 10 seconds for local servers and 15 seconds for remote servers.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Set the `timeout` field (in milliseconds) in the server's config entry. The default is 30000 (30 seconds).
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
@@ -443,6 +464,27 @@ MCP tool calls use the same permission system as built-in tools. Each MCP tool's
 ```
 
 {% /tab %}
+{% tab label="CLI" %}
+
+Add `permission` entries to your config to auto-approve specific tools. MCP tool keys use the server name, an underscore, then the tool name:
+
+```json
+{
+  "mcp": {
+    "my-server": {
+      "type": "local",
+      "command": ["npx", "-y", "my-mcp-server"],
+      "enabled": true
+    }
+  },
+  "permission": {
+    "my-server_tool1": "allow",
+    "my-server_tool2": "allow"
+  }
+}
+```
+
+{% /tab %}
 {% tab label="VSCode (Legacy)" %}
 
 MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
@@ -458,61 +500,41 @@ When enabled, Kilo Code will automatically approve this specific tool without pr
 {% /tab %}
 {% /tabs %}
 
-## Platform-Specific MCP Configuration Examples
+## Platform-Specific Local Server Commands
+
+Local MCP server instructions are often written as shell commands, such as `npx -y @modelcontextprotocol/server-puppeteer`. Use the right command format for your operating system.
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-### Windows Configuration Example
-
-When setting up MCP servers on Windows, you'll need to use the Windows Command Prompt (`cmd`) to execute commands. Here's an example of configuring a Puppeteer MCP server on Windows:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "cmd",
-      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-puppeteer"]
-    }
-  }
-}
-```
-
-This Windows-specific configuration:
-
-- Uses the `cmd` command to access the Windows Command Prompt
-- Uses `/c` to tell cmd to execute the command and then terminate
-- Uses `npx` to run the package without installing it permanently
-- The `-y` flag automatically answers "yes" to any prompts during installation
-- Runs the `@modelcontextprotocol/server-puppeteer` package which provides browser automation capabilities
-
-{% callout type="note" %}
-For macOS or Linux, you would use a different configuration:
-
-```json
-{
-  "mcpServers": {
-    "puppeteer": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
-    }
-  }
-}
-```
-
-{% /callout %}
-
-{% /tab %}
 {% tab label="VSCode" %}
 
-In the VS Code extension, use **Settings → MCP → Add Server** to add any of the examples below through the UI. You can also edit the config files directly — see the **CLI** tab for the JSON format.
+In the VS Code extension, open **Settings → MCP**, click **Add Server**, and choose **Local (stdio)**.
+
+### Windows
+
+Use `cmd` as the command and pass the package command as arguments:
+
+| Field         | Value                                                       |
+| ------------- | ----------------------------------------------------------- |
+| **Name**      | `puppeteer`                                                 |
+| **Command**   | `cmd`                                                       |
+| **Arguments** | `/c`, `npx`, `-y`, `@modelcontextprotocol/server-puppeteer` |
+
+### macOS and Linux
+
+Use the executable directly:
+
+| Field         | Value                                          |
+| ------------- | ---------------------------------------------- |
+| **Name**      | `puppeteer`                                    |
+| **Command**   | `npx`                                          |
+| **Arguments** | `-y`, `@modelcontextprotocol/server-puppeteer` |
 
 {% /tab %}
 {% tab label="CLI" %}
 
 ### Windows
 
-When setting up local MCP servers on Windows, use the full `cmd` invocation in the `command` array:
+Use the full `cmd` invocation in the `command` array:
 
 ```json
 {
@@ -526,7 +548,61 @@ When setting up local MCP servers on Windows, use the full `cmd` invocation in t
 }
 ```
 
-The same approach can be used for other MCP servers on Windows, adjusting the package name as needed for different server types.
+### macOS and Linux
+
+Use `npx` directly:
+
+```json
+{
+  "mcp": {
+    "puppeteer": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-puppeteer"],
+      "enabled": true
+    }
+  }
+}
+```
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+### Windows
+
+Use `cmd` as the command and put the rest of the invocation in `args`:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}
+```
+
+### macOS and Linux
+
+Use `npx` directly:
+
+```json
+{
+  "mcpServers": {
+    "puppeteer": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    }
+  }
+}
+```
+
+{% /tab %}
+{% /tabs %}
+
+## MCP Server Examples
+
+These examples use the current `mcp` config format. In VS Code, use **Settings → MCP → Add Server** and enter the same type, URL, or command values through the UI.
 
 ### Figma Desktop
 
@@ -573,9 +649,6 @@ Add the test MCP server for development:
 }
 ```
 
-{% /tab %}
-{% /tabs %}
-
 ## Finding and Installing MCP Servers
 
 Kilo Code does not come with any pre-installed MCP servers. You'll need to find and install them separately.
@@ -608,20 +681,20 @@ Example: "Analyze the performance of my API" might use an MCP tool that tests AP
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
-
-- **Server Not Responding:** Check if the server process is running and verify network connectivity
-- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
-- **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
-- **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
-
-{% /tab %}
 {% tab label="CLI" %}
 
 - **Server Not Responding:** Check if the server process is running. Use `kilo mcp debug <server-name>` to inspect the connection.
 - **Permission Errors:** Ensure API keys and credentials are set in your `kilo.jsonc` config or via `{env:VARIABLE_NAME}` references.
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it is not disabled (`"enabled": false`) in your config.
 - **Slow Performance:** Increase the `timeout` value for the specific MCP server in your config.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+- **Server Not Responding:** Check if the server process is running and verify network connectivity
+- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
+- **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
+- **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
 
 {% /tab %}
 {% /tabs %}

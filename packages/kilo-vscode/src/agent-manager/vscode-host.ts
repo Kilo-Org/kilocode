@@ -95,6 +95,8 @@ export class VscodeHost implements Host {
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
       registerSession: (s) => provider.registerSession(s),
+      recoverPendingPrompts: () => provider.recoverPendingPrompts(),
+      onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
       dispose: () => provider.dispose(),
     }
 

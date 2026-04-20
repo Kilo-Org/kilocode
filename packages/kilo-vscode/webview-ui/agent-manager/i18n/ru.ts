@@ -55,6 +55,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Откройте папку, содержащую репозиторий git, чтобы использовать worktrees.",
   "agentManager.setup.error.lfs_missing":
     "Этот репозиторий использует Git LFS, но git-lfs не найден. Пожалуйста, установите Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "В этом репозитории еще нет коммитов. Создайте начальный коммит перед использованием worktrees.",
   "agentManager.shortcuts.title": "Сочетания клавиш",
   "agentManager.shortcuts.category.sidebar": "Боковая панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",
@@ -71,6 +73,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Новая вкладка",
   "agentManager.shortcuts.closeTab": "Закрыть вкладку",
   "agentManager.shortcuts.toggleTerminal": "Переключить терминал",
+  "agentManager.shortcuts.runScript": "Запустить скрипт",
+  "agentManager.run.options": "Параметры запуска",
+  "agentManager.run.configure": "Настроить скрипт запуска",
   "agentManager.shortcuts.openAgentManager": "Открыть Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -109,6 +114,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Переключить diff",
   "agentManager.diff.openFile": "Открыть файл",
+  "agentManager.diff.revertFile": "Откатить файл",
+  "agentManager.diff.revertSuccess": "Файл откатан",
+  "agentManager.diff.revertError": "Ошибка отката",
   "agentManager.open.button": "Открыть",
   "agentManager.open.tooltip": "Открыть этот Worktree в VS Code",
   "agentManager.apply.button": "Применить локально",

@@ -98,6 +98,8 @@ function createHarness() {
   const manager = Object.create(AgentManagerProvider.prototype) as {
     host: Host
     panel: { sessions: { registerSession: ReturnType<typeof vi.fn> } } | undefined
+    prBridge: { handleMessage: ReturnType<typeof vi.fn> }
+    activeSessionId: string | undefined
     stateReady: Promise<void> | undefined
     createWorktreeOnDisk: ReturnType<typeof vi.fn>
     runSetupScriptForWorktree: ReturnType<typeof vi.fn>
@@ -107,6 +109,7 @@ function createHarness() {
     notifyWorktreeReady: ReturnType<typeof vi.fn>
     log: ReturnType<typeof vi.fn>
     onCreateWorktree: () => Promise<null>
+    onMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
   }
 
   manager.host = host
@@ -115,6 +118,8 @@ function createHarness() {
       registerSession: vi.fn(),
     },
   }
+  manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
+  manager.activeSessionId = undefined
   manager.stateReady = Promise.resolve()
   manager.createWorktreeOnDisk = vi.fn()
   manager.runSetupScriptForWorktree = vi.fn().mockResolvedValue(undefined)
@@ -168,5 +173,14 @@ describe("AgentManagerProvider worktree creation", () => {
     await pending
 
     expect(manager.createWorktreeOnDisk).toHaveBeenCalledTimes(1)
+  })
+
+  it("routes file search through the active worktree session", async () => {
+    const manager = createHarness()
+    manager.activeSessionId = "session-wt"
+
+    const result = await manager.onMessage({ type: "requestFileSearch", query: "src", requestId: "r1" })
+
+    expect(result).toEqual({ type: "requestFileSearch", query: "src", requestId: "r1", sessionID: "session-wt" })
   })
 })

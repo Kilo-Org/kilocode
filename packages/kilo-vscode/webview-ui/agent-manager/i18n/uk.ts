@@ -61,6 +61,8 @@ export const dict = {
     "Відкрийте папку, що містить git-репозиторій, щоб використовувати робочі дерева.",
   "agentManager.setup.error.lfs_missing":
     "Цей репозиторій використовує Git LFS, але git-lfs не знайдено. Будь ласка, встановіть Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "У цьому репозиторії ще немає коммітів. Створіть початковий комміт перед використанням worktrees.",
   "agentManager.shortcuts.title": "Клавіатурні скорочення",
   "agentManager.shortcuts.category.sidebar": "Бічна панель",
   "agentManager.shortcuts.category.tabs": "Вкладки",
@@ -77,6 +79,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
   "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.runScript": "Запустити скрипт",
+  "agentManager.run.options": "Параметри запуску",
+  "agentManager.run.configure": "Налаштувати скрипт запуску",
   "agentManager.shortcuts.openAgentManager": "Відкрити Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Наступний режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Попередній режим агента",
@@ -116,6 +121,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Показати або приховати diff",
   "agentManager.diff.openFile": "Відкрити файл",
+  "agentManager.diff.revertFile": "Скасувати зміни файлу",
+  "agentManager.diff.revertSuccess": "Файл відновлено",
+  "agentManager.diff.revertError": "Не вдалося відновити",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.button": "Застосувати локально",

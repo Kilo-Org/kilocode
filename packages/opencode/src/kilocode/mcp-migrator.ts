@@ -149,9 +149,12 @@ export namespace McpMigrator {
    * Load Kilocode MCP servers and return them as an opencode config partial.
    * This function handles all logging internally, so callers just need to merge the result.
    */
-  export async function loadMcpConfig(projectDir: string): Promise<Record<string, Config.Mcp>> {
+  export async function loadMcpConfig(
+    projectDir: string,
+    skipGlobalPaths?: boolean,
+  ): Promise<Record<string, Config.Mcp>> {
     try {
-      const result = await migrate({ projectDir })
+      const result = await migrate({ projectDir, skipGlobalPaths })
 
       if (Object.keys(result.mcp).length > 0) {
         log.debug("loaded kilocode MCP servers", {

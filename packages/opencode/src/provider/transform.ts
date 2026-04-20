@@ -26,8 +26,9 @@ export namespace ProviderTransform {
     switch (npm) {
       case "@ai-sdk/github-copilot":
         return "copilot"
-      case "@ai-sdk/openai":
       case "@ai-sdk/azure":
+        return "azure"
+      case "@ai-sdk/openai":
         return "openai"
       case "@ai-sdk/amazon-bedrock":
         return "bedrock"
@@ -35,6 +36,7 @@ export namespace ProviderTransform {
       case "@ai-sdk/google-vertex/anthropic":
         return "anthropic"
       case "@ai-sdk/google-vertex":
+        return "vertex"
       case "@ai-sdk/google":
         return "google"
       case "@ai-sdk/gateway":
@@ -53,7 +55,11 @@ export namespace ProviderTransform {
   ): ModelMessage[] {
     // Anthropic rejects messages with empty content - filter out empty string messages
     // and remove empty text/reasoning parts from array content
-    if (model.api.npm === "@ai-sdk/anthropic") {
+    // kilocode_change start - only filter for Claude models on Bedrock, not all Bedrock models
+    const bedrock = model.api.npm === "@ai-sdk/amazon-bedrock"
+    const claude = model.api.id.includes("anthropic") || model.api.id.includes("claude") || model.id.includes("claude")
+    if (model.api.npm === "@ai-sdk/anthropic" || (bedrock && claude)) {
+      // kilocode_change end
       msgs = msgs
         .map((msg) => {
           if (typeof msg.content === "string") {
@@ -74,17 +80,29 @@ export namespace ProviderTransform {
     }
 
     if (model.api.id.includes("claude")) {
+      const scrub = (id: string) => id.replace(/[^a-zA-Z0-9_-]/g, "_")
       return msgs.map((msg) => {
-        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
-          msg.content = msg.content.map((part) => {
-            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
-              return {
-                ...part,
-                toolCallId: part.toolCallId.replace(/[^a-zA-Z0-9_-]/g, "_"),
+        if (msg.role === "assistant" && Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: msg.content.map((part) => {
+              if (part.type === "tool-call" || part.type === "tool-result") {
+                return { ...part, toolCallId: scrub(part.toolCallId) }
               }
-            }
-            return part
-          })
+              return part
+            }),
+          }
+        }
+        if (msg.role === "tool" && Array.isArray(msg.content)) {
+          return {
+            ...msg,
+            content: msg.content.map((part) => {
+              if (part.type === "tool-result") {
+                return { ...part, toolCallId: scrub(part.toolCallId) }
+              }
+              return part
+            }),
+          }
         }
         return msg
       })
@@ -95,29 +113,33 @@ export namespace ProviderTransform {
       model.api.id.toLowerCase().includes("mistral") ||
       model.api.id.toLocaleLowerCase().includes("devstral")
     ) {
+      const scrub = (id: string) => {
+        return id
+          .replace(/[^a-zA-Z0-9]/g, "") // Remove non-alphanumeric characters
+          .substring(0, 9) // Take first 9 characters
+          .padEnd(9, "0") // Pad with zeros if less than 9 characters
+      }
       const result: ModelMessage[] = []
       for (let i = 0; i < msgs.length; i++) {
         const msg = msgs[i]
         const nextMsg = msgs[i + 1]
 
-        if ((msg.role === "assistant" || msg.role === "tool") && Array.isArray(msg.content)) {
+        if (msg.role === "assistant" && Array.isArray(msg.content)) {
           msg.content = msg.content.map((part) => {
-            if ((part.type === "tool-call" || part.type === "tool-result") && "toolCallId" in part) {
-              // Mistral requires alphanumeric tool call IDs with exactly 9 characters
-              const normalizedId = part.toolCallId
-                .replace(/[^a-zA-Z0-9]/g, "") // Remove non-alphanumeric characters
-                .substring(0, 9) // Take first 9 characters
-                .padEnd(9, "0") // Pad with zeros if less than 9 characters
-
-              return {
-                ...part,
-                toolCallId: normalizedId,
-              }
+            if (part.type === "tool-call" || part.type === "tool-result") {
+              return { ...part, toolCallId: scrub(part.toolCallId) }
             }
             return part
           })
         }
-
+        if (msg.role === "tool" && Array.isArray(msg.content)) {
+          msg.content = msg.content.map((part) => {
+            if (part.type === "tool-result") {
+              return { ...part, toolCallId: scrub(part.toolCallId) }
+            }
+            return part
+          })
+        }
         result.push(msg)
 
         // Fix message sequence: tool messages cannot be followed by user messages
@@ -194,15 +216,26 @@ export namespace ProviderTransform {
       copilot: {
         copilot_cache_control: { type: "ephemeral" },
       },
+      alibaba: {
+        cacheControl: { type: "ephemeral" },
+      },
     }
 
     for (const msg of unique([...system, ...final])) {
-      const useMessageLevelOptions = model.providerID === "anthropic" || model.providerID.includes("bedrock")
+      const useMessageLevelOptions =
+        model.providerID === "anthropic" ||
+        model.providerID.includes("bedrock") ||
+        model.api.npm === "@ai-sdk/amazon-bedrock"
       const shouldUseContentOptions = !useMessageLevelOptions && Array.isArray(msg.content) && msg.content.length > 0
 
       if (shouldUseContentOptions) {
         const lastContent = msg.content[msg.content.length - 1]
-        if (lastContent && typeof lastContent === "object") {
+        if (
+          lastContent &&
+          typeof lastContent === "object" &&
+          lastContent.type !== "tool-approval-request" &&
+          lastContent.type !== "tool-approval-response"
+        ) {
           lastContent.providerOptions = mergeDeep(lastContent.providerOptions ?? {}, providerOptions)
           continue
         }
@@ -252,62 +285,19 @@ export namespace ProviderTransform {
     })
   }
 
-  // kilocode_change - function added
-  function fixDuplicateReasoning(msgs: ModelMessage[], model: Provider.Model) {
-    for (const msg of msgs) {
-      if (!Array.isArray(msg.content)) {
-        continue
-      }
-      const encryptedDataSet = new Set<string>()
-      const textSet = new Set<string>()
-      for (const part of msg.content) {
-        const openrouterProviderOptions = part.providerOptions?.openrouter as
-          | {
-              reasoning_details?: { data?: string; text?: string; signature?: string }[]
-            }
-          | undefined
-        if (!openrouterProviderOptions || !openrouterProviderOptions.reasoning_details) {
-          continue
-        }
-        openrouterProviderOptions.reasoning_details = openrouterProviderOptions.reasoning_details.filter((rd) => {
-          if (rd.data) {
-            if (!encryptedDataSet.has(rd.data)) {
-              encryptedDataSet.add(rd.data)
-              return true
-            }
-            return false
-          }
-          if (rd.text) {
-            if ((model.family === "claude" || model.id.includes("claude")) && !rd.signature) return false
-            if (!textSet.has(rd.text)) {
-              textSet.add(rd.text)
-              return true
-            }
-            return false
-          }
-          return true
-        })
-      }
-    }
-  }
-
   export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
     msgs = unsupportedParts(msgs, model)
     msgs = normalizeMessages(msgs, model, options)
 
-    // kilocode_change - workaround for @openrouter/ai-sdk-provider v1 duplicating reasoning
-    // fixed in https://github.com/OpenRouterTeam/ai-sdk-provider/pull/344/
-    if (model.api.npm === "@openrouter/ai-sdk-provider") {
-      fixDuplicateReasoning(msgs, model)
-    }
-
     if (
       (model.providerID === "anthropic" ||
+        model.providerID === "google-vertex-anthropic" ||
         model.api.id.includes("anthropic") ||
         model.api.id.includes("claude") ||
         model.id.includes("anthropic") ||
         model.id.includes("claude") ||
-        model.api.npm === "@ai-sdk/anthropic") &&
+        model.api.npm === "@ai-sdk/anthropic" ||
+        model.api.npm === "@ai-sdk/alibaba") &&
       model.api.npm !== "@ai-sdk/gateway"
     ) {
       msgs = applyCaching(msgs, model)
@@ -315,7 +305,7 @@ export namespace ProviderTransform {
 
     // Remap providerOptions keys from stored providerID to expected SDK key
     const key = sdkKey(model.api.npm)
-    if (key && key !== model.providerID && model.api.npm !== "@ai-sdk/azure") {
+    if (key && key !== model.providerID) {
       const remap = (opts: Record<string, any> | undefined) => {
         if (!opts) return opts
         if (!(model.providerID in opts)) return opts
@@ -330,7 +320,12 @@ export namespace ProviderTransform {
         return {
           ...msg,
           providerOptions: remap(msg.providerOptions),
-          content: msg.content.map((part) => ({ ...part, providerOptions: remap(part.providerOptions) })),
+          content: msg.content.map((part) => {
+            if (part.type === "tool-approval-request" || part.type === "tool-approval-response") {
+              return { ...part }
+            }
+            return { ...part, providerOptions: remap(part.providerOptions) }
+          }),
         } as typeof msg
       })
     }
@@ -380,7 +375,11 @@ export namespace ProviderTransform {
 
   export function variants(model: Provider.Model): Record<string, Record<string, any>> {
     // kilocode_change start
-    if (model.api.npm === "@kilocode/kilo-gateway" && model.variants && Object.keys(model.variants).length > 0) {
+    if (
+      ["@kilocode/kilo-gateway", "@ai-sdk/openai-compatible"].includes(model.api.npm) &&
+      model.variants &&
+      Object.keys(model.variants).length > 0
+    ) {
       return model.variants
     }
     // kilocode_change end
@@ -388,10 +387,12 @@ export namespace ProviderTransform {
     if (!model.capabilities.reasoning) return {}
 
     const id = model.id.toLowerCase()
-    const isAnthropicAdaptive = ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) =>
-      model.api.id.includes(v),
-    )
-    const adaptiveEfforts = ["low", "medium", "high", "max"]
+    // kilocode_change start: add opus-4.7 (with xhigh effort)
+    const isOpus47 = ["opus-4-7", "opus-4.7"].some((v) => model.api.id.includes(v))
+    const isAnthropicAdaptive =
+      isOpus47 || ["opus-4-6", "opus-4.6", "sonnet-4-6", "sonnet-4.6"].some((v) => model.api.id.includes(v))
+    const adaptiveEfforts = isOpus47 ? ["low", "medium", "high", "xhigh", "max"] : ["low", "medium", "high", "max"]
+    // kilocode_change end
     if (
       id.includes("deepseek") ||
       id.includes("minimax") ||
@@ -399,7 +400,9 @@ export namespace ProviderTransform {
       id.includes("mistral") ||
       // id.includes("kimi") || // kilocode_change
       // TODO: Remove this after models.dev data is fixed to use "kimi-k2.5" instead of "k2p5"
-      id.includes("k2p5")
+      id.includes("k2p5") ||
+      id.includes("qwen") ||
+      id.includes("big-pickle")
     )
       return {}
 
@@ -505,9 +508,7 @@ export namespace ProviderTransform {
           return {}
         }
         if (model.id.includes("claude")) {
-          return {
-            thinking: { thinking_budget: 4000 },
-          }
+          return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
         }
         const copilotEfforts = iife(() => {
           if (id.includes("5.1-codex-max") || id.includes("5.2") || id.includes("5.3"))
@@ -547,6 +548,11 @@ export namespace ProviderTransform {
         if (id.includes("gpt-5-") || id === "gpt-5") {
           azureEfforts.unshift("minimal")
         }
+        // kilocode_change start
+        if (model.release_date >= "2025-12-04") {
+          azureEfforts.push("xhigh")
+        }
+        // kilocode_change end
         return Object.fromEntries(
           azureEfforts.map((effort) => [
             effort,
@@ -729,9 +735,21 @@ export namespace ProviderTransform {
         // https://v5.ai-sdk.dev/providers/ai-sdk-providers/perplexity
         return {}
 
-      case "@mymediset/sap-ai-provider":
       case "@jerome-benoit/sap-ai-provider-v2":
         if (model.api.id.includes("anthropic")) {
+          if (isAnthropicAdaptive) {
+            return Object.fromEntries(
+              adaptiveEfforts.map((effort) => [
+                effort,
+                {
+                  thinking: {
+                    type: "adaptive",
+                  },
+                  effort,
+                },
+              ]),
+            )
+          }
           return {
             high: {
               thinking: {
@@ -747,7 +765,26 @@ export namespace ProviderTransform {
             },
           }
         }
-        return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+        if (model.api.id.includes("gemini") && id.includes("2.5")) {
+          return {
+            high: {
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingBudget: 16000,
+              },
+            },
+            max: {
+              thinkingConfig: {
+                includeThoughts: true,
+                thinkingBudget: 24576,
+              },
+            },
+          }
+        }
+        if (model.api.id.includes("gpt") || /\bo[1-9]/.test(model.api.id)) {
+          return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { reasoningEffort: effort }]))
+        }
+        return {}
     }
     return {}
   }
@@ -785,7 +822,10 @@ export namespace ProviderTransform {
       result["chat_template_args"] = { enable_thinking: true }
     }
 
-    if (["zai", "zhipuai"].includes(input.model.providerID) && input.model.api.npm === "@ai-sdk/openai-compatible") {
+    if (
+      ["zai", "zhipuai"].some((id) => input.model.providerID.includes(id)) &&
+      input.model.api.npm === "@ai-sdk/openai-compatible"
+    ) {
       result["thinking"] = {
         type: "enabled",
         clear_thinking: false,
@@ -797,11 +837,13 @@ export namespace ProviderTransform {
     }
 
     if (input.model.api.npm === "@ai-sdk/google" || input.model.api.npm === "@ai-sdk/google-vertex") {
-      result["thinkingConfig"] = {
-        includeThoughts: true,
-      }
-      if (input.model.api.id.includes("gemini-3")) {
-        result["thinkingConfig"]["thinkingLevel"] = "high"
+      if (input.model.capabilities.reasoning) {
+        result["thinkingConfig"] = {
+          includeThoughts: true,
+        }
+        if (input.model.api.id.includes("gemini-3")) {
+          result["thinkingConfig"]["thinkingLevel"] = "high"
+        }
       }
     }
 
@@ -834,7 +876,16 @@ export namespace ProviderTransform {
     if (input.model.api.id.includes("gpt-5") && !input.model.api.id.includes("gpt-5-chat")) {
       if (!input.model.api.id.includes("gpt-5-pro")) {
         result["reasoningEffort"] = "medium"
-        result["reasoningSummary"] = "auto"
+        // Only inject reasoningSummary for providers that support it natively.
+        // @ai-sdk/openai-compatible proxies (e.g. LiteLLM) do not understand this
+        // parameter and return "Unknown parameter: 'reasoningSummary'".
+        if (
+          input.model.api.npm === "@ai-sdk/openai" ||
+          input.model.api.npm === "@ai-sdk/azure" ||
+          input.model.api.npm === "@ai-sdk/github-copilot"
+        ) {
+          result["reasoningSummary"] = "auto"
+        }
       }
 
       // Only set textVerbosity for non-chat gpt-5.x models
@@ -952,6 +1003,12 @@ export namespace ProviderTransform {
     // kilocode_change end
 
     const key = sdkKey(model.api.npm) ?? model.providerID
+    // @ai-sdk/azure delegates to OpenAIChatLanguageModel which reads from
+    // providerOptions["openai"], but OpenAIResponsesLanguageModel checks
+    // "azure" first. Pass both so model options work on either code path.
+    if (model.api.npm === "@ai-sdk/azure") {
+      return { openai: options, azure: options }
+    }
     return { [key]: options }
   }
 

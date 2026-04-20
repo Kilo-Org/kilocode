@@ -5,11 +5,12 @@ import {
   ParentProps,
   Show,
   createEffect,
-  createSignal,
   onCleanup,
   splitProps,
   ValidComponent,
 } from "solid-js"
+import { createStore } from "solid-js/store"
+import { makeEventListener } from "@solid-primitives/event-listener"
 import { useI18n } from "../context/i18n"
 import { IconButton } from "./icon-button"
 
@@ -46,21 +47,22 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     "modal",
   ])
 
-  const [contentRef, setContentRef] = createSignal<HTMLElement | undefined>(undefined)
-  const [triggerRef, setTriggerRef] = createSignal<HTMLElement | undefined>(undefined)
-  const [dismiss, setDismiss] = createSignal<"escape" | "outside" | null>(null)
-  const [ready, setReady] = createSignal(true)
-
-  const [uncontrolledOpen, setUncontrolledOpen] = createSignal<boolean>(local.defaultOpen ?? false)
+  const [state, setState] = createStore({
+    contentRef: undefined as HTMLElement | undefined,
+    triggerRef: undefined as HTMLElement | undefined,
+    dismiss: null as "escape" | "outside" | null,
+    uncontrolledOpen: local.defaultOpen ?? false,
+    ready: true, // kilocode_change
+  })
 
   const controlled = () => local.open !== undefined
   const opened = () => {
     if (controlled()) return local.open ?? false
-    return uncontrolledOpen()
+    return state.uncontrolledOpen
   }
 
   const focus = (node?: ParentNode | null) => {
-    const root = node ?? contentRef()
+    const root = node ?? state.contentRef
     if (!root) return
     const target = root.querySelector<HTMLElement>("[data-autofocus]")
     if (!target) return
@@ -68,27 +70,27 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
   }
 
   const onOpenChange = (next: boolean) => {
-    if (next) setDismiss(null)
+    if (next) setState("dismiss", null)
     if (local.onOpenChange) local.onOpenChange(next)
     if (controlled()) return
-    setUncontrolledOpen(next)
+    setState("uncontrolledOpen", next)
   }
 
   createEffect(() => {
     if (!opened()) return
-    setReady(false)
+    setState("ready", false)
 
     const inside = (node: Node | null | undefined) => {
       if (!node) return false
-      const content = contentRef()
+      const content = state.contentRef
       if (content && content.contains(node)) return true
-      const trigger = triggerRef()
+      const trigger = state.triggerRef
       if (trigger && trigger.contains(node)) return true
       return false
     }
 
     const close = (reason: "escape" | "outside") => {
-      setDismiss(reason)
+      setState("dismiss", reason)
       onOpenChange(false)
     }
 
@@ -117,35 +119,14 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       close("outside")
     }
 
-    window.addEventListener("keydown", onKeyDown, true)
-
-    // Defer outside-dismiss arming so portal mount and parent dialog focus
-    // reconciliation finish before the popover starts reacting to external
-    // focus or pointer events. This avoids first-click flicker when opening
-    // from an already focused field inside a dialog.
-    const pending = {
-      id: requestAnimationFrame(() => {
-        pending.id = requestAnimationFrame(() => {
-          pending.id = 0
-          setReady(true)
-          window.addEventListener("pointerdown", onPointerDown, true)
-          window.addEventListener("focusin", onFocusIn, true)
-        })
-      }),
-    }
-
-    onCleanup(() => {
-      setReady(true)
-      window.removeEventListener("keydown", onKeyDown, true)
-      window.removeEventListener("pointerdown", onPointerDown, true)
-      window.removeEventListener("focusin", onFocusIn, true)
-      if (pending.id) cancelAnimationFrame(pending.id)
-    })
+    makeEventListener(window, "keydown", onKeyDown, { capture: true })
+    makeEventListener(window, "pointerdown", onPointerDown, { capture: true })
+    makeEventListener(window, "focusin", onFocusIn, { capture: true })
   })
 
   createEffect(() => {
     if (!opened()) return
-    const node = contentRef()
+    const node = state.contentRef
     if (!node) return
     const id = requestAnimationFrame(() => focus(node))
     onCleanup(() => cancelAnimationFrame(id))
@@ -153,7 +134,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
 
   const content = () => (
     <Kobalte.Content
-      ref={(el: HTMLElement | undefined) => setContentRef(el)}
+      ref={(el: HTMLElement | undefined) => setState("contentRef", el)}
       data-component="popover-content"
       classList={{
         ...(local.classList ?? {}),
@@ -176,8 +157,8 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         focus(node)
       }}
       onCloseAutoFocus={(event: Event) => {
-        if (dismiss() === "outside") event.preventDefault()
-        setDismiss(null)
+        if (state.dismiss === "outside") event.preventDefault()
+        setState("dismiss", null)
       }}
     >
       {/* <Kobalte.Arrow data-slot="popover-arrow" /> */}
@@ -203,7 +184,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
   return (
     <Kobalte gutter={4} {...rest} open={opened()} onOpenChange={onOpenChange} modal={local.modal ?? false}>
       <Kobalte.Trigger
-        ref={(el: HTMLElement) => setTriggerRef(el)}
+        ref={(el: HTMLElement) => setState("triggerRef", el)}
         as={local.triggerAs ?? "div"}
         data-slot="popover-trigger"
         {...(local.triggerProps as any)}

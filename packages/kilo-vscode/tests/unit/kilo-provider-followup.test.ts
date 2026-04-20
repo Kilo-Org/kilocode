@@ -130,4 +130,37 @@ describe("KiloProvider follow-up sessions", () => {
       },
     ])
   })
+
+  it("calls onFollowupAdopted listeners with session and directory", async () => {
+    const service = connection()
+    const provider = new KiloProvider({} as never, service as never)
+    const internal = provider as unknown as Internals
+    const adopted: Array<{ id: string; dir: string }> = []
+
+    internal.webview = { postMessage: async () => true }
+    internal.syncWebviewState = async () => {}
+    internal.flushPendingSessionRefresh = async () => {}
+    internal.fetchAndSendProviders = async () => {}
+    internal.fetchAndSendAgents = async () => {}
+    internal.fetchAndSendSkills = async () => {}
+    internal.fetchAndSendCommands = async () => {}
+    internal.fetchAndSendConfig = async () => {}
+    internal.fetchAndSendNotifications = async () => {}
+    internal.seedSessionStatusMap = async () => {}
+    internal.sendNotificationSettings = () => {}
+    internal.startStatsPolling = () => {}
+    internal.handleLoadMessages = async () => {}
+
+    await internal.initializeConnection()
+
+    provider.onFollowupAdopted((session, directory) => {
+      adopted.push({ id: session.id, dir: directory })
+    })
+
+    internal.pendingFollowup = { dir: "/repo/.kilo/worktrees/feat", time: Date.now() }
+    service.emit(created({ id: "ses-wt", directory: "/repo/.kilo/worktrees/feat" }))
+    await Promise.resolve()
+
+    expect(adopted).toEqual([{ id: "ses-wt", dir: "/repo/.kilo/worktrees/feat" }])
+  })
 })

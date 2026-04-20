@@ -3,16 +3,19 @@ name: test-vscode
 on:
   push:
     branches:
+      - main
       - dev
     paths:
       - "packages/kilo-vscode/**"
       - "packages/ui/**"
       - "packages/kilo-ui/**"
+      - ".github/workflows/test-vscode.yml"
   pull_request:
     paths:
       - "packages/kilo-vscode/**"
       - "packages/ui/**"
       - "packages/kilo-ui/**"
+      - ".github/workflows/test-vscode.yml"
   workflow_dispatch:
 
 jobs:
@@ -34,6 +37,10 @@ jobs:
       - name: Run unit tests
         working-directory: packages/kilo-vscode
         run: bun run test:unit
+
+      - name: Check lint (ESLint)
+        working-directory: packages/kilo-vscode
+        run: bun run lint
 
       - name: Check formatting (prettier)
         working-directory: packages/kilo-vscode

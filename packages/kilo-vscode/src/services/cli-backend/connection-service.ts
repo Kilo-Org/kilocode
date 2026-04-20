@@ -22,6 +22,28 @@ type DirectoryProvider = () => string[]
 const HEALTH_POLL_INTERVAL_MS = 10_000
 
 /**
+ * Reject all pending network-offline waits for a given directory.
+ * The network namespace is not yet in the SDK KiloClient type (pending SDK regeneration),
+ * so we access it via a type assertion.
+ */
+async function drainNetworkWaits(client: KiloClient, dir: string) {
+  const net = (client as any).network as
+    | {
+        list: (p: { directory: string }) => Promise<{ data?: { id: string }[]; error?: unknown }>
+        reject: (p: { requestID: string; directory: string }) => Promise<{ error?: unknown }>
+      }
+    | undefined
+  if (!net) return
+  const { data: waits, error: err } = await net.list({ directory: dir })
+  if (err) throw new Error(`Failed to list network waits for ${dir}: ${String(err)}`)
+  if (!waits) return
+  for (const w of waits) {
+    const { error } = await net.reject({ requestID: w.id, directory: dir })
+    if (error) throw new Error(`Failed to reject network wait ${w.id}: ${String(error)}`)
+  }
+}
+
+/**
  * Shared connection service that owns the single ServerManager, KiloClient (SDK), and SdkSSEAdapter.
  * Multiple KiloProvider instances subscribe to it for SSE events and state changes.
  */
@@ -34,6 +56,7 @@ export class KiloConnectionService {
   private state: ConnectionState = "disconnected"
   private connectPromise: Promise<void> | null = null
   private healthPollTimer: ReturnType<typeof setInterval> | null = null
+  private remoteService: import("../RemoteStatusService").RemoteStatusService | null = null
 
   private readonly eventListeners: Set<SSEEventListener> = new Set()
   private readonly stateListeners: Set<StateListener> = new Set()
@@ -50,6 +73,13 @@ export class KiloConnectionService {
    * Used primarily for message.part.updated where only messageID may be present.
    */
   private readonly messageSessionIdsByMessageId: Map<string, string> = new Map()
+
+  /** Provider key → single focused session ID. */
+  private readonly focused: Map<string, string> = new Map()
+  /** Provider key → all open (background) session IDs. */
+  private readonly opened: Map<string, string[]> = new Map()
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null
+  private unsubRemote: (() => void) | null = null
 
   constructor(context: vscode.ExtensionContext) {
     this.serverManager = new ServerManager(context)
@@ -92,6 +122,20 @@ export class KiloConnectionService {
   }
 
   /**
+   * Get the shared SDK client, auto-connecting if not yet started.
+   * Accepts an optional directory to use as the workspace root; falls back
+   * to the first VS Code workspace folder. Throws if neither is available
+   * or if the connection fails.
+   */
+  async getClientAsync(dir?: string): Promise<KiloClient> {
+    if (this.client) return this.client
+    const root = dir ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+    if (!root) throw new Error("No workspace folder open")
+    await this.connect(root)
+    return this.client!
+  }
+
+  /**
    * Get server info (port). Returns null if not connected.
    */
   getServerInfo(): { port: number } | null {
@@ -104,6 +148,27 @@ export class KiloConnectionService {
    */
   getServerConfig(): ServerConfig | null {
     return this.config
+  }
+
+  /**
+   * Set the remote status service. When remote is disabled, flushViewed()
+   * is a no-op. When remote becomes enabled (startup refresh, user toggle,
+   * or SSE event), the accumulated focused/opened state is automatically
+   * flushed so the server is never left unaware of already-open sessions.
+   */
+  setRemoteService(service: import("../RemoteStatusService").RemoteStatusService | null): void {
+    this.unsubRemote?.()
+    this.unsubRemote = null
+    this.remoteService = service
+    if (service) {
+      this.unsubRemote = service.onChange((state) => {
+        if (state.enabled) this.flushViewed()
+      })
+    }
+  }
+
+  private isRemoteEnabled(): boolean {
+    return this.remoteService?.getState().enabled ?? false
   }
 
   /**
@@ -144,6 +209,17 @@ export class KiloConnectionService {
       return
     }
     this.messageSessionIdsByMessageId.set(messageId, sessionId)
+  }
+
+  /**
+   * Remove all messageID → sessionID entries for a given session.
+   * Called when a session is deleted or otherwise pruned so the map
+   * does not grow unbounded over the extension lifetime.
+   */
+  pruneSession(sessionId: string): void {
+    for (const [mid, sid] of this.messageSessionIdsByMessageId) {
+      if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
+    }
   }
 
   /**
@@ -329,6 +405,8 @@ export class KiloConnectionService {
           if (error) throw new Error(`Failed to reject question ${q.id}: ${String(error)}`)
         }
       }
+      await drainSuggestions(this.client, dir)
+      await drainNetworkWaits(this.client, dir)
     }
     for (const listener of this.clearPendingPromptsListeners) {
       listener()
@@ -343,6 +421,55 @@ export class KiloConnectionService {
     return () => {
       this.stateListeners.delete(listener)
     }
+  }
+
+  /**
+   * Register the session a provider is actively viewing (focused).
+   * After any change the aggregated set is sent to the server (debounced).
+   */
+  registerFocused(key: string, sessionID: string): void {
+    if (this.focused.get(key) === sessionID) return
+    this.focused.set(key, sessionID)
+    this.flushViewed()
+  }
+
+  /**
+   * Unregister a provider's focused session (e.g. on dispose, hidden, or clearSession).
+   */
+  unregisterFocused(key: string): void {
+    if (!this.focused.has(key)) return
+    this.focused.delete(key)
+    this.flushViewed()
+  }
+
+  /**
+   * Register the open (background tab) session IDs for a provider.
+   * Sessions that appear in both focused and open are reported as focused only.
+   */
+  registerOpen(key: string, ids: string[]): void {
+    const prev = this.opened.get(key)
+    if (prev && prev.length === ids.length && prev.every((v, i) => v === ids[i])) return
+    this.opened.set(key, ids)
+    this.flushViewed()
+  }
+
+  /** Debounced: send the aggregated focused + open session IDs to the server. */
+  flushViewed(): void {
+    if (!this.isRemoteEnabled()) return
+    if (this.debounceTimer) clearTimeout(this.debounceTimer)
+    this.debounceTimer = setTimeout(() => {
+      this.debounceTimer = null
+      const focus = new Set(this.focused.values())
+      const open = new Set<string>()
+      for (const ids of this.opened.values()) {
+        for (const id of ids) {
+          if (!focus.has(id)) open.add(id)
+        }
+      }
+      this.client?.session
+        .viewed({ focused: [...focus], open: [...open] })
+        .catch((err) => console.warn("[Kilo New] ConnectionService: viewed flush failed:", err))
+    }, 150)
   }
 
   /**
@@ -361,6 +488,14 @@ export class KiloConnectionService {
     this.clearPendingPromptsListeners.clear()
     this.directoryProviders.clear()
     this.messageSessionIdsByMessageId.clear()
+    this.focused.clear()
+    this.opened.clear()
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer)
+      this.debounceTimer = null
+    }
+    this.unsubRemote?.()
+    this.unsubRemote = null
     this.client = null
     this.sseClient = null
     this.config = null
@@ -497,5 +632,16 @@ export class KiloConnectionService {
 
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+}
+
+async function drainSuggestions(client: KiloClient, directory: string): Promise<void> {
+  const { data, error: err } = await client.suggestion.list({ directory })
+  if (err) throw new Error(`Failed to list suggestions for ${directory}: ${String(err)}`)
+  if (data) {
+    for (const s of data) {
+      const { error } = await client.suggestion.dismiss({ requestID: s.id, directory })
+      if (error) throw new Error(`Failed to dismiss suggestion ${s.id}: ${String(error)}`)
+    }
   }
 }
