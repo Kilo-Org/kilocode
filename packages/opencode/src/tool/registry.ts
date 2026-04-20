@@ -15,7 +15,7 @@ import { InvalidTool } from "./invalid"
 import { SkillTool } from "./skill"
 import { Tool } from "./tool"
 import { Config } from "../config/config"
-import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin" // kilocode_change
+import { type ToolContext as PluginToolContext, type ToolDefinition } from "@kilocode/plugin"
 import z from "zod"
 import { Plugin } from "../plugin"
 import { Provider } from "../provider/provider"
@@ -39,7 +39,6 @@ import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import { Ripgrep } from "../file/ripgrep"
 import { Format } from "../format"
 import { InstanceState } from "@/effect/instance-state"
-import { Env } from "../env"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
 import { LSP } from "../lsp"
@@ -77,11 +76,31 @@ export namespace ToolRegistry {
 
   export class Service extends Context.Service<Service, Interface>()("@opencode/ToolRegistry") {}
 
-  export const layer = Layer.effect(
+  export const layer: Layer.Layer<
+    Service,
+    never,
+    | Config.Service
+    | Plugin.Service
+    | Question.Service
+    | Todo.Service
+    | Agent.Service
+    | Skill.Service
+    | Session.Service
+    | Provider.Service
+    | LSP.Service
+    | FileTime.Service
+    | Instruction.Service
+    | AppFileSystem.Service
+    | Bus.Service
+    | HttpClient.HttpClient
+    | ChildProcessSpawner
+    | Ripgrep.Service
+    | Format.Service
+    | Truncate.Service
+  > = Layer.effect(
     Service,
     Effect.gen(function* () {
       const config = yield* Config.Service
-      const env = yield* Env.Service
       const plugin = yield* Plugin.Service
       const agents = yield* Agent.Service
       const skill = yield* Skill.Service
@@ -206,10 +225,10 @@ export namespace ToolRegistry {
               tool.code,
               tool.skill,
               tool.patch,
-              ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []), // kilocode_change
               ...(KiloToolRegistry.plan() ? [tool.plan] : []), // kilocode_change
               ...KiloToolRegistry.suggest(tool.suggest), // kilocode_change
               ...KiloToolRegistry.extra(kilo, cfg), // kilocode_change
+              ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ],
             task: tool.task,
             read: tool.read,
@@ -261,7 +280,6 @@ export namespace ToolRegistry {
       })
 
       const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
-        const e2e = !!(yield* env.get("OPENCODE_E2E_LLM_URL"))
         const filtered = (yield* all()).filter((tool) => {
           if (tool.id === CodeSearchTool.id || tool.id === WebSearchTool.id) {
             return KiloToolRegistry.exa(input.providerID) // kilocode_change
@@ -315,7 +333,6 @@ export namespace ToolRegistry {
   export const defaultLayer = Layer.suspend(() =>
     layer.pipe(
       Layer.provide(Config.defaultLayer),
-      Layer.provide(Env.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(Question.defaultLayer),
       Layer.provide(Todo.defaultLayer),
