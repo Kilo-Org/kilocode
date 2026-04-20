@@ -225,6 +225,18 @@ describe("restoreLocalSessions", () => {
     expect(result).toEqual(["s2"])
   })
 
+  it("evicts worktree-bound sessions already in current local state", () => {
+    // Regression: sessionCreated (SSE) can race ahead of agentManager.state and
+    // wrongly add a worktree session to localSessionIDs. On the next state push
+    // the worktree mapping arrives and the session must be evicted from local.
+    const sessions = [
+      { id: "s1", worktreeId: null },
+      { id: "s2", worktreeId: "wt-1" },
+    ]
+    const result = restoreLocalSessions(sessions, ["s1", "s2"], undefined, isPending, identity)
+    expect(result).toEqual(["s1"])
+  })
+
   it("applies tab order on restore", () => {
     const sessions = [
       { id: "s1", worktreeId: null },

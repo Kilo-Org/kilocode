@@ -776,8 +776,10 @@ export class AgentManagerProvider implements Disposable {
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
-    this.panel?.sessions.registerSession(session)
+    // Push state before registerSession so the webview's sessionCreated handler
+    // sees the worktree mapping and routes the session to the worktree tab.
     this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
+    this.panel?.sessions.registerSession(session)
     this.host.capture("Agent Manager Session Started", {
       source: PLATFORM,
       sessionId: session.id,

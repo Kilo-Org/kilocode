@@ -152,6 +152,25 @@ describe("AgentManagerProvider worktree creation", () => {
     expect(manager.panel!.sessions.registerSession).toHaveBeenCalledWith(session)
   })
 
+  // Regression for #8983: notifyWorktreeReady must push agentManager.state before
+  // registerSession posts sessionCreated. Reverse order makes the webview route the
+  // new worktree session into the Local tab.
+  it("pushes worktree state before registering the session", async () => {
+    const manager = createHarness()
+    manager.createWorktreeOnDisk.mockResolvedValue({
+      worktree: { id: "wt-1" },
+      result: { path: "/repo/.kilo/worktrees/wt-1", branch: "feature/wt-1", parentBranch: "main" },
+    })
+    manager.createSessionInWorktree.mockResolvedValue({ id: "session-1" })
+    manager.getStateManager.mockReturnValue({ addSession: vi.fn() })
+
+    await manager.onCreateWorktree()
+
+    const notify = manager.notifyWorktreeReady.mock.invocationCallOrder[0]!
+    const register = manager.panel!.sessions.registerSession.mock.invocationCallOrder[0]!
+    expect(notify).toBeLessThan(register)
+  })
+
   it("waits for state initialization before creating a worktree", async () => {
     const manager = createHarness()
     const ready = deferred()

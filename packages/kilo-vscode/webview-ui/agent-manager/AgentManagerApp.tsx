@@ -339,6 +339,9 @@ const AgentManagerContent: Component = () => {
   // Recover persisted local session IDs from webview state
   const persisted = vscode.getState<{ localSessionIDs?: string[]; sidebarWidth?: number }>()
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
+  /** Remove a session ID from the local tab (no-op if absent). */
+  const evictLocal = (sid: string) =>
+    setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
   const [sections, setSections] = createSignal<SectionState[]>([])
@@ -1167,14 +1170,7 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" || ev.status === "error") {
           const error = ev.status === "error"
-          // Remove from busy map
-          if (ev.worktreeId) {
-            setBusyWorktrees((prev) => {
-              const next = new Map(prev)
-              next.delete(ev.worktreeId!)
-              return next
-            })
-          }
+          if (ev.worktreeId) setBusyWorktrees((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
           setSetup({
             active: true,
             message: ev.message,
@@ -1186,9 +1182,9 @@ const AgentManagerContent: Component = () => {
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
-            // Auto-switch sidebar to the worktree containing this session
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
+            evictLocal(ev.sessionId)
           }
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
@@ -1223,6 +1219,10 @@ const AgentManagerContent: Component = () => {
             return [...prev, ev.sessionId]
           })
           vscode.postMessage({ type: "agentManager.persistSession", sessionId: ev.sessionId })
+        } else {
+          saveTabMemory()
+          setSelection(ev.worktreeId)
+          evictLocal(ev.sessionId)
         }
         session.selectSession(ev.sessionId)
       }

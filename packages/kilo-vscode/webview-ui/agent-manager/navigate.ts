@@ -95,6 +95,11 @@ export function restoreLocalSessions(
   applyOrder: (items: { id: string }[], order: string[]) => { id: string }[],
 ): string[] | undefined {
   const locals = sessions.filter((s) => !s.worktreeId).map((s) => s.id)
+  // Sessions assigned to a worktree must never appear in the local tab. A race
+  // where sessionCreated (SSE) arrives before agentManager.state can incorrectly
+  // add a worktree session to localSessionIDs; evict them here on every state push.
+  const worktree = new Set(sessions.filter((s) => s.worktreeId).map((s) => s.id))
+  const evict = (ids: string[]) => (worktree.size > 0 ? ids.filter((id) => !worktree.has(id)) : ids)
   const real = current.filter((id) => !isPending(id))
 
   // First restore: current has no real sessions but disk has some
@@ -109,7 +114,9 @@ export function restoreLocalSessions(
   // Merge any disk-persisted sessions missing from current (e.g. vscode.setState
   // debounce didn't fire before close, but persistSession already wrote to disk)
   const missing = locals.filter((id) => !current.includes(id))
-  const merged = missing.length > 0 ? [...current, ...missing] : current
+  const base = missing.length > 0 ? [...current, ...missing] : current
+  const merged = evict(base)
+  const changed = missing.length > 0 || merged.length !== base.length
 
   // Apply tab order if present
   if (tabOrder && merged.length > 0) {
@@ -119,7 +126,7 @@ export function restoreLocalSessions(
     ).map((item) => item.id)
   }
 
-  return missing.length > 0 ? merged : undefined
+  return changed ? merged : undefined
 }
 
 /**
