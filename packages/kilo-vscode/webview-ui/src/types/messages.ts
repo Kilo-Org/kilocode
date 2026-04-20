@@ -2057,9 +2057,15 @@ export interface AddSessionToWorktreeRequest {
 
 // Fork an existing session (copies conversation history)
 export interface ForkSessionRequest {
-  type: "agentManager.forkSession" | "forkSession"
+  type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
+}
+
+export interface SidebarForkSessionRequest {
+  type: "forkSession"
+  sessionId: string
   messageId?: string
 }
 
@@ -2562,6 +2568,7 @@ export type WebviewMessage =
   | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
+  | SidebarForkSessionRequest
   | CloseSessionRequest
   | PersistSessionRequest
   | ForgetSessionRequest
