@@ -64,15 +64,6 @@ AI-powered dependency vulnerability triage for your codebase:
 3. Configure [managed indexing](/docs/deploy-secure/managed-indexing) for large projects
 4. Enable the [Security Agent](/docs/deploy-secure/security-reviews) to triage your Dependabot alerts
 
-## Personal AI Agents
-
-Deploy a 24/7 personal AI agent powered by OpenClaw:
-
-- [**KiloClaw**](/docs/kiloclaw/overview) — One-click deployment of a personal AI agent
-- Connects to Telegram, Discord, and Slack
-- Uses your existing Kilo Gateway credits
-- Free hosting during beta
-
 ## Best Practices
 
 - **Deploy early** — Start with a staging deployment to verify the setup
