@@ -5,7 +5,7 @@ description: "Use your own API keys with Kilo Gateway while retaining platform f
 
 # Bring Your Own Key (BYOK)
 
-Bring Your Own Key (BYOK) lets you use your own API keys when using the Kilo Gateway, while retaining Kilo platform features like Code Reviews and Cloud Agents.
+Bring Your Own Key (BYOK) lets you use your own API keys when using the Kilo Gateway, while retaining Kilo platform features like [Code Reviews](/docs/automate/code-reviews/overview) and [Cloud Agents](/docs/code-with-ai/platforms/cloud-agent). BYOK is also supported in [KiloClaw](/docs/kiloclaw/overview) for running your personal AI agent with your own provider keys.
 
 A user or organization may want to use BYOK to:
 

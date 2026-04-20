@@ -26,6 +26,6 @@ To see which models are currently free, check the [Kilo Leaderboard](https://kil
 
 ## Adding Credits
 
-You can add Gateway credits from your [Kilo account](https://app.kilo.ai). Credits are shared across all Kilo products (VSCode extension, CLI, Cloud Agents, and KiloClaw).
+You can add Gateway credits from your [Kilo account](https://app.kilo.ai). Credits are shared across all Kilo products (VSCode extension, CLI, [Cloud Agents](/docs/code-with-ai/platforms/cloud-agent), and KiloClaw).
 
 See [Adding Credits](/docs/getting-started/adding-credits) and [Gateway Usage and Billing](/docs/gateway/usage-and-billing) for details.

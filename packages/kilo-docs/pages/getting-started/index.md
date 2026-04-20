@@ -22,8 +22,9 @@ Your sessions sync across all of these, so you can start a task on your phone an
 
 - [**Code with AI**](/docs/code-with-ai) — Generate, refactor, and debug code through natural conversation. Use specialized modes (Code, Architect, Debug, Ask) or create your own. Get inline suggestions with Autocomplete.
 - [**Collaborate**](/docs/collaborate) — Share sessions, manage team settings, and track AI adoption across your organization.
-- [**Automate**](/docs/automate) — Set up AI-powered code reviews, triage agents, and auto-fixers that open new PRs based on issues.
+- [**Automate**](/docs/automate) — Set up AI-powered [code reviews](/docs/automate/code-reviews/overview), [triage agents](/docs/automate/auto-triage/overview), and auto-fixers that open new PRs based on issues.
 - [**Deploy & Secure**](/docs/deploy-secure) — Build and deploy apps directly from Kilo. Run security scans and manage issues with AI assistance.
+- [**KiloClaw**](/docs/kiloclaw/overview) — Deploy a personal 24/7 AI agent that connects to Telegram, Discord, and Slack.
 
 ## Quick Start
 

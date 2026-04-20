@@ -27,6 +27,14 @@ Manage and orchestrate multiple AI agents:
 - Parallel Mode with Git worktree isolation
 - Resume existing sessions
 
+## Auto-Triage
+
+Automatically classify and label new GitHub issues:
+
+- [**Auto-Triage**](/docs/automate/auto-triage/overview) — AI-powered issue classification and duplicate detection
+- Automatic labelling from your existing label set
+- Vector-similarity duplicate detection
+
 ## MCP (Model Context Protocol)
 
 Connect Kilo Code to external tools and services:

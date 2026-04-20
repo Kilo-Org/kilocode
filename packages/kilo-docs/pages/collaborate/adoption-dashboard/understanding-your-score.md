@@ -98,7 +98,7 @@ The score aggregates event streams from multiple surfaces:
 - **IDE** — Autocomplete and coding agent interactions
 - **CLI** — Terminal-based AI usage
 - **Reviewer Agent** — AI-assisted code reviews
-- **Cloud Agent** — Browser-based AI sessions
+- **[Cloud Agent](/docs/code-with-ai/platforms/cloud-agent)** — Browser-based AI sessions
 
 ## Why Scores Fluctuate
 

@@ -184,5 +184,5 @@ Ready for more? Here are some next steps:
 - **[Git commit generation](/docs/code-with-ai/features/git-commit-generation)** — Automatically generate commit messages
 
 {% callout type="tip" %}
-**Accelerate development:** Check out multiple copies of your repository and run Kilo Code on all of them in parallel (using git to resolve any conflicts, same as with human devs). This can dramatically speed up development on large projects.
+**Accelerate development:** Check out multiple copies of your repository and run Kilo Code on all of them in parallel (using git to resolve any conflicts, same as with human devs). The [Agent Manager](/docs/automate/agent-manager) provides built-in worktree isolation for this workflow. For a fully managed 24/7 agent, see [KiloClaw](/docs/kiloclaw/overview).
 {% /callout %}

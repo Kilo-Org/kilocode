@@ -14,7 +14,7 @@ Kilo Code makes it easy to work together with your team. Share sessions, manage 
 Sessions are your platform-agnostic interaction with Kilo. They remember your repository, task, and conversation so you can pause and resume work without losing context.
 
 - [**Sessions & Sharing**](/docs/collaborate/sessions-sharing) — Share and collaborate on Kilo Code sessions
-- Create sessions from the CLI, Cloud Agent, or IDE extensions
+- Create sessions from the CLI, [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent), or IDE extensions
 - Share read-only links with teammates
 - Fork shared sessions to create your own copy
 

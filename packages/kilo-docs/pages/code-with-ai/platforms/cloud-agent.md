@@ -210,6 +210,10 @@ You can reference data in a trigger’s prompt template using these placeholders
 Care should be taken when deciding to use webhooks as they are susceptible to prompt injection attacks. Especially in scenarios where webhook payloads may contain untrusted input. At this time we recommend using webhooks only for trusted sources.
 {% /callout %}
 
+{% callout type="tip" %}
+Looking for a 24/7 personal AI agent that connects to chat platforms like Telegram, Discord, and Slack? See [KiloClaw](/docs/kiloclaw/overview) — Kilo's hosted OpenClaw service with one-click deployment.
+{% /callout %}
+
 ## General Cloud Agent Limitations and Guidance
 
 - Each message can run for **up to 15 minutes**.

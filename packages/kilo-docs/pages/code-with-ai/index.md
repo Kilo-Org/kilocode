@@ -28,6 +28,7 @@ Use Kilo Code wherever you work:
 - [**Mobile Apps**](/docs/code-with-ai/platforms/mobile) — iOS and Android support
 - [**Slack**](/docs/code-with-ai/platforms/slack) — Chat with Kilo in your workspace
 - [**App Builder**](/docs/code-with-ai/app-builder) — Create full-stack applications with AI
+- [**KiloClaw**](/docs/kiloclaw/overview) — Deploy a personal 24/7 AI agent on Telegram, Discord, and Slack
 
 ## Working with Agents
 

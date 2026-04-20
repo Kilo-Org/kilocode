@@ -20,7 +20,7 @@ This information lets Kilo show your recent sessions and continue right from the
 
 1. Choose the repository. Pick the GitHub repository you want the agent to work with.
 2. Describe the task. (e.g., “Add dark mode toggle and unit tests”).
-3. Interact with Kilo via any of our interfaces- the CLI, the Cloud Agent, or the Extensions in your favorite IDE.
+3. Interact with Kilo via any of our interfaces — the [CLI](/docs/code-with-ai/platforms/cli), the [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent), or the Extensions in your favorite IDE.
 
 ## Continue where you left off
 

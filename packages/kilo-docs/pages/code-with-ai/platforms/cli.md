@@ -405,6 +405,10 @@ This instructs the AI to proceed without user input.
     kilo run "Implement the new feature" --auto
 ```
 
+{% callout type="tip" %}
+For a fully managed autonomous agent that runs 24/7 and connects to chat platforms, see [KiloClaw](/docs/kiloclaw/overview).
+{% /callout %}
+
 ## Session Continuation
 
 Resume your last conversation from the current workspace using the `--continue` (or `-c`) flag:

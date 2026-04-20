@@ -42,7 +42,7 @@ The Security Agent processes each vulnerability alert through four stages.
 
 **Triage** runs a quick LLM assessment of the alert metadata — the advisory, severity, package, and version range. Each finding gets classified as **Safe to Dismiss**, **Needs Analysis**, or **Needs Review**.
 
-**Deep analysis** kicks in for findings that warrant it. The Cloud Agent performs a full codebase search for actual usage of the vulnerable package, checks whether the vulnerable code paths are reachable, and suggests fixes when possible.
+**Deep analysis** kicks in for findings that warrant it. The [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent) performs a full codebase search for actual usage of the vulnerable package, checks whether the vulnerable code paths are reachable, and suggests fixes when possible.
 
 **Auto-dismiss** (when enabled) automatically closes non-exploitable findings and syncs that dismissal back to GitHub with a `[Kilo Code auto-dismiss]` prefix.
 
@@ -100,7 +100,7 @@ The **Details** tab shows the vulnerability metadata — package name and ecosys
 
 The **Triage** tab shows the agent's initial assessment: a suggested action badge (Safe to Dismiss, Needs Analysis, or Needs Review), a confidence level, and the reasoning behind the decision. If triage hasn't run yet, you can start it here. If it failed, you can retry.
 
-The **Analysis** tab shows the deep analysis results when available — whether the vulnerability is exploitable or not, a summary, up to 5 usage locations found in your codebase, a suggested fix, and full analysis details. There's also a link to continue the investigation in Cloud Agent if you want to dig deeper.
+The **Analysis** tab shows the deep analysis results when available — whether the vulnerability is exploitable or not, a summary, up to 5 usage locations found in your codebase, a suggested fix, and full analysis details. There's also a link to continue the investigation in [Cloud Agent](/docs/code-with-ai/platforms/cloud-agent) if you want to dig deeper.
 
 ---
 
