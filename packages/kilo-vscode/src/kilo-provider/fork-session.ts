@@ -14,9 +14,10 @@ export interface ForkContext {
 export async function handleForkSession(ctx: ForkContext, sessionId: string, messageId?: string): Promise<void> {
   const status =
     ctx.status(sessionId) ??
-    (await ctx.connection
-      .getClient()
-      .session.status({ directory: ctx.directory(sessionId) }, { throwOnError: true })
+    (await Promise.resolve()
+      .then(() =>
+        ctx.connection.getClient().session.status({ directory: ctx.directory(sessionId) }, { throwOnError: true }),
+      )
       .then((result) => result.data?.[sessionId]?.type ?? "idle")
       .catch((e) => {
         console.error("[Kilo New] refreshForkStatus failed:", e)
