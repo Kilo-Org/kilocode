@@ -50,11 +50,6 @@ const readonly: Record<string, "allow"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
-  // compilers (no script execution)
-  "tsc *": "allow",
-  "tsgo *": "allow",
-  // archive (cross-platform)
-  "unzip *": "allow",
 }
 
 const mutating: Record<string, "allow"> = {
@@ -62,14 +57,23 @@ const mutating: Record<string, "allow"> = {
   "mkdir *": "allow",
   "cp *": "allow",
   "mv *": "allow",
+  // compilers can emit build artifacts
+  "tsc *": "allow",
+  "tsgo *": "allow",
+  // archive extraction can write files
+  "unzip *": "allow",
+}
+
+const posixRead: Record<string, "allow"> = {
+  "uname *": "allow",
 }
 
 // Linux/macOS-only commands
 const posix: Record<string, "allow"> = {
+  ...posixRead,
   "tar *": "allow",
   "gzip *": "allow",
   "gunzip *": "allow",
-  "uname *": "allow",
 }
 
 export const bash: Record<string, "allow" | "ask" | "deny"> =
@@ -84,11 +88,11 @@ export const bash: Record<string, "allow" | "ask" | "deny"> =
 
 // Read-only bash commands for ask/plan agents.
 // Unknown commands are DENIED (not "ask") because these agents must never modify the filesystem.
-// Mutating commands (touch, mkdir, cp, mv) are intentionally excluded.
+// Mutating commands are intentionally excluded.
 export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
   ...readonly,
-  ...(process.platform !== "win32" ? posix : {}),
+  ...(process.platform !== "win32" ? posixRead : {}),
   // git — allowlist of read-only subcommands, deny everything else
   "git *": "deny",
   "git log *": "allow",
