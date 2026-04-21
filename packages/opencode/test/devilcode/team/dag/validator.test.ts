@@ -79,7 +79,20 @@ describe("validateDAG — entry detection", () => {
     // The cycle makes Kahn's not find an entry — we get no-entry + cycle
     const kinds = errors.map((e) => e.kind)
     expect(kinds).toContain("no-entry")
+    // The cycle prevents Kahn's from running — no-entry fires and returns early
+    // so "cycle" kind should NOT appear (early return after no-entry)
+    expect(kinds).not.toContain("cycle")
   })
+
+  // devilcode_change start — Phase 7 fix F6: duplicate stages — documents known limitation
+  it("duplicate stages in stages[] — validator does not deduplicate (known limitation)", () => {
+    // Zod does not reject duplicates; validator does not deduplicate
+    // This test documents the current behavior (not a regression)
+    const d = dag(["plan", "plan", "build"], [{ from: "plan", to: "build" }])
+    // Should not throw — validator handles it without panicking
+    expect(() => validateDAG(d, allCaps())).not.toThrow()
+  })
+  // devilcode_change end
 
   it("rejects DAG with multiple entry nodes", () => {
     // plan has no incoming edges; build has no incoming edges; no edge between them → no cycles
@@ -239,6 +252,17 @@ describe("validateDAG — capability coverage", () => {
     const planMissing = errors.find((e) => e.kind === "missing-capability" && (e as any).stage === "plan")
     expect(planMissing).toBeDefined()
   })
+
+  // devilcode_change start — Phase 7 fix F9: capabilityOverride for unknown stage is silently ignored
+  it("capabilityOverride for unknown stage is silently ignored (not in dag.stages)", () => {
+    // Override specifies "retro" which is NOT in this DAG's stages
+    const d = dag(["plan", "build"], [{ from: "plan", to: "build" }])
+    const required = caps("planning", "implementation")
+    // "retro" override should be ignored since retro is not in dag.stages
+    const errors = validateDAG(d, required, { retro: ["retrospective"] })
+    expect(errors.filter((e) => e.kind === "missing-capability")).toHaveLength(0)
+  })
+  // devilcode_change end
 })
 
 // ---------------------------------------------------------------------------

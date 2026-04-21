@@ -42,9 +42,9 @@ export namespace Workflow {
       if (next !== null) return next
       throw new Error(`No outgoing edge from stage "${current}" in custom DAG`)
     }
-    const effectiveDAG = generateDefaultDAG()
-    const next = getNextStage(current, effectiveDAG)
-    if (next !== null) return next
+    // No custom DAG — use STAGE_TRANSITIONS for default cyclic workflow (retro→plan)
+    const transitions = STAGE_TRANSITIONS[current]
+    if (transitions && transitions.length > 0) return transitions[0]
     throw new Error(`No transitions available from stage "${current}"`)
   }
   // devilcode_change end

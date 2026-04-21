@@ -133,4 +133,18 @@ describe("migrateTeamConfig", () => {
     }
     await expect(migrateTeamConfig(bogusLegacy)).rejects.toThrow(TeamSchemaValidationError)
   })
+
+  // devilcode_change start — Phase 7 fix F10: explicit v1.0.0 migration chain test
+  it("migrates explicit v1.0.0 config (identity migration to v1.1.0)", async () => {
+    // Synthetic v1.0.0 config — no workflowOverride field (added in v1.1.0)
+    const config10 = loadQuickstartTemplates()["solo-enhanced"].team
+    // migrateTeamConfig accepts raw objects — v1.0.0 config is already canonical,
+    // identity migration should produce identical output
+    const migrated = await migrateTeamConfig(config10)
+    // workflowOverride should be undefined (not set in v1.0.0)
+    expect(migrated.workflowOverride).toBeUndefined()
+    // Core fields preserved
+    expect(migrated.roles).toBeDefined()
+  })
+  // devilcode_change end
 })

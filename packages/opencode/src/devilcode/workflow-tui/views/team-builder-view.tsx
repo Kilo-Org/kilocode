@@ -143,7 +143,7 @@ export function TeamBuilderView(): JSX.Element {
               <Show when={builder.advancedMode}>
                 <div style={{ "margin-top": "12px" }}>
                   <DAGEditor
-                    dag={builder.dagDraft ?? generateDefaultDAG()}
+                    dag={builder.dagDraft?.dag ?? generateDefaultDAG()}
                     errors={builder.dagErrors as any}
                     readOnly={true}
                   />

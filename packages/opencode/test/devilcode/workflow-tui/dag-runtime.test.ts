@@ -4,6 +4,7 @@
 import { describe, it, expect } from "bun:test"
 import { getNextStage, generateDefaultDAG } from "@/devilcode/team/dag"
 import type { WorkflowDAG } from "@/devilcode/team/dag"
+import { Workflow } from "@/devilcode/workflow"
 
 describe("DAG-driven runtime stage ordering", () => {
   describe("default 7-stage linear DAG", () => {
@@ -97,3 +98,38 @@ describe("DAG-driven runtime stage ordering", () => {
     })
   })
 })
+
+// devilcode_change start — Phase 7 fix F2: runtime integration tests for Workflow.nextStage()
+describe("Workflow.nextStage() — runtime integration", () => {
+  it("default DAG: plan → challenge", () => {
+    expect(Workflow.nextStage("plan")).toBe("challenge")
+  })
+
+  it("default DAG: retro → plan (cyclic, critical regression test)", () => {
+    // Before Phase 7 fix: nextStage("retro") threw. Must return "plan".
+    expect(Workflow.nextStage("retro")).toBe("plan")
+  })
+
+  it("custom skip-challenge DAG: plan → contract", () => {
+    const skipChallenge: WorkflowDAG = {
+      stages: ["plan", "contract", "build", "review", "ship", "retro"],
+      edges: [
+        { from: "plan", to: "contract" },
+        { from: "contract", to: "build" },
+        { from: "build", to: "review" },
+        { from: "review", to: "ship" },
+        { from: "ship", to: "retro" },
+      ],
+    }
+    expect(Workflow.nextStage("plan", skipChallenge)).toBe("contract")
+  })
+
+  it("custom DAG: throws when stage is terminal (no outgoing edge)", () => {
+    const minimalDAG: WorkflowDAG = {
+      stages: ["plan", "ship"],
+      edges: [{ from: "plan", to: "ship" }],
+    }
+    expect(() => Workflow.nextStage("ship", minimalDAG)).toThrow()
+  })
+})
+// devilcode_change end

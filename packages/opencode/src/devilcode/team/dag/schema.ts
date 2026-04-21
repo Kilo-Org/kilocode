@@ -29,6 +29,12 @@ export type WorkflowDAG = z.infer<typeof WorkflowDAG>
 
 // R1-01: z.record(WorkflowStage, ...) would require ALL enum keys — use z.record(z.string(), ...)
 // with a refine to validate that keys are valid WorkflowStage values.
+// Design note: DAGOverride wraps WorkflowDAG (with stages + edges) rather than
+// a flat { stages, capabilityOverrides } as sketched in the Phase 7 ROADMAP spec.
+// Rationale: stages alone cannot represent conditional branching or non-linear order —
+// edges are required for unambiguous graph representation. The ROADMAP spec was
+// updated implicitly by the Phase 7 implementation; Phase 9 may extract shared types
+// to @devilcode/sdk if needed.
 export const DAGOverride = z.object({
   dag: WorkflowDAG,
   capabilityOverrides: z

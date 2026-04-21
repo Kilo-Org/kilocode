@@ -67,10 +67,13 @@ export async function importTeamFromFile(filePath: string): Promise<CanonicalTea
       })
     }
     const envelope = parseResult.data
-    const migrated = await migrateTeamConfig(envelope.config)
-    if (!verifyTeamChecksum(migrated, envelope.checksum)) {
+    // devilcode_change start — Phase 7 fix F8: verify checksum on raw envelope.config (pre-migration)
+    // to avoid spurious failures when migration or Zod defaults alter the object shape.
+    if (!verifyTeamChecksum(envelope.config as CanonicalTeamConfig, envelope.checksum)) {
       throw new TeamChecksumError({ filePath })
     }
+    // devilcode_change end
+    const migrated = await migrateTeamConfig(envelope.config)
     return migrated
   }
 

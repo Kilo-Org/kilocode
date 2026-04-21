@@ -14,6 +14,11 @@ import { validateDAG } from "@/devilcode/team/dag/validator"
 import { getNextStage, getEntryStage } from "@/devilcode/team/dag/helpers"
 import { WorkflowDAG } from "@/devilcode/team/dag/schema"
 import type { CanonicalCapability } from "@/devilcode/team/capabilities"
+// devilcode_change start — Phase 7 fix F3: CanonicalTeamConfig workflowOverride schema enforcement tests
+import { CanonicalTeamConfig } from "@/devilcode/team/config"
+import { loadQuickstartTemplates } from "@/devilcode/team/quickstarts"
+import { stableStringify } from "@/devilcode/team/checksum"
+// devilcode_change end
 
 // ---------------------------------------------------------------------------
 // Capability helpers
@@ -195,3 +200,69 @@ describe("Synthetic DAG 3 — capability override (retro with research capabilit
     expect(getNextStage("ship", withOverrideDag)).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// devilcode_change start — Phase 7 fix F3: CanonicalTeamConfig workflowOverride schema enforcement
+//
+// Exercises the superRefine block in config.ts that validates the DAG against
+// team capabilities when workflowOverride is present.
+// ---------------------------------------------------------------------------
+
+describe("CanonicalTeamConfig — workflowOverride schema enforcement", () => {
+  // Helper: base config from a quickstart template that has broad capability coverage
+  const baseConfig = () => loadQuickstartTemplates()["solo-enhanced"].team
+
+  it("valid workflowOverride (simple 3-stage DAG) parses successfully", () => {
+    const config = {
+      ...baseConfig(),
+      workflowOverride: {
+        dag: {
+          stages: ["plan", "build", "ship"],
+          edges: [
+            { from: "plan", to: "build" },
+            { from: "build", to: "ship" },
+          ],
+        },
+      },
+    }
+    const result = CanonicalTeamConfig.safeParse(config)
+    expect(result.success).toBe(true)
+  })
+
+  it("cyclic DAG in workflowOverride fails CanonicalTeamConfig.safeParse (superRefine)", () => {
+    const config = {
+      ...baseConfig(),
+      workflowOverride: {
+        dag: {
+          stages: ["plan", "build"],
+          edges: [
+            { from: "plan", to: "build" },
+            { from: "build", to: "plan" }, // cycle
+          ],
+        },
+      },
+    }
+    const result = CanonicalTeamConfig.safeParse(config)
+    expect(result.success).toBe(false)
+  })
+
+  it("valid team config with workflowOverride round-trips through CanonicalTeamConfig.parse", () => {
+    const base = baseConfig()
+    const withOverride: CanonicalTeamConfig = {
+      ...base,
+      workflowOverride: {
+        dag: {
+          stages: ["plan", "build", "ship"],
+          edges: [
+            { from: "plan", to: "build" },
+            { from: "build", to: "ship" },
+          ],
+        },
+      },
+    }
+    const parsed = CanonicalTeamConfig.parse(withOverride)
+    expect(stableStringify(parsed)).toBe(stableStringify(withOverride))
+    expect(parsed.workflowOverride?.dag.stages).toEqual(["plan", "build", "ship"])
+  })
+})
+// devilcode_change end

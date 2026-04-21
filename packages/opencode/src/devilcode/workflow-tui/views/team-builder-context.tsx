@@ -13,8 +13,8 @@ import { loadQuickstartTemplates } from "../../team/quickstarts"
 import { createFileSystemTeamRepository, type TeamRepository } from "../../team/repository"
 // devilcode_change start — Phase 7: DAG state integration
 import { generateDefaultDAG, validateDAG } from "../../team/dag"
-import type { WorkflowDAG } from "../../team/dag"
-import type { DAGError } from "../../team/dag"
+import type { WorkflowDAG, DAGOverride, DAGError } from "../../team/dag"
+import type { CanonicalCapability } from "../../team/capabilities"
 // devilcode_change end
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error"
@@ -29,7 +29,7 @@ export type TeamBuilderState = {
   saveError: string | null
   loadedQuickstart: string | null
   // devilcode_change start — Phase 7: DAG state
-  dagDraft: WorkflowDAG | null
+  dagDraft: DAGOverride | null
   dagErrors: DAGError[]
   advancedMode: boolean
   // devilcode_change end
@@ -163,7 +163,7 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
         // devilcode_change start — Phase 7: persist workflowOverride when valid
         const workflowOverride =
           store.advancedMode && store.dagDraft && store.dagErrors.length === 0
-            ? { dag: store.dagDraft }
+            ? store.dagDraft
             : undefined
         await repo.saveTeam(store.teamId, { ...store.draft, workflowOverride } as CanonicalTeamConfig)
         // devilcode_change end
@@ -179,7 +179,7 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
       // devilcode_change start — Phase 7: include workflowOverride when valid
       const workflowOverride =
         store.advancedMode && store.dagDraft && store.dagErrors.length === 0
-          ? { dag: store.dagDraft }
+          ? store.dagDraft
           : undefined
       const result = CanonicalTeamConfig.safeParse({ ...store.draft, enabled: true, workflowOverride })
       // devilcode_change end
@@ -236,29 +236,29 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
     setAdvancedMode(enabled: boolean) {
       setStore("advancedMode", enabled)
       if (enabled && !store.dagDraft) {
-        setStore("dagDraft", generateDefaultDAG())
+        setStore("dagDraft", { dag: generateDefaultDAG() })
       }
     },
 
     updateDAG(dag: WorkflowDAG) {
-      setStore("dagDraft", dag)
+      setStore("dagDraft", { ...(store.dagDraft ?? {}), dag })
       // R2-03: null-safety for roles
-      const capMap = new Map<string, boolean>()
+      const capMap = new Map<CanonicalCapability, boolean>()
       const roles = store.draft?.roles
       if (roles && typeof roles === "object") {
         for (const role of Object.values(roles)) {
           const typedRole = role as { capabilities?: string[] } | undefined
           if (typedRole?.capabilities) {
-            for (const cap of typedRole.capabilities) capMap.set(cap, true)
+            for (const cap of typedRole.capabilities) capMap.set(cap as CanonicalCapability, true)
           }
         }
       }
-      const errors = validateDAG(dag, capMap as Map<never, boolean>)
+      const errors = validateDAG(dag, capMap)
       setStore("dagErrors", errors)
     },
 
     resetDAGToDefault() {
-      setStore("dagDraft", generateDefaultDAG())
+      setStore("dagDraft", { dag: generateDefaultDAG() })
       setStore("dagErrors", [])
     },
     // devilcode_change end
