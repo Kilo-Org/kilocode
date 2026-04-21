@@ -8,8 +8,9 @@ import { TeamSchemaValidationError } from "@/devilcode/team/errors"
 import { loadQuickstartTemplates } from "@/devilcode/team/quickstarts"
 
 describe("CURRENT_TEAM_CONFIG_VERSION", () => {
-  it("is 1.0.0", () => {
-    expect(CURRENT_TEAM_CONFIG_VERSION).toBe("1.0.0")
+  it("is 1.1.0", () => {
+    // devilcode_change — Phase 7: bumped from 1.0.0 to 1.1.0
+    expect(CURRENT_TEAM_CONFIG_VERSION).toBe("1.1.0")
   })
 })
 

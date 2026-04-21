@@ -35,3 +35,10 @@ export { exportTeamToFile, importTeamFromFile } from "./io"
 export { createLayeredTeamRepository } from "./layered-repository"
 export { createProjectLocalTeamRepository } from "./repositories/project-local"
 export { createQuickstartTeamRepository } from "./repositories/quickstart"
+
+// Phase 7 — Configurable Workflow DAG
+export { WorkflowDAG, WorkflowDAGEdge, DAGOverride } from "./dag/schema"
+export type { WorkflowDAG as WorkflowDAGType, WorkflowDAGEdge as WorkflowDAGEdgeType, DAGOverride as DAGOverrideType } from "./dag/schema"
+export { validateDAG, formatDAGError } from "./dag/validator"
+export type { DAGError } from "./dag/validator"
+export { getNextStage, getEntryStage, generateDefaultDAG } from "./dag/helpers"

@@ -1,6 +1,10 @@
 import z from "zod"
 import { CanonicalCapability, STAGE_CAPABILITY_REQUIREMENTS } from "./capabilities"
 import { CanonicalPosition } from "./library"
+// devilcode_change start
+import { DAGOverride } from "./dag/schema"
+import { validateDAG, formatDAGError } from "./dag/validator"
+// devilcode_change end
 
 export const EffortLevel = z.enum(["max", "xhigh", "high", "medium", "low", "default"]).default("default")
 export type EffortLevel = z.infer<typeof EffortLevel>
@@ -55,6 +59,9 @@ export const CanonicalTeamConfig = z
     roles: z.record(z.string(), CanonicalTeamRole),
     routing: CanonicalTeamRouting,
     reactions: z.array(ReactionRule).default([]).optional(),
+    // devilcode_change start — Phase 7: optional DAG override (additive, backwards-compatible)
+    workflowOverride: DAGOverride.optional(),
+    // devilcode_change end
   })
   .refine(
     (cfg) => Object.keys(cfg.roles).every((k) => CanonicalPosition.options.includes(k as CanonicalPosition)),
@@ -95,6 +102,29 @@ export const CanonicalTeamConfig = z
       })
     }
   })
+  // devilcode_change start — Phase 7: validate workflowOverride DAG against team capabilities
+  .superRefine((cfg, ctx) => {
+    if (!cfg.workflowOverride) return
+    const roleCapabilities = new Map<CanonicalCapability, boolean>()
+    for (const role of Object.values(cfg.roles)) {
+      for (const cap of role.capabilities) {
+        roleCapabilities.set(cap, true)
+      }
+    }
+    const dagErrors = validateDAG(
+      cfg.workflowOverride.dag,
+      roleCapabilities,
+      cfg.workflowOverride.capabilityOverrides as Record<string, CanonicalCapability[]> | undefined,
+    )
+    for (const err of dagErrors) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: formatDAGError(err),
+        path: ["workflowOverride"],
+      })
+    }
+  })
+  // devilcode_change end
 export type CanonicalTeamConfig = z.infer<typeof CanonicalTeamConfig>
 
 

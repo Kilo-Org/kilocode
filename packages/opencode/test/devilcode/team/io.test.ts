@@ -34,13 +34,14 @@ describe("exportTeamToFile", () => {
     const team = loadQuickstartTemplates()["solo-enhanced"].team
     const target = path.join(tmpDir, "exp.json")
     const envelope = await exportTeamToFile(target, team, { exportedBy: "tester" })
-    expect(envelope.version).toBe("1.0.0")
+    // devilcode_change — Phase 7: version bumped to 1.1.0
+    expect(envelope.version).toBe("1.1.0")
     expect(envelope.checksum).toMatch(/^[a-f0-9]{64}$/)
     expect(envelope.exportedBy).toBe("tester")
     const text = await fs.readFile(target, "utf-8")
     expect(text.endsWith("\n")).toBe(true)
     const parsed = JSON.parse(text)
-    expect(parsed.version).toBe("1.0.0")
+    expect(parsed.version).toBe("1.1.0")
   })
 })
 
@@ -94,7 +95,8 @@ describe("importTeamFromFile — malformed inputs", () => {
     } catch (err) {
       expect(err).toBeInstanceOf(TeamVersionMismatchError)
       expect((err as TeamVersionMismatchError).found).toBe("9.9.9")
-      expect((err as TeamVersionMismatchError).required).toBe("1.0.0")
+      // devilcode_change — Phase 7: required is now 1.1.0
+      expect((err as TeamVersionMismatchError).required).toBe("1.1.0")
     }
   })
 

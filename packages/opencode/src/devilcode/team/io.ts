@@ -2,7 +2,9 @@ import { promises as fs } from "fs"
 import { CanonicalTeamConfig } from "./config"
 import { TeamExportEnvelope } from "./export-envelope"
 import { computeTeamChecksum, verifyTeamChecksum } from "./checksum"
-import { migrateTeamConfig, CURRENT_TEAM_CONFIG_VERSION } from "./versioning"
+// devilcode_change start — Phase 7: import TeamConfigVersion for known-version check
+import { migrateTeamConfig, CURRENT_TEAM_CONFIG_VERSION, TeamConfigVersion } from "./versioning"
+// devilcode_change end
 import { TeamImportError, TeamVersionMismatchError, TeamChecksumError, TeamSchemaValidationError } from "./errors"
 
 export async function exportTeamToFile(
@@ -46,13 +48,16 @@ export async function importTeamFromFile(filePath: string): Promise<CanonicalTea
 
   if (looksLikeEnvelope) {
     const candidate = raw as { version: unknown; checksum: unknown; config: unknown }
-    if (candidate.version !== CURRENT_TEAM_CONFIG_VERSION) {
+    // devilcode_change start — Phase 7: accept known older versions via migration; reject truly unknown versions
+    const versionCheck = TeamConfigVersion.safeParse(candidate.version)
+    if (!versionCheck.success) {
       throw new TeamVersionMismatchError({
         found: String(candidate.version),
         required: CURRENT_TEAM_CONFIG_VERSION,
         filePath,
       })
     }
+    // devilcode_change end
     const parseResult = TeamExportEnvelope.safeParse(raw)
     if (!parseResult.success) {
       throw new TeamSchemaValidationError({

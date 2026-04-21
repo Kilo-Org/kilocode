@@ -25,7 +25,8 @@ describe("io round-trip across all quickstart templates", () => {
       const original = templates[id].team
       const tmpFile = path.join(tmpDir, `${id}.json`)
       const envelope = await exportTeamToFile(tmpFile, original)
-      expect(envelope.version).toBe("1.0.0")
+      // devilcode_change — Phase 7: version bumped to 1.1.0
+      expect(envelope.version).toBe("1.1.0")
       expect(envelope.checksum).toMatch(/^[a-f0-9]{64}$/)
       const imported = await importTeamFromFile(tmpFile)
       expect(stableStringify(imported)).toBe(stableStringify(original))
