@@ -17,6 +17,7 @@ import { WorkflowStateManager } from "../workflow/state"
 import { WorkflowStage, type WorkflowStage as WorkflowStageType } from "../workflow/types"
 import { exportCommand, importCommand, type TeamIOCommandHandlers } from "./commands/team-io"
 import { publishCommand, installCommand, trustCommand, untrustCommand, type TeamRegistryCommandHandlers } from "./commands/team-registry"
+import { swapCommand, type TeamSwapCommandHandlers } from "./commands/team-swap"
 
 export function WorkflowCommandInput() {
   const local = useLocal()
@@ -83,6 +84,22 @@ export function WorkflowCommandInput() {
         success: (msg, duration = 3000) => toast.show({ message: msg, variant: "success", duration }),
         error: (msg, duration = 6000) => toast.show({ message: msg, variant: "error", duration }),
         warning: (msg, duration = 4000) => toast.show({ message: msg, variant: "warning", duration }),
+      },
+    }
+  }
+
+  // Phase 10 — team swap handler
+  function swapHandlers(): TeamSwapCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onSwapped: async (updated) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: updated })
+      },
+      toast: {
+        success: (msg) => toast.show({ message: msg, variant: "success", duration: 3000 }),
+        error: (msg) => toast.show({ message: msg, variant: "error", duration: 6000 }),
+        warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
       },
     }
   }
@@ -294,6 +311,18 @@ export function WorkflowCommandInput() {
       return
     }
     // devilcode_change end
+
+    // devilcode_change — Phase 10: team swap command (live position swap mid-workflow)
+    if (cmd.startsWith("team swap ")) {
+      const parts = text.slice("team swap ".length).trim().split(/\s+/)
+      if (parts.length < 3) {
+        toast.show({ message: "Usage: team swap <position> <provider> <model>", variant: "warning", duration: 4000 })
+        return
+      }
+      const [position, provider, model] = parts
+      await swapCommand({ position, provider, model }, swapHandlers())
+      return
+    }
 
     const parsed = WorkflowStage.safeParse(cmd)
     if (parsed.success) {

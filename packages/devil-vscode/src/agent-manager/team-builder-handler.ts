@@ -1,6 +1,6 @@
 import type { DevilConnectionService } from "../services/cli-backend/connection-service"
 import type { AgentManagerInMessage } from "./types"
-import type { TeamBuilderInMessage } from "../messages/team-builder-types"
+import type { TeamBuilderInMessage, TeamBuilderSwapIn } from "../messages/team-builder-types"
 
 /**
  * Handles all team builder messages from the webview, delegated from AgentManagerProvider.
@@ -31,6 +31,9 @@ export class TeamBuilderHandler {
         return true
       case "teamBuilder.getAggregations":
         await this.handleGetAggregations()
+        return true
+      case "teamBuilder.swapPosition":
+        await this.handleSwapPosition(tbMsg as TeamBuilderSwapIn)
         return true
       default:
         return false
@@ -89,6 +92,31 @@ export class TeamBuilderHandler {
       const message = err instanceof Error ? err.message : "Unknown error"
       this.log(`[TeamBuilder] Failed to get aggregations: ${message}`)
       this.postMessage({ type: "teamBuilder.error", code: "AGGREGATION_FAILED", message })
+    }
+  }
+
+  private async handleSwapPosition(msg: TeamBuilderSwapIn): Promise<void> {
+    try {
+      const result = await this.connectionService.swapPosition(msg.position, msg.provider, msg.model)
+      this.postMessage({
+        type: "teamBuilder.swapped",
+        position: msg.position,
+        success: result.success,
+        previousProvider: result.previousProvider,
+        previousModel: result.previousModel,
+        newProvider: result.newProvider,
+        newModel: result.newModel,
+        error: result.error,
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error"
+      this.log(`[TeamBuilder] Failed to swap position ${msg.position}: ${message}`)
+      this.postMessage({
+        type: "teamBuilder.swapped",
+        position: msg.position,
+        success: false,
+        error: message,
+      })
     }
   }
 }

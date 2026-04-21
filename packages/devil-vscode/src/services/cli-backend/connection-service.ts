@@ -384,6 +384,31 @@ export class DevilConnectionService {
   async getAggregations(): Promise<unknown> {
     return this.teamFetch("GET", "/devilcode/workflow/aggregations")
   }
+
+  async swapPosition(
+    position: string,
+    provider: string,
+    model: string,
+  ): Promise<{
+    success: boolean
+    position?: string
+    previousProvider?: string
+    previousModel?: string
+    newProvider?: string
+    newModel?: string
+    error?: string
+  }> {
+    const data = await this.teamFetch("POST", "/devilcode/workflow/team/swap", { position, provider, model })
+    return data as {
+      success: boolean
+      position?: string
+      previousProvider?: string
+      previousModel?: string
+      newProvider?: string
+      newModel?: string
+      error?: string
+    }
+  }
   // devilcode_change end
 
   /**

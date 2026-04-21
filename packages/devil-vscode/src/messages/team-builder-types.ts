@@ -75,12 +75,32 @@ export interface TeamBuilderGetAggregationsIn {
   type: "teamBuilder.getAggregations"
 }
 
+// Phase 10 — Live Team Editing: position swap message types
+export interface TeamBuilderSwapIn {
+  type: "teamBuilder.swapPosition"
+  position: string
+  provider: string
+  model: string
+}
+
+export interface TeamBuilderSwappedOut {
+  type: "teamBuilder.swapped"
+  position: string
+  success: boolean
+  previousProvider?: string
+  previousModel?: string
+  newProvider?: string
+  newModel?: string
+  error?: string
+}
+
 export type TeamBuilderInMessage =
   | TeamBuilderLoadTeamIn
   | TeamBuilderListTeamsIn
   | TeamBuilderSaveTeamIn
   | TeamBuilderDeleteTeamIn
   | TeamBuilderGetAggregationsIn
+  | TeamBuilderSwapIn
 
 export type TeamBuilderOutMessage =
   | TeamBuilderTeamLoadedOut
@@ -89,3 +109,4 @@ export type TeamBuilderOutMessage =
   | TeamBuilderSavedOut
   | TeamBuilderDeletedOut
   | TeamBuilderErrorOut
+  | TeamBuilderSwappedOut
