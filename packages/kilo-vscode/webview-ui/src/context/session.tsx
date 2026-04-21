@@ -1770,7 +1770,7 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
+    const queuedMessageIDs = queuedUserMessageIDs(store.messages[sessionID] || [], statusMap[sessionID] ?? idle)
 
     vscode.postMessage({
       type: "abort",
