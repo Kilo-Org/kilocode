@@ -91,6 +91,8 @@ export interface TeamBuilderSwappedOut {
   previousModel?: string
   newProvider?: string
   newModel?: string
+  slotsRebalanced?: number
+  errorCode?: string
   error?: string
 }
 
