@@ -2,7 +2,6 @@
  * TeamBuilderTab — Agent Manager tab for viewing and editing team configurations.
  *
  * Sends/receives messages via the extension's teamBuilder.* channel.
- * Kept intentionally simple for v1 — no deep config editing, just name + role list.
  */
 import { createSignal, For, Show, onMount, onCleanup, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -12,19 +11,19 @@ import type {
   TeamBuilderTeamLoadedMessage,
   TeamBuilderSavedMessage,
   TeamBuilderErrorMessage,
+  TeamBuilderDeletedMessage,
 } from "../src/types/messages"
 
 // ---------------------------------------------------------------------------
-// Types
+// Local-only types (component draft state — NOT the same shape as TeamConfig
+// in messages.ts, which uses Record<string, TeamRoleConfig>)
 // ---------------------------------------------------------------------------
 
-interface TeamHandle {
-  id: string
-  name: string
-  isQuickstart: boolean
-}
+/** Matches the team list entries sent by the extension in teamBuilder.teamsList */
+type TeamHandle = TeamBuilderTeamsListMessage["teams"][number]
 
-interface TeamRole {
+/** Flat role entry used for draft editing in the UI */
+interface LocalRoleEntry {
   positionId: string
   displayName?: string
   provider: string
@@ -32,15 +31,16 @@ interface TeamRole {
   effort: string
 }
 
-interface TeamConfig {
+/** Local draft state shape — array-based for easy table rendering */
+interface LocalTeamDraft {
   name?: string
-  roles: TeamRole[]
+  roles: LocalRoleEntry[]
 }
 
 interface TeamBuilderLocalState {
   teams: TeamHandle[]
   selectedTeamId: string | null
-  draft: TeamConfig
+  draft: LocalTeamDraft
   loading: boolean
   error: string | null
 }
@@ -49,18 +49,89 @@ interface TeamBuilderLocalState {
 // Stage coverage calculation (7 canonical stages)
 // ---------------------------------------------------------------------------
 
-const ALL_STAGES = ["plan", "challenge", "contract", "build", "review", "ship", "retro"]
+const ALL_STAGES = ["plan", "challenge", "contract", "build", "review", "ship", "retro"] as const
 
-function computeCoveredStages(roles: TeamRole[]): number {
+/**
+ * Explicit map from canonical positionId values to the stages they cover.
+ * Avoids fragile substring matching — extend when new canonical positions are added.
+ */
+const POSITION_STAGES: Record<string, readonly string[]> = {
+  planner: ["plan"],
+  challenger: ["challenge"],
+  contractor: ["contract"],
+  builder: ["build"],
+  reviewer: ["review"],
+  shipper: ["ship"],
+  retro: ["retro"],
+  // Multi-stage roles
+  "lead-dev": ["build", "review"],
+  "tech-lead": ["plan", "build", "review"],
+  "full-stack": ["build", "ship"],
+  architect: ["plan", "contract"],
+  qa: ["review"],
+  devops: ["ship"],
+}
+
+function computeCoveredStages(roles: LocalRoleEntry[]): number {
   const covered = new Set<string>()
   for (const role of roles) {
-    // Each role covers its positionId if it matches a stage name
-    const id = role.positionId.toLowerCase()
-    for (const stage of ALL_STAGES) {
-      if (id.includes(stage)) covered.add(stage)
+    const stages = POSITION_STAGES[role.positionId.toLowerCase()]
+    if (stages) {
+      for (const s of stages) covered.add(s)
     }
   }
   return covered.size
+}
+
+// ---------------------------------------------------------------------------
+// RoleRow sub-component (extracted to keep TeamBuilderTab under 400 LOC)
+// ---------------------------------------------------------------------------
+
+const EFFORT_OPTIONS = ["default", "low", "medium", "high", "xhigh", "max"] as const
+
+interface RoleRowProps {
+  role: LocalRoleEntry
+  index: number
+  onProviderChange: (index: number, value: string) => void
+  onModelChange: (index: number, value: string) => void
+  onEffortChange: (index: number, value: string) => void
+}
+
+function RoleRow(props: RoleRowProps): JSX.Element {
+  return (
+    <tr>
+      <td class="tb-cell">{props.role.positionId}</td>
+      <td class="tb-cell">{props.role.displayName ?? "—"}</td>
+      <td class="tb-cell">
+        <input
+          class="tb-cell-input"
+          type="text"
+          value={props.role.provider}
+          onInput={(e) => props.onProviderChange(props.index, (e.target as HTMLInputElement).value)}
+          aria-label={`Provider for ${props.role.positionId}`}
+        />
+      </td>
+      <td class="tb-cell tb-model-cell">
+        <input
+          class="tb-cell-input"
+          type="text"
+          value={props.role.model}
+          onInput={(e) => props.onModelChange(props.index, (e.target as HTMLInputElement).value)}
+          aria-label={`Model for ${props.role.positionId}`}
+        />
+      </td>
+      <td class="tb-cell">
+        <select
+          class="tb-cell-select"
+          value={props.role.effort}
+          onChange={(e) => props.onEffortChange(props.index, (e.target as HTMLSelectElement).value)}
+          aria-label={`Effort for ${props.role.positionId}`}
+        >
+          <For each={EFFORT_OPTIONS}>{(opt) => <option value={opt}>{opt}</option>}</For>
+        </select>
+      </td>
+    </tr>
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -97,7 +168,7 @@ export function TeamBuilderTab(): JSX.Element {
 
       if (msg.type === "teamBuilder.teamLoaded") {
         const m = msg as TeamBuilderTeamLoadedMessage
-        const config = (m.config ?? {}) as TeamConfig
+        const config = (m.config ?? {}) as LocalTeamDraft
         setState("draft", {
           name: config.name ?? "",
           roles: Array.isArray(config.roles) ? config.roles : [],
@@ -124,6 +195,18 @@ export function TeamBuilderTab(): JSX.Element {
         setState("error", m.message)
         setState("loading", false)
         setSaving(false)
+        return
+      }
+
+      if (msg.type === "teamBuilder.deleted") {
+        const m = msg as TeamBuilderDeletedMessage
+        // Remove the deleted team from the list and clear selection if needed
+        setState("teams", (prev) => prev.filter((t) => t.id !== m.teamId))
+        if (state.selectedTeamId === m.teamId) {
+          setState("selectedTeamId", null)
+          setState("draft", { name: "", roles: [] })
+        }
+        setState("loading", false)
         return
       }
     })
@@ -155,6 +238,18 @@ export function TeamBuilderTab(): JSX.Element {
 
   const handleNameChange = (value: string) => {
     setState("draft", "name", value)
+  }
+
+  const handleProviderChange = (index: number, value: string) => {
+    setState("draft", "roles", index, "provider", value)
+  }
+
+  const handleModelChange = (index: number, value: string) => {
+    setState("draft", "roles", index, "model", value)
+  }
+
+  const handleEffortChange = (index: number, value: string) => {
+    setState("draft", "roles", index, "effort", value)
   }
 
   // -------------------------------------------------------------------------
@@ -262,14 +357,14 @@ export function TeamBuilderTab(): JSX.Element {
                     </thead>
                     <tbody>
                       <For each={state.draft.roles}>
-                        {(role) => (
-                          <tr>
-                            <td>{role.positionId}</td>
-                            <td>{role.displayName ?? "—"}</td>
-                            <td>{role.provider}</td>
-                            <td class="tb-model-cell">{role.model}</td>
-                            <td>{role.effort}</td>
-                          </tr>
+                        {(role, index) => (
+                          <RoleRow
+                            role={role}
+                            index={index()}
+                            onProviderChange={handleProviderChange}
+                            onModelChange={handleModelChange}
+                            onEffortChange={handleEffortChange}
+                          />
                         )}
                       </For>
                     </tbody>

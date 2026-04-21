@@ -73,7 +73,7 @@ export class TeamBuilderHandler {
   private async handleDeleteTeam(teamId: string): Promise<void> {
     try {
       await this.connectionService.deleteTeam(teamId)
-      this.postMessage({ type: "teamBuilder.saved", teamId, success: true })
+      this.postMessage({ type: "teamBuilder.deleted", teamId })
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unknown error"
       this.log(`[TeamBuilder] Failed to delete team ${teamId}: ${message}`)

@@ -17,18 +17,21 @@ export interface CanonicalPosition {
 
 export interface CanonicalTeamRole {
   positionId: string
-  displayName?: string
+  displayName: string
   provider: string
   model: string
-  effort: "low" | "medium" | "high" | "max"
-  tier?: number
-  canDelegate?: boolean
-  capabilities?: string[]
+  effort: "max" | "xhigh" | "high" | "medium" | "low" | "default"
+  tier: number
+  canDelegate: string[]
+  maxConcurrent: number
+  capabilities: string[]
+  supplementaryCapabilities?: string[]
 }
 
 export interface CanonicalTeamRouting {
-  strategy?: "round-robin" | "load-balanced" | "primary-fallback"
-  defaultRole?: string
+  strategy: "hierarchical" | "flat"
+  defaultRole: string
+  escalationEnabled: boolean
   parentRole?: string
   reviewEscalationRole?: string
 }
@@ -39,9 +42,9 @@ export interface DAGOverride {
 }
 
 export interface CanonicalTeamConfig {
-  name?: string
-  roles: CanonicalTeamRole[]
-  routing?: CanonicalTeamRouting
+  enabled: boolean
+  roles: Record<string, CanonicalTeamRole>
+  routing: CanonicalTeamRouting
   workflowOverride?: DAGOverride
 }
 

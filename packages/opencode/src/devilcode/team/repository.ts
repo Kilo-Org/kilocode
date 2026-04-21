@@ -19,6 +19,16 @@ export type TeamHandle = {
   updatedAt: string
 }
 
+/** Thrown when a team is not found in a repository layer. */
+export class TeamNotFoundError extends Error {
+  readonly teamId: string
+  constructor(id: string) {
+    super(`Team "${id}" not found`)
+    this.name = "TeamNotFoundError"
+    this.teamId = id
+  }
+}
+
 export interface TeamRepository {
   listTeams(): Promise<TeamHandle[]>
   loadTeam(id: string): Promise<CanonicalTeamConfig>
@@ -81,7 +91,7 @@ export function createFileSystemTeamRepository(
         raw = JSON.parse(await fs.readFile(filePath, "utf-8"))
       } catch (err: unknown) {
         if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-          throw new Error(`Team "${id}" not found`)
+          throw new TeamNotFoundError(id)
         }
         throw err
       }
@@ -99,7 +109,14 @@ export function createFileSystemTeamRepository(
 
     async deleteTeam(id) {
       const filePath = pathFor(id)
-      await fs.unlink(filePath)
+      try {
+        await fs.unlink(filePath)
+      } catch (err: unknown) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          throw new TeamNotFoundError(id)
+        }
+        throw err
+      }
     },
   }
 }

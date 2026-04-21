@@ -13,7 +13,7 @@ import { Auth } from "../../auth"
 import { CanonicalTeamConfig } from "../../devilcode/team/config"
 import { loadQuickstartTemplates, QUICKSTART_IDS } from "../../devilcode/team/quickstarts"
 import { createLayeredTeamRepository } from "../../devilcode/team/layered-repository"
-import { createFileSystemTeamRepository } from "../../devilcode/team/repository"
+import { createFileSystemTeamRepository, TeamNotFoundError } from "../../devilcode/team/repository"
 import { createQuickstartTeamRepository } from "../../devilcode/team/repositories/quickstart"
 import type { TeamHandle } from "../../devilcode/team/repository"
 import { Instance } from "../../project/instance"
@@ -191,8 +191,7 @@ export const ConfigRoutes = lazy(() =>
           const config = await repo.loadTeam(id)
           return c.json(config)
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          if (/not found/i.test(msg)) {
+          if (err instanceof TeamNotFoundError) { // devilcode_change
             return c.json(createNotFoundResponse("team", id), 404)
           }
           throw err
@@ -267,8 +266,7 @@ export const ConfigRoutes = lazy(() =>
           await repo.deleteTeam(id)
           return c.json({ deleted: true })
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          if (/not found/i.test(msg) || (err as { code?: string })?.code === "ENOENT") {
+          if (err instanceof TeamNotFoundError) { // devilcode_change
             return c.json(createNotFoundResponse("team", id), 404)
           }
           throw err

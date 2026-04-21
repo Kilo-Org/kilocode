@@ -80,6 +80,12 @@ export function computeAggregationsFromEvents(events: WorkflowEvent[]): Aggregat
         stallWaits[r]!.push(waitMs)
         delete pendingStarts[taskId]
       }
+    } else if (event.eventType === "task_failed") {
+      // Clean up pending start entry so failed tasks don't skew stall rate
+      // and don't leak memory in long-running processes.
+      if (taskId && pendingStarts[taskId]) {
+        delete pendingStarts[taskId]
+      }
     }
 
     // Cost aggregation

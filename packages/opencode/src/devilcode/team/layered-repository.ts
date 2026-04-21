@@ -1,4 +1,5 @@
 import type { TeamRepository, TeamHandle } from "./repository"
+import { TeamNotFoundError } from "./repository"
 import type { CanonicalTeamConfig } from "./config"
 
 interface LayerConfig {
@@ -18,6 +19,7 @@ export type LayeredTeamRepository = TeamRepository & {
 
 function isNotFound(err: unknown): boolean {
   if (!err) return false
+  if (err instanceof TeamNotFoundError) return true
   const e = err as { code?: unknown; message?: unknown }
   if (e.code === "ENOENT") return true
   if (typeof e.message === "string" && /not found/i.test(e.message)) return true

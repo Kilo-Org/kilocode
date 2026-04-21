@@ -1445,6 +1445,11 @@ export interface TeamBuilderAggregationsMessage {
   data: unknown
 }
 
+export interface TeamBuilderDeletedMessage {
+  type: "teamBuilder.deleted"
+  teamId: string
+}
+
 // Webview → Extension (inbound)
 export interface TeamBuilderListTeamsRequest {
   type: "teamBuilder.listTeams"
@@ -1459,6 +1464,11 @@ export interface TeamBuilderSaveTeamRequest {
   type: "teamBuilder.saveTeam"
   teamId: string
   config: unknown
+}
+
+export interface TeamBuilderDeleteTeamRequest {
+  type: "teamBuilder.deleteTeam"
+  teamId: string
 }
 
 export interface TeamBuilderGetAggregationsRequest {
@@ -1575,6 +1585,7 @@ export type ExtensionMessage =
   | TeamBuilderTeamsListMessage
   | TeamBuilderTeamLoadedMessage
   | TeamBuilderSavedMessage
+  | TeamBuilderDeletedMessage
   | TeamBuilderErrorMessage
   | TeamBuilderAggregationsMessage
 // devilcode_change end
@@ -2484,6 +2495,7 @@ export type WebviewMessage =
   | TeamBuilderListTeamsRequest
   | TeamBuilderLoadTeamRequest
   | TeamBuilderSaveTeamRequest
+  | TeamBuilderDeleteTeamRequest
   | TeamBuilderGetAggregationsRequest
 // devilcode_change end
 

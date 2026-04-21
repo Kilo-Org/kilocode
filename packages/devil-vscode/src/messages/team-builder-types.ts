@@ -35,6 +35,11 @@ export interface TeamBuilderSavedOut {
   error?: string
 }
 
+export interface TeamBuilderDeletedOut {
+  type: "teamBuilder.deleted"
+  teamId: string
+}
+
 export interface TeamBuilderErrorOut {
   type: "teamBuilder.error"
   code: "LOAD_FAILED" | "SAVE_FAILED" | "DELETE_FAILED" | "AGGREGATION_FAILED" | "LIST_FAILED"
@@ -82,4 +87,5 @@ export type TeamBuilderOutMessage =
   | TeamBuilderTeamsListOut
   | TeamBuilderAggregationsOut
   | TeamBuilderSavedOut
+  | TeamBuilderDeletedOut
   | TeamBuilderErrorOut

@@ -363,24 +363,24 @@ export class DevilConnectionService {
   }
 
   async listTeams(): Promise<Array<{ id: string; name: string; isQuickstart: boolean }>> {
-    const data = await this.teamFetch("GET", "/devilcode/teams")
+    const data = await this.teamFetch("GET", "/config/team")
     return data as Array<{ id: string; name: string; isQuickstart: boolean }>
   }
 
   async getTeam(id: string): Promise<unknown> {
-    return this.teamFetch("GET", `/devilcode/teams/${encodeURIComponent(id)}`)
+    return this.teamFetch("GET", `/config/team/${encodeURIComponent(id)}`)
   }
 
   async saveTeam(id: string, config: unknown): Promise<void> {
-    await this.teamFetch("PUT", `/devilcode/teams/${encodeURIComponent(id)}`, config)
+    await this.teamFetch("PUT", `/config/team/${encodeURIComponent(id)}`, config)
   }
 
   async deleteTeam(id: string): Promise<void> {
-    await this.teamFetch("DELETE", `/devilcode/teams/${encodeURIComponent(id)}`)
+    await this.teamFetch("DELETE", `/config/team/${encodeURIComponent(id)}`)
   }
 
   async getAggregations(): Promise<unknown> {
-    return this.teamFetch("GET", "/devilcode/teams/aggregations")
+    return this.teamFetch("GET", "/devilcode/workflow/aggregations")
   }
   // devilcode_change end
 
