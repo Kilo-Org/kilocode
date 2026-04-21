@@ -1,14 +1,44 @@
 # Project State
 
 ## Current Position
-- **Phase**: 8 of 10 (executed, pending review)
-- **Status**: Phase 8 complete — all 3 plans executed successfully
-- **Last Activity**: Phase 8 execution (2026-04-21)
+- **Phase**: 9 of 10 (planned, pending execution)
+- **Status**: Phase 8 review passed — ready for Phase 9 planning
+- **Last Activity**: Phase 8 review cycle 4 PASS (2026-04-21)
 
 ## Progress
 ```
-[####################] 80% — 20/25 plans complete (Phase 8 COMPLETE — awaiting review)
+[####################] 80% — 20/25 plans complete (Phase 8 COMPLETE ✓ Review passed)
 ```
+
+## Phase 8 Wave Results
+
+### Wave 1 Results (08-01)
+- Registry module foundation — Complete ✓
+  - `team/registry/manifest.ts`: TeamRegistryManifest, TeamManifestMetadata, RegistryIndex (all .strict(), browser-safe)
+  - `team/registry/errors.ts`: TeamRegistryError + 4 subclasses (browser-safe)
+  - `team/registry/signing.ts`: Ed25519 sign/verify via Node crypto; generateKeyPair, signManifest, verifyManifestSignature, getPublicKeyFingerprint
+  - `team/registry/http-client.ts`: fetchManifest with SSRF protection (net.isIPv4/IPv6 numeric range checks blocking RFC-1918, loopback, link-local 169.254.x.x, IPv4-mapped IPv6), 5 MB body cap
+  - `team/registry/trust-store.ts`: Explicit key-pinning trust store at ~/.local/share/kilo/registry/trusted-publishers.json
+  - 72 tests pass across 5 test files
+
+### Wave 2 Results (08-02)
+- I/O orchestration + TUI commands — Complete ✓
+  - `team/registry/io.ts`: publishManifest + installManifest; skipTrustCheck decoupled from crypto verification; verifyWithKey option for trust-store-bypass with crypto enforcement
+  - `workflow-tui/commands/team-registry.ts`: publishCommand, installCommand (requireSignature forwarded), trustCommand, untrustCommand, registerTeamRegistryCommands
+  - `workflow-tui/command-input.tsx`: all 4 command branches; --publisher-id extracted; --require-signature flag parsed and forwarded
+  - 39 new tests (13 io + 15 commands + 11 integration)
+
+### Wave 3 Results (08-03)
+- Security review + docs — Complete ✓
+  - `test/devilcode/team/registry/security.test.ts`: 26 tests across Signature Forgery Resistance, Manifest Tampering Detection, Trust Store Integrity, Install Safety (including forged-key rejection with verifyWithKey)
+  - `devil-docs/pages/collaborate/teams/team-registry.md`: full registry docs with updated team install syntax, --require-signature argument table row, and example
+  - `devil-docs/pages/collaborate/index.md`: Team Registry link added
+
+### Review Cycles
+- Cycle 1 (FAIL→fixed): skipTrustCheck bypass, SSRF, body size limit, toast variant, --publisher-id forwarding, placeholder test
+- Cycle 2 (NEEDS WORK→fixed): SSRF regex bypass vectors (decimal int IP, IPv4-mapped IPv6, 169.254.x.x), --require-signature TUI wiring
+- Cycle 3 (Security PASS, QA NEEDS WORK→fixed): docs syntax block/table incomplete, no --require-signature regression tests
+- Cycle 4 (PASS): All findings resolved. 472/472 tests pass.
 
 ## Phase 7 Wave Results
 

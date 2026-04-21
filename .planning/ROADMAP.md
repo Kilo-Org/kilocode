@@ -9,7 +9,7 @@
 - [x] Phase 5: Runtime Cockpit Redesign ✓ Review passed
 - [x] Phase 6: Team Export/Import & Persistence Layer ✓ Review passed
 - [x] Phase 7: Configurable Workflow DAG ✓ Review passed
-- [x] Phase 8: Team Registry & Marketplace
+- [x] Phase 8: Team Registry & Marketplace ✓ Review passed
 - [ ] Phase 9: VS Code Extension UI & Telemetry Dashboards
 - [ ] Phase 10: Live Team Editing & Final Polish
 
@@ -157,7 +157,7 @@
 | 5. Runtime Cockpit | 3 | 3 | Complete ✓ Reviewed |
 | 6. Export/Import | 2 | 2 | Complete ✓ Reviewed |
 | 7. Configurable DAG | 2 | 2 | Complete ✓ Reviewed |
-| 8. Registry | 3 | 3 | Complete |
+| 8. Registry | 3 | 3 | Complete ✓ Reviewed |
 | 9. VS Code + Telemetry | 3 | 0 | Not started |
 | 10. Live Editing + Polish | 2 | 0 | Not started |
 | **Total** | **25** | **20** | **In Progress** |
