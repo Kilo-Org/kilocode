@@ -68,7 +68,18 @@ export async function publishManifest(
 
 export interface InstallOptions {
   requireSignature?: boolean
+  /**
+   * Skip the trust-store publisher lookup. Does NOT skip cryptographic
+   * signature verification — supply `verifyWithKey` to verify against a
+   * specific public key when bypassing the trust store.
+   */
   skipTrustCheck?: boolean
+  /**
+   * When `skipTrustCheck` is true, verify the manifest signature against
+   * this Ed25519 public key (base64-encoded) instead of the trust store.
+   * Ignored when `skipTrustCheck` is false or unset.
+   */
+  verifyWithKey?: string
 }
 
 export async function installManifest(
@@ -114,7 +125,18 @@ export async function installManifest(
   const manifest = parseResult.data
 
   if (manifest.signature) {
-    if (!options?.skipTrustCheck) {
+    if (options?.skipTrustCheck) {
+      // Trust-store lookup is bypassed, but cryptographic verification still runs
+      // if the caller provides an explicit public key.
+      if (options.verifyWithKey) {
+        const valid = verifyManifestSignature(manifest, options.verifyWithKey)
+        if (!valid) {
+          throw new TeamSignatureError("Manifest signature verification failed")
+        }
+      } else {
+        warnings.push("Manifest signature not verified — skipTrustCheck=true with no verifyWithKey")
+      }
+    } else {
       const trusted = await getTrustedPublisher(manifest.metadata.publisherId)
       if (!trusted) {
         throw new TeamPublisherNotTrusted(manifest.metadata.publisherId)

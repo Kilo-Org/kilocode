@@ -80,7 +80,7 @@ export function WorkflowCommandInput() {
         await Config.update({ ...current, team: config })
       },
       toast: {
-        success: (msg, duration = 3000) => toast.show({ message: msg, variant: "info", duration }),
+        success: (msg, duration = 3000) => toast.show({ message: msg, variant: "success", duration }),
         error: (msg, duration = 6000) => toast.show({ message: msg, variant: "error", duration }),
         warning: (msg, duration = 4000) => toast.show({ message: msg, variant: "warning", duration }),
       },
@@ -248,16 +248,17 @@ export function WorkflowCommandInput() {
       const name = parseRegistryFlag(rest, "name")
       const author = parseRegistryFlag(rest, "author")
       const version = parseRegistryFlag(rest, "version")
+      const publisherId = parseRegistryFlag(rest, "publisher-id")
       const sign = parseRegistryFlag(rest, "sign")
       if (!outputPath || !name || !author || !version) {
         toast.show({
-          message: "Usage: team publish <path> --name=<n> --author=<a> --version=<v> [--sign=<keyfile>]",
+          message: "Usage: team publish <path> --name=<n> --author=<a> --version=<v> [--publisher-id=<uuid>] [--sign=<keyfile>]",
           variant: "warning",
           duration: 4000,
         })
         return
       }
-      await publishCommand({ path: outputPath, name, author, version, sign }, registryHandlers())
+      await publishCommand({ path: outputPath, name, author, version, publisherId, sign }, registryHandlers())
       return
     }
     if (cmd.startsWith("team install ")) {

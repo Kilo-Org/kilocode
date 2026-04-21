@@ -357,10 +357,30 @@ describe("Install Safety", () => {
       privateKey: kp1.privateKey,
     })
 
-    // Publisher NOT in trust store but skipTrustCheck skips that gate
-    const result = await installManifest(outputPath, { skipTrustCheck: true })
+    // Publisher NOT in trust store; skipTrustCheck bypasses the store lookup.
+    // verifyWithKey still enforces cryptographic signature correctness.
+    const result = await installManifest(outputPath, { skipTrustCheck: true, verifyWithKey: kp1.publicKey })
     expect(result.config).toBeDefined()
     expect(result.warnings).toHaveLength(0)
+  })
+
+  test("installManifest rejects forged signature when skipTrustCheck=true and verifyWithKey is set", async () => {
+    const outputPath = path.join(tempDir, "skip-trust-forged.manifest.json")
+    await publishManifest(getTestConfig(), outputPath, {
+      ...baseOptions(),
+      privateKey: kp1.privateKey,
+    })
+
+    // Tamper with the signature to simulate a forgery
+    const raw = JSON.parse(await fs.readFile(outputPath, "utf-8"))
+    raw.signature = "AAAA" + raw.signature.slice(4)
+    const forgedPath = path.join(tempDir, "skip-trust-forged-tampered.manifest.json")
+    await fs.writeFile(forgedPath, JSON.stringify(raw), "utf-8")
+
+    // Even with skipTrustCheck=true, a forged signature must be detected when verifyWithKey is provided
+    await expect(
+      installManifest(forgedPath, { skipTrustCheck: true, verifyWithKey: kp1.publicKey }),
+    ).rejects.toThrow(TeamSignatureError)
   })
 
   test("installManifest validates manifest schema — rejects arbitrary JSON object", async () => {

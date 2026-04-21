@@ -164,10 +164,9 @@ describe("installManifest — signature verification", () => {
     // Add publisher to trust store
     await addTrustedPublisher(PUBLISHER_ID, publicKey, undefined, storePath)
 
-    // Install with a mocked trust store path — we need to ensure getTrustedPublisher hits our store
-    // Use skipTrustCheck=false (default) but intercept via the trust-store module
-    // For simplicity, test with skipTrustCheck=true (signature format still verified)
-    const result = await installManifest(outputPath, { skipTrustCheck: true })
+    // Trust-store path DI not supported by installManifest; bypass the store lookup
+    // but supply the public key explicitly so signature still verifies.
+    const result = await installManifest(outputPath, { skipTrustCheck: true, verifyWithKey: publicKey })
     expect(result.config).toBeDefined()
     expect(result.warnings).toHaveLength(0)
   })
@@ -184,29 +183,20 @@ describe("installManifest — signature verification", () => {
   })
 
   it("throws TeamSignatureError for tampered signature", async () => {
-    const { privateKey } = generateKeyPair()
+    const { publicKey, privateKey } = generateKeyPair()
     const outputPath = path.join(tempDir, "tampered.manifest.json")
 
     await publishManifest(getTestConfig(), outputPath, { ...baseOptions(), privateKey })
 
-    // Tamper with the signature
+    // Tamper with the signature bytes
     const raw = JSON.parse(await fs.readFile(outputPath, "utf-8"))
     raw.signature = "AAAA" + raw.signature.slice(4)
     await fs.writeFile(outputPath, JSON.stringify(raw), "utf-8")
 
-    // Add publisher to trust store so we get past the trust check to signature verification
-    const { publicKey: fakeKey } = generateKeyPair()
-    const storePath = path.join(tempDir, "trust-tamper.json")
-    await addTrustedPublisher(PUBLISHER_ID, fakeKey, undefined, storePath)
-
-    // With skipTrustCheck=false and publisher in trust store (different key), sig check fails
-    // But since trust store path is different we can't easily mock — use skipTrustCheck=true
-    // and confirm tampered signature still throws TeamSignatureError
-    // Actually with skipTrustCheck=true, we skip verification — so we need a different approach.
-    // The best we can test here without full DI is: publisher not trusted → TeamPublisherNotTrusted
-    // which is already covered above. Tampered signature detection requires trusting the publisher.
-    // Mark this as a known limitation — full DI test requires trust-store path injection.
-    // Skip this case to avoid false assertion.
-    expect(true).toBe(true) // placeholder — tamper test requires DI for trust store path
+    // skipTrustCheck bypasses the trust store; verifyWithKey performs crypto verification.
+    // A tampered signature must still be detected and rejected.
+    await expect(
+      installManifest(outputPath, { skipTrustCheck: true, verifyWithKey: publicKey }),
+    ).rejects.toThrow(TeamSignatureError)
   })
 })
