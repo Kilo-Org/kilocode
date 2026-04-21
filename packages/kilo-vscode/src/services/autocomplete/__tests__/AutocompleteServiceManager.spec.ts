@@ -98,6 +98,7 @@ vi.mock("../AutocompleteCodeActionProvider", () => {
 vi.mock("../classic-auto-complete/AutocompleteInlineCompletionProvider", () => {
   class AutocompleteInlineCompletionProvider {
     public provideInlineCompletionItems_Internal = vi.fn()
+    public updateWorkspacePath = vi.fn()
     public dispose = vi.fn()
 
     constructor(..._args: any[]) {}

@@ -117,6 +117,7 @@ export class AutocompleteServiceManager {
 
   public async load() {
     this.settings = readSettings()
+    this.inlineCompletionProvider.updateWorkspacePath(vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? "")
 
     await this.updateGlobalContext()
     this.updateStatusBar()

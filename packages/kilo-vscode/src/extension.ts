@@ -64,6 +64,9 @@ export function activate(context: vscode.ExtensionContext) {
     }
   })
 
+  // Prewarm the CLI backend early so autocomplete is ready before first editor use.
+  ensureBackendForAutocomplete(connectionService)
+
   // Track all open tab panel providers so toolbar button commands can target them.
   // NOTE: The editor/title toolbar for tab panels intentionally omits Agent Manager
   // and Marketplace buttons (unlike the sidebar). Too many icons causes VS Code to
@@ -354,9 +357,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
-
-  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
-  ensureBackendForAutocomplete(connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)

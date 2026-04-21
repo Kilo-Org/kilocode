@@ -60,4 +60,12 @@ export const registerAutocompleteProvider = (
       }
     }),
   )
+
+  // Re-check backend startup and workspace-scoped autocomplete state when folders change.
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      ensureBackendForAutocomplete(connectionService)
+      void autocompleteManager.load()
+    }),
+  )
 }
