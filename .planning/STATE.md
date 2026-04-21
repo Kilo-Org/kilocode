@@ -1,18 +1,73 @@
 # Project State
 
 ## Current Position
-- **Phase**: 9 of 10 (executed, pending review)
-- **Phase**: 10 of 10 (planned)
-- **Status**: Phase 9 complete ✓ Review passed (3 cycles) — ready for Phase 10
-- **Last Activity**: Phase 9 review passed (2026-04-21)
+- **Phase**: 10 of 10 (executed, pending review)
+- **Status**: Phase 10 complete — all plans executed successfully
+- **Last Activity**: Phase 10 execution (2026-04-21)
 
 ## Progress
 ```
-[#######################] 92% — 23/25 plans complete (Phase 9 COMPLETE ✓ Reviewed)
+[#########################] 100% — 25/25 plans complete (Phase 10 EXECUTED)
 ```
 
 ## Next Action
-Run `/legion:plan 10` to plan Phase 10: Live Team Editing & Final Polish.
+Run `/legion:review` to verify Phase 10: Live Team Editing & Final Polish.
+
+## Phase 10 Wave Results
+
+### Wave 1 Results (10-01)
+- Core Swap Infrastructure — Complete with Warnings ✓
+  - `team/position-swap.ts`: PositionSwapRequest/Result/Success/Failure Zod schemas + validatePositionSwap + applyPositionSwap
+  - `workflow/position-swap-events.ts`: 4 BusEvent definitions (validating/success/failed/rebalance)
+  - `workflow/routes.ts`: POST /devilcode/workflow/team/swap endpoint with Config.get/update + Bus events + deep-clone safety
+  - `team/concurrency.ts`: ConcurrencyManager.rebalanceAfterSwap() method
+  - Barrel exports: team/index.ts + workflow/index.ts updated
+  - 22 new tests: 9 unit (position-swap) + 13 chaos (live-swap) — all pass
+  - Warning: bun turbo typecheck fails on pre-existing @devilcode/kilo-ui errors (confirmed pre-existing)
+
+### Wave 2 Results (10-02)
+- TUI/Extension Integration + Docs — Complete ✓
+  - `workflow-tui/commands/team-swap.ts`: DI-pattern command module calling applyPositionSwap directly
+  - `command-input.tsx`: /team swap <position> <provider> <model> branch wired with devilcode_change marker
+  - `devil-vscode/messages/team-builder-types.ts`: TeamBuilderSwapIn + TeamBuilderSwappedOut types + union updates
+  - `devil-vscode/connection-service.ts`: swapPosition() method POSTing to /devilcode/workflow/team/swap
+  - `devil-vscode/team-builder-handler.ts`: handleSwapPosition() with try/catch + postMessage back
+  - NEW `devil-docs/collaborate/teams/team-orchestrator-guide.md`: Full user guide
+  - NEW `devil-docs/collaborate/teams/workflow-tui-migration.md`: Migration guide from legacy TUI
+  - `devil-docs/collaborate/index.md`: Links to both new docs
+  - All devil-vscode CI: typecheck + knip + format:check pass
+
+## Phase 10 Plan Structure (planned 2026-04-21, refine_cycle=1)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 10-01 Core Swap Infrastructure — position-swap.ts + events + HTTP route + concurrency + chaos tests | 1 | Phase 9 | Backend Architect, Senior Developer | QA Verification Specialist |
+| 10-02 TUI/Extension Integration + Docs — swap command + VS Code handler + user guide + migration guide | 2 | 10-01 | Senior Developer, Technical Writer | QA Verification Specialist |
+
+## Phase 10 Architecture Decision
+- Selected **Clean** after 3 parallel proposal agents (Minimal/Clean/Pragmatic) — consistent with Phases 3-9 precedent.
+- New `team/position-swap.ts` module for swap validation + application logic
+- New `workflow/position-swap-events.ts` for BusEvent lifecycle emission
+- Single HTTP endpoint `POST /devilcode/workflow/team/swap`
+- Transactional: in-flight tasks finish on old agent; new tasks route to new agent
+- Handler DI pattern in TUI (teamSwapHandlers) matching Phase 6 precedent
+- Spec written to `.planning/specs/10-live-team-editing-spec.md`
+- Estimated ~1,240 LOC source + tests + docs
+
+## Phase 10 Auto-Refine History
+
+- **2026-04-21 cycle 0** → 3 competing architecture proposals (Minimal/Clean/Pragmatic) spawned. User auto-selected **Clean** per --auto-refine. Spec pipeline produced `.planning/specs/10-live-team-editing-spec.md` (Medium-Complex); 2 plan files generated (10-01 Wave 1, 10-02 Wave 2).
+- **2026-04-21 cycle 1** → Pre-Mortem + Assumption Hunt returned **CAUTION**. 3 CRITICAL fixes applied:
+  - R1-01: `Workflow.state()` does NOT exist — replaced with `Config.get()` + WorkflowStateManager pattern
+  - R1-02: `wf.saveTeamConfig()` does NOT exist — replaced with `Config.update({ ...current, team: updated })`
+  - R2-01: command-input.tsx uses handler DI pattern — added `teamSwapHandlers()` factory
+- **Cycle 1 verification** → All 3 fixes HELD. No CRITICAL findings. CAUTION accepted.
+
+## Phase 10 Open Risks (documented, not blocking execution)
+
+- **sync.http.post() verification**: Plan 10-02 assumes sync.http.post() exists in command-input.tsx context; verify at execution
+- **Bus import pattern**: Route uses Bus.publish(); verify Bus is importable in routes.ts context
+- **Type narrowing**: Config.get() cast to `{ team?: unknown }` is defensive but loose; tighten if schema available
 
 ## Phase 9 Plan Structure (planned 2026-04-21, refine_cycle=2)
 
