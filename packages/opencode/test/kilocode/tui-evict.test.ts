@@ -47,6 +47,7 @@ function createFetch(log: string[]) {
       if (url.pathname === "/experimental/console") return json({})
       if (url.pathname === "/agent") return json([])
       if (url.pathname === "/config") return json({})
+      if (url.pathname === "/config/warnings") return json([])
       if (url.pathname === "/project/current") return json({ id: "proj_root" })
       if (url.pathname === "/path") {
         return json({
@@ -58,6 +59,7 @@ function createFetch(log: string[]) {
       }
       if (url.pathname === "/session") return json([])
       if (url.pathname === "/session/status") return json({})
+      if (url.pathname === "/network") return json([])
       if (url.pathname === "/command") return json([])
       if (url.pathname === "/lsp") return json([])
       if (url.pathname === "/mcp") return json({})
