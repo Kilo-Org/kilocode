@@ -205,9 +205,14 @@ export namespace SessionNetwork {
     }
 
     const promise = new Promise<void>((resolve, reject) => {
+      const abort = new AbortController()
+      const dispose = () => {
+        input.abort.removeEventListener("abort", onAbort)
+        abort.abort()
+      }
       const onAbort = () => {
         if (!s.pending[id]) return
-        cleanup()
+        dispose()
         delete s.pending[id]
         Bus.publish(Event.Rejected, {
           sessionID: input.sessionID,
@@ -215,18 +220,17 @@ export namespace SessionNetwork {
         })
         reject(new DOMException("Aborted", "AbortError"))
       }
-      const cleanup = () => input.abort.removeEventListener("abort", onAbort)
       s.pending[id] = {
         info,
         resolve: () => {
-          cleanup()
+          dispose()
           resolve()
         },
         reject: (err) => {
-          cleanup()
+          dispose()
           reject(err)
         },
-        dispose: cleanup,
+        dispose,
       }
       input.abort.addEventListener("abort", onAbort, { once: true })
       if (input.abort.aborted) {
@@ -235,7 +239,7 @@ export namespace SessionNetwork {
       }
       log.warn("waiting for network", { sessionID: input.sessionID, requestID: id, message: input.message })
       Bus.publish(Event.Asked, info)
-      void watch({ requestID: id, abort: input.abort }).catch((err) => {
+      void watch({ requestID: id, abort: abort.signal }).catch((err) => {
         log.error("restore watch failed", { err, requestID: id })
       })
     })
