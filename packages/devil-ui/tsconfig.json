@@ -12,7 +12,12 @@
     "noEmit": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "types": ["@types/bun"]
+    "allowImportingTsExtensions": true,
+    "types": ["@types/bun"],
+    "paths": {
+      "@/*": ["../opencode/src/*"],
+      "@tui/*": ["../opencode/src/cli/cmd/tui/*"]
+    }
   },
-  "include": ["src/**/*", ".storybook/**/*"]
+  "include": ["src/**/*", ".storybook/**/*", "../opencode/src/md.d.ts"]
 }

@@ -49,10 +49,10 @@ function DomBranch(props: StagePositionBadgeProps): JSX.Element {
 
   return (
     <span
+      {...{ class: props.class }}
       data-component="stage-position-badge"
       data-stage={props.info.stage}
       data-covered={covered() ? "true" : "false"}
-      class={props.class}
       aria-label={`Stage ${props.info.stage}: ${covered() ? `covered by ${roleDisplay()}` : "uncovered"}`}
       style={{
         display: "inline-flex",
