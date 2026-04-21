@@ -255,7 +255,15 @@ export const MessageList: Component<MessageListProps> = (props) => {
             <Show when={boundary()}>
               <RevertBanner />
             </Show>
-            <For each={queuedTurns()}>{(turn) => <VscodeSessionTurn turn={turn} queued />}</For>
+            <For each={queuedTurns()}>
+              {(turn) => (
+                <VscodeSessionTurn
+                  turn={turn}
+                  queued
+                  onDeleteQueued={() => session.deleteMessage(session.currentSessionID() ?? "", turn.user.id)}
+                />
+              )}
+            </For>
             <WorkingIndicator />
             <For each={props.questions?.()}>{(req) => <QuestionDock request={req} />}</For>
             <For each={props.suggestions?.()}>{(req) => <SuggestBar request={req} />}</For>
