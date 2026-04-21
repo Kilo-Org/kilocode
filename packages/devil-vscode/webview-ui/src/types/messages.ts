@@ -1412,6 +1412,61 @@ export interface CustomProviderModelsFetchedMessage {
   auth?: boolean
 }
 
+// devilcode_change start — team builder message interface definitions
+
+// Extension → Webview (outbound)
+export interface TeamBuilderTeamsListMessage {
+  type: "teamBuilder.teamsList"
+  teams: Array<{ id: string; name: string; isQuickstart: boolean }>
+}
+
+export interface TeamBuilderTeamLoadedMessage {
+  type: "teamBuilder.teamLoaded"
+  teamId: string
+  config: unknown
+}
+
+export interface TeamBuilderSavedMessage {
+  type: "teamBuilder.saved"
+  teamId: string
+  success: boolean
+  error?: string
+}
+
+export interface TeamBuilderErrorMessage {
+  type: "teamBuilder.error"
+  code: "LOAD_FAILED" | "SAVE_FAILED" | "DELETE_FAILED" | "AGGREGATION_FAILED" | "LIST_FAILED"
+  teamId?: string
+  message: string
+}
+
+export interface TeamBuilderAggregationsMessage {
+  type: "teamBuilder.aggregations"
+  data: unknown
+}
+
+// Webview → Extension (inbound)
+export interface TeamBuilderListTeamsRequest {
+  type: "teamBuilder.listTeams"
+}
+
+export interface TeamBuilderLoadTeamRequest {
+  type: "teamBuilder.loadTeam"
+  teamId: string
+}
+
+export interface TeamBuilderSaveTeamRequest {
+  type: "teamBuilder.saveTeam"
+  teamId: string
+  config: unknown
+}
+
+export interface TeamBuilderGetAggregationsRequest {
+  type: "teamBuilder.getAggregations"
+}
+
+// devilcode_change end
+
 export type ExtensionMessage =
   | ReadyMessage
   | ConnectionStateMessage
@@ -1516,6 +1571,13 @@ export type ExtensionMessage =
   | McpStatusLoadedMessage
   | ClearPendingPromptsMessage
   | ExtensionDataReadyMessage
+  // devilcode_change start — team builder inbound messages
+  | TeamBuilderTeamsListMessage
+  | TeamBuilderTeamLoadedMessage
+  | TeamBuilderSavedMessage
+  | TeamBuilderErrorMessage
+  | TeamBuilderAggregationsMessage
+// devilcode_change end
 
 // ============================================
 // Messages FROM webview TO extension
@@ -2418,6 +2480,12 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  // devilcode_change start — team builder webview→extension requests
+  | TeamBuilderListTeamsRequest
+  | TeamBuilderLoadTeamRequest
+  | TeamBuilderSaveTeamRequest
+  | TeamBuilderGetAggregationsRequest
+// devilcode_change end
 
 // ============================================
 // VS Code API type
