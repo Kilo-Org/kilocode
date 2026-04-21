@@ -14,6 +14,8 @@ import { FileLock } from "./locks"
 import { Lesson } from "./learning"
 import { Log } from "../../util/log"
 import z from "zod"
+import { computeAggregations, emptyAggregations } from "./aggregations"
+import path from "path"
 
 const log = Log.create({ service: "workflow.routes" })
 const InternalError = z.object({ error: z.string() })
@@ -243,6 +245,73 @@ export const WorkflowRoutes = lazy(() =>
           return c.json(lessons)
         } catch {
           return c.json([] as Lesson[])
+        }
+      },
+    )
+    .get(
+      "/aggregations",
+      describeRoute({
+        summary: "Get workflow aggregations",
+        description:
+          "Compute telemetry aggregation metrics from the event log: success rates, stall rates, cost totals, and stage durations.",
+        operationId: "devilcode.workflow.aggregations",
+        responses: {
+          200: {
+            description: "Aggregation metrics",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    successRateByTeam: z.record(
+                      z.string(),
+                      z.object({
+                        completed: z.number(),
+                        started: z.number(),
+                        rate: z.number(),
+                      }),
+                    ),
+                    stallRateByPosition: z.record(
+                      z.string(),
+                      z.object({
+                        maxWaitMs: z.number(),
+                        avgWaitMs: z.number(),
+                      }),
+                    ),
+                    costByWorkflow: z.array(
+                      z.object({
+                        workflowId: z.string(),
+                        totalCost: z.number(),
+                      }),
+                    ),
+                    durationByStage: z.record(
+                      z.string(),
+                      z.object({
+                        avgMs: z.number(),
+                        p95Ms: z.number(),
+                        count: z.number(),
+                      }),
+                    ),
+                    generatedAt: z.string(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const planningDir = path.join(Instance.directory, ".planning")
+        const since = c.req.query("since")
+        const limitParam = c.req.query("limit")
+        const limit = limitParam ? parseInt(limitParam, 10) : undefined
+        try {
+          const aggregations = await computeAggregations(planningDir, {
+            since: since ?? undefined,
+            limit: limit && !isNaN(limit) ? limit : undefined,
+          })
+          return c.json(aggregations)
+        } catch {
+          return c.json(emptyAggregations())
         }
       },
     ),
