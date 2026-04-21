@@ -103,7 +103,7 @@ export namespace LLM {
           system.push(
             [
               // kilocode_change start - soul defines core identity and personality
-              ...(isOpenaiOauth ? [] : [SystemPrompt.soul()]),
+              ...(isOpenaiOauth ? [] : [SystemPrompt.soul(cfg)]),
               // kilocode_change end
               // use agent prompt otherwise provider prompt
               ...(input.agent.prompt ? [input.agent.prompt] : SystemPrompt.provider(input.model)),
@@ -148,7 +148,7 @@ export namespace LLM {
           )
           if (isOpenaiOauth) {
             // kilocode_change start - prepend soul to instructions
-            options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")
+            options.instructions = SystemPrompt.soul(cfg) + "\n" + system.join("\n")
             // kilocode_change end
           }
 

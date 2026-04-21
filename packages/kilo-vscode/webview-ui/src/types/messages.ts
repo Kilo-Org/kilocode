@@ -452,6 +452,10 @@ export interface CommitMessageConfig {
   prompt?: string
 }
 
+export interface ReviewConfig {
+  auto_suggest?: boolean
+}
+
 export interface Config {
   permission?: PermissionConfig
   model?: string | null
@@ -467,6 +471,7 @@ export interface Config {
   skills?: SkillsConfig
   snapshot?: boolean
   remote_control?: boolean
+  review?: ReviewConfig
   share?: "manual" | "auto" | "disabled"
   username?: string
   watcher?: WatcherConfig

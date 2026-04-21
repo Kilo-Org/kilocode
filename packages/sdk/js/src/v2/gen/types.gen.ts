@@ -1553,9 +1553,9 @@ export type ProviderConfig = {
            */
           disabled?: boolean
           [key: string]: unknown | boolean | undefined
-        }
+        } | null
       }
-    }
+    } | null
   }
 }
 
@@ -1697,6 +1697,15 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  /**
+   * Code review configuration
+   */
+  review?: {
+    /**
+     * Offer a local code review suggestion after completing implementation work (default: true).
+     */
+    auto_suggest?: boolean
+  }
   /**
    * Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications
    */

@@ -207,19 +207,20 @@ Skills are markdown files at `skills/<name>/SKILL.md` (or `skill/<name>/SKILL.md
 
 ## Other Top-Level Fields
 
-| Field              | Type                           | Description                                         |
-| ------------------ | ------------------------------ | --------------------------------------------------- |
-| `model`            | `"provider/model"`             | Default model                                       |
-| `small_model`      | `"provider/model"`             | Model for titles/summaries                          |
-| `default_agent`    | `string`                       | Default primary agent (fallback: `code`)            |
-| `instructions`     | `string[]`                     | Glob patterns for additional instruction files      |
-| `plugin`           | `string[]`                     | Plugin specifiers (npm packages or `file://` paths) |
-| `snapshot`         | `boolean`                      | Enable git snapshots                                |
-| `share`            | `"manual"\|"auto"\|"disabled"` | Session sharing mode                                |
-| `autoupdate`       | `boolean\|"notify"`            | Auto-update behavior                                |
-| `username`         | `string`                       | Display name override                               |
-| `compaction.auto`  | `boolean`                      | Auto-compact when context full (default: true)      |
-| `compaction.prune` | `boolean`                      | Prune old tool outputs (default: true)              |
+| Field                 | Type                           | Description                                         |
+| --------------------- | ------------------------------ | --------------------------------------------------- |
+| `model`               | `"provider/model"`             | Default model                                       |
+| `small_model`         | `"provider/model"`             | Model for titles/summaries                          |
+| `default_agent`       | `string`                       | Default primary agent (fallback: `code`)            |
+| `instructions`        | `string[]`                     | Glob patterns for additional instruction files      |
+| `plugin`              | `string[]`                     | Plugin specifiers (npm packages or `file://` paths) |
+| `snapshot`            | `boolean`                      | Enable git snapshots                                |
+| `share`               | `"manual"\|"auto"\|"disabled"` | Session sharing mode                                |
+| `autoupdate`          | `boolean\|"notify"`            | Auto-update behavior                                |
+| `username`            | `string`                       | Display name override                               |
+| `review.auto_suggest` | `boolean`                      | Offer local review suggestions (default: true)      |
+| `compaction.auto`     | `boolean`                      | Auto-compact when context full (default: true)      |
+| `compaction.prune`    | `boolean`                      | Prune old tool outputs (default: true)              |
 
 ## TUI Settings (Ctrl+P Command Palette)
 

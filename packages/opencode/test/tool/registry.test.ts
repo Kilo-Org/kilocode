@@ -71,6 +71,33 @@ describe("tool.registry", () => {
       else process.env["KILO_CONFIG_DIR"] = originalConfig
     }
   })
+
+  test("suggest is skipped when review auto suggestions are disabled", async () => {
+    const original = process.env["KILO_CLIENT"]
+    const originalConfig = process.env["KILO_CONFIG_DIR"]
+    try {
+      process.env["KILO_CLIENT"] = "cli"
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(path.join(dir, "kilo.json"), JSON.stringify({ review: { auto_suggest: false } }))
+        },
+      })
+      process.env["KILO_CONFIG_DIR"] = tmp.path
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const ids = await ToolRegistry.ids()
+          expect(ids).not.toContain("suggest")
+        },
+      })
+    } finally {
+      if (original === undefined) delete process.env["KILO_CLIENT"]
+      else process.env["KILO_CLIENT"] = original
+      if (originalConfig === undefined) delete process.env["KILO_CONFIG_DIR"]
+      else process.env["KILO_CONFIG_DIR"] = originalConfig
+    }
+  })
   // kilocode_change end
 
   it.live("loads tools from .opencode/tool (singular)", () =>

@@ -28,8 +28,10 @@ export namespace SystemPrompt {
     return PROMPT_CODEX.trim()
   }
 
-  export function soul() {
-    return SOUL.trim()
+  export function soul(cfg?: { review?: { auto_suggest?: boolean } }) {
+    const prompt = SOUL.trim()
+    if (cfg?.review?.auto_suggest === false) return prompt.replace(/\n## Suggestions[\s\S]*$/, "")
+    return prompt
   }
   // kilocode_change end
 

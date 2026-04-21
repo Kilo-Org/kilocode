@@ -226,7 +226,7 @@ export namespace ToolRegistry {
               tool.skill,
               tool.patch,
               ...(KiloToolRegistry.plan() ? [tool.plan] : []), // kilocode_change
-              ...KiloToolRegistry.suggest(tool.suggest), // kilocode_change
+              ...KiloToolRegistry.suggest(tool.suggest, cfg), // kilocode_change
               ...KiloToolRegistry.extra(kilo, cfg), // kilocode_change
               ...(Flag.KILO_EXPERIMENTAL_LSP_TOOL ? [tool.lsp] : []),
             ],
