@@ -1335,6 +1335,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       if (sid === sessionID) continue
       load.abort.abort()
       this.detailLoads.delete(sid)
+      this.lastDetailsAt.delete(sid)
     }
     if (now - (this.lastDetailsAt.get(sessionID) ?? 0) < 1000) return
     const load = this.detailLoads.get(sessionID)
