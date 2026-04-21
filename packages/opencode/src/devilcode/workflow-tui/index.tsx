@@ -18,7 +18,13 @@ import { TeamBuilderProvider, useTeamBuilder } from "./views/team-builder-contex
 import { TeamBuilderView } from "./views/team-builder-view"
 import { registerTeamBuilderCommands } from "./views/team-builder-commands"
 import { createFileSystemTeamRepository } from "../team/repository"
+import {
+  createLayeredTeamRepository,
+  createProjectLocalTeamRepository,
+  createQuickstartTeamRepository,
+} from "../team"
 import { loadQuickstartTemplates, getQuickstart } from "../team/quickstarts"
+import { Instance } from "../../project/instance"
 import type { QuickstartEntry } from "@devilcode/kilo-ui/primitives/onboarding-wizard"
 
 type CockpitMode = "onboarding" | "workflow" | "team-builder"
@@ -31,8 +37,36 @@ function WorkflowViewInner() {
   const wf = useWorkflow()
   const [mode, setMode] = createSignal<CockpitMode>("workflow")
 
-  // teamRepo instantiated inside component body — honors AsyncLocalStorage context (R3-13)
-  const teamRepo = createFileSystemTeamRepository()
+  // teamRepo instantiated inside component body — honors AsyncLocalStorage context (R3-13).
+  // Phase 6: layered composite with project-local > user-level > quickstart precedence.
+  const projectDir = (() => {
+    try {
+      return Instance.directory
+    } catch {
+      return process.cwd()
+    }
+  })()
+
+  const teamRepo = createLayeredTeamRepository({
+    layers: [
+      {
+        name: "project-local",
+        repository: createProjectLocalTeamRepository({ cwd: projectDir }),
+        writable: true,
+      },
+      {
+        name: "user-level",
+        repository: createFileSystemTeamRepository(),
+        writable: true,
+      },
+      {
+        name: "quickstart",
+        repository: createQuickstartTeamRepository(),
+        writable: false,
+      },
+    ],
+    defaultWriteLayer: "user-level",
+  })
 
   // First-run check: if no firstRunComplete persisted, show onboarding wizard
   onMount(() => {

@@ -26,3 +26,12 @@ export { STAGE_CAPABILITY_REQUIREMENTS } from "./capabilities"
 export type { CanonicalCapability } from "./capabilities"
 export type { TeamHandle, TeamRepository, CreateFileSystemTeamRepositoryOptions } from "./repository"
 export { createFileSystemTeamRepository } from "./repository"
+
+// Phase 6 — Export/Import & Persistence Layer (public surface only; internal symbols imported via deep paths)
+export { TeamImportError, TeamVersionMismatchError, TeamChecksumError, TeamSchemaValidationError } from "./errors"
+export type { TeamImportErrorKind } from "./errors"
+export { TeamExportEnvelope } from "./export-envelope"
+export { exportTeamToFile, importTeamFromFile } from "./io"
+export { createLayeredTeamRepository } from "./layered-repository"
+export { createProjectLocalTeamRepository } from "./repositories/project-local"
+export { createQuickstartTeamRepository } from "./repositories/quickstart"

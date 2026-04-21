@@ -8,12 +8,14 @@ import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { onMount } from "solid-js"
 import { CanonicalTeamConfig } from "../team/config"
+import { Config } from "../../config/config"
 import { useWorkflow } from "./context"
 import type { DensityMode } from "./types"
 import { Review } from "../review/review"
 import { Workflow } from "../workflow"
 import { WorkflowStateManager } from "../workflow/state"
 import { WorkflowStage, type WorkflowStage as WorkflowStageType } from "../workflow/types"
+import { exportCommand, importCommand, type TeamIOCommandHandlers } from "./commands/team-io"
 
 export function WorkflowCommandInput() {
   const local = useLocal()
@@ -49,6 +51,23 @@ export function WorkflowCommandInput() {
     const result = CanonicalTeamConfig.safeParse((sync.data.config as { team?: unknown }).team)
     if (!result.success || !result.data.enabled) return undefined
     return result.data
+  }
+
+  // Phase 6 — team export/import handlers (active team read + Config.update on import)
+  function teamIOHandlers(): TeamIOCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onImported: async (imported) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: imported })
+      },
+      prompt: async () => undefined,
+      toast: {
+        success: (msg) => toast.show({ message: msg, variant: "success", duration: 3000 }),
+        error: (msg) => toast.show({ message: msg, variant: "error", duration: 6000 }),
+        warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
+      },
+    }
   }
 
   async function phase(input?: string) {
@@ -182,6 +201,18 @@ export function WorkflowCommandInput() {
     if (cmd.startsWith("task ")) {
       const taskId = text.slice(5).trim()
       wf.selectTask(taskId)
+      return
+    }
+
+    // devilcode_change — Phase 6: team export/import commands
+    if (cmd.startsWith("team export ")) {
+      const exportPath = text.slice("team export ".length).trim()
+      await exportCommand({ path: exportPath }, teamIOHandlers())
+      return
+    }
+    if (cmd.startsWith("team import ")) {
+      const importPath = text.slice("team import ".length).trim()
+      await importCommand({ path: importPath }, teamIOHandlers())
       return
     }
 

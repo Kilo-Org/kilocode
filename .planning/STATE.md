@@ -1,14 +1,71 @@
 # Project State
 
 ## Current Position
-- **Phase**: 5 of 10 (complete)
-- **Status**: Phase 5 review passed — 2 cycles, 329 tests green, all blockers and warnings resolved
-- **Last Activity**: Phase 5 review complete (2026-04-19)
+- **Phase**: 6 of 10 (executed — pending /legion:review)
+- **Status**: Phase 6 executed — 2/2 plans complete; all CI gates green
+- **Last Activity**: Phase 6 execution complete (2026-04-21)
 
 ## Progress
 ```
-[#############.......] 52% — 13/25 plans complete (Phase 5 COMPLETE ✓)
+[###############.....] 60% — 15/25 plans complete (Phase 5 COMPLETE ✓, Phase 6 EXECUTED pending review)
 ```
+
+## Phase 6 Plan Structure (planned 2026-04-19, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 06-01 Pure Modules — versioning/checksum/errors/envelope/io/layered-repo + project-local + quickstart repos | 1 | Phase 5 | Backend Architect + Senior Developer | QA Verification Specialist |
+| 06-02 Commands + Integration + Docs — team-io.ts command module + LayeredTeamRepository composition swap + command-input.tsx branches + team-portability.md docs | 2 | 06-01 | Senior Developer + Frontend Developer + Technical Writer | QA Verification Specialist + Backend Architect |
+
+## Phase 6 Architecture Decision
+- Selected **Clean** (vs Minimal / Pragmatic) after 3 parallel proposal agents — user prioritized Phase 8 registry reuse + Phase 9 zero-rework (matches Phase 3/4/5 precedent).
+- 8 new source modules: versioning.ts (TeamConfigVersion + CURRENT_TEAM_CONFIG_VERSION + migrateTeamConfig pipeline), checksum.ts (stableStringify + sha256 + timingSafeEqual verify), errors.ts (4 plain Error subclasses: TeamImportError/VersionMismatch/Checksum/SchemaValidation), export-envelope.ts (`.strict()` Zod schema with version/checksum/config/exportedAt/exportedBy), io.ts (pure exportTeamToFile + importTeamFromFile), layered-repository.ts (LayeredTeamRepository composite with saveTeamToLayer extension), repositories/project-local.ts (`.planning/team.json` reserved id "project"), repositories/quickstart.ts (read-only wrapper over loadQuickstartTemplates).
+- 1 new command module: workflow-tui/commands/team-io.ts with handler-injection DI pattern (TeamIOCommandHandlers type).
+- Composition-site edits: workflow-tui/index.tsx swap `createFileSystemTeamRepository()` → `createLayeredTeamRepository({..., defaultWriteLayer: "user-level"})` preserving Phase 5 OnboardingWizard save semantics; command-input.tsx adds two `cmd.startsWith("team export|import ")` branches with teamIOHandlers() closure.
+- Docs: NEW `packages/devil-docs/pages/collaborate/teams/team-portability.md` (NOT overwriting existing `team-management.md` which holds unrelated member-management content) + `collaborate/index.md` link entry.
+- Spec written to `.planning/specs/06-team-export-import-spec.md` (gather → research → write → critique → assess complete; Medium complexity; PASS verdict, HIGH confidence).
+- Estimated ~940 LOC source + ~780 LOC tests + ~220 LOC docs = ~1,940 total across Phase 6.
+
+## Phase 6 Auto-Refine History
+
+- **2026-04-19 cycle 0** → 3 competing architecture proposals (Minimal/Clean/Pragmatic) spawned as Explore agents. User selected **Clean**. Spec pipeline produced `.planning/specs/06-team-export-import-spec.md` (Medium rating); 2 plan files generated (06-01 Wave 1, 06-02 Wave 2).
+- **2026-04-19 cycle 1** → Pre-Mortem (QA Verification Specialist) + Assumption Hunt (Sprint Prioritizer) both returned **REWORK**. 16 surgical fixes applied via CYCLE 1 REFINEMENTS blocks in each plan file:
+  - R1-01: Test dir moved from `test/kilocode/team/` to `test/devilcode/team/` (Phase 4+5 precedent).
+  - R1-02: `isLegacyShape` heuristic REPLACED — role-name check was unsound (`reviewer`/`researcher`/`coordinator` are valid canonical CanonicalPosition values). Structural detector: canonical roles REQUIRE positionId; legacy shapes lack it.
+  - R1-03: `migrateTeamConfig` MUST unwrap `migrateLegacyTeamConfig` discriminated-union Result (not `fromLegacyTeamConfig(raw as never)` which returns `LegacyMigrationResult`, not CanonicalTeamConfig).
+  - R1-04: Quickstart repo `loadTeam(id)` returns `template.team` (unwrap QuickstartTemplate envelope), not whole template.
+  - R1-05: File authoring order — errors → checksum → versioning → export-envelope (dep-topological).
+  - R1-06: `crypto.timingSafeEqual` wrapped in defensive try/catch.
+  - R1-07: Round-trip test baseline = Zod-parsed `templates[id].team`; no re-parse.
+  - R2-01: `Instance.cwd()` does NOT exist — use `Instance.directory` (getter, no parens).
+  - R2-02: `team-management.md` ALREADY EXISTS with unrelated member-management content; Phase 6 docs publish to NEW `team-portability.md` + adjacent link in `collaborate/index.md`.
+  - R2-03: `getActiveTeam` closure reads via existing `team()` helper at command-input.tsx:48-52 (not speculative `wf.state.teamConfig`).
+  - R2-04: `teamRepo` instantiation site is `WorkflowViewInner` (not `WorkflowView`); execution greps before editing.
+  - R2-05: `RegisterFn = (cmd: Command) => () => void` declared LOCALLY per `team-builder-commands.ts:2-6` pattern (no central re-export).
+  - R2-06: `check-devilcode-change` is definitive CI script name (not `check-kilocode-change`).
+  - R2-07: Consolidate team imports to barrel `../team` in index.tsx.
+  - R2-08: Cross-reference to R1-02 canonical-role name collision.
+  - R2-09: Doc file rename cascade: frontmatter, internal anchors.
+- **2026-04-19 cycle 2** → Reality Checker returned **CAUTION**. All 14 R1/R2 fixes HELD against actual source. 2 new CRITICALs + 10 CAUTIONs surfaced; surgical cycle-2 edits folded:
+  - R1-08 (new): Trim barrel exports — `CURRENT_TEAM_CONFIG_VERSION`/`TeamConfigVersion`/`migrateTeamConfig`/`isLegacyShape`/`stableStringify` stay internal-only; avoids knip orphan risk. Public surface = error classes + envelope + io functions + 3 repo factories.
+  - R2-10 (new): `/team init` lives in `workflow-commands.tsx`, NOT `command-input.tsx`. Phase 6 `team export|import` branches are FIRST `team ...` branches in command-input.tsx. Insert before `WorkflowStage.safeParse(cmd)` fallback.
+  - R2-11 (new): `toast.show` requires `duration` field per existing convention (14 call sites). Success 3000ms, error 6000ms, warning 4000ms.
+  - R2-12 (new): `Instance.directory` in SolidJS component body is a new pattern; add defensive try/catch → `process.cwd()` fallback (belt-and-suspenders).
+  - R2-13 (new): `team-portability.md` frontmatter keys = `title:` + `description:`; collaborate/index.md link format = plain markdown `- [**Team Portability**](...) — ...` adjacent to existing team-management line.
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2 with surgical cycle-2 edits folded in. Verdict: **CAUTION** accepted. No further auto-refine.
+
+## Phase 6 Open Risks (documented, not blocking execution)
+
+- **OQ-1**: Palette-click prompt flow — palette entries for "Team: Export" / "Team: Import" show toast hint ("Type 'team export <path>' in the prompt"); blocking modal deferred to Phase 10 polish.
+- **OQ-2**: `/team export` empty-path default — rejected with usage message in v1; future `.planning/team.json` default deferred.
+- **`.planning/team.json` gitignore policy** — user-discretion; docs call this out explicitly.
+- **`exportedBy` default** — `undefined`; git-config fallback deferred.
+- **`Config.get` / `Config.update` imports in command-input.tsx** — execution may need to add these imports (Grep first); `workflow-commands.tsx:55-56` is the reference site.
+- **Phase 7 DAG interaction** — schema-migration pipeline (`migrateTeamConfig`) is the extension hook; Phase 7 will chain v1→v2 migration + bump CURRENT_TEAM_CONFIG_VERSION.
+- **Phase 8 registry reuse** — envelope + checksum + versioning promoted to barrel exports at Phase 8 if needed; signed-manifest wraps AROUND envelope (no envelope churn).
+- **Phase 9 webview compatibility** — pure modules (versioning/envelope/errors) browser-safe; Node-only modules (io/checksum) proxied via KiloConnectionService message bridge.
+- **Knip barrel-trim** — `stableStringify` is test-only consumer; test file imports via deep path. If Phase 8 promotes internal symbols to public, re-add to barrel at that time.
+- **Test sibling dir split** — new Phase 6 tests in `test/devilcode/team/` + `test/devilcode/workflow-tui/`; legacy Phase 2 tests stay in `test/kilocode/team/`. Full regression gate runs both: `bun test test/kilocode/ && bun test test/devilcode/`.
 
 ## Phase 5 Plan Structure (planned 2026-04-19, refine_cycle=2)
 
@@ -301,8 +358,38 @@
 - Fix commits: `a8725e96f` (cycle 1), `b36be5ec5` (cycle 2 residual)
 - Final: 329 tests pass (195 devil-ui + 134 opencode/devilcode), 0 fail
 
+## Phase 6 Wave Results
+
+### Wave 1 Results
+- Plan 06-01 (Wave 1): Pure Modules Layer — Complete.
+  - 8 new source files: errors.ts, checksum.ts, versioning.ts, export-envelope.ts, io.ts, layered-repository.ts, repositories/project-local.ts, repositories/quickstart.ts
+  - 9 new test files; 74 new tests pass (81 total across team/ suite including 7 pre-existing); 181 expect() calls
+  - `isLegacyShape` structural detector (R1-02); `migrateTeamConfig` unwraps LegacyMigrationResult (R1-03)
+  - Round-trip fidelity: all 5 quickstarts pass `stableStringify(imported) === stableStringify(original)`
+  - 8 malformed-input error cases covered in io.test.ts
+  - Barrel trimmed to public surface only per R1-08 (internal symbols via deep import paths)
+  - Zero new typecheck errors (4 pre-existing devil-ui errors unchanged)
+
+### Wave 2 Results
+- Plan 06-02 (Wave 2): TUI Wiring + Docs — Complete.
+  - `commands/team-io.ts`: exportCommand + importCommand + registerTeamIOCommands + TeamIOCommandHandlers DI type
+  - `workflow-tui/index.tsx`: `createFileSystemTeamRepository()` → `createLayeredTeamRepository({..., defaultWriteLayer:"user-level"})` at WorkflowViewInner (R2-04); Instance.directory with defensive try/catch fallback (R2-12)
+  - `command-input.tsx`: `team export <path>` / `team import <path>` branches inserted before WorkflowStage.safeParse fallback (R2-10); teamIOHandlers() closure using existing team() helper (R2-03)
+  - NEW `packages/devil-docs/pages/collaborate/teams/team-portability.md` (team-management.md untouched per R2-02)
+  - `collaborate/index.md`: Team Portability link added
+  - 18 new tests (12 commands + 6 structural); 40 new expect() calls
+  - Phase 5 regression gate: 92 pass / 0 fail in workflow-tui suite (205 pre-existing + 40 new = 245 expect() total)
+  - All CI gates: knip PASS, format:check PASS, check-devilcode-change PASS, zero new typecheck errors
+
+## Phase 6 Carry-Forward Items
+- **OQ-1**: Palette-modal UI for team export/import — deferred to Phase 10 polish
+- **Phase 7 DAG**: checksum re-computation needed in versioning pipeline for migrated configs
+- **Phase 8 Registry**: signed manifests (Ed25519) for authenticity on top of integrity checksum
+- **Pre-existing flake**: `worktree-diff.test.ts` hangs in full kilocode suite on Windows (pre-existing, unrelated)
+- **Pre-existing typecheck**: 440 errors in kilo-ui @/* alias resolution (pre-existing, recommend hygiene phase)
+
 ## Next Action
-Run `/legion:plan 6` to plan Phase 6: Team Export/Import & Persistence Layer.
+Run `/legion:review` to review Phase 6: Team Export/Import & Persistence Layer.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
