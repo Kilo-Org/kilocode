@@ -103,9 +103,23 @@ function which(name: string): string | null {
   return null
 }
 
+function batch(path: string): boolean {
+  return win && /\.(cmd|bat)$/i.test(path)
+}
+
+function wrapper(app: string): string {
+  if (!win || batch(app)) return app
+  const lower = app.toLowerCase()
+  if (!lower.endsWith(".exe")) return app
+  const cmd = lower.includes("insiders") ? "code-insiders.cmd" : "code.cmd"
+  const file = join(app, "..", "bin", cmd)
+  if (existsSync(file)) return file
+  return app
+}
+
 function detect(): string {
   const env = explicit ?? process.env["VSCODE_EXEC_PATH"]
-  if (env && existsSync(env)) return env
+  if (env && existsSync(env)) return wrapper(env)
 
   const candidates: string[] = []
   const prefer = insiders ? "insiders" : "stable"
@@ -156,16 +170,7 @@ function detect(): string {
   }
 
   const found = candidates.find((c) => existsSync(c))
-  if (found) {
-    // On Windows, Code.exe is the raw Electron binary and cannot be launched directly
-    // with folder/extension args — use the bin/code.cmd (or code-insiders.cmd) wrapper instead.
-    if (win) {
-      const cmd = found.toLowerCase().includes("insiders") ? "code-insiders.cmd" : "code.cmd"
-      const wrapper = join(found, "..", "bin", cmd)
-      if (existsSync(wrapper)) return wrapper
-    }
-    return found
-  }
+  if (found) return wrapper(found)
 
   // Last resort: PATH lookup
   const path = insiders ? (which("code-insiders") ?? which("code")) : (which("code") ?? which("code-insiders"))
@@ -318,26 +323,22 @@ async function launch() {
   console.log(`[launch] State:      ${base}`)
 
   if (blocking) {
-    // On Windows, .cmd files cannot be executed directly — invoke via cmd.exe /c.
-    const cmd = win && app.endsWith(".cmd") ? ["cmd.exe", "/c", app, ...args] : [app, ...args]
-    const result = Bun.spawnSync(cmd, {
+    const result = Bun.spawnSync([app, ...args], {
       cwd: workspace,
       env: process.env,
       stdio: ["ignore", "inherit", "inherit"],
+      ...(batch(app) ? { shell: true } : {}),
     })
     console.log(`[launch] VS Code exited (code ${result.exitCode})`)
     return
   }
 
-  // On Windows, .cmd files require shell:true. Quote all args so cmd.exe
-  // handles paths with spaces correctly.
-  const spawnArgs = win ? args.map((a) => (a.includes(" ") ? `"${a}"` : a)) : args
-  const child = spawn(win ? `"${app}"` : app, spawnArgs, {
+  const child = spawn(app, args, {
     cwd: workspace,
     detached: !win,
     env: process.env,
     stdio: "ignore",
-    ...(win ? { shell: true } : {}),
+    ...(batch(app) ? { shell: true } : {}),
   })
 
   child.unref()
