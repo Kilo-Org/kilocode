@@ -1110,11 +1110,12 @@ export const dict = {
   "settings.agentBehaviour.exportMode": "Eksporter agentdefinisjon",
   "settings.agentBehaviour.editMode": "Rediger modus",
   "settings.agentBehaviour.editMode.description": "Beskrivelse",
-  "settings.agentBehaviour.editMode.whenToUse": "When to Use",
-  "settings.agentBehaviour.editMode.whenToUse.help": "Tells the orchestrator when to delegate tasks to this agent.",
+  "settings.agentBehaviour.editMode.whenToUse": "Når den skal brukes",
+  "settings.agentBehaviour.editMode.whenToUse.help":
+    "Forteller orkestratoren når oppgaver skal delegeres til denne agenten.",
   "settings.agentBehaviour.editMode.whenToUse.placeholder":
-    "e.g. Use this agent when the user asks for code review or quality analysis",
-  "settings.agentBehaviour.editMode.whenToUse.none": "No description defined for this built-in agent.",
+    "f.eks. bruk denne agenten når brukeren ber om kodegjennomgang eller kvalitetsanalyse",
+  "settings.agentBehaviour.editMode.whenToUse.none": "Ingen beskrivelse er definert for denne innebygde agenten.",
   "settings.agentBehaviour.editMode.prompt": "Systemprompt",
   "settings.agentBehaviour.editMode.save": "Ferdig",
   "settings.agentBehaviour.editMode.back": "Tilbake til listen",

@@ -1128,11 +1128,13 @@ export const dict = {
   "settings.agentBehaviour.exportMode": "Agenten-Definition exportieren",
   "settings.agentBehaviour.editMode": "Modus bearbeiten",
   "settings.agentBehaviour.editMode.description": "Beschreibung",
-  "settings.agentBehaviour.editMode.whenToUse": "When to Use",
-  "settings.agentBehaviour.editMode.whenToUse.help": "Tells the orchestrator when to delegate tasks to this agent.",
+  "settings.agentBehaviour.editMode.whenToUse": "Wann verwenden",
+  "settings.agentBehaviour.editMode.whenToUse.help":
+    "Teilt dem Orchestrator mit, wann Aufgaben an diesen Agenten delegiert werden sollen.",
   "settings.agentBehaviour.editMode.whenToUse.placeholder":
-    "e.g. Use this agent when the user asks for code review or quality analysis",
-  "settings.agentBehaviour.editMode.whenToUse.none": "No description defined for this built-in agent.",
+    "z. B. diesen Agenten verwenden, wenn der Benutzer um Code-Review oder Qualitätsanalyse bittet",
+  "settings.agentBehaviour.editMode.whenToUse.none":
+    "Für diesen integrierten Agenten ist keine Beschreibung definiert.",
   "settings.agentBehaviour.editMode.prompt": "System-Prompt",
   "settings.agentBehaviour.editMode.save": "Fertig",
   "settings.agentBehaviour.editMode.back": "Zurück zur Liste",

@@ -1109,11 +1109,12 @@ export const dict = {
   "settings.agentBehaviour.exportMode": "エージェント定義をエクスポート",
   "settings.agentBehaviour.editMode": "モードを編集",
   "settings.agentBehaviour.editMode.description": "説明",
-  "settings.agentBehaviour.editMode.whenToUse": "When to Use",
-  "settings.agentBehaviour.editMode.whenToUse.help": "Tells the orchestrator when to delegate tasks to this agent.",
+  "settings.agentBehaviour.editMode.whenToUse": "使用するタイミング",
+  "settings.agentBehaviour.editMode.whenToUse.help":
+    "このエージェントにタスクを委任するタイミングをオーケストレーターに伝えます。",
   "settings.agentBehaviour.editMode.whenToUse.placeholder":
-    "e.g. Use this agent when the user asks for code review or quality analysis",
-  "settings.agentBehaviour.editMode.whenToUse.none": "No description defined for this built-in agent.",
+    "例: ユーザーがコードレビューや品質分析を求めたときにこのエージェントを使用する",
+  "settings.agentBehaviour.editMode.whenToUse.none": "この組み込みエージェントの説明は定義されていません。",
   "settings.agentBehaviour.editMode.prompt": "システムプロンプト",
   "settings.agentBehaviour.editMode.save": "完了",
   "settings.agentBehaviour.editMode.back": "リストに戻る",
