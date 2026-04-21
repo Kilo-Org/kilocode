@@ -262,12 +262,15 @@ export function WorkflowCommandInput() {
       return
     }
     if (cmd.startsWith("team install ")) {
-      const source = text.slice("team install ".length).trim()
+      const rest = text.slice("team install ".length).trim()
+      const parts = rest.split(/\s+/)
+      const source = parts.find((p) => !p.startsWith("--")) ?? ""
+      const requireSignature = parts.includes("--require-signature")
       if (!source) {
-        toast.show({ message: "Usage: team install <url-or-path>", variant: "warning", duration: 4000 })
+        toast.show({ message: "Usage: team install <url-or-path> [--require-signature]", variant: "warning", duration: 4000 })
         return
       }
-      await installCommand({ source }, registryHandlers())
+      await installCommand({ source, requireSignature }, registryHandlers())
       return
     }
     if (cmd.startsWith("team trust ")) {

@@ -113,6 +113,80 @@ describe("fetchManifest — network error", () => {
   })
 })
 
+describe("fetchManifest — URL validation (SSRF protection)", () => {
+  // These tests do NOT require mocking fetch — validation fires before the network call
+
+  it("rejects http:// URLs (non-HTTPS)", async () => {
+    await expect(fetchManifest("http://example.com/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    try {
+      await fetchManifest("http://example.com/manifest.json")
+    } catch (err) {
+      expect((err as TeamManifestFetchFailed).message).toContain("HTTPS")
+    }
+  })
+
+  it("rejects localhost", async () => {
+    await expect(fetchManifest("https://localhost/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects 127.x.x.x loopback (dotted-quad)", async () => {
+    await expect(fetchManifest("https://127.0.0.1/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://127.255.255.255/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects 10.x.x.x RFC-1918 private range", async () => {
+    await expect(fetchManifest("https://10.0.0.1/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects 192.168.x.x RFC-1918 private range", async () => {
+    await expect(fetchManifest("https://192.168.1.100/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects 172.16-31.x.x RFC-1918 private range", async () => {
+    await expect(fetchManifest("https://172.16.0.1/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://172.31.255.255/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects 169.254.x.x link-local / cloud metadata range", async () => {
+    // AWS EC2 IMDS, Azure IMDS, GCP metadata server all live at 169.254.169.254
+    await expect(fetchManifest("https://169.254.169.254/latest/meta-data/")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://169.254.0.1/path")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects IPv6 loopback ::1", async () => {
+    await expect(fetchManifest("https://[::1]/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects IPv4-mapped IPv6 addresses (::ffff: prefix)", async () => {
+    // ::ffff:127.0.0.1 is a bypass vector — the regex approach misses these
+    await expect(fetchManifest("https://[::ffff:127.0.0.1]/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://[::ffff:10.0.0.1]/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://[::ffff:192.168.1.1]/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects ULA IPv6 addresses (fc00::/7)", async () => {
+    await expect(fetchManifest("https://[fd00::1]/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("allows valid public HTTPS URLs", async () => {
+    // Should pass URL validation and reach fetch (which is mocked to return success)
+    mockFetch(async () => new Response(JSON.stringify({ ok: true }), { status: 200 }))
+    const result = await fetchManifest<{ ok: boolean }>("https://registry.example.com/manifest.json")
+    expect(result.ok).toBe(true)
+  })
+
+  it("rejects decimal integer IP notation (WHATWG normalises to dotted-quad before our check)", async () => {
+    // 2130706433 == 127.0.0.1, 167772161 == 10.0.0.1 — Bun/Node WHATWG URL parser normalises these
+    await expect(fetchManifest("https://2130706433/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("https://167772161/manifest.json")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+
+  it("rejects invalid (malformed) URLs", async () => {
+    await expect(fetchManifest("not-a-url")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+    await expect(fetchManifest("://broken")).rejects.toBeInstanceOf(TeamManifestFetchFailed)
+  })
+})
+
 describe("fetchManifest — timeout", () => {
   it("throws TeamManifestFetchFailed with 'timed out' message when AbortError is raised", async () => {
     mockFetch(async (_url, opts) => {

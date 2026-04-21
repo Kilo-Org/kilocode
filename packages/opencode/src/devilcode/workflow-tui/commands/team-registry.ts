@@ -61,11 +61,13 @@ export async function publishCommand(
 }
 
 export async function installCommand(
-  args: { source: string },
+  args: { source: string; requireSignature?: boolean },
   handlers: TeamRegistryCommandHandlers,
 ): Promise<void> {
   try {
-    const { config, warnings } = await installManifest(args.source)
+    const { config, warnings } = await installManifest(args.source, {
+      requireSignature: args.requireSignature,
+    })
 
     for (const w of warnings) {
       handlers.toast.warning(w)
@@ -144,7 +146,7 @@ export function registerTeamRegistryCommands(
     hideKeywords: [],
     hidden: false,
     onSelect: () => {
-      handlers.toast.warning("Type 'team install <url-or-path>' in the prompt to execute")
+      handlers.toast.warning("Type 'team install <url-or-path> [--require-signature]' in the prompt to execute")
     },
   } as Command)
 
