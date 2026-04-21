@@ -51,6 +51,8 @@ export interface CanonicalTeamConfig {
 export interface TeamHandle {
   id: string
   name: string
+  path: string
+  updatedAt: string
   isQuickstart: boolean
 }
 

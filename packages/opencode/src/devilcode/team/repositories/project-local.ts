@@ -47,6 +47,7 @@ export function createProjectLocalTeamRepository(
           name,
           path: filePath,
           updatedAt: stat.mtime.toISOString(),
+          isQuickstart: false,
         },
       ]
     },
@@ -80,6 +81,7 @@ export function createProjectLocalTeamRepository(
         name,
         path: filePath,
         updatedAt: stat.mtime.toISOString(),
+        isQuickstart: false,
       }
     },
 

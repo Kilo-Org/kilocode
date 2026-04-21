@@ -1417,7 +1417,7 @@ export interface CustomProviderModelsFetchedMessage {
 // Extension → Webview (outbound)
 export interface TeamBuilderTeamsListMessage {
   type: "teamBuilder.teamsList"
-  teams: Array<{ id: string; name: string; isQuickstart: boolean }>
+  teams: Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
 }
 
 export interface TeamBuilderTeamLoadedMessage {

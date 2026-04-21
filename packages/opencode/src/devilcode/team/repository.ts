@@ -17,6 +17,7 @@ export type TeamHandle = {
   name: string
   path: string
   updatedAt: string
+  isQuickstart: boolean
 }
 
 /** Thrown when a team is not found in a repository layer. */
@@ -75,7 +76,7 @@ export function createFileSystemTeamRepository(
           } catch {
             // malformed — surface id only
           }
-          handles.push({ id, name, path: filePath, updatedAt: stat.mtime.toISOString() })
+          handles.push({ id, name, path: filePath, updatedAt: stat.mtime.toISOString(), isQuickstart: false })
         }
         return handles.sort((a, b) => a.id.localeCompare(b.id))
       } catch (err: any) {
@@ -104,7 +105,7 @@ export function createFileSystemTeamRepository(
       const validated = CanonicalTeamConfig.parse({ ...config, enabled: true })
       await fs.writeFile(filePath, JSON.stringify(validated, null, 2) + "\n", "utf-8")
       const stat = await fs.stat(filePath)
-      return { id, name: (config as Record<string, unknown>).name as string ?? id, path: filePath, updatedAt: stat.mtime.toISOString() }
+      return { id, name: (config as Record<string, unknown>).name as string ?? id, path: filePath, updatedAt: stat.mtime.toISOString(), isQuickstart: false }
     },
 
     async deleteTeam(id) {

@@ -362,9 +362,11 @@ export class DevilConnectionService {
     return res.json()
   }
 
-  async listTeams(): Promise<Array<{ id: string; name: string; isQuickstart: boolean }>> {
+  async listTeams(): Promise<
+    Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
+  > {
     const data = await this.teamFetch("GET", "/config/team")
-    return data as Array<{ id: string; name: string; isQuickstart: boolean }>
+    return data as Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
   }
 
   async getTeam(id: string): Promise<unknown> {

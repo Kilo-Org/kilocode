@@ -83,15 +83,18 @@ export function createLayeredTeamRepository(options: LayeredTeamRepositoryOption
     },
 
     async deleteTeam(id: string): Promise<void> {
+      let deleted = false
       for (const layer of layers) {
         if (layer.writable === false) continue
         try {
           await layer.repository.deleteTeam(id)
+          deleted = true
         } catch (err) {
           if (isNotFound(err)) continue
           throw err
         }
       }
+      if (!deleted) throw new TeamNotFoundError(id)
     },
   }
 }

@@ -15,6 +15,7 @@ export function createQuickstartTeamRepository(): TeamRepository {
           name: template.name,
           path: `<bundled:${id}>`,
           updatedAt: BUNDLED_TIMESTAMP,
+          isQuickstart: true,
         })
       }
       return handles

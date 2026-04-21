@@ -20,7 +20,7 @@ export interface TeamBuilderTeamLoadedOut {
 
 export interface TeamBuilderTeamsListOut {
   type: "teamBuilder.teamsList"
-  teams: Array<{ id: string; name: string; isQuickstart: boolean }>
+  teams: Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
 }
 
 export interface TeamBuilderAggregationsOut {
