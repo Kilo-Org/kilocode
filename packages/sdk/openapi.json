@@ -14598,67 +14598,54 @@
               "type": "string"
             },
             "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "family": {
-                  "type": "string"
-                },
-                "release_date": {
-                  "type": "string"
-                },
-                "attachment": {
-                  "type": "boolean"
-                },
-                "reasoning": {
-                  "type": "boolean"
-                },
-                "temperature": {
-                  "type": "boolean"
-                },
-                "tool_call": {
-                  "type": "boolean"
-                },
-                "interleaved": {
-                  "anyOf": [
-                    {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "field": {
-                          "type": "string",
-                          "enum": ["reasoning_content", "reasoning_details"]
-                        }
-                      },
-                      "required": ["field"],
-                      "additionalProperties": false
-                    }
-                  ]
-                },
-                "cost": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "input": {
-                      "type": "number"
+                    "id": {
+                      "type": "string"
                     },
-                    "output": {
-                      "type": "number"
+                    "name": {
+                      "type": "string"
                     },
-                    "cache_read": {
-                      "type": "number"
+                    "family": {
+                      "type": "string"
                     },
-                    "cache_write": {
-                      "type": "number"
+                    "release_date": {
+                      "type": "string"
                     },
-                    "context_over_200k": {
+                    "attachment": {
+                      "type": "boolean"
+                    },
+                    "reasoning": {
+                      "type": "boolean"
+                    },
+                    "temperature": {
+                      "type": "boolean"
+                    },
+                    "tool_call": {
+                      "type": "boolean"
+                    },
+                    "interleaved": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "enum": ["reasoning_content", "reasoning_details"]
+                            }
+                          },
+                          "required": ["field"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "cost": {
                       "type": "object",
                       "properties": {
                         "input": {
@@ -14672,100 +14659,127 @@
                         },
                         "cache_write": {
                           "type": "number"
+                        },
+                        "context_over_200k": {
+                          "type": "object",
+                          "properties": {
+                            "input": {
+                              "type": "number"
+                            },
+                            "output": {
+                              "type": "number"
+                            },
+                            "cache_read": {
+                              "type": "number"
+                            },
+                            "cache_write": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["input", "output"]
                         }
                       },
                       "required": ["input", "output"]
-                    }
-                  },
-                  "required": ["input", "output"]
-                },
-                "limit": {
-                  "type": "object",
-                  "properties": {
-                    "context": {
-                      "type": "number"
                     },
-                    "input": {
-                      "type": "number"
+                    "limit": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "number"
+                        },
+                        "input": {
+                          "type": "number"
+                        },
+                        "output": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["context", "output"]
                     },
-                    "output": {
-                      "type": "number"
-                    }
-                  },
-                  "required": ["context", "output"]
-                },
-                "modalities": {
-                  "type": "object",
-                  "properties": {
-                    "input": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["text", "audio", "image", "video", "pdf"]
+                    "modalities": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["text", "audio", "image", "video", "pdf"]
+                          }
+                        },
+                        "output": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["text", "audio", "image", "video", "pdf"]
+                          }
+                        }
+                      },
+                      "required": ["input", "output"]
+                    },
+                    "experimental": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["alpha", "beta", "deprecated"]
+                    },
+                    "provider": {
+                      "type": "object",
+                      "properties": {
+                        "npm": {
+                          "type": "string"
+                        },
+                        "api": {
+                          "type": "string"
+                        }
                       }
                     },
-                    "output": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["text", "audio", "image", "video", "pdf"]
-                      }
-                    }
-                  },
-                  "required": ["input", "output"]
-                },
-                "experimental": {
-                  "type": "boolean"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["alpha", "beta", "deprecated"]
-                },
-                "provider": {
-                  "type": "object",
-                  "properties": {
-                    "npm": {
-                      "type": "string"
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
                     },
-                    "api": {
-                      "type": "string"
+                    "headers": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "variants": {
+                      "description": "Variant-specific configuration",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "disabled": {
+                                "description": "Disable this variant for the model",
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
                     }
                   }
                 },
-                "options": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "headers": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                },
-                "variants": {
-                  "description": "Variant-specific configuration",
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "type": "object",
-                    "properties": {
-                      "disabled": {
-                        "description": "Disable this variant for the model",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": {}
-                  }
+                {
+                  "type": "null"
                 }
-              }
+              ]
             }
           }
         },
@@ -14998,6 +15012,16 @@
           "remote_control": {
             "description": "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
             "type": "boolean"
+          },
+          "review": {
+            "description": "Code review configuration",
+            "type": "object",
+            "properties": {
+              "auto_suggest": {
+                "description": "Offer a local code review suggestion after completing implementation work (default: true).",
+                "type": "boolean"
+              }
+            }
           },
           "autoupdate": {
             "description": "Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications",

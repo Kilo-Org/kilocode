@@ -72,6 +72,16 @@ Two slash commands are available for local code reviews:
 - **`/local-review`** — Review all changes on your current branch vs the base branch
 - **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
 
+The CLI may also offer a local review after completing implementation work. To turn off that prompt, set `review.auto_suggest` to `false` in `kilo.json` or `kilo.jsonc`:
+
+```json
+{
+  "review": {
+    "auto_suggest": false
+  }
+}
+```
+
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}
 

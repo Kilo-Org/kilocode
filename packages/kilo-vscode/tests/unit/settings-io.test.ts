@@ -75,6 +75,7 @@ describe("buildExport", () => {
       permission: { read: "allow" },
       instructions: ["rule1.md"],
       snapshot: true,
+      review: { auto_suggest: false },
       share: "manual",
     }
     const result = buildExport(cfg)
@@ -85,6 +86,7 @@ describe("buildExport", () => {
     expect(result.permission).toEqual({ read: "allow" })
     expect(result.instructions).toEqual(["rule1.md"])
     expect(result.snapshot).toBe(true)
+    expect(result.review).toEqual({ auto_suggest: false })
     expect(result.share).toBe("manual")
   })
 

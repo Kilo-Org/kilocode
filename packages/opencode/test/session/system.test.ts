@@ -11,6 +11,17 @@ function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
 }
 
 describe("session.system", () => {
+  // kilocode_change start
+  test("soul omits review suggestion guidance when disabled", () => {
+    const enabled = SystemPrompt.soul()
+    const disabled = SystemPrompt.soul({ review: { auto_suggest: false } })
+
+    expect(enabled).toContain("## Suggestions")
+    expect(disabled).not.toContain("## Suggestions")
+    expect(disabled).not.toContain("local code review")
+  })
+  // kilocode_change end
+
   test("skills output is sorted by name and stable across calls", async () => {
     await using tmp = await tmpdir({
       git: true,

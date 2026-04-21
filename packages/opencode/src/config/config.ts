@@ -982,6 +982,15 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
+      review: z
+        .object({
+          auto_suggest: z
+            .boolean()
+            .optional()
+            .describe("Offer a local code review suggestion after completing implementation work (default: true)."),
+        })
+        .optional()
+        .describe("Code review configuration"),
       // kilocode_change end
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
