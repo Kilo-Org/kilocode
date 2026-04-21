@@ -7,6 +7,7 @@
     "sourceMap": true,
     "rootDir": "src",
     "strict": true /* enable all strict type-checking options */,
+    "skipLibCheck": true,
     "types": ["node", "vscode", "mocha"]
     /* Additional Checks */
     // "noImplicitReturns": true, /* Report error when not all code paths in function return a value. */
