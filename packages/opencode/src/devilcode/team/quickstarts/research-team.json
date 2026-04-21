@@ -1,0 +1,95 @@
+{
+  "id": "research-team",
+  "name": "Research Team",
+  "description": "Research-first team for architecture and discovery work with full workflow coverage.",
+  "icon": "search",
+  "team": {
+    "enabled": true,
+    "roles": {
+      "coordinator": {
+        "displayName": "Research Orchestrator",
+        "positionId": "coordinator",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["researcher", "senior-dev", "architect", "reviewer", "release-engineer"],
+        "maxConcurrent": 4,
+        "capabilities": ["planning", "retrospective"],
+        "supplementaryCapabilities": ["synthesis"]
+      },
+      "researcher": {
+        "displayName": "Deep Researcher",
+        "positionId": "researcher",
+        "provider": "kilo",
+        "model": "claude-4.1-sonnet",
+        "effort": "high",
+        "tier": 3,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["research"],
+        "supplementaryCapabilities": ["analysis", "long-form", "search", "triage"]
+      },
+      "senior-dev": {
+        "displayName": "Senior Developer",
+        "positionId": "senior-dev",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["reviewer"],
+        "maxConcurrent": 3,
+        "capabilities": ["implementation", "design"],
+        "supplementaryCapabilities": []
+      },
+      "architect": {
+        "displayName": "Architect",
+        "positionId": "architect",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["senior-dev", "reviewer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "design"],
+        "supplementaryCapabilities": []
+      },
+      "reviewer": {
+        "displayName": "Reviewer",
+        "positionId": "reviewer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 3,
+        "capabilities": ["review"],
+        "supplementaryCapabilities": []
+      },
+      "release-engineer": {
+        "displayName": "Release Engineer",
+        "positionId": "release-engineer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 2,
+        "capabilities": ["release"],
+        "supplementaryCapabilities": []
+      }
+    },
+    "routing": {
+      "strategy": "flat",
+      "defaultRole": "coordinator",
+      "escalationEnabled": true
+    },
+    "reactions": []
+  },
+  "_meta": {
+    "migratedFrom": "TEAM_PRESETS[4]",
+    "addedRoles": ["senior-dev", "architect", "reviewer", "release-engineer"],
+    "tierOverrides": [],
+    "notes": "Legacy 'orchestrator' maps to coordinator (tier 1). Legacy 'deep-researcher' and 'fast-scanner' both map to researcher — combined into single researcher role with supplementaryCapabilities from both. 'flat' routing strategy preserved. Added senior-dev for build stage, architect for contract stage, reviewer for review stage, release-engineer for ship stage. Coordinator covers plan/challenge/retro. 'synthesis', 'analysis', 'long-form', 'search', 'triage' preserved in supplementaryCapabilities."
+  }
+}

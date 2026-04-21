@@ -1,4 +1,4 @@
-import type { TeamConfig } from "../team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "../team/config"
 import type { TaskResult } from "./types"
 import { Log } from "@/util/log"
 
@@ -62,7 +62,7 @@ export function detectEscalation(output: string): EscalationSignal {
 export function findParentRole(role: string, teamConfig: TeamConfig): string | undefined {
   let best: { name: string; tier: number } | undefined
   for (const [roleName, roleDef] of Object.entries(teamConfig.roles)) {
-    if (roleDef.canDelegate.includes(role)) {
+    if ((roleDef.canDelegate as string[]).includes(role)) {
       if (!best || roleDef.tier > best.tier) {
         best = { name: roleName, tier: roleDef.tier }
       }

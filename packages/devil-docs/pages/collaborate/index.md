@@ -30,6 +30,10 @@ devil Code's paid plans provide powerful team management features:
 
 - [**Getting Started**](/docs/collaborate/teams/getting-started) — Set up your team
 - [**Team Management**](/docs/collaborate/teams/team-management) — Manage members and roles
+- [**Team Portability**](/docs/collaborate/teams/team-portability) — Export/import team configs as JSON files.
+- [**Team Registry**](/docs/collaborate/teams/team-registry) — Publish and install signed team manifests with Ed25519 signatures and publisher trust management.
+- [**Team Orchestrator Guide**](/docs/collaborate/teams/team-orchestrator-guide) — Complete guide to the 7-stage workflow pipeline, live position swapping, and monitoring.
+- [**Workflow TUI Migration Guide**](/docs/collaborate/teams/workflow-tui-migration) — Migrate from the legacy workflow TUI to the Team Orchestrator.
 - [**Dashboard**](/docs/collaborate/teams/dashboard) — Team overview and activity
 - [**Analytics**](/docs/collaborate/teams/analytics) — Usage insights and trends
 - [**Billing**](/docs/collaborate/teams/billing) — Manage payments and invoices

@@ -26,7 +26,7 @@ import type {
   ShipReport,
   RetroReport,
 } from "../workflow/types"
-import type { TeamConfig } from "../team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "../team/config"
 
 export class WorkflowOrchestrator {
   private manager: WorkflowStateManager

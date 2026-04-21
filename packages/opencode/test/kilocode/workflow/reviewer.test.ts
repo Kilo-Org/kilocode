@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test"
 import { routeFix, triageFindings } from "@/devilcode/workflow/reviewer"
 import type { ReviewFinding } from "@/devilcode/workflow/types"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
 
-const teamConfig: TeamConfig = {
+// Legacy-keyed fixture — safe cast; reviewer functions only access roles/routing by property lookup.
+const teamConfig = {
   enabled: true,
   roles: {
     orchestrator: {
@@ -38,7 +39,7 @@ const teamConfig: TeamConfig = {
     },
   },
   routing: { strategy: "hierarchical", defaultRole: "worker", escalationEnabled: true },
-}
+} as unknown as TeamConfig
 
 describe("routeFix", () => {
   test("routes security findings to senior", () => {
@@ -87,7 +88,7 @@ describe("routeFix", () => {
 
 // devilcode_change - audit MA2: routeFix must not assume "senior" exists.
 describe("routeFix without senior role", () => {
-  const noSeniorConfig: TeamConfig = {
+  const noSeniorConfig = {
     enabled: true,
     roles: {
       lead: {
@@ -117,7 +118,7 @@ describe("routeFix without senior role", () => {
       escalationEnabled: true,
       reviewEscalationRole: "lead",
     },
-  }
+  } as unknown as TeamConfig
 
   test("uses configured reviewEscalationRole for security", () => {
     const f: ReviewFinding = { id: "R-S1", severity: "blocker", category: "security", file: "a.ts", description: "x" }
@@ -130,10 +131,10 @@ describe("routeFix without senior role", () => {
   })
 
   test("falls back to defaultRole when no senior and no reviewEscalationRole", () => {
-    const cfg: TeamConfig = {
+    const cfg = {
       ...noSeniorConfig,
       routing: { strategy: "hierarchical", defaultRole: "builder", escalationEnabled: true },
-    }
+    } as unknown as TeamConfig
     const f: ReviewFinding = { id: "R-S3", severity: "blocker", category: "architecture", file: "a.ts", description: "x" }
     expect(routeFix(f, cfg)).toBe("builder")
   })

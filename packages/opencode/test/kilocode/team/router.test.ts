@@ -1,6 +1,14 @@
 import { describe, it, expect } from "bun:test"
 import { resolveTaskModel, TeamDelegationError, TeamConcurrencyError } from "@/devilcode/team/router"
-import type { TeamConfig } from "@/devilcode/team/config"
+import type { CanonicalTeamConfig as TeamConfig } from "@/devilcode/team/config"
+
+// These tests pass legacy-keyed role fixtures directly to resolveTaskModel.
+// resolveTaskModel accesses roles/routing by property lookup — it does not re-validate the Zod
+// schema at runtime, so the type assertion is safe for behavioral testing purposes.
+// Canonical schema validation is covered by canonical-config.test.ts.
+function asTeamConfig(o: unknown): TeamConfig {
+  return o as unknown as TeamConfig
+}
 
 describe("team router", () => {
   describe("resolveTaskModel", () => {
@@ -14,7 +22,7 @@ describe("team router", () => {
     })
 
     it("returns undefined when subagentType has no matching role", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           senior: {
@@ -25,7 +33,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: ["worker"],
             maxConcurrent: 3,
-            capabilities: ["code-review", "architecture"],
+            capabilities: ["review"],
           },
         },
         routing: {
@@ -33,7 +41,7 @@ describe("team router", () => {
           defaultRole: "senior",
           escalationEnabled: true,
         },
-      }
+      })
 
       const result = resolveTaskModel({
         subagentType: "nonexistent",
@@ -44,7 +52,7 @@ describe("team router", () => {
     })
 
     it("returns resolved model for valid subagentType", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           worker: {
@@ -55,7 +63,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: ["coding"],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -63,7 +71,7 @@ describe("team router", () => {
           defaultRole: "worker",
           escalationEnabled: false,
         },
-      }
+      })
 
       const result = resolveTaskModel({
         subagentType: "worker",
@@ -79,7 +87,7 @@ describe("team router", () => {
     })
 
     it("enforces hierarchical delegation rules", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           senior: {
@@ -90,7 +98,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: ["worker"],
             maxConcurrent: 3,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
           worker: {
             displayName: "Worker",
@@ -100,7 +108,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -108,7 +116,7 @@ describe("team router", () => {
           defaultRole: "senior",
           escalationEnabled: true,
         },
-      }
+      })
 
       // Senior can delegate to worker
       const validResult = resolveTaskModel({
@@ -129,7 +137,7 @@ describe("team router", () => {
     })
 
     it("skips hierarchy check for flat strategy", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           senior: {
@@ -140,7 +148,7 @@ describe("team router", () => {
             tier: 2,
             canDelegate: [],
             maxConcurrent: 3,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
           worker: {
             displayName: "Worker",
@@ -150,7 +158,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -158,7 +166,7 @@ describe("team router", () => {
           defaultRole: "worker",
           escalationEnabled: false,
         },
-      }
+      })
 
       // Flat strategy allows any delegation regardless of canDelegate
       const result = resolveTaskModel({
@@ -171,7 +179,7 @@ describe("team router", () => {
 
     // devilcode_change - audit MA1: throw when parentRole missing from roles instead of silently skipping.
     it("throws when parentRole is hierarchical but missing from roles", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           worker: {
@@ -182,7 +190,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -190,7 +198,7 @@ describe("team router", () => {
           defaultRole: "worker",
           escalationEnabled: true,
         },
-      }
+      })
 
       expect(() =>
         resolveTaskModel({
@@ -202,7 +210,7 @@ describe("team router", () => {
     })
 
     it("skips hierarchy check when no parent role", () => {
-      const teamConfig: TeamConfig = {
+      const teamConfig = asTeamConfig({
         enabled: true,
         roles: {
           worker: {
@@ -213,7 +221,7 @@ describe("team router", () => {
             tier: 1,
             canDelegate: [],
             maxConcurrent: 5,
-            capabilities: [],
+            capabilities: ["implementation"],
           },
         },
         routing: {
@@ -221,7 +229,7 @@ describe("team router", () => {
           defaultRole: "worker",
           escalationEnabled: true,
         },
-      }
+      })
 
       // Top-level dispatch (no parent) should work
       const result = resolveTaskModel({

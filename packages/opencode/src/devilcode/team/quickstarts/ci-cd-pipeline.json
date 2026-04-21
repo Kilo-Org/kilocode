@@ -1,0 +1,99 @@
+{
+  "id": "ci-cd-pipeline",
+  "name": "CI/CD Pipeline",
+  "description": "Delivery-focused team with CI fix ownership, escalation, and full workflow coverage.",
+  "icon": "branch",
+  "team": {
+    "enabled": true,
+    "roles": {
+      "release-engineer": {
+        "displayName": "Release Lead",
+        "positionId": "release-engineer",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["developer", "coordinator", "architect"],
+        "maxConcurrent": 3,
+        "capabilities": ["release"],
+        "supplementaryCapabilities": ["triage"]
+      },
+      "developer": {
+        "displayName": "Implementer",
+        "positionId": "developer",
+        "provider": "kilo",
+        "model": "claude-4.1-sonnet",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 4,
+        "capabilities": ["implementation"],
+        "supplementaryCapabilities": []
+      },
+      "coordinator": {
+        "displayName": "Coordinator",
+        "positionId": "coordinator",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "medium",
+        "tier": 1,
+        "canDelegate": ["release-engineer", "developer", "architect"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "retrospective"],
+        "supplementaryCapabilities": []
+      },
+      "architect": {
+        "displayName": "Architect",
+        "positionId": "architect",
+        "provider": "kilo",
+        "model": "gpt-5",
+        "effort": "high",
+        "tier": 1,
+        "canDelegate": ["developer"],
+        "maxConcurrent": 2,
+        "capabilities": ["planning", "design"],
+        "supplementaryCapabilities": []
+      },
+      "reviewer": {
+        "displayName": "CI Fixer",
+        "positionId": "reviewer",
+        "provider": "kilo",
+        "model": "gpt-5-mini",
+        "effort": "medium",
+        "tier": 2,
+        "canDelegate": [],
+        "maxConcurrent": 5,
+        "capabilities": ["review"],
+        "supplementaryCapabilities": ["ci", "tests"]
+      }
+    },
+    "routing": {
+      "strategy": "hierarchical",
+      "defaultRole": "release-engineer",
+      "escalationEnabled": true
+    },
+    "reactions": [
+      {
+        "trigger": "ci-failed",
+        "auto": true,
+        "action": "send-to-agent",
+        "targetRole": "reviewer",
+        "retries": 2
+      },
+      {
+        "trigger": "agent-stuck",
+        "auto": true,
+        "action": "escalate",
+        "targetRole": "release-engineer",
+        "retries": 0,
+        "escalateAfterMinutes": 15
+      }
+    ]
+  },
+  "_meta": {
+    "migratedFrom": "TEAM_PRESETS[3]",
+    "addedRoles": ["coordinator", "architect"],
+    "tierOverrides": ["release-engineer at tier 1: library default is tier 2, but this quickstart intentionally sets tier 1 to match the legacy 'release' role's lead intent. The Release Lead is the primary agent in this delivery-focused team."],
+    "notes": "Legacy 'release' (tier 1) maps to release-engineer; tier overridden to 1 to preserve primary-agent semantics (library default is tier 2). Legacy 'implementer' maps to developer (tier 2). Legacy 'ci-fixer' maps to release-engineer but collides — authored as reviewer here to preserve the distinct CI-fixer identity. 'ci' and 'tests' preserved in supplementaryCapabilities. Two original reaction rules preserved verbatim. Added coordinator for plan/challenge/retro; added architect for contract stage."
+  }
+}

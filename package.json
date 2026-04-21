@@ -46,6 +46,8 @@
       "hono": "4.12.12",
       "hono-openapi": "1.1.2",
       "fuzzysort": "3.1.0",
+      "@opentui/solid": "0.1.87",
+      "@opentui/core": "0.1.87",
       "luxon": "3.6.1",
       "marked": "17.0.1",
       "marked-shiki": "1.2.1",
@@ -104,6 +106,8 @@
     "electron"
   ],
   "overrides": {
+    "@opentui/core": "0.1.87",
+    "@opentui/solid": "0.1.87",
     "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "path-to-regexp": ">=8.4.0",

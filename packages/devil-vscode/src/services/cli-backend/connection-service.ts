@@ -335,6 +335,86 @@ export class DevilConnectionService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Team CRUD + Aggregations
+  // ---------------------------------------------------------------------------
+
+  /** Minimal team handle returned by GET /devilcode/teams */
+  // devilcode_change start
+  private async teamFetch(method: string, path: string, body?: unknown): Promise<unknown> {
+    const config = this.config
+    if (!config) throw new Error("Not connected — call connect() first")
+    const username = process.env.DEVIL_SERVER_USERNAME || "kilo"
+    const authHeader = `Basic ${Buffer.from(`${username}:${config.password}`).toString("base64")}`
+    const res = await fetch(`${config.baseUrl}${path}`, {
+      method,
+      headers: {
+        Authorization: authHeader,
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText)
+      throw new Error(`Team API ${method} ${path} failed (${res.status}): ${text}`)
+    }
+    if (res.status === 204) return undefined
+    return res.json()
+  }
+
+  async listTeams(): Promise<
+    Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
+  > {
+    const data = await this.teamFetch("GET", "/config/team")
+    return data as Array<{ id: string; name: string; path: string; updatedAt: string; isQuickstart: boolean }>
+  }
+
+  async getTeam(id: string): Promise<unknown> {
+    return this.teamFetch("GET", `/config/team/${encodeURIComponent(id)}`)
+  }
+
+  async saveTeam(id: string, config: unknown): Promise<void> {
+    await this.teamFetch("PUT", `/config/team/${encodeURIComponent(id)}`, config)
+  }
+
+  async deleteTeam(id: string): Promise<void> {
+    await this.teamFetch("DELETE", `/config/team/${encodeURIComponent(id)}`)
+  }
+
+  async getAggregations(): Promise<unknown> {
+    return this.teamFetch("GET", "/devilcode/workflow/aggregations")
+  }
+
+  async swapPosition(
+    position: string,
+    provider: string,
+    model: string,
+  ): Promise<{
+    success: boolean
+    position?: string
+    previousProvider?: string
+    previousModel?: string
+    newProvider?: string
+    newModel?: string
+    slotsRebalanced?: number
+    code?: string
+    error?: string
+  }> {
+    const data = await this.teamFetch("POST", "/devilcode/workflow/team/swap", { position, provider, model })
+    return data as {
+      success: boolean
+      position?: string
+      previousProvider?: string
+      previousModel?: string
+      newProvider?: string
+      newModel?: string
+      slotsRebalanced?: number
+      code?: string
+      error?: string
+    }
+  }
+  // devilcode_change end
+
   /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */

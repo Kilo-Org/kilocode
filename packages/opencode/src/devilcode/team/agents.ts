@@ -1,4 +1,4 @@
-import type { TeamConfig } from "./config"
+import type { CanonicalTeamConfig as TeamConfig } from "./config"
 import type { Agent } from "../../agent/agent"
 import type { PermissionNext } from "@/permission/next"
 import { effortToProviderOptions } from "./effort"

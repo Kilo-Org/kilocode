@@ -1,5 +1,5 @@
 // devilcode_change - new file
-// Read-only HTTP endpoints exposing workflow state to the VS Code extension.
+// HTTP endpoints exposing workflow state to the VS Code extension.
 // Mounted at /devilcode/workflow/ via devilcode.ts.
 import { Hono } from "hono"
 import { describeRoute, resolver } from "hono-openapi"
@@ -14,6 +14,13 @@ import { FileLock } from "./locks"
 import { Lesson } from "./learning"
 import { Log } from "../../util/log"
 import z from "zod"
+import { computeAggregations, emptyAggregations } from "./aggregations"
+import path from "path"
+import { Bus } from "@/bus"
+import { Config } from "@/config/config"
+import { applyPositionSwap, PositionSwapRequest, PositionSwapResult } from "../team/position-swap"
+import { PositionSwapValidating, PositionSwapSucceeded, PositionSwapFailed, PositionSwapRebalanced } from "./position-swap-events"
+import { getConcurrencyManager } from "../team/concurrency"
 
 const log = Log.create({ service: "workflow.routes" })
 const InternalError = z.object({ error: z.string() })
@@ -244,6 +251,189 @@ export const WorkflowRoutes = lazy(() =>
         } catch {
           return c.json([] as Lesson[])
         }
+      },
+    )
+    .get(
+      "/aggregations",
+      describeRoute({
+        summary: "Get workflow aggregations",
+        description:
+          "Compute telemetry aggregation metrics from the event log: success rates, stall rates, cost totals, and stage durations.",
+        operationId: "devilcode.workflow.aggregations",
+        responses: {
+          200: {
+            description: "Aggregation metrics",
+            content: {
+              "application/json": {
+                schema: resolver(
+                  z.object({
+                    successRateByTeam: z.record(
+                      z.string(),
+                      z.object({
+                        completed: z.number(),
+                        started: z.number(),
+                        rate: z.number(),
+                      }),
+                    ),
+                    stallRateByPosition: z.record(
+                      z.string(),
+                      z.object({
+                        maxWaitMs: z.number(),
+                        avgWaitMs: z.number(),
+                      }),
+                    ),
+                    costByWorkflow: z.array(
+                      z.object({
+                        workflowId: z.string(),
+                        totalCost: z.number(),
+                      }),
+                    ),
+                    durationByStage: z.record(
+                      z.string(),
+                      z.object({
+                        avgMs: z.number(),
+                        p95Ms: z.number(),
+                        count: z.number(),
+                      }),
+                    ),
+                    generatedAt: z.string(),
+                  }),
+                ),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const planningDir = path.join(Instance.directory, ".planning")
+        const since = c.req.query("since")
+        const limitParam = c.req.query("limit")
+        const limit = limitParam ? parseInt(limitParam, 10) : undefined
+        try {
+          const aggregations = await computeAggregations(planningDir, {
+            since: since ?? undefined,
+            limit: limit && !isNaN(limit) ? limit : undefined,
+          })
+          return c.json(aggregations)
+        } catch {
+          return c.json(emptyAggregations())
+        }
+      },
+    )
+    .post(
+      "/team/swap",
+      describeRoute({
+        summary: "Swap a position's provider and model",
+        description:
+          "Live-updates the team config for a given position. Validates the position exists, applies the swap, rebalances concurrency slots, and emits bus events. Changes are persisted via Config.update().",
+        operationId: "devilcode.workflow.team.swap",
+        responses: {
+          200: {
+            description: "Swap succeeded",
+            content: {
+              "application/json": {
+                schema: resolver(PositionSwapResult),
+              },
+            },
+          },
+          400: {
+            description: "Invalid request body",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ error: z.string() })),
+              },
+            },
+          },
+          422: {
+            description: "Business rule failure (POSITION_NOT_FOUND, DELEGATION_VIOLATION, WORKFLOW_NOT_ACTIVE)",
+            content: {
+              "application/json": {
+                schema: resolver(PositionSwapResult),
+              },
+            },
+          },
+          500: {
+            description: "Internal error reading or persisting config",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ error: z.string() })),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const log = Log.create({ service: "workflow.routes.swap" })
+        let body: unknown
+        try {
+          body = await c.req.json()
+        } catch {
+          return c.json({ error: "Invalid JSON body" }, 400)
+        }
+
+        const parsed = PositionSwapRequest.safeParse(body)
+        if (!parsed.success) {
+          return c.json({ error: parsed.error.message }, 400)
+        }
+        const request = parsed.data
+
+        let current: Awaited<ReturnType<typeof Config.get>>
+        try {
+          current = await Config.get()
+        } catch (e) {
+          log.error("failed to read config for swap", { error: e })
+          return c.json({ error: "Failed to read config" }, 500)
+        }
+
+        if (!current.team) {
+          return c.json({ success: false as const, error: "Team config not found", code: "WORKFLOW_NOT_ACTIVE" as const }, 422)
+        }
+
+        // Emit validating event
+        await Bus.publish(PositionSwapValidating, {
+          position: request.position,
+          newProvider: request.provider,
+          newModel: request.model,
+        })
+
+        // Clone team config to avoid mutating cached state
+        const teamConfig = JSON.parse(JSON.stringify(current.team)) as typeof current.team
+
+        const result = applyPositionSwap(teamConfig, request)
+
+        if (!result.success) {
+          await Bus.publish(PositionSwapFailed, result)
+          return c.json(result, 422)
+        }
+
+        // Rebalance concurrency if the role has maxConcurrent defined.
+        // Note: Current swap only changes provider/model, not maxConcurrent, so oldMax === newMax.
+        // The rebalance call is a no-op but is left in place for future maxConcurrent swaps.
+        const role = teamConfig.roles[request.position]
+        const concurrencyManager = getConcurrencyManager()
+        const oldMax = role.maxConcurrent
+        const rebalance = concurrencyManager.rebalanceAfterSwap(request.position, oldMax, oldMax)
+
+        // Persist updated team config
+        try {
+          await Config.update({ ...current, team: teamConfig })
+        } catch (e) {
+          log.error("failed to persist config after swap", { error: e })
+          return c.json({ error: "Failed to persist config" }, 500)
+        }
+
+        const finalResult = { ...result, slotsRebalanced: rebalance.queued }
+        await Bus.publish(PositionSwapSucceeded, finalResult)
+
+        if (rebalance.queued > 0) {
+          await Bus.publish(PositionSwapRebalanced, {
+            role: request.position,
+            freedSlots: rebalance.freed,
+            queuedTasks: rebalance.queued,
+          })
+        }
+
+        return c.json(finalResult)
       },
     ),
 )

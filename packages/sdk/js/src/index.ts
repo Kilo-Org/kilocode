@@ -1,5 +1,7 @@
 export * from "./client.js"
 export * from "./server.js"
+// devilcode_change — team type exports for external consumers
+export * from "./team.js"
 
 import { createDevilClient } from "./client.js"
 import { createDevilServer } from "./server.js"

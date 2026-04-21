@@ -7,12 +7,17 @@ import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
 import { onMount } from "solid-js"
-import { TeamConfig } from "../team/config"
+import { CanonicalTeamConfig } from "../team/config"
+import { Config } from "../../config/config"
 import { useWorkflow } from "./context"
+import type { DensityMode } from "./types"
 import { Review } from "../review/review"
 import { Workflow } from "../workflow"
 import { WorkflowStateManager } from "../workflow/state"
 import { WorkflowStage, type WorkflowStage as WorkflowStageType } from "../workflow/types"
+import { exportCommand, importCommand, type TeamIOCommandHandlers } from "./commands/team-io"
+import { publishCommand, installCommand, trustCommand, untrustCommand, type TeamRegistryCommandHandlers } from "./commands/team-registry"
+import { swapCommand, type TeamSwapCommandHandlers } from "./commands/team-swap"
 
 export function WorkflowCommandInput() {
   const local = useLocal()
@@ -45,9 +50,63 @@ export function WorkflowCommandInput() {
   }
 
   function team() {
-    const result = TeamConfig.safeParse((sync.data.config as { team?: unknown }).team)
+    const result = CanonicalTeamConfig.safeParse((sync.data.config as { team?: unknown }).team)
     if (!result.success || !result.data.enabled) return undefined
     return result.data
+  }
+
+  // Phase 6 — team export/import handlers (active team read + Config.update on import)
+  function teamIOHandlers(): TeamIOCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onImported: async (imported) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: imported })
+      },
+      prompt: async () => undefined,
+      toast: {
+        success: (msg) => toast.show({ message: msg, variant: "success", duration: 3000 }),
+        error: (msg) => toast.show({ message: msg, variant: "error", duration: 6000 }),
+        warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
+      },
+    }
+  }
+
+  // Phase 8 — team publish/install/trust/untrust handlers
+  function registryHandlers(): TeamRegistryCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onInstalled: async (config) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: config })
+      },
+      toast: {
+        success: (msg, duration = 3000) => toast.show({ message: msg, variant: "success", duration }),
+        error: (msg, duration = 6000) => toast.show({ message: msg, variant: "error", duration }),
+        warning: (msg, duration = 4000) => toast.show({ message: msg, variant: "warning", duration }),
+      },
+    }
+  }
+
+  // Phase 10 — team swap handler
+  function swapHandlers(): TeamSwapCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onSwapped: async (updated) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: updated })
+      },
+      toast: {
+        success: (msg) => toast.show({ message: msg, variant: "success", duration: 3000 }),
+        error: (msg) => toast.show({ message: msg, variant: "error", duration: 6000 }),
+        warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
+      },
+    }
+  }
+
+  function parseRegistryFlag(str: string, flag: string): string | undefined {
+    const match = str.match(new RegExp(`--${flag}=([^\\s]+)`))
+    return match?.[1]
   }
 
   async function phase(input?: string) {
@@ -88,7 +147,7 @@ export function WorkflowCommandInput() {
   async function run(stage: WorkflowStageType, opts?: { phase?: string }) {
     const state = wf.state
     if (!state) {
-      throw new Error("No workflow initialized. Run /team init first.")
+      throw new Error("No workflow initialized. Run /team init <quickstart> first.")
     }
 
     const info = stage === "plan" || stage === "challenge" || stage === "review"
@@ -111,6 +170,20 @@ export function WorkflowCommandInput() {
 
     if (cmd === "back") {
       route.back()
+      return
+    }
+
+    // /density compact|expanded — toggle UI density (Phase 5)
+    if (cmd.startsWith("density")) {
+      const arg = text.slice("density".length).trim()
+      const mode: DensityMode | undefined =
+        arg === "compact" || arg === "expanded" ? arg : undefined
+      if (!mode) {
+        toast.show({ message: "Usage: density compact|expanded", variant: "warning", duration: 3000 })
+        return
+      }
+      await wf.setDensity(mode)
+      toast.show({ message: `Density set to ${mode}`, variant: "info", duration: 2000 })
       return
     }
 
@@ -153,16 +226,101 @@ export function WorkflowCommandInput() {
 
     if (cmd === "next") {
       if (!wf.state) {
-        toast.show({ message: "No workflow initialized", variant: "error", duration: 2000 })
+        toast.show({ message: "No workflow initialized. Run /team init <quickstart> first.", variant: "error", duration: 2000 })
         return
       }
-      await run(Workflow.resolveAction(wf.state.currentStage, "next")!)
+      try {
+        // devilcode_change start — Phase 7: pass custom DAG so /next follows workflowOverride
+        const effectiveDAG = team()?.workflowOverride?.dag
+        await run(Workflow.resolveAction(wf.state.currentStage, "next", effectiveDAG)!)
+        // devilcode_change end
+      } catch (err) {
+        toast.show({ message: error(err), variant: "error", duration: 4000 })
+      }
       return
     }
 
     if (cmd.startsWith("task ")) {
       const taskId = text.slice(5).trim()
       wf.selectTask(taskId)
+      return
+    }
+
+    // devilcode_change — Phase 6: team export/import commands
+    if (cmd.startsWith("team export ")) {
+      const exportPath = text.slice("team export ".length).trim()
+      await exportCommand({ path: exportPath }, teamIOHandlers())
+      return
+    }
+    if (cmd.startsWith("team import ")) {
+      const importPath = text.slice("team import ".length).trim()
+      await importCommand({ path: importPath }, teamIOHandlers())
+      return
+    }
+
+    // devilcode_change start — Phase 8: team publish/install/trust/untrust commands
+    if (cmd.startsWith("team publish ")) {
+      const rest = text.slice("team publish ".length).trim()
+      const outputPath = rest.split(" ")[0]
+      const name = parseRegistryFlag(rest, "name")
+      const author = parseRegistryFlag(rest, "author")
+      const version = parseRegistryFlag(rest, "version")
+      const publisherId = parseRegistryFlag(rest, "publisher-id")
+      const sign = parseRegistryFlag(rest, "sign")
+      if (!outputPath || !name || !author || !version) {
+        toast.show({
+          message: "Usage: team publish <path> --name=<n> --author=<a> --version=<v> [--publisher-id=<uuid>] [--sign=<keyfile>]",
+          variant: "warning",
+          duration: 4000,
+        })
+        return
+      }
+      await publishCommand({ path: outputPath, name, author, version, publisherId, sign }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team install ")) {
+      const rest = text.slice("team install ".length).trim()
+      const parts = rest.split(/\s+/)
+      const source = parts.find((p) => !p.startsWith("--")) ?? ""
+      const requireSignature = parts.includes("--require-signature")
+      if (!source) {
+        toast.show({ message: "Usage: team install <url-or-path> [--require-signature]", variant: "warning", duration: 4000 })
+        return
+      }
+      await installCommand({ source, requireSignature }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team trust ")) {
+      const parts = text.slice("team trust ".length).trim().split(" ")
+      const keyFile = parts[0]
+      const publisherId = parts[1]
+      if (!keyFile || !publisherId) {
+        toast.show({ message: "Usage: team trust <keyfile> <publisher-id>", variant: "warning", duration: 4000 })
+        return
+      }
+      await trustCommand({ keyFile, publisherId }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team untrust ")) {
+      const publisherId = text.slice("team untrust ".length).trim()
+      if (!publisherId) {
+        toast.show({ message: "Usage: team untrust <publisher-id>", variant: "warning", duration: 4000 })
+        return
+      }
+      await untrustCommand({ publisherId }, registryHandlers())
+      return
+    }
+    // devilcode_change end
+
+    // devilcode_change — Phase 10: team swap command (live position swap mid-workflow)
+    if (cmd.startsWith("team swap ")) {
+      const parts = text.slice("team swap ".length).trim().split(/\s+/)
+      if (parts.length < 3) {
+        toast.show({ message: "Usage: team swap <position> <provider> <model>", variant: "warning", duration: 4000 })
+        return
+      }
+      const [position, provider, model] = parts
+      await swapCommand({ position, provider, model }, swapHandlers())
       return
     }
 

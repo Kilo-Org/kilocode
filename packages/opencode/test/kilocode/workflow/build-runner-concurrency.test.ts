@@ -43,7 +43,15 @@ mock.module("@/devilcode/workflow/prompts/build.txt", () => ({
 
 import { ConcurrencyManager } from "@/devilcode/team/concurrency"
 import { TeamConcurrencyError } from "@/devilcode/team/router"
+import type { CanonicalTeamConfig } from "@/devilcode/team/config"
 const { BuildRunner } = await import("@/devilcode/workflow/build-runner")
+
+// Helper: cast legacy-shaped test fixtures to CanonicalTeamConfig.
+// BuildRunner only accesses roles/routing by property lookup at runtime — it does not
+// re-validate the Zod schema — so this is safe for behavioral testing.
+function tc(o: unknown): CanonicalTeamConfig {
+  return o as unknown as CanonicalTeamConfig
+}
 
 function makeTask(overrides: Partial<PlanTask>): PlanTask {
   return {
@@ -102,7 +110,7 @@ describe("BuildRunner concurrency integration", () => {
   it("rejects wave that would exceed role maxConcurrent", async () => {
     const { getConcurrencyManager } = await import("@/devilcode/team/concurrency")
     getConcurrencyManager().reset()
-    const teamConfig = {
+    const teamConfig = tc({
       enabled: true,
       roles: {
         worker: {
@@ -117,7 +125,7 @@ describe("BuildRunner concurrency integration", () => {
         },
       },
       routing: { strategy: "flat" as const, defaultRole: "worker", escalationEnabled: true },
-    }
+    })
     const runner = new BuildRunner({
       teamConfig,
       onTaskStart: () => {},
@@ -140,7 +148,7 @@ describe("BuildRunner concurrency integration", () => {
   it("releases pre-acquired slots after wave completes", async () => {
     const { getConcurrencyManager } = await import("@/devilcode/team/concurrency")
     getConcurrencyManager().reset()
-    const teamConfig = {
+    const teamConfig = tc({
       enabled: true,
       roles: {
         worker: {
@@ -155,7 +163,7 @@ describe("BuildRunner concurrency integration", () => {
         },
       },
       routing: { strategy: "flat" as const, defaultRole: "worker", escalationEnabled: true },
-    }
+    })
     const runner = new BuildRunner({
       teamConfig,
       onTaskStart: () => {},
@@ -176,7 +184,7 @@ describe("BuildRunner concurrency integration", () => {
     getConcurrencyManager().reset()
     const seen: number[] = []
     const runner = new BuildRunner({
-      teamConfig: {
+      teamConfig: tc({
         enabled: true,
         roles: {
           senior: {
@@ -206,7 +214,7 @@ describe("BuildRunner concurrency integration", () => {
           escalationEnabled: true,
           parentRole: "senior",
         },
-      },
+      }),
       onTaskStart: () => {},
       onTaskComplete: (_taskId, result) => {
         if (result.status === "escalated") {
