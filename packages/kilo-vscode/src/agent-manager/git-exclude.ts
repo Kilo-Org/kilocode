@@ -6,7 +6,7 @@
  * Uses .git/info/exclude rather than the project .gitignore because these are
  * per-clone, local-only concerns — they should not be committed to the repo.
  *
- * Safe to call in any non-git context (returns silently) and safe to call
+ * Safe to call in any non-git context (returns false) and safe to call
  * repeatedly (individual entries are skipped when already present).
  */
 
@@ -34,11 +34,16 @@ const ENTRIES: readonly (readonly [string, string])[] = [
 type Log = (msg: string) => void
 
 /**
- * Resolve the shared git directory for a working tree root.
+ * Resolve the git directory that owns `info/exclude` for a working tree root.
  *
- * When root/.git is a directory, returns it directly.
- * When root/.git is a file (the repo itself is a worktree), follows the
- * `gitdir:` pointer up two levels to reach the shared .git directory.
+ * - `root/.git` is a directory → the repo's own git dir.
+ * - `root/.git` is a file (linked worktree, submodule, or --separate-git-dir):
+ *   follow the `gitdir:` pointer to the individual git dir, then honor the
+ *   `commondir` file when present. `commondir` only exists for linked
+ *   worktrees and points at the shared git dir that actually owns
+ *   `info/exclude`. Submodules and --separate-git-dir have no `commondir`,
+ *   so the pointer path is itself the correct git dir.
+ *
  * Returns undefined when the path is not a git repo.
  */
 async function resolveGitDir(root: string): Promise<string | undefined> {
@@ -51,7 +56,11 @@ async function resolveGitDir(root: string): Promise<string | undefined> {
   if (!content) return undefined
   const match = content.match(/^gitdir:\s*(.+)$/m)
   if (!match?.[1]) return undefined
-  return path.resolve(path.dirname(gitPath), match[1].trim(), "..", "..")
+
+  const gitDir = path.resolve(path.dirname(gitPath), match[1].trim())
+  const commondir = await fs.promises.readFile(path.join(gitDir, "commondir"), "utf-8").catch(() => undefined)
+  if (!commondir) return gitDir
+  return path.resolve(gitDir, commondir.trim())
 }
 
 async function addEntry(excludePath: string, entry: string, comment: string, log?: Log): Promise<void> {
@@ -72,13 +81,14 @@ async function addEntry(excludePath: string, entry: string, comment: string, log
 /**
  * Append Agent Manager entries to .git/info/exclude for the given repo root.
  *
- * No-ops when the path is not a git repo. Errors writing individual entries
- * are surfaced via the optional `log` callback but never thrown — callers
- * should not have to wrap this in try/catch.
+ * Returns true when a git dir was resolved and entries were processed
+ * (callers can use this to cache success and skip retries). Returns false
+ * when the path is not a git repo. Per-entry errors are surfaced via the
+ * optional `log` callback but never thrown.
  */
-export async function ensureKiloGitExclude(root: string, log?: Log): Promise<void> {
+export async function ensureKiloGitExclude(root: string, log?: Log): Promise<boolean> {
   const gitDir = await resolveGitDir(root)
-  if (!gitDir) return
+  if (!gitDir) return false
 
   const excludePath = path.join(gitDir, "info", "exclude")
   for (const [entry, comment] of ENTRIES) {
@@ -86,4 +96,5 @@ export async function ensureKiloGitExclude(root: string, log?: Log): Promise<voi
       log?.(`Failed to add ${entry} to ${excludePath}: ${err}`)
     })
   }
+  return true
 }

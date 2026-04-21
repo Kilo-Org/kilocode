@@ -669,4 +669,29 @@ describe("WorktreeStateManager git-exclude integration", () => {
     const content = fs.readFileSync(excludePath, "utf-8")
     expect(content).toContain(".kilo/agent-manager.json")
   })
+
+  it("retries exclude registration when a folder becomes a git repo mid-session", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-late-git-"))
+    roots.push(root)
+
+    // First save happens before `git init` — nothing to register yet.
+    const mgr = new WorktreeStateManager(root, () => {})
+    mgr.addSession("s1", null)
+    await mgr.flush()
+    expect(fs.existsSync(path.join(root, ".git"))).toBe(false)
+
+    // User initializes a repo later in the same session.
+    const git = simpleGit(root)
+    await git.init()
+    await git.addConfig("user.email", "test@test.com")
+    await git.addConfig("user.name", "Test")
+
+    // The next save should backfill the exclude entries.
+    mgr.addSession("s2", null)
+    await mgr.flush()
+
+    const excludePath = path.join(root, ".git", "info", "exclude")
+    expect(fs.existsSync(excludePath)).toBe(true)
+    expect(fs.readFileSync(excludePath, "utf-8")).toContain(".kilo/agent-manager.json")
+  })
 })

@@ -109,4 +109,55 @@ describe("ensureKiloGitExclude", () => {
     const mainExclude = await fs.readFile(path.join(root, ".git", "info", "exclude"), "utf-8")
     expect(mainExclude).toContain(".kilo/agent-manager.json")
   })
+
+  it("writes to the submodule's own git dir (no `commondir`)", async () => {
+    // Simulate a submodule layout: root/.git is a file pointing at a directory
+    // that is itself the git dir (no `commondir` file).
+    const parent = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-exclude-sub-"))
+    tempDirs.push(parent)
+
+    const subGitDir = path.join(parent, ".git", "modules", "sub")
+    await fs.mkdir(subGitDir, { recursive: true })
+
+    const subRoot = path.join(parent, "sub")
+    await fs.mkdir(subRoot, { recursive: true })
+    await fs.writeFile(path.join(subRoot, ".git"), `gitdir: ${subGitDir}\n`)
+
+    const ran = await ensureKiloGitExclude(subRoot)
+    expect(ran).toBe(true)
+
+    const subExclude = await fs.readFile(path.join(subGitDir, "info", "exclude"), "utf-8")
+    expect(subExclude).toContain(".kilo/agent-manager.json")
+    // Must NOT have written to the parent's .git — that would be the bug.
+    const parentExists = await fs
+      .stat(path.join(parent, ".git", "info", "exclude"))
+      .then(() => true)
+      .catch(() => false)
+    expect(parentExists).toBe(false)
+  })
+
+  it("writes to the external git dir for --separate-git-dir layouts", async () => {
+    const base = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-exclude-sep-"))
+    tempDirs.push(base)
+
+    const workdir = path.join(base, "workdir")
+    const realGitDir = path.join(base, "elsewhere", "real-git")
+    await fs.mkdir(workdir, { recursive: true })
+    await fs.mkdir(realGitDir, { recursive: true })
+    await fs.writeFile(path.join(workdir, ".git"), `gitdir: ${realGitDir}\n`)
+
+    const ran = await ensureKiloGitExclude(workdir)
+    expect(ran).toBe(true)
+
+    const content = await fs.readFile(path.join(realGitDir, "info", "exclude"), "utf-8")
+    expect(content).toContain(".kilo/agent-manager.json")
+  })
+
+  it("returns true on success and false outside a git repo", async () => {
+    const repo = await createRepo()
+    const plain = await createNonRepo()
+
+    expect(await ensureKiloGitExclude(repo)).toBe(true)
+    expect(await ensureKiloGitExclude(plain)).toBe(false)
+  })
 })
