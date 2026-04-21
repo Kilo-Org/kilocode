@@ -84,3 +84,6 @@ export namespace Workflow {
     return new WorkflowStateManager(basePath)
   }
 }
+
+// Phase 10 — Live Team Editing (position swap events)
+export { PositionSwapValidating, PositionSwapSucceeded, PositionSwapFailed, PositionSwapRebalanced } from "./position-swap-events"

@@ -43,6 +43,10 @@ export { validateDAG, formatDAGError } from "./dag/validator"
 export type { DAGError } from "./dag/validator"
 export { getNextStage, getEntryStage, generateDefaultDAG } from "./dag/helpers"
 
+// Phase 10 — Live Team Editing (position swap)
+export { PositionSwapRequest, PositionSwapResult, PositionSwapSuccess, PositionSwapFailure, PositionSwapErrorCode } from "./position-swap"
+export { validatePositionSwap, applyPositionSwap } from "./position-swap"
+
 // Phase 8 — Team Registry & Marketplace
 export { publishManifest, installManifest } from "./registry/io"
 export type { PublishOptions, InstallOptions } from "./registry/io"

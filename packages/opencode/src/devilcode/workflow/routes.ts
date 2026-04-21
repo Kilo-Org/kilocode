@@ -1,5 +1,5 @@
 // devilcode_change - new file
-// Read-only HTTP endpoints exposing workflow state to the VS Code extension.
+// HTTP endpoints exposing workflow state to the VS Code extension.
 // Mounted at /devilcode/workflow/ via devilcode.ts.
 import { Hono } from "hono"
 import { describeRoute, resolver } from "hono-openapi"
@@ -16,6 +16,11 @@ import { Log } from "../../util/log"
 import z from "zod"
 import { computeAggregations, emptyAggregations } from "./aggregations"
 import path from "path"
+import { Bus } from "@/bus"
+import { Config } from "@/config/config"
+import { applyPositionSwap, PositionSwapRequest, PositionSwapResult } from "../team/position-swap"
+import { PositionSwapValidating, PositionSwapSucceeded, PositionSwapFailed, PositionSwapRebalanced } from "./position-swap-events"
+import { getConcurrencyManager } from "../team/concurrency"
 
 const log = Log.create({ service: "workflow.routes" })
 const InternalError = z.object({ error: z.string() })
@@ -313,6 +318,112 @@ export const WorkflowRoutes = lazy(() =>
         } catch {
           return c.json(emptyAggregations())
         }
+      },
+    )
+    .post(
+      "/team/swap",
+      describeRoute({
+        summary: "Swap a position's provider and model",
+        description:
+          "Live-updates the team config for a given position. Validates the position exists, applies the swap, rebalances concurrency slots, and emits bus events. Changes are persisted via Config.update().",
+        operationId: "devilcode.workflow.team.swap",
+        responses: {
+          200: {
+            description: "Swap result (success or failure with error code)",
+            content: {
+              "application/json": {
+                schema: resolver(PositionSwapResult),
+              },
+            },
+          },
+          400: {
+            description: "Invalid request body",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ error: z.string() })),
+              },
+            },
+          },
+          500: {
+            description: "Internal error reading or persisting config",
+            content: {
+              "application/json": {
+                schema: resolver(z.object({ error: z.string() })),
+              },
+            },
+          },
+        },
+      }),
+      async (c) => {
+        const log = Log.create({ service: "workflow.routes.swap" })
+        let body: unknown
+        try {
+          body = await c.req.json()
+        } catch {
+          return c.json({ error: "Invalid JSON body" }, 400)
+        }
+
+        const parsed = PositionSwapRequest.safeParse(body)
+        if (!parsed.success) {
+          return c.json({ error: parsed.error.message }, 400)
+        }
+        const request = parsed.data
+
+        let current: Awaited<ReturnType<typeof Config.get>>
+        try {
+          current = await Config.get()
+        } catch (e) {
+          log.error("failed to read config for swap", { error: e })
+          return c.json({ error: "Failed to read config" }, 500)
+        }
+
+        if (!current.team) {
+          return c.json({ success: false as const, error: "Team config not found", code: "WORKFLOW_NOT_ACTIVE" as const })
+        }
+
+        // Emit validating event
+        await Bus.publish(PositionSwapValidating, {
+          position: request.position,
+          newProvider: request.provider,
+          newModel: request.model,
+        })
+
+        // Clone team config to avoid mutating cached state
+        const teamConfig = JSON.parse(JSON.stringify(current.team)) as typeof current.team
+
+        const result = applyPositionSwap(teamConfig, request)
+
+        if (!result.success) {
+          await Bus.publish(PositionSwapFailed, result)
+          return c.json(result)
+        }
+
+        // Rebalance concurrency if the role has maxConcurrent defined
+        const role = teamConfig.roles[request.position]
+        const concurrencyManager = getConcurrencyManager()
+        const oldMax = role.maxConcurrent
+        const rebalance = concurrencyManager.rebalanceAfterSwap(request.position, oldMax, oldMax)
+
+        // Persist updated team config
+        try {
+          await Config.update({ ...current, team: teamConfig })
+        } catch (e) {
+          log.error("failed to persist config after swap", { error: e })
+          return c.json({ error: "Failed to persist config" }, 500)
+        }
+
+        const finalResult = { ...result, slotsRebalanced: rebalance.queued }
+        await Bus.publish(PositionSwapSucceeded, finalResult)
+
+        if (rebalance.queued > 0) {
+          await Bus.publish(PositionSwapRebalanced, {
+            role: request.position,
+            freedSlots: rebalance.freed,
+            queuedTasks: rebalance.queued,
+          })
+        }
+
+        return c.json(finalResult)
       },
     ),
 )

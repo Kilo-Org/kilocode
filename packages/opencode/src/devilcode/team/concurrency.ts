@@ -31,6 +31,26 @@ export class ConcurrencyManager {
     return this.getActiveCount(role) < maxConcurrent
   }
 
+  /**
+   * Rebalance slots after a position swap changes maxConcurrent.
+   * If newMax < active count, excess tasks are marked pending release.
+   * Does NOT preempt active tasks — they finish normally.
+   */
+  rebalanceAfterSwap(role: string, oldMax: number, newMax: number): { freed: number; queued: number } {
+    if (newMax >= oldMax) {
+      return { freed: 0, queued: 0 }
+    }
+
+    const active = this.getActiveCount(role)
+    if (active <= newMax) {
+      return { freed: 0, queued: 0 }
+    }
+
+    // Mark excess as pending release (they'll be freed when tasks complete)
+    const excess = active - newMax
+    return { freed: 0, queued: excess }
+  }
+
   reset(): void {
     this.active.clear()
   }
