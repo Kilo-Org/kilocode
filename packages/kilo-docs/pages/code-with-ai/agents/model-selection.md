@@ -52,11 +52,49 @@ While the specifics change constantly, some principles stay consistent:
 
 **For everyday coding**: Mid-tier models often provide the best balance of speed, cost, and quality. They're fast enough to keep your flow state intact and capable enough for most tasks.
 
-**For budget-conscious work**: Newer efficient models keep surprising us with price-to-performance ratios. DeepSeek, Qwen, and similar models can handle more than you'd expect.
+**For budget-conscious work**: Newer efficient models keep surprising us with price-to-performance ratios. DeepSeek, Qwen, and similar models can handle more than you'd expect. See the [free and budget picks](#free-and-budget-model-picks) below.
 
 **For local/private work**: Ollama and LM Studio let you run models locally. The tradeoff is usually speed and capability for privacy and zero API costs.
 
 **Using an unlisted model?** You can register any model — including fine-tunes, newly released models, or custom local models — by adding it to your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for details.
+
+## Free and Budget Model Picks
+
+You don't need a paid API key to use Kilo Code productively. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
+
+If you prefer to pick models yourself, here are the current standouts. Type `free` in the model picker to filter the list.
+
+{% callout type="info" %}
+Free model availability changes as providers adjust promotional periods. The models below reflect what's available as of April 2026 — check [kilo.ai/models](https://kilo.ai/models) for the live list.
+{% /callout %}
+
+### Free Models ($0/1M tokens)
+
+| Model | Provider | Why It's Worth Trying |
+|-------|----------|-----------------------|
+| **MiniMax M2.5** | MiniMax | Recommended. Strong coding performance at zero cost — a standout free option for everyday tasks. |
+| **Elephant Alpha** | OpenRouter | 100B-param text model with a 256K context window. Efficient and capable for general coding. |
+| **NVIDIA Nemotron 3 Super** | NVIDIA | 120B hybrid MoE model (12B active params). Fast inference with solid reasoning. |
+| **Dola Seed 2.0 Pro** | BytePlus | Multimodal model — handles both text and image inputs at no cost. |
+| **Arcee Trinity Large Preview** | Arcee AI | 400B sparse MoE (13B active). Creative and general-purpose. |
+
+### Budget Models (under $0.50/1M tokens)
+
+| Model | Provider | Price/1M tokens | Why It's Worth Trying |
+|-------|----------|----------------:|-----------------------|
+| **Z.ai GLM 4.7 Flash** | Z.ai | $0.06 | Best price-to-performance in the budget tier. Optimized for agentic coding. |
+| **StepFun Step 3.5 Flash** | StepFun | $0.10 | 196B MoE with 11B active — extremely cost-effective for light tasks. |
+| **MiniMax M2.5** (paid) | MiniMax | $0.15 | Same model as the free tier but with higher rate limits. |
+| **Qwen3 Coder Next** | Qwen | $0.15 | 80B MoE with 3B active. Designed for local-first coding workflows. |
+| **xAI Grok Code Fast 1** | xAI | $0.20 | Reasoning traces visible in responses — great for learning and debugging. |
+| **DeepSeek V3.1 Terminus** | DeepSeek | $0.21 | Updated V3.1 with improved agent capabilities and language consistency. |
+| **Qwen3 Coder 480B** | Qwen | $0.22 | Largest open-weight coding MoE. Strong for agentic tool calling and long-context reasoning. |
+| **Google Gemini 2.5 Flash** | Google | $0.30 | Built-in thinking capabilities. Solid all-rounder at a low price. |
+| **MiniMax M2.7** | MiniMax | $0.30 | Multi-agent support and autonomous productivity focus. |
+| **Qwen3.6 Plus** | Qwen | $0.33 | Hybrid linear attention + MoE. Scales well for complex tasks. |
+| **Z.ai GLM 4.6** | Z.ai | $0.39 | 200K context window. Good balance of capability and cost. |
+| **Mistral Devstral 2** | Mistral | $0.40 | 123B dense model with 256K context. Open-source and strong for exploration. |
+| **MoonshotAI Kimi K2.5** | MoonshotAI | $0.44 | Native multimodal with visual coding support and agent swarm capabilities. |
 
 ## Context Windows Matter
 
