@@ -117,6 +117,15 @@ function wrapper(app: string): string {
   return app
 }
 
+function quote(arg: string): string {
+  return `"${arg.replaceAll('"', '""')}"`
+}
+
+function command(app: string, args: string[]) {
+  if (!batch(app)) return { file: app, args }
+  return { file: "cmd.exe", args: ["/d", "/s", "/c", [app, ...args].map(quote).join(" ")] }
+}
+
 function detect(): string {
   const env = explicit ?? process.env["VSCODE_EXEC_PATH"]
   if (env && existsSync(env)) return wrapper(env)
@@ -322,23 +331,23 @@ async function launch() {
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
 
+  const cmd = command(app, args)
+
   if (blocking) {
-    const result = Bun.spawnSync([app, ...args], {
+    const result = Bun.spawnSync([cmd.file, ...cmd.args], {
       cwd: workspace,
       env: process.env,
       stdio: ["ignore", "inherit", "inherit"],
-      ...(batch(app) ? { shell: true } : {}),
     })
     console.log(`[launch] VS Code exited (code ${result.exitCode})`)
     return
   }
 
-  const child = spawn(app, args, {
+  const child = spawn(cmd.file, cmd.args, {
     cwd: workspace,
     detached: !win,
     env: process.env,
     stdio: "ignore",
-    ...(batch(app) ? { shell: true } : {}),
   })
 
   child.unref()
