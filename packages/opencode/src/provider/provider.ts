@@ -1208,12 +1208,16 @@ export namespace Provider {
           for (const [id, provider] of Object.entries(database)) {
             const providerID = ProviderID.make(id)
             if (disabled.has(providerID)) continue
-            const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
-            if (!apiKey) continue
+            // kilocode_change start
+            const name = provider.env.find((item) => envs[item])
+            if (!name) continue
+            const apiKey = envs[name]
             mergeProvider(providerID, {
               source: "env",
+              env: [name],
               key: provider.env.length === 1 ? apiKey : undefined,
             })
+            // kilocode_change end
           }
 
           // load apikeys
