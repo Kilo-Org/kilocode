@@ -224,6 +224,11 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
           s.saveStatus = "idle"
           s.saveError = null
           s.loadedQuickstart = null
+          // devilcode_change start — Phase 7: also reset DAG state
+          s.dagDraft = null
+          s.dagErrors = []
+          s.advancedMode = false
+          // devilcode_change end
         }),
       )
     },

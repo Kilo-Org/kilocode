@@ -51,6 +51,7 @@ describe("io round-trip with workflowOverride populated", () => {
             { from: "build", to: "ship" },
           ],
         },
+        capabilityOverrides: { ship: ["release", "testing"] },
       },
     }
     const tmpFile = path.join(tmpDir, "with-override.json")
@@ -59,6 +60,7 @@ describe("io round-trip with workflowOverride populated", () => {
     const imported = await importTeamFromFile(tmpFile)
     expect(stableStringify(imported)).toBe(stableStringify(withOverride))
     expect(imported.workflowOverride?.dag.stages).toEqual(["plan", "build", "ship"])
+    expect(imported.workflowOverride?.capabilityOverrides?.["ship"]).toEqual(["release", "testing"])
   })
 })
 // devilcode_change end

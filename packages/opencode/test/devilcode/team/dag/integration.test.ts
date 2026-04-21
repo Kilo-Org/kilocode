@@ -229,7 +229,7 @@ describe("CanonicalTeamConfig — workflowOverride schema enforcement", () => {
     expect(result.success).toBe(true)
   })
 
-  it("cyclic DAG in workflowOverride fails CanonicalTeamConfig.safeParse (superRefine)", () => {
+  it("structurally invalid DAG (no-entry due to all nodes having incoming edges) fails safeParse", () => {
     const config = {
       ...baseConfig(),
       workflowOverride: {
@@ -237,12 +237,32 @@ describe("CanonicalTeamConfig — workflowOverride schema enforcement", () => {
           stages: ["plan", "build"],
           edges: [
             { from: "plan", to: "build" },
-            { from: "build", to: "plan" }, // cycle
+            { from: "build", to: "plan" }, // both nodes have in-degree 1 → no-entry, not Kahn's cycle
           ],
         },
       },
     }
     const result = CanonicalTeamConfig.safeParse(config)
+    expect(result.success).toBe(false)
+  })
+
+  it("cyclic DAG with valid entry fails safeParse (exercises Kahn's cycle detection)", () => {
+    // plan is entry (in-degree 0); build↔review form a 2-node cycle reachable from plan
+    // Kahn's: plan gets sorted, then build and review both remain with in-degree > 0 → cycle detected
+    const base = loadQuickstartTemplates()["solo-enhanced"].team
+    const result = CanonicalTeamConfig.safeParse({
+      ...base,
+      workflowOverride: {
+        dag: {
+          stages: ["plan", "build", "review"],
+          edges: [
+            { from: "plan", to: "build" },
+            { from: "build", to: "review" },
+            { from: "review", to: "build" }, // cycle: build ↔ review
+          ],
+        },
+      },
+    })
     expect(result.success).toBe(false)
   })
 

@@ -191,7 +191,10 @@ export function WorkflowCommandInput() {
         return
       }
       try {
-        await run(Workflow.resolveAction(wf.state.currentStage, "next")!)
+        // devilcode_change start — Phase 7: pass custom DAG so /next follows workflowOverride
+        const effectiveDAG = team()?.workflowOverride?.dag
+        await run(Workflow.resolveAction(wf.state.currentStage, "next", effectiveDAG)!)
+        // devilcode_change end
       } catch (err) {
         toast.show({ message: error(err), variant: "error", duration: 4000 })
       }

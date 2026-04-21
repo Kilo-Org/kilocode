@@ -49,10 +49,12 @@ export namespace Workflow {
   }
   // devilcode_change end
 
-  export function resolveAction(stage: WorkflowStage, action: WorkflowAction): WorkflowStage | undefined {
-    if (action === "next") return nextStage(stage)
+  // devilcode_change start — Phase 7: pass custom DAG to nextStage for "next" action
+  export function resolveAction(stage: WorkflowStage, action: WorkflowAction, dag?: WorkflowDAG): WorkflowStage | undefined {
+    if (action === "next") return nextStage(stage, dag)
     return ACTION_TRANSITIONS[action][stage]
   }
+  // devilcode_change end
 
   export async function advanceStage(
     manager: WorkflowStateManager,
