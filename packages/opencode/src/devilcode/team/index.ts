@@ -42,3 +42,12 @@ export type { WorkflowDAG as WorkflowDAGType, WorkflowDAGEdge as WorkflowDAGEdge
 export { validateDAG, formatDAGError } from "./dag/validator"
 export type { DAGError } from "./dag/validator"
 export { getNextStage, getEntryStage, generateDefaultDAG } from "./dag/helpers"
+
+// Phase 8 — Team Registry & Marketplace
+export { publishManifest, installManifest } from "./registry/io"
+export type { PublishOptions, InstallOptions } from "./registry/io"
+export { TeamRegistryManifest, TeamManifestMetadata, RegistryIndex } from "./registry/manifest"
+export type { TeamRegistryManifest as TeamRegistryManifestType } from "./registry/manifest"
+export { TeamRegistryError, TeamSignatureError, TeamPublisherNotTrusted, TeamManifestFetchFailed, TeamManifestInvalid } from "./registry/errors"
+export { generateKeyPair, signManifest, verifyManifestSignature, getPublicKeyFingerprint, computeSignaturePayload } from "./registry/signing"
+export { loadTrustStore, saveTrustStore, addTrustedPublisher, removeTrustedPublisher, getTrustedPublisher, listTrustedPublishers } from "./registry/trust-store"

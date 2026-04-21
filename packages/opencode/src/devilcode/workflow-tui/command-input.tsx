@@ -16,6 +16,7 @@ import { Workflow } from "../workflow"
 import { WorkflowStateManager } from "../workflow/state"
 import { WorkflowStage, type WorkflowStage as WorkflowStageType } from "../workflow/types"
 import { exportCommand, importCommand, type TeamIOCommandHandlers } from "./commands/team-io"
+import { publishCommand, installCommand, trustCommand, untrustCommand, type TeamRegistryCommandHandlers } from "./commands/team-registry"
 
 export function WorkflowCommandInput() {
   const local = useLocal()
@@ -68,6 +69,27 @@ export function WorkflowCommandInput() {
         warning: (msg) => toast.show({ message: msg, variant: "warning", duration: 4000 }),
       },
     }
+  }
+
+  // Phase 8 — team publish/install/trust/untrust handlers
+  function registryHandlers(): TeamRegistryCommandHandlers {
+    return {
+      getActiveTeam: () => team(),
+      onInstalled: async (config) => {
+        const current = await Config.get()
+        await Config.update({ ...current, team: config })
+      },
+      toast: {
+        success: (msg, duration = 3000) => toast.show({ message: msg, variant: "info", duration }),
+        error: (msg, duration = 6000) => toast.show({ message: msg, variant: "error", duration }),
+        warning: (msg, duration = 4000) => toast.show({ message: msg, variant: "warning", duration }),
+      },
+    }
+  }
+
+  function parseRegistryFlag(str: string, flag: string): string | undefined {
+    const match = str.match(new RegExp(`--${flag}=([^\\s]+)`))
+    return match?.[1]
   }
 
   async function phase(input?: string) {
@@ -218,6 +240,56 @@ export function WorkflowCommandInput() {
       await importCommand({ path: importPath }, teamIOHandlers())
       return
     }
+
+    // devilcode_change start — Phase 8: team publish/install/trust/untrust commands
+    if (cmd.startsWith("team publish ")) {
+      const rest = text.slice("team publish ".length).trim()
+      const outputPath = rest.split(" ")[0]
+      const name = parseRegistryFlag(rest, "name")
+      const author = parseRegistryFlag(rest, "author")
+      const version = parseRegistryFlag(rest, "version")
+      const sign = parseRegistryFlag(rest, "sign")
+      if (!outputPath || !name || !author || !version) {
+        toast.show({
+          message: "Usage: team publish <path> --name=<n> --author=<a> --version=<v> [--sign=<keyfile>]",
+          variant: "warning",
+          duration: 4000,
+        })
+        return
+      }
+      await publishCommand({ path: outputPath, name, author, version, sign }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team install ")) {
+      const source = text.slice("team install ".length).trim()
+      if (!source) {
+        toast.show({ message: "Usage: team install <url-or-path>", variant: "warning", duration: 4000 })
+        return
+      }
+      await installCommand({ source }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team trust ")) {
+      const parts = text.slice("team trust ".length).trim().split(" ")
+      const keyFile = parts[0]
+      const publisherId = parts[1]
+      if (!keyFile || !publisherId) {
+        toast.show({ message: "Usage: team trust <keyfile> <publisher-id>", variant: "warning", duration: 4000 })
+        return
+      }
+      await trustCommand({ keyFile, publisherId }, registryHandlers())
+      return
+    }
+    if (cmd.startsWith("team untrust ")) {
+      const publisherId = text.slice("team untrust ".length).trim()
+      if (!publisherId) {
+        toast.show({ message: "Usage: team untrust <publisher-id>", variant: "warning", duration: 4000 })
+        return
+      }
+      await untrustCommand({ publisherId }, registryHandlers())
+      return
+    }
+    // devilcode_change end
 
     const parsed = WorkflowStage.safeParse(cmd)
     if (parsed.success) {

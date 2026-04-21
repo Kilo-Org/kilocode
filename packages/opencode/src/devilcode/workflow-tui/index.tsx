@@ -6,7 +6,7 @@ import { useKeyboard } from "@opentui/solid"
 import { useRoute } from "@tui/context/route"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useSDK } from "@tui/context/sdk"
-import { Toast } from "@tui/ui/toast"
+import { Toast, useToast } from "@tui/ui/toast"
 import { createTerminalAdapter } from "@devilcode/kilo-ui/adapters/terminal"
 import { RenderTargetProvider } from "@devilcode/kilo-ui/context/render-target"
 import { CommandRegistryProvider, useCommandRegistry } from "@devilcode/kilo-ui/hooks/use-command-registry"
@@ -17,6 +17,7 @@ import { RuntimeCockpit } from "./runtime-cockpit"
 import { TeamBuilderProvider, useTeamBuilder } from "./views/team-builder-context"
 import { TeamBuilderView } from "./views/team-builder-view"
 import { registerTeamBuilderCommands } from "./views/team-builder-commands"
+import { registerTeamRegistryCommands } from "./commands/team-registry"
 import { createFileSystemTeamRepository } from "../team/repository"
 import {
   createLayeredTeamRepository,
@@ -35,6 +36,7 @@ function WorkflowViewInner() {
   const registry = useCommandRegistry()
   const builder = useTeamBuilder()
   const wf = useWorkflow()
+  const toast = useToast()
   const [mode, setMode] = createSignal<CockpitMode>("workflow")
 
   // teamRepo instantiated inside component body — honors AsyncLocalStorage context (R3-13).
@@ -104,6 +106,18 @@ function WorkflowViewInner() {
     openBuilder: () => setMode("team-builder"),
   })
   onCleanup(cleanupTeamCmds)
+
+  // Phase 8 — register team registry commands (publish/install/trust/untrust)
+  const cleanupRegistryCmds = registerTeamRegistryCommands(registry.register.bind(registry), {
+    getActiveTeam: () => undefined,
+    onInstalled: async () => {},
+    toast: {
+      success: (msg, duration = 3000) => toast.show({ message: msg, variant: "info", duration }),
+      error: (msg, duration = 6000) => toast.show({ message: msg, variant: "error", duration }),
+      warning: (msg, duration = 4000) => toast.show({ message: msg, variant: "warning", duration }),
+    },
+  })
+  onCleanup(cleanupRegistryCmds)
 
   // Build quickstart entries for the onboarding wizard picker
   function buildQuickstartEntries(): QuickstartEntry[] {
