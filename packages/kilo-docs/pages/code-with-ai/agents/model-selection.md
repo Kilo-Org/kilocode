@@ -74,11 +74,11 @@ Free model availability changes as providers adjust promotional periods. The mod
 |-------|----------|-----------------------|
 | **MiniMax M2.5** | MiniMax | Recommended. Strong coding performance at zero cost — a standout free option for everyday tasks. |
 | **Elephant Alpha** | OpenRouter | 100B-param text model with a 256K context window. Efficient and capable for general coding. |
-| **NVIDIA Nemotron 3 Super** | NVIDIA | 120B hybrid MoE model (12B active params). Fast inference with solid reasoning. |
+| **NVIDIA Nemotron 3 Super** | NVIDIA (free via API catalog) | 120B hybrid MoE model (12B active params). Fast inference with solid reasoning. Check provider — some routes charge. |
 | **Dola Seed 2.0 Pro** | BytePlus | Multimodal model — handles both text and image inputs at no cost. |
 | **Arcee Trinity Large Preview** | Arcee AI | 400B sparse MoE (13B active). Creative and general-purpose. |
 
-### Budget Models (under $0.50/1M tokens)
+### Budget Models (input under $0.50/1M tokens)
 
 | Model | Provider | Price/1M tokens | Why It's Worth Trying |
 |-------|----------|----------------:|-----------------------|
