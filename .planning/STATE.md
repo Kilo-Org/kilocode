@@ -1,14 +1,75 @@
 # Project State
 
 ## Current Position
-- **Phase**: 6 of 10 (complete)
-- **Status**: Phase 6 complete — review passed (1 cycle)
-- **Last Activity**: Phase 6 review passed (2026-04-20)
+- **Phase**: 7 of 10 (executed, pending review)
+- **Status**: Phase 7 executed — 2/2 plans complete across 2 waves
+- **Last Activity**: Phase 7 execution complete (2026-04-21)
 
 ## Progress
 ```
-[################....] 64% — 15/25 plans complete (Phase 6 COMPLETE ✓)
+[##################..] 68% — 17/25 plans complete (Phase 7 EXECUTED — pending review)
 ```
+
+## Phase 7 Wave Results
+
+### Wave 1 Results
+- Plan 07-01 (Wave 1): DAG Module + Schema Integration — Complete.
+  - `team/dag/schema.ts`: WorkflowDAG, WorkflowDAGEdge, DAGOverride Zod schemas (R1-01: z.record string + refine)
+  - `team/dag/validator.ts`: validateDAG() + 7 DAGError types + formatDAGError() (R1-02) + Kahn's+BFS split
+  - `team/dag/helpers.ts`: getNextStage(), getEntryStage(), generateDefaultDAG()
+  - `team/config.ts`: workflowOverride field + DAG superRefine validation
+  - `team/versioning.ts`: CURRENT_TEAM_CONFIG_VERSION = "1.1.0"; identity migration 1.0.0→1.1.0
+  - `team/io.ts`: version check uses TeamConfigVersion.safeParse() (not hard equality)
+  - 64 tests pass (13 schema + 22 validator + 12 helpers + 17 integration), 93 expect() calls
+
+### Wave 2 Results
+- Plan 07-02 (Wave 2): UI + Runtime Integration — Complete.
+  - `devil-ui/primitives/dag-editor/`: DAGEditor SolidJS component + local types (R2-02: no cross-package import)
+  - `devil-ui/package.json`: dag-editor exports map entry
+  - `team-builder-context.tsx`: dagDraft/dagErrors/advancedMode state + setAdvancedMode/updateDAG(R2-03)/resetDAGToDefault actions
+  - `team-builder-view.tsx`: Workflow tab + advanced-mode DAGEditor (readOnly=true, v1 display-only)
+  - `workflow/index.ts`: Workflow.nextStage() uses getNextStage() for custom DAGs; falls back to generateDefaultDAG()
+  - 16 dag-runtime structural tests; 306 total tests pass, 664 expect() calls
+  - All CI gates: knip + format:check + check-devilcode-change clean
+
+## Phase 7 Plan Structure (planned 2026-04-21, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 07-01 DAG Module + Schema Integration — schema/validator/helpers + config workflowOverride + version 1.1.0 + 3 synthetic DAGs | 1 | Phase 6 | Backend Architect + Senior Developer | QA Verification Specialist |
+| 07-02 UI + Runtime Integration — devil-ui dag-editor primitive + team-builder Workflow tab + orchestrator getNextStage() | 2 | 07-01 | Frontend Developer + Senior Developer | QA Verification Specialist |
+
+## Phase 7 Architecture Decision
+- Selected **Clean** (vs Minimal / Pragmatic) after 3 parallel proposal agents — user prioritized Phase 9 zero-rework (matches Phases 3-6 precedent).
+- New `team/dag/` module: schema.ts (WorkflowDAG, WorkflowDAGEdge, DAGOverride), validator.ts (validateDAG + DAGError types + formatDAGError + Kahn's algorithm), helpers.ts (getNextStage, getEntryStage, generateDefaultDAG), index.ts (barrel).
+- Explicit edge representation `{ from, to, condition? }` supports non-linear DAGs and future conditional branching.
+- `capabilityOverrides` uses `z.record(z.string(), ...)` with refine (not `z.record(WorkflowStage, ...)` which requires ALL enum keys in Zod v4).
+- Config integration: `CanonicalTeamConfig.workflowOverride?: DAGOverride` with DAG validation in superRefine.
+- Version bump to 1.1.0; identity migration from 1.0.0.
+- devil-ui primitive: `primitives/dag-editor/` with local type definitions (avoids cross-package import complexity).
+- Team-builder integration: Workflow tab with advanced mode toggle (hidden by default).
+- Runtime: `getNextStage(current, effectiveDAG)` replaces hardcoded stage array.
+- Spec written to `.planning/specs/07-configurable-dag-spec.md` (Medium complexity; PASS verdict, HIGH confidence).
+- Estimated ~350 LOC source + ~250 LOC tests = ~600 total across Phase 7.
+
+## Phase 7 Auto-Refine History
+
+- **2026-04-21 cycle 0** → 3 competing architecture proposals (Minimal/Clean/Pragmatic) spawned as Explore agents. User selected **Clean**. Spec pipeline produced `.planning/specs/07-configurable-dag-spec.md` (Medium rating); 2 plan files generated (07-01 Wave 1, 07-02 Wave 2).
+- **2026-04-21 cycle 1** → Pre-Mortem (QA Verification Specialist) + Assumption Hunt (Sprint Prioritizer) returned **REWORK**. 5 surgical fixes applied:
+  - R1-01: `capabilityOverrides` schema changed to `z.record(z.string(), ...)` with refine — Zod v4 `z.record(WorkflowStage, ...)` requires ALL enum keys present.
+  - R1-02: Added `formatDAGError()` export to validator.ts specification.
+  - R2-01: Fixed file reference `team-builder.tsx` → `team-builder-view.tsx` (actual filename).
+  - R2-02: DAGEditor types defined locally in devil-ui — avoids cross-package import complexity.
+  - R2-03: `updateDAG()` action null-safety — check `store.draft.roles` existence before iteration.
+- **2026-04-21 cycle 2** → Verification returned **CAUTION**. All 5 fixes HELD in plan text. CAUTION due to "code not yet implemented" — expected since this is planning phase.
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2 with Cycle 1 refinements folded in. Verdict: **CAUTION** accepted. No further auto-refine.
+
+## Phase 7 Open Risks (documented, not blocking execution)
+
+- **Type sharing**: devil-ui defines DAGEditor types locally; Phase 9 may extract to shared types package if friction surfaces.
+- **Conditional edges deferred**: Schema supports `condition?: string` on edges; runtime ignores in v1; documented as "reserved for Phase 9+".
+- **Visual DAG editor deferred**: CSS-based layout for v1; no external graph library.
+- **Cross-package import**: team/dag/ types mirrored in devil-ui to avoid @devilcode/cli import complexity.
 
 ## Phase 6 Plan Structure (planned 2026-04-19, refine_cycle=2)
 
@@ -396,7 +457,7 @@
 - All CI gates green
 
 ## Next Action
-Run `/legion:plan 7` to plan Phase 7: Configurable Workflow DAG.
+Run `/legion:review` to verify Phase 7: Configurable Workflow DAG execution.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
