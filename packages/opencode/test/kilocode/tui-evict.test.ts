@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import type { Event, GlobalEvent } from "@kilocode/sdk/v2"
-import { onMount } from "solid-js"
+import { onMount, type Component, type JSX } from "solid-js"
 import { createComponent } from "solid-js/web"
 import { ArgsProvider } from "../../src/cli/cmd/tui/context/args"
 import { ExitProvider } from "../../src/cli/cmd/tui/context/exit"
@@ -83,16 +83,16 @@ function Probe(props: { onReady: (sync: ReturnType<typeof useSync>) => void }) {
 }
 
 function withChildren<T extends Record<string, unknown>>(
-  component: (props: T) => unknown,
+  component: Component<T & { children?: JSX.Element }>,
   props: T,
-  child: () => unknown,
+  child: () => JSX.Element,
 ) {
   return createComponent(component, {
     ...props,
     get children() {
       return child()
     },
-  })
+  } as T & { children?: JSX.Element })
 }
 
 async function mount(log: string[], events: EventSource) {
