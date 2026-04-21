@@ -76,6 +76,7 @@ interface StateFile {
 }
 
 import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
+import { ensureKiloGitExclude } from "./git-exclude"
 
 const STATE_FILE = "agent-manager.json"
 
@@ -101,6 +102,7 @@ export class WorktreeStateManager {
 
   private readonly root: string
   private migrated = false
+  private excludeEnsured = false
 
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
@@ -666,6 +668,14 @@ export class WorktreeStateManager {
     try {
       const dir = path.dirname(this.file)
       if (!fs.existsSync(dir)) await fs.promises.mkdir(dir, { recursive: true })
+      // Register .kilo/ artifacts in .git/info/exclude on the first write per
+      // instance. Gating on a flag (vs. file existence) ensures users who
+      // already have agent-manager.json from before this fix still get the
+      // exclude entries on their next extension reload.
+      if (!this.excludeEnsured) {
+        this.excludeEnsured = true
+        await ensureKiloGitExclude(this.root, this.log)
+      }
       await fs.promises.writeFile(this.file, JSON.stringify(data, null, 2), "utf-8")
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code

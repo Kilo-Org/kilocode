@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 import * as fs from "fs"
 import * as path from "path"
 import * as os from "os"
+import simpleGit from "simple-git"
 import { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 describe("WorktreeStateManager", () => {
@@ -580,5 +581,92 @@ describe("WorktreeStateManager", () => {
       // Separator style from the stored path is preserved (backslashes stay as backslashes)
       expect(manager.getWorktrees()[0].path).toBe("C:\\.kilo\\worktrees\\fix")
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Git exclude registration on first write
+// ---------------------------------------------------------------------------
+
+describe("WorktreeStateManager git-exclude integration", () => {
+  const roots: string[] = []
+
+  afterEach(() => {
+    while (roots.length) fs.rmSync(roots.pop()!, { recursive: true, force: true })
+  })
+
+  async function createRepo(): Promise<string> {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-exclude-"))
+    roots.push(dir)
+    const git = simpleGit(dir)
+    await git.init()
+    await git.addConfig("user.email", "test@test.com")
+    await git.addConfig("user.name", "Test")
+    return dir
+  }
+
+  it("adds .kilo/agent-manager.json to .git/info/exclude on first save", async () => {
+    const root = await createRepo()
+    const mgr = new WorktreeStateManager(root, () => {})
+    mgr.addSession("local-1", null)
+    await mgr.flush()
+
+    const content = fs.readFileSync(path.join(root, ".git", "info", "exclude"), "utf-8")
+    expect(content).toContain(".kilo/agent-manager.json")
+  })
+
+  it("runs exactly once per instance — subsequent saves skip the exclude work", async () => {
+    const root = await createRepo()
+    const excludePath = path.join(root, ".git", "info", "exclude")
+    const mgr = new WorktreeStateManager(root, () => {})
+
+    mgr.addSession("s1", null)
+    await mgr.flush()
+    const first = fs.readFileSync(excludePath, "utf-8")
+
+    mgr.addSession("s2", null)
+    await mgr.flush()
+    mgr.addSession("s3", null)
+    await mgr.flush()
+    const later = fs.readFileSync(excludePath, "utf-8")
+
+    expect(later).toBe(first)
+    expect(later.split(".kilo/agent-manager.json").length - 1).toBe(1)
+  })
+
+  it("still writes state file when the path is not a git repo", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "wtsm-no-git-"))
+    roots.push(root)
+    const mgr = new WorktreeStateManager(root, () => {})
+    mgr.addSession("local-1", null)
+    await mgr.flush()
+
+    expect(fs.existsSync(path.join(root, ".kilo", "agent-manager.json"))).toBe(true)
+  })
+
+  it("backfills exclude entries on a new instance when existing state file lacks them", async () => {
+    const root = await createRepo()
+    // Pre-seed an agent-manager.json as if a prior extension version had written it
+    fs.mkdirSync(path.join(root, ".kilo"), { recursive: true })
+    fs.writeFileSync(
+      path.join(root, ".kilo", "agent-manager.json"),
+      JSON.stringify({ worktrees: {}, sessions: {} }),
+      "utf-8",
+    )
+
+    // The exclude file does not yet list .kilo/agent-manager.json
+    const excludePath = path.join(root, ".git", "info", "exclude")
+    expect(
+      fs.existsSync(excludePath) && fs.readFileSync(excludePath, "utf-8").includes(".kilo/agent-manager.json"),
+    ).toBe(false)
+
+    // A fresh instance triggering any save (even a no-op change) backfills the exclude
+    const mgr = new WorktreeStateManager(root, () => {})
+    await mgr.load()
+    mgr.addSession("s1", null)
+    await mgr.flush()
+
+    const content = fs.readFileSync(excludePath, "utf-8")
+    expect(content).toContain(".kilo/agent-manager.json")
   })
 })
