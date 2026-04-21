@@ -1,13 +1,13 @@
 # Project State
 
 ## Current Position
-- **Phase**: 7 of 10 (complete)
-- **Status**: Phase 7 reviewed — PASS (3 cycles, 2026-04-21)
-- **Last Activity**: Phase 7 review passed (2026-04-21)
+- **Phase**: 8 of 10 (executed, pending review)
+- **Status**: Phase 8 complete — all 3 plans executed successfully
+- **Last Activity**: Phase 8 execution (2026-04-21)
 
 ## Progress
 ```
-[##################..] 68% — 17/25 plans complete (Phase 7 REVIEWED — PASS)
+[####################] 80% — 20/25 plans complete (Phase 8 COMPLETE — awaiting review)
 ```
 
 ## Phase 7 Wave Results
@@ -464,8 +464,85 @@
 - Cycle 3: PASS — all 5 success criteria satisfied
 - 318 tests pass, 0 fail; all CI gates green
 
+## Phase 8 Plan Structure (planned 2026-04-21, refine_cycle=0)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 08-01 Registry Module Foundation — manifest.ts + errors.ts + signing.ts + http-client.ts + trust-store.ts + barrel | 1 | Phase 7 | Backend Architect + Senior Developer | QA Verification Specialist |
+| 08-02 I/O Orchestration + Commands — io.ts (publishManifest/installManifest) + team-registry.ts commands + TUI integration | 2 | 08-01 | Senior Developer + Frontend Developer | QA Verification Specialist |
+| 08-03 Security Review + Docs — security.test.ts (18+ attack vectors) + team-registry.md docs + CI gates | 3 | 08-02 | Security Engineer + Technical Writer | QA Verification Specialist |
+
+## Phase 8 Architecture Decision
+- Selected **Clean** after 3 parallel proposal agents — user prioritized Phase 9 zero-rework (consistent with Phases 3-7).
+- New `team/registry/` submodule with clear separation:
+  - Browser-safe: manifest.ts, errors.ts (no Node imports)
+  - Node-only: signing.ts, http-client.ts, trust-store.ts, io.ts
+- Manifest wraps AROUND TeamExportEnvelope (no envelope churn from Phase 6).
+- Ed25519 signing via Node.js built-in crypto (`crypto.generateKeyPairSync("ed25519")`).
+- Explicit key pinning trust model (no trust-on-first-use vulnerability).
+- Trust store at `~/.local/share/kilo/registry/trusted-publishers.json`.
+- Command handler DI pattern from Phase 6 team-io.ts reused for team-registry.ts.
+- Spec written to `.planning/specs/08-registry-marketplace-spec.md` (Medium complexity).
+- Estimated ~800 LOC source + ~600 LOC tests + ~180 LOC docs = ~1,580 total.
+
+## Phase 8 Auto-Refine History
+- **2026-04-21 cycle 0** → 3 competing architecture proposals (Minimal/Clean/Pragmatic) spawned. User selected **Clean**. Spec pipeline produced `.planning/specs/08-registry-marketplace-spec.md`; 3 plan files generated (08-01 Wave 1, 08-02 Wave 2, 08-03 Wave 3).
+- **Critique agents failed** — Pre-mortem + Assumption-hunt agents searched wrong working directory (`packages/opencode/.planning/` instead of repo root `.planning/`). False negative; plans verified manually (9 tasks, 3 per plan, dependencies correct).
+- Plans at refine_cycle=0 ready for execution.
+
+## Phase 8 Open Risks (documented, not blocking execution)
+- **Bun Ed25519 support**: Node crypto.generateKeyPairSync("ed25519") support assumed; verify in execution.
+- **fetch() native**: Uses native fetch() with AbortController timeout; no wrapper.
+- **Trust store persistence**: JSON file at ~/.local/share/kilo/registry/trusted-publishers.json; no migration needed (new store).
+- **Phase 9 webview**: Browser-safe modules (manifest.ts, errors.ts) importable directly; Node-only modules proxied via KiloConnectionService.
+
+## Phase 8 Wave Results
+
+### Wave 1 Results
+- Plan 08-01 (Wave 1): Registry Module Foundation — Complete.
+  - `team/registry/manifest.ts`: TeamRegistryManifest, TeamManifestMetadata, RegistryIndex schemas (all .strict(), browser-safe)
+  - `team/registry/errors.ts`: TeamRegistryError base + 4 typed subclasses (browser-safe)
+  - `team/registry/signing.ts`: Ed25519 generateKeyPair, signManifest, verifyManifestSignature, getPublicKeyFingerprint
+  - `team/registry/http-client.ts`: fetchManifest with AbortController timeout, TeamManifestFetchFailed errors
+  - `team/registry/trust-store.ts`: CRUD for ~/.local/share/kilo/registry/trusted-publishers.json
+  - `team/registry/index.ts`: barrel re-exporting all symbols
+  - 72 tests pass (manifest + errors + signing + http-client + trust-store)
+
+### Wave 2 Results
+- Plan 08-02 (Wave 2): I/O Orchestration + Commands — Complete.
+  - `team/registry/io.ts`: publishManifest (signed/unsigned) + installManifest (fetch/file, signature verify, trust check)
+  - `workflow-tui/commands/team-registry.ts`: publishCommand, installCommand, trustCommand, untrustCommand + registerTeamRegistryCommands
+  - `command-input.tsx`: 4 new branches (team publish/install/trust/untrust) before WorkflowStage.safeParse fallback
+  - `index.tsx`: registerTeamRegistryCommands + onCleanup wired
+  - `team/index.ts`: registry public surface exported
+  - 39 new tests; 429 total devilcode tests pass (Phase 7 regression clean)
+
+### Wave 3 Results
+- Plan 08-03 (Wave 3): Security Review + Docs — Complete.
+  - `test/devilcode/team/registry/security.test.ts`: 25 security tests across 4 threat vectors
+    - Signature Forgery Resistance (5 tests): wrong key, random bytes, empty string, all-zeros, end-to-end
+    - Manifest Tampering Detection (6 tests): config/name/version/exportedAt/checksum mutation, file-level MITM
+    - Trust Store Integrity (6 tests): unknown/revoked/trusted publisher, malformed/truncated JSON recovery
+    - Install Safety (8 tests): requireSignature, warnings, skipTrustCheck, schema/JSON rejection
+  - `packages/devil-docs/pages/collaborate/teams/team-registry.md`: Full docs (272 LOC)
+  - 454 total devilcode tests pass; typecheck clean
+
+## Phase 8 Plan Structure (executed 2026-04-21)
+
+| Plan | Wave | Deps | Primary Agents | Status |
+|---|---|---|---|---|
+| 08-01 Registry Module Foundation | 1 | Phase 7 | Backend Architect + Senior Developer | Complete |
+| 08-02 I/O Orchestration + Commands | 2 | 08-01 | Senior Developer + Frontend Developer | Complete |
+| 08-03 Security Review + Docs | 3 | 08-02 | Security Engineer + Technical Writer | Complete |
+
+## Phase 8 Open Findings (documented, not blocking)
+
+- **Trust store DI gap**: `installManifest` calls `getTrustedPublisher` against global path; no path injection. Medium severity design debt — security tests work around via real trust store cleanup. Phase 9 should add `storePath` param to `installManifest` signature.
+- **publisherId default**: CLI `publishCommand` generates a default UUID when `--publisherId` not passed. Should be required when `--sign` provided. Low severity.
+- **registryHandlers in index.tsx**: Uses stub `getActiveTeam` for palette registration; real execution through command-input.tsx reactive context. Intentional — matches Phase 6 pattern.
+
 ## Next Action
-Run `/legion:plan 8` to plan Phase 8: Team Registry & Marketplace.
+Run `/legion:review` to verify Phase 8: Team Registry & Marketplace.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
