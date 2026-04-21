@@ -1,14 +1,82 @@
 # Project State
 
 ## Current Position
-- **Phase**: 9 of 10 (planned, pending execution)
-- **Status**: Phase 8 review passed — ready for Phase 9 planning
-- **Last Activity**: Phase 8 review cycle 4 PASS (2026-04-21)
+- **Phase**: 9 of 10 (executed, pending review)
+- **Status**: Phase 9 complete — all 3 plans executed successfully
+- **Last Activity**: Phase 9 execution (2026-04-21)
 
 ## Progress
 ```
-[####################] 80% — 20/25 plans complete (Phase 8 COMPLETE ✓ Review passed)
+[#######################] 92% — 23/25 plans complete (Phase 9 EXECUTED ✓ Ready for /legion:review)
 ```
+
+## Next Action
+Run `/legion:review` to verify Phase 9: VS Code Extension UI & Telemetry Dashboards.
+
+## Phase 9 Plan Structure (planned 2026-04-21, refine_cycle=2)
+
+| Plan | Wave | Deps | Primary Agents | Reviewer |
+|---|---|---|---|---|
+| 09-01 CLI Backend Foundation — Team CRUD routes + aggregation endpoint + tests | 1 | Phase 8 | Backend Architect | QA Verification Specialist |
+| 09-02 Extension Layer — DevilConnectionService methods + message contracts + TeamBuilderHandler | 2 | 09-01 | Senior Developer | QA Verification Specialist |
+| 09-03 Webview UI — TeamBuilderTab + dashboards + SDK exports | 3 | 09-02 | Frontend Developer | QA Verification Specialist |
+
+## Phase 9 Architecture Decision
+- Selected **Clean** after 3 parallel proposal agents (Minimal/Clean/Pragmatic) — user prioritized Phase 10 zero-rework (consistent with Phases 3-8).
+- Server-side aggregation endpoint at `/devilcode/workflow/aggregations`
+- devil-ui component reuse (StageCoverageIndicator, TabGroup)
+- Type-safe message contracts (discriminated unions)
+- Isolated TeamBuilderHandler class
+- SDK type exports (manual, no generator)
+- Spec written to `.planning/specs/09-vscode-telemetry-spec.md` (Medium-Complex)
+- Estimated ~1,700 LOC source + ~500 LOC tests = ~2,200 total across Phase 9
+
+## Phase 9 Auto-Refine History
+
+- **2026-04-21 cycle 0** → 3 competing architecture proposals (Minimal/Clean/Pragmatic) spawned. User selected **Clean**. Spec pipeline (5 stages) produced `.planning/specs/09-vscode-telemetry-spec.md`; 3 plan files generated (09-01 Wave 1, 09-02 Wave 2, 09-03 Wave 3).
+- **2026-04-21 cycle 1** → Pre-Mortem + Assumption Hunt returned **REWORK**. 5 fixes applied:
+  - R1: SDK types are MANUAL (no generate.ts exists) — added explicit type definitions to Plan 09-03
+  - R2: Shared message types pattern — single source of truth at `src/messages/team-builder-types.ts`
+  - R3: Error handling with try/catch + `teamBuilder.error` message type
+  - R4: `Instance.directory` for planning path resolution in aggregation route
+  - R5: Performance query params (`?since`, `?limit=10000` default)
+- **2026-04-21 cycle 2** → Verification returned **CAUTION**. All 5 fixes HELD. 3 clarifications added:
+  - Type validation test for SDK ↔ CLI schema consistency
+  - Direct copy approach for webview message types (esbuild compatible)
+  - Backwards compatibility note for query param defaults
+- **AUTO_REFINE limit reached (2 cycles)** — plans at refine_cycle=2. Verdict: **CAUTION** accepted.
+
+## Phase 9 Open Risks (documented, not blocking execution)
+
+- **SDK type maintenance**: Manual types require discipline; CI test validates shape consistency
+- **Event log scaling**: Default limit=10000 events; archival recommended for >10MB logs
+- **Chart rendering**: Plain SVG may need canvas fallback for >1000 data points
+- **Phase 10 prep**: Live team editing will extend TeamBuilderHandler; message contract patterns established
+
+## Phase 9 Wave Results
+
+### Wave 1 Results (09-01)
+- CLI Backend Foundation — Complete ✓
+  - `workflow/aggregations.ts`: AggregationResponse interface + computeAggregations + computeAggregationsFromEvents + emptyAggregations. Since/limit query params; default limit 10000.
+  - `server/routes/config.ts`: 4 Team CRUD routes: GET/GET:id/PUT:id/DELETE /config/team
+  - `workflow/routes.ts`: GET /devilcode/workflow/aggregations route
+  - 25 new tests pass (13 aggregation + 12 team-routes)
+
+### Wave 2 Results (09-02)
+- Extension Layer — Complete ✓
+  - `src/messages/team-builder-types.ts`: Single source of truth for all team builder message contracts (5 in + 5 out types + union exports)
+  - `src/agent-manager/team-builder-handler.ts`: Isolated handler class with full try/catch on all 5 message types
+  - `src/services/cli-backend/connection-service.ts`: 5 team methods added
+  - `src/agent-manager/AgentManagerProvider.ts`: Delegates to TeamBuilderHandler in onMessage()
+  - All devil-vscode CI checks pass: typecheck + format:check + knip
+
+### Wave 3 Results (09-03)
+- Webview UI — Complete with Warnings ✓
+  - `webview-ui/agent-manager/TeamBuilderTab.tsx` (295 LOC): Team list sidebar, editable fields, role table, save button, stage coverage count
+  - `webview-ui/agent-manager/dashboards/TelemetryDashboards.tsx`: 4 plain-SVG charts with empty-state handling
+  - `webview-ui/agent-manager/AgentManagerApp.tsx`: Top-level nav bar with Agent Manager | Team Builder | Telemetry
+  - `sdk/js/src/team.ts`: Manual type definitions for external consumers
+  - Warning: pre-existing `@devilcode/kilo-ui` typecheck errors (TS2307 module resolution — unrelated to Phase 9)
 
 ## Phase 8 Wave Results
 
@@ -572,7 +640,7 @@
 - **registryHandlers in index.tsx**: Uses stub `getActiveTeam` for palette registration; real execution through command-input.tsx reactive context. Intentional — matches Phase 6 pattern.
 
 ## Next Action
-Run `/legion:review` to verify Phase 8: Team Registry & Marketplace.
+Run `/legion:build` to execute Phase 9: VS Code Extension UI & Telemetry Dashboards.
 
 ## GitHub
 - Repository: `https://github.com/9thLevelSoftware/kilocode.git`
