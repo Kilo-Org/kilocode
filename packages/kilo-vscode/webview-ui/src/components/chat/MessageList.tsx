@@ -48,7 +48,6 @@ const KiloLogo = (): JSX.Element => {
 interface MessageListProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
-  onForkMessage?: (sessionId: string, messageId: string) => void
   /** Non-tool question requests to render inline at the bottom of the message list */
   questions?: () => QuestionRequest[]
   /** Non-tool suggestion requests to render inline at the bottom of the message list */
@@ -239,7 +238,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     return index() > active
                   })
 
-                  return <VscodeSessionTurn turn={turn} queued={queued()} onForkMessage={props.onForkMessage} />
+                  return <VscodeSessionTurn turn={turn} queued={queued()} />
                 }}
               </Virtualizer>
             </Show>

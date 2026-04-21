@@ -3,7 +3,6 @@ import * as vscode from "vscode"
 import { inspect } from "util"
 import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
 import { GitOps } from "./agent-manager/GitOps"
-import { resolveBase } from "./agent-manager/local-diff"
 
 export function appendOutput(channel: vscode.OutputChannel, prefix: string, ...args: unknown[]): void {
   const msg = args
@@ -36,8 +35,7 @@ export async function resolveLocalDiffTarget(
 
   const tracking = await gitOps.resolveTrackingBranch(root, branch)
   const fallback = tracking ? undefined : await gitOps.resolveDefaultBranch(root, branch)
-  const raw = tracking || fallback || "HEAD"
-  const base = await resolveBase(gitOps, root, raw)
+  const base = tracking ?? fallback ?? "HEAD"
 
   log(`Local diff: branch=${branch} tracking=${tracking ?? "none"} default=${fallback ?? "none"} base=${base}`)
 

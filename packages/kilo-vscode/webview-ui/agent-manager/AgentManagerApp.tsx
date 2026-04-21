@@ -339,9 +339,6 @@ const AgentManagerContent: Component = () => {
   // Recover persisted local session IDs from webview state
   const persisted = vscode.getState<{ localSessionIDs?: string[]; sidebarWidth?: number }>()
   const [localSessionIDs, setLocalSessionIDs] = createSignal<string[]>(persisted?.localSessionIDs ?? [])
-  /** Remove a session ID from the local tab (no-op if absent). */
-  const evictLocal = (sid: string) =>
-    setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(false)
   const [sections, setSections] = createSignal<SectionState[]>([])
@@ -1170,7 +1167,14 @@ const AgentManagerContent: Component = () => {
         const ev = msg as AgentManagerWorktreeSetupMessage
         if (ev.status === "ready" || ev.status === "error") {
           const error = ev.status === "error"
-          if (ev.worktreeId) setBusyWorktrees((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
+          // Remove from busy map
+          if (ev.worktreeId) {
+            setBusyWorktrees((prev) => {
+              const next = new Map(prev)
+              next.delete(ev.worktreeId!)
+              return next
+            })
+          }
           setSetup({
             active: true,
             message: ev.message,
@@ -1182,9 +1186,9 @@ const AgentManagerContent: Component = () => {
           globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
           if (!error && ev.sessionId) {
             session.selectSession(ev.sessionId)
+            // Auto-switch sidebar to the worktree containing this session
             const ms = managedSessions().find((s) => s.id === ev.sessionId)
             if (ms?.worktreeId) setSelection(ms.worktreeId)
-            evictLocal(ev.sessionId)
           }
         } else {
           // Track this worktree as setting up and auto-select it in the sidebar
@@ -1219,10 +1223,6 @@ const AgentManagerContent: Component = () => {
             return [...prev, ev.sessionId]
           })
           vscode.postMessage({ type: "agentManager.persistSession", sessionId: ev.sessionId })
-        } else {
-          saveTabMemory()
-          setSelection(ev.worktreeId)
-          evictLocal(ev.sessionId)
         }
         session.selectSession(ev.sessionId)
       }
@@ -1888,12 +1888,13 @@ const AgentManagerContent: Component = () => {
     if (sel === LOCAL) addPendingTab()
     else if (sel) vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
   }
-  const handleForkSession = (sessionId: string, messageId?: string) => {
+
+  const handleForkSession = (sessionId: string) => {
     const sel = selection()
-    const msg = { type: "agentManager.forkSession" as const, sessionId, ...(messageId ? { messageId } : {}) }
-    if (!sel || sel === LOCAL) return vscode.postMessage(msg)
-    vscode.postMessage({ ...msg, worktreeId: sel })
+    if (sel === LOCAL) vscode.postMessage({ type: "agentManager.forkSession", sessionId })
+    else if (sel) vscode.postMessage({ type: "agentManager.forkSession", sessionId, worktreeId: sel })
   }
+
   const handleCloseTab = (sessionId: string) => {
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
@@ -2947,7 +2948,6 @@ const AgentManagerContent: Component = () => {
                   openLocally(id)
                 }}
                 onShowHistory={() => setHistory(true)}
-                onForkMessage={readOnly() ? undefined : handleForkSession}
                 readonly={readOnly()}
                 continueInWorktree={selection() === LOCAL}
                 promptBoxId={`agent-manager:${selection() ?? "unassigned"}`}

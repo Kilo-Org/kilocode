@@ -3,7 +3,7 @@ import * as Context from "effect/Context"
 import { Instance } from "@/project/instance"
 import { LocalContext } from "@/util/local-context"
 import { InstanceRef, WorkspaceRef } from "./instance-ref"
-import { Observability } from "./observability"
+import { Observability } from "./oltp"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 
 export const memoMap = Layer.makeMemoMapUnsafe()

@@ -48,10 +48,6 @@ export namespace IngestQueue {
         type: "session_close"
         data: { reason: CloseReason }
       }
-    | {
-        type: "session_status"
-        data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
-      }
 
   type Share = {
     ingestPath: string
@@ -127,7 +123,6 @@ export namespace IngestQueue {
       if (item.type === "session_diff") return "session_diff"
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
-      if (item.type === "session_status") return "session_status"
 
       if (item.type === "message") {
         const value = id(item.data)

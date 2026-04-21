@@ -62,10 +62,10 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         cs: CoroutineScope,
     ) {
         try {
-            val ui = SessionUi(project, workspace, sessions, app, cs)
+            val chat = SessionUi(project, workspace, sessions, app, cs)
             val content = ContentFactory.getInstance()
-                .createContent(ui, "", false)
-            content.setDisposer(ui)
+                .createContent(chat, "", false)
+            content.setDisposer(chat)
             toolWindow.contentManager.addContent(content)
 
             ActionManager.getInstance().getAction("Kilo.Settings")?.let {

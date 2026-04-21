@@ -1125,7 +1125,6 @@ export namespace Provider {
             }
 
             for (const [modelID, model] of Object.entries(provider.models ?? {})) {
-              if (!model) continue // kilocode_change - null entries are transient delete sentinels
               const existingModel = parsed.models[model.id ?? modelID]
               const name = iife(() => {
                 if (model.name) return model.name
@@ -1196,7 +1195,7 @@ export namespace Provider {
               }
               const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
               parsedModel.variants = mapValues(
-                pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
+                pickBy(merged, (v) => !v.disabled),
                 (v) => omit(v, ["disabled"]),
               )
               parsed.models[modelID] = parsedModel
@@ -1358,7 +1357,7 @@ export namespace Provider {
               if (configVariants && model.variants) {
                 const merged = mergeDeep(model.variants, configVariants)
                 model.variants = mapValues(
-                  pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
+                  pickBy(merged, (v) => !v.disabled),
                   (v) => omit(v, ["disabled"]),
                 )
               }
@@ -1559,6 +1558,21 @@ export namespace Provider {
         if (s.models.has(key)) return s.models.get(key)!
 
         return yield* Effect.promise(async () => {
+          const url = (() => {
+            const item = envs["OPENCODE_E2E_LLM_URL"]
+            if (typeof item !== "string" || item === "") return
+            return item
+          })()
+          if (url) {
+            const language = createOpenAICompatible({
+              name: model.providerID,
+              apiKey: "test-key",
+              baseURL: url,
+            }).chatModel(model.api.id)
+            s.models.set(key, language)
+            return language
+          }
+
           const provider = s.providers[model.providerID]
           const sdk = await resolveSDK(model, s, envs)
 

@@ -875,14 +875,11 @@ export namespace Config {
       variants: z
         .record(
           z.string(),
-          // kilocode_change start - allow null values so removed variants can be deleted via stripNulls on save
           z
             .object({
               disabled: z.boolean().optional().describe("Disable this variant for the model"),
             })
-            .catchall(z.any())
-            .nullable(),
-          // kilocode_change end
+            .catchall(z.any()),
         )
         .optional()
         .describe("Variant-specific configuration"),
@@ -932,7 +929,7 @@ export namespace Config {
         })
         .catchall(z.any())
         .optional(),
-      models: z.record(z.string(), Model.nullable()).optional(), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
+      models: z.record(z.string(), Model).optional(),
     })
     .partial()
     .strict()

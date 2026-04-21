@@ -90,25 +90,10 @@ export function generatedLike(file: string): boolean {
   return false
 }
 
-const BASE_CANDIDATES = ["main", "master", "dev", "develop"]
-
-export async function resolveBase(git: GitOps, dir: string, base: string): Promise<string> {
-  // If the caller gave an explicit base, honor it. Return it as-is so merge-base
-  // fails loudly on a stale/misspelled ref instead of silently diffing against
-  // an unrelated candidate branch.
-  if (base && base !== "HEAD") return base
-  for (const name of BASE_CANDIDATES) {
-    const ok = await git.execGit(["rev-parse", "--verify", "--quiet", `refs/heads/${name}`], dir)
-    if (ok.code === 0) return name
-  }
-  return "HEAD"
-}
-
 async function ancestor(git: GitOps, dir: string, base: string, log?: Log): Promise<string | undefined> {
-  const resolvedBase = await resolveBase(git, dir, base)
-  const result = await git.execGit(["merge-base", "HEAD", resolvedBase], dir)
+  const result = await git.execGit(["merge-base", "HEAD", base], dir)
   if (result.code !== 0) {
-    log?.("git merge-base failed", { code: result.code, stderr: result.stderr.trim(), dir, base, resolvedBase })
+    log?.("git merge-base failed", { code: result.code, stderr: result.stderr.trim(), dir, base })
     return undefined
   }
   return result.stdout.trim()

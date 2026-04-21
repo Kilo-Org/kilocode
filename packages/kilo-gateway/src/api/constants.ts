@@ -72,4 +72,4 @@ export const ENV_FEATURE = "KILOCODE_FEATURE"
 
 export const PROMPTS = ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"] as const
 
-export const AI_SDK_PROVIDERS = ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"] as const
+export const AI_SDK_PROVIDERS = ["anthropic", "openai", "openai-compatible", "openrouter"] as const

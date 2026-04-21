@@ -69,7 +69,7 @@ export function patchConfigModel(cfg: any, existing: any) {
     ai_sdk_provider: cfg.ai_sdk_provider ?? existing?.ai_sdk_provider,
     variants: cfg.variants
       ? mapValues(
-          pickBy(cfg.variants, (v) => !!v && !v.disabled),
+          pickBy(cfg.variants, (v) => !v.disabled),
           (v) => omit(v, ["disabled"]),
         )
       : {},
@@ -147,7 +147,6 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
         options,
         async getModel(sdk: KiloProvider, modelID: string) {
           const provider = input.models[modelID]?.ai_sdk_provider
-          if (provider === "alibaba") return sdk.alibaba(modelID)
           if (provider === "anthropic") return sdk.anthropic(modelID)
           if (provider === "openai") return sdk.openai(modelID)
           if (provider === "openai-compatible") return sdk.openaiCompatible(modelID)

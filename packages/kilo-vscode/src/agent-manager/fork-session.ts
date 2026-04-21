@@ -21,12 +21,7 @@ export interface ForkContext {
  *
  * Pure orchestration — no vscode imports.
  */
-export async function forkSession(
-  ctx: ForkContext,
-  sessionId: string,
-  worktreeId?: string,
-  messageId?: string,
-): Promise<null> {
+export async function forkSession(ctx: ForkContext, sessionId: string, worktreeId?: string): Promise<null> {
   let client: KiloClient
   try {
     client = ctx.getClient()
@@ -43,8 +38,7 @@ export async function forkSession(
 
   let forked: Session
   try {
-    const input = { sessionID: sessionId, directory, ...(messageId ? { messageID: messageId } : {}) }
-    const { data } = await client.session.fork(input, { throwOnError: true })
+    const { data } = await client.session.fork({ sessionID: sessionId, directory }, { throwOnError: true })
     forked = data
   } catch (error) {
     const err = getErrorMessage(error)

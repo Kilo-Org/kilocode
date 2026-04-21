@@ -1,5 +1,14 @@
-import { OpenApi } from "effect/unstable/httpapi"
 import { api } from "./definition/api.js"
 import type { OpenApiSpec } from "./types.js"
 
-export const openapi = (): OpenApiSpec => OpenApi.fromApi(api)
+export function openapi(): OpenApiSpec {
+  return {
+    openapi: "3.1.1",
+    info: {
+      title: api.name,
+      version: "0.0.0",
+      description: "Contract-first server package scaffold.",
+    },
+    paths: {},
+  }
+}

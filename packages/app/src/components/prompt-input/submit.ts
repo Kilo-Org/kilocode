@@ -3,7 +3,7 @@ import { showToast } from "@opencode-ai/ui/toast"
 import { base64Encode } from "@opencode-ai/util/encode"
 import { Binary } from "@opencode-ai/util/binary"
 import { useNavigate, useParams } from "@solidjs/router"
-import { batch, type Accessor } from "solid-js"
+import type { Accessor } from "solid-js"
 import type { FileSelection } from "@/context/file"
 import { useGlobalSync } from "@/context/global-sync"
 import { useLanguage } from "@/context/language"
@@ -13,6 +13,7 @@ import { usePermission } from "@/context/permission"
 import { type ContextItem, type ImageAttachmentPart, type Prompt, usePrompt } from "@/context/prompt"
 import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
+import { promptProbe } from "@/testing/prompt"
 import { Identifier } from "@/utils/id"
 import { Worktree as WorktreeState } from "@/utils/worktree"
 import { buildRequestParts } from "./build-request-parts"
@@ -138,17 +139,13 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
       messageID,
     })
 
-  batch(() => {
-    setBusy()
-    add()
-  })
+  setBusy()
+  add()
 
   try {
     if (!(await wait())) {
-      batch(() => {
-        setIdle()
-        remove()
-      })
+      setIdle()
+      remove()
       return false
     }
 
@@ -162,10 +159,8 @@ export async function sendFollowupDraft(input: FollowupSendInput) {
     })
     return true
   } catch (err) {
-    batch(() => {
-      setIdle()
-      remove()
-    })
+    setIdle()
+    remove()
     throw err
   }
 }
@@ -312,6 +307,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
 
     input.addToHistory(currentPrompt, mode)
     input.resetHistoryNavigation()
+    promptProbe.start()
 
     const projectDirectory = sdk.directory
     const isNewSession = !params.id
@@ -431,6 +427,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
       return
     }
 
+    promptProbe.submit({ sessionID: session.id, directory: sessionDirectory })
     input.onSubmit?.()
 
     if (mode === "shell") {

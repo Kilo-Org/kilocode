@@ -188,9 +188,6 @@ async function main() {
     "dist/agent-manager.js",
   )
 
-  // Build KiloClaw webview (SolidJS, standalone chat panel)
-  const kiloClawCtx = await createBrowserWebviewContext("webview-ui/kiloclaw/index.tsx", "dist/kiloclaw.js")
-
   // Build Diff Viewer webview (SolidJS, reuses Agent Manager diff components)
   const diffViewerCtx = await createBrowserWebviewContext("webview-ui/diff-viewer/index.tsx", "dist/diff-viewer.js")
 
@@ -207,14 +204,12 @@ async function main() {
       agentManagerCtx.watch(),
       diffViewerCtx.watch(),
       diffVirtualCtx.watch(),
-      kiloClawCtx.watch(),
     ])
   } else {
     await Promise.all([
       extensionCtx.rebuild(),
       webviewCtx.rebuild(),
       agentManagerCtx.rebuild(),
-      kiloClawCtx.rebuild(),
       diffViewerCtx.rebuild(),
       diffVirtualCtx.rebuild(),
     ])
@@ -222,7 +217,6 @@ async function main() {
       extensionCtx.dispose(),
       webviewCtx.dispose(),
       agentManagerCtx.dispose(),
-      kiloClawCtx.dispose(),
       diffViewerCtx.dispose(),
       diffVirtualCtx.dispose(),
     ])

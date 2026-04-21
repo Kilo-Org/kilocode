@@ -206,10 +206,6 @@ export interface QuestionOption {
   label: string
   description: string
   mode?: string
-  // Optional i18n keys — the backend fills these for strings it wants translated in the webview.
-  // The canonical English `label` stays on the reply wire, so server-side matching is unaffected.
-  labelKey?: string
-  descriptionKey?: string
 }
 
 export interface QuestionInfo {
@@ -218,9 +214,6 @@ export interface QuestionInfo {
   options: QuestionOption[]
   multiple?: boolean
   custom?: boolean
-  // Optional i18n keys for question text and header (see QuestionOption for details).
-  questionKey?: string
-  headerKey?: string
 }
 
 export interface QuestionRequest {
@@ -578,11 +571,6 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
-}
-
-export interface SessionForkedMessage {
-  type: "sessionForked"
-  sessionID: string
 }
 
 export interface SessionUpdatedMessage {
@@ -1078,12 +1066,6 @@ export interface FavoritesLoadedMessage {
   favorites: ModelSelection[]
 }
 
-// Per-mode model selections loaded from model.json (extension → webview)
-export interface ModelSelectionsLoadedMessage {
-  type: "modelSelectionsLoaded"
-  selections: Record<string, ModelSelection>
-}
-
 export interface BranchInfo {
   name: string
   isLocal: boolean
@@ -1545,7 +1527,6 @@ export type ExtensionMessage =
   | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
-  | SessionForkedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
@@ -1640,7 +1621,6 @@ export type ExtensionMessage =
   | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
   | FavoritesLoadedMessage
-  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
@@ -2074,13 +2054,6 @@ export interface ForkSessionRequest {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
-  messageId?: string
-}
-
-export interface SidebarForkSessionRequest {
-  type: "forkSession"
-  sessionId: string
-  messageId?: string
 }
 
 // Close (remove) a session from its worktree
@@ -2448,23 +2421,6 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
-// Per-mode model selection persistence (webview → extension)
-export interface PersistModelSelectionRequest {
-  type: "persistModelSelection"
-  agent: string
-  providerID: string
-  modelID: string
-}
-
-export interface ClearModelSelectionRequest {
-  type: "clearModelSelection"
-  agent: string
-}
-
-export interface RequestModelSelectionsMessage {
-  type: "requestModelSelections"
-}
-
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -2599,7 +2555,6 @@ export type WebviewMessage =
   | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
-  | SidebarForkSessionRequest
   | CloseSessionRequest
   | PersistSessionRequest
   | ForgetSessionRequest
@@ -2669,9 +2624,6 @@ export type WebviewMessage =
   | RequestRecentsMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
-  | PersistModelSelectionRequest
-  | ClearModelSelectionRequest
-  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage

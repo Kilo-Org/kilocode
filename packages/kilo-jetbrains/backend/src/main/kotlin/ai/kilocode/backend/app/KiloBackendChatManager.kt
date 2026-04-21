@@ -5,12 +5,7 @@ import ai.kilocode.backend.util.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
-import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
-import ai.kilocode.rpc.dto.PermissionReplyDto
-import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
-import ai.kilocode.rpc.dto.QuestionReplyDto
-import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -43,20 +38,9 @@ class KiloBackendChatManager(
             "message.removed",
             "message.part.updated",
             "message.part.delta",
-            "message.part.removed",
             "session.turn.open",
             "session.turn.close",
             "session.error",
-            "session.status",
-            "session.idle",
-            "session.compacted",
-            "session.diff",
-            "permission.asked",
-            "permission.replied",
-            "question.asked",
-            "question.replied",
-            "question.rejected",
-            "todo.updated",
         )
     }
 
@@ -190,69 +174,7 @@ class KiloBackendChatManager(
         }
     }
 
-    // ------ permission / question ------
-
-    fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) {
-        val body = KiloCliDataParser.buildPermissionReplyJson(reply)
-        post("/permission/$requestId/reply?directory=${encode(dir)}", body, "replyPermission")
-    }
-
-    fun savePermissionRules(requestId: String, dir: String, rules: PermissionAlwaysRulesDto) {
-        val body = KiloCliDataParser.buildPermissionAlwaysRulesJson(rules)
-        post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules")
-    }
-
-    fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) {
-        val body = KiloCliDataParser.buildQuestionReplyJson(answers)
-        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion")
-    }
-
-    fun rejectQuestion(requestId: String, dir: String) {
-        post("/question/$requestId/reject?directory=${encode(dir)}", "{}", "rejectQuestion")
-    }
-
-    fun pendingPermissions(dir: String): List<PermissionRequestDto> {
-        val raw = get("/permission?directory=${encode(dir)}", "pendingPermissions") ?: return emptyList()
-        return KiloCliDataParser.parsePermissionRequests(raw)
-    }
-
-    fun pendingQuestions(dir: String): List<QuestionRequestDto> {
-        val raw = get("/question?directory=${encode(dir)}", "pendingQuestions") ?: return emptyList()
-        return KiloCliDataParser.parseQuestionRequests(raw)
-    }
-
     // ------ utilities ------
-
-    private fun post(path: String, body: String, op: String) {
-        val http = requireClient()
-        val url = requireBase()
-        val request = Request.Builder()
-            .url("$url$path")
-            .post(body.toRequestBody(JSON_TYPE))
-            .build()
-        http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                log.warn("$op failed: HTTP ${response.code}")
-            }
-        }
-    }
-
-    private fun get(path: String, op: String): String? {
-        val http = requireClient()
-        val url = requireBase()
-        val request = Request.Builder()
-            .url("$url$path")
-            .get()
-            .build()
-        return http.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) {
-                log.warn("$op failed: HTTP ${response.code}")
-                null
-            } else {
-                response.body?.string()
-            }
-        }
-    }
 
     private fun requireClient(): OkHttpClient =
         client ?: throw IllegalStateException("Chat manager not started")

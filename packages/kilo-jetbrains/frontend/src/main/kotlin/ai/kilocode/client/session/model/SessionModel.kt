@@ -1,346 +1,350 @@
 package ai.kilocode.client.session.model
 
-import ai.kilocode.rpc.dto.DiffFileDto
-import ai.kilocode.rpc.dto.KiloAppStateDto
+import ai.kilocode.client.app.KiloAppService
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.rpc.dto.ChatEventDto
+import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
-import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
-import ai.kilocode.rpc.dto.MessageDto
-import ai.kilocode.rpc.dto.MessageWithPartsDto
-import ai.kilocode.rpc.dto.PartDto
-import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.util.Disposer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /**
- * Pure session model — single source of truth for session content and runtime state.
+ * Session lifecycle controller for a single session.
  *
- * **EDT-only access** — no synchronization. [ai.kilocode.client.session.SessionController] guarantees all
- * reads and writes happen on the EDT.
+ * Accepts an optional [id] — if non-null, loads that session immediately.
+ * If null, lazily creates a session on the first [prompt] call. This
+ * ensures event subscription happens *before* the prompt is sent,
+ * eliminating race conditions.
+ *
+ * Owns [SessionState] and the listener list. All model mutations and
+ * listener notifications happen on the EDT — [fire] auto-dispatches
+ * via `invokeLater` when called from a background thread.
  */
-class SessionModel {
+class SessionModel(
+    parent: Disposable,
+    id: String?,
+    private val sessions: KiloSessionService,
+    private val workspace: Workspace,
+    private val app: KiloAppService,
+    private val cs: CoroutineScope,
+) : Disposable {
 
-    private val entries = LinkedHashMap<String, Message>()
+    companion object {
+        private val LOG = Logger.getInstance(SessionModel::class.java)
+    }
 
-    var app: KiloAppStateDto = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
-    var version: String? = null
+    init {
+        Disposer.register(parent, this)
+    }
 
-    var workspace: KiloWorkspaceStateDto = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
-    var agents: List<AgentItem> = emptyList()
-    var models: List<ModelItem> = emptyList()
-    var agent: String? = null
-    var model: String? = null
-    var showMessages: Boolean = false
+    val chat = SessionState()
 
-    var state: SessionState = SessionState.Idle
-        private set
+    private val listeners = mutableListOf<SessionModelListener>()
 
-    var diff: List<DiffFileDto> = emptyList()
-        private set
+    /** The session ID owned by this model. Null until created or passed in. */
+    private var sessionId: String? = id
 
-    var todos: List<TodoDto> = emptyList()
-        private set
+    /** Resolved project directory for RPC calls. */
+    private val directory: String get() = workspace.directory
 
-    var compactionCount: Int = 0
-        private set
+    // Status computation state (EDT-only)
+    private var partType: String? = null
+    private var tool: String? = null
+    private var busy: Boolean = false
 
-    private val listeners = mutableListOf<SessionModelEvent.Listener>()
+    // Coroutine job for the current event subscription
+    private var eventJob: Job? = null
 
-    fun addListener(parent: Disposable, listener: SessionModelEvent.Listener) {
+    // --- Listener management (EDT) ---
+
+    /**
+     * Register a listener whose lifetime is tied to [parent].
+     * When [parent] is disposed the listener is auto-removed.
+     */
+    fun addListener(parent: Disposable, listener: SessionModelListener) {
         listeners.add(listener)
         Disposer.register(parent) { listeners.remove(listener) }
     }
 
-    fun messages(): Collection<Message> = entries.values
-
-    fun message(id: String): Message? = entries[id]
-
-    fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
-
-    fun isEmpty(): Boolean = entries.isEmpty()
-
-    fun isReady(): Boolean = app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY
+    // --- Actions (called from EDT) ---
 
     /**
-     * Add a message if it doesn't exist, or update its [MessageDto] info if it does.
-     * Returns true when the message was newly added (caller can decide to show messages).
+     * Send a prompt. If no session exists, creates one first,
+     * subscribes to events, then sends the prompt — all in one
+     * coroutine to avoid race conditions.
      */
-    fun upsertMessage(dto: MessageDto): Boolean {
-        val existing = entries[dto.id]
-        if (existing != null) {
-            val updated = Message(dto).also { it.parts.putAll(existing.parts) }
-            entries[dto.id] = updated
-            fire(SessionModelEvent.MessageUpdated(updated))
-            return false
-        }
-        val msg = Message(dto)
-        entries[dto.id] = msg
-        fire(SessionModelEvent.MessageAdded(msg))
-        return true
-    }
-
-    /** @deprecated Use [upsertMessage] instead. Kept for incremental migration. */
-    fun addMessage(dto: MessageDto): Message? {
-        if (entries.containsKey(dto.id)) return null
-        val msg = Message(dto)
-        entries[dto.id] = msg
-        fire(SessionModelEvent.MessageAdded(msg))
-        return msg
-    }
-
-    fun removeMessage(id: String) {
-        if (entries.remove(id) == null) return
-        fire(SessionModelEvent.MessageRemoved(id))
-    }
-
-    fun removeContent(messageId: String, contentId: String) {
-        val msg = entries[messageId] ?: return
-        if (msg.parts.remove(contentId) == null) return
-        fire(SessionModelEvent.ContentRemoved(messageId, contentId))
-    }
-
-    fun updateContent(messageId: String, dto: PartDto) {
-        val msg = entries[messageId] ?: return
-        val existing = msg.parts[dto.id]
-        if (existing != null) {
-            updateExisting(messageId, existing, dto)
-            return
-        }
-        val content = fromDto(dto)
-        msg.parts[dto.id] = content
-        fire(SessionModelEvent.ContentAdded(messageId, content))
-    }
-
-    fun appendDelta(messageId: String, contentId: String, delta: String) {
-        val msg = entries[messageId] ?: return
-        val existing = msg.parts[contentId]
-        if (existing != null) {
-            val buf = when (existing) {
-                is Text -> existing.content
-                is Reasoning -> existing.content
-                else -> return
+    fun prompt(text: String) {
+        showMessages()
+        cs.launch {
+            try {
+                val id = sessionId ?: run {
+                    val session = sessions.create(directory)
+                    sessionId = session.id
+                    subscribeEvents()
+                    session.id
+                }
+                sessions.prompt(id, directory, text)
+            } catch (e: Exception) {
+                LOG.warn("prompt failed", e)
+                edt {
+                    fire(SessionEvent.Error(e.message ?: KiloBundle.message("session.error.prompt")))
+                    fire(SessionEvent.BusyChanged(false))
+                }
             }
-            buf.append(delta)
+        }
+    }
+
+    fun abort() {
+        val id = sessionId ?: return
+        cs.launch {
+            try {
+                sessions.abort(id, directory)
+            } catch (e: Exception) {
+                LOG.warn("abort failed", e)
+            }
+        }
+    }
+
+    fun selectAgent(name: String) {
+        chat.agent = name
+        cs.launch {
+            try {
+                sessions.updateConfig(directory, ConfigUpdateDto(agent = name))
+            } catch (e: Exception) {
+                LOG.warn("selectAgent failed", e)
+            }
+        }
+        fire(SessionEvent.WorkspaceReady)
+    }
+
+    fun selectModel(provider: String, id: String) {
+        chat.model = "$provider/$id"
+        cs.launch {
+            try {
+                sessions.updateConfig(directory, ConfigUpdateDto(model = "$provider/$id"))
+            } catch (e: Exception) {
+                LOG.warn("selectModel failed", e)
+            }
+        }
+        fire(SessionEvent.WorkspaceReady)
+    }
+
+    // --- Internal: coroutine → EDT bridge ---
+
+    init {
+        // If we have a session ID, load it immediately
+        if (sessionId != null) {
+            loadHistory()
+            subscribeEvents()
+        }
+
+        // Watch session statuses for busy/idle
+        cs.launch {
+            sessions.statuses.collect { statuses ->
+                val id = sessionId ?: return@collect
+                val st = statuses[id]
+                edt { fire(SessionEvent.BusyChanged(st?.type == "busy")) }
+            }
+        }
+
+        // Watch app lifecycle state
+        app.connect()
+        cs.launch {
+            app.state.collect { state ->
+                if (state.status == KiloAppStatusDto.READY) app.fetchVersionAsync()
+                edt {
+                    chat.app = state
+                    chat.version = app.version
+                    fire(SessionEvent.AppChanged)
+                }
+            }
+        }
+
+        // Watch workspace state for providers/agents and lifecycle
+        cs.launch {
+            workspace.state.collect { state ->
+                edt {
+                    chat.workspace = state
+                    fire(SessionEvent.WorkspaceChanged)
+
+                    if (state.status == KiloWorkspaceStatusDto.READY) {
+                        chat.agents = state.agents?.agents?.map {
+                            AgentItem(it.name, it.displayName ?: it.name)
+                        } ?: emptyList()
+
+                        chat.models = state.providers?.let { providers ->
+                            providers.providers
+                                .filter { it.id in providers.connected }
+                                .flatMap { provider ->
+                                    provider.models.map { (id, info) ->
+                                        ModelItem(id, info.name, provider.id)
+                                    }
+                                }
+                        } ?: emptyList()
+
+                        if (chat.agent == null) {
+                            chat.agent = state.agents?.default
+                        }
+                        if (chat.model == null) {
+                            chat.model = state.providers?.defaults?.entries?.firstOrNull()?.value
+                        }
+
+                        chat.ready = true
+                        fire(SessionEvent.WorkspaceReady)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun loadHistory() {
+        val id = sessionId ?: return
+        cs.launch {
+            try {
+                val history = sessions.messages(id, directory)
+                edt {
+                    chat.load(history)
+                    if (!chat.isEmpty()) showMessages()
+                    fire(SessionEvent.HistoryLoaded)
+                }
+            } catch (e: Exception) {
+                LOG.warn("loadHistory failed", e)
+            }
+        }
+    }
+
+    private fun subscribeEvents() {
+        val id = sessionId ?: return
+        eventJob?.cancel()
+        eventJob = cs.launch {
+            sessions.events(id, directory).collect { event ->
+                edt { handle(event) }
+            }
+        }
+    }
+
+    private fun handle(event: ChatEventDto) {
+        when (event) {
+            is ChatEventDto.MessageUpdated -> {
+                chat.addMessage(event.info)
+                showMessages()
+                fire(SessionEvent.MessageAdded(event.info.id))
+            }
+
+            is ChatEventDto.PartUpdated -> {
+                partType = event.part.type
+                tool = event.part.tool
+                chat.updatePart(event.part.messageID, event.part)
+                if (busy) {
+                    fire(SessionEvent.StatusChanged(status()))
+                }
+                if (event.part.type == "text" && event.part.text != null) {
+                    fire(SessionEvent.PartUpdated(event.part.messageID, event.part.id))
+                }
+            }
+
+            is ChatEventDto.PartDelta -> {
+                if (event.field == "text") {
+                    chat.appendDelta(event.messageID, event.partID, event.delta)
+                    fire(SessionEvent.PartDelta(event.messageID, event.partID, event.delta))
+                }
+            }
+
+            is ChatEventDto.TurnOpen -> {
+                partType = null
+                tool = null
+                busy = true
+                fire(SessionEvent.StatusChanged(KiloBundle.message("session.status.considering")))
+                fire(SessionEvent.BusyChanged(true))
+            }
+
+            is ChatEventDto.TurnClose -> {
+                partType = null
+                tool = null
+                busy = false
+                fire(SessionEvent.StatusChanged(null))
+                fire(SessionEvent.BusyChanged(false))
+            }
+
+            is ChatEventDto.Error -> {
+                val msg = event.error?.message ?: event.error?.type ?: KiloBundle.message("session.error.unknown")
+                busy = false
+                fire(SessionEvent.Error(msg))
+                fire(SessionEvent.StatusChanged(null))
+                fire(SessionEvent.BusyChanged(false))
+            }
+
+            is ChatEventDto.MessageRemoved -> {
+                chat.removeMessage(event.messageID)
+                fire(SessionEvent.MessageRemoved(event.messageID))
+            }
+        }
+    }
+
+    // --- View switching (EDT) ---
+
+    private fun showMessages() {
+        if (!chat.showMessages) {
+            chat.showMessages = true
+            fire(SessionEvent.ViewChanged(true))
+        }
+    }
+
+    private fun hideMessages() {
+        if (chat.showMessages) {
+            chat.showMessages = false
+            fire(SessionEvent.ViewChanged(false))
+        }
+    }
+
+    /**
+     * Compute a human-readable status from the last streaming part.
+     */
+    private fun status(): String = when (partType) {
+        "reasoning" -> KiloBundle.message("session.status.thinking")
+        "text" -> KiloBundle.message("session.status.writing")
+        "tool" -> when (tool) {
+            "task" -> KiloBundle.message("session.status.delegating")
+            "todowrite", "todoread" -> KiloBundle.message("session.status.planning")
+            "read" -> KiloBundle.message("session.status.gathering")
+            "glob", "grep", "list" -> KiloBundle.message("session.status.searching.codebase")
+            "webfetch", "websearch", "codesearch" -> KiloBundle.message("session.status.searching.web")
+            "edit", "write" -> KiloBundle.message("session.status.editing")
+            "bash" -> KiloBundle.message("session.status.commands")
+            else -> KiloBundle.message("session.status.considering")
+        }
+        else -> KiloBundle.message("session.status.considering")
+    }
+
+    /**
+     * Notify all listeners. If called from the EDT, listeners run
+     * immediately. If called from a background thread, the notification
+     * is dispatched via `invokeLater`.
+     */
+    private fun fire(event: SessionEvent) {
+        val application = ApplicationManager.getApplication()
+        if (application.isDispatchThread) {
+            for (l in listeners) l.onEvent(event)
         } else {
-            val content = Text(contentId)
-            content.content.append(delta)
-            msg.parts[contentId] = content
-            fire(SessionModelEvent.ContentAdded(messageId, content))
-        }
-        fire(SessionModelEvent.ContentDelta(messageId, contentId, delta))
-    }
-
-    fun setState(state: SessionState) {
-        this.state = state
-        fire(SessionModelEvent.StateChanged(state))
-    }
-
-    fun setDiff(diff: List<DiffFileDto>) {
-        this.diff = diff
-        fire(SessionModelEvent.DiffUpdated(diff))
-    }
-
-    fun setTodos(todos: List<TodoDto>) {
-        this.todos = todos
-        fire(SessionModelEvent.TodosUpdated(todos))
-    }
-
-    fun markCompacted() {
-        compactionCount++
-        fire(SessionModelEvent.Compacted(compactionCount))
-    }
-
-    fun loadHistory(history: List<MessageWithPartsDto>) {
-        entries.clear()
-        state = SessionState.Idle
-        diff = emptyList()
-        todos = emptyList()
-        compactionCount = 0
-        for (msg in history) {
-            val item = Message(msg.info)
-            for (part in msg.parts) {
-                val content = fromDto(part, part.text)
-                item.parts[content.id] = content
-            }
-            entries[msg.info.id] = item
-        }
-        fire(SessionModelEvent.HistoryLoaded)
-    }
-
-    fun clear() {
-        entries.clear()
-        state = SessionState.Idle
-        diff = emptyList()
-        todos = emptyList()
-        compactionCount = 0
-        fire(SessionModelEvent.Cleared)
-    }
-
-    private fun updateExisting(messageId: String, existing: Content, dto: PartDto) {
-        when (existing) {
-            is Text -> {
-                val text = dto.text ?: return
-                existing.content.clear()
-                existing.content.append(text)
-            }
-            is Reasoning -> {
-                val text = dto.text ?: return
-                existing.content.clear()
-                existing.content.append(text)
-            }
-            is Tool -> {
-                existing.state = parseToolState(dto.state)
-                existing.title = dto.title
-            }
-            is Compaction -> return
-            is Generic -> return
-        }
-        fire(SessionModelEvent.ContentUpdated(messageId, existing))
-    }
-
-    private fun fromDto(dto: PartDto, text: CharSequence? = null): Content {
-        val content = text ?: dto.text
-        return when (dto.type) {
-            "text" -> Text(dto.id).apply {
-                if (content != null && content.isNotEmpty()) this.content.append(content)
-            }
-            "reasoning" -> Reasoning(dto.id).apply {
-                if (content != null && content.isNotEmpty()) this.content.append(content)
-            }
-            "tool" -> Tool(dto.id, dto.tool ?: "unknown").apply {
-                state = parseToolState(dto.state)
-                title = dto.title
-            }
-            "compaction" -> Compaction(dto.id)
-            else -> Generic(dto.id, dto.type)
+            application.invokeLater { for (l in listeners) l.onEvent(event) }
         }
     }
 
-    private fun fire(event: SessionModelEvent) {
-        for (l in listeners) l.onEvent(event)
+    private fun edt(block: () -> Unit) {
+        ApplicationManager.getApplication().invokeLater(block)
     }
 
-    override fun toString(): String {
-        val out = mutableListOf<String>()
-
-        for (msg in messages()) {
-            if (out.isNotEmpty()) out.add("---")
-            out.addAll(renderMessage(msg))
-        }
-
-        when (val state = this.state) {
-            is SessionState.AwaitingQuestion -> {
-                if (out.isNotEmpty()) out.add("---")
-                out.addAll(renderQuestion(state.question))
-            }
-            is SessionState.AwaitingPermission -> {
-                if (out.isNotEmpty()) out.add("---")
-                out.addAll(renderPermission(state.permission))
-            }
-            else -> {}
-        }
-
-        if (diff.isNotEmpty()) {
-            if (out.isNotEmpty()) out.add("---")
-            out.add("diff: ${diff.joinToString(" ") { it.file }}")
-        }
-        if (todos.isNotEmpty()) {
-            if (out.isNotEmpty()) out.add("---")
-            todos.forEach { out.add("todo: [${it.status}] ${it.content}") }
-        }
-        if (compactionCount > 0) {
-            if (out.isNotEmpty()) out.add("---")
-            out.add("compacted: $compactionCount")
-        }
-
-        return out.joinToString("\n")
+    override fun dispose() {
+        eventJob?.cancel()
+        cs.cancel()
     }
-}
-
-private fun parseToolState(raw: String?): ToolExecState = when (raw) {
-    "pending" -> ToolExecState.PENDING
-    "running" -> ToolExecState.RUNNING
-    "completed" -> ToolExecState.COMPLETED
-    "error" -> ToolExecState.ERROR
-    else -> ToolExecState.PENDING
-}
-
-data class AgentItem(val name: String, val display: String)
-
-data class ModelItem(val id: String, val display: String, val provider: String)
-
-private fun renderMessage(msg: Message): List<String> {
-    val out = mutableListOf<String>()
-    out.add("${msg.info.role}#${msg.info.id}")
-    for (part in msg.parts.values) {
-        when (part) {
-            is Text -> {
-                out.add("text#${part.id}:")
-                out.addAll(renderText(part.content))
-            }
-            is Reasoning -> {
-                out.add("reasoning#${part.id}:")
-                out.addAll(renderText(part.content))
-            }
-            is Tool -> out.add(renderTool(part))
-            is Compaction -> out.add("compaction#${part.id}")
-            is Generic -> out.add("${part.type}#${part.id}")
-        }
-    }
-    return out
-}
-
-private fun renderQuestion(question: Question): List<String> {
-    val out = mutableListOf<String>()
-    out.add("question#${question.id}")
-    out.add("tool: ${renderToolRef(question.tool)}")
-    for (item in question.items) {
-        out.add("header: ${item.header}")
-        out.add("prompt: ${item.question}")
-        for (opt in item.options) {
-            out.add("option: ${opt.label} - ${opt.description}")
-        }
-        out.add("multiple: ${item.multiple}")
-        out.add("custom: ${item.custom}")
-    }
-    return out
-}
-
-private fun renderPermission(permission: Permission): List<String> {
-    val out = mutableListOf<String>()
-    out.add("permission#${permission.id}")
-    out.add("tool: ${renderToolRef(permission.tool)}")
-    out.add("name: ${permission.name}")
-    out.add("patterns: ${permission.patterns.joinToString(", ").ifEmpty { "<none>" }}")
-    out.add("always: ${permission.always.joinToString(", ").ifEmpty { "<none>" }}")
-    out.add("file: ${renderFile(permission.meta)}")
-    out.add("state: ${permission.state.name}")
-    val meta = permission.meta.raw.entries
-        .filter { it.key !in setOf("file", "path", "state") }
-        .sortedBy { it.key }
-        .joinToString(", ") { "${it.key}=${it.value}" }
-        .ifEmpty { "<none>" }
-    out.add("metadata: $meta")
-    return out
-}
-
-private fun renderToolRef(ref: ToolCallRef?): String = ref?.let { "${it.messageId}/${it.callId}" } ?: "<none>"
-
-private fun renderFile(meta: PermissionMeta): String {
-    meta.filePath?.takeIf { it.isNotBlank() }?.let { return it }
-    meta.raw["file"]?.takeIf { it.isNotBlank() }?.let { return it }
-    meta.raw["path"]?.takeIf { it.isNotBlank() }?.let { return it }
-    return "<none>"
-}
-
-private fun renderTool(tool: Tool): String {
-    val state = tool.state.name
-    val title = tool.title?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
-    return "tool#${tool.id} ${tool.name} [$state]$title"
-}
-
-private fun renderText(text: CharSequence): List<String> {
-    val raw = text.toString()
-    if (raw.isEmpty()) return listOf("  <empty>")
-    return raw.split("\n").map { "  $it" }
 }

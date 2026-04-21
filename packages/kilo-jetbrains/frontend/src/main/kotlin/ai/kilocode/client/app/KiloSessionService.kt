@@ -6,13 +6,8 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
-import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
-import ai.kilocode.rpc.dto.PermissionReplyDto
-import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
-import ai.kilocode.rpc.dto.QuestionReplyDto
-import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.Service
@@ -33,7 +28,7 @@ import kotlinx.coroutines.launch
  * Project-level frontend service for session management.
  *
  * Stateless with respect to "active session" — callers pass explicit
- * session IDs. [ai.kilocode.client.session.SessionController] owns the
+ * session IDs. [ai.kilocode.client.session.model.SessionModel] owns the
  * active session concept.
  */
 @Service(Service.Level.PROJECT)
@@ -148,34 +143,4 @@ class KiloSessionService internal constructor(
     suspend fun updateConfig(dir: String, config: ConfigUpdateDto) {
         call { updateConfig(dir, config) }
     }
-
-    // ------ permission / question resolution ------
-
-    /** Reply to a pending permission request. */
-    suspend fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) {
-        call { replyPermission(requestId, dir, reply) }
-    }
-
-    /** Save always-rules for a pending permission request. */
-    suspend fun savePermissionRules(requestId: String, dir: String, rules: PermissionAlwaysRulesDto) {
-        call { savePermissionRules(requestId, dir, rules) }
-    }
-
-    /** Reply to a pending question with user answers. */
-    suspend fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) {
-        call { replyQuestion(requestId, dir, answers) }
-    }
-
-    /** Reject a pending question. */
-    suspend fun rejectQuestion(requestId: String, dir: String) {
-        call { rejectQuestion(requestId, dir) }
-    }
-
-    /** List pending permissions (caller filters by session ID). */
-    suspend fun pendingPermissions(dir: String): List<PermissionRequestDto> =
-        call { pendingPermissions(dir) }
-
-    /** List pending questions (caller filters by session ID). */
-    suspend fun pendingQuestions(dir: String): List<QuestionRequestDto> =
-        call { pendingQuestions(dir) }
 }

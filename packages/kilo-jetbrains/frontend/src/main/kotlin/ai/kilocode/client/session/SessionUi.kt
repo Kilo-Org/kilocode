@@ -3,10 +3,10 @@ package ai.kilocode.client.session
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
-import ai.kilocode.client.session.model.SessionModelEvent
-import ai.kilocode.client.session.model.SessionState
+import ai.kilocode.client.session.model.SessionEvent
+import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.ui.LabelPicker
-import ai.kilocode.client.session.ui.MessageListUi
+import ai.kilocode.client.session.ui.MessageListPanel
 import ai.kilocode.client.session.ui.PromptPanel
 import ai.kilocode.client.session.ui.StatusPanel
 import com.intellij.openapi.Disposable
@@ -18,7 +18,18 @@ import java.awt.BorderLayout
 import java.awt.CardLayout
 import javax.swing.JPanel
 
-/** Main session panel — reacts to [SessionController] events. */
+/**
+ * Main chat panel — reacts to [SessionModel] events.
+ *
+ * Uses [CardLayout] in the center to switch between the empty panel
+ * (shown before the first prompt) and the scrollable message list.
+ *
+ * All business logic (app/workspace watching, session lifecycle, event
+ * handling, status computation) lives in [SessionModel]. Welcome
+ * rendering lives in [ai.kilocode.client.session.ui.StatusPanel]. This class handles layout, prompt
+ * wiring, message list updates, card switching, picker population,
+ * busy state, and scrolling.
+ */
 class SessionUi(
     project: Project,
     workspace: Workspace,
@@ -32,9 +43,9 @@ class SessionUi(
         private const val MESSAGES = "messages"
     }
 
-    private val controller = SessionController(this, null, sessions, workspace, app, cs)
-    private val status = StatusPanel(this, controller)
-    private val messages = MessageListUi(this, controller.model)
+    private val model = SessionModel(this, null, sessions, workspace, app, cs)
+    private val status = StatusPanel(this, model)
+    private val messages = MessageListPanel()
 
     private val cards = CardLayout()
     private val center = JPanel(cards)
@@ -46,12 +57,13 @@ class SessionUi(
     }
 
     private val prompt = PromptPanel(
-        project = project,
-        onSend = { text -> send(text) },
-        onAbort = { controller.abort() },
+      project = project,
+      onSend = { text -> send(text) },
+      onAbort = { model.abort() },
     )
 
     init {
+        // Layout
         center.add(status, STATUS)
         center.add(scroll, MESSAGES)
         cards.show(center, STATUS)
@@ -59,54 +71,112 @@ class SessionUi(
         add(center, BorderLayout.CENTER)
         add(prompt, BorderLayout.SOUTH)
 
-        prompt.mode.onSelect = { item -> controller.selectAgent(item.id) }
-        prompt.model.onSelect = picker@{ item ->
-            val group = item.group
-            if (group == null) return@picker
-            controller.selectModel(group, item.id)
+        // Wire picker callbacks via typed model methods
+        prompt.mode.onSelect = { item ->
+            model.selectAgent(item.id)
         }
-
-        // Lifecycle events from the manager (app/workspace state, view switching)
-        controller.addListener(this) { event ->
-            when (event) {
-                is SessionControllerEvent.WorkspaceReady -> {
-                    val c = controller.model
-                    prompt.mode.setItems(c.agents.map { LabelPicker.Item(it.name, it.display) }, c.agent)
-                    val items = c.models.map { LabelPicker.Item(it.id, it.display, it.provider) }
-                    val selected = c.model?.let { full -> items.firstOrNull { "${it.group}/${it.id}" == full }?.id }
-                    prompt.model.setItems(items, selected)
-                    prompt.setReady(c.isReady())
-                }
-
-                is SessionControllerEvent.ViewChanged -> cards.show(center, if (event.show) MESSAGES else STATUS)
-
-                is SessionControllerEvent.AppChanged,
-                is SessionControllerEvent.WorkspaceChanged -> prompt.setReady(controller.model.isReady())
+        prompt.model.onSelect = { item ->
+            val group = item.group
+            if (group != null) {
+                model.selectModel(group, item.id)
             }
         }
 
-        // Model events — state drives the prompt busy state
-        controller.model.addListener(this) { event ->
+        // React to model events — no coroutines, pure EDT
+        model.addListener(this) { event ->
             when (event) {
-                is SessionModelEvent.StateChanged -> {
-                    val busy = event.state.isBusy()
-                    prompt.setBusy(busy)
-                    scrollToBottom()
+                is SessionEvent.MessageAdded -> {
+                    val msg = model.chat.message(event.id) ?: return@addListener
+                    messages.addMessage(msg.info)
+                    refreshMessages()
                 }
-                is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.ContentAdded,
-                is SessionModelEvent.ContentUpdated,
-                is SessionModelEvent.ContentDelta -> scrollToBottom()
-                is SessionModelEvent.HistoryLoaded -> scrollToBottom()
-                else -> {}
+
+                is SessionEvent.MessageRemoved -> {
+                    messages.removeMessage(event.id)
+                    refreshMessages()
+                }
+
+                is SessionEvent.PartUpdated -> {
+                    val part = model.chat.part(event.messageId, event.partId) ?: return@addListener
+                    messages.updatePartText(event.messageId, event.partId, part.text.toString())
+                    refreshMessages()
+                }
+
+                is SessionEvent.PartDelta -> {
+                    messages.appendDelta(event.messageId, event.partId, event.delta)
+                    refreshMessages()
+                }
+
+                is SessionEvent.StatusChanged -> {
+                    messages.setStatus(event.text)
+                    refreshMessages()
+                }
+
+                is SessionEvent.Error -> {
+                    messages.addError(event.message)
+                    refreshMessages()
+                }
+
+                is SessionEvent.HistoryLoaded -> {
+                    messages.clear()
+                    for (msg in model.chat.messages()) {
+                        messages.addMessage(msg.info)
+                        for ((partId, part) in msg.parts) {
+                            if (part.dto.type == "text" && part.text.isNotEmpty()) {
+                                messages.updatePartText(msg.info.id, partId, part.text.toString())
+                            }
+                        }
+                    }
+                    refreshMessages()
+                }
+
+                is SessionEvent.Cleared -> {
+                    messages.clear()
+                    refreshMessages()
+                }
+
+                is SessionEvent.WorkspaceReady -> {
+                    val c = model.chat
+                    prompt.mode.setItems(
+                        c.agents.map { LabelPicker.Item(it.name, it.display) },
+                        c.agent,
+                    )
+                    val items = c.models.map { LabelPicker.Item(it.id, it.display, it.provider) }
+                    // chat.model is "provider/modelId", picker items use modelId only.
+                    // Find the matching item and pass its id for selection.
+                    val selected = c.model?.let { full ->
+                        items.firstOrNull { "${it.group}/${it.id}" == full }?.id
+                    }
+                    prompt.model.setItems(items, selected)
+                    prompt.setReady(c.ready)
+                }
+
+                is SessionEvent.ViewChanged -> {
+                    cards.show(center, if (event.show) MESSAGES else STATUS)
+                }
+
+                is SessionEvent.BusyChanged -> {
+                    prompt.setBusy(event.busy)
+                }
+
+                is SessionEvent.AppChanged,
+                is SessionEvent.WorkspaceChanged -> {
+                    // Handled by StatusPanel
+                }
             }
         }
     }
 
     private fun send(text: String) {
         if (text.isBlank()) return
-        controller.prompt(text)
+        model.prompt(text)
         prompt.clear()
+    }
+
+    private fun refreshMessages() {
+        messages.revalidate()
+        messages.repaint()
+        scrollToBottom()
     }
 
     private fun scrollToBottom() {
@@ -114,11 +184,7 @@ class SessionUi(
         bar.value = bar.maximum
     }
 
-    override fun dispose() {}
-}
-
-private fun SessionState.isBusy(): Boolean = when (this) {
-    is SessionState.Idle -> false
-    is SessionState.Error -> false
-    else -> true
+    override fun dispose() {
+        // All children (status, model) disposed by Disposer
+    }
 }

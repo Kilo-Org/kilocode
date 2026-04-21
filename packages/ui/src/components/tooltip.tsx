@@ -99,8 +99,6 @@ export function Tooltip(props: TooltipProps) {
     onCleanup(() => obs.disconnect())
   })
 
-  let justClickedTrigger = false
-
   return (
     <Switch>
       <Match when={local.inactive}>{local.children}</Match>
@@ -114,10 +112,6 @@ export function Tooltip(props: TooltipProps) {
           onOpenChange={(open) => {
             if (local.forceOpen) return
             if (state.block && open) return
-            if (justClickedTrigger) {
-              justClickedTrigger = false
-              return
-            }
             setState("open", open)
           }}
         >
@@ -143,12 +137,6 @@ export function Tooltip(props: TooltipProps) {
               data-force-open={local.forceOpen}
               class={local.contentClass}
               style={local.contentStyle}
-              onPointerDownOutside={(e) => {
-                if (ref === e.target || (e.target instanceof Node && ref?.contains(e.target))) {
-                  justClickedTrigger = true
-                }
-                e.preventDefault()
-              }}
             >
               {local.value}
               {/* <KobalteTooltip.Arrow data-slot="tooltip-arrow" /> */}

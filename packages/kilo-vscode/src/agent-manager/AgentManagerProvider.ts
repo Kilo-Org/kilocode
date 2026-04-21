@@ -297,7 +297,7 @@ export class AgentManagerProvider implements Disposable {
     if (m.type === "agentManager.removeStaleWorktree") return this.onRemoveStaleWorktree(m.worktreeId)
     if (m.type === "agentManager.promoteSession") return this.onPromoteSession(m.sessionId)
     if (m.type === "agentManager.addSessionToWorktree") return this.onAddSessionToWorktree(m.worktreeId)
-    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId, m.messageId)
+    if (m.type === "agentManager.forkSession") return this.onForkSession(m.sessionId, m.worktreeId)
     if (m.type === "agentManager.closeSession") return this.onCloseSession(m.sessionId)
   }
 
@@ -776,10 +776,8 @@ export class AgentManagerProvider implements Disposable {
     const state = this.getStateManager()!
     state.addSession(session.id, created.worktree.id)
     this.registerWorktreeSession(session.id, created.result.path)
-    // Push state before registerSession so the webview's sessionCreated handler
-    // sees the worktree mapping and routes the session to the worktree tab.
-    this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
     this.panel?.sessions.registerSession(session)
+    this.notifyWorktreeReady(session.id, created.result, created.worktree.id)
     this.host.capture("Agent Manager Session Started", {
       source: PLATFORM,
       sessionId: session.id,
@@ -933,7 +931,7 @@ export class AgentManagerProvider implements Disposable {
     return null
   }
 
-  private onForkSession(sessionId: string, worktreeId?: string, messageId?: string) {
+  private onForkSession(sessionId: string, worktreeId?: string) {
     return forkSession(
       {
         getClient: () => this.connectionService.getClient(),
@@ -953,7 +951,6 @@ export class AgentManagerProvider implements Disposable {
       },
       sessionId,
       worktreeId,
-      messageId,
     )
   }
 

@@ -4,12 +4,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
-import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
-import ai.kilocode.rpc.dto.PermissionReplyDto
-import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
-import ai.kilocode.rpc.dto.QuestionReplyDto
-import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -48,21 +43,11 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Push status updates here. */
     val statuses = MutableStateFlow<Map<String, SessionStatusDto>>(emptyMap())
 
-    /** Pending permissions returned by [pendingPermissions]. */
-    val pendingPermissionList = mutableListOf<PermissionRequestDto>()
-
-    /** Pending questions returned by [pendingQuestions]. */
-    val pendingQuestionList = mutableListOf<QuestionRequestDto>()
-
     // --- Call tracking ---
 
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
     val aborts = mutableListOf<Pair<String, String>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
-    val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
-    val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
-    val questionReplies = mutableListOf<Triple<String, String, QuestionReplyDto>>()
-    val questionRejects = mutableListOf<Pair<String, String>>()
     var creates = 0
         private set
 
@@ -125,35 +110,5 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) {
         assertNotEdt("updateConfig")
         configs.add(directory to config)
-    }
-
-    override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
-        assertNotEdt("replyPermission")
-        permissionReplies.add(Triple(requestId, directory, reply))
-    }
-
-    override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
-        assertNotEdt("savePermissionRules")
-        permissionRulesSaved.add(Triple(requestId, directory, rules))
-    }
-
-    override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
-        assertNotEdt("replyQuestion")
-        questionReplies.add(Triple(requestId, directory, answers))
-    }
-
-    override suspend fun rejectQuestion(requestId: String, directory: String) {
-        assertNotEdt("rejectQuestion")
-        questionRejects.add(requestId to directory)
-    }
-
-    override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> {
-        assertNotEdt("pendingPermissions")
-        return pendingPermissionList.toList()
-    }
-
-    override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> {
-        assertNotEdt("pendingQuestions")
-        return pendingQuestionList.toList()
     }
 }
