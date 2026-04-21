@@ -189,6 +189,44 @@ describe("installCommand", () => {
     expect(errorCalls.length).toBe(1)
     expect(errorCalls[0][0]).toContain("Invalid manifest")
   })
+
+  test("requireSignature: true rejects unsigned manifest with signature error toast", async () => {
+    const outputPath = path.join(tmpDir, "unsigned-required.manifest.json")
+    await publishManifest(fixtureTeam(), outputPath, {
+      name: "T",
+      author: "A",
+      publisherId: "550e8400-e29b-41d4-a716-446655440004",
+      version: "1.0.0",
+      // no privateKey — unsigned
+    })
+
+    const handlers = makeHandlers()
+    await installCommand({ source: outputPath, requireSignature: true }, handlers)
+
+    const errorCalls = (handlers.toast.error as ReturnType<typeof mock>).mock.calls
+    expect(errorCalls.length).toBe(1)
+    expect(errorCalls[0][0].toLowerCase()).toContain("signature")
+    const successCalls = (handlers.toast.success as ReturnType<typeof mock>).mock.calls
+    expect(successCalls.length).toBe(0)
+  })
+
+  test("requireSignature: false accepts unsigned manifest with warning (same as omitting option)", async () => {
+    const outputPath = path.join(tmpDir, "unsigned-ok.manifest.json")
+    await publishManifest(fixtureTeam(), outputPath, {
+      name: "T",
+      author: "A",
+      publisherId: "550e8400-e29b-41d4-a716-446655440005",
+      version: "1.0.0",
+    })
+
+    const handlers = makeHandlers()
+    await installCommand({ source: outputPath, requireSignature: false }, handlers)
+
+    const warnCalls = (handlers.toast.warning as ReturnType<typeof mock>).mock.calls
+    expect(warnCalls.some((c: string[]) => c[0].includes("unsigned"))).toBe(true)
+    const successCalls = (handlers.toast.success as ReturnType<typeof mock>).mock.calls
+    expect(successCalls.length).toBe(1)
+  })
 })
 
 // ─── trustCommand ────────────────────────────────────────────────────────────

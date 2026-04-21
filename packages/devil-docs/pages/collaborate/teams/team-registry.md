@@ -99,12 +99,13 @@ Fetches a manifest from a URL or local file path, verifies its signature against
 **Syntax**:
 
 ```
-team install <url-or-path>
+team install <url-or-path> [--require-signature]
 ```
 
 | Argument | Description |
 |---|---|
 | `<url-or-path>` | HTTPS URL or absolute/relative file path to the manifest JSON |
+| `--require-signature` | Optional. Reject the manifest if it is unsigned; a missing signature becomes a hard error instead of a warning |
 
 **Examples**:
 
@@ -117,6 +118,9 @@ team install https://releases.example.com/teams/backend-squad-v1.manifest.json
 
 # Install an unsigned manifest (will warn but proceed)
 team install /shared/team-unsigned.manifest.json
+
+# Require a valid signature — unsigned manifests are rejected
+team install https://releases.example.com/teams/backend-squad-v1.manifest.json --require-signature
 ```
 
 **What happens during install**:

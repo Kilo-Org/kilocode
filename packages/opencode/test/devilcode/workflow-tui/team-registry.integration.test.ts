@@ -17,6 +17,17 @@ describe("TUI registry integration — command-input.tsx branches", () => {
     expect(src).toContain('cmd.startsWith("team install ")')
   })
 
+  test("team install branch parses --require-signature boolean flag", () => {
+    // The branch must use parts.includes to extract the boolean flag
+    expect(src).toContain('parts.includes("--require-signature")')
+  })
+
+  test("team install branch forwards requireSignature to installCommand", () => {
+    // requireSignature must be destructured and passed through
+    expect(src).toContain("requireSignature")
+    expect(src).toContain("installCommand({ source, requireSignature }")
+  })
+
   test("has team trust branch", () => {
     expect(src).toContain('cmd.startsWith("team trust ")')
   })
