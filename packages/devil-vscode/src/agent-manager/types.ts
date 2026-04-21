@@ -8,6 +8,7 @@
  */
 
 import type { FileDiff } from "@devilcode/sdk/v2/client"
+import type { TeamBuilderInMessage, TeamBuilderOutMessage } from "../messages/team-builder-types"
 import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
@@ -264,6 +265,7 @@ export type AgentManagerOutMessage =
   | WorktreeDiffFileMessage
   | PRStatusOutMessage
   | ActionOutMessage
+  | TeamBuilderOutMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -619,3 +621,4 @@ export type AgentManagerInMessage =
   | ToggleSectionCollapsedIn
   | MoveToSectionIn
   | MoveSectionIn
+  | TeamBuilderInMessage

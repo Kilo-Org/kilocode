@@ -335,6 +335,55 @@ export class DevilConnectionService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Team CRUD + Aggregations
+  // ---------------------------------------------------------------------------
+
+  /** Minimal team handle returned by GET /devilcode/teams */
+  // devilcode_change start
+  private async teamFetch(method: string, path: string, body?: unknown): Promise<unknown> {
+    const config = this.config
+    if (!config) throw new Error("Not connected — call connect() first")
+    const username = process.env.DEVIL_SERVER_USERNAME || "kilo"
+    const authHeader = `Basic ${Buffer.from(`${username}:${config.password}`).toString("base64")}`
+    const res = await fetch(`${config.baseUrl}${path}`, {
+      method,
+      headers: {
+        Authorization: authHeader,
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText)
+      throw new Error(`Team API ${method} ${path} failed (${res.status}): ${text}`)
+    }
+    if (res.status === 204) return undefined
+    return res.json()
+  }
+
+  async listTeams(): Promise<Array<{ id: string; name: string; isQuickstart: boolean }>> {
+    const data = await this.teamFetch("GET", "/devilcode/teams")
+    return data as Array<{ id: string; name: string; isQuickstart: boolean }>
+  }
+
+  async getTeam(id: string): Promise<unknown> {
+    return this.teamFetch("GET", `/devilcode/teams/${encodeURIComponent(id)}`)
+  }
+
+  async saveTeam(id: string, config: unknown): Promise<void> {
+    await this.teamFetch("PUT", `/devilcode/teams/${encodeURIComponent(id)}`, config)
+  }
+
+  async deleteTeam(id: string): Promise<void> {
+    await this.teamFetch("DELETE", `/devilcode/teams/${encodeURIComponent(id)}`)
+  }
+
+  async getAggregations(): Promise<unknown> {
+    return this.teamFetch("GET", "/devilcode/teams/aggregations")
+  }
+  // devilcode_change end
+
   /**
    * Subscribe to connection state changes. Returns unsubscribe function.
    */

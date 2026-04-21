@@ -27,6 +27,7 @@ import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { PLATFORM } from "./constants"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
+import { TeamBuilderHandler } from "./team-builder-handler"
 import { hashFileDiffs, resolveLocalDiffTarget } from "../review-utils"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
 
@@ -62,6 +63,7 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: AgentManagerOutMessage | undefined
   private cachedLocalStats: AgentManagerOutMessage | undefined
   private applyingWorktreeId: string | undefined
+  private teamBuilderHandler: TeamBuilderHandler | undefined
 
   /** Session ID most recently loaded via a `loadMessages` message from the webview.
    *  Updated synchronously — unlike the session provider's currentSession which depends on
@@ -106,6 +108,11 @@ export class AgentManagerProvider implements Disposable {
       openExternal: (u) => this.host.openExternal(u),
       log: (...a) => this.log(...a),
     })
+    this.teamBuilderHandler = new TeamBuilderHandler(
+      this.connectionService,
+      (msg) => this.postMessage(msg),
+      (msg) => this.log(msg),
+    )
   }
 
   private log(...args: unknown[]) {
@@ -224,6 +231,11 @@ export class AgentManagerProvider implements Disposable {
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
     if (this.prBridge.handleMessage(msg)) return null
     const m = msg as unknown as AgentManagerInMessage
+
+    if (this.teamBuilderHandler) {
+      const handled = await this.teamBuilderHandler.handleMessage(m)
+      if (handled) return null
+    }
 
     if (m.type === "agentManager.createWorktree") {
       return this.onCreateWorktree(m.baseBranch, m.branchName)
