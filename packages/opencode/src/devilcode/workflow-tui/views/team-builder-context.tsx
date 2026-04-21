@@ -11,6 +11,11 @@ import { CanonicalTeamConfig, type CanonicalTeamRole } from "../../team/config"
 import { POSITION_LIBRARY, type CanonicalPosition } from "../../team/library"
 import { loadQuickstartTemplates } from "../../team/quickstarts"
 import { createFileSystemTeamRepository, type TeamRepository } from "../../team/repository"
+// devilcode_change start — Phase 7: DAG state integration
+import { generateDefaultDAG, validateDAG } from "../../team/dag"
+import type { WorkflowDAG } from "../../team/dag"
+import type { DAGError } from "../../team/dag"
+// devilcode_change end
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error"
 
@@ -23,6 +28,11 @@ export type TeamBuilderState = {
   saveStatus: SaveStatus
   saveError: string | null
   loadedQuickstart: string | null
+  // devilcode_change start — Phase 7: DAG state
+  dagDraft: WorkflowDAG | null
+  dagErrors: DAGError[]
+  advancedMode: boolean
+  // devilcode_change end
 }
 
 export type TeamBuilderActions = {
@@ -52,6 +62,11 @@ export type TeamBuilderActions = {
    * or by closeOverlays().
    */
   selectRole(id: string | null): void
+  // devilcode_change start — Phase 7: DAG actions
+  setAdvancedMode(enabled: boolean): void
+  updateDAG(dag: WorkflowDAG): void
+  resetDAGToDefault(): void
+  // devilcode_change end
 }
 
 export type TeamBuilderContextValue = TeamBuilderState & TeamBuilderActions
@@ -74,6 +89,11 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
     saveStatus: "idle",
     saveError: null,
     loadedQuickstart: null,
+    // devilcode_change start — Phase 7: DAG initial state
+    dagDraft: null,
+    dagErrors: [],
+    advancedMode: false,
+    // devilcode_change end
   })
 
   const actions: TeamBuilderActions = {
@@ -140,7 +160,13 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
       setStore("saveStatus", "saving")
       setStore("saveError", null)
       try {
-        await repo.saveTeam(store.teamId, { ...store.draft } as CanonicalTeamConfig)
+        // devilcode_change start — Phase 7: persist workflowOverride when valid
+        const workflowOverride =
+          store.advancedMode && store.dagDraft && store.dagErrors.length === 0
+            ? { dag: store.dagDraft }
+            : undefined
+        await repo.saveTeam(store.teamId, { ...store.draft, workflowOverride } as CanonicalTeamConfig)
+        // devilcode_change end
         setStore("saveStatus", "saved")
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
@@ -150,7 +176,13 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
     },
 
     async validateAndStartBuild(startBuild) {
-      const result = CanonicalTeamConfig.safeParse({ ...store.draft, enabled: true })
+      // devilcode_change start — Phase 7: include workflowOverride when valid
+      const workflowOverride =
+        store.advancedMode && store.dagDraft && store.dagErrors.length === 0
+          ? { dag: store.dagDraft }
+          : undefined
+      const result = CanonicalTeamConfig.safeParse({ ...store.draft, enabled: true, workflowOverride })
+      // devilcode_change end
       if (!result.success) {
         const issues = result.error.issues
         setStore("saveError", issues.map((i) => i.message).join("; "))
@@ -199,6 +231,37 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
     selectRole(id: string | null) {
       setStore("selectedRole", id)
     },
+
+    // devilcode_change start — Phase 7: DAG actions
+    setAdvancedMode(enabled: boolean) {
+      setStore("advancedMode", enabled)
+      if (enabled && !store.dagDraft) {
+        setStore("dagDraft", generateDefaultDAG())
+      }
+    },
+
+    updateDAG(dag: WorkflowDAG) {
+      setStore("dagDraft", dag)
+      // R2-03: null-safety for roles
+      const capMap = new Map<string, boolean>()
+      const roles = store.draft?.roles
+      if (roles && typeof roles === "object") {
+        for (const role of Object.values(roles)) {
+          const typedRole = role as { capabilities?: string[] } | undefined
+          if (typedRole?.capabilities) {
+            for (const cap of typedRole.capabilities) capMap.set(cap, true)
+          }
+        }
+      }
+      const errors = validateDAG(dag, capMap as Map<never, boolean>)
+      setStore("dagErrors", errors)
+    },
+
+    resetDAGToDefault() {
+      setStore("dagDraft", generateDefaultDAG())
+      setStore("dagErrors", [])
+    },
+    // devilcode_change end
   }
 
   const value: TeamBuilderContextValue = {
@@ -226,6 +289,17 @@ export function TeamBuilderProvider(props: TeamBuilderProviderProps): JSX.Elemen
     get loadedQuickstart() {
       return store.loadedQuickstart
     },
+    // devilcode_change start — Phase 7: DAG state getters
+    get dagDraft() {
+      return store.dagDraft
+    },
+    get dagErrors() {
+      return store.dagErrors
+    },
+    get advancedMode() {
+      return store.advancedMode
+    },
+    // devilcode_change end
     ...actions,
   }
 

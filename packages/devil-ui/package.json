@@ -103,7 +103,8 @@
     "./primitives/stage-position-badge": "./src/primitives/stage-position-badge/index.tsx",
     "./primitives/detail-panel": "./src/primitives/detail-panel/index.tsx",
     "./primitives/tab-group": "./src/primitives/tab-group/index.tsx",
-    "./primitives/onboarding-wizard": "./src/primitives/onboarding-wizard/index.tsx"
+    "./primitives/onboarding-wizard": "./src/primitives/onboarding-wizard/index.tsx",
+    "./primitives/dag-editor": "./src/primitives/dag-editor/index.tsx"
   },
   "peerDependencies": {
     "@opencode-ai/ui": "workspace:*",

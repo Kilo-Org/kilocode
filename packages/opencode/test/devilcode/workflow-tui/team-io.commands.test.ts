@@ -60,7 +60,7 @@ describe("exportCommand", () => {
     // file written
     const text = await fs.readFile(target, "utf-8")
     const parsed = JSON.parse(text)
-    expect(parsed.version).toBe("1.0.0")
+    expect(parsed.version).toBe("1.1.0") // devilcode_change — Phase 7: version bumped to 1.1.0
   })
 
   test("empty path: emits warning, does not write", async () => {

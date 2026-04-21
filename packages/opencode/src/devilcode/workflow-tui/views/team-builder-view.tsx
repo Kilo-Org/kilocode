@@ -1,6 +1,6 @@
 /** @jsxImportSource solid-js */
 // packages/opencode/src/devilcode/workflow-tui/views/team-builder-view.tsx
-import { Show, type JSX } from "solid-js"
+import { Show, createSignal, type JSX } from "solid-js"
 import { RosterTable, type RosterTableProps } from "@devilcode/kilo-ui/components"
 import { PositionPicker } from "@devilcode/kilo-ui/components"
 import { StageCoverageIndicator } from "@devilcode/kilo-ui/primitives"
@@ -8,6 +8,18 @@ import { useTeamValidation } from "@devilcode/kilo-ui/hooks"
 import { useTeamBuilder } from "./team-builder-context"
 import { QuickstartLoader } from "./quickstart-loader"
 import { useWorkflow } from "../context"
+// devilcode_change start — Phase 7: DAG editor integration
+import { TabGroup } from "@devilcode/kilo-ui/primitives/tab-group"
+import { DAGEditor } from "@devilcode/kilo-ui/primitives/dag-editor"
+import { generateDefaultDAG } from "../../team/dag"
+// devilcode_change end
+
+// devilcode_change start — Phase 7: tab definitions
+const TEAM_BUILDER_TABS = [
+  { id: "roster", label: "Roster", closeable: false },
+  { id: "workflow", label: "Workflow", closeable: false },
+]
+// devilcode_change end
 
 export function TeamBuilderView(): JSX.Element {
   const builder = useTeamBuilder()
@@ -18,6 +30,10 @@ export function TeamBuilderView(): JSX.Element {
 
   const roles = (): RosterTableProps["roles"] =>
     (builder.draft.roles ?? {}) as RosterTableProps["roles"]
+
+  // devilcode_change start — Phase 7: active tab state
+  const [activeTab, setActiveTab] = createSignal("roster")
+  // devilcode_change end
 
   return (
     <div
@@ -86,18 +102,79 @@ export function TeamBuilderView(): JSX.Element {
         <StageCoverageIndicator missingStages={validation().missingStages} compact />
       </div>
 
-      {/* Roster table */}
-      <RosterTable
-        roles={roles()}
-        errorsByRole={validation().errorsByRole}
-        onEdit={(positionId, field, value) => builder.editRole(positionId, field, value)}
-        onDelete={(positionId) => builder.removeRole(positionId)}
-        onAdd={() => builder.openPicker()}
-        selectedRole={builder.selectedRole}
-        onSelectRole={(positionId) => {
-          builder.selectRole(positionId)
+      {/* devilcode_change start — Phase 7: Tabbed Roster + Workflow */}
+      <TabGroup
+        tabs={TEAM_BUILDER_TABS}
+        activeTab={activeTab()}
+        onSwitch={(id) => setActiveTab(id)}
+      >
+        {(tab) => {
+          if (tab.id === "roster") {
+            return (
+              <div style={{ "padding-top": "8px" }}>
+                {/* Roster table */}
+                <RosterTable
+                  roles={roles()}
+                  errorsByRole={validation().errorsByRole}
+                  onEdit={(positionId, field, value) => builder.editRole(positionId, field, value)}
+                  onDelete={(positionId) => builder.removeRole(positionId)}
+                  onAdd={() => builder.openPicker()}
+                  selectedRole={builder.selectedRole}
+                  onSelectRole={(positionId) => {
+                    builder.selectRole(positionId)
+                  }}
+                />
+              </div>
+            )
+          }
+          // Workflow tab
+          return (
+            <div class="workflow-tab" style={{ "padding-top": "8px" }}>
+              <label style={{ display: "flex", "align-items": "center", gap: "8px", "font-size": "13px", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={builder.advancedMode}
+                  onChange={(e: Event & { currentTarget: HTMLInputElement }) =>
+                    builder.setAdvancedMode(e.currentTarget.checked)
+                  }
+                />
+                Advanced: Custom Workflow Order
+              </label>
+              <Show when={builder.advancedMode}>
+                <div style={{ "margin-top": "12px" }}>
+                  <DAGEditor
+                    dag={builder.dagDraft ?? generateDefaultDAG()}
+                    errors={builder.dagErrors as any}
+                    readOnly={true}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => builder.resetDAGToDefault()}
+                    style={{
+                      "margin-top": "8px",
+                      background: "transparent",
+                      border: "1px solid var(--color-border, #444)",
+                      "border-radius": "4px",
+                      color: "var(--color-subtext, #a6adc8)",
+                      cursor: "pointer",
+                      padding: "4px 10px",
+                      "font-size": "12px",
+                    }}
+                  >
+                    Reset to Default
+                  </button>
+                </div>
+              </Show>
+              <Show when={!builder.advancedMode}>
+                <p style={{ "font-size": "12px", color: "var(--color-subtext, #a6adc8)", "margin-top": "8px" }}>
+                  Enable Advanced mode to customize workflow stage order.
+                </p>
+              </Show>
+            </div>
+          )
         }}
-      />
+      </TabGroup>
+      {/* devilcode_change end */}
 
       {/* Save status */}
       <Show when={builder.saveError}>

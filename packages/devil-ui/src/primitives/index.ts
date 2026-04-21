@@ -15,3 +15,6 @@ export { TabGroup } from "./tab-group"
 export type { TabGroupProps, TabDescriptor, TabGroupChildrenRender } from "./tab-group"
 export { OnboardingWizard } from "./onboarding-wizard"
 export type { OnboardingWizardProps, OnboardingWizardStep, QuickstartEntry } from "./onboarding-wizard"
+// Phase 7: DAG editor primitive
+export { DAGEditor } from "./dag-editor"
+export type { DAGEditorProps, WorkflowDAG, WorkflowDAGEdge, DAGError } from "./dag-editor"

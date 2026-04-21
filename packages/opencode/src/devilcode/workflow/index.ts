@@ -1,5 +1,9 @@
 import { WorkflowStateManager } from "./state"
 import type { WorkflowStage, WorkflowState } from "./types"
+// devilcode_change start — Phase 7: DAG-aware stage ordering
+import { getNextStage, generateDefaultDAG } from "../team/dag"
+import type { WorkflowDAG } from "../team/dag"
+// devilcode_change end
 
 const STAGE_TRANSITIONS: Record<WorkflowStage, WorkflowStage[]> = {
   plan: ["challenge"],
@@ -31,13 +35,19 @@ export namespace Workflow {
     return STAGE_TRANSITIONS[from]?.includes(to) ?? false
   }
 
-  export function nextStage(current: WorkflowStage): WorkflowStage {
-    const transitions = STAGE_TRANSITIONS[current]
-    if (!transitions || transitions.length === 0) {
-      throw new Error(`No transitions available from stage "${current}"`)
+  // devilcode_change start — Phase 7: DAG-aware nextStage; falls back to STAGE_TRANSITIONS when no DAG provided
+  export function nextStage(current: WorkflowStage, dag?: WorkflowDAG): WorkflowStage {
+    if (dag) {
+      const next = getNextStage(current, dag)
+      if (next !== null) return next
+      throw new Error(`No outgoing edge from stage "${current}" in custom DAG`)
     }
-    return transitions[0]
+    const effectiveDAG = generateDefaultDAG()
+    const next = getNextStage(current, effectiveDAG)
+    if (next !== null) return next
+    throw new Error(`No transitions available from stage "${current}"`)
   }
+  // devilcode_change end
 
   export function resolveAction(stage: WorkflowStage, action: WorkflowAction): WorkflowStage | undefined {
     if (action === "next") return nextStage(stage)
