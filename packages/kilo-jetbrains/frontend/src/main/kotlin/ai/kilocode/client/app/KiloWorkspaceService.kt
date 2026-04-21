@@ -86,7 +86,10 @@ class KiloWorkspaceService internal constructor(
             next.retain()
             next
         }!!
-        Disposer.register(parent) { release(directory, entry) }
+        val child = Disposable { release(directory, entry) }
+        if (!Disposer.tryRegister(parent, child)) {
+            release(directory, entry)
+        }
         return entry.workspace
     }
 
