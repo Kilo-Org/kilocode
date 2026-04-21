@@ -654,6 +654,7 @@
   ],
   "patchedDependencies": {
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
+    "ghostty-web@github:anomalyco/ghostty-web#20bd361": "patches/ghostty-web@0.3.0.patch",
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.0-beta.46",
