@@ -83,7 +83,8 @@ All fields are optional. When a model ID matches one already in the built-in cat
 | `tool_call`   | `boolean` | Whether the model supports tool/function calling                              |
 | `reasoning`   | `boolean` | Whether the model supports extended thinking                                  |
 | `temperature` | `boolean` | Whether the model supports the temperature parameter                          |
-| `attachment`  | `boolean` | Whether the model supports file attachments                                   |
+| `attachment`  | `boolean` | Whether the model supports generic file attachments (not the same as image input — see `modalities` below) |
+| `modalities`  | `object`  | Input/output modality support: `{ input: ["text", "image", ...], output: ["text", ...] }`. Required for multimodal models — see [Modalities](#modalities) below |
 | `limit`       | `object`  | Token limits: `{ context, output, input? }`                                   |
 | `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`    |
 | `options`     | `object`  | Arbitrary provider-specific model options                                     |
@@ -128,6 +129,28 @@ If you use a custom or local model and don't specify limits — and the model is
 For custom and local models, always set `limit.context` and `limit.output` to match the model's actual capabilities. Without these values, automatic context management is disabled.
 {% /callout %}
 
+### Modalities
+
+The `modalities` object tells Kilo which input and output types the model supports. This is separate from the `attachment` flag — `attachment` controls generic file attachments, while `modalities` determines whether the model can process specific content types like images, audio, or video.
+
+| Sub-field | Type                | Description                                                   |
+| --------- | ------------------- | ------------------------------------------------------------- |
+| `input`   | `string[]`          | Content types the model accepts. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"` |
+| `output`  | `string[]`          | Content types the model can generate. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"` |
+
+For a multimodal model that accepts images (e.g., Gemma 4, Qwen 3.5):
+
+```jsonc
+"modalities": {
+  "input": ["text", "image"],
+  "output": ["text"]
+}
+```
+
+{% callout type="warning" %}
+Setting `attachment: true` alone does **not** enable image input. If you paste an image and the model doesn't recognize it, add `"image"` to `modalities.input`.
+{% /callout %}
+
 ## Examples
 
 ### Local model with LM Studio
@@ -147,6 +170,35 @@ Register a model that LM Studio serves under a custom name:
       },
     },
   },
+}
+```
+
+### Multimodal local model (image input)
+
+Register a multimodal model and enable image input:
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "lmstudio/gemma-4-31b-it",
+  "provider": {
+    "lmstudio": {
+      "models": {
+        "gemma-4-31b-it": {
+          "name": "Gemma 4 31B IT",
+          "tool_call": true,
+          "modalities": {
+            "input": ["text", "image"],
+            "output": ["text"]
+          },
+          "limit": {
+            "context": 131072,
+            "output": 8192
+          }
+        }
+      }
+    }
+  }
 }
 ```
 
