@@ -57,14 +57,8 @@ export async function buildSettingsMessage(context?: vscode.ExtensionContext) {
 
 async function updateSetting(key: unknown, value: unknown) {
   if (typeof key !== "string" || !ALLOWED_KEYS.has(key)) return false
-  const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
-  const scope = config.inspect(key)
-  const target =
-    scope?.workspaceFolderValue !== undefined
-      ? vscode.ConfigurationTarget.WorkspaceFolder
-      : scope?.workspaceValue !== undefined
-        ? vscode.ConfigurationTarget.Workspace
-        : vscode.ConfigurationTarget.Global
-  await config.update(key, value, target)
+  await vscode.workspace
+    .getConfiguration("kilo-code.new.autocomplete")
+    .update(key, value, vscode.ConfigurationTarget.Global)
   return true
 }
