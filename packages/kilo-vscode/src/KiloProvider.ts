@@ -249,6 +249,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private governanceService: import("./services/governance").GovernanceService | null = null
   private workstationProfile: import("./services/workstation").WorkstationProfileService | null = null
   private discoveryService: import("./services/onboarding").OnboardingDiscoveryService | null = null
+  private hermesStatusSvc: import("./services/hermes").HermesStatusService | null = null
+  private hermesClientSvc: import("./services/hermes").HermesClient | null = null
 
   /** Build an enriched governance snapshot with release checklist/readiness data. */
   private getEnrichedGovernanceSnapshot(): Record<string, unknown> | null {
@@ -310,6 +312,15 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const s = this.remoteService?.getState()
       if (s) this.postMessage({ type: "remoteStatus", enabled: s.enabled, connected: s.connected })
     })
+  }
+
+  /** Inject Hermes services so the HermesTab can communicate with the pipeline. */
+  setHermesServices(
+    status: import("./services/hermes").HermesStatusService,
+    client: import("./services/hermes").HermesClient,
+  ): void {
+    this.hermesStatusSvc = status
+    this.hermesClientSvc = client
   }
 
   /** Inject V4 subsystem services so message routing can reach them. */
@@ -1784,6 +1795,75 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             this.postMessage({ type: "onboardingReset" } as never)
           }
           break
+
+        // ── Hermes Pipeline ───────────────────────────────
+        case "requestHermesStatus":
+          await this.handleHermesStatusRequest()
+          break
+        case "hermesToggle":
+          await this.hermesStatusSvc?.toggle()
+          await this.handleHermesStatusRequest()
+          break
+        case "hermesTestConnection":
+          await this.hermesStatusSvc?.refresh()
+          await this.handleHermesStatusRequest()
+          break
+        case "hermesSetApiKey": {
+          const { saveKey } = await import("./services/hermes")
+          if (this.extensionContext && typeof message.key === "string") {
+            await saveKey(this.extensionContext, message.key)
+            await this.handleHermesStatusRequest()
+          }
+          break
+        }
+        case "hermesClearApiKey": {
+          const { clearKey } = await import("./services/hermes")
+          if (this.extensionContext) {
+            await clearKey(this.extensionContext)
+            await this.handleHermesStatusRequest()
+          }
+          break
+        }
+        case "hermesUpdateConfig": {
+          if (this.hermesStatusSvc && typeof message.key === "string") {
+            const section = "kilo-code.new.hermes"
+            const cfg = vscode.workspace.getConfiguration(section)
+            await cfg.update(message.key as string, message.value, vscode.ConfigurationTarget.Global)
+            await this.handleHermesStatusRequest()
+          }
+          break
+        }
+        case "requestHermesTasks":
+          await this.handleHermesTasksRequest()
+          break
+        case "hermesSubmitTask":
+          await this.handleHermesSubmitTask(message)
+          break
+        case "hermesApproveTask":
+          if (this.hermesClientSvc && typeof message.taskId === "string") {
+            try {
+              const result = await this.hermesClientSvc.approve(message.taskId)
+              this.postMessage({ type: "hermesTaskApproved", task: result } as never)
+              await this.handleHermesTasksRequest()
+            } catch (err) {
+              this.postMessage({ type: "hermesError", message: err instanceof Error ? err.message : "Approve failed" } as never)
+            }
+          }
+          break
+        case "hermesCancelTask":
+          if (this.hermesClientSvc && typeof message.taskId === "string") {
+            try {
+              const result = await this.hermesClientSvc.cancel(message.taskId)
+              this.postMessage({ type: "hermesTaskCancelled", task: result } as never)
+              await this.handleHermesTasksRequest()
+            } catch (err) {
+              this.postMessage({ type: "hermesError", message: err instanceof Error ? err.message : "Cancel failed" } as never)
+            }
+          }
+          break
+        case "hermesAgentAssist":
+          await this.handleHermesAgentAssist()
+          break
       }
       } catch (err) {
         console.error(`[Kilo New] KiloProvider: unhandled error in message handler for "${message?.type}":`, err)
@@ -3067,6 +3147,97 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Handle auto-fill request for a specific setting.
    * Discovers API keys and fills in the requested setting.
    */
+
+  // ── Hermes helpers ────────────────────────────────────────────────────────
+
+  private async handleHermesStatusRequest(): Promise<void> {
+    if (!this.hermesStatusSvc || !this.hermesClientSvc || !this.extensionContext) {
+      this.postMessage({ type: "hermesStatusUpdate", status: {
+        enabled: false, baseUrl: "http://187.77.30.206:18789",
+        approvalMode: "auto-low", workspaceScopeOnly: true,
+        reachable: false, latency_ms: 0, keySource: "none",
+      } } as never)
+      return
+    }
+    const cfg = this.hermesStatusSvc.getConfig()
+    const health = await this.hermesClientSvc.health(3000)
+    const { keySource } = await import("./services/hermes")
+    const src = await keySource(this.extensionContext)
+    this.postMessage({ type: "hermesStatusUpdate", status: {
+      enabled: cfg.enabled,
+      baseUrl: cfg.baseUrl,
+      approvalMode: cfg.approvalMode,
+      workspaceScopeOnly: cfg.workspaceScopeOnly,
+      reachable: health.bridge_reachable,
+      latency_ms: health.latency_ms,
+      version: health.version,
+      keySource: src,
+      error: health.error,
+    } } as never)
+  }
+
+  private async handleHermesTasksRequest(): Promise<void> {
+    this.postMessage({ type: "hermesTasksUpdate", tasks: [] } as never)
+  }
+
+  private async handleHermesSubmitTask(message: Record<string, unknown>): Promise<void> {
+    if (!this.hermesClientSvc || !this.hermesStatusSvc) {
+      this.postMessage({ type: "hermesError", message: "Hermes not initialized" } as never)
+      return
+    }
+    const cfg = this.hermesStatusSvc.getConfig()
+    if (!cfg.enabled) {
+      this.postMessage({ type: "hermesError", message: "Hermes pipeline is disabled — enable it in Settings → Hermes" } as never)
+      return
+    }
+    try {
+      const { type: _t, ...rest } = message
+      const envelope = {
+        task_type: (rest.task_type as string) ?? "research",
+        description: (rest.description as string) ?? "",
+        evidence: (rest.evidence as unknown[]) ?? [],
+        auto_approve: (rest.auto_approve as boolean) ?? (cfg.approvalMode === "auto-all"),
+        workspace_scope_only: cfg.workspaceScopeOnly,
+      }
+      const created = await this.hermesClientSvc.postTask(envelope as never)
+      this.postMessage({ type: "hermesTaskSubmitted", task: created } as never)
+    } catch (err) {
+      this.postMessage({ type: "hermesError", message: err instanceof Error ? err.message : "Task submission failed" } as never)
+    }
+  }
+
+  private async handleHermesAgentAssist(): Promise<void> {
+    if (!this.hermesStatusSvc?.getConfig().enabled) {
+      this.postMessage({ type: "hermesError", message: "Enable Hermes pipeline before running Agent Assist" } as never)
+      return
+    }
+    try {
+      const { getSettingsAgentAPI } = await import("./services/SettingsAgentAPI")
+      const api = getSettingsAgentAPI(this.extensionContext ?? undefined)
+      const [fillResult, suggestions] = await Promise.all([
+        api.autoFillAll(),
+        api.getSuggestions(),
+      ])
+      const auditFindings: string[] = []
+      const status = await api.getSettingsStatus()
+      const providerValues = Object.values(status.providers ?? {})
+      if (!providerValues.some((v) => v !== null && v !== undefined && (Array.isArray(v) ? v.length > 0 : true))) {
+        auditFindings.push("No providers are fully configured — add at least one API key")
+      }
+      if (!status.speech?.azureConfigured) {
+        auditFindings.push("Azure Speech not configured — Speech tab needs region + key")
+      }
+      this.postMessage({ type: "hermesAgentAssistResult", result: {
+        filled: fillResult.filled,
+        failed: fillResult.failed,
+        suggestions: suggestions.slice(0, 10).map((s) => s.reason ?? s.category ?? String(s)),
+        auditFindings,
+      } } as never)
+    } catch (err) {
+      this.postMessage({ type: "hermesError", message: err instanceof Error ? err.message : "Agent Assist failed" } as never)
+    }
+  }
+
   private async handleAutoFillSetting(key: string): Promise<void> {
     const scanResult = ApiKeyScannerService.scan()
 

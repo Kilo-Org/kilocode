@@ -223,6 +223,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context)
   provider.setRemoteService(remoteService)
+  provider.setHermesServices(hermesStatus, hermesClient)
   provider.setV4Services({
     ssh: sshService,
     vps: vpsService,
@@ -357,6 +358,7 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
         tabProvider.setRemoteService(remoteService)
+        tabProvider.setHermesServices(hermesStatus, hermesClient)
         tabProvider.setV4Services({
           ssh: sshService,
           vps: vpsService,
@@ -509,6 +511,8 @@ export function activate(context: vscode.ExtensionContext) {
         diffVirtualProvider,
         remoteService,
         { ssh: sshService, vps: vpsService, zeroClaw: zeroClawService, routing: routingService, memory: memoryService, training: trainingService, governance: governanceService, workstation: workstationProfile, discovery: discoveryService },
+        hermesStatus,
+        hermesClient,
       )
     }),
     vscode.commands.registerCommand("kilo-code.new.showChanges", () => {
@@ -652,6 +656,8 @@ async function openKiloInNewTab(
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
   v4Services: Parameters<KiloProvider["setV4Services"]>[0],
+  hermesStatusArg?: import("./services/hermes").HermesStatusService,
+  hermesClientArg?: import("./services/hermes").HermesClient,
 ) {
   const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
   const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
@@ -675,6 +681,7 @@ async function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
   tabProvider.setRemoteService(remoteService)
+  if (hermesStatusArg && hermesClientArg) tabProvider.setHermesServices(hermesStatusArg, hermesClientArg)
   tabProvider.setV4Services(v4Services)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),

@@ -1719,6 +1719,10 @@ export interface V4SubsystemMessage {
     | "workstationLocalAI" | "workstationRoutingPrefs" | "workstationLocalPref"
     | "workstationModelLibrary" | "workstationModelsForCategory"
     | "workstationLoRAStatus" | "workstationLocalTTSStatus" | "workstationLocalSTTStatus"
+    // Hermes pipeline (extension → webview)
+    | "hermesStatusUpdate" | "hermesTasksUpdate"
+    | "hermesAgentAssistResult" | "hermesError"
+    | "hermesTaskSubmitted" | "hermesTaskApproved" | "hermesTaskCancelled"
   [key: string]: unknown
 }
 
@@ -2843,6 +2847,11 @@ export interface V4SubsystemRequest {
     | "workstationReload"
     // Onboarding / Discovery
     | "requestDiscoveryResult" | "triggerDiscovery" | "markOnboardingComplete" | "resetOnboarding"
+    // Hermes pipeline
+    | "requestHermesStatus" | "hermesToggle" | "hermesTestConnection"
+    | "hermesSetApiKey" | "hermesClearApiKey" | "hermesUpdateConfig"
+    | "hermesAgentAssist" | "hermesSubmitTask"
+    | "requestHermesTasks" | "hermesApproveTask" | "hermesCancelTask"
   [key: string]: unknown
 }
 

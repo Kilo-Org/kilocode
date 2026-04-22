@@ -21,6 +21,7 @@ import SpeechTab from "./SpeechTab"
 import SSHTab from "./SSHTab"
 import VPSTab from "./VPSTab"
 import ZeroClawTab from "./ZeroClawTab"
+import HermesTab from "./HermesTab"
 import RoutingTab from "./RoutingTab"
 import MemoryTab from "./MemoryTab"
 import TrainingTab from "./TrainingTab"
@@ -156,6 +157,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">VPS & Infra</span>
           </Tabs.Trigger>
+          <Tabs.Trigger value="hermes">
+            <Icon name="fork" />
+            <span class="label">Hermes</span>
+          </Tabs.Trigger>
           <Tabs.Trigger value="zeroclaw">
             <Icon name="shield" />
             <span class="label">ZeroClaw</span>
@@ -246,6 +251,10 @@ const Settings: Component<SettingsProps> = (props) => {
         <Tabs.Content value="vps">
           <h3>VPS & Infrastructure</h3>
           <VPSTab />
+        </Tabs.Content>
+        <Tabs.Content value="hermes">
+          <h3>Hermes Pipeline</h3>
+          <HermesTab />
         </Tabs.Content>
         <Tabs.Content value="zeroclaw">
           <h3>ZeroClaw Execution</h3>
