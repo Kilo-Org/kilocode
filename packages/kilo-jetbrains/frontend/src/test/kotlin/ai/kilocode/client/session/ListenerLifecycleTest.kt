@@ -24,11 +24,11 @@ class ListenerLifecycleTest : SessionControllerTestBase() {
         edt { m.prompt("after") }
         flush()
 
-        assertControllerEvents("""
-            ViewChanged show
-            AppChanged
-            WorkspaceChanged
-        """, events)
+        // AppChanged and WorkspaceChanged are emitted from independent flows with no
+        // guaranteed relative order between them; only ViewChanged show must come first.
+        assertEquals("ViewChanged show", events.first().toString())
+        assertContainsElements(events.map { it.toString() }, listOf("AppChanged", "WorkspaceChanged"))
+        assertEquals(3, events.size)
     }
 
     fun `test all listeners notified`() {
@@ -46,16 +46,11 @@ class ListenerLifecycleTest : SessionControllerTestBase() {
         edt { m.prompt("go") }
         flush()
 
-        assertControllerEvents("""
-            ViewChanged show
-            AppChanged
-            WorkspaceChanged
-        """, events1)
-        assertControllerEvents("""
-            ViewChanged show
-            AppChanged
-            WorkspaceChanged
-        """, events2)
+        for (events in listOf(events1, events2)) {
+            assertEquals("ViewChanged show", events.first().toString())
+            assertContainsElements(events.map { it.toString() }, listOf("AppChanged", "WorkspaceChanged"))
+            assertEquals(3, events.size)
+        }
     }
 
     fun `test session status idle fires StateChanged to Idle`() {
