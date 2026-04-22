@@ -5,6 +5,7 @@ include("frontend")
 include("backend")
 
 pluginManagement {
+    includeBuild("build-tasks")
     repositories {
         mavenCentral()
         gradlePluginPortal()

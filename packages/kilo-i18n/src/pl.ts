@@ -69,4 +69,14 @@ export const dict = {
   "marketplace.warning.busyMany": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "marketplace.warning.installAnyway": "Zainstaluj mimo to",
   "marketplace.warning.cancel": "Anuluj",
+  "marketplace.contribute.prompt": "Brakuje skilla, trybu lub serwera MCP?",
+  "marketplace.contribute.cta": "Wnieś wkład na GitHubie",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Wdróż",
+  "plan.followup.question": "Gotowy do wdrożenia?",
+  "plan.followup.answer.newSession": "Rozpocznij nową sesję",
+  "plan.followup.answer.newSession.description": "Wdróż w nowej sesji z czystym kontekstem",
+  "plan.followup.answer.continue": "Kontynuuj tutaj",
+  "plan.followup.answer.continue.description": "Wdróż plan w tej sesji",
 }

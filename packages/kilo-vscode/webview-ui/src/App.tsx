@@ -182,6 +182,12 @@ const AppContent: Component = () => {
     if (agent) session.selectAgent(agent.name)
   }
 
+  const handleForked = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "sessionForked" || !message.sessionID) return
+    session.selectSession(message.sessionID)
+    setCurrentView("newTask")
+  }
+
   onMount(() => {
     const handler = (event: MessageEvent) => {
       const message = event.data
@@ -199,6 +205,7 @@ const AppContent: Component = () => {
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
       }
+      handleForked(message)
       if (message?.type === "viewSubAgentSession" && message.sessionID) {
         console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
         session.setCurrentSessionID(message.sessionID)
@@ -219,17 +226,30 @@ const AppContent: Component = () => {
     setCurrentView("newTask")
   }
 
+  const handleForkMessage = (sessionId: string, messageId: string) => {
+    vscode.postMessage({ type: "forkSession", sessionId, messageId })
+  }
+
   return (
     <div class="container">
       {/* legacy-migration start — state-driven overlay, independent of currentView */}
       <Show
         when={migrationNeeded()}
         fallback={
-          <Switch fallback={<ChatView continueInWorktree promptBoxId="sidebar:fallback" />}>
+          <Switch
+            fallback={
+              <ChatView
+                continueInWorktree
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                promptBoxId="sidebar:fallback"
+              />
+            }
+          >
             <Match when={currentView() === "newTask"}>
               <ChatView
                 onSelectSession={handleSelectSession}
                 onShowHistory={() => setCurrentView("history")}
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
                 continueInWorktree
                 promptBoxId="sidebar:new-task"
               />

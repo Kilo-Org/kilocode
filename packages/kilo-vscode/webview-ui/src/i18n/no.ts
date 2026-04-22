@@ -757,6 +757,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Navn",
   "provider.custom.models.name.placeholder": "Visningsnavn",
+  "provider.custom.models.reasoning.label": "Resonnering",
+  "provider.custom.models.variants.label": "Varianter",
+  "provider.custom.models.variants.add": "Legg til variant",
+  "provider.custom.models.variants.remove": "Fjern variant",
+  "provider.custom.models.variants.name.label": "Navn",
+  "provider.custom.models.variants.name.placeholder": "f.eks. thinking",
+  "provider.custom.models.variants.option.unset": "(ikke angitt)",
+  "provider.custom.models.variants.enableThinking.label": "Aktiver tenkning (f.eks. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Tenkningstype (f.eks. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Aktiver tenkning via chat-malargumenter (f.eks. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Resonneringsinnsats",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Fjern modell",
   "provider.custom.models.add": "Legg til modell",
   "provider.custom.models.fetch": "Hent modeller",
@@ -940,10 +968,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code er en AI-kodingsassistent. Be den om å bygge funksjoner, fikse feil eller forklare kodebasen din.",
   "session.messages.scrollToBottom": "Rull til bunnen",
+  "session.messages.initializing": "Initialiserer...",
+  "session.messages.taskStarting": "Starter...",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.retrying": "Prøver på nytt (forsøk {{ attempt }})… {{ message }}",
   "session.status.working": "Arbeider…",
+  "session.status.offline": "Nettverk frakoblet — kobler til på nytt...",
+
+  "ui.sessionTurn.cancel": "Avbryt",
+  "ui.sessionTurn.status.thinking": "Tenker...",
+  "ui.sessionTurn.status.consideringNextSteps": "Vurderer neste steg...",
 
   "dialog.model.noProviders": "Ingen leverandører",
 
@@ -952,6 +987,7 @@ export const dict = {
   "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
+  "context.usage.olderSessions": "{{count}} eldre sesjoner",
   "context.stats.thisSession": "Denne sesjonen",
 
   "time.justNow": "akkurat nå",
@@ -1065,6 +1101,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Fortsett agentløkken når en tillatelse avvises",
   "settings.experimental.mcpTimeout.title": "MCP-tidsavbrudd (ms)",
   "settings.experimental.mcpTimeout.description": "Tidsavbrudd for MCP-serverforespørsler i millisekunder",
+  "settings.experimental.remote.title": "Remote-kontroll",
+  "settings.experimental.remote.description":
+    "Aktiver Remote-kontroll av økter via Kilo Cloud. Dette vil også påvirke CLI-er på denne maskinen.",
+  "settings.experimental.remote.current": "Nåværende status:",
+  "settings.experimental.remote.startup": "Aktiver automatisk ved oppstart:",
+  "settings.experimental.remote.active": "Aktiv",
+  "settings.experimental.remote.inactive": "Inaktiv",
+  "settings.experimental.remote.hint": "Bruk /remote i chatten for å veksle",
   "settings.experimental.toolToggles": "Verktøybrytere",
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent å bruke når ingen er angitt",
@@ -1126,6 +1170,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Dette er en innebygd modus. Grunndefinisjonen kan ikke endres, men du kan konfigurere overstyringer nedenfor.",
   "settings.agentBehaviour.editMode.promptOverride": "Tilpasset prompt-overstyring for denne innebygde modusen",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Beregnede tillatelser",
+  "settings.agentBehaviour.permissions.count": "{{count}} regler",
+  "settings.agentBehaviour.permissions.effective": "Gjeldende (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Verktøy",
+  "settings.agentBehaviour.permissions.col.pattern": "Mønster",
+  "settings.agentBehaviour.permissions.col.action": "Handling",
+  "settings.agentBehaviour.permissions.copy": "Kopier tillatelser som JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Reglene evalueres i rekkefølge — siste matchende regel vinner. Dette er det gjeldende regelsettet fra CLI-backenden.",
   "settings.agentBehaviour.removeMode.title": "Fjern modus",
   "settings.agentBehaviour.removeMode.confirm":
     'Vil du fjerne modusen "{{name}}"? Dette vil deaktivere modusen ved å oppdatere konfigurasjonen din.',
@@ -1218,6 +1272,17 @@ export const dict = {
   "settings.context.prune.description": "Fjern gamle verktøyutdata under komprimering",
   "settings.context.watcherPatterns": "Filvakt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer som vakten skal ignorere",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Bruk egendefinert prompt",
+  "settings.commitMessage.override.description":
+    "Overstyr standard prompt for commit message. Når aktivert, erstatter din egendefinerte prompt fullstendig den innebygde prompten for conventional commits.",
+  "settings.commitMessage.prompt.title": "Egendefinert prompt",
+  "settings.commitMessage.prompt.description":
+    "System prompt sendt til AI-en ved generering av commit messages. Dette erstatter standard prompt fullstendig.",
+  "settings.commitMessage.prompt.placeholder":
+    "f.eks. Generer commit messages på spansk i henhold til conventional commits-formatet. Returner KUN commit message.",
+
   "settings.display.username.title": "Brukernavn",
   "settings.display.username.description": "Egendefinert brukernavn i samtaler",
   "settings.display.layout.title": "Layout",
@@ -1263,6 +1328,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Én liten, effektiv kjerne på tvers av alle Kilo-produkter. En kjent opplevelse uansett hvordan du velger å jobbe.",
   "migration.whatsNew.blogLink": "Les hele kunngjøringen",
+  "migration.whatsNew.docsLink": "Nyheter og ofte stilte spørsmål",
   "migration.whatsNew.continue": "Fortsett",
 
   // Screen 2 — Migrate Settings
@@ -1299,6 +1365,36 @@ export const dict = {
   "migration.error.continue": "Fortsett",
   "migration.error.action.copy": "Kopier",
   "migration.error.toast.copied": "Feil kopiert til utklippstavlen",
+
+  "migration.sessionSummary.title": "Oppsummering:",
+  "migration.sessionSummary.copy": "Kopier rapport",
+  "migration.sessionSummary.toast.copied": "Rapport kopiert",
+  "migration.sessionSummary.successful": "Vellykkede",
+  "migration.sessionSummary.skipped": "Hoppet over",
+  "migration.sessionSummary.alreadyMigrated": "Allerede migrert",
+  "migration.sessionSummary.errored": "Med feil",
+  "migration.sessionSummary.none": "Ingen",
+  "migration.forceReimport.title": "Tving ny import",
+  "migration.forceReimport.description":
+    "Hvis du importerer {{target}} på nytt, blir de overskrevet og alle nye meldinger som allerede er opprettet i disse øktene blir slettet.",
+  "migration.forceReimport.target.one": "denne økten",
+  "migration.forceReimport.target.many": "disse {{count}} øktene",
+  "migration.forceReimport.button": "Tving ny import",
+  "migration.forceReimport.all": "Importer alle på nytt",
+  "migration.forceReimport.proceed": "Fortsett",
+  "migration.forceReimport.toast.started": "Tvungen ny import startet",
+  "migration.running.title": "Migrering pågår",
+  "migration.running.description.line1": "Du er i ferd med å avslutte mens det fortsatt er økter som migreres.",
+  "migration.running.description.line2": "Hvis du går nå, kan noen økter forbli ufullstendige.",
+  "migration.running.stay": "Bli",
+  "migration.running.proceed": "Fortsett",
+  "migration.sessionProgress.preparing": "Forbereder økt",
+  "migration.sessionProgress.storing": "Lagrer økt",
+  "migration.sessionProgress.skipped": "Økt hoppet over",
+  "migration.sessionProgress.header": "Migrerer {{current}} av {{total}}",
+  "migration.sessionFormat.unknownDate": "Ukjent dato",
+  "migration.sessionFormat.unknown": "Ukjent",
+  "migration.sessionFormat.unknownError": "Ukjent feil",
   // legacy-migration end
 
   "task.todos.progress": "{{done}}/{{total}} oppgaver fullført",
@@ -1310,7 +1406,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Flere økter kjører og vil bli avbrutt",
   "settings.saveBar.saveAnyway": "Lagre uansett",
   "settings.saveBar.cancel": "Avbryt",
+  "settings.saveBar.saving": "Lagrer…",
+  "settings.saveBar.saveFailed": "Kunne ikke lagre innstillinger",
   "notifications.action.next": "Neste",
   "notifications.action.close": "Lukk",
   "notifications.action.tryModel": "Prøv {{model}}",
+  "notifications.action.tryModelGeneric": "Prøv modell",
 } satisfies Partial<Record<Keys, string>>

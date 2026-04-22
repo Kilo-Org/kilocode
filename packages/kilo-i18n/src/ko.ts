@@ -67,4 +67,14 @@ export const dict = {
   "marketplace.warning.busyMany": "여러 세션이 실행 중이며 중단됩니다",
   "marketplace.warning.installAnyway": "그래도 설치",
   "marketplace.warning.cancel": "취소",
+  "marketplace.contribute.prompt": "스킬, 모드 또는 MCP 서버가 없나요?",
+  "marketplace.contribute.cta": "GitHub에서 기여하기",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "구현",
+  "plan.followup.question": "구현할 준비가 되셨나요?",
+  "plan.followup.answer.newSession": "새 세션 시작",
+  "plan.followup.answer.newSession.description": "깨끗한 컨텍스트의 새 세션에서 구현",
+  "plan.followup.answer.continue": "여기서 계속하기",
+  "plan.followup.answer.continue.description": "이 세션에서 계획 구현",
 }

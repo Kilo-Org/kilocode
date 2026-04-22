@@ -754,6 +754,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Nome",
   "provider.custom.models.name.placeholder": "Nome de Exibição",
+  "provider.custom.models.reasoning.label": "Raciocínio",
+  "provider.custom.models.variants.label": "Variantes",
+  "provider.custom.models.variants.add": "Adicionar variante",
+  "provider.custom.models.variants.remove": "Remover variante",
+  "provider.custom.models.variants.name.label": "Nome",
+  "provider.custom.models.variants.name.placeholder": "ex. thinking",
+  "provider.custom.models.variants.option.unset": "(não definido)",
+  "provider.custom.models.variants.enableThinking.label": "Ativar pensamento (ex. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Tipo de pensamento (ex. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Ativar pensamento via args do template de chat (ex. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Esforço de raciocínio",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Remover modelo",
   "provider.custom.models.add": "Adicionar modelo",
   "provider.custom.models.fetch": "Buscar modelos",
@@ -938,10 +966,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code é um assistente de programação com IA. Peça para criar funcionalidades, corrigir bugs ou explicar sua base de código.",
   "session.messages.scrollToBottom": "Rolar para o final",
+  "session.messages.initializing": "O teraouiñ...",
+  "session.messages.taskStarting": "O kregiñ...",
   "session.status.writingResponse": "Escrevendo resposta…",
   "session.status.retry": "Tentando novamente…",
   "session.status.retrying": "Tentando novamente (tentativa {{ attempt }})… {{ message }}",
   "session.status.working": "Trabalhando…",
+  "session.status.offline": "Rede desconectada — reconectando...",
+
+  "ui.sessionTurn.cancel": "Cancelar",
+  "ui.sessionTurn.status.thinking": "Pensando...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considerando próximos passos...",
 
   "dialog.model.noProviders": "Nenhum provedor",
 
@@ -950,6 +985,7 @@ export const dict = {
   "prompt.placeholder.default": "Digite uma mensagem... (Enter para enviar, Shift+Enter para nova linha)",
 
   "context.usage.sessionCost": "Custo da sessão",
+  "context.usage.olderSessions": "{{count}} sessões anteriores",
   "context.stats.thisSession": "Esta sessão",
 
   "time.justNow": "agora mesmo",
@@ -1069,6 +1105,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continuar o loop do agente quando uma permissão é negada",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
+  "settings.experimental.remote.title": "Controle Remote",
+  "settings.experimental.remote.description":
+    "Habilite o controle Remote de sessões via Kilo Cloud. Isso também afetará as CLIs nesta máquina.",
+  "settings.experimental.remote.current": "Estado atual:",
+  "settings.experimental.remote.startup": "Ativar automaticamente na inicialização:",
+  "settings.experimental.remote.active": "Ativo",
+  "settings.experimental.remote.inactive": "Inativo",
+  "settings.experimental.remote.hint": "Use /remote no chat para alternar",
   "settings.experimental.toolToggles": "Alternadores de ferramentas",
   "settings.agentBehaviour.defaultAgent.title": "Agente padrão",
   "settings.agentBehaviour.defaultAgent.description": "Agente a usar quando nenhum é especificado",
@@ -1132,6 +1176,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Este é um modo embutido. Sua definição base não pode ser alterada, mas você pode configurar as sobrescritas abaixo.",
   "settings.agentBehaviour.editMode.promptOverride": "Substituição de prompt personalizado para este modo integrado",
+  "settings.agentBehaviour.badge.subagent": "subagente",
+  "settings.agentBehaviour.permissions.title": "Permissões Calculadas",
+  "settings.agentBehaviour.permissions.count": "{{count}} regras",
+  "settings.agentBehaviour.permissions.effective": "Efetiva (curinga):",
+  "settings.agentBehaviour.permissions.col.tool": "Ferramenta",
+  "settings.agentBehaviour.permissions.col.pattern": "Padrão",
+  "settings.agentBehaviour.permissions.col.action": "Ação",
+  "settings.agentBehaviour.permissions.copy": "Copiar permissões como JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "As regras são avaliadas em ordem — a última regra correspondente vence. Este é o conjunto de regras resolvido do backend da CLI.",
   "settings.agentBehaviour.removeMode.title": "Remover modo",
   "settings.agentBehaviour.removeMode.confirm":
     'Remover o modo "{{name}}"? Isso desativará o modo atualizando sua configuração.',
@@ -1230,6 +1284,17 @@ export const dict = {
   "settings.context.prune.description": "Remover saídas antigas de ferramentas durante a compactação",
   "settings.context.watcherPatterns": "Padrões de ignorar do observador",
   "settings.context.watcherPatterns.description": "Padrões glob para arquivos que o observador deve ignorar",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Usar prompt personalizado",
+  "settings.commitMessage.override.description":
+    "Substituir o prompt padrão de commit message. Quando ativado, o seu prompt personalizado substitui totalmente o prompt integrado de conventional commits.",
+  "settings.commitMessage.prompt.title": "prompt personalizado",
+  "settings.commitMessage.prompt.description":
+    "O prompt de sistema enviado à IA ao gerar commit messages. Isso substitui totalmente o prompt padrão.",
+  "settings.commitMessage.prompt.placeholder":
+    "ex: Gere commit messages em espanhol seguindo o formato conventional commits. Retorne APENAS o commit message.",
+
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
   "settings.display.layout.title": "Layout",
@@ -1276,6 +1341,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Um núcleo pequeno e eficiente em todos os produtos Kilo. Uma experiência familiar independentemente de como você escolha trabalhar.",
   "migration.whatsNew.blogLink": "Leia o anúncio completo",
+  "migration.whatsNew.docsLink": "Novidades e perguntas frequentes",
   "migration.whatsNew.continue": "Continuar",
 
   // Screen 2 — Migrate Settings
@@ -1312,6 +1378,36 @@ export const dict = {
   "migration.error.continue": "Continuar",
   "migration.error.action.copy": "Copiar",
   "migration.error.toast.copied": "Erro copiado para a área de transferência",
+
+  "migration.sessionSummary.title": "Resumo:",
+  "migration.sessionSummary.copy": "Copiar relatório",
+  "migration.sessionSummary.toast.copied": "Relatório copiado",
+  "migration.sessionSummary.successful": "Bem-sucedidas",
+  "migration.sessionSummary.skipped": "Ignoradas",
+  "migration.sessionSummary.alreadyMigrated": "Já migradas",
+  "migration.sessionSummary.errored": "Com erro",
+  "migration.sessionSummary.none": "Nenhuma",
+  "migration.forceReimport.title": "Forçar reimportação",
+  "migration.forceReimport.description":
+    "Reimportar {{target}} vai sobrescrevê-los e apagar quaisquer novas mensagens já criadas nessas sessões.",
+  "migration.forceReimport.target.one": "esta sessão",
+  "migration.forceReimport.target.many": "estas {{count}} sessões",
+  "migration.forceReimport.button": "Forçar reimportação",
+  "migration.forceReimport.all": "Reimportar tudo",
+  "migration.forceReimport.proceed": "Prosseguir",
+  "migration.forceReimport.toast.started": "Reimportação forçada iniciada",
+  "migration.running.title": "Migração em andamento",
+  "migration.running.description.line1": "Você está prestes a concluir enquanto ainda há sessões sendo migradas.",
+  "migration.running.description.line2": "Se você sair agora, algumas sessões podem ficar incompletas.",
+  "migration.running.stay": "Ficar",
+  "migration.running.proceed": "Prosseguir",
+  "migration.sessionProgress.preparing": "Preparando sessão",
+  "migration.sessionProgress.storing": "Salvando sessão",
+  "migration.sessionProgress.skipped": "Sessão ignorada",
+  "migration.sessionProgress.header": "Migrando {{current}} de {{total}}",
+  "migration.sessionFormat.unknownDate": "Data desconhecida",
+  "migration.sessionFormat.unknown": "Desconhecido",
+  "migration.sessionFormat.unknownError": "Erro desconhecido",
   // legacy-migration end
 
   "error.details.show": "Detalhes",
@@ -1325,7 +1421,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Várias sessões estão em execução e serão interrompidas",
   "settings.saveBar.saveAnyway": "Salvar mesmo assim",
   "settings.saveBar.cancel": "Cancelar",
+  "settings.saveBar.saving": "Salvando…",
+  "settings.saveBar.saveFailed": "Não foi possível salvar as configurações",
   "notifications.action.next": "Próximo",
   "notifications.action.close": "Fechar",
   "notifications.action.tryModel": "Experimentar {{model}}",
+  "notifications.action.tryModelGeneric": "Experimentar modelo",
 }

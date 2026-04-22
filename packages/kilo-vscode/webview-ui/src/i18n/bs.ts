@@ -759,6 +759,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Naziv",
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
+  "provider.custom.models.reasoning.label": "Zaključivanje",
+  "provider.custom.models.variants.label": "Varijante",
+  "provider.custom.models.variants.add": "Dodaj varijantu",
+  "provider.custom.models.variants.remove": "Ukloni varijantu",
+  "provider.custom.models.variants.name.label": "Ime",
+  "provider.custom.models.variants.name.placeholder": "npr. thinking",
+  "provider.custom.models.variants.option.unset": "(nije postavljeno)",
+  "provider.custom.models.variants.enableThinking.label": "Omogući razmišljanje (npr. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Vrsta razmišljanja (npr. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Omogući razmišljanje preko argumenata chat predloška (npr. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Napor zaključivanja",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Ukloni model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch": "Preuzmi modele",
@@ -943,10 +971,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code je AI asistent za programiranje. Zatražite da gradi funkcionalnosti, ispravlja greške ili objasni vašu bazu koda.",
   "session.messages.scrollToBottom": "Pomakni se na dno",
+  "session.messages.initializing": "Inicijalizacija...",
+  "session.messages.taskStarting": "Pokretanje...",
   "session.status.writingResponse": "Pisanje odgovora…",
   "session.status.retry": "Ponovni pokušaj…",
   "session.status.retrying": "Ponovni pokušaj (pokušaj {{ attempt }})… {{ message }}",
   "session.status.working": "Radim…",
+  "session.status.offline": "Mreža prekinuta — ponovno povezivanje...",
+
+  "ui.sessionTurn.cancel": "Otkaži",
+  "ui.sessionTurn.status.thinking": "Razmišljam...",
+  "ui.sessionTurn.status.consideringNextSteps": "Razmatram sljedeće korake...",
 
   "dialog.model.noProviders": "Nema pružatelja",
 
@@ -955,6 +990,7 @@ export const dict = {
   "prompt.placeholder.default": "Unesite poruku... (Enter za slanje, Shift+Enter za novi red)",
 
   "context.usage.sessionCost": "Cijena sesije",
+  "context.usage.olderSessions": "{{count}} starijih sesija",
   "context.stats.thisSession": "Ova sesija",
 
   "time.justNow": "upravo sada",
@@ -1068,6 +1104,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Nastavi petlju agenta kada je dozvola odbijena",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
+  "settings.experimental.remote.title": "Remote kontrola",
+  "settings.experimental.remote.description":
+    "Omogućite Remote kontrolu sesija putem Kilo Cloud. Ovo će također utjecati na CLI-jeve na ovoj mašini.",
+  "settings.experimental.remote.current": "Trenutno stanje:",
+  "settings.experimental.remote.startup": "Automatsko uključivanje pri pokretanju:",
+  "settings.experimental.remote.active": "Aktivno",
+  "settings.experimental.remote.inactive": "Neaktivno",
+  "settings.experimental.remote.hint": "Koristite /remote u chatu za prebacivanje",
   "settings.experimental.toolToggles": "Prekidači alata",
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
@@ -1130,6 +1174,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "Ovo je ugrađeni način rada. Njegova osnovna definicija ne može se mijenjati, ali ispod možete konfigurirati nadjačavanja.",
   "settings.agentBehaviour.editMode.promptOverride": "Prilagođeno nadjačavanje prompta za ovaj ugrađeni mod",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Izračunate dozvole",
+  "settings.agentBehaviour.permissions.count": "{{count}} pravila",
+  "settings.agentBehaviour.permissions.effective": "Efektivno (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Alat",
+  "settings.agentBehaviour.permissions.col.pattern": "Uzorak",
+  "settings.agentBehaviour.permissions.col.action": "Akcija",
+  "settings.agentBehaviour.permissions.copy": "Kopiraj dozvole kao JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Pravila se evaluiraju po redoslijedu — zadnje pravilo koje se podudara pobjeđuje. Ovo je riješeni skup pravila iz CLI backenda.",
   "settings.agentBehaviour.removeMode.title": "Ukloni mod",
   "settings.agentBehaviour.removeMode.confirm":
     'Ukloniti mod "{{name}}"? Ovo će onemogućiti mod ažuriranjem vaše konfiguracije.',
@@ -1226,6 +1280,17 @@ export const dict = {
   "settings.context.prune.description": "Ukloni stare izlaze alata tokom kompresije",
   "settings.context.watcherPatterns": "Uzorci ignoriranja za promatrač datoteka",
   "settings.context.watcherPatterns.description": "Glob uzorci za datoteke koje promatrač treba ignorirati",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Koristi prilagođeni prompt",
+  "settings.commitMessage.override.description":
+    "Nadjačaj podrazumijevani prompt za commit message. Kada je omogućeno, vaš prilagođeni prompt u potpunosti zamjenjuje ugrađeni prompt za conventional commits.",
+  "settings.commitMessage.prompt.title": "Prilagođeni prompt",
+  "settings.commitMessage.prompt.description":
+    "Sistemski prompt koji se šalje AI-u prilikom generisanja commit messages. Ovo u potpunosti zamjenjuje podrazumijevani prompt.",
+  "settings.commitMessage.prompt.placeholder":
+    "npr. Generiši commit messages na španskom jeziku prateći conventional commits format. Vrati SAMO commit message.",
+
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
   "settings.display.layout.title": "Raspored",
@@ -1272,6 +1337,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Jedno malo, efikasno jezgro kroz sve Kilo proizvode. Poznato iskustvo bez obzira na to kako odaberete raditi.",
   "migration.whatsNew.blogLink": "Pročitajte cijeli oglas",
+  "migration.whatsNew.docsLink": "Novosti i često postavljana pitanja",
   "migration.whatsNew.continue": "Nastavi",
 
   // Screen 2 — Migrate Settings
@@ -1308,6 +1374,36 @@ export const dict = {
   "migration.error.continue": "Nastavi",
   "migration.error.action.copy": "Kopiraj",
   "migration.error.toast.copied": "Greška kopirana u međuspremnik",
+
+  "migration.sessionSummary.title": "Sažetak:",
+  "migration.sessionSummary.copy": "Kopiraj izvještaj",
+  "migration.sessionSummary.toast.copied": "Izvještaj kopiran",
+  "migration.sessionSummary.successful": "Uspješne",
+  "migration.sessionSummary.skipped": "Preskočene",
+  "migration.sessionSummary.alreadyMigrated": "Već migrirane",
+  "migration.sessionSummary.errored": "S greškom",
+  "migration.sessionSummary.none": "Nijedna",
+  "migration.forceReimport.title": "Prisilni ponovni uvoz",
+  "migration.forceReimport.description":
+    "Ponovni uvoz {{target}} će ih prepisati i obrisati sve nove poruke koje su već napravljene u tim sesijama.",
+  "migration.forceReimport.target.one": "ovu sesiju",
+  "migration.forceReimport.target.many": "ovih {{count}} sesija",
+  "migration.forceReimport.button": "Prisilni ponovni uvoz",
+  "migration.forceReimport.all": "Ponovo uvezi sve",
+  "migration.forceReimport.proceed": "Nastavi",
+  "migration.forceReimport.toast.started": "Prisilni ponovni uvoz je pokrenut",
+  "migration.running.title": "Migracija je u toku",
+  "migration.running.description.line1": "Upravo ćete završiti dok se neke sesije još uvijek migriraju.",
+  "migration.running.description.line2": "Ako sada izađete, neke sesije mogu ostati nedovršene.",
+  "migration.running.stay": "Ostani",
+  "migration.running.proceed": "Nastavi",
+  "migration.sessionProgress.preparing": "Priprema se sesija",
+  "migration.sessionProgress.storing": "Spremanje sesije",
+  "migration.sessionProgress.skipped": "Sesija je preskočena",
+  "migration.sessionProgress.header": "Migrira se {{current}} od {{total}}",
+  "migration.sessionFormat.unknownDate": "Nepoznat datum",
+  "migration.sessionFormat.unknown": "Nepoznato",
+  "migration.sessionFormat.unknownError": "Nepoznata greška",
   // legacy-migration end
 
   "error.details.show": "Detalji",
@@ -1321,7 +1417,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Nekoliko sesija je pokrenuto i bit će prekinuto",
   "settings.saveBar.saveAnyway": "Spremi svejedno",
   "settings.saveBar.cancel": "Otkaži",
+  "settings.saveBar.saving": "Spremanje…",
+  "settings.saveBar.saveFailed": "Postavke nije moguće spremiti",
   "notifications.action.next": "Sljedeći",
   "notifications.action.close": "Zatvori",
   "notifications.action.tryModel": "Probaj {{model}}",
+  "notifications.action.tryModelGeneric": "Probaj model",
 }

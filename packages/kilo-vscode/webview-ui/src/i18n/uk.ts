@@ -756,6 +756,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "ідентифікатор-моделі",
   "provider.custom.models.name.label": "Назва",
   "provider.custom.models.name.placeholder": "Відображувана назва",
+  "provider.custom.models.reasoning.label": "Міркування",
+  "provider.custom.models.variants.label": "Варіанти",
+  "provider.custom.models.variants.add": "Додати варіант",
+  "provider.custom.models.variants.remove": "Видалити варіант",
+  "provider.custom.models.variants.name.label": "Ім'я",
+  "provider.custom.models.variants.name.placeholder": "напр. thinking",
+  "provider.custom.models.variants.option.unset": "(не встановлено)",
+  "provider.custom.models.variants.enableThinking.label": "Увімкнути мислення (напр. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Тип мислення (напр. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Увімкнути мислення через аргументи шаблону чату (напр. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Зусилля міркування",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Видалити модель",
   "provider.custom.models.add": "Додати модель",
   "provider.custom.models.fetch": "Отримати моделі",
@@ -940,10 +968,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code — це асистент з кодування на базі ШІ. Попросіть його розробити функцію, виправити помилку або пояснити вашу кодову базу.",
   "session.messages.scrollToBottom": "Прокрутити до низу",
+  "session.messages.initializing": "Ініціалізація...",
+  "session.messages.taskStarting": "Запуск...",
   "session.status.writingResponse": "Пишу відповідь...",
   "session.status.retry": "Повторна спроба…",
   "session.status.retrying": "Повторна спроба (спроба {{ attempt }})… {{ message }}",
   "session.status.working": "Працює...",
+  "session.status.offline": "Мережу відключено — перепідключення...",
+
+  "ui.sessionTurn.cancel": "Скасувати",
+  "ui.sessionTurn.status.thinking": "Думаю...",
+  "ui.sessionTurn.status.consideringNextSteps": "Обдумую наступні кроки...",
 
   "dialog.model.noProviders": "Немає провайдерів",
 
@@ -952,6 +987,7 @@ export const dict = {
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
+  "context.usage.olderSessions": "{{count}} старіших сесій",
   "context.stats.thisSession": "Ця сесія",
 
   "time.justNow": "щойно",
@@ -1071,6 +1107,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Продовжувати цикл агента, коли дозвіл відхилено",
   "settings.experimental.mcpTimeout.title": "Тайм-аут MCP (мс)",
   "settings.experimental.mcpTimeout.description": "Тайм-аут у мілісекундах для запитів до MCP-сервера",
+  "settings.experimental.remote.title": "Керування Remote",
+  "settings.experimental.remote.description":
+    "Увімкніть керування Remote сеансами через Kilo Cloud. Це також вплине на CLI на цьому комп'ютері.",
+  "settings.experimental.remote.current": "Поточний стан:",
+  "settings.experimental.remote.startup": "Автоматичне ввімкнення під час запуску:",
+  "settings.experimental.remote.active": "Активний",
+  "settings.experimental.remote.inactive": "Неактивний",
+  "settings.experimental.remote.hint": "Використовуйте /remote у чаті для перемикання",
   "settings.experimental.toolToggles": "Перемикачі інструментів",
 
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",
@@ -1205,6 +1249,16 @@ export const dict = {
   "settings.context.watcherPatterns": "Шаблони ігнорування спостерігача файлів",
   "settings.context.watcherPatterns.description": "Glob-шаблони для файлів, які спостерігач має ігнорувати",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Використовувати власний prompt",
+  "settings.commitMessage.override.description":
+    "Перевизначити prompt за замовчуванням для commit message. Якщо ввімкнено, ваш власний prompt повністю замінює вбудований prompt для conventional commits.",
+  "settings.commitMessage.prompt.title": "Власний prompt",
+  "settings.commitMessage.prompt.description":
+    "Системний prompt, що надсилається ШІ під час генерації commit messages. Це повністю замінює prompt за замовчуванням.",
+  "settings.commitMessage.prompt.placeholder":
+    "напр., Згенеруй commit messages іспанською мовою у форматі conventional commits. Поверни ЛИШЕ commit message.",
+
   "settings.display.username.title": "Ім'я користувача",
   "settings.display.username.description": "Власне ім'я користувача, що відображається в чатах",
   "settings.display.layout.title": "Макет",
@@ -1260,6 +1314,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Малий та ефективний ядерний модуль у кожному продукті Kilo. Знайомий досвід незалежно від того, як ви вважаєте за краще працювати.",
   "migration.whatsNew.blogLink": "Читати повне оголошення",
+  "migration.whatsNew.docsLink": "Що нового та часті запитання",
   "migration.whatsNew.continue": "Продовжити",
 
   // Screen 2 — Migrate Settings
@@ -1296,6 +1351,36 @@ export const dict = {
   "migration.error.continue": "Продовжити",
   "migration.error.action.copy": "Копіювати",
   "migration.error.toast.copied": "Помилку скопійовано до буфера обміну",
+
+  "migration.sessionSummary.title": "Підсумок:",
+  "migration.sessionSummary.copy": "Скопіювати звіт",
+  "migration.sessionSummary.toast.copied": "Звіт скопійовано",
+  "migration.sessionSummary.successful": "Успішно",
+  "migration.sessionSummary.skipped": "Пропущено",
+  "migration.sessionSummary.alreadyMigrated": "Уже перенесено",
+  "migration.sessionSummary.errored": "З помилкою",
+  "migration.sessionSummary.none": "Немає",
+  "migration.forceReimport.title": "Примусово імпортувати повторно",
+  "migration.forceReimport.description":
+    "Повторний імпорт {{target}} перезапише їх і видалить усі нові повідомлення, уже створені в цих сесіях.",
+  "migration.forceReimport.target.one": "цю сесію",
+  "migration.forceReimport.target.many": "ці {{count}} сесії",
+  "migration.forceReimport.button": "Примусово імпортувати повторно",
+  "migration.forceReimport.all": "Імпортувати все повторно",
+  "migration.forceReimport.proceed": "Продовжити",
+  "migration.forceReimport.toast.started": "Примусовий повторний імпорт розпочато",
+  "migration.running.title": "Триває перенесення",
+  "migration.running.description.line1": "Ви збираєтеся завершити роботу, поки деякі сесії ще переносяться.",
+  "migration.running.description.line2": "Якщо ви вийдете зараз, деякі сесії можуть залишитися незавершеними.",
+  "migration.running.stay": "Залишитися",
+  "migration.running.proceed": "Продовжити",
+  "migration.sessionProgress.preparing": "Підготовка сесії",
+  "migration.sessionProgress.storing": "Збереження сесії",
+  "migration.sessionProgress.skipped": "Сесію пропущено",
+  "migration.sessionProgress.header": "Перенесення {{current}} з {{total}}",
+  "migration.sessionFormat.unknownDate": "Невідома дата",
+  "migration.sessionFormat.unknown": "Невідомо",
+  "migration.sessionFormat.unknownError": "Невідома помилка",
   // legacy-migration end
 
   "error.details.show": "Деталі",
@@ -1310,9 +1395,12 @@ export const dict = {
   "settings.saveBar.warning.many": "Кілька сесій виконуються і будуть перервані",
   "settings.saveBar.saveAnyway": "Зберегти все одно",
   "settings.saveBar.cancel": "Скасувати",
+  "settings.saveBar.saving": "Збереження…",
+  "settings.saveBar.saveFailed": "Не вдалося зберегти налаштування",
   "notifications.action.next": "Далі",
   "notifications.action.close": "Закрити",
   "notifications.action.tryModel": "Спробувати {{model}}",
+  "notifications.action.tryModelGeneric": "Спробувати модель",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Перемикання акаунту…",
   "settings.agentBehaviour.createMode": "Створити новий режим",
@@ -1336,9 +1424,20 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Редагувати режим",
   "settings.agentBehaviour.editMode.back": "Назад до списку",
   "settings.agentBehaviour.editMode.description": "Опис",
-  "settings.agentBehaviour.editMode.native": "Вбудований режим (визначення лише для читання)",
+  "settings.agentBehaviour.editMode.native":
+    "Це вбудований режим. Його базове визначення неможливо змінити, але ви можете налаштувати перевизначення нижче.",
   "settings.agentBehaviour.editMode.prompt": "Системний запит",
   "settings.agentBehaviour.editMode.promptOverride":
     "Власне перевизначення системного запиту для цього вбудованого режиму",
+  "settings.agentBehaviour.badge.subagent": "субагент",
+  "settings.agentBehaviour.permissions.title": "Обчислені дозволи",
+  "settings.agentBehaviour.permissions.count": "{{count}} правил",
+  "settings.agentBehaviour.permissions.effective": "Ефективні (шаблон):",
+  "settings.agentBehaviour.permissions.col.tool": "Інструмент",
+  "settings.agentBehaviour.permissions.col.pattern": "Шаблон",
+  "settings.agentBehaviour.permissions.col.action": "Дія",
+  "settings.agentBehaviour.permissions.copy": "Копіювати дозволи як JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Правила оцінюються по порядку — останнє відповідне правило має пріоритет. Це розрахований набір правил з CLI бекенду.",
   "settings.agentBehaviour.editMode.save": "Готово",
 }

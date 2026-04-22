@@ -7,12 +7,13 @@
  * type-checked rather than relying on Record<string, unknown> casts.
  */
 
-import type { FileDiff } from "@kilocode/sdk/v2/client"
-import type { Worktree, ManagedSession } from "./WorktreeStateManager"
+import type { SnapshotFileDiff } from "@kilocode/sdk/v2/client"
+import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
+import type { RunStatus } from "./run/manager"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -22,11 +23,65 @@ type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
-export type WorktreeDiffEntry = FileDiff & {
+export type WorktreeDiffEntry = SnapshotFileDiff & {
+  before?: string
+  after?: string
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
   stamp?: string
+}
+
+// ---------------------------------------------------------------------------
+// PR status types
+// ---------------------------------------------------------------------------
+
+export type PRState = "open" | "draft" | "merged" | "closed"
+export type ReviewDecision = "approved" | "changes_requested" | "pending"
+export type CheckStatus = "success" | "failure" | "pending" | "skipped" | "cancelled"
+export type AggregateCheckStatus = "success" | "failure" | "pending" | "none"
+
+export interface PRCheck {
+  name: string
+  status: CheckStatus
+  url?: string
+  duration?: string
+}
+
+export interface PRComment {
+  id: string
+  author: string
+  avatar?: string
+  body: string
+  file?: string
+  line?: number
+  url?: string
+  resolved: boolean
+  createdAt?: number
+}
+
+export interface PRStatus {
+  number: number
+  title: string
+  url: string
+  state: PRState
+  review: ReviewDecision | null
+  checks: {
+    status: AggregateCheckStatus
+    total: number
+    passed: number
+    failed: number
+    pending: number
+    items: PRCheck[]
+  }
+  comments?: {
+    total: number
+    unresolved: number
+    items: PRComment[]
+  }
+  additions: number
+  deletions: number
+  files: number
 }
 
 // ---------------------------------------------------------------------------
@@ -66,6 +121,7 @@ interface StateMessage {
   type: "agentManager.state"
   worktrees: Worktree[]
   sessions: ManagedSession[]
+  sections?: Section[]
   staleWorktreeIds?: string[]
   tabOrder?: Record<string, string[]>
   worktreeOrder?: string[]
@@ -73,6 +129,9 @@ interface StateMessage {
   reviewDiffStyle?: "unified" | "split"
   isGitRepo?: boolean
   defaultBaseBranch?: string
+  runStatuses?: RunStatus[]
+  runScriptConfigured?: boolean
+  runScriptPath?: string
 }
 
 interface ErrorOutMessage {
@@ -116,6 +175,7 @@ interface SendInitialMessage {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
 }
 
@@ -175,9 +235,28 @@ interface WorktreeDiffFileMessage {
   diff: WorktreeDiffEntry | null
 }
 
+interface RevertWorktreeFileResultMessage {
+  type: "agentManager.revertWorktreeFileResult"
+  sessionId: string
+  file: string
+  status: "success" | "error"
+  message: string
+}
+
+interface PRStatusOutMessage {
+  type: "agentManager.prStatus"
+  worktreeId: string
+  pr: PRStatus | null
+  error?: "gh_missing" | "gh_auth" | "fetch_failed"
+}
+
 interface ActionOutMessage {
   type: "action"
   action: string
+}
+
+interface RunStatusMessage extends RunStatus {
+  type: "agentManager.runStatus"
 }
 
 /** All messages the Agent Manager extension sends to the webview. */
@@ -202,7 +281,10 @@ export type AgentManagerOutMessage =
   | WorktreeDiffLoadingMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
+  | RevertWorktreeFileResultMessage
+  | PRStatusOutMessage
   | ActionOutMessage
+  | RunStatusMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -244,8 +326,34 @@ interface CloseSessionIn {
   sessionId: string
 }
 
+/** Persist a non-worktree session to agent-manager.json (worktreeId = null). */
+interface PersistSessionIn {
+  type: "agentManager.persistSession"
+  sessionId: string
+}
+
+/** Remove a non-worktree session from agent-manager.json. */
+interface ForgetSessionIn {
+  type: "agentManager.forgetSession"
+  sessionId: string
+}
+
 interface ConfigureSetupScriptIn {
   type: "agentManager.configureSetupScript"
+}
+
+interface ConfigureRunScriptIn {
+  type: "agentManager.configureRunScript"
+}
+
+interface RunScriptIn {
+  type: "agentManager.runScript"
+  worktreeId: string
+}
+
+interface StopRunScriptIn {
+  type: "agentManager.stopRunScript"
+  worktreeId: string
 }
 
 interface ShowTerminalIn {
@@ -283,6 +391,7 @@ interface CreateMultiVersionIn {
   providerID?: string
   modelID?: string
   agent?: string
+  variant?: string
   files?: Array<{ mime: string; url: string }>
   baseBranch?: string
   branchName?: string
@@ -379,6 +488,27 @@ interface StopDiffWatchIn {
   type: "agentManager.stopDiffWatch"
 }
 
+interface RevertWorktreeFileIn {
+  type: "agentManager.revertWorktreeFile"
+  sessionId: string
+  file: string
+}
+
+interface RefreshPRIn {
+  type: "agentManager.refreshPR"
+  worktreeId: string
+}
+
+interface OpenPRIn {
+  type: "agentManager.openPR"
+  worktreeId: string
+}
+
+interface OpenSessionsIn {
+  type: "agentManager.openSessions"
+  sessionIDs: string[]
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -404,6 +534,19 @@ interface PreviewImageIn {
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
+  mode?: "replace" | "prepend" | "focus"
+  before?: string
+  limit?: number
+}
+
+interface FileSourceIn {
+  type: "file"
+  path: string
+  text: {
+    value: string
+    start: number
+    end: number
+  }
 }
 
 interface SendMessageIn {
@@ -416,7 +559,7 @@ interface SendMessageIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
 }
 
 interface SendCommandIn {
@@ -430,7 +573,13 @@ interface SendCommandIn {
   modelID?: string
   agent?: string
   variant?: string
-  files?: Array<{ mime: string; url: string; filename?: string }>
+  files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
+}
+
+interface RequestTerminalContextIn {
+  type: "requestTerminalContext"
+  requestId: string
+  sessionID?: string
 }
 
 interface ClearSessionIn {
@@ -441,16 +590,59 @@ interface ForkSessionIn {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
 }
 
 interface AbortIn {
   type: "abort"
   sessionID: string
+  queuedMessageIDs?: string[]
 }
 
 interface ContinueInWorktreeIn {
   type: "continueInWorktree"
   sessionId: string
+}
+
+interface CreateSectionIn {
+  type: "agentManager.createSection"
+  name: string
+  color?: string
+  worktreeIds?: string[]
+}
+
+interface RenameSectionIn {
+  type: "agentManager.renameSection"
+  sectionId: string
+  name: string
+}
+
+interface DeleteSectionIn {
+  type: "agentManager.deleteSection"
+  sectionId: string
+}
+
+interface SetSectionColorIn {
+  type: "agentManager.setSectionColor"
+  sectionId: string
+  color: string | null
+}
+
+interface ToggleSectionCollapsedIn {
+  type: "agentManager.toggleSectionCollapsed"
+  sectionId: string
+}
+
+interface MoveToSectionIn {
+  type: "agentManager.moveToSection"
+  worktreeIds: string[]
+  sectionId: string | null
+}
+
+interface MoveSectionIn {
+  type: "agentManager.moveSection"
+  sectionId: string
+  dir: -1 | 1
 }
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
@@ -462,8 +654,13 @@ export type AgentManagerInMessage =
   | OpenLocallyIn
   | AddSessionToWorktreeIn
   | CloseSessionIn
+  | PersistSessionIn
+  | ForgetSessionIn
   | ForkSessionIn
   | ConfigureSetupScriptIn
+  | ConfigureRunScriptIn
+  | RunScriptIn
+  | StopRunScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
   | OpenWorktreeIn
@@ -489,12 +686,24 @@ export type AgentManagerInMessage =
   | ApplyWorktreeDiffIn
   | StartDiffWatchIn
   | StopDiffWatchIn
+  | RevertWorktreeFileIn
+  | RefreshPRIn
+  | OpenPRIn
+  | OpenSessionsIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | RequestTerminalContextIn
   | ClearSessionIn
   | AbortIn
   | ContinueInWorktreeIn
+  | CreateSectionIn
+  | RenameSectionIn
+  | DeleteSectionIn
+  | SetSectionColorIn
+  | ToggleSectionCollapsedIn
+  | MoveToSectionIn
+  | MoveSectionIn

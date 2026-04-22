@@ -1,5 +1,5 @@
 import { test, expect, describe } from "bun:test"
-import { resolvePluginProviders } from "../../src/cli/cmd/auth"
+import { resolvePluginProviders } from "../../src/cli/cmd/providers"
 import type { Hooks } from "@kilocode/plugin"
 
 function hookWithAuth(provider: string): Hooks {

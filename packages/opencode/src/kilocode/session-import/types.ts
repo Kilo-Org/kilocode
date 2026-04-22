@@ -112,7 +112,12 @@ export namespace SessionImportType {
     }),
   })
 
-  export const ToolState = z.discriminatedUnion("status", [ToolStatePending, ToolStateRunning, ToolStateCompleted, ToolStateError])
+  export const ToolState = z.discriminatedUnion("status", [
+    ToolStatePending,
+    ToolStateRunning,
+    ToolStateCompleted,
+    ToolStateError,
+  ])
 
   export const ToolPartData = z.object({
     type: z.literal("tool"),
@@ -151,6 +156,7 @@ export namespace SessionImportType {
   export const Session = z.object({
     id: z.string(),
     projectID: z.string(),
+    force: z.boolean().optional(),
     workspaceID: z.string().optional(),
     parentID: z.string().optional(),
     slug: z.string(),

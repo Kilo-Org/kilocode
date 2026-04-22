@@ -2,9 +2,11 @@ import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
-import { checksum } from "@opencode-ai/util/encode"
+import { checksum } from "@opencode-ai/shared/util/encode"
 import { ComponentProps, createEffect, createResource, createSignal, onCleanup, splitProps } from "solid-js"
 import { isServer } from "solid-js/web"
+import { stream } from "./markdown-stream"
+import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
 
 type Entry = {
   hash: string
@@ -49,7 +51,7 @@ function escape(text: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 }
 
@@ -180,10 +182,11 @@ function decorate(root: HTMLDivElement, labels: CopyLabels) {
   markCodeLinks(root)
 }
 
-function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
+function setupCodeCopy(root: HTMLDivElement, getLabels: () => CopyLabels) {
   const timeouts = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>()
 
   const updateLabel = (button: HTMLButtonElement) => {
+    const labels = getLabels()
     const copied = button.getAttribute("data-copied") === "true"
     setCopyState(button, labels, copied)
   }
@@ -200,14 +203,13 @@ function setupCodeCopy(root: HTMLDivElement, labels: CopyLabels) {
     const clipboard = navigator?.clipboard
     if (!clipboard) return
     await clipboard.writeText(content)
+    const labels = getLabels()
     setCopyState(button, labels, true)
     const existing = timeouts.get(button)
     if (existing) clearTimeout(existing)
     const timeout = setTimeout(() => setCopyState(button, labels, false), 2000)
     timeouts.set(button, timeout)
   }
-
-  decorate(root, labels)
 
   const buttons = Array.from(root.querySelectorAll('[data-slot="markdown-copy-button"]'))
   for (const button of buttons) {
@@ -239,36 +241,49 @@ export function Markdown(
   props: ComponentProps<"div"> & {
     text: string
     cacheKey?: string
+    streaming?: boolean
     class?: string
     classList?: Record<string, boolean>
   },
 ) {
-  const [local, others] = splitProps(props, ["text", "cacheKey", "class", "classList"])
+  const [local, others] = splitProps(props, ["text", "cacheKey", "streaming", "class", "classList"])
   const marked = useMarked()
   const i18n = useI18n()
   const [root, setRoot] = createSignal<HTMLDivElement>()
   const [html] = createResource(
-    () => local.text,
-    async (markdown) => {
-      if (isServer) return fallback(markdown)
+    () => ({
+      text: local.text,
+      key: local.cacheKey,
+      streaming: local.streaming ?? false,
+    }),
+    async (src) => {
+      if (isServer) return fallback(src.text)
+      if (!src.text) return ""
 
-      const hash = checksum(markdown)
-      const key = local.cacheKey ?? hash
+      const base = src.key ?? checksum(src.text)
+      return Promise.all(
+        stream(src.text, src.streaming).map(async (block, index) => {
+          const hash = checksum(block.raw)
+          const key = base ? `${base}:${index}:${block.mode}` : hash
 
-      if (key && hash) {
-        const cached = cache.get(key)
-        if (cached && cached.hash === hash) {
-          touch(key, cached)
-          return cached.html
-        }
-      }
+          if (key && hash) {
+            const cached = cache.get(key)
+            if (cached && cached.hash === hash) {
+              touch(key, cached)
+              return cached.html
+            }
+          }
 
-      const next = await marked.parse(markdown)
-      const safe = sanitize(next)
-      if (key && hash) touch(key, { hash, html: safe })
-      return safe
+          const next = await Promise.resolve(marked.parse(block.src))
+          const safe = sanitize(next)
+          if (key && hash) touch(key, { hash, html: safe })
+          return safe
+        }),
+      )
+        .then((list) => list.join(""))
+        .catch(() => fallback(src.text))
     },
-    { initialValue: isServer ? fallback(local.text) : "" },
+    { initialValue: fallback(local.text) },
   )
 
   let copyCleanup: (() => void) | undefined
@@ -281,7 +296,7 @@ export function Markdown(
 
   createEffect(() => {
     const container = root()
-    const content = html()
+    const content = local.text ? (html.latest ?? html() ?? "") : ""
     if (!container) return
     if (isServer) return
 
@@ -290,12 +305,22 @@ export function Markdown(
       return
     }
 
-    const temp = document.createElement("div")
-    temp.innerHTML = content
     const labels = {
       copy: i18n.t("ui.message.copy"),
       copied: i18n.t("ui.message.copied"),
     }
+
+    // kilocode_change start
+    const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
+    if (fast.handled) {
+      copyCleanup = fast.copyCleanup
+      kickHighlight(container, labels)
+      return
+    }
+    // kilocode_change end
+
+    const temp = document.createElement("div")
+    temp.innerHTML = content
     decorate(temp, labels)
 
     // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
@@ -304,6 +329,15 @@ export function Markdown(
     morphdom(container, temp, {
       childrenOnly: true,
       onBeforeElUpdated: (fromEl, toEl) => {
+        if (
+          fromEl instanceof HTMLButtonElement &&
+          toEl instanceof HTMLButtonElement &&
+          fromEl.getAttribute("data-slot") === "markdown-copy-button" &&
+          toEl.getAttribute("data-slot") === "markdown-copy-button" &&
+          fromEl.getAttribute("data-copied") === "true"
+        ) {
+          setCopyState(toEl, labels, true)
+        }
         if (fromEl.isEqualNode(toEl)) return false
         // Preserve Shiki-highlighted blocks — don't let morphdom revert them
         // to plain <pre><code> during streaming re-renders.
@@ -333,33 +367,35 @@ export function Markdown(
     })
     // kilocode_change end
 
-    // kilocode_change start: deferred syntax highlighting (issue #6221)
-    // DOM is now painted with plain <pre><code> blocks.
-    // Progressively highlight via setTimeout(0) to avoid blocking.
-    // onComplete re-runs setupCodeCopy since highlighting replaces DOM nodes.
-    // The generation counter ensures a stale in-flight highlight run (from a
-    // previous streaming token) doesn't overwrite the cleanup set by a newer run.
-    // Cancel any in-flight highlight pass before starting a new one — prevents
-    // concurrent passes from racing to replace the same DOM nodes.
+    kickHighlight(container, labels)
+  })
+
+  // kilocode_change start: progressive Shiki highlighting (issue #6221, PR #7102).
+  // Parser emits plain <pre><code data-lang="..."> blocks; we upgrade them to
+  // Shiki-highlighted <pre class="shiki"> here via setTimeout(0) so initial
+  // paint is instant and session switches with many code blocks don't freeze.
+  // The generation counter + abort signal cancel a previous in-flight pass
+  // when streaming tokens (or session switches) spawn a new render.
+  function kickHighlight(container: HTMLDivElement, labels: { copy: string; copied: string }) {
     highlightState.signal.aborted = true
     const gen = ++highlightState.gen
     const signal = { aborted: false }
     highlightState.signal = signal
-    deferredHighlight(
+    void deferredHighlight(
       container,
       () => {
         if (gen !== highlightState.gen) return
         if (copyCleanup) copyCleanup()
-        copyCleanup = setupCodeCopy(container, labels)
+        copyCleanup = setupCodeCopy(container, () => labels)
       },
       signal,
     )
-    // kilocode_change end
-  })
+  }
+  // kilocode_change end
 
   onCleanup(() => {
-    // Invalidate any in-flight deferredHighlight callbacks so they don't call
-    // setupCodeCopy on a disconnected container after the component unmounts.
+    // kilocode_change: cancel any in-flight deferredHighlight pass so its
+    // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
     if (copyCleanup) copyCleanup()
@@ -369,7 +405,7 @@ export function Markdown(
     <div
       data-component="markdown"
       classList={{
-        ...(local.classList ?? {}),
+        ...local.classList,
         [local.class ?? ""]: !!local.class,
       }}
       ref={setRoot}

@@ -1,6 +1,6 @@
 import { ulid } from "ulid"
 import type * as SDK from "@kilocode/sdk/v2"
-import type { Session } from "@/session"
+import type { KiloSession } from "@/kilocode/session"
 
 export namespace IngestQueue {
   export type Client = {
@@ -8,7 +8,7 @@ export namespace IngestQueue {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
   }
 
-  export type CloseReason = Session.CloseReason
+  export type CloseReason = KiloSession.CloseReason
 
   export type Data =
     | {
@@ -34,7 +34,7 @@ export namespace IngestQueue {
       }
     | {
         type: "session_diff"
-        data: SDK.FileDiff[]
+        data: SDK.SnapshotFileDiff[]
       }
     | {
         type: "model"
@@ -47,6 +47,10 @@ export namespace IngestQueue {
     | {
         type: "session_close"
         data: { reason: CloseReason }
+      }
+    | {
+        type: "session_status"
+        data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
       }
 
   type Share = {
@@ -123,6 +127,7 @@ export namespace IngestQueue {
       if (item.type === "session_diff") return "session_diff"
       if (item.type === "session_open") return "session_open"
       if (item.type === "session_close") return "session_close"
+      if (item.type === "session_status") return "session_status"
 
       if (item.type === "message") {
         const value = id(item.data)

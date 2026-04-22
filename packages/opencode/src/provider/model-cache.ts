@@ -1,9 +1,8 @@
 // kilocode_change new file
 import { fetchKiloModels } from "@kilocode/kilo-gateway"
-import { Config } from "../config/config"
+import { Config } from "../config"
 import { Auth } from "../auth"
-import { Env } from "../env"
-import { Log } from "../util/log"
+import { Log } from "../util"
 
 export namespace ModelCache {
   const log = Log.create({ service: "model-cache" })
@@ -209,7 +208,7 @@ export namespace ModelCache {
         name: model.id,
         family: model.owned_by ?? "",
         release_date: "",
-        attachment: false,
+        attachment: true,
         reasoning: false,
         temperature: true,
         tool_call: true,
@@ -217,7 +216,7 @@ export namespace ModelCache {
         limit: { context: 128000, output: 4096 },
         options: {},
         modalities: {
-          input: ["text"],
+          input: ["text", "image"],
           output: ["text"],
         },
       }
@@ -265,8 +264,8 @@ export namespace ModelCache {
         }
       }
 
-      // Get from Env
-      const env = Env.all()
+      // Get from Env (process.env — matches upstream's pattern for sync async helpers)
+      const env = process.env
       if (env.KILO_API_KEY) {
         options.kilocodeToken = env.KILO_API_KEY
       }
@@ -297,7 +296,7 @@ export namespace ModelCache {
         options.apiKey = auth.key
       }
 
-      const env = Env.all()
+      const env = process.env
       if (env.APERTIS_API_KEY) {
         options.apiKey = env.APERTIS_API_KEY
       }

@@ -33,7 +33,13 @@ import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { resolveTemplate } from "../context/language-utils"
-import type { Config, KilocodeNotification, PermissionRequest, QuestionRequest } from "../types/messages"
+import type {
+  Config,
+  KilocodeNotification,
+  PermissionRequest,
+  QuestionRequest,
+  SuggestionRequest,
+} from "../types/messages"
 
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
@@ -61,6 +67,7 @@ const MOCK_PROVIDERS = {
         name: "Anthropic: Claude Sonnet 4.6",
         inputPrice: 0.003,
         outputPrice: 0.015,
+        limit: { context: 200000, output: 8192 },
       },
     },
   },
@@ -120,11 +127,13 @@ export function mockSessionValue(overrides?: {
   id?: string
   permissions?: PermissionRequest[]
   questions?: QuestionRequest[]
+  suggestions?: SuggestionRequest[]
   status?: string
 }) {
   const id = overrides?.id ?? "story-session-001"
   const permissions = overrides?.permissions ?? []
   const qs = overrides?.questions ?? []
+  const suggestions = overrides?.suggestions ?? []
   const status = (overrides?.status ?? "idle") as "idle" | "busy"
 
   return {
@@ -142,6 +151,9 @@ export function mockSessionValue(overrides?: {
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
     busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
     loading: () => false,
+    loadingOlderMessages: () => false,
+    hasOlderMessages: () => false,
+    messageMutation: () => undefined,
     messages: () => [],
     userMessages: () => [],
     allMessages: () => ({}),
@@ -149,13 +161,18 @@ export function mockSessionValue(overrides?: {
     allStatusMap: () => ({}),
     familyData: () => ({ messages: {}, parts: {}, status: {} }),
     getParts: () => [],
+    hydrateParts: noop,
     todos: () => [],
     permissions: () => permissions,
     respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
+    suggestions: () => suggestions,
+    suggestionErrors: () => new Set<string>(),
+    respondingSuggestions: () => new Set<string>(),
     scopedPermissions: (sid?: string) => (sid ? permissions.filter((p) => p.sessionID === sid) : permissions),
     scopedQuestions: (sid?: string) => (sid ? qs.filter((q) => q.sessionID === sid) : qs),
+    scopedSuggestions: (sid?: string) => (sid ? suggestions.filter((item) => item.sessionID === sid) : suggestions),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     hasModelOverride: () => false,
@@ -163,6 +180,7 @@ export function mockSessionValue(overrides?: {
     costBreakdown: () => [],
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
+    allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
     refreshSkills: noop,
     removeSkill: noop,
@@ -185,14 +203,18 @@ export function mockSessionValue(overrides?: {
     currentVariant: () => undefined,
     selectVariant: noop,
     sendMessage: noop,
+    sendCommand: noop,
     abort: noop,
     compact: noop,
     respondToPermission: noop,
     replyToQuestion: noop,
     rejectQuestion: noop,
+    acceptSuggestion: noop,
+    dismissSuggestion: noop,
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadOlderMessages: noop,
     selectSession: noop,
     deleteSession: noop,
     renameSession: noop,
@@ -210,6 +232,7 @@ interface StoryProvidersProps {
   data?: any
   permissions?: PermissionRequest[]
   questions?: QuestionRequest[]
+  suggestions?: SuggestionRequest[]
   notifications?: KilocodeNotification[]
   status?: string
   sessionID?: string
@@ -226,6 +249,8 @@ const ConfigWrapper: ParentComponent<{ config?: Config }> = (props) => {
       config: () => props.config!,
       loading: () => false,
       isDirty: () => false,
+      saving: () => false,
+      saveError: () => null,
       updateConfig: noop,
       saveConfig: noop,
       discardConfig: noop,
@@ -241,6 +266,7 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
     id: props.sessionID,
     permissions: props.permissions,
     questions: props.questions,
+    suggestions: props.suggestions,
     status: props.status,
   })
   const notifications = mockNotificationsValue(props.notifications)

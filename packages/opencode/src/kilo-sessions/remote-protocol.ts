@@ -18,6 +18,8 @@ export namespace RemoteProtocol {
   export const Heartbeat = z.object({
     type: z.literal("heartbeat"),
     sessions: z.array(SessionInfo),
+    focused: z.array(z.string()).optional(),
+    open: z.array(z.string()).optional(),
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 

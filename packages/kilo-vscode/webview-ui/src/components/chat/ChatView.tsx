@@ -12,7 +12,6 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
-import { QuestionDock } from "./QuestionDock"
 import { PermissionDock } from "./PermissionDock"
 import { StartupErrorBanner } from "./StartupErrorBanner"
 import { useSession } from "../../context/session"
@@ -20,10 +19,12 @@ import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
 import { useServer } from "../../context/server"
+import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  onForkMessage?: (sessionId: string, messageId: string) => void
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
@@ -56,18 +57,23 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // not once per accessor call (questionRequest, permissionRequest, blocked all read these).
   const familyPermissions = createMemo(() => session.scopedPermissions(id()))
   const familyQuestions = createMemo(() => session.scopedQuestions(id()))
-
-  // Prefer non-tool questions in the dock: current-session non-tool first,
-  // then any non-tool, then fall back to any remaining scoped question.
-  const questionRequest = () =>
-    familyQuestions().find((q) => q.sessionID === id() && !q.tool) ??
-    familyQuestions().find((q) => !q.tool) ??
-    familyQuestions()[0]
+  const familySuggestions = createMemo(() => session.scopedSuggestions(id()))
+  // Non-tool questions (standalone, not from the question tool) render inline in
+  // the message list since they don't have an associated tool part in the conversation.
+  // Tool-linked questions render inline at their tool part position via AssistantMessage.
+  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
+  const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
   const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
-  const blocked = () => familyPermissions().length > 0 || familyQuestions().length > 0
-  const dock = () => !props.readonly || !!questionRequest() || !!permissionRequest()
+  // Prompt input is decoupled from questions/suggestions — only permissions block.
+  // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
+  const blocked = () => isPromptBlocked(familyPermissions().length)
+  // Session is busy only because a suggestion tool call is pending — prompt should behave as idle
+  const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
+  // Session is busy only because a question tool call is pending — prompt should behave as idle
+  const questioning = () => isQuestioning(blocked(), familyQuestions().length)
+  const dock = () => !props.readonly || !!permissionRequest()
 
-  // When a bottom-dock permission/question disappears while the session is busy,
+  // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
   // resume auto-scroll.
   createEffect(
@@ -81,10 +87,9 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   onMount(() => {
     if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && session.status() === "busy" && !e.defaultPrevented) {
-        e.preventDefault()
-        session.abort()
-      }
+      if (e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return
+      e.preventDefault()
+      session.abort()
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
@@ -129,7 +134,14 @@ export const ChatView: Component<ChatViewProps> = (props) => {
       <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
-          <MessageList onSelectSession={props.onSelectSession} onShowHistory={props.onShowHistory} />
+          <MessageList
+            onSelectSession={props.onSelectSession}
+            onShowHistory={props.onShowHistory}
+            onForkMessage={props.onForkMessage}
+            questions={standaloneQuestions}
+            suggestions={standaloneSuggestions}
+            readonly={props.readonly}
+          />
         </div>
       </div>
 
@@ -137,9 +149,6 @@ export const ChatView: Component<ChatViewProps> = (props) => {
         <div class="chat-input">
           <Show when={server.connectionState() === "error" && server.errorMessage()}>
             <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
-          </Show>
-          <Show when={questionRequest()} keyed>
-            {(req) => <QuestionDock request={req} />}
           </Show>
           <Show when={permissionRequest()} keyed>
             {(perm) => (
@@ -163,7 +172,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                     {language.t("command.session.new.task")}
                   </Button>
                 </Tooltip>
-                <Show when={canContinueInWorktree()}>
+                <Show when={canContinueInWorktree() && server.gitInstalled()}>
                   <Tooltip value="Continue in isolated worktree" placement="top">
                     <Button
                       variant="ghost"
@@ -185,7 +194,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                     </Button>
                   </Tooltip>
                 </Show>
-                <Show when={isSidebar()}>
+                <Show when={isSidebar() && server.gitInstalled()}>
                   <Tooltip
                     value={
                       session.worktreeStats()?.files
@@ -216,7 +225,13 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             </div>
           </Show>
           <Show when={!props.readonly}>
-            <PromptInput blocked={blocked} boxId={props.promptBoxId} pendingSessionID={props.pendingSessionID} />
+            <PromptInput
+              blocked={blocked}
+              suggesting={suggesting}
+              questioning={questioning}
+              boxId={props.promptBoxId}
+              pendingSessionID={props.pendingSessionID}
+            />
           </Show>
         </div>
       </Show>

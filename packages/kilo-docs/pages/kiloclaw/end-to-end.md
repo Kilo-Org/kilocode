@@ -46,6 +46,12 @@ Before configuring, take these preflight steps:
 
 1. **Create a Google Account for your Claw** — Go to [google.com](https://www.google.com/) and create a new Google/Gmail account dedicated to your KiloClaw. Something like `yourname.bot@gmail.com` works well.
 
+{% callout type="tip" title="Google Workspace users" %}
+If your organization uses Google Workspace, create the dedicated bot account inside your Workspace domain (e.g., `claw@yourcompany.com`) rather than as a standalone `@gmail.com` account.
+
+A Workspace-managed account benefits from your organization's admin policies, making configuration easier.
+{% /callout %}
+
 2. **Set up Google Cloud** — Visit [console.cloud.google.com](https://console.cloud.google.com). Accept the terms of service and click "Start my free tier". You may need to add a credit card for identity verification.
 
    {% callout type="info" %}

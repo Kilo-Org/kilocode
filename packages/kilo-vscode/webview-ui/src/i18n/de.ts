@@ -764,6 +764,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Anzeigename",
+  "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.variants.label": "Varianten",
+  "provider.custom.models.variants.add": "Variante hinzufügen",
+  "provider.custom.models.variants.remove": "Variante entfernen",
+  "provider.custom.models.variants.name.label": "Name",
+  "provider.custom.models.variants.name.placeholder": "z.B. thinking",
+  "provider.custom.models.variants.option.unset": "(nicht festgelegt)",
+  "provider.custom.models.variants.enableThinking.label": "Nachdenken aktivieren (z.B. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Art des Nachdenkens (z.B. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Nachdenken über Chat-Vorlagenargumente aktivieren (z.B. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Reasoning-Aufwand",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Modell entfernen",
   "provider.custom.models.add": "Modell hinzufügen",
   "provider.custom.models.fetch": "Modelle abrufen",
@@ -948,10 +976,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code ist ein KI-Programmierassistent. Bitten Sie ihn, Funktionen zu erstellen, Fehler zu beheben oder Ihre Codebasis zu erklären.",
   "session.messages.scrollToBottom": "Nach unten scrollen",
+  "session.messages.initializing": "Initialisierung...",
+  "session.messages.taskStarting": "Wird gestartet...",
   "session.status.writingResponse": "Antwort wird geschrieben…",
   "session.status.retry": "Erneuter Versuch…",
   "session.status.retrying": "Erneuter Versuch ({{ attempt }})… {{ message }}",
   "session.status.working": "Wird bearbeitet…",
+  "session.status.offline": "Netzwerk getrennt — Verbindung wird wiederhergestellt...",
+
+  "ui.sessionTurn.cancel": "Abbrechen",
+  "ui.sessionTurn.status.thinking": "Denke nach...",
+  "ui.sessionTurn.status.consideringNextSteps": "Überlege nächste Schritte...",
 
   "dialog.model.noProviders": "Keine Anbieter",
 
@@ -961,6 +996,7 @@ export const dict = {
   "prompt.placeholder.default": "Nachricht eingeben... (Enter zum Senden, Shift+Enter für neue Zeile)",
 
   "context.usage.sessionCost": "Sitzungskosten",
+  "context.usage.olderSessions": "{{count}} ältere Sitzungen",
   "context.stats.thisSession": "Diese Sitzung",
 
   "time.justNow": "gerade eben",
@@ -1082,6 +1118,14 @@ export const dict = {
     "Agent-Schleife fortsetzen, wenn eine Berechtigung abgelehnt wird",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
+  "settings.experimental.remote.title": "Remote-Steuerung",
+  "settings.experimental.remote.description":
+    "Aktivieren Sie die Remote-Steuerung von Sitzungen über Kilo Cloud. Dies betrifft auch CLIs auf diesem Computer.",
+  "settings.experimental.remote.current": "Aktueller Status:",
+  "settings.experimental.remote.startup": "Automatisch beim Start aktivieren:",
+  "settings.experimental.remote.active": "Aktiv",
+  "settings.experimental.remote.inactive": "Inaktiv",
+  "settings.experimental.remote.hint": "Verwende /remote im Chat zum Umschalten",
   "settings.experimental.toolToggles": "Werkzeug-Schalter",
   "settings.agentBehaviour.defaultAgent.title": "Standard-Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent, der verwendet wird, wenn keiner angegeben ist",
@@ -1145,6 +1189,16 @@ export const dict = {
     "Dies ist ein integrierter Modus. Seine Basisdefinition kann nicht geändert werden, aber Sie können unten Überschreibungen konfigurieren.",
   "settings.agentBehaviour.editMode.promptOverride":
     "Benutzerdefinierte Prompt-Überschreibung für diesen eingebauten Modus",
+  "settings.agentBehaviour.badge.subagent": "Subagent",
+  "settings.agentBehaviour.permissions.title": "Berechnete Berechtigungen",
+  "settings.agentBehaviour.permissions.count": "{{count}} Regeln",
+  "settings.agentBehaviour.permissions.effective": "Effektiv (Platzhalter):",
+  "settings.agentBehaviour.permissions.col.tool": "Werkzeug",
+  "settings.agentBehaviour.permissions.col.pattern": "Muster",
+  "settings.agentBehaviour.permissions.col.action": "Aktion",
+  "settings.agentBehaviour.permissions.copy": "Berechtigungen als JSON kopieren",
+  "settings.agentBehaviour.permissions.hint":
+    "Regeln werden der Reihe nach ausgewertet — die letzte übereinstimmende Regel gewinnt. Dies ist das aufgelöste Regelwerk vom CLI-Backend.",
   "settings.agentBehaviour.removeMode.title": "Modus entfernen",
   "settings.agentBehaviour.removeMode.confirm":
     'Modus "{{name}}" entfernen? Dadurch wird der Modus durch Aktualisierung Ihrer Konfiguration deaktiviert.',
@@ -1242,6 +1296,17 @@ export const dict = {
   "settings.context.prune.description": "Alte Werkzeugausgaben während der Komprimierung entfernen",
   "settings.context.watcherPatterns": "Datei-Watcher-Ignorierungsmuster",
   "settings.context.watcherPatterns.description": "Glob-Muster für Dateien, die der Watcher ignorieren soll",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Benutzerdefinierten prompt verwenden",
+  "settings.commitMessage.override.description":
+    "Den Standard-prompt für die commit message überschreiben. Wenn diese Option aktiviert ist, ersetzt Ihr benutzerdefinierter prompt den integrierten prompt für conventional commits vollständig.",
+  "settings.commitMessage.prompt.title": "Benutzerdefinierter prompt",
+  "settings.commitMessage.prompt.description":
+    "System-prompt, der beim Generieren von commit messages an die KI gesendet wird. Dies ersetzt den Standard-prompt vollständig.",
+  "settings.commitMessage.prompt.placeholder":
+    "z. B. Generiere commit messages auf Spanisch nach dem conventional commits Format. Gib NUR die commit message zurück.",
+
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
   "settings.display.layout.title": "Layout",
@@ -1289,6 +1354,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Ein kleiner, effizienter Kern über alle Kilo-Produkte hinweg. Ein vertrautes Erlebnis, egal wie Sie arbeiten.",
   "migration.whatsNew.blogLink": "Die vollständige Ankündigung lesen",
+  "migration.whatsNew.docsLink": "Neuigkeiten & häufige Fragen",
   "migration.whatsNew.continue": "Weiter",
 
   // Screen 2 — Migrate Settings
@@ -1326,6 +1392,36 @@ export const dict = {
   "migration.error.continue": "Weiter",
   "migration.error.action.copy": "Kopieren",
   "migration.error.toast.copied": "Fehler in die Zwischenablage kopiert",
+
+  "migration.sessionSummary.title": "Zusammenfassung:",
+  "migration.sessionSummary.copy": "Bericht kopieren",
+  "migration.sessionSummary.toast.copied": "Bericht kopiert",
+  "migration.sessionSummary.successful": "Erfolgreich",
+  "migration.sessionSummary.skipped": "Übersprungen",
+  "migration.sessionSummary.alreadyMigrated": "Bereits migriert",
+  "migration.sessionSummary.errored": "Fehlgeschlagen",
+  "migration.sessionSummary.none": "Keine",
+  "migration.forceReimport.title": "Erneuten Import erzwingen",
+  "migration.forceReimport.description":
+    "Ein erneuter Import von {{target}} überschreibt diese und löscht alle neuen Nachrichten, die in diesen Sitzungen bereits erstellt wurden.",
+  "migration.forceReimport.target.one": "diese Sitzung",
+  "migration.forceReimport.target.many": "diese {{count}} Sitzungen",
+  "migration.forceReimport.button": "Erneuten Import erzwingen",
+  "migration.forceReimport.all": "Alle erneut importieren",
+  "migration.forceReimport.proceed": "Fortfahren",
+  "migration.forceReimport.toast.started": "Erneuter Import gestartet",
+  "migration.running.title": "Migration läuft",
+  "migration.running.description.line1": "Sie sind dabei abzuschließen, während noch Sitzungen migriert werden.",
+  "migration.running.description.line2": "Wenn Sie jetzt gehen, bleiben einige Sitzungen möglicherweise unvollständig.",
+  "migration.running.stay": "Bleiben",
+  "migration.running.proceed": "Fortfahren",
+  "migration.sessionProgress.preparing": "Sitzung wird vorbereitet",
+  "migration.sessionProgress.storing": "Sitzung wird gespeichert",
+  "migration.sessionProgress.skipped": "Sitzung übersprungen",
+  "migration.sessionProgress.header": "Migriere {{current}} von {{total}}",
+  "migration.sessionFormat.unknownDate": "Unbekanntes Datum",
+  "migration.sessionFormat.unknown": "Unbekannt",
+  "migration.sessionFormat.unknownError": "Unbekannter Fehler",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1339,7 +1435,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Mehrere Sitzungen laufen und werden unterbrochen",
   "settings.saveBar.saveAnyway": "Trotzdem speichern",
   "settings.saveBar.cancel": "Abbrechen",
+  "settings.saveBar.saving": "Speichern…",
+  "settings.saveBar.saveFailed": "Einstellungen konnten nicht gespeichert werden",
   "notifications.action.next": "Weiter",
   "notifications.action.close": "Schließen",
   "notifications.action.tryModel": "{{model}} ausprobieren",
+  "notifications.action.tryModelGeneric": "Modell ausprobieren",
 } satisfies Partial<Record<Keys, string>>

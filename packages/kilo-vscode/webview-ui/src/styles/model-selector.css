@@ -1,0 +1,507 @@
+/* ============================================
+   Model Selector (uses kilo-ui Popover)
+   ============================================ */
+
+.model-selector-popover {
+  transition:
+    width 0.2s ease,
+    max-width 0.2s ease;
+}
+
+/* Body is always flex so height changes animate in the same pass as width */
+.model-selector-body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: height 0.2s ease;
+}
+
+.model-selector-body .model-selector-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.model-selector-preview {
+  flex-shrink: 0;
+  overflow: hidden;
+  height: 0;
+}
+
+/* ============================================
+   Model Preview Panel
+   ============================================ */
+
+.model-preview {
+  height: 100%;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-sizing: border-box;
+  background: var(--vscode-editor-background);
+  color: var(--vscode-editor-foreground);
+  position: relative;
+}
+
+.model-preview-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.model-preview-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.model-preview-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.model-preview-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--vscode-editor-foreground);
+  line-height: 1.3;
+}
+
+.model-preview-provider {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.model-preview-description {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--vscode-editor-foreground);
+  opacity: 0.85;
+}
+
+.model-preview-description p {
+  margin: 0 0 0.5em;
+}
+
+.model-preview-description p:last-child {
+  margin-bottom: 0;
+}
+
+.model-preview-description a {
+  color: var(--vscode-textLink-foreground);
+  text-decoration: none;
+}
+
+.model-preview-description a:hover {
+  text-decoration: underline;
+}
+
+.model-preview-description code {
+  font-family: var(--vscode-editor-font-family, monospace);
+  background: var(--vscode-textCodeBlock-background);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+/* Two-column label/value grid for metrics */
+.model-preview-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 10px;
+  align-items: baseline;
+}
+
+.model-preview-label {
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.model-preview-value {
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Capability badge row */
+.model-preview-caps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.model-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+}
+
+.model-preview-badge--reasoning {
+  background: var(--vscode-inputValidation-infoBackground);
+  color: var(--vscode-inputValidation-infoForeground, var(--vscode-foreground));
+  border: 1px solid var(--vscode-inputValidation-infoBorder, transparent);
+}
+
+.model-preview-badge--free {
+  background: var(--vscode-testing-iconPassed, #4caf50);
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.model-preview-badge--top-right {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+
+.model-selector-preview--visible {
+  /* height is set inline via previewHeight signal */
+  border-top-width: 0;
+}
+
+.model-selector-splitter {
+  flex-shrink: 0;
+  height: 5px;
+  cursor: row-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-top: 1px solid var(--border-base, var(--vscode-panel-border));
+}
+
+.model-selector-splitter::after {
+  content: "";
+  width: 24px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--vscode-scrollbarSlider-background);
+  opacity: 0.5;
+}
+
+.model-selector-splitter:hover::after,
+.model-selector-splitter:active::after {
+  opacity: 1;
+}
+
+.model-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-selector-trigger-chevron {
+  flex-shrink: 0;
+}
+
+.model-selector-search-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--border-base, var(--vscode-panel-border));
+}
+
+.model-selector-search {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: var(--vscode-font-family);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.model-selector-search:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+.model-selector-search::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+.model-selector-list {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  max-height: 300px;
+  padding: 4px 0;
+  transition: max-height 0.15s ease;
+}
+
+.model-selector-empty {
+  padding: 12px 16px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  font-size: 12px;
+  text-align: center;
+}
+
+.model-selector-group-label {
+  padding: 4px 12px;
+  font-size: var(--font-size-x-small, 11px);
+  font-weight: var(--font-weight-medium, 500);
+  line-height: var(--line-height-large, 1.67);
+  letter-spacing: var(--letter-spacing-normal, 0);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+  user-select: none;
+}
+
+.model-selector-group-label:not(:first-child) {
+  border-top: 1px solid var(--border-weak-base, var(--vscode-panel-border));
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.model-selector-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.model-selector-item:hover,
+.model-selector-item.selected {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.model-selector-item.keyboard-focused {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+}
+
+.model-selector-item.active {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+}
+
+.model-selector-item.active .model-selector-item-name {
+  font-weight: 600;
+}
+
+.model-selector-item-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.model-selector-item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.model-selector-item-name-provider {
+  flex-shrink: 0;
+}
+
+.model-selector-item-name-main {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.model-selector-item [data-component="tag"] {
+  flex-shrink: 0;
+  background: var(--vscode-testing-iconPassed, #4caf50) !important;
+  color: #fff !important;
+  text-transform: uppercase;
+  font-size: 8px !important;
+  padding: 1px 3px !important;
+  opacity: 0.8;
+}
+
+.model-selector-item-provider-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0.8;
+}
+
+.model-selector-star {
+  all: unset;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--vscode-descriptionForeground);
+  opacity: 0;
+  transition:
+    opacity 0.1s ease,
+    color 0.1s ease;
+}
+
+.model-selector-star [data-component="icon"] {
+  color: inherit;
+}
+
+.model-selector-item:hover .model-selector-star,
+.model-selector-item.selected .model-selector-star,
+.model-selector-star--active {
+  opacity: 1;
+}
+
+.model-selector-star--active {
+  color: var(--vscode-list-highlightForeground);
+}
+
+.model-selector-star:hover {
+  color: var(--vscode-list-highlightForeground);
+  opacity: 1;
+}
+
+.model-selector-star--preview {
+  opacity: 1;
+}
+
+.model-selector-item-select-btn {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 2px;
+  border: none;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  opacity: 0.95;
+  cursor: pointer;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
+.model-selector-item-select-btn:hover {
+  opacity: 1;
+}
+
+.model-selector-item-select-btn--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ============================================
+   Thinking Selector (uses kilo-ui Popover)
+   ============================================ */
+
+.thinking-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.thinking-selector-list {
+  min-width: 120px;
+}
+
+.thinking-selector-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.thinking-selector-item:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.thinking-selector-item.selected {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+}
+
+.thinking-selector-item-name {
+  font-weight: 500;
+}
+
+/* ============================================
+   Mode Switcher (uses kilo-ui Popover)
+   ============================================ */
+
+.mode-switcher-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.mode-switcher-list {
+  overflow-y: auto;
+}
+
+.mode-switcher-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: var(--vscode-font-size);
+}
+
+.mode-switcher-item:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.mode-switcher-item:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: -1px;
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.mode-switcher-item.selected {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+}
+
+.mode-switcher-item-name {
+  font-weight: 500;
+}
+
+.mode-switcher-item-desc {
+  font-size: 11px;
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.mode-switcher-item.selected .mode-switcher-item-name {
+  font-weight: 600;
+}
+
+.mode-switcher-item.selected .mode-switcher-item-desc {
+  color: inherit;
+}

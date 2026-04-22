@@ -9,6 +9,8 @@ import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -19,13 +21,15 @@ import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import { useTerminalContext } from "../../hooks/useTerminalContext"
+import { hasTerminalMention } from "../../hooks/terminal-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
+import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
@@ -46,6 +50,10 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
 
 interface PromptInputProps {
   blocked?: () => boolean
+  /** When true, session is busy only because a suggestion is pending — treat as idle for input */
+  suggesting?: () => boolean
+  /** When true, session is busy only because a question is pending — treat as idle for input */
+  questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -57,9 +65,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(vscode)
-  const excluded = worktree ? new Set(["sessions"]) : undefined
-  const slash = useSlashCommand(vscode, excluded)
+  const mention = useFileMention(
+    vscode,
+    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+  )
+  const terminal = useTerminalContext(vscode)
+  const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -217,7 +228,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
 
   // Focus textarea when any part of the app requests it
-  const onFocusPrompt = () => textareaRef?.focus()
+  const onFocusPrompt = (event: Event) => {
+    const focus = () => {
+      const ref = textareaRef
+      if (!ref) return
+      ref.focus({ preventScroll: true })
+    }
+    focus()
+    if (!(event instanceof CustomEvent) || !event.detail?.restore) return
+    const restore = () => {
+      window.focus()
+      focus()
+    }
+    queueMicrotask(restore)
+    requestAnimationFrame(() => {
+      restore()
+      requestAnimationFrame(restore)
+      setTimeout(restore, 0)
+      setTimeout(restore, 50)
+    })
+  }
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
@@ -244,13 +274,18 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
-  const isBusy = () => session.status() === "busy"
+  const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled() && !props.blocked?.()
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
+  const highlightMentions = () => {
+    const paths = new Set(mention.mentionedPaths())
+    if (hasTerminalMention(text())) paths.add("terminal")
+    return paths
+  }
   const placeholder = () => {
     switch (server.connectionState()) {
       case "connecting":
@@ -290,7 +325,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
       if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
-        handleSend()
+        void handleSend()
       } else {
         textareaRef?.focus()
       }
@@ -548,7 +583,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const draft = text().trim()
 
     // Detect slash command (hoisted for both client and server command checks).
@@ -579,17 +614,24 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || props.blocked?.()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
-    const allFiles = [...mentionFiles, ...imgFiles]
-
     const sel = session.selected()
+    const pendingId = props.pendingSessionID ?? session.draftSessionID()
+    const sid = session.currentSessionID()
+
+    const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {
+      showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
+      return undefined
+    })
+    if (hasTerminalMention(message) && !terminalFile) return
+
+    const allFiles = [...mentionFiles, ...imgFiles, ...(terminalFile ? [terminalFile] : [])]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     const key = draftKey()
-    const pendingId = props.pendingSessionID ?? session.draftSessionID()
     // Server-side slash command (cmdMatch/matched already computed above)
     if (matched) {
       const rest = draft.slice(cmdMatch![0].length).trim()
@@ -675,22 +717,37 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">No files or folders found</div>}
           >
             <For each={mention.mentionResults()}>
-              {(path, index) => (
+              {(item, index) => (
                 <div
                   class="file-mention-item"
                   classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                   onMouseDown={(e) => {
                     e.preventDefault()
-                    if (textareaRef) mention.selectFile(path, textareaRef, setText, adjustHeight)
+                    if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
                   }}
                   onMouseEnter={() => mention.setMentionIndex(index())}
                 >
-                  <FileIcon node={{ path, type: "file" }} class="file-mention-icon" />
-                  <span class="file-mention-name">{fileName(path)}</span>
-                  <span class="file-mention-dir">{dirName(path)}</span>
+                  {item.type === "terminal" ? (
+                    <>
+                      <Icon name="console" class="file-mention-icon" />
+                      <span class="file-mention-name">{item.label}</span>
+                      <span class="file-mention-dir">{item.description}</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileIcon
+                        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+                        class="file-mention-icon"
+                      />
+                      <span class="file-mention-name">
+                        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+                      </span>
+                      <span class="file-mention-dir">{dirName(item.value)}</span>
+                    </>
+                  )}
                 </div>
               )}
             </For>
@@ -787,7 +844,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
-            <Index each={buildHighlightSegments(text(), mention.mentionedPaths())}>
+            <Index each={buildHighlightSegments(text(), highlightMentions())}>
               {(seg) => (
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
                   <span class="prompt-input-file-mention">{seg().text}</span>
@@ -860,7 +917,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 <Button
                   variant="ghost"
                   size="small"
-                  onClick={handleSend}
+                  onClick={() => void handleSend()}
                   disabled={!canSend()}
                   aria-label={language.t("prompt.action.send")}
                 >

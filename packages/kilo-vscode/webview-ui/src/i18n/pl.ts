@@ -757,6 +757,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Nazwa",
   "provider.custom.models.name.placeholder": "Nazwa wyświetlana",
+  "provider.custom.models.reasoning.label": "Rozumowanie",
+  "provider.custom.models.variants.label": "Warianty",
+  "provider.custom.models.variants.add": "Dodaj wariant",
+  "provider.custom.models.variants.remove": "Usuń wariant",
+  "provider.custom.models.variants.name.label": "Nazwa",
+  "provider.custom.models.variants.name.placeholder": "np. thinking",
+  "provider.custom.models.variants.option.unset": "(nie ustawiono)",
+  "provider.custom.models.variants.enableThinking.label": "Włącz myślenie (np. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Typ myślenia (np. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Włącz myślenie przez argumenty szablonu czatu (np. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Wysiłek rozumowania",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Usuń model",
   "provider.custom.models.add": "Dodaj model",
   "provider.custom.models.fetch": "Pobierz modele",
@@ -940,10 +968,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code to asystent programowania AI. Poproś go o tworzenie funkcji, naprawę błędów lub wyjaśnienie bazy kodu.",
   "session.messages.scrollToBottom": "Przewiń na dół",
+  "session.messages.initializing": "Inicjalizacja...",
+  "session.messages.taskStarting": "Uruchamianie...",
   "session.status.writingResponse": "Pisanie odpowiedzi…",
   "session.status.retry": "Ponawianie…",
   "session.status.retrying": "Ponawiam próbę ({{ attempt }})… {{ message }}",
   "session.status.working": "Pracuję…",
+  "session.status.offline": "Odłączono od sieci — ponowne łączenie...",
+
+  "ui.sessionTurn.cancel": "Anuluj",
+  "ui.sessionTurn.status.thinking": "Myślę...",
+  "ui.sessionTurn.status.consideringNextSteps": "Rozważam następne kroki...",
 
   "dialog.model.noProviders": "Brak dostawców",
 
@@ -952,6 +987,7 @@ export const dict = {
   "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
+  "context.usage.olderSessions": "{{count}} starszych sesji",
   "context.stats.thisSession": "Ta sesja",
 
   "time.justNow": "przed chwilą",
@@ -1066,6 +1102,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Kontynuuj pętlę agenta po odmowie uprawnienia",
   "settings.experimental.mcpTimeout.title": "Limit czasu MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Limit czasu żądań serwera MCP w milisekundach",
+  "settings.experimental.remote.title": "Sterowanie Remote",
+  "settings.experimental.remote.description":
+    "Włącz sterowanie Remote sesjami za pośrednictwem Kilo Cloud. Wpłynie to również na CLI na tej maszynie.",
+  "settings.experimental.remote.current": "Aktualny stan:",
+  "settings.experimental.remote.startup": "Automatyczne włączanie przy starcie:",
+  "settings.experimental.remote.active": "Aktywny",
+  "settings.experimental.remote.inactive": "Nieaktywny",
+  "settings.experimental.remote.hint": "Użyj /remote na czacie, aby przełączyć",
   "settings.experimental.toolToggles": "Przełączniki narzędzi",
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
@@ -1129,6 +1173,16 @@ export const dict = {
   "settings.agentBehaviour.editMode.native":
     "To jest wbudowany tryb. Jego podstawowa definicja nie może zostać zmieniona, ale poniżej możesz skonfigurować nadpisania.",
   "settings.agentBehaviour.editMode.promptOverride": "Niestandardowe nadpisanie promptu dla tego wbudowanego trybu",
+  "settings.agentBehaviour.badge.subagent": "podagent",
+  "settings.agentBehaviour.permissions.title": "Obliczone uprawnienia",
+  "settings.agentBehaviour.permissions.count": "{{count}} reguł",
+  "settings.agentBehaviour.permissions.effective": "Efektywne (wieloznacznik):",
+  "settings.agentBehaviour.permissions.col.tool": "Narzędzie",
+  "settings.agentBehaviour.permissions.col.pattern": "Wzorzec",
+  "settings.agentBehaviour.permissions.col.action": "Akcja",
+  "settings.agentBehaviour.permissions.copy": "Kopiuj uprawnienia jako JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Reguły są sprawdzane po kolei — ostatnia pasująca reguła wygrywa. To jest wynikowy zestaw reguł z backendu CLI.",
   "settings.agentBehaviour.removeMode.title": "Usuń tryb",
   "settings.agentBehaviour.removeMode.confirm":
     'Usunąć tryb "{{name}}"? Spowoduje to wyłączenie trybu poprzez aktualizację konfiguracji.',
@@ -1226,6 +1280,17 @@ export const dict = {
   "settings.context.prune.description": "Usuń stare wyjścia narzędzi podczas kompakcji",
   "settings.context.watcherPatterns": "Wzorce ignorowania obserwatora plików",
   "settings.context.watcherPatterns.description": "Wzorce glob dla plików do ignorowania",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Użyj niestandardowego prompt",
+  "settings.commitMessage.override.description":
+    "Zastąp domyślny prompt dla commit message. Po włączeniu, Twój niestandardowy prompt całkowicie zastępuje wbudowany prompt dla conventional commits.",
+  "settings.commitMessage.prompt.title": "Niestandardowy prompt",
+  "settings.commitMessage.prompt.description":
+    "Systemowy prompt wysyłany do AI podczas generowania commit messages. Zastępuje to całkowicie domyślny prompt.",
+  "settings.commitMessage.prompt.placeholder":
+    "np. Generuj commit messages w języku hiszpańskim zgodnie z formatem conventional commits. Zwróć TYLKO commit message.",
+
   "settings.display.username.title": "Nazwa użytkownika",
   "settings.display.username.description": "Niestandardowa nazwa użytkownika w rozmowach",
   "settings.display.layout.title": "Układ",
@@ -1271,6 +1336,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Jedno małe, wydajne jądro we wszystkich produktach Kilo. Znajome doświadczenie niezależnie od sposobu pracy.",
   "migration.whatsNew.blogLink": "Przeczytaj pełne ogłoszenie",
+  "migration.whatsNew.docsLink": "Nowości i często zadawane pytania",
   "migration.whatsNew.continue": "Kontynuuj",
 
   // Screen 2 — Migrate Settings
@@ -1307,6 +1373,36 @@ export const dict = {
   "migration.error.continue": "Kontynuuj",
   "migration.error.action.copy": "Kopiuj",
   "migration.error.toast.copied": "Błąd skopiowano do schowka",
+
+  "migration.sessionSummary.title": "Podsumowanie:",
+  "migration.sessionSummary.copy": "Kopiuj raport",
+  "migration.sessionSummary.toast.copied": "Skopiowano raport",
+  "migration.sessionSummary.successful": "Udane",
+  "migration.sessionSummary.skipped": "Pominięte",
+  "migration.sessionSummary.alreadyMigrated": "Już zmigrowane",
+  "migration.sessionSummary.errored": "Z błędem",
+  "migration.sessionSummary.none": "Brak",
+  "migration.forceReimport.title": "Wymuś ponowny import",
+  "migration.forceReimport.description":
+    "Ponowny import {{target}} spowoduje ich nadpisanie i usunięcie wszystkich nowych wiadomości już utworzonych w tych sesjach.",
+  "migration.forceReimport.target.one": "tej sesji",
+  "migration.forceReimport.target.many": "tych {{count}} sesji",
+  "migration.forceReimport.button": "Wymuś ponowny import",
+  "migration.forceReimport.all": "Zaimportuj ponownie wszystko",
+  "migration.forceReimport.proceed": "Kontynuuj",
+  "migration.forceReimport.toast.started": "Rozpoczęto wymuszony ponowny import",
+  "migration.running.title": "Migracja w toku",
+  "migration.running.description.line1": "Zaraz zakończysz, podczas gdy część sesji wciąż się migruje.",
+  "migration.running.description.line2": "Jeśli wyjdziesz teraz, niektóre sesje mogą pozostać niekompletne.",
+  "migration.running.stay": "Zostań",
+  "migration.running.proceed": "Kontynuuj",
+  "migration.sessionProgress.preparing": "Przygotowywanie sesji",
+  "migration.sessionProgress.storing": "Zapisywanie sesji",
+  "migration.sessionProgress.skipped": "Sesja pominięta",
+  "migration.sessionProgress.header": "Migracja {{current}} z {{total}}",
+  "migration.sessionFormat.unknownDate": "Nieznana data",
+  "migration.sessionFormat.unknown": "Nieznane",
+  "migration.sessionFormat.unknownError": "Nieznany błąd",
   // legacy-migration end
 
   "error.details.show": "Szczegóły",
@@ -1320,7 +1416,10 @@ export const dict = {
   "settings.saveBar.warning.many": "Kilka sesji jest uruchomionych i zostanie przerwanych",
   "settings.saveBar.saveAnyway": "Zapisz mimo to",
   "settings.saveBar.cancel": "Anuluj",
+  "settings.saveBar.saving": "Zapisywanie…",
+  "settings.saveBar.saveFailed": "Nie można zapisać ustawień",
   "notifications.action.next": "Następny",
   "notifications.action.close": "Zamknij",
   "notifications.action.tryModel": "Wypróbuj {{model}}",
+  "notifications.action.tryModelGeneric": "Wypróbuj model",
 }

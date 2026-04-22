@@ -755,6 +755,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-kimlik",
   "provider.custom.models.name.label": "Ad",
   "provider.custom.models.name.placeholder": "Görünen Ad",
+  "provider.custom.models.reasoning.label": "Akıl Yürütme",
+  "provider.custom.models.variants.label": "Varyantlar",
+  "provider.custom.models.variants.add": "Varyant ekle",
+  "provider.custom.models.variants.remove": "Varyantı kaldır",
+  "provider.custom.models.variants.name.label": "Ad",
+  "provider.custom.models.variants.name.placeholder": "örn. thinking",
+  "provider.custom.models.variants.option.unset": "(ayarlanmadı)",
+  "provider.custom.models.variants.enableThinking.label": "Düşünmeyi etkinleştir (örn. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Düşünme türü (örn. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Sohbet şablonu argümanları ile düşünmeyi etkinleştir (ör. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Akıl yürütme çabası",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Modeli kaldır",
   "provider.custom.models.add": "Model ekle",
   "provider.custom.models.fetch": "Modelleri getir",
@@ -939,10 +967,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code bir yapay zeka kodlama asistanıdır. Özellik geliştirmesini, hata düzeltmesini veya kod tabanınızı açıklamasını isteyin.",
   "session.messages.scrollToBottom": "En alta kaydır",
+  "session.messages.initializing": "Başlatılıyor...",
+  "session.messages.taskStarting": "Başlıyor...",
   "session.status.writingResponse": "Yanıt yazılıyor...",
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.retrying": "Yeniden deneniyor (deneme {{ attempt }})… {{ message }}",
   "session.status.working": "Çalışıyor...",
+  "session.status.offline": "Ağ bağlantısı kesildi — yeniden bağlanılıyor...",
+
+  "ui.sessionTurn.cancel": "İptal",
+  "ui.sessionTurn.status.thinking": "Düşünüyor...",
+  "ui.sessionTurn.status.consideringNextSteps": "Sonraki adımları değerlendiriyor...",
 
   "dialog.model.noProviders": "Sağlayıcı yok",
 
@@ -951,6 +986,7 @@ export const dict = {
   "prompt.placeholder.error": "Bağlantı başarısız. Çıktı panelini kontrol edin veya uzantıyı yeniden başlatın.",
 
   "context.usage.sessionCost": "Oturum maliyeti",
+  "context.usage.olderSessions": "{{count}} eski oturum",
   "context.stats.thisSession": "Bu oturum",
 
   "time.justNow": "az önce",
@@ -1068,6 +1104,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Bir izin reddedildiğinde ajan döngüsüne devam et",
   "settings.experimental.mcpTimeout.title": "MCP Zaman Aşımı (ms)",
   "settings.experimental.mcpTimeout.description": "MCP sunucu istekleri için milisaniye cinsinden zaman aşımı",
+  "settings.experimental.remote.title": "Remote Kontrolü",
+  "settings.experimental.remote.description":
+    "Kilo Cloud üzerinden oturumların Remote kontrolünü etkinleştirin. Bu, bu makinedeki CLI'leri de etkileyecektir.",
+  "settings.experimental.remote.current": "Mevcut durum:",
+  "settings.experimental.remote.startup": "Başlangıçta otomatik etkinleştir:",
+  "settings.experimental.remote.active": "Aktif",
+  "settings.experimental.remote.inactive": "Pasif",
+  "settings.experimental.remote.hint": "Geçiş yapmak için sohbette /remote kullanın",
   "settings.experimental.toolToggles": "Araç Açma/Kapatma",
 
   "settings.agentBehaviour.defaultAgent.title": "Varsayılan Ajan",
@@ -1203,6 +1247,16 @@ export const dict = {
   "settings.context.watcherPatterns": "Dosya İzleyici Yok Sayma Kalıpları",
   "settings.context.watcherPatterns.description": "İzleyicinin yok sayması gereken dosyalar için glob kalıpları",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Özel prompt Kullan",
+  "settings.commitMessage.override.description":
+    "Varsayılan commit message için olan prompt değerini geçersiz kıl. Etkinleştirildiğinde, özel prompt değeriniz yerleşik conventional commits için olan prompt değerini tamamen değiştirir.",
+  "settings.commitMessage.prompt.title": "Özel prompt",
+  "settings.commitMessage.prompt.description":
+    "commit messages oluşturulurken yapay zekaya gönderilen sistem prompt'u. Bu, varsayılan prompt'un tamamen yerini alır.",
+  "settings.commitMessage.prompt.placeholder":
+    "örn. conventional commits formatını izleyerek İspanyolca commit messages oluştur. SADECE commit message döndür.",
+
   "settings.display.username.title": "Kullanıcı Adı",
   "settings.display.username.description": "Sohbetlerde görüntülenen özel kullanıcı adı",
   "settings.display.layout.title": "Düzen",
@@ -1259,6 +1313,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Her Kilo ürününde küçük ve verimli bir çekirdek. Nasıl çalışmayı tercih ederseniz edin, tanıdık bir deneyim.",
   "migration.whatsNew.blogLink": "Tam duyuruyu oku",
+  "migration.whatsNew.docsLink": "Yenilikler ve sık sorulan sorular",
   "migration.whatsNew.continue": "Devam",
 
   // Screen 2 — Migrate Settings
@@ -1295,6 +1350,36 @@ export const dict = {
   "migration.error.continue": "Devam et",
   "migration.error.action.copy": "Kopyala",
   "migration.error.toast.copied": "Hata panoya kopyalandı",
+
+  "migration.sessionSummary.title": "Özet:",
+  "migration.sessionSummary.copy": "Raporu kopyala",
+  "migration.sessionSummary.toast.copied": "Rapor kopyalandı",
+  "migration.sessionSummary.successful": "Başarılı",
+  "migration.sessionSummary.skipped": "Atlandı",
+  "migration.sessionSummary.alreadyMigrated": "Zaten taşındı",
+  "migration.sessionSummary.errored": "Hatalı",
+  "migration.sessionSummary.none": "Yok",
+  "migration.forceReimport.title": "Yeniden içe aktarmayı zorla",
+  "migration.forceReimport.description":
+    "{{target}} yeniden içe aktarılırsa üzerlerine yazılır ve bu oturumlarda zaten oluşturulmuş yeni mesajlar silinir.",
+  "migration.forceReimport.target.one": "bu oturum",
+  "migration.forceReimport.target.many": "bu {{count}} oturum",
+  "migration.forceReimport.button": "Yeniden içe aktarmayı zorla",
+  "migration.forceReimport.all": "Hepsini yeniden içe aktar",
+  "migration.forceReimport.proceed": "Devam et",
+  "migration.forceReimport.toast.started": "Zorunlu yeniden içe aktarma başlatıldı",
+  "migration.running.title": "Taşıma sürüyor",
+  "migration.running.description.line1": "Hâlâ taşınan oturumlar varken işlemi bitirmek üzeresiniz.",
+  "migration.running.description.line2": "Şimdi çıkarsanız bazı oturumlar eksik kalabilir.",
+  "migration.running.stay": "Kal",
+  "migration.running.proceed": "Devam et",
+  "migration.sessionProgress.preparing": "Oturum hazırlanıyor",
+  "migration.sessionProgress.storing": "Oturum kaydediliyor",
+  "migration.sessionProgress.skipped": "Oturum atlandı",
+  "migration.sessionProgress.header": "{{total}} içinden {{current}} taşınıyor",
+  "migration.sessionFormat.unknownDate": "Bilinmeyen tarih",
+  "migration.sessionFormat.unknown": "Bilinmiyor",
+  "migration.sessionFormat.unknownError": "Bilinmeyen hata",
   // legacy-migration end
 
   "error.details.show": "Ayrıntılar",
@@ -1309,9 +1394,12 @@ export const dict = {
   "settings.saveBar.warning.many": "Birden fazla oturum çalışıyor ve kesintiye uğrayacak",
   "settings.saveBar.saveAnyway": "Yine de kaydet",
   "settings.saveBar.cancel": "İptal",
+  "settings.saveBar.saving": "Kaydediliyor…",
+  "settings.saveBar.saveFailed": "Ayarlar kaydedilemedi",
   "notifications.action.next": "Sonraki",
   "notifications.action.close": "Kapat",
   "notifications.action.tryModel": "Dene {{model}}",
+  "notifications.action.tryModelGeneric": "Modeli Dene",
   // Missing translations - English fallbacks until translated
   "profile.switchingAccount": "Hesap değiştiriliyor…",
   "settings.agentBehaviour.createMode": "Yeni Mod Oluştur",
@@ -1335,8 +1423,19 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Modu Düzenle",
   "settings.agentBehaviour.editMode.back": "Listeye dön",
   "settings.agentBehaviour.editMode.description": "Açıklama",
-  "settings.agentBehaviour.editMode.native": "Yerleşik mod (salt okunur tanım)",
+  "settings.agentBehaviour.editMode.native":
+    "Bu yerleşik bir moddur. Temel tanımı değiştirilemez, ancak aşağıdan geçersiz kılmaları yapılandırabilirsiniz.",
   "settings.agentBehaviour.editMode.prompt": "Sistem İstemi",
   "settings.agentBehaviour.editMode.promptOverride": "Bu yerleşik mod için özel sistem istemi geçersiz kılma",
+  "settings.agentBehaviour.badge.subagent": "alt ajan",
+  "settings.agentBehaviour.permissions.title": "Hesaplanan İzinler",
+  "settings.agentBehaviour.permissions.count": "{{count}} kural",
+  "settings.agentBehaviour.permissions.effective": "Geçerli (joker karakter):",
+  "settings.agentBehaviour.permissions.col.tool": "Araç",
+  "settings.agentBehaviour.permissions.col.pattern": "Desen",
+  "settings.agentBehaviour.permissions.col.action": "Eylem",
+  "settings.agentBehaviour.permissions.copy": "İzinleri JSON olarak kopyala",
+  "settings.agentBehaviour.permissions.hint":
+    "Kurallar sırayla değerlendirilir — son eşleşen kural kazanır. Bu, CLI arka ucundan çözümlenen kural kümesidir.",
   "settings.agentBehaviour.editMode.save": "Tamam",
 }

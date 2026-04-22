@@ -753,6 +753,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Naam",
   "provider.custom.models.name.placeholder": "Weergavenaam",
+  "provider.custom.models.reasoning.label": "Redeneren",
+  "provider.custom.models.variants.label": "Varianten",
+  "provider.custom.models.variants.add": "Variant toevoegen",
+  "provider.custom.models.variants.remove": "Variant verwijderen",
+  "provider.custom.models.variants.name.label": "Naam",
+  "provider.custom.models.variants.name.placeholder": "bijv. thinking",
+  "provider.custom.models.variants.option.unset": "(niet ingesteld)",
+  "provider.custom.models.variants.enableThinking.label": "Denken inschakelen (bijv. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Denktype (bijv. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Nadenken inschakelen via chat template args (bijv. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Redeneerinspanning",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Model verwijderen",
   "provider.custom.models.add": "Model toevoegen",
   "provider.custom.models.fetch": "Modellen ophalen",
@@ -937,10 +965,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code is een AI-codeerassistent. Vraag het om features te bouwen, bugs op te lossen of je codebase uit te leggen.",
   "session.messages.scrollToBottom": "Scroll naar beneden",
+  "session.messages.initializing": "Initialiseren...",
+  "session.messages.taskStarting": "Starten...",
   "session.status.writingResponse": "Antwoord schrijven...",
   "session.status.retry": "Opnieuw proberen...",
   "session.status.retrying": "Opnieuw proberen (poging {{ attempt }})... {{ message }}",
   "session.status.working": "Bezig...",
+  "session.status.offline": "Netwerkverbinding verbroken — opnieuw verbinden...",
+
+  "ui.sessionTurn.cancel": "Annuleren",
+  "ui.sessionTurn.status.thinking": "Denken...",
+  "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen...",
 
   "dialog.model.noProviders": "Geen providers",
 
@@ -949,6 +984,7 @@ export const dict = {
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",
+  "context.usage.olderSessions": "{{count}} oudere sessies",
   "context.stats.thisSession": "Deze sessie",
 
   "time.justNow": "zojuist",
@@ -1072,6 +1108,14 @@ export const dict = {
     "Ga door met de agent loop wanneer een toestemming wordt geweigerd",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
+  "settings.experimental.remote.title": "Remote-bediening",
+  "settings.experimental.remote.description":
+    "Schakel Remote-bediening van sessies in via Kilo Cloud. Dit heeft ook invloed op CLI's op deze machine.",
+  "settings.experimental.remote.current": "Huidige status:",
+  "settings.experimental.remote.startup": "Automatisch inschakelen bij opstarten:",
+  "settings.experimental.remote.active": "Actief",
+  "settings.experimental.remote.inactive": "Inactief",
+  "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
@@ -1210,6 +1254,16 @@ export const dict = {
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
 
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
+  "settings.commitMessage.override.description":
+    "Overschrijf de standaard prompt voor de commit message. Indien ingeschakeld, vervangt uw aangepaste prompt de ingebouwde prompt voor conventional commits volledig.",
+  "settings.commitMessage.prompt.title": "Aangepaste prompt",
+  "settings.commitMessage.prompt.description":
+    "Systeem prompt die naar de AI wordt gestuurd bij het genereren van commit messages. Dit vervangt de standaard prompt volledig.",
+  "settings.commitMessage.prompt.placeholder":
+    "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
+
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.layout.title": "Lay-out",
@@ -1266,6 +1320,7 @@ export const dict = {
   "migration.whatsNew.features.foundation.detail":
     "Één kleine, efficiënte kern voor elk Kilo-product. Een vertrouwde ervaring, hoe je ook wilt werken.",
   "migration.whatsNew.blogLink": "Lees de volledige aankondiging",
+  "migration.whatsNew.docsLink": "Wat is er nieuw & veelgestelde vragen",
   "migration.whatsNew.continue": "Doorgaan",
 
   // Screen 2 — Migrate Settings
@@ -1303,6 +1358,36 @@ export const dict = {
   "migration.error.continue": "Doorgaan",
   "migration.error.action.copy": "Kopiëren",
   "migration.error.toast.copied": "Fout gekopieerd naar het klembord",
+
+  "migration.sessionSummary.title": "Samenvatting:",
+  "migration.sessionSummary.copy": "Rapport kopiëren",
+  "migration.sessionSummary.toast.copied": "Rapport gekopieerd",
+  "migration.sessionSummary.successful": "Geslaagd",
+  "migration.sessionSummary.skipped": "Overgeslagen",
+  "migration.sessionSummary.alreadyMigrated": "Al gemigreerd",
+  "migration.sessionSummary.errored": "Met fouten",
+  "migration.sessionSummary.none": "Geen",
+  "migration.forceReimport.title": "Herimport forceren",
+  "migration.forceReimport.description":
+    "Het opnieuw importeren van {{target}} zal deze overschrijven en alle nieuwe berichten verwijderen die al in die sessies zijn gemaakt.",
+  "migration.forceReimport.target.one": "deze sessie",
+  "migration.forceReimport.target.many": "deze {{count}} sessies",
+  "migration.forceReimport.button": "Herimport forceren",
+  "migration.forceReimport.all": "Alles opnieuw importeren",
+  "migration.forceReimport.proceed": "Doorgaan",
+  "migration.forceReimport.toast.started": "Geforceerde herimport gestart",
+  "migration.running.title": "Migratie bezig",
+  "migration.running.description.line1": "Je staat op het punt af te ronden terwijl er nog sessies worden gemigreerd.",
+  "migration.running.description.line2": "Als je nu vertrekt, kunnen sommige sessies onvolledig blijven.",
+  "migration.running.stay": "Blijven",
+  "migration.running.proceed": "Doorgaan",
+  "migration.sessionProgress.preparing": "Sessie voorbereiden",
+  "migration.sessionProgress.storing": "Sessie opslaan",
+  "migration.sessionProgress.skipped": "Sessie overgeslagen",
+  "migration.sessionProgress.header": "Bezig met migreren van {{current}} van {{total}}",
+  "migration.sessionFormat.unknownDate": "Onbekende datum",
+  "migration.sessionFormat.unknown": "Onbekend",
+  "migration.sessionFormat.unknownError": "Onbekende fout",
   // legacy-migration end
 
   "error.details.show": "Details",
@@ -1317,9 +1402,12 @@ export const dict = {
   "settings.saveBar.warning.many": "Meerdere sessies zijn actief en worden onderbroken",
   "settings.saveBar.saveAnyway": "Toch opslaan",
   "settings.saveBar.cancel": "Annuleren",
+  "settings.saveBar.saving": "Bezig met opslaan…",
+  "settings.saveBar.saveFailed": "Instellingen konden niet worden opgeslagen",
   "notifications.action.next": "Volgende",
   "notifications.action.close": "Sluiten",
   "notifications.action.tryModel": "Probeer {{model}}",
+  "notifications.action.tryModelGeneric": "Probeer model",
   // Missing translations - English fallbacks until translated
   "settings.agentBehaviour.createMode": "Nieuwe modus aanmaken",
   "settings.agentBehaviour.createMode.button": "Aanmaken",
@@ -1342,8 +1430,19 @@ export const dict = {
   "settings.agentBehaviour.editMode": "Modus bewerken",
   "settings.agentBehaviour.editMode.back": "Terug naar lijst",
   "settings.agentBehaviour.editMode.description": "Beschrijving",
-  "settings.agentBehaviour.editMode.native": "Ingebouwde modus (alleen-lezen definitie)",
+  "settings.agentBehaviour.editMode.native":
+    "Dit is een ingebouwde modus. De basisdefinitie kan niet worden gewijzigd, maar u kunt hieronder overrides configureren.",
   "settings.agentBehaviour.editMode.prompt": "Systeemprompt",
   "settings.agentBehaviour.editMode.promptOverride": "Aangepaste systeemprompt voor deze ingebouwde modus",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Berekende machtigingen",
+  "settings.agentBehaviour.permissions.count": "{{count}} regels",
+  "settings.agentBehaviour.permissions.effective": "Effectief (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Tool",
+  "settings.agentBehaviour.permissions.col.pattern": "Patroon",
+  "settings.agentBehaviour.permissions.col.action": "Actie",
+  "settings.agentBehaviour.permissions.copy": "Machtigingen kopiëren als JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Regels worden op volgorde geëvalueerd — de laatst overeenkomende regel wint. Dit is de opgeloste regelset van de CLI backend.",
   "settings.agentBehaviour.editMode.save": "Klaar",
 }

@@ -63,32 +63,64 @@ For additional model configuration (token limits, tool calling, variants), edit 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set the API key and base URL as environment variables or configure them in your `kilo.json` config file:
+Define a custom provider in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`). The provider key (e.g., `"vllm"`) is your chosen identifier — it can be any name you like.
 
-**Environment variable:**
-
-```bash
-export OPENAI_API_KEY="your-api-key"
-```
-
-**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+You must define at least one model. Setting `name` and `limit` (context window and max output tokens) is recommended so the agent can manage context correctly:
 
 ```jsonc
 {
   "provider": {
-    "openai-compatible": {
-      "env": ["OPENAI_API_KEY"],
-      "baseURL": "https://api.your-provider.com/v1",
+    "vllm": {
+      "models": {
+        "qwen35": {
+          "name": "Qwen 3.5",
+          "limit": {
+            "context": 262144,
+            "output": 16384,
+          },
+        },
+      },
+      "options": {
+        "apiKey": "none",
+        "baseURL": "http://my.url:8000/v1",
+      },
     },
   },
 }
 ```
 
-Then set your default model:
+Then set your default model using the `provider-id/model-id` format:
 
 ```jsonc
 {
-  "model": "openai-compatible/model-name",
+  "model": "vllm/qwen35",
+}
+```
+
+**Configuration fields:**
+
+- **`models`** — A map of model IDs to model definitions. Each model should include a `name` and `limit` with `context` and `output` token counts. If `limit.context` or `limit.output` is omitted, it defaults to `0`, which limits context management.
+- **`options.baseURL`** — The base URL of your OpenAI-compatible API endpoint.
+- **`options.apiKey`** — Your API key. Use any non-empty string (e.g., `"none"`) if the provider doesn't require authentication.
+
+You can also set the API key via an environment variable instead of putting it in the config file. Use the `env` field to specify which variable to read:
+
+```jsonc
+{
+  "provider": {
+    "my-provider": {
+      "env": ["MY_PROVIDER_API_KEY"],
+      "models": {
+        "my-model": {
+          "name": "My Model",
+          "limit": { "context": 128000, "output": 4096 },
+        },
+      },
+      "options": {
+        "baseURL": "https://api.my-provider.com/v1",
+      },
+    },
+  },
 }
 ```
 
