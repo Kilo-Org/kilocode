@@ -18,6 +18,10 @@
       "dependsOn": ["@kilocode/sdk#build"],
       "outputs": ["dist/**"]
     },
+    "@kilocode/plugin#build": {
+      "dependsOn": ["@kilocode/sdk#build"],
+      "outputs": ["dist/**"]
+    },
     "@kilocode/cli#test": {
       "dependsOn": ["^build"],
       "outputs": [],
