@@ -11,19 +11,20 @@ import * as Win32 from "../../../src/cli/cmd/tui/win32"
 import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 
 const stop = new Error("stop")
+// kilocode_change start
 const seen = {
   tui: [] as string[],
-  // kilocode_change
   args: [] as Array<{ yolo?: boolean }>,
 }
+// kilocode_change end
 
 function setup() {
+  // kilocode_change start
   // Intentionally avoid mock.module() here: Bun keeps module overrides in cache
   // and mock.restore() does not reset mock.module values. If this switches back
   // to module mocks, later suites can see mocked @/config/tui and fail (e.g.
   // plugin-loader tests expecting real TuiConfig.waitForDependencies). See:
   // https://github.com/oven-sh/bun/issues/7823 and #12823.
-  // kilocode_change start
   spyOn(App, "tui").mockImplementation(async (input) => {
     if (input.directory) seen.tui.push(input.directory)
     seen.args.push({ yolo: input.args.yolo })
@@ -53,8 +54,8 @@ describe("tui thread", () => {
   })
 
   async function call(project?: string) {
-    const { TuiThreadCommand } = await import("../../../src/cli/cmd/tui/thread")
     // kilocode_change start
+    const { TuiThreadCommand } = await import("../../../src/cli/cmd/tui/thread")
     const args: Parameters<NonNullable<typeof TuiThreadCommand.handler>>[0] = {
       _: [],
       $0: "kilo", // kilocode_change
@@ -82,12 +83,12 @@ describe("tui thread", () => {
 
   async function check(project?: string) {
     setup()
-
+    // kilocode_change start
+    await using tmp = await tmpdir({ git: true })
     const cwd = process.cwd()
     const pwd = process.env.PWD
     const worker = globalThis.Worker
     const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
-    await using tmp = await tmpdir({ git: true })
     const link = path.join(path.dirname(tmp.path), path.basename(tmp.path) + "-link")
     const type = process.platform === "win32" ? "junction" : "dir"
     seen.tui.length = 0
@@ -99,14 +100,15 @@ describe("tui thread", () => {
       configurable: true,
       value: true,
     })
+    // kilocode_change start
     globalThis.Worker = class extends EventTarget {
       onerror = null
       onmessage = null
       onmessageerror = null
       postMessage() {}
-      // kilocode_change
       terminate() {}
     } as unknown as typeof Worker
+    // kilocode_change end
 
     // kilocode_change start
     try {
@@ -124,7 +126,8 @@ describe("tui thread", () => {
       globalThis.Worker = worker
       await fs.rm(link, { recursive: true, force: true }).catch(() => undefined)
     }
-  } // kilocode_change end
+    // kilocode_change end
+  }
 
   // kilocode_change start
   test("uses the real cwd when PWD points at a symlink", async () => {
@@ -191,6 +194,5 @@ describe("tui thread", () => {
       globalThis.Worker = worker
     }
     // kilocode_change end
-  })
-  // kilocode_change end
+  }) // kilocode_change end
 })

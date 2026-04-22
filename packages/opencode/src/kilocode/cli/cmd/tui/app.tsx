@@ -6,7 +6,7 @@
  * via thin integration points so the upstream diff stays minimal.
  */
 
-import { createEffect, on } from "solid-js"
+import { createEffect, createSignal, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
@@ -136,6 +136,7 @@ export function init() {
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
+  const [booted, setBooted] = createSignal<string>()
 
   const enabled = () => {
     if (route.data.type !== "session") return false
@@ -164,10 +165,14 @@ export function init() {
   createEffect(() => {
     if (!args.yolo) return
     if (route.data.type !== "session") return
-    if (enabled()) return
-    void sdk.client.permission.allowEverything({
-      enable: true,
-      sessionID: route.data.sessionID,
+    if (booted() === route.data.sessionID) return
+    if (args.yoloSessionID && args.yoloSessionID !== route.data.sessionID) return
+    setBooted(route.data.sessionID)
+    const req = sync.data.permission[route.data.sessionID]?.[0]
+    if (!req) return
+    void sdk.client.permission.reply({
+      requestID: req.id,
+      reply: "once",
     })
   })
 
