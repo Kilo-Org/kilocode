@@ -6,7 +6,7 @@
  * via thin integration points so the upstream diff stays minimal.
  */
 
-import { createEffect, createSignal, on } from "solid-js"
+import { createEffect, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
@@ -23,6 +23,7 @@ import { DialogSelect } from "@tui/ui/dialog-select"
 import { Link } from "@tui/ui/link"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
+import { TuiYolo } from "@/kilocode/cli/cmd/tui/yolo"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 
 // Re-export so upstream can render the route without importing directly
@@ -136,11 +137,10 @@ export function init() {
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
-  const [booted, setBooted] = createSignal<string>()
 
   const enabled = () => {
     if (route.data.type !== "session") return false
-    return isAllowEverything(sync.session.get(route.data.sessionID)?.permission)
+    return TuiYolo.enabled(route.data.sessionID)
   }
 
   // Inject TUI dependencies for kilo-gateway
@@ -165,15 +165,18 @@ export function init() {
   createEffect(() => {
     if (!args.yolo) return
     if (route.data.type !== "session") return
-    if (booted() === route.data.sessionID) return
-    if (args.yoloSessionID && args.yoloSessionID !== route.data.sessionID) return
-    setBooted(route.data.sessionID)
+    if (!TuiYolo.consume()) return
+    if (!args.sessionID && !args.continue && !args.fork) return
+    TuiYolo.set(route.data.sessionID, true)
+  })
+
+  createEffect(() => {
+    if (route.data.type !== "session") return
     const req = sync.data.permission[route.data.sessionID]?.[0]
     if (!req) return
-    void sdk.client.permission.reply({
-      requestID: req.id,
-      reply: "once",
-    })
+    if (!TuiYolo.shouldReply(route.data.sessionID, req.id)) return
+    TuiYolo.mark(req.id)
+    void sdk.client.permission.reply({ requestID: req.id, reply: "once" })
   })
 
   // Register YOLO toggle
@@ -191,13 +194,22 @@ export function init() {
       onSelect: async (dialog) => {
         if (route.data.type !== "session") return
         const sessionID = route.data.sessionID
-        const result = await sdk.client.permission.allowEverything({ enable: !enabled(), sessionID })
-        if (result.error) {
-          toast.show({
-            variant: "error",
-            message: `Failed to ${enabled() ? "disable" : "enable"} YOLO mode`,
-          })
-          return
+        const next = !enabled()
+        TuiYolo.set(sessionID, next)
+        if (next) {
+          const req = sync.data.permission[sessionID]?.[0]
+          if (req && TuiYolo.shouldReply(sessionID, req.id)) {
+            TuiYolo.mark(req.id)
+            const result = await sdk.client.permission.reply({ requestID: req.id, reply: "once" })
+            if (result.error) {
+              TuiYolo.set(sessionID, false)
+              toast.show({
+                variant: "error",
+                message: "Failed to enable YOLO mode",
+              })
+              return
+            }
+          }
         }
         dialog.clear()
       },

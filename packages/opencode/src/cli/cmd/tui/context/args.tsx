@@ -1,5 +1,6 @@
 import { createSimpleContext } from "./helper"
 
+// kilocode_change start
 export interface Args {
   model?: string
   agent?: string
@@ -8,8 +9,8 @@ export interface Args {
   sessionID?: string
   fork?: boolean
   yolo?: boolean // kilocode_change
-  yoloSessionID?: string // kilocode_change
 }
+// kilocode_change end
 
 export const { use: useArgs, provider: ArgsProvider } = createSimpleContext({
   name: "Args",

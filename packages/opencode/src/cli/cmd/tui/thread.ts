@@ -354,9 +354,8 @@ export const TuiThreadCommand = cmd({
             prompt,
             fork: args.fork,
             yolo: args.yolo,
-            yoloSessionID: args.yolo && args.session ? args.session : undefined,
             // kilocode_change end
-          },
+          }, // kilocode_change end
         })
       } finally {
         await stop()

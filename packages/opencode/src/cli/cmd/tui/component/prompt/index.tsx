@@ -44,6 +44,7 @@ import { DialogWorkspaceCreate, restoreWorkspaceSession } from "../dialog-worksp
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
+import { TuiYolo } from "@/kilocode/cli/cmd/tui/yolo" // kilocode_change
 
 export type PromptProps = {
   sessionID?: string
@@ -733,8 +734,8 @@ export function Prompt(props: PromptProps) {
       return false
     }
 
-    let sessionID = props.sessionID
     // kilocode_change start
+    let sessionID = props.sessionID
     if (sessionID == null) {
       const res = await sdk.client.session.create({ workspace: props.workspaceID })
 
@@ -750,6 +751,9 @@ export function Prompt(props: PromptProps) {
       }
 
       sessionID = res.data.id
+      if (args.yolo && !args.sessionID && !args.continue && TuiYolo.consume()) {
+        TuiYolo.set(sessionID, true)
+      }
     }
     // kilocode_change end
 
