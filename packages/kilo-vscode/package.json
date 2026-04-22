@@ -836,7 +836,6 @@
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
-    "test:webview-reactivity": "bun test --conditions=browser tests/webview-reactivity/",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",
@@ -847,7 +846,6 @@
     "extension": "bun script/launch.ts"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "20.0.11",
     "@playwright/test": "1.57.0",
     "@storybook/addon-docs": "10.2.10",
     "@types/diff": "^6.0.0",
