@@ -836,6 +836,7 @@
     "lint": "eslint src webview-ui",
     "test": "vscode-test",
     "test:unit": "bun test tests/unit/",
+    "test:webview-reactivity": "bun test --conditions=browser tests/webview-reactivity/",
     "rebuild-sdk": "bun run --cwd ../sdk/js build",
     "storybook": "storybook dev -p 6007",
     "build-storybook": "storybook build -o storybook-static",
