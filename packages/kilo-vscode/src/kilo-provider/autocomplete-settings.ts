@@ -15,14 +15,18 @@ type Message = { type: string; key?: string; value?: unknown; text?: string }
 /**
  * Route autocomplete-related webview messages. Returns true when the message was handled.
  */
-export async function routeAutocompleteMessage(message: Message, post: (msg: unknown) => void): Promise<boolean> {
+export async function routeAutocompleteMessage(
+  message: Message,
+  post: (msg: unknown) => void,
+  context?: vscode.ExtensionContext,
+): Promise<boolean> {
   if (message.type === "requestAutocompleteSettings") {
-    post(await buildSettingsMessage())
+    post(await buildSettingsMessage(context))
     return true
   }
   if (message.type === "updateAutocompleteSetting") {
     if (await updateSetting(message.key, message.value)) {
-      post(await buildSettingsMessage())
+      post(await buildSettingsMessage(context))
     }
     return true
   }
@@ -38,7 +42,7 @@ export async function routeAutocompleteMessage(message: Message, post: (msg: unk
  * Build the autocompleteSettingsLoaded message. Exposed so other flows
  * (e.g. "reset all settings") can push fresh settings after changing config.
  */
-export async function buildSettingsMessage() {
+export async function buildSettingsMessage(context?: vscode.ExtensionContext) {
   const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
   return {
     type: "autocompleteSettingsLoaded" as const,
@@ -47,7 +51,7 @@ export async function buildSettingsMessage() {
       enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
       enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
     },
-    keybindings: await keybindings(["kilo-code.new.autocomplete.generateSuggestions"]),
+    keybindings: await keybindings(["kilo-code.new.autocomplete.generateSuggestions"], context),
   }
 }
 

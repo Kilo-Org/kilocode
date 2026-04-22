@@ -1,4 +1,3 @@
-import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
 
@@ -43,11 +42,18 @@ const SPECIAL: Record<string, string> = {
   space: "Space",
 }
 
-export async function keybindings(ids: string[]) {
+/**
+ * Resolve effective display shortcuts for the given command IDs.
+ *
+ * Reads the active VS Code profile's `keybindings.json` (derived from the extension's
+ * globalStorageUri so it works across profiles) and applies user entries on top of
+ * the extension's declared defaults. Respects `-command` unbinds.
+ */
+export async function keybindings(ids: string[], context?: vscode.ExtensionContext) {
   const result: Record<string, string> = {}
-  const user = await readUserKeybindings()
+  const user = await readUserKeybindings(context)
   for (const id of ids) {
-    const binding = bindingFor(id, user)
+    const binding = resolve(id, user)
     if (binding) {
       result[id] = binding
     }
@@ -55,82 +61,69 @@ export async function keybindings(ids: string[]) {
   return result
 }
 
-function bindingFor(id: string, user: KeybindingEntry[]) {
-  const entry = user.find((item) => item.command === id)
-  if (entry) {
-    if (!entry.key) {
-      return undefined
-    }
-    return pretty(entry.key)
-  }
-
-  const ext = vscode.extensions.getExtension("kilocode.kilo-code")
-  const bindings = (ext?.packageJSON?.contributes?.keybindings ?? []) as KeybindingEntry[]
-  const fallback = bindings.find((item) => item.command === id)
-  const raw = process.platform === "darwin" ? fallback?.mac || fallback?.key : fallback?.key
-  if (!raw) {
+function resolve(id: string, user: KeybindingEntry[]) {
+  const defaults = extensionDefaults(id)
+  const platformDefault = process.platform === "darwin" ? defaults?.mac || defaults?.key : defaults?.key
+  const effective = applyOverrides(id, user, platformDefault)
+  if (!effective) {
     return undefined
   }
-  return pretty(raw)
+  return pretty(effective)
 }
 
-async function readUserKeybindings() {
-  const files = await candidates()
-  for (const file of files) {
-    const value = await read(file)
-    if (Array.isArray(value)) {
-      return value as KeybindingEntry[]
+function extensionDefaults(id: string): KeybindingEntry | undefined {
+  const ext = vscode.extensions.getExtension("kilocode.kilo-code")
+  const bindings = (ext?.packageJSON?.contributes?.keybindings ?? []) as KeybindingEntry[]
+  return bindings.find((item) => item.command === id)
+}
+
+/**
+ * Walk user keybindings in order, applying override semantics:
+ *  - `command: id`      → sets the effective binding to this entry's key
+ *  - `command: -id`     → removes the current binding (matches any bound key for display)
+ *
+ * Later entries win, matching VS Code's "last wins" resolution for display purposes.
+ */
+function applyOverrides(id: string, user: KeybindingEntry[], fallback: string | undefined) {
+  let current = fallback
+  const unbind = `-${id}`
+  for (const entry of user) {
+    if (entry.command === id && entry.key) {
+      current = entry.key
+    } else if (entry.command === unbind) {
+      current = undefined
     }
+  }
+  return current
+}
+
+async function readUserKeybindings(context?: vscode.ExtensionContext) {
+  const file = keybindingsPath(context)
+  if (!file) {
+    return []
+  }
+  const value = await read(file)
+  if (Array.isArray(value)) {
+    return value as KeybindingEntry[]
   }
   return []
 }
 
-async function candidates() {
-  const root = process.env.VSCODE_PORTABLE ? path.join(process.env.VSCODE_PORTABLE, "user-data") : dataDir()
-  const dir = path.join(root, "User")
-  const files = [path.join(dir, "keybindings.json")]
-  const profiles = path.join(dir, "profiles")
-  const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(profiles)).then(
-    (items) => items,
-    () => [],
-  )
-  return files.concat(
-    entries
-      .filter((entry) => entry[1] === vscode.FileType.Directory)
-      .map((entry) => path.join(profiles, entry[0], "keybindings.json")),
-  )
-}
-
-function dataDir() {
-  const home = os.homedir()
-  const product = productDir()
-  if (process.platform === "win32") {
-    return path.join(process.env.APPDATA || path.join(home, "AppData", "Roaming"), product)
+/**
+ * Derive the active profile's `keybindings.json` from the extension's globalStorageUri.
+ *
+ * Layouts (per VS Code Profiles):
+ *   default profile:  <root>/User/globalStorage/<ext-id>          → <root>/User/keybindings.json
+ *   custom profile:   <root>/User/profiles/<id>/globalStorage/... → <root>/User/profiles/<id>/keybindings.json
+ *
+ * Either way, walking up two directories from globalStorageUri and appending
+ * `keybindings.json` lands us on the right file for the currently active profile.
+ */
+function keybindingsPath(context?: vscode.ExtensionContext) {
+  if (!context) {
+    return undefined
   }
-  if (process.platform === "darwin") {
-    return path.join(home, "Library", "Application Support", product)
-  }
-  return path.join(process.env.XDG_CONFIG_HOME || path.join(home, ".config"), product)
-}
-
-function productDir() {
-  const name = vscode.env.appName.toLowerCase()
-  if (name.includes("insiders")) {
-    return "Code - Insiders"
-  }
-  if (name.includes("vscodium")) {
-    return "VSCodium"
-  }
-  if (name.includes("cursor")) {
-    return "Cursor"
-  }
-  if (name.includes("windsurf")) {
-    return "Windsurf"
-  }
-  if (name.includes("oss")) {
-    return "Code - OSS"
-  }
-  return "Code"
+  return path.join(context.globalStorageUri.fsPath, "..", "..", "keybindings.json")
 }
 
 async function read(file: string) {

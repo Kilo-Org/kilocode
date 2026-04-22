@@ -572,7 +572,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
       if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
-      if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg))) return
+      if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg), this.extensionContext)) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -2991,7 +2991,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   /** Read autocomplete settings from VS Code configuration and push to the webview. */
   private async sendAutocompleteSettings(): Promise<void> {
-    this.postMessage(await buildSettingsMessage())
+    this.postMessage(await buildSettingsMessage(this.extensionContext))
   }
 
   /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
