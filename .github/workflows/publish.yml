@@ -98,6 +98,30 @@ jobs:
           name: kilo-cli
           path: packages/opencode/dist
 
+      # kilocode_change start - upload smaller CLI artifact for VS Code packaging
+      - name: Prepare VS Code CLI artifact
+        run: |
+          rm -rf packages/opencode/dist-vscode
+          mkdir -p packages/opencode/dist-vscode/@kilocode
+          cp -R \
+            packages/opencode/dist/@kilocode/cli-linux-x64 \
+            packages/opencode/dist/@kilocode/cli-linux-arm64 \
+            packages/opencode/dist/@kilocode/cli-linux-x64-musl \
+            packages/opencode/dist/@kilocode/cli-linux-arm64-musl \
+            packages/opencode/dist/@kilocode/cli-darwin-x64 \
+            packages/opencode/dist/@kilocode/cli-darwin-arm64 \
+            packages/opencode/dist/@kilocode/cli-windows-x64 \
+            packages/opencode/dist/@kilocode/cli-windows-arm64 \
+            packages/opencode/dist-vscode/@kilocode/
+          du -sh packages/opencode/dist packages/opencode/dist-vscode
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kilo-cli-vscode
+          path: packages/opencode/dist-vscode
+          if-no-files-found: error
+      # kilocode_change end
+
     outputs:
       version: ${{ needs.version.outputs.version }}
 
@@ -118,10 +142,12 @@ jobs:
       - name: Install @vscode/vsce
         run: bun install -g @vscode/vsce
 
+      # kilocode_change start - download smaller CLI artifact for VS Code packaging
       - uses: actions/download-artifact@v4
         with:
-          name: kilo-cli
+          name: kilo-cli-vscode
           path: packages/opencode/dist
+      # kilocode_change end
 
       - name: Build VSIX packages
         run: bun script/build.ts
