@@ -54,9 +54,44 @@ The built plugin archive is at `build/distributions/kilo.jetbrains-<version>.zip
 
 ## Run the plugin
 
-Use the `runIde` Gradle task (available in the Gradle tool window or via the "Run JetBrains Plugin" run configuration) to launch a sandboxed IntelliJ instance with the plugin installed.
+### Monolithic mode (recommended for most development)
 
-On a fresh worktree, `runIde` now checks `backend/build/generated/cli/cli/` first. If the local-platform CLI binary is missing, it runs the standard single-binary generation flow and copies the result into the backend resources automatically.
+Use the `runIde` Gradle task to launch a single sandboxed IntelliJ instance with all plugin modules loaded together. This is the simplest mode and is sufficient for the vast majority of development work.
+
+Via the Gradle tool window: run the `:runIde` task under the root project.
+
+Or from the terminal:
+
+```
+./gradlew runIde
+```
+
+### Split mode (backend + frontend in separate processes)
+
+Split mode mirrors production remote-development deployments where the backend runs on a remote host and the frontend runs on the local client machine. Use it when working on the RPC boundary, testing remote-dev-specific behaviour, or debugging split-mode-only issues.
+
+Three run configurations are provided in `.run/` and appear automatically in the IDE's run configuration dropdown:
+
+| Configuration            | Gradle task       | What it starts                     |
+| ------------------------ | ----------------- | ---------------------------------- |
+| **Run IDE (Backend)**    | `:runIdeBackend`  | Backend IDE process (host side)    |
+| **Run IDE (Frontend)**   | `:runIdeFrontend` | Frontend IDE process (client side) |
+| **Run IDE (Split Mode)** | compound          | Both processes together            |
+
+**Start order matters:** the backend must be running and accepting connections before the frontend starts. Always launch **Run IDE (Backend)** first, wait until the backend sandbox IDE is fully up, then launch **Run IDE (Frontend)**.
+
+**Run them separately, not via the compound configuration, if you want working breakpoints or live logs.** The compound **Run IDE (Split Mode)** configuration is convenient but launches both processes under a single run session, which prevents the IDE from attaching debuggers independently to each side and merges their output streams. When you need to set breakpoints in backend or frontend code, or need each side's log stream in its own Run tab, start **Run IDE (Backend)** and **Run IDE (Frontend)** as two separate run sessions instead.
+
+Both configurations tail their respective dev log files automatically in the Run tool window:
+
+- Backend log: `.intellijPlatform/sandbox/kilo.jetbrains/kilo-backend/kilo-dev.log`
+- Frontend log: `.intellijPlatform/sandbox/kilo.jetbrains/kilo-frontend/kilo-dev.log`
+
+Both run with `-Pkilo.dev.log.level=debug` by default.
+
+---
+
+On a fresh worktree, all `runIde` variants check `backend/build/generated/cli/cli/` first. If the local-platform CLI binary is missing, it runs the standard single-binary generation flow and copies the result into the backend resources automatically.
 
 That bootstrap is local-development only. Production packaging still requires running `bun run build:production` so all platform binaries are present.
 
