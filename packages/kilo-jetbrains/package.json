@@ -2,6 +2,9 @@
   "name": "@kilocode/kilo-jetbrains",
   "private": true,
   "scripts": {
+    "typecheck": "bun script/gradle.ts compileKotlin compileTestKotlin",
+    "test": "bun script/gradle.ts test",
+    "test:ci": "bun script/gradle.ts --rerun-tasks test",
     "build": "bun script/build.ts",
     "build:production": "bun script/build.ts --production"
   }

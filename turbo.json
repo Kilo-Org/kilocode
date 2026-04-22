@@ -33,6 +33,11 @@
       "dependsOn": ["@kilocode/cli#build"],
       "outputs": ["build/distributions/**"]
     },
+    "@kilocode/kilo-jetbrains#test:ci": {
+      "dependsOn": ["@kilocode/cli#build"],
+      "outputs": [".artifacts/unit/**"],
+      "passThroughEnv": ["*"]
+    },
     "@opencode-ai/app#test:ci": {
       "dependsOn": ["^build"],
       "outputs": [".artifacts/unit/junit.xml"],

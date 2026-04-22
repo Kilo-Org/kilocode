@@ -72,7 +72,7 @@ jobs:
         if: always()
         uses: mikepenz/action-junit-report@v6
         with:
-          report_paths: packages/*/.artifacts/unit/junit.xml
+          report_paths: packages/*/.artifacts/unit/**/*.xml
           check_name: "unit results (${{ matrix.settings.name }})"
           detailed_summary: true
           include_time_in_summary: true
@@ -86,7 +86,7 @@ jobs:
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
-          path: packages/*/.artifacts/unit/junit.xml
+          path: packages/*/.artifacts/unit/**/*.xml
 
   e2e:
     # kilocode_change - disabled: packages/app is not actively maintained

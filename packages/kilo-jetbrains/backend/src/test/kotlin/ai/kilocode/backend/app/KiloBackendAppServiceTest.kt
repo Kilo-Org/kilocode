@@ -170,18 +170,18 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
-    fun `profile 500 transitions to Error`() = runBlocking {
+    fun `profile 500 does not prevent Ready`() = runBlocking {
         mock.profileStatus = 500
         mock.profile = """{"error":"internal"}"""
         val svc = create()
         svc.connect()
 
         withTimeout(15_000) {
-            svc.appState.first { it is KiloAppState.Error }
+            svc.appState.first { it is KiloAppState.Ready }
         }
 
-        val err = svc.appState.value as KiloAppState.Error
-        assertTrue(err.errors.any { it.resource == "profile" })
+        assertNull(svc.profile)
+        assertIs<KiloAppState.Ready>(svc.appState.value)
     }
 
     @Test

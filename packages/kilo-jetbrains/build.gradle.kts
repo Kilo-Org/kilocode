@@ -2,6 +2,7 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
+import org.gradle.api.tasks.testing.Test
 
 group = "ai.kilocode.jetbrains"
 version = "7.0.1"
@@ -25,6 +26,12 @@ subprojects {
         config.setFrom(rootProject.file("detekt.yml"))
         buildUponDefaultConfig = true
         source.setFrom("src/main/kotlin")
+    }
+
+    tasks.withType<Test>().configureEach {
+        useJUnitPlatform()
+        reports.junitXml.required.set(true)
+        reports.junitXml.outputLocation.set(rootProject.layout.projectDirectory.dir(".artifacts/unit/${project.name}"))
     }
 }
 
