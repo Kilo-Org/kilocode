@@ -1,0 +1,106 @@
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:// kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    model: ConfigModelID.nullable().optional(), // kilocode_change - nullable for delete sentinel
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:  // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:      // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:  // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:      // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/agent.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:// kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:  // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:      // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/command.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:import { applyEdits, findNodeAtLocation, modify, parseTree } from "jsonc-parser" // kilocode_change - parseTree/findNodeAtLocation used in patchJsonc
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: kilo.local)"), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // NOTE: Any new kilocode_change key added to Config.Info must also be mirrored in
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change start - nullable for delete sentinel
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change start - renamed from "build" to "code"
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        debug: ConfigAgent.Info.optional(), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        orchestrator: ConfigAgent.Info.optional(), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        ask: ConfigAgent.Info.optional(), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    commit_message: KilocodeConfig.CommitMessageSchema, // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - enable telemetry by default
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  warnings: Warning[] // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<Info> // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  // kilocode_change start — when the existing JSONC node at this path is a
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:  // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:              result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:            // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:            // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change start - warning accumulator and legacy Kilo config
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:          // kilocode_change start - warn instead of fail on wellknown errors
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:          // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - capture global config failures as warnings
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - capture KILO_CONFIG failures as warnings
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - also discover kilo.json project files
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - accept .kilo/.kilocode config dirs and all kilo/opencode filenames
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - propagate parse errors to the Warning accumulator
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change start - capture KILO_CONFIG_CONTENT parse failures as warnings
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change start - include kilo.json/kilo.jsonc in managed dir loading
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        warnings, // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        .pipe(Effect.orDie) // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:    // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:        const merged = KilocodeConfig.mergeConfig(writable(existing), input) // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change start - skip dispose when caller opts out
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:      warnings, // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change start - keep async wrappers for Kilo callsites during Effect migration
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/config.ts:// kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/keybinds.ts:    news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/managed.ts:      return "/Library/Application Support/kilo" // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/managed.ts:      return path.join(process.env.ProgramData || "C:\\ProgramData", "kilo") // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/managed.ts:      return "/etc/kilo" // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/paths.ts:            targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/paths.ts:        targets: [".kilocode", ".kilo", ".opencode"], // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/permission.ts:  // kilocode_change - nullable allows null as a delete sentinel
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:          // kilocode_change start - allow null values so removed variants can be deleted via stripNulls on save
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:          // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:          // kilocode_change start
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:              // kilocode_change end
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:              "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.", // kilocode_change
+f373e0d06a0133cee4c1051f1c9d08e73aa87b68:packages/opencode/src/config/provider.ts:      models: z.record(z.string(), Model.nullable()).optional(), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save

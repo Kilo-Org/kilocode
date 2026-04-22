@@ -1,0 +1,24 @@
+M	packages/opencode/src/auth/index.ts	6 -> 0
+M	packages/opencode/src/cli/cmd/tui/component/dialog-session-list.tsx	15 -> 14
+M	packages/opencode/src/cli/cmd/tui/component/dialog-session-rename.tsx	5 -> 4
+M	packages/opencode/src/cli/cmd/tui/component/prompt/index.tsx	22 -> 19
+R090	packages/opencode/src/config/tui-migrate.ts -> packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts	3 -> 2
+M	packages/opencode/src/cli/cmd/tui/context/local.tsx	17 -> 11
+M	packages/opencode/src/cli/cmd/tui/routes/session/index.tsx	34 -> 35
+M	packages/opencode/src/config/config.ts	95 -> 66
+M	packages/opencode/src/ide/index.ts	0 -> 2
+D	packages/opencode/src/kilocode/paste-summary.ts	1 -> DELETED
+M	packages/opencode/src/lsp/index.ts	3 -> 0
+M	packages/opencode/src/mcp/index.ts	7 -> 9
+M	packages/opencode/src/mcp/oauth-callback.ts	6 -> 9
+M	packages/opencode/src/permission/index.ts	36 -> 38
+M	packages/opencode/src/project/bootstrap.ts	3 -> 4
+M	packages/opencode/src/provider/auth.ts	5 -> 4
+M	packages/opencode/src/provider/error.ts	2 -> 1
+M	packages/opencode/src/provider/models.ts	10 -> 8
+M	packages/opencode/src/provider/provider.ts	25 -> 27
+M	packages/opencode/src/provider/transform.ts	24 -> 23
+M	packages/opencode/src/server/instance/config.ts	8 -> 7
+M	packages/opencode/src/server/instance/index.ts	2 -> 3
+M	packages/opencode/src/server/proxy.ts	0 -> 1
+M	packages/opencode/src/session/index.ts	31 -> 0

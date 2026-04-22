@@ -1,0 +1,95 @@
+14:// kilocode_change start
+25:// kilocode_change end
+64:  // kilocode_change start
+73:  // kilocode_change end
+80:        return "/Library/Application Support/kilo" // kilocode_change
+82:        return path.join(process.env.ProgramData || "C:\\ProgramData", "kilo") // kilocode_change
+84:        return "/etc/kilo" // kilocode_change
+178:  // kilocode_change — toWarning, caughtWarning, handleInvalid are imported from KilocodeConfig above
+180:  // kilocode_change start
+182:    // kilocode_change end
+194:        // kilocode_change start
+204:        // kilocode_change end
+231:      // kilocode_change start
+233:      // kilocode_change end
+238:  // kilocode_change start
+240:    // kilocode_change end
+253:        // kilocode_change start
+263:        // kilocode_change end
+267:      // kilocode_change start
+278:      // kilocode_change end
+292:      // kilocode_change start
+294:      // kilocode_change end
+299:  // kilocode_change start
+301:    // kilocode_change end
+313:        // kilocode_change start
+323:        // kilocode_change end
+340:      // kilocode_change start
+342:      // kilocode_change end
+469:    // kilocode_change - nullable allows null as a delete sentinel
+556:      model: ModelId.nullable().optional(), // kilocode_change - nullable for delete sentinel
+796:      news_toggle: z.string().optional().default("none").describe("Toggle news on home screen"), // kilocode_change
+810:      mdnsDomain: z.string().optional().describe("Custom domain name for mDNS service (default: kilo.local)"), // kilocode_change
+878:          // kilocode_change start - allow null values so removed variants can be deleted via stripNulls on save
+885:          // kilocode_change end
+907:          // kilocode_change start
+918:              // kilocode_change end
+922:              "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.", // kilocode_change
+935:      models: z.record(z.string(), Model.nullable()).optional(), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
+977:      // kilocode_change start
+978:      // NOTE: Any new kilocode_change key added to Config.Info must also be mirrored in
+985:      // kilocode_change end
+997:      // kilocode_change start - nullable for delete sentinel
+1004:      // kilocode_change end
+1005:      // kilocode_change start - renamed from "build" to "code"
+1012:      // kilocode_change end
+1030:          debug: Agent.optional(), // kilocode_change
+1031:          orchestrator: Agent.optional(), // kilocode_change
+1032:          ask: Agent.optional(), // kilocode_change
+1121:      commit_message: KilocodeConfig.CommitMessageSchema, // kilocode_change
+1138:          codebase_search: z.boolean().optional().describe("Enable AI-powered codebase search"), // kilocode_change
+1139:          // kilocode_change start - enable telemetry by default
+1141:          // kilocode_change end
+1169:    warnings: Warning[] // kilocode_change
+1179:    readonly updateGlobal: (config: Info, options?: { dispose?: boolean }) => Effect.Effect<Info> // kilocode_change
+1183:    readonly warnings: () => Effect.Effect<Warning[]> // kilocode_change
+1189:    // kilocode_change start
+1191:      // kilocode_change end
+1202:      // kilocode_change - null means "delete this key" — pass undefined to jsonc-parser's modify()
+1212:    // kilocode_change start — when the existing JSONC node at this path is a
+1230:    // kilocode_change end
+1336:            parsed.data.$schema = "https://app.kilo.ai/config.json" // kilocode_change
+1337:            const updated = original.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",') // kilocode_change
+1364:        yield* Effect.promise(() => KilocodeConfig.migrateBashPermission()) // kilocode_change
+1368:          // kilocode_change start
+1371:          // kilocode_change end
+1383:                result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
+1412:        const plugin = path.join(dir, "node_modules", "@kilocode", "plugin", "package.json") // kilocode_change
+1435:            // kilocode_change start - added pnpm-lock.yaml and yarn.lock (not in upstream)
+1445:            // kilocode_change end
+1451:        // kilocode_change start
+1461:        // kilocode_change end
+1498:        // kilocode_change start - warning accumulator and legacy Kilo config
+1517:        // kilocode_change end
+1599:          // kilocode_change start
+1609:          // kilocode_change end
+1614:          // kilocode_change start
+1631:          // kilocode_change end
+1647:          // kilocode_change start
+1666:          // kilocode_change end
+1690:          // kilocode_change start
+1706:          // kilocode_change end
+1746:        // kilocode_change start
+1753:        // kilocode_change end
+1801:          warnings, // kilocode_change
+1834:      // kilocode_change start
+1838:      // kilocode_change end
+1849:          .pipe(Effect.orDie) // kilocode_change
+1870:      // kilocode_change start - add dispose option to skip Instance.disposeAll for permission-only changes
+1873:        // kilocode_change end
+1881:          const merged = KilocodeConfig.mergeConfig(writable(existing), input) // kilocode_change
+1890:        // kilocode_change start - skip dispose when caller opts out
+1905:        // kilocode_change end
+1921:        warnings, // kilocode_change
+1933:  // kilocode_change start - keep async wrappers for Kilo callsites during Effect migration
+1971:  // kilocode_change end

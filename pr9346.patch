@@ -1,0 +1,2 @@
+could not find pull request diff: HTTP 406: Sorry, the diff exceeded the maximum number of files (300). Consider using 'List pull requests files' API or locally cloning the repository instead. (https://api.github.com/repos/Kilo-Org/kilocode/pulls/9346)
+PullRequest.diff too_large
