@@ -83,6 +83,7 @@ function wrap<Parameters extends z.ZodType, Result extends Metadata>(
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
+          // kilocode_change start
           if (typeof args !== "object" || args === null) {
             return yield* Effect.fail(
               new Error(
@@ -90,6 +91,7 @@ function wrap<Parameters extends z.ZodType, Result extends Metadata>(
               ),
             )
           }
+          // kilocode_change end
           yield* Effect.try({
             try: () => toolInfo.parameters.parse(args),
             catch: (error) => {

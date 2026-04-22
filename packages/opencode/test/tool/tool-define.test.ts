@@ -1,10 +1,12 @@
 import { describe, test, expect } from "bun:test"
-import { Cause, Effect, Layer, ManagedRuntime } from "effect"
+import { Cause, Effect, Layer, ManagedRuntime } from "effect" // kilocode_change
 import z from "zod"
 import { Agent } from "../../src/agent/agent"
 import { Tool } from "../../src/tool"
 import { Truncate } from "../../src/tool"
+// kilocode_change start
 import { SessionID, MessageID } from "../../src/session/schema"
+// kilocode_change end
 
 const runtime = ManagedRuntime.make(Layer.mergeAll(Truncate.defaultLayer, Agent.defaultLayer))
 
@@ -21,6 +23,7 @@ function makeTool(id: string, executeFn?: () => void) {
   }
 }
 
+// kilocode_change start
 function makeCtx(): Tool.Context {
   return {
     sessionID: SessionID.make("session_test"),
@@ -68,6 +71,7 @@ describe("Tool.execute invalid JSON args", () => {
     expect(msg).toContain("invalid arguments")
   })
 })
+// kilocode_change end
 
 describe("Tool.define", () => {
   test("object-defined tool does not mutate the original init object", async () => {

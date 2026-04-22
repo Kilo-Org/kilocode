@@ -268,6 +268,7 @@ export namespace LLM {
             if (!t || !t.execute) {
               return { result: "", error: `Unknown tool: ${toolName}` }
             }
+            // kilocode_change start
             let parsed: unknown
             try {
               parsed = JSON.parse(argsJson)
@@ -277,8 +278,11 @@ export namespace LLM {
                 error: `Failed to parse tool call arguments as JSON for tool '${toolName}': ${e.message}`,
               }
             }
+            // kilocode_change end
             try {
+              // kilocode_change start
               const result = await t.execute!(parsed as any, {
+                // kilocode_change end
                 toolCallId: _requestID,
                 messages: input.messages,
                 abortSignal: input.abort,
@@ -389,7 +393,7 @@ export namespace LLM {
           maxOutputTokens: params.maxOutputTokens,
           abortSignal: input.abort,
           headers: {
-            ...(input.model.providerID.startsWith("kilo") // kilocode_change
+              ...(input.model.providerID.startsWith("kilo") // kilocode_change
               ? {
                   "x-kilo-project": Instance.project.id,
                   "x-kilo-session": input.sessionID,
