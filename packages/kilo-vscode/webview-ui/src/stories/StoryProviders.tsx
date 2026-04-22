@@ -67,6 +67,7 @@ const MOCK_PROVIDERS = {
         name: "Anthropic: Claude Sonnet 4.6",
         inputPrice: 0.003,
         outputPrice: 0.015,
+        limit: { context: 200000, output: 8192 },
       },
     },
   },

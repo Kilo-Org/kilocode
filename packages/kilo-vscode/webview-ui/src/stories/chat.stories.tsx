@@ -16,7 +16,7 @@ import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
-import type { QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -167,7 +167,7 @@ export const ChatViewWithPendingQuestionEmptyInput: Story = {
 // ---------------------------------------------------------------------------
 
 export const QuestionDockSingle: Story = {
-  name: "QuestionDock — single question",
+  name: "QuestionDock — single question (explicit submit)",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} questions={[singleQuestion]}>
       <div style={{ width: "100%" }}>
@@ -234,6 +234,7 @@ export const SuggestBarReview: Story = {
 const toolUserID = "user-msg-spacing-001"
 const toolAssistantID = "asst-msg-spacing-001"
 const queuedUserID = "user-msg-spacing-002"
+const queuedSecondID = "user-msg-spacing-003"
 const toolNow = 1_700_000_000_000
 const spacingMessages = [
   {
@@ -241,6 +242,18 @@ const spacingMessages = [
     sessionID: SESSION_ID,
     role: "user",
     time: { created: toolNow - 9000 },
+  },
+  {
+    id: queuedUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: toolNow - 1000 },
+  },
+  {
+    id: queuedSecondID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: toolNow - 500 },
   },
   {
     id: toolAssistantID,
@@ -253,12 +266,6 @@ const spacingMessages = [
     mode: "default",
     agent: "default",
     path: { cwd: "/project", root: "/project" },
-  },
-  {
-    id: queuedUserID,
-    sessionID: SESSION_ID,
-    role: "user",
-    time: { created: toolNow - 1000 },
   },
 ]
 const spacingParts = {
@@ -298,6 +305,15 @@ const spacingParts = {
       text: "ok",
     },
   ],
+  [queuedSecondID]: [
+    {
+      id: "part-user-spacing-003",
+      sessionID: SESSION_ID,
+      messageID: queuedSecondID,
+      type: "text",
+      text: "and then explain it",
+    },
+  ],
 }
 const spacingData = {
   ...defaultMockData,
@@ -306,15 +322,119 @@ const spacingData = {
 }
 
 export const MessageListToolToQueuedUserSpacing: Story = {
-  name: "MessageList — tool to queued user spacing",
+  name: "MessageList — queued users stay at bottom",
   render: () => {
     const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
       messages: () => spacingMessages,
       userMessages: () => spacingMessages.filter((msg) => msg.role === "user"),
     }
     return (
-      <StoryProviders data={spacingData} sessionID={SESSION_ID} status="idle" noPadding>
+      <StoryProviders data={spacingData} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ height: "420px", display: "flex", "flex-direction": "column" }}>
+            <MessageList />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// MessageList — sub-agent (task tool) to queued user spacing
+// Verifies the same vertical gap applies when the last assistant part is a
+// sub-agent's expanded task tool, not just a regular tool like bash.
+// ---------------------------------------------------------------------------
+
+const subUserID = "user-msg-subagent-spacing-001"
+const subAssistantID = "asst-msg-subagent-spacing-001"
+const subQueuedUserID = "user-msg-subagent-spacing-002"
+const subChildSessionID = "story-session-child-subagent-001"
+const subNow = 1_700_000_100_000
+const subagentSpacingMessages = [
+  {
+    id: subUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: subNow - 9000 },
+  },
+  {
+    id: subAssistantID,
+    sessionID: SESSION_ID,
+    role: "assistant",
+    parentID: subUserID,
+    time: { created: subNow - 8000 },
+    modelID: "claude-sonnet-4-20250514",
+    providerID: "anthropic",
+    mode: "default",
+    agent: "default",
+    path: { cwd: "/project", root: "/project" },
+  },
+  {
+    id: subQueuedUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    time: { created: subNow - 1000 },
+  },
+]
+const subagentSpacingParts = {
+  [subUserID]: [
+    {
+      id: "part-user-subagent-spacing-001",
+      sessionID: SESSION_ID,
+      messageID: subUserID,
+      type: "text",
+      text: "Delegate a search to a sub-agent so I can test the spacing.",
+    },
+  ],
+  [subAssistantID]: [
+    {
+      id: "part-task-subagent-spacing-001",
+      sessionID: SESSION_ID,
+      messageID: subAssistantID,
+      type: "tool",
+      callID: "call-task-subagent-spacing-001",
+      tool: "task",
+      state: {
+        status: "completed",
+        input: { description: "Find auth usage", subagent_type: "explore" },
+        output: "done",
+        title: "Find auth usage",
+        metadata: { sessionId: subChildSessionID },
+        time: { start: subNow - 7000, end: subNow - 6500 },
+      },
+    },
+  ],
+  [subQueuedUserID]: [
+    {
+      id: "part-user-subagent-spacing-002",
+      sessionID: SESSION_ID,
+      messageID: subQueuedUserID,
+      type: "text",
+      text: "continue",
+    },
+  ],
+}
+const subagentSpacingData = {
+  ...defaultMockData,
+  message: {
+    [SESSION_ID]: subagentSpacingMessages,
+    [subChildSessionID]: [],
+  },
+  part: subagentSpacingParts,
+}
+
+export const MessageListSubagentToQueuedUserSpacing: Story = {
+  name: "MessageList — sub-agent to queued user spacing",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => subagentSpacingMessages,
+      userMessages: () => subagentSpacingMessages.filter((msg) => msg.role === "user"),
+    }
+    return (
+      <StoryProviders data={subagentSpacingData} sessionID={SESSION_ID} status="idle" noPadding>
         <SessionContext.Provider value={session as any}>
           <div style={{ height: "420px", display: "flex", "flex-direction": "column" }}>
             <MessageList />
@@ -329,10 +449,141 @@ export const MessageListToolToQueuedUserSpacing: Story = {
 // TaskHeader with todos
 // ---------------------------------------------------------------------------
 
+const headerNow = 1_700_000_000_000
+const headerUserID = "user-task-header-001"
+const headerAssistantID = "asst-task-header-001"
+const headerMessages: Message[] = [
+  {
+    id: headerUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    content: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+    createdAt: new Date(headerNow - 12000).toISOString(),
+    time: { created: headerNow - 12000 },
+  },
+  {
+    id: headerAssistantID,
+    sessionID: SESSION_ID,
+    role: "assistant",
+    parentID: headerUserID,
+    content: "I'll track the CLI interface implementation with a todo list.",
+    createdAt: new Date(headerNow - 10000).toISOString(),
+    time: { created: headerNow - 10000 },
+    modelID: "anthropic/claude-sonnet-4-6",
+    providerID: "kilo",
+    mode: "default",
+    agent: "code",
+    path: { cwd: "/project", root: "/project" },
+  },
+]
+const headerParts: Record<string, Part[]> = {
+  [headerAssistantID]: [
+    {
+      id: "part-header-read-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "read",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/index.ts" },
+        output: "export async function main() { /* existing CLI bootstrap */ }",
+        title: "Read CLI entrypoint",
+      },
+    },
+    {
+      id: "part-header-text-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "text",
+      text: "I found the existing command registration and argument parsing flow.",
+    },
+    {
+      id: "part-header-glob-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "glob",
+      state: {
+        status: "completed",
+        input: { pattern: "packages/opencode/src/**/*.ts" },
+        output:
+          "packages/opencode/src/cli/index.ts\npackages/opencode/src/command/run.ts\npackages/opencode/src/config/config.ts",
+        title: "Find CLI files",
+      },
+    },
+    {
+      id: "part-header-edit-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "edit",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/index.ts" },
+        output: "Updated the command registry to expose the new interface hook.",
+        title: "Update CLI registry",
+      },
+    },
+    {
+      id: "part-header-bash-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "bash",
+      state: {
+        status: "completed",
+        input: { command: "bun run check-types:webview", description: "Typecheck webview" },
+        output: "Checked 1 project. No type errors found.",
+        title: "Run typecheck",
+      },
+    },
+    {
+      id: "part-header-write-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "write",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/interface.ts" },
+        output: "Created the CLI interface implementation scaffold.",
+        title: "Create interface scaffold",
+      },
+    },
+    {
+      id: "part-header-text-002",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "text",
+      text: "Next I am wiring the implementation into the existing command path.",
+    },
+    {
+      id: "part-header-bash-002",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "bash",
+      state: {
+        status: "running",
+        input: { command: "bun test packages/opencode/test/cli.test.ts", description: "Run CLI tests" },
+        title: "Run CLI tests",
+      },
+    },
+  ],
+}
+
 const mockTodosInProgress: TodoItem[] = [
-  { id: "1", content: "Create a haiku about Jan", status: "completed" },
-  { id: "2", content: "Create a poem about Henk", status: "in_progress" },
-  { id: "3", content: "Write a limerick about the team", status: "pending" },
+  { id: "1", content: "Project setup and architecture backlog", status: "completed" },
+  { id: "2", content: "Configuration schema for target jobs", status: "completed" },
+  { id: "3", content: "Core scanning logic", status: "completed" },
+  { id: "4", content: "Build invocation and error handling", status: "completed" },
+  { id: "5", content: "CLI interface implementation", status: "in_progress" },
+  { id: "6", content: "Storage layer implementation", status: "pending" },
+  { id: "7", content: "Character profiles and prompt types", status: "pending" },
+  { id: "8", content: "Local tests and integration tests", status: "pending" },
+  { id: "9", content: "Migration guide", status: "pending" },
+  { id: "10", content: "Release validation", status: "pending" },
 ]
 
 const mockTodosAllDone: TodoItem[] = [
@@ -345,19 +596,22 @@ export const TaskHeaderWithTodos: Story = {
   render: () => {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
-      messages: () => [{ id: "msg-001" }] as any[],
+      messages: () => headerMessages,
       currentSession: () => ({
         id: SESSION_ID,
-        title: "Writing poems about the team",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        title: "Task: Can you use the update_todo_list tool to create a CLI interface implementation?",
+        createdAt: new Date(headerNow - 12000).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
       }),
       todos: () => mockTodosInProgress,
+      getParts: (id: string) => headerParts[id] ?? [],
+      contextUsage: () => ({ tokens: 34300, percentage: 17 }),
+      costBreakdown: () => [{ label: "Session", cost: 0.64 }],
     }
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
+          <div style={{ width: "100%" }}>
             <TaskHeader />
           </div>
         </SessionContext.Provider>

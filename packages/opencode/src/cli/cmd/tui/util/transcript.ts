@@ -1,5 +1,5 @@
 import type { AssistantMessage, Part, Provider, UserMessage } from "@kilocode/sdk/v2"
-import { Locale } from "@/util/locale"
+import { Locale } from "@/util"
 import * as Model from "./model"
 
 export type TranscriptOptions = {

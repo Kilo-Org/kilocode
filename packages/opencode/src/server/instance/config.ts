@@ -1,21 +1,19 @@
 import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
-import { Config } from "../../config/config"
-import { Provider } from "../../provider/provider"
-import { ModelID, ProviderID } from "../../provider/schema"
+import { Config } from "../../config"
+import { Provider } from "../../provider"
+import { ModelID, ProviderID } from "../../provider/schema" // kilocode_change
 import { mapValues } from "remeda"
 import { errors } from "../error"
-import { Log } from "../../util/log"
 import { lazy } from "../../util/lazy"
 import { AppRuntime } from "../../effect/app-runtime"
-import { Effect } from "effect"
+import { jsonRequest } from "./trace"
 // kilocode_change start
 import { fetchDefaultModel } from "@kilocode/kilo-gateway"
 import { Auth } from "../../auth"
+import { Effect } from "effect"
 // kilocode_change end
-
-const log = Log.create({ service: "server" })
 
 export const ConfigRoutes = lazy(() =>
   new Hono()
@@ -36,9 +34,11 @@ export const ConfigRoutes = lazy(() =>
           },
         },
       }),
-      async (c) => {
-        return c.json(await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.get())))
-      },
+      async (c) =>
+        jsonRequest("ConfigRoutes.get", c, function* () {
+          const cfg = yield* Config.Service
+          return yield* cfg.get()
+        }),
     )
     .patch(
       "/",
@@ -110,39 +110,33 @@ export const ConfigRoutes = lazy(() =>
           },
         },
       }),
-      async (c) => {
-        using _ = log.time("providers")
-        const providers = await AppRuntime.runPromise(
-          Effect.gen(function* () {
-            const svc = yield* Provider.Service
-            return mapValues(yield* svc.list(), (item) => item)
-          }),
-        )
+      async (c) =>
+        jsonRequest("ConfigRoutes.providers", c, function* () {
+          const svc = yield* Provider.Service
+          const providers = mapValues(yield* svc.list(), (item) => item)
+          const defaults = mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id)
 
-        // kilocode_change start - Fetch default model from Kilo API
-        // Only call the Kilo API when the kilo provider is actually available.
-        // This prevents unnecessary network calls for teams using only their
-        // own providers (e.g. LiteLLM) via enabled_providers config.
-        let kiloApiDefault: string | undefined
-        if (providers[ProviderID.kilo]) {
-          const kiloAuth = await Auth.get("kilo")
-          const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
-          const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
-          kiloApiDefault = await fetchDefaultModel(token, organizationId)
-        }
-        // kilocode_change end
+          // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
+          // Only call the Kilo API when the kilo provider is actually available.
+          // This prevents unnecessary network calls for teams using only their
+          // own providers (e.g. LiteLLM) via enabled_providers config.
+          if (providers[ProviderID.kilo]) {
+            const kiloApiDefault = yield* Effect.promise(async () => {
+              const kiloAuth = await Auth.get("kilo")
+              const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
+              const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
+              return fetchDefaultModel(token, organizationId)
+            })
+            if (kiloApiDefault && providers[ProviderID.kilo]?.models[kiloApiDefault]) {
+              defaults[ProviderID.kilo] = ModelID.make(kiloApiDefault)
+            }
+          }
+          // kilocode_change end
 
-        // kilocode_change start - Use API default for Kilo provider if valid
-        const defaults = mapValues(providers, (item) => Provider.sort(Object.values(item.models))[0].id)
-        if (kiloApiDefault && providers[ProviderID.kilo]?.models[kiloApiDefault]) {
-          defaults[ProviderID.kilo] = ModelID.make(kiloApiDefault)
-        }
-        // kilocode_change end
-
-        return c.json({
-          providers: Object.values(providers),
-          default: defaults,
-        })
-      },
+          return {
+            providers: Object.values(providers),
+            default: defaults,
+          }
+        }),
     ),
 )

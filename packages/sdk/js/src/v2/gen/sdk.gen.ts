@@ -40,6 +40,8 @@ import type {
   ExperimentalWorkspaceListResponses,
   ExperimentalWorkspaceRemoveErrors,
   ExperimentalWorkspaceRemoveResponses,
+  ExperimentalWorkspaceSessionRestoreErrors,
+  ExperimentalWorkspaceSessionRestoreResponses,
   ExperimentalWorkspaceStatusResponses,
   FileListResponses,
   FilePartInput,
@@ -211,6 +213,10 @@ import type {
   SuggestionDismissErrors,
   SuggestionDismissResponses,
   SuggestionListResponses,
+  SyncHistoryListErrors,
+  SyncHistoryListResponses,
+  SyncReplayErrors,
+  SyncReplayResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
   TextPartInput,
@@ -1332,6 +1338,49 @@ export class Workspace extends HeyApiClient {
       url: "/experimental/workspace/{id}",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Restore session into workspace
+   *
+   * Replay a session's sync events into the target workspace in batches.
+   */
+  public sessionRestore<ThrowOnError extends boolean = false>(
+    parameters: {
+      id: string
+      directory?: string
+      workspace?: string
+      sessionID?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "id" },
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "sessionID" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ExperimentalWorkspaceSessionRestoreResponses,
+      ExperimentalWorkspaceSessionRestoreErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/workspace/{id}/session-restore",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 
@@ -3297,6 +3346,109 @@ export class Provider extends HeyApiClient {
   private _oauth?: Oauth
   get oauth(): Oauth {
     return (this._oauth ??= new Oauth({ client: this.client }))
+  }
+}
+
+export class History extends HeyApiClient {
+  /**
+   * List sync events
+   *
+   * List sync events for all aggregates. Keys are aggregate IDs the client already knows about, values are the last known sequence ID. Events with seq > value are returned for those aggregates. Aggregates not listed in the input get their full history.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      body?: {
+        [key: string]: number
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { key: "body", map: "body" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<SyncHistoryListResponses, SyncHistoryListErrors, ThrowOnError>({
+      url: "/sync/history",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+}
+
+export class Sync extends HeyApiClient {
+  /**
+   * Replay sync events
+   *
+   * Validate and replay a complete sync event history.
+   */
+  public replay<ThrowOnError extends boolean = false>(
+    parameters?: {
+      query_directory?: string
+      workspace?: string
+      body_directory?: string
+      events?: Array<{
+        id: string
+        aggregateID: string
+        seq: number
+        type: string
+        data: {
+          [key: string]: unknown
+        }
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            {
+              in: "query",
+              key: "query_directory",
+              map: "directory",
+            },
+            { in: "query", key: "workspace" },
+            {
+              in: "body",
+              key: "body_directory",
+              map: "directory",
+            },
+            { in: "body", key: "events" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SyncReplayResponses, SyncReplayErrors, ThrowOnError>({
+      url: "/sync/replay",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  private _history?: History
+  get history(): History {
+    return (this._history ??= new History({ client: this.client }))
   }
 }
 
@@ -5861,6 +6013,11 @@ export class KiloClient extends HeyApiClient {
   private _provider?: Provider
   get provider(): Provider {
     return (this._provider ??= new Provider({ client: this.client }))
+  }
+
+  private _sync?: Sync
+  get sync(): Sync {
+    return (this._sync ??= new Sync({ client: this.client }))
   }
 
   private _find?: Find

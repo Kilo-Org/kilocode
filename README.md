@@ -163,7 +163,6 @@ This feature is submitted as [PR #8839](https://github.com/Kilo-Org/kilocode/pul
 ## About Kilo Code
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
-> [#1 coding agent on OpenRouter](https://openrouter.ai/apps/category/coding). 1.5M+ Kilo Coders. 25T+ tokens processed
 
 - Generate code from natural language
 - Checks its own work

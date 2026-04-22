@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "แยกเซสชัน",
   "agentManager.tab.terminal": "เทอร์มินัล",
   "agentManager.tab.openTerminal": "เปิดเทอร์มินัล",
+  "agentManager.tab.newOptions": "ตัวเลือกแท็บใหม่เพิ่มเติม",
+
+  "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
+  "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
+  "agentManager.terminal.connectionError": "ข้อผิดพลาดการเชื่อมต่อเทอร์มินัล",
+  "agentManager.terminal.errorTitle": "ข้อผิดพลาดเทอร์มินัล",
   "agentManager.setup.failed": "ตั้งค่า Worktree ล้มเหลว",
   "agentManager.setup.settingUp": "กำลังตั้งค่า Worktree",
   "agentManager.setup.error.git_not_found": "ไม่ได้ติดตั้ง Git หรือไม่พบใน PATH โปรดติดตั้ง Git และรีสตาร์ท VS Code",

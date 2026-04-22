@@ -7,7 +7,7 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
 
     companion object {
-        private val LOG = Logger.getInstance(KiloToolWindowFactory::class.java)
+        private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
@@ -62,10 +62,10 @@ class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
         cs: CoroutineScope,
     ) {
         try {
-            val chat = SessionUi(project, workspace, sessions, app, cs)
+            val ui = SessionUi(project, workspace, sessions, app, cs)
             val content = ContentFactory.getInstance()
-                .createContent(chat, "", false)
-            content.setDisposer(chat)
+                .createContent(ui, "", false)
+            content.setDisposer(ui)
             toolWindow.contentManager.addContent(content)
 
             ActionManager.getInstance().getAction("Kilo.Settings")?.let {

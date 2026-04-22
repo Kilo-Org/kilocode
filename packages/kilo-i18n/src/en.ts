@@ -73,4 +73,14 @@ export const dict = {
   "marketplace.warning.cancel": "Cancel",
   "marketplace.contribute.prompt": "Missing a skill, mode, or MCP server?",
   "marketplace.contribute.cta": "Contribute on GitHub",
+
+  // Plan follow-up question shown after plan_exit. The English strings here must match
+  // the canonical `label`/`header`/`question` sent by the backend — those canonical labels
+  // are still what the backend matches on (see packages/opencode/src/kilocode/plan-followup.ts).
+  "plan.followup.header": "Implement",
+  "plan.followup.question": "Ready to implement?",
+  "plan.followup.answer.newSession": "Start new session",
+  "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
+  "plan.followup.answer.continue": "Continue here",
+  "plan.followup.answer.continue.description": "Implement the plan in this session",
 }

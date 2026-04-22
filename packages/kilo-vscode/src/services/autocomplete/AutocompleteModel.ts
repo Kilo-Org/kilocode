@@ -4,18 +4,6 @@ import type { KiloConnectionService } from "../cli-backend"
 const DEFAULT_MODEL = "mistralai/codestral-2508"
 const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
 
-/** Chunk from an LLM streaming response */
-export type ApiStreamChunk =
-  | { type: "text"; text: string }
-  | {
-      type: "usage"
-      totalCost?: number
-      inputTokens?: number
-      outputTokens?: number
-      cacheReadTokens?: number
-      cacheWriteTokens?: number
-    }
-
 export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
   public profileName: string | null = null
@@ -32,10 +20,6 @@ export class AutocompleteModel {
    */
   public setConnectionService(service: KiloConnectionService): void {
     this.connectionService = service
-  }
-
-  public supportsFim(): boolean {
-    return true
   }
 
   /**
@@ -100,20 +84,6 @@ export class AutocompleteModel {
       cacheWriteTokens: 0,
       cacheReadTokens: 0,
     }
-  }
-
-  /**
-   * Generate response via chat completions (holefiller fallback).
-   * Not used when FIM is supported, but kept for compatibility.
-   */
-  public async generateResponse(
-    systemPrompt: string,
-    userPrompt: string,
-    onChunk: (chunk: ApiStreamChunk) => void,
-  ): Promise<ResponseMetaData> {
-    // FIM is the primary strategy; this method is a fallback.
-    // For now, throw — callers should use generateFimResponse via supportsFim().
-    throw new Error("Chat-based completions are not supported via CLI backend. Use FIM (supportsFim() returns true).")
   }
 
   public getModelName(): string {

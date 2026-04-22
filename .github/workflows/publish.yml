@@ -261,7 +261,7 @@ jobs:
     needs:
       - version
       - build-cli
-    if: false # Disable the smoketest job until it works when called on draft releases
+    if: github.repository == 'Kilo-Org/kilocode'
     uses: ./.github/workflows/smoke-test.yml
     with:
       cli_version: ${{ needs.version.outputs.version }}
@@ -272,7 +272,7 @@ jobs:
       - version
       - build-cli
       - build-vscode
-      # - smoke-test # Disable the smoketest job until it works when called on draft releases
+      - smoke-test
       # - build-tauri
     runs-on: ubuntu-24.04
     steps:

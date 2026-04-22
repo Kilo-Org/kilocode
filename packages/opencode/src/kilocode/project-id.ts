@@ -1,6 +1,6 @@
 import { Context, Effect, Layer } from "effect"
 import { Instance } from "@/project/instance"
-import { InstanceState } from "@/effect/instance-state"
+import { InstanceState } from "@/effect"
 import { makeRuntime } from "@/effect/run-service"
 import path from "path"
 import { $ } from "bun"

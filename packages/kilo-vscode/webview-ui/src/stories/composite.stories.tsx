@@ -292,6 +292,52 @@ const todoWriteCompleted: ToolPart = {
   },
 }
 
+const docsTodos = [
+  {
+    id: "1",
+    content: "Project setup and core architecture (package.json, tsconfig, documentation, type definitions)",
+    status: "completed",
+  },
+  {
+    id: "2",
+    content: "Configuration system (scraper config, targets.json, validation utilities)",
+    status: "completed",
+  },
+  {
+    id: "3",
+    content: "Core scraping engine (browser manager, orchestrator, selector engine, content extractor)",
+    status: "completed",
+  },
+  {
+    id: "4",
+    content: "Utility modules (DOM utils, retry logic, URL handling, validation)",
+    status: "completed",
+  },
+  { id: "5", content: "CLI interface implementation", status: "in_progress" },
+  { id: "6", content: "Storage layer implementation (database and file storage)", status: "pending" },
+  { id: "7", content: "Chart extractors for specific chart types", status: "pending" },
+  { id: "8", content: "Logging and error handling systems", status: "pending" },
+  { id: "9", content: "Test suites (unit and integration tests)", status: "pending" },
+  { id: "10", content: "Main entry point and final integration", status: "pending" },
+]
+
+const todoWriteDocsOverview: ToolPart = {
+  id: "part-todo-docs-001",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-todo-docs-001",
+  tool: "todowrite",
+  state: {
+    status: "completed",
+    input: { todos: docsTodos },
+    output: "Updated 10 todos",
+    title: "Todo List Updated",
+    metadata: { todos: docsTodos },
+    time: { start: now - 3000, end: now - 2800 },
+  },
+}
+
 const todoWritePermission: PermissionRequest = {
   id: "perm-todo-001",
   sessionID: SESSION_ID,
@@ -601,6 +647,18 @@ export const TodoWriteCompleted: Story = {
   name: "TodoWrite — Completed Inline",
   render: () => {
     const data = dataWith([todoWriteCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TodoWriteDocsOverview: Story = {
+  name: "TodoWrite — docs overview",
+  render: () => {
+    const data = dataWith([todoWriteDocsOverview])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />

@@ -19,6 +19,10 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 - Session import from existing branches, external worktrees, or GitHub PR URLs
 - "Continue in Worktree" to promote a sidebar session to the Agent Manager
 
+{% callout type="tip" %}
+New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/automate/agent-manager-workflows) guide walks through when to use the sidebar vs. the Agent Manager, how to pick tasks that parallelize well, and the common patterns for testing, reviewing, and integrating changes across worktrees.
+{% /callout %}
+
 ## Opening the Agent Manager
 
 - Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
@@ -153,10 +157,12 @@ Right-click the section header and select **Delete Section**. The section is rem
 
 Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
 
-- Select files and click **Apply to Main Branch** to merge changes
+- Select files and click **Apply to local** to copy the worktree's changes onto your local checkout of the base branch
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
+
+See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
 ## Terminals
 

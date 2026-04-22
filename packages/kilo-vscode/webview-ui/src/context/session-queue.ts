@@ -1,9 +1,36 @@
 import type { Message, SessionStatusInfo } from "../types/messages"
 
+export interface MessageTurn {
+  id: string
+  user: Message
+  assistant: Message[]
+}
+
+export function messageTurns(messages: Message[], boundary?: string) {
+  const result: MessageTurn[] = []
+  const by = new Map<string, MessageTurn>()
+
+  for (const msg of messages) {
+    if (msg.role === "user") {
+      if (boundary && msg.id >= boundary) break
+      const turn = { id: msg.id, user: msg, assistant: [] }
+      result.push(turn)
+      by.set(msg.id, turn)
+      continue
+    }
+
+    if (msg.role !== "assistant") continue
+    const turn = (msg.parentID ? by.get(msg.parentID) : undefined) ?? result[result.length - 1]
+    if (turn) turn.assistant.push(msg)
+  }
+
+  return result
+}
+
 function active(messages: Message[]) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
     const msg = messages[i]
-    if (msg.role !== "assistant") continue
+    if (!msg || msg.role !== "assistant") continue
     if (typeof msg.time?.completed === "number") continue
     if (msg.error) continue
     if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) continue
@@ -16,23 +43,24 @@ function active(messages: Message[]) {
   return undefined
 }
 
-function pending(messages: Message[]) {
-  const done = (() => {
-    for (let i = messages.length - 1; i >= 0; i -= 1) {
-      const msg = messages[i]
-      if (msg.role !== "assistant") continue
-      if (typeof msg.time?.completed === "number") return i
-      if (msg.error) return i
-      if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) return i
-    }
-    return -1
-  })()
-
-  for (let i = done + 1; i < messages.length; i += 1) {
-    if (messages[i].role === "user") return messages[i].id
+function done(messages: Message[]) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const msg = messages[i]
+    if (!msg || msg.role !== "assistant") continue
+    if (typeof msg.time?.completed === "number") return msg.parentID
+    if (msg.error) return msg.parentID
+    if (msg.finish && !["tool-calls", "unknown"].includes(msg.finish)) return msg.parentID
   }
-
   return undefined
+}
+
+function pending(messages: Message[]) {
+  const users = messages.filter((msg) => msg.role === "user")
+  const id = done(messages)
+  if (!id) return users[0]?.id
+
+  const idx = users.findIndex((msg) => msg.id === id)
+  return users[idx + 1]?.id
 }
 
 // Find the user message whose turn the server is actively processing.

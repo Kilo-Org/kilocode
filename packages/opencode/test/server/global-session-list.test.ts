@@ -4,9 +4,9 @@ import { Effect } from "effect"
 import path from "path"
 import z from "zod"
 import { Instance } from "../../src/project/instance"
-import { Project } from "../../src/project/project"
+import { Project } from "../../src/project"
 import { Session as SessionNs } from "../../src/session"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
 import { resetDatabase } from "../fixture/db"
 import { tmpdir } from "../fixture/fixture"
 import { RemoteSender } from "../../src/kilo-sessions/remote-sender" // kilocode_change
@@ -17,7 +17,7 @@ beforeEach(() => {
 })
 // kilocode_change end
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
 // kilocode_change start
 afterEach(async () => {

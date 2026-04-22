@@ -1,7 +1,6 @@
 package ai.kilocode.backend.cli
 
-import ai.kilocode.backend.util.IntellijLog
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.KiloLog
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationInfo
 import com.intellij.openapi.application.PathManager
@@ -30,7 +29,7 @@ import java.util.concurrent.TimeUnit
  * guard and volatile [process] field.
  */
 class KiloBackendCliManager(
-    private val log: KiloLog = IntellijLog(KiloBackendCliManager::class.java),
+    private val log: KiloLog = KiloLog.create(KiloBackendCliManager::class.java),
 ) : CliServer {
 
     companion object {

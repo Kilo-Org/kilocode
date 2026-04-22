@@ -1,4 +1,4 @@
-import { Binary } from "@opencode-ai/util/binary"
+import { Binary } from "@opencode-ai/shared/util/binary"
 import type { SuggestionRequest } from "@kilocode/sdk/v2"
 
 type RemovedEvent = {
