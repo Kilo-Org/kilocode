@@ -155,6 +155,7 @@ const TIPS = [
   "Use {highlight}/connect{/highlight} with OpenCode Zen for curated, tested models",
   "Commit your project's {highlight}AGENTS.md{/highlight} file to Git for team sharing",
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
+  "Use {highlight}/yolo{/highlight} or start with {highlight}kilo --yolo{/highlight} to skip tool permission prompts for the current session",
   "Run {highlight}/help{/highlight} or {highlight}Ctrl+X H{/highlight} to show the help dialog",
   "Use {highlight}/rename{/highlight} to rename the current session",
   ...(process.platform === "win32"
