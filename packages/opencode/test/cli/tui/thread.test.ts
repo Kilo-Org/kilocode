@@ -13,6 +13,7 @@ import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 const stop = new Error("stop")
 const seen = {
   tui: [] as string[],
+  // kilocode_change
   args: [] as Array<{ yolo?: boolean }>,
 }
 
@@ -22,11 +23,13 @@ function setup() {
   // to module mocks, later suites can see mocked @/config/tui and fail (e.g.
   // plugin-loader tests expecting real TuiConfig.waitForDependencies). See:
   // https://github.com/oven-sh/bun/issues/7823 and #12823.
+  // kilocode_change start
   spyOn(App, "tui").mockImplementation(async (input) => {
     if (input.directory) seen.tui.push(input.directory)
     seen.args.push({ yolo: input.args.yolo })
     throw stop
   })
+  // kilocode_change end
   spyOn(Rpc, "client").mockImplementation(() => ({
     call: async () => ({ url: "http://127.0.0.1" }) as never,
     on: () => () => {},
@@ -51,6 +54,7 @@ describe("tui thread", () => {
 
   async function call(project?: string) {
     const { TuiThreadCommand } = await import("../../../src/cli/cmd/tui/thread")
+    // kilocode_change start
     const args: Parameters<NonNullable<typeof TuiThreadCommand.handler>>[0] = {
       _: [],
       $0: "kilo", // kilocode_change
@@ -61,6 +65,7 @@ describe("tui thread", () => {
       session: undefined,
       continue: false,
       fork: false,
+      // kilocode_change
       yolo: false,
       "cloud-fork": undefined, // kilocode_change
       cloudFork: undefined, // kilocode_change
@@ -71,11 +76,13 @@ describe("tui thread", () => {
       mdnsDomain: "kilo.local", // kilocode_change
       cors: [],
     }
+    // kilocode_change end
     return TuiThreadCommand.handler(args)
   }
 
   async function check(project?: string) {
     setup()
+
     const cwd = process.cwd()
     const pwd = process.env.PWD
     const worker = globalThis.Worker
@@ -85,6 +92,7 @@ describe("tui thread", () => {
     const type = process.platform === "win32" ? "junction" : "dir"
     seen.tui.length = 0
     seen.args.length = 0
+    // kilocode_change end
     await fs.symlink(tmp.path, link, type)
 
     Object.defineProperty(process.stdin, "isTTY", {
@@ -96,9 +104,11 @@ describe("tui thread", () => {
       onmessage = null
       onmessageerror = null
       postMessage() {}
+      // kilocode_change
       terminate() {}
     } as unknown as typeof Worker
 
+    // kilocode_change start
     try {
       process.chdir(tmp.path)
       process.env.PWD = link
@@ -114,17 +124,18 @@ describe("tui thread", () => {
       globalThis.Worker = worker
       await fs.rm(link, { recursive: true, force: true }).catch(() => undefined)
     }
-  }
+  } // kilocode_change end
 
-  // serial because both modify real env vars
-  test.serial("uses the real cwd when PWD points at a symlink", async () => {
+  // kilocode_change start
+  test("uses the real cwd when PWD points at a symlink", async () => {
     await check()
   })
-
-  test.serial("uses the real cwd after resolving a relative project from PWD", async () => {
+  test("uses the real cwd after resolving a relative project from PWD", async () => {
     await check(".")
   })
+  // kilocode_change end
 
+  // kilocode_change start
   test("forwards yolo flag into tui args", async () => {
     setup()
     await using tmp = await tmpdir({ git: true })
@@ -143,9 +154,11 @@ describe("tui thread", () => {
       onmessage = null
       onmessageerror = null
       postMessage() {}
+      // kilocode_change
       terminate() {}
     } as unknown as typeof Worker
 
+    // kilocode_change start
     try {
       process.chdir(tmp.path)
       const { TuiThreadCommand } = await import("../../../src/cli/cmd/tui/thread")
@@ -177,5 +190,7 @@ describe("tui thread", () => {
       else delete (process.stdin as { isTTY?: boolean }).isTTY
       globalThis.Worker = worker
     }
+    // kilocode_change end
   })
+  // kilocode_change end
 })

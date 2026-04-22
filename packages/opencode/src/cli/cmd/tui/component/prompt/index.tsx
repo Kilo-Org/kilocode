@@ -44,7 +44,7 @@ import { DialogWorkspaceCreate, restoreWorkspaceSession } from "../dialog-worksp
 import { DialogWorkspaceUnavailable } from "../dialog-workspace-unavailable"
 import { useArgs } from "@tui/context/args"
 import { KiloSessionTuiSync } from "@/kilocode/session/tui-sync" // kilocode_change
-import { Permission } from "@/permission"
+import { Permission } from "@/permission" // kilocode_change
 
 export type PromptProps = {
   sessionID?: string
@@ -736,12 +736,14 @@ export function Prompt(props: PromptProps) {
 
     let sessionID = props.sessionID
     if (sessionID == null) {
+      // kilocode_change start
       const res = await sdk.client.session.create({
         workspace: props.workspaceID,
         permission: args.yolo
           ? [{ permission: "*", pattern: "*", action: "allow" } satisfies Permission.Rule]
           : undefined,
       })
+      // kilocode_change end
 
       if (res.error) {
         console.log("Creating a session failed:", res.error)

@@ -295,11 +295,13 @@ export const RunCommand = cmd({
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
+        // kilocode_change start
         .option("yolo", {
           type: "boolean",
           describe: "allow tools to run without permission prompts",
           default: false,
         })
+        // kilocode_change end
         // kilocode_change end
         .option("dangerously-skip-permissions", {
           type: "boolean",
@@ -575,6 +577,7 @@ export const RunCommand = cmd({
           }
 
           if (event.type === "permission.asked") {
+            // kilocode_change start
             const permission = event.properties
             if (permission.sessionID !== sessionID) continue
 
@@ -595,6 +598,7 @@ export const RunCommand = cmd({
                 reply: "reject",
               })
             }
+            // kilocode_change end
           }
           // kilocode_change start - network retry handling
           if (event.type === "session.network.asked") {

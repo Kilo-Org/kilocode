@@ -7,7 +7,7 @@ export interface Args {
   continue?: boolean
   sessionID?: string
   fork?: boolean
-  yolo?: boolean
+  yolo?: boolean // kilocode_change
 }
 
 export const { use: useArgs, provider: ArgsProvider } = createSimpleContext({
