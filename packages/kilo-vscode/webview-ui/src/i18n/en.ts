@@ -1060,8 +1060,7 @@ export const dict = {
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
   "settings.autocomplete.smartKeybinding.title": "Enable smart inline task keybinding",
-  "settings.autocomplete.smartKeybinding.description":
-    "Use {keybinding} to trigger inline tasks. Change this shortcut in Keyboard Shortcuts.",
+  "settings.autocomplete.smartKeybinding.description": "Use {{keybinding}} to trigger inline tasks.",
   "settings.autocomplete.keybindingNotFound": "Not assigned",
   "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Enable chat textarea autocomplete",

@@ -58,28 +58,31 @@ const AutocompleteTab: Component = () => {
 
         <SettingsRow
           title={language.t("settings.autocomplete.smartKeybinding.title")}
-          description={language.t("settings.autocomplete.smartKeybinding.description", { keybinding: shortcut() })}
+          description={
+            <span>
+              {language.t("settings.autocomplete.smartKeybinding.description", { keybinding: shortcut() })}{" "}
+              <Button
+                variant="secondary"
+                size="small"
+                onClick={() =>
+                  vscode.postMessage({
+                    type: "openGlobalKeybindings",
+                    text: "kilo-code.new.autocomplete.generateSuggestions",
+                  })
+                }
+              >
+                {language.t("settings.autocomplete.changeKeybinding")}
+              </Button>
+            </span>
+          }
         >
-          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
-            <Button
-              variant="secondary"
-              onClick={() =>
-                vscode.postMessage({
-                  type: "openGlobalKeybindings",
-                  text: "kilo-code.new.autocomplete.generateSuggestions",
-                })
-              }
-            >
-              {language.t("settings.autocomplete.changeKeybinding")}
-            </Button>
-            <Switch
-              checked={enableSmartInlineTaskKeybinding()}
-              onChange={(checked) => updateSetting("enableSmartInlineTaskKeybinding", checked)}
-              hideLabel
-            >
-              {language.t("settings.autocomplete.smartKeybinding.title")}
-            </Switch>
-          </div>
+          <Switch
+            checked={enableSmartInlineTaskKeybinding()}
+            onChange={(checked) => updateSetting("enableSmartInlineTaskKeybinding", checked)}
+            hideLabel
+          >
+            {language.t("settings.autocomplete.smartKeybinding.title")}
+          </Switch>
         </SettingsRow>
 
         <SettingsRow
