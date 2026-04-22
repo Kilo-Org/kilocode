@@ -69,6 +69,8 @@ class QuestionPanelTest : BasePlatformTestCase() {
                         question = "Pick one",
                         header = "Header",
                         options = listOf(QuestionOption("Yes", "desc")),
+                        multiple = false,
+                        custom = false,
                     )
                 ),
             )
@@ -80,6 +82,6 @@ class QuestionPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isVisible)
         assertEquals(0, panel.componentCount)
         assertTrue(rpc.questionReplies.isEmpty())
-        assertTrue(rpc.questionRejections.isEmpty())
+        assertTrue(rpc.questionRejects.isEmpty())
     }
 }
