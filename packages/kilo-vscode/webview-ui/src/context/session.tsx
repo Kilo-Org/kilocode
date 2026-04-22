@@ -4,7 +4,17 @@
  * Also owns global (extension-lifetime) model selection (provider context is catalog-only).
  */
 
-import { createContext, useContext, createSignal, createMemo, createEffect, onMount, onCleanup, batch } from "solid-js"
+import {
+  createContext,
+  useContext,
+  createSignal,
+  createMemo,
+  createEffect,
+  on,
+  onMount,
+  onCleanup,
+  batch,
+} from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { createStore, produce, reconcile } from "solid-js/store"
 import { useVSCode } from "./vscode"
@@ -479,6 +489,29 @@ export const SessionProvider: ParentComponent = (props) => {
     const agentName = selectedAgentName()
     return resolveModel(agentName)
   })
+
+  // When the config model changes (e.g. user changed model in Settings), clear
+  // per-session overrides so all sessions pick up the new default. Without this,
+  // Agent Manager sessions keep their stale override from session creation time.
+  // Watches both the global model and per-agent model configs.
+  const configModelKey = createMemo(() => {
+    const agents = config().agent ?? {}
+    const parts = Object.entries(agents)
+      .map(([k, v]) => `${k}:${v?.model ?? ""}`)
+      .sort()
+    return `${config().model ?? ""}|${parts.join(",")}`
+  })
+
+  createEffect(
+    on(
+      configModelKey,
+      () => {
+        if (Object.keys(store.sessionOverrides).length === 0) return
+        setStore("sessionOverrides", reconcile({}))
+      },
+      { defer: true },
+    ),
+  )
 
   /** True when the active model differs from what the config dictates. */
   const hasModelOverride = createMemo<boolean>(() => {
