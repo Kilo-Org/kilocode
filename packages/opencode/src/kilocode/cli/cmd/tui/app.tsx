@@ -11,6 +11,8 @@ import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/util/clipboard"
 import { useCommandDialog } from "@tui/component/dialog-command"
+import { useRoute } from "@tui/context/route"
+import { useArgs } from "@tui/context/args"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useDialog } from "@tui/ui/dialog"
@@ -129,9 +131,16 @@ export function handleSessionError(error: unknown, toast: ReturnType<typeof useT
  */
 export function init() {
   const command = useCommandDialog()
+  const route = useRoute()
+  const args = useArgs()
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
+
+  const enabled = () => {
+    if (route.data.type !== "session") return false
+    return isAllowEverything(sync.session.get(route.data.sessionID)?.permission)
+  }
 
   // Inject TUI dependencies for kilo-gateway
   initializeTUIDependencies({
@@ -152,21 +161,36 @@ export function init() {
   // Register Kilo Gateway commands (profile, teams, kiloclaw, remote, etc.)
   registerKiloCommands(useSDK)
 
-  // Register auto-approve toggle
+  createEffect(() => {
+    if (!args.yolo) return
+    if (route.data.type !== "session") return
+    if (enabled()) return
+    void sdk.client.permission.allowEverything({
+      enable: true,
+      sessionID: route.data.sessionID,
+    })
+  })
+
+  // Register YOLO toggle
   command.register(() => [
     {
       get title() {
-        return isAllowEverything(sync.data.config.permission) ? "Disable auto-approve mode" : "Enable auto-approve mode"
+        return enabled() ? "Disable YOLO mode" : "Enable YOLO mode"
       },
       value: "permission.allow_everything",
-      category: "System",
+      category: "Session",
+      enabled: route.data.type === "session",
+      slash: {
+        name: "yolo",
+      },
       onSelect: async (dialog) => {
-        const enabled = isAllowEverything(sync.data.config.permission)
-        const result = await sdk.client.permission.allowEverything({ enable: !enabled })
+        if (route.data.type !== "session") return
+        const sessionID = route.data.sessionID
+        const result = await sdk.client.permission.allowEverything({ enable: !enabled(), sessionID })
         if (result.error) {
           toast.show({
             variant: "error",
-            message: `Failed to ${!enabled ? "enable" : "disable"} auto-approve mode`,
+            message: `Failed to ${enabled() ? "disable" : "enable"} YOLO mode`,
           })
           return
         }

@@ -113,6 +113,10 @@ export const TuiThreadCommand = cmd({
       .option("agent", {
         type: "string",
         describe: "agent to use",
+      })
+      .option("yolo", {
+        type: "boolean",
+        describe: "allow tools to run without permission prompts in this session",
       }),
   handler: async (args) => {
     // Keep ENABLE_PROCESSED_INPUT cleared even if other code flips it.
@@ -346,6 +350,7 @@ export const TuiThreadCommand = cmd({
             model: args.model,
             prompt,
             fork: args.fork,
+            yolo: args.yolo,
           },
         })
       } finally {

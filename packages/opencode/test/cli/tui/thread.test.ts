@@ -13,6 +13,7 @@ import { TuiConfig } from "../../../src/cli/cmd/tui/config/tui"
 const stop = new Error("stop")
 const seen = {
   tui: [] as string[],
+  args: [] as Array<{ yolo?: boolean }>,
 }
 
 function setup() {
@@ -23,6 +24,7 @@ function setup() {
   // https://github.com/oven-sh/bun/issues/7823 and #12823.
   spyOn(App, "tui").mockImplementation(async (input) => {
     if (input.directory) seen.tui.push(input.directory)
+    seen.args.push({ yolo: input.args.yolo })
     throw stop
   })
   spyOn(Rpc, "client").mockImplementation(() => ({
@@ -59,6 +61,7 @@ describe("tui thread", () => {
       session: undefined,
       continue: false,
       fork: false,
+      yolo: false,
       "cloud-fork": undefined, // kilocode_change
       cloudFork: undefined, // kilocode_change
       port: 0,
@@ -81,6 +84,7 @@ describe("tui thread", () => {
     const link = path.join(path.dirname(tmp.path), path.basename(tmp.path) + "-link")
     const type = process.platform === "win32" ? "junction" : "dir"
     seen.tui.length = 0
+    seen.args.length = 0
     await fs.symlink(tmp.path, link, type)
 
     Object.defineProperty(process.stdin, "isTTY", {
@@ -100,6 +104,7 @@ describe("tui thread", () => {
       process.env.PWD = link
       await expect(call(project)).rejects.toBe(stop)
       expect(seen.tui[0]).toBe(tmp.path)
+      expect(seen.args[0]).toEqual({ yolo: false })
     } finally {
       process.chdir(cwd)
       if (pwd === undefined) delete process.env.PWD
@@ -118,5 +123,59 @@ describe("tui thread", () => {
 
   test.serial("uses the real cwd after resolving a relative project from PWD", async () => {
     await check(".")
+  })
+
+  test("forwards yolo flag into tui args", async () => {
+    setup()
+    await using tmp = await tmpdir({ git: true })
+    const cwd = process.cwd()
+    const worker = globalThis.Worker
+    const tty = Object.getOwnPropertyDescriptor(process.stdin, "isTTY")
+    seen.tui.length = 0
+    seen.args.length = 0
+
+    Object.defineProperty(process.stdin, "isTTY", {
+      configurable: true,
+      value: true,
+    })
+    globalThis.Worker = class extends EventTarget {
+      onerror = null
+      onmessage = null
+      onmessageerror = null
+      postMessage() {}
+      terminate() {}
+    } as unknown as typeof Worker
+
+    try {
+      process.chdir(tmp.path)
+      const { TuiThreadCommand } = await import("../../../src/cli/cmd/tui/thread")
+      const args: Parameters<NonNullable<typeof TuiThreadCommand.handler>>[0] = {
+        _: [],
+        $0: "kilo",
+        project: undefined,
+        prompt: "hi",
+        model: undefined,
+        agent: undefined,
+        session: undefined,
+        continue: false,
+        fork: false,
+        yolo: true,
+        "cloud-fork": undefined,
+        cloudFork: undefined,
+        port: 0,
+        hostname: "127.0.0.1",
+        mdns: false,
+        "mdns-domain": "kilo.local",
+        mdnsDomain: "kilo.local",
+        cors: [],
+      }
+      await expect(TuiThreadCommand.handler(args)).rejects.toBe(stop)
+      expect(seen.args[0]).toEqual({ yolo: true })
+    } finally {
+      process.chdir(cwd)
+      if (tty) Object.defineProperty(process.stdin, "isTTY", tty)
+      else delete (process.stdin as { isTTY?: boolean }).isTTY
+      globalThis.Worker = worker
+    }
   })
 })
