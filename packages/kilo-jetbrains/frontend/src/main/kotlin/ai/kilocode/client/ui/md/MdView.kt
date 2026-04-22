@@ -290,7 +290,7 @@ abstract class MdView private constructor() {
             foregroundOverride?.let { body.add("color: ${hex(it)}") }
             if (!opaqueState) body.add("background: transparent")
             fontOverride?.let {
-                body.add("font-family: '${css(it.family)}', sans-serif")
+                body.add("font-family: '${css(it.name)}', sans-serif")
                 body.add("font-size: ${it.size}pt")
             }
             if (body.isNotEmpty()) rules.append("body { ${body.joinToString("; ")} } ")
