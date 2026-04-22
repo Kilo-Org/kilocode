@@ -313,6 +313,11 @@
         "@kilocode/sdk": "workspace:*",
         "@opencode-ai/ui": "workspace:*",
         "@thisbeyond/solid-dnd": "0.7.5",
+        "@xterm/addon-clipboard": "0.2.0",
+        "@xterm/addon-fit": "0.11.0",
+        "@xterm/addon-unicode-graphemes": "0.4.0",
+        "@xterm/addon-web-links": "0.12.0",
+        "@xterm/xterm": "6.0.0",
         "diff": "8.0.4",
         "dotenv": "^16.4.7",
         "fastest-levenshtein": "^1.0.16",
@@ -2483,6 +2488,16 @@
 
     "@xmldom/xmldom": ["@xmldom/xmldom@0.9.10", "", {}, "sha512-A9gOqLdi6cV4ibazAjcQufGj0B1y/vDqYrcuP6d/6x8P27gRS8643Dj9o1dEKtB6O7fwxb2FgBmJS2mX7gpvdw=="],
 
+    "@xterm/addon-clipboard": ["@xterm/addon-clipboard@0.2.0", "", { "dependencies": { "js-base64": "^3.7.5" } }, "sha512-Dl31BCtBhLaUEECUbEiVcCLvLBbaeGYdT7NofB8OJkGTD3MWgBsaLjXvfGAD4tQNHhm6mbKyYkR7XD8kiZsdNg=="],
+
+    "@xterm/addon-fit": ["@xterm/addon-fit@0.11.0", "", {}, "sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g=="],
+
+    "@xterm/addon-unicode-graphemes": ["@xterm/addon-unicode-graphemes@0.4.0", "", {}, "sha512-9+/CqwbKcnlkJU4d3wIgO+wjsL8f6vyz+UwUWLu6nADQz8Gr8ONqGCJfdDjIdI+yYZLABQqQy47FzEM6AWELjw=="],
+
+    "@xterm/addon-web-links": ["@xterm/addon-web-links@0.12.0", "", {}, "sha512-4Smom3RPyVp7ZMYOYDoC/9eGJJJqYhnPLGGqJ6wOBfB8VxPViJNSKdgRYb8NpaM6YSelEKbA2SStD7lGyqaobw=="],
+
+    "@xterm/xterm": ["@xterm/xterm@6.0.0", "", {}, "sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg=="],
+
     "@zip.js/zip.js": ["@zip.js/zip.js@2.7.62", "", {}, "sha512-OaLvZ8j4gCkLn048ypkZu29KX30r8/OfFF2w4Jo5WXFr+J04J+lzJ5TKZBVgFXhlvSkqNFQdfnY1Q8TMTCyBVA=="],
 
     "abbrev": ["abbrev@4.0.0", "", {}, "sha512-a1wflyaL0tHtJSmLSOVybYhy22vRih4eduhhrkcjgrWGnRfrZtovJ2FRjxuTtkkj47O/baf0R86QU5OuYpz8fA=="],
@@ -3556,6 +3571,8 @@
     "jose": ["jose@5.2.3", "", {}, "sha512-KUXdbctm1uHVL8BYhnyHkgp3zDX5KW8ZhAKVFEfUbU2P8Alpzjb+48hHvjOdQIyPshoblhzsuqOwEEAbtHVirA=="],
 
     "jpeg-js": ["jpeg-js@0.4.4", "", {}, "sha512-WZzeDOEtTOBK4Mdsar0IqEU5sMr3vSV2RqkAIzUEV2BHnUfKGyswWFPFwK5EeDo93K3FohSHbLAjj0s1Wzd+dg=="],
+
+    "js-base64": ["js-base64@3.7.8", "", {}, "sha512-hNngCeKxIUQiEUN3GPJOkz4wF/YvdUdbNL9hsBcMQTkKzboD7T/q3OYOuuPZLUE6dBxSGpwhk5mwuDud7JVAow=="],
 
     "js-md4": ["js-md4@0.3.2", "", {}, "sha512-/GDnfQYsltsjRswQhN9fhv3EMw2sCpUdrdxyWDOUK7eyD++r3gRhzgiQgc/x4MAv2i1iuQ4lxO5mvqM3vj4bwA=="],
 

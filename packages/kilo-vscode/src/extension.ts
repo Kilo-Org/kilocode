@@ -303,7 +303,9 @@ export function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
-      agentManagerProvider.showTerminalForCurrentSession()
+      // Route through the webview so it can reach into the active session
+      // state and open the VS Code integrated terminal for it.
+      agentManagerProvider.postMessage({ type: "action", action: "showTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.runScript", () => {
       agentManagerProvider.postMessage({ type: "action", action: "runScript" })
@@ -317,6 +319,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand("kilo-code.new.agentManager.newTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newTab" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.newTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "newTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeTab" })
