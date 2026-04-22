@@ -1247,6 +1247,7 @@ export class GovernanceService implements vscode.Disposable {
 
 	// ── Adversarial Audit ──────────────────────────────
 
+	// eslint-disable-next-line complexity
 	runAdversarialAudit(): AdversarialAuditResult {
 		const auditId = crypto.randomUUID()
 		const subsystemResults: SubsystemAuditResult[] = []

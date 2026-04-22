@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import * as path from "path"
 import * as vscode from "vscode"
 import { KiloLogger } from "./services/KiloLogger"

@@ -1207,6 +1207,7 @@ export class VPSService implements vscode.Disposable {
    * Handle messages from the VPS tab in the webview.
    * Call this from KiloProvider's message handler.
    */
+  // eslint-disable-next-line complexity
   async handleMessage(
     message: Record<string, unknown>,
     postToWebview: (msg: Record<string, unknown>) => void,

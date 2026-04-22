@@ -109,6 +109,7 @@ export class SettingsAgentAPI {
   /**
    * Auto-fill a specific setting from discovered API keys
    */
+  // eslint-disable-next-line complexity
   async autoFillSetting(request: AutoFillRequest): Promise<AutoFillResult> {
     const scanResult = ApiKeyScannerService.scan()
 

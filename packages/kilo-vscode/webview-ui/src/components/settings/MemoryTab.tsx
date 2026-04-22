@@ -271,6 +271,7 @@ function relevanceBar(score: number) {
 
 // ─── Component ───────────────────────────────────────────
 
+// eslint-disable-next-line complexity
 const MemoryTab: Component = () => {
   const vscode = useVSCode()
 
