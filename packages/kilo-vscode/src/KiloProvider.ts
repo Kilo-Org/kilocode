@@ -48,6 +48,7 @@ import { MarketplaceService, type MarketplaceItem, type RemoveResult } from "./s
 import type { RemoteStatusService } from "./services/RemoteStatusService"
 import { resolveProjectDirectory } from "./project-directory"
 import { getBusySessionCount, seedSessionStatuses } from "./session-status"
+import { ApiKeyScannerService } from "./services/ApiKeyScannerService"
 import { retry } from "./services/cli-backend/retry"
 import { slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleContinueInWorktree } from "./kilo-provider/continue-worktree"
@@ -996,6 +997,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "validateAzureKey":
           this.validateAzureKey(message.apiKey, message.region)
+          break
+        case "requestApiKeys":
+          this.handleRequestApiKeys()
+          break
+        case "autoFillSetting":
+          await this.handleAutoFillSetting(message.key)
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
@@ -3037,6 +3044,138 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       )
     } catch (e: any) {
       this.postMessage({ type: "azureKeyValidationResult", valid: false, error: e.message ?? "Network error" })
+    }
+  }
+
+  /**
+   * Handle request for discovered API keys from the webview.
+   * Returns a summary of available keys (without exposing actual key values).
+   */
+  private handleRequestApiKeys(): void {
+    const summary = ApiKeyScannerService.getDiscoverySummary()
+    this.postMessage({ type: "apiKeysDiscovered", keys: summary })
+  }
+
+  /**
+   * Handle auto-fill request for a specific setting.
+   * Discovers API keys and fills in the requested setting.
+   */
+  private async handleAutoFillSetting(key: string): Promise<void> {
+    const scanResult = ApiKeyScannerService.scan()
+
+    try {
+      let success = false
+      let error: string | undefined
+
+      // Handle speech settings
+      if (key === "speech.azure") {
+        if (!scanResult.azure.apiKey) {
+          error = "No Azure API key found"
+        } else {
+          const speechConfig = vscode.workspace.getConfiguration("kilo-code.new.speech")
+          await speechConfig.update("azure.apiKey", scanResult.azure.apiKey, vscode.ConfigurationTarget.Global)
+          if (scanResult.azure.region) {
+            await speechConfig.update("azure.region", scanResult.azure.region, vscode.ConfigurationTarget.Global)
+          }
+          await speechConfig.update("provider", "azure", vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "speech.google") {
+        if (!scanResult.google) {
+          error = "No Google API key found"
+        } else {
+          const speechConfig = vscode.workspace.getConfiguration("kilo-code.new.speech")
+          await speechConfig.update("google.apiKey", scanResult.google, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "speech.openai") {
+        if (!scanResult.openai) {
+          error = "No OpenAI API key found"
+        } else {
+          const speechConfig = vscode.workspace.getConfiguration("kilo-code.new.speech")
+          await speechConfig.update("openai.apiKey", scanResult.openai, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "speech.elevenlabs") {
+        if (!scanResult.elevenlabs) {
+          error = "No ElevenLabs API key found"
+        } else {
+          const speechConfig = vscode.workspace.getConfiguration("kilo-code.new.speech")
+          await speechConfig.update("elevenlabs.apiKey", scanResult.elevenlabs, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "speech.polly") {
+        if (!scanResult.polly.accessKeyId) {
+          error = "No AWS credentials found"
+        } else {
+          const speechConfig = vscode.workspace.getConfiguration("kilo-code.new.speech")
+          await speechConfig.update("polly.accessKeyId", scanResult.polly.accessKeyId, vscode.ConfigurationTarget.Global)
+          if (scanResult.polly.secretAccessKey) {
+            await speechConfig.update("polly.secretAccessKey", scanResult.polly.secretAccessKey, vscode.ConfigurationTarget.Global)
+          }
+          if (scanResult.polly.region) {
+            await speechConfig.update("polly.region", scanResult.polly.region, vscode.ConfigurationTarget.Global)
+          }
+          success = true
+        }
+      } else if (key === "provider.siliconflow") {
+        if (scanResult.siliconflow.length === 0) {
+          error = "No SiliconFlow API key found"
+        } else {
+          // SiliconFlow is configured via custom provider in config.yaml
+          // Store the API key in VS Code configuration for the custom provider
+          const config = vscode.workspace.getConfiguration("kilo-code.new")
+          await config.update("provider.siliconflow.apiKey", scanResult.siliconflow[0], vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "provider.minimax") {
+        if (!scanResult.minimax) {
+          error = "No MiniMax API key found"
+        } else {
+          const config = vscode.workspace.getConfiguration("kilo-code.new")
+          await config.update("provider.minimax.apiKey", scanResult.minimax, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "provider.github") {
+        if (!scanResult.github) {
+          error = "No GitHub token found"
+        } else {
+          const config = vscode.workspace.getConfiguration("kilo-code.new")
+          await config.update("provider.github.token", scanResult.github, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else if (key === "training.huggingface") {
+        if (!scanResult.huggingface) {
+          error = "No HuggingFace token found"
+        } else {
+          // Store in VS Code secret storage for training
+          await this.extensionContext?.secrets.store("kilo-training-huggingface", scanResult.huggingface)
+          const config = vscode.workspace.getConfiguration("kilo-code.new")
+          await config.update("training.huggingface.token", scanResult.huggingface, vscode.ConfigurationTarget.Global)
+          success = true
+        }
+      } else {
+        error = `Unknown setting: ${key}`
+      }
+
+      this.postMessage({
+        type: "autoFillResult",
+        key,
+        success,
+        error,
+      })
+
+      // Refresh speech settings if we auto-filled a speech setting
+      if (key.startsWith("speech.")) {
+        this.sendSpeechSettings()
+      }
+    } catch (e: any) {
+      this.postMessage({
+        type: "autoFillResult",
+        key,
+        success: false,
+        error: e.message ?? "Unknown error",
+      })
     }
   }
 
