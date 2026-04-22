@@ -114,7 +114,12 @@ describe("Streaming perf — regression benchmark", () => {
   it("TextShimmer: 100 active-prop toggles produce ZERO timer calls", async () => {
     const { counters, restore } = installSpies()
     try {
-      const { TextShimmer } = await import("../../../ui/src/components/text-shimmer")
+      // Import via the package export path — the deep relative path would
+      // make Bun transpile text-shimmer.tsx against kilo-vscode's tsconfig
+      // (which has no jsxImportSource), causing "React is not defined" in
+      // CI. The package export resolves into @opencode-ai/ui which carries
+      // its own tsconfig with jsxImportSource: solid-js.
+      const { TextShimmer } = await import("@opencode-ai/ui/text-shimmer")
       const { render } = await import("solid-js/web")
       const { createSignal } = await import("solid-js")
 
