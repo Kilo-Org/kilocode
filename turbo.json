@@ -10,6 +10,14 @@
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
+    "@kilocode/cli#build": {
+      "dependsOn": ["@kilocode/sdk#build"],
+      "outputs": ["dist/**"]
+    },
+    "@opencode-ai/app#build": {
+      "dependsOn": ["@kilocode/sdk#build"],
+      "outputs": ["dist/**"]
+    },
     "@kilocode/cli#test": {
       "dependsOn": ["^build"],
       "outputs": [],
