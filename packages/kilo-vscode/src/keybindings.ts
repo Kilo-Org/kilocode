@@ -24,6 +24,13 @@ const OTHER: Record<string, string> = {
   shift: "Shift",
 }
 
+const DEFAULTS: Record<string, KeybindingEntry> = {
+  "kilo-code.new.autocomplete.generateSuggestions": {
+    key: "ctrl+l",
+    mac: "cmd+l",
+  },
+}
+
 const SPECIAL: Record<string, string> = {
   left: "Left",
   right: "Right",
@@ -74,7 +81,7 @@ function resolve(id: string, user: KeybindingEntry[]) {
 function extensionDefaults(id: string): KeybindingEntry | undefined {
   const ext = vscode.extensions.getExtension("kilocode.kilo-code")
   const bindings = (ext?.packageJSON?.contributes?.keybindings ?? []) as KeybindingEntry[]
-  return bindings.find((item) => item.command === id)
+  return bindings.find((item) => item.command === id) ?? DEFAULTS[id]
 }
 
 /**
@@ -150,7 +157,10 @@ async function read(file: string) {
 }
 
 function strip(input: string) {
-  return input.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1")
+  return input
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|\s)\/\/.*$/gm, "$1")
+    .replace(/,\s*([}\]])/g, "$1")
 }
 
 function pretty(input: string) {

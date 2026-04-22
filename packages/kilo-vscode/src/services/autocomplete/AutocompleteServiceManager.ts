@@ -117,6 +117,9 @@ export class AutocompleteServiceManager {
 
   public async load() {
     this.settings = readSettings()
+    if (!this.settings.enableAutoTrigger) {
+      this.inlineCompletionProvider.resetBackoff()
+    }
 
     await this.updateGlobalContext()
     this.updateStatusBar()
@@ -141,6 +144,8 @@ export class AutocompleteServiceManager {
     if (!shouldBeRegistered) {
       this.inlineCompletionProviderDisposable!.dispose()
       this.inlineCompletionProviderDisposable = null
+      await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+      await vscode.commands.executeCommand("setContext", "kilo-code.new.autocomplete.hasSuggestions", false)
       return
     }
 
@@ -250,6 +255,10 @@ export class AutocompleteServiceManager {
   }
 
   public async codeSuggestion() {
+    if (!this.settings?.enableAutoTrigger || !this.settings.enableSmartInlineTaskKeybinding) {
+      return
+    }
+
     const editor = vscode.window.activeTextEditor
     if (!editor) {
       return
