@@ -38,6 +38,10 @@ jobs:
         working-directory: packages/kilo-vscode
         run: bun run test:unit
 
+      - name: Run webview reactivity + perf benchmark
+        working-directory: packages/kilo-vscode
+        run: bun run test:webview-reactivity
+
       - name: Check lint (ESLint)
         working-directory: packages/kilo-vscode
         run: bun run lint
