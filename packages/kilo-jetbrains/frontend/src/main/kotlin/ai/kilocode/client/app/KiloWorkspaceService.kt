@@ -6,7 +6,7 @@ import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -33,7 +33,7 @@ class KiloWorkspaceService internal constructor(
     constructor(cs: CoroutineScope) : this(cs, null)
 
     companion object {
-        private val LOG = Logger.getInstance(KiloWorkspaceService::class.java)
+        private val LOG = KiloLog.create(KiloWorkspaceService::class.java)
         private val INIT = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.PENDING)
     }
 

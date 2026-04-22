@@ -1,7 +1,7 @@
 id = "kilo"
 name = "Kilo"
 description = "The open source coding agent."
-version = "7.2.17"
+version = "1.4.7"
 schema_version = 1
 authors = ["Anomaly"]
 repository = "https://github.com/Kilo-Org/kilocode"
@@ -11,26 +11,26 @@ name = "Kilo"
 icon = "./icons/opencode.svg"
 
 [agent_servers.opencode.targets.darwin-aarch64]
-archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.2.17/opencode-darwin-arm64.zip"
-cmd = "./opencode"
+archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.4.7/kilo-darwin-arm64.zip"
+cmd = "./kilo"
 args = ["acp"]
 
 [agent_servers.opencode.targets.darwin-x86_64]
-archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.2.17/opencode-darwin-x64.zip"
-cmd = "./opencode"
+archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.4.7/kilo-darwin-x64.zip"
+cmd = "./kilo"
 args = ["acp"]
 
 [agent_servers.opencode.targets.linux-aarch64]
-archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.2.17/opencode-linux-arm64.tar.gz"
-cmd = "./opencode"
+archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.4.7/kilo-linux-arm64.tar.gz"
+cmd = "./kilo"
 args = ["acp"]
 
 [agent_servers.opencode.targets.linux-x86_64]
-archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.2.17/opencode-linux-x64.tar.gz"
-cmd = "./opencode"
+archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.4.7/kilo-linux-x64.tar.gz"
+cmd = "./kilo"
 args = ["acp"]
 
 [agent_servers.opencode.targets.windows-x86_64]
-archive = "https://github.com/Kilo-Org/kilocode/releases/download/v7.2.17/opencode-windows-x64.zip"
-cmd = "./opencode.exe"
+archive = "https://github.com/Kilo-Org/kilocode/releases/download/v1.4.7/kilo-windows-x64.zip"
+cmd = "./kilo.exe"
 args = ["acp"]

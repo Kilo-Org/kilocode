@@ -4,8 +4,8 @@ import { ProjectTable } from "../../src/project/project.sql"
 import { ProjectID } from "../../src/project/schema"
 import { Session } from "../../src/session"
 import { SessionTable } from "../../src/session/session.sql"
-import { Database, eq } from "../../src/storage/db"
-import { Log } from "../../src/util/log"
+import { Database, eq } from "../../src/storage"
+import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })

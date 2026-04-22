@@ -1,6 +1,6 @@
 import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
-import { InstanceState } from "@/effect/instance-state"
+import { InstanceState } from "@/effect"
 import { SessionID } from "./schema"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
 import { Effect, Layer, Context } from "effect"

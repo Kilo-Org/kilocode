@@ -102,6 +102,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
 
   const reject = () => {
     if (store.sending) return
+    if (prevAgent !== undefined) {
+      session.selectAgent(prevAgent)
+      prevAgent = undefined
+    }
     setStore("sending", true)
     session.rejectQuestion(props.request.id)
     focusPrompt()
@@ -145,17 +149,6 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     syncAgent(answers, kinds)
 
     const outcome = pickOutcome({ single: single(), multi: multi(), custom })
-    if (outcome.kind === "submit") {
-      // Mirror TUI behaviour: a single-question single-select option pick submits immediately.
-      // handleCustomSubmit covers the custom-input path via its own submit() call.
-      //
-      // NOTE: This auto-submit applies to every single-question single-select prompt, not only
-      // the plan follow-up. If a future caller needs the user to review before submitting, set
-      // `multiple: true` on the question (that path stays on the current tab and waits for the
-      // footer Submit button).
-      reply([[answer]])
-      return
-    }
     if (outcome.kind === "advance") {
       setStore("tab", store.tab + 1)
     }

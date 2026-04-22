@@ -1,10 +1,11 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run IDE (Frontend)" type="GradleRunConfiguration" factoryName="Gradle">
+    <log_file alias="Frontend Kilo" path="$PROJECT_DIR$/packages/kilo-jetbrains/.intellijPlatform/sandbox/kilo.jetbrains/kilo-frontend/kilo-dev.log" show_all="true" />
     <ExternalSystemSettings>
       <option name="executionName" />
       <option name="externalProjectPath" value="$PROJECT_DIR$/packages/kilo-jetbrains" />
       <option name="externalSystemIdString" value="GRADLE" />
-      <option name="scriptParameters" value="" />
+      <option name="scriptParameters" value="-Pkilo.dev.log.level=debug" />
       <option name="taskDescriptions">
         <list />
       </option>

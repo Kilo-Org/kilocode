@@ -3,8 +3,8 @@ import { Effect, Layer, ManagedRuntime } from "effect"
 import { Command } from "../../../src/command"
 import { Suggestion } from "../../../src/kilocode/suggestion"
 import { SuggestTool } from "../../../src/kilocode/suggestion/tool"
-import { Tool } from "../../../src/tool/tool"
-import { Truncate } from "../../../src/tool/truncate"
+import { Tool } from "../../../src/tool"
+import { Truncate } from "../../../src/tool"
 import { Agent } from "../../../src/agent/agent"
 import { SessionStatus } from "../../../src/session/status"
 
@@ -187,6 +187,31 @@ describe("tool.suggest", () => {
     expect(result.title).toBe("User accepted: Start review")
     expect(result.output).toContain("/local-review-uncommitted")
     expect(result.metadata.dismissed).toBe(false)
+  })
+
+  // The suggest tool must emit non-blocking suggestions so the main CLI input
+  // stays focused and submittable while the picker is visible (matches the
+  // VS Code extension). Blocking suggestions hide the main prompt entirely.
+  test("emits non-blocking suggestions so the main input stays active", async () => {
+    const tool = await initTool()
+    show.mockRejectedValueOnce(new Suggestion.DismissedError())
+
+    await toolRuntime.runPromise(
+      tool.execute(
+        {
+          suggest: "Run review?",
+          actions: [{ label: "Start", prompt: "/local-review-uncommitted" }],
+        },
+        ctx as any,
+      ),
+    )
+
+    expect(show).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionID: ctx.sessionID,
+        blocking: false,
+      }),
+    )
   })
 
   // Regression for https://github.com/Kilo-Org/kilocode/pull/9199: while the

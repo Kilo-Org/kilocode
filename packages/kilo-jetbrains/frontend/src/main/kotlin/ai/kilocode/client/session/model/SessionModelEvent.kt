@@ -8,6 +8,13 @@ import ai.kilocode.rpc.dto.TodoDto
  *
  * Events carry the data needed for rendering so UI can update without
  * reading back from the model except for [HistoryLoaded].
+ *
+ * **Message events** cover individual message and part mutations.
+ * **Turn events** ([TurnAdded], [TurnUpdated], [TurnRemoved]) cover the
+ * derivative turn-grouping structure that [SessionModel] maintains on top
+ * of the flat message list. Turn events fire *after* the message event
+ * that caused the regrouping, so by the time a turn event arrives the
+ * message is already present in (or absent from) the model.
  */
 sealed class SessionModelEvent {
     data class MessageAdded(val info: Message) : SessionModelEvent() {
@@ -45,6 +52,35 @@ sealed class SessionModelEvent {
     }
     data object HistoryLoaded : SessionModelEvent()
     data object Cleared : SessionModelEvent()
+
+    // ------ Turn grouping events ------
+
+    /**
+     * A new conversational turn was created. Fires after [MessageAdded]
+     * when a user message starts a new turn, or when a leading assistant
+     * message anchors a standalone turn.
+     */
+    data class TurnAdded(val turn: Turn) : SessionModelEvent() {
+        override fun toString() = "TurnAdded ${turn.id} [${turn.messageIds.joinToString(", ")}]"
+    }
+
+    /**
+     * An existing turn's message list changed (message added to or removed
+     * from an existing turn). Fires after the message event that caused the
+     * change. The [turn] carries the new, complete message-id list.
+     */
+    data class TurnUpdated(val turn: Turn) : SessionModelEvent() {
+        override fun toString() = "TurnUpdated ${turn.id} [${turn.messageIds.joinToString(", ")}]"
+    }
+
+    /**
+     * A turn was removed because all its messages are gone or because a
+     * user-message anchor was removed and the remaining messages were
+     * absorbed into an adjacent turn.
+     */
+    data class TurnRemoved(val id: String) : SessionModelEvent() {
+        override fun toString() = "TurnRemoved $id"
+    }
 
     fun interface Listener {
         fun onEvent(event: SessionModelEvent)

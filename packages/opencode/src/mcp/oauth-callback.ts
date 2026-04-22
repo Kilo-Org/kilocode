@@ -1,6 +1,6 @@
 import { createConnection } from "net"
 import { createServer } from "http"
-import { Log } from "../util/log"
+import { Log } from "../util"
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH, parseRedirectUri } from "./oauth-provider"
 
 const log = Log.create({ service: "mcp.oauth-callback" })
@@ -168,11 +168,27 @@ export namespace McpOAuthCallback {
 
     server = createServer(handleRequest)
     await new Promise<void>((resolve, reject) => {
+      // kilocode_change start - EADDRINUSE can still fire when another process
+      // races us between isPortInUse() and listen() (notably across parallel
+      // bun test subprocesses). Treat it as "another instance owns the port",
+      // matching the isPortInUse() branch above instead of crashing.
+      const onError = (err: Error & { code?: string }) => {
+        if (err.code === "EADDRINUSE") {
+          log.info("oauth callback port bound by another instance", { port: currentPort })
+          server?.close()
+          server = undefined
+          resolve()
+          return
+        }
+        reject(err)
+      }
+      server!.on("error", onError)
+      // kilocode_change end
       server!.listen(currentPort, () => {
+        server!.off("error", onError) // kilocode_change
         log.info("oauth callback server started", { port: currentPort, path: currentPath })
         resolve()
       })
-      server!.on("error", reject)
     })
   }
 
@@ -224,7 +240,7 @@ export namespace McpOAuthCallback {
       log.info("oauth callback server stopped")
     }
 
-    for (const [name, pending] of pendingAuths) {
+    for (const [_name, pending] of pendingAuths) {
       clearTimeout(pending.timeout)
       pending.reject(new Error("OAuth callback server stopped"))
     }

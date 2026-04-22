@@ -12,7 +12,7 @@
  */
 
 import type { ChatCredentials, ChatMessage } from "./types"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 
 const log = Log.create({ service: "claw-chat" })
 

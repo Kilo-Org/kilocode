@@ -6,7 +6,7 @@ import z from "zod"
 import { Format } from "../../format"
 import { TuiRoutes } from "./tui"
 import { Instance } from "../../project/instance"
-import { Vcs } from "../../project/vcs"
+import { Vcs } from "../../project"
 import { Agent } from "../../agent/agent"
 import { Skill } from "../../skill"
 import { Global } from "../../global"
@@ -14,6 +14,8 @@ import { LSP } from "../../lsp"
 import { Command } from "../../command"
 import { QuestionRoutes } from "./question"
 import { PermissionRoutes } from "./permission"
+import { Flag } from "@/flag/flag"
+import { ExperimentalHttpApiServer } from "./httpapi/server"
 import { ProjectRoutes } from "./project"
 import { SessionRoutes } from "./session"
 import { PtyRoutes } from "./pty"
@@ -23,6 +25,7 @@ import { ConfigRoutes } from "./config"
 import { ExperimentalRoutes } from "./experimental"
 import { ProviderRoutes } from "./provider"
 import { EventRoutes } from "./event"
+import { SyncRoutes } from "./sync"
 import { WorkspaceRouterMiddleware } from "./middleware"
 import { AppRuntime } from "@/effect/app-runtime"
 import { register as registerKiloRoutes } from "@/kilocode/server/instance" // kilocode_change
@@ -36,8 +39,21 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
     .route("/experimental", ExperimentalRoutes())
     .route("/session", SessionRoutes())
     .route("/permission", PermissionRoutes())
+
+  if (Flag.KILO_EXPERIMENTAL_HTTPAPI) {
+    const handler = ExperimentalHttpApiServer.webHandler().handler
+    app
+      .all("/question", (c) => handler(c.req.raw))
+      .all("/question/*", (c) => handler(c.req.raw))
+      .all("/permission", (c) => handler(c.req.raw))
+      .all("/permission/*", (c) => handler(c.req.raw))
+      .all("/provider/auth", (c) => handler(c.req.raw))
+  }
+
+  const full = app // kilocode_change
     .route("/question", QuestionRoutes())
     .route("/provider", ProviderRoutes())
+    .route("/sync", SyncRoutes())
     .route("/", FileRoutes())
     .route("/", EventRoutes())
     .route("/mcp", McpRoutes())
@@ -283,5 +299,5 @@ export const InstanceRoutes = (upgrade: UpgradeWebSocket): Hono => {
       },
     )
 
-  return registerKiloRoutes(app) // kilocode_change
+  return registerKiloRoutes(full) // kilocode_change
 }
