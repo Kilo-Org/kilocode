@@ -159,7 +159,6 @@ export namespace LLM {
           // kilocode_change end
         }
 
-
         const isWorkflow = language instanceof GitLabWorkflowLanguageModel
         const messages = isOpenaiOauth
           ? input.messages
@@ -269,8 +268,17 @@ export namespace LLM {
             if (!t || !t.execute) {
               return { result: "", error: `Unknown tool: ${toolName}` }
             }
+            let parsed: unknown
             try {
-              const result = await t.execute!(JSON.parse(argsJson), {
+              parsed = JSON.parse(argsJson)
+            } catch (e: any) {
+              return {
+                result: "",
+                error: `Failed to parse tool call arguments as JSON for tool '${toolName}': ${e.message}`,
+              }
+            }
+            try {
+              const result = await t.execute!(parsed as any, {
                 toolCallId: _requestID,
                 messages: input.messages,
                 abortSignal: input.abort,
@@ -381,7 +389,7 @@ export namespace LLM {
           maxOutputTokens: params.maxOutputTokens,
           abortSignal: input.abort,
           headers: {
-              ...(input.model.providerID.startsWith("kilo") // kilocode_change
+            ...(input.model.providerID.startsWith("kilo") // kilocode_change
               ? {
                   "x-kilo-project": Instance.project.id,
                   "x-kilo-session": input.sessionID,

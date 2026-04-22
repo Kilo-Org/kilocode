@@ -83,6 +83,13 @@ function wrap<Parameters extends z.ZodType, Result extends Metadata>(
           ...(ctx.callID ? { "tool.call_id": ctx.callID } : {}),
         }
         return Effect.gen(function* () {
+          if (typeof args !== "object" || args === null) {
+            return yield* Effect.fail(
+              new Error(
+                `The ${id} tool received invalid JSON arguments: expected a JSON object but received ${typeof args === "string" ? `a JSON string (${JSON.stringify(args).slice(0, 60)})` : `type ${typeof args}`}. Ensure the tool call arguments form a JSON object.`,
+              ),
+            )
+          }
           yield* Effect.try({
             try: () => toolInfo.parameters.parse(args),
             catch: (error) => {
