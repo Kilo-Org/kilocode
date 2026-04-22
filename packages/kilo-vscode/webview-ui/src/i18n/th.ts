@@ -1054,6 +1054,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "แสดงข้อเสนอแนะการเติมอัตโนมัติระหว่างพิมพ์",
   "settings.autocomplete.smartKeybinding.title": "เปิดใช้งานปุ่มลัดงานอินไลน์อัจฉริยะ",
   "settings.autocomplete.smartKeybinding.description": "ใช้ปุ่มลัดอัจฉริยะสำหรับงานอินไลน์",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "เปิดใช้งานเติมอัตโนมัติแชท",
   "settings.autocomplete.chatAutocomplete.description": "แสดงข้อเสนอแนะเติมอัตโนมัติในช่องแชท",
   "settings.notifications.agent.title": "เอเจนต์เสร็จสิ้น",

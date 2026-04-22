@@ -1082,6 +1082,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.title": "Activer le raccourci intelligent de tâche en ligne",
   "settings.autocomplete.smartKeybinding.description":
     "Utiliser un raccourci intelligent pour déclencher les tâches en ligne",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Activer l'autocomplétion du chat",
   "settings.autocomplete.chatAutocomplete.description": "Afficher les suggestions d'autocomplétion dans le chat",
   "settings.notifications.agent.title": "Achèvement de l'agent",

@@ -1068,6 +1068,8 @@ export const dict = {
     "Mostrar automaticamente sugestões de completamento inline ao digitar",
   "settings.autocomplete.smartKeybinding.title": "Ativar atalho inteligente de tarefa inline",
   "settings.autocomplete.smartKeybinding.description": "Usar um atalho inteligente para acionar tarefas inline",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Ativar autocompletar do chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugestões de autocompletar no campo de chat",
   "settings.notifications.agent.title": "Conclusão do agente",

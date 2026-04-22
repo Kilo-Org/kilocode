@@ -1045,6 +1045,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "在您輸入時自動顯示內嵌補全建議",
   "settings.autocomplete.smartKeybinding.title": "啟用智慧內嵌任務快捷鍵",
   "settings.autocomplete.smartKeybinding.description": "使用智慧快捷鍵觸發內嵌任務",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "啟用聊天文字方塊自動補全",
   "settings.autocomplete.chatAutocomplete.description": "在聊天文字方塊中顯示自動補全建議",
   "settings.notifications.agent.title": "Agent 完成",

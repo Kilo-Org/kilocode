@@ -1065,6 +1065,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "Vis automatisk innebygde fullføringsforslag ved skriving",
   "settings.autocomplete.smartKeybinding.title": "Aktiver smart innebygd oppgavetastbinding",
   "settings.autocomplete.smartKeybinding.description": "Bruk en smart tastbinding for å utløse innebygde oppgaver",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofullføring",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofullføringsforslag i chatfeltet",
   "settings.notifications.agent.title": "Agentfullføring",

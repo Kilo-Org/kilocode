@@ -1068,6 +1068,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.title": "Увімкнути розумне прив'язування клавіш",
   "settings.autocomplete.smartKeybinding.description":
     "Використовувати розумне прив'язування клавіш для активації підказок",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Увімкнути автодоповнення в полі чату",
   "settings.autocomplete.chatAutocomplete.description": "Показувати підказки автодоповнення в полі введення чату",
 

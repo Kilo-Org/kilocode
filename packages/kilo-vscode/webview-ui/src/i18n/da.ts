@@ -1062,6 +1062,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "Vis automatisk inline-fuldførelsesforslag under indtastning",
   "settings.autocomplete.smartKeybinding.title": "Aktiver smart inline-opgave-tastaturgenvej",
   "settings.autocomplete.smartKeybinding.description": "Brug en smart tastaturgenvej til at udløse inline-opgaver",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Aktiver chat-autofuldførelse",
   "settings.autocomplete.chatAutocomplete.description": "Vis autofuldførelsesforslag i chatfeltet",
   "settings.notifications.agent.title": "Agentafslutning",

@@ -1061,6 +1061,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "入力時にインライン補完の提案を自動的に表示",
   "settings.autocomplete.smartKeybinding.title": "スマートインラインタスクキーバインドを有効にする",
   "settings.autocomplete.smartKeybinding.description": "インラインタスクをトリガーするスマートキーバインドを使用",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "チャットの自動補完を有効にする",
   "settings.autocomplete.chatAutocomplete.description": "チャットテキストエリアに自動補完の提案を表示",
   "settings.notifications.agent.title": "エージェント完了",

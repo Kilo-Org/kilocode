@@ -1072,6 +1072,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "Mostrar automáticamente sugerencias de completado al escribir",
   "settings.autocomplete.smartKeybinding.title": "Habilitar atajo inteligente de tarea en línea",
   "settings.autocomplete.smartKeybinding.description": "Usar un atajo inteligente para activar tareas en línea",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Habilitar autocompletado del chat",
   "settings.autocomplete.chatAutocomplete.description": "Mostrar sugerencias de autocompletado en el chat",
   "settings.notifications.agent.title": "Finalización del agente",

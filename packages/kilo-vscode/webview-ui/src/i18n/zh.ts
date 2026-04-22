@@ -1043,6 +1043,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "在您输入时自动显示内联补全建议",
   "settings.autocomplete.smartKeybinding.title": "启用智能内联任务快捷键",
   "settings.autocomplete.smartKeybinding.description": "使用智能快捷键触发内联任务",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "启用聊天文本框自动补全",
   "settings.autocomplete.chatAutocomplete.description": "在聊天文本框中显示自动补全建议",
   "settings.notifications.agent.title": "智能体完成",

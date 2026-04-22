@@ -1067,6 +1067,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.title": "Slimme inline taak-sneltoets inschakelen",
   "settings.autocomplete.smartKeybinding.description":
     "Gebruik een slimme sneltoets voor het activeren van inline taken",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Chat tekstveld automatisch aanvullen inschakelen",
   "settings.autocomplete.chatAutocomplete.description":
     "Toon suggesties voor automatisch aanvullen in het chat tekstveld",

@@ -1068,6 +1068,8 @@ export const dict = {
   "settings.autocomplete.autoTrigger.description": "Автоматически показывать предложения дополнения при вводе",
   "settings.autocomplete.smartKeybinding.title": "Включить умную клавишу встроенной задачи",
   "settings.autocomplete.smartKeybinding.description": "Использовать умную клавишу для запуска встроенных задач",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Включить автодополнение чата",
   "settings.autocomplete.chatAutocomplete.description": "Показывать предложения автодополнения в поле чата",
   "settings.notifications.agent.title": "Завершение агента",

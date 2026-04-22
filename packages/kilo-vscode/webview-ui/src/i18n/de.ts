@@ -1080,6 +1080,8 @@ export const dict = {
   "settings.autocomplete.smartKeybinding.title": "Intelligente Inline-Aufgaben-Tastenkombination aktivieren",
   "settings.autocomplete.smartKeybinding.description":
     "Eine intelligente Tastenkombination zum Auslösen von Inline-Aufgaben verwenden",
+  "settings.autocomplete.keybindingNotFound": "Not assigned",
+  "settings.autocomplete.changeKeybinding": "Change shortcut",
   "settings.autocomplete.chatAutocomplete.title": "Chat-Textfeld-Autovervollständigung aktivieren",
   "settings.autocomplete.chatAutocomplete.description": "Autovervollständigungsvorschläge im Chat-Textfeld anzeigen",
   "settings.notifications.agent.title": "Agent-Abschluss",
