@@ -85,16 +85,23 @@ function extensionDefaults(id: string): KeybindingEntry | undefined {
  * Later entries win, matching VS Code's "last wins" resolution for display purposes.
  */
 function applyOverrides(id: string, user: KeybindingEntry[], fallback: string | undefined) {
-  let current = fallback
   const unbind = `-${id}`
-  for (const entry of user) {
-    if (entry.command === id && entry.key) {
-      current = entry.key
-    } else if (entry.command === unbind) {
-      current = undefined
+  return user.reduce<string | undefined>((current, entry) => {
+    if (entry.command === id) {
+      return platformKey(entry)
     }
+    if (entry.command === unbind) {
+      return undefined
+    }
+    return current
+  }, fallback)
+}
+
+function platformKey(entry: KeybindingEntry) {
+  if (process.platform === "darwin") {
+    return entry.mac || entry.key
   }
-  return current
+  return entry.key
 }
 
 async function readUserKeybindings(context?: vscode.ExtensionContext) {
