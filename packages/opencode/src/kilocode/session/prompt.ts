@@ -17,6 +17,13 @@ import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
   /**
+   * Maximum compaction attempts per turn before surfacing an error.
+   * Three covers a normal overflow + summary-self-overflow retry without
+   * spinning forever.
+   */
+  export const MAX_COMPACTION_ATTEMPTS = 3
+
+  /**
    * Determines whether the plan follow-up prompt should be shown.
    * Checks if the plan_exit tool was called in the last assistant turn.
    * Exported so tests can verify the logic independently.

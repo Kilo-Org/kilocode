@@ -1347,6 +1347,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const slog = elog.with({ sessionID })
           let structured: unknown | undefined
           let step = 0
+          let compactions = 0 // kilocode_change - cap compaction retries to prevent infinite loops
           const session = yield* sessions.get(sessionID)
 
           while (true) {
@@ -1417,6 +1418,17 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             }
 
             if (task?.type === "compaction") {
+              // kilocode_change start - cap compaction retries to prevent infinite loops
+              compactions++
+              if (compactions > KiloSessionPrompt.MAX_COMPACTION_ATTEMPTS) {
+                const error = new MessageV2.ContextOverflowError({
+                  message: `Compaction exhausted: context still exceeds model limits after ${KiloSessionPrompt.MAX_COMPACTION_ATTEMPTS} attempts`,
+                })
+                closeReasons.set(sessionID, "error")
+                yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+                break
+              }
+              // kilocode_change end
               const result = yield* compaction.process({
                 messages: msgs,
                 parentID: lastUser.id,
@@ -1424,7 +1436,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 auto: task.auto,
                 overflow: task.overflow,
               })
-              if (result === "stop") break
+              // kilocode_change - surface compaction overflow stop as turn error
+              if (result === "stop") {
+                closeReasons.set(sessionID, "error")
+                break
+              }
               continue
             }
 
