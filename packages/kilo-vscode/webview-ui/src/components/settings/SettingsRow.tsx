@@ -1,6 +1,6 @@
-import { Component, JSX } from "solid-js"
+import type { Component, JSX } from "solid-js"
 
-const SettingsRow: Component<{ title: string; description?: string; last?: boolean; children: JSX.Element }> = (
+const SettingsRow: Component<{ title: string; description?: JSX.Element; last?: boolean; children: JSX.Element }> = (
   props,
 ) => (
   <div

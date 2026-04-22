@@ -758,6 +758,7 @@ export interface AutocompleteSettingsLoadedMessage {
     enableSmartInlineTaskKeybinding: boolean
     enableChatAutocomplete: boolean
   }
+  keybindings: Record<string, string>
 }
 
 export interface ChatCompletionResultMessage {
@@ -1928,6 +1929,11 @@ export interface UpdateAutocompleteSettingMessage {
   value: boolean
 }
 
+export interface OpenGlobalKeybindingsMessage {
+  type: "openGlobalKeybindings"
+  text?: string
+}
+
 export interface RequestChatCompletionMessage {
   type: "requestChatCompletion"
   text: string
@@ -2574,6 +2580,7 @@ export type WebviewMessage =
   | RenameSessionRequest
   | RequestAutocompleteSettingsMessage
   | UpdateAutocompleteSettingMessage
+  | OpenGlobalKeybindingsMessage
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage

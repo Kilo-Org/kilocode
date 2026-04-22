@@ -1,5 +1,6 @@
-import { Component, createSignal, onCleanup } from "solid-js"
+import { createSignal, onCleanup, type Component } from "solid-js"
 import { Switch } from "@kilocode/kilo-ui/switch"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -13,6 +14,7 @@ const AutocompleteTab: Component = () => {
   const [enableAutoTrigger, setEnableAutoTrigger] = createSignal(true)
   const [enableSmartInlineTaskKeybinding, setEnableSmartInlineTaskKeybinding] = createSignal(false)
   const [enableChatAutocomplete, setEnableChatAutocomplete] = createSignal(false)
+  const [shortcut, setShortcut] = createSignal("Cmd+L")
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "autocompleteSettingsLoaded") {
@@ -21,6 +23,10 @@ const AutocompleteTab: Component = () => {
     setEnableAutoTrigger(message.settings.enableAutoTrigger)
     setEnableSmartInlineTaskKeybinding(message.settings.enableSmartInlineTaskKeybinding)
     setEnableChatAutocomplete(message.settings.enableChatAutocomplete)
+    setShortcut(
+      message.keybindings["kilo-code.new.autocomplete.generateSuggestions"] ??
+        language.t("settings.autocomplete.keybindingNotFound"),
+    )
   })
 
   onCleanup(unsubscribe)
@@ -52,15 +58,28 @@ const AutocompleteTab: Component = () => {
 
         <SettingsRow
           title={language.t("settings.autocomplete.smartKeybinding.title")}
-          description={language.t("settings.autocomplete.smartKeybinding.description")}
+          description={language.t("settings.autocomplete.smartKeybinding.description", { keybinding: shortcut() })}
         >
-          <Switch
-            checked={enableSmartInlineTaskKeybinding()}
-            onChange={(checked) => updateSetting("enableSmartInlineTaskKeybinding", checked)}
-            hideLabel
-          >
-            {language.t("settings.autocomplete.smartKeybinding.title")}
-          </Switch>
+          <div style={{ display: "flex", "align-items": "center", gap: "8px" }}>
+            <Button
+              variant="secondary"
+              onClick={() =>
+                vscode.postMessage({
+                  type: "openGlobalKeybindings",
+                  text: "kilo-code.new.autocomplete.generateSuggestions",
+                })
+              }
+            >
+              {language.t("settings.autocomplete.changeKeybinding")}
+            </Button>
+            <Switch
+              checked={enableSmartInlineTaskKeybinding()}
+              onChange={(checked) => updateSetting("enableSmartInlineTaskKeybinding", checked)}
+              hideLabel
+            >
+              {language.t("settings.autocomplete.smartKeybinding.title")}
+            </Switch>
+          </div>
         </SettingsRow>
 
         <SettingsRow

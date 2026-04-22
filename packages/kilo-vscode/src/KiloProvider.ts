@@ -55,6 +55,7 @@ import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-pa
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { abortSession, parseQueued } from "./kilo-provider/abort"
+import { keybindings } from "./keybindings"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
@@ -804,7 +805,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.connectionService.notifyLanguageChanged(message.locale as string)
           break
         case "requestAutocompleteSettings":
-          this.sendAutocompleteSettings()
+          await this.sendAutocompleteSettings()
           break
         case "updateAutocompleteSetting": {
           const allowedKeys = new Set([
@@ -816,10 +817,16 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             await vscode.workspace
               .getConfiguration("kilo-code.new.autocomplete")
               .update(message.key, message.value, vscode.ConfigurationTarget.Global)
-            this.sendAutocompleteSettings()
+            await this.sendAutocompleteSettings()
           }
           break
         }
+        case "openGlobalKeybindings":
+          await vscode.commands.executeCommand(
+            "workbench.action.openGlobalKeybindings",
+            message.text ?? "kilo-code.new",
+          )
+          break
         case "requestChatCompletion": {
           if (!this.chatAutocomplete) {
             this.chatAutocomplete = new ChatTextAreaAutocomplete(this.connectionService)
@@ -2834,7 +2841,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
 
     // Re-send all settings to the webview so the UI reflects the reset
-    this.sendAutocompleteSettings()
+    await this.sendAutocompleteSettings()
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
@@ -3007,7 +3014,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   /**
    * Read autocomplete settings from VS Code configuration and push to the webview.
    */
-  private sendAutocompleteSettings(): void {
+  private async sendAutocompleteSettings(): Promise<void> {
     const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
     this.postMessage({
       type: "autocompleteSettingsLoaded",
@@ -3016,6 +3023,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
         enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
       },
+      keybindings: await keybindings(["kilo-code.new.autocomplete.generateSuggestions"]),
     })
   }
 
