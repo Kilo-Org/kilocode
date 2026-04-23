@@ -4,7 +4,7 @@
 
 import { test, expect, mock } from "bun:test"
 import path from "path"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
 
 Log.init({ print: false })
 

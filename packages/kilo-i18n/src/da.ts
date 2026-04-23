@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "Annuller",
   "marketplace.contribute.prompt": "Mangler du en skill, tilstand eller MCP-server?",
   "marketplace.contribute.cta": "Bidrag på GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementér",
+  "plan.followup.question": "Klar til at implementere?",
+  "plan.followup.answer.newSession": "Start ny session",
+  "plan.followup.answer.newSession.description": "Implementér i en ny session med ren kontekst",
+  "plan.followup.answer.continue": "Fortsæt her",
+  "plan.followup.answer.continue.description": "Implementér planen i denne session",
 }

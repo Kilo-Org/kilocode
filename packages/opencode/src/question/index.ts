@@ -1,10 +1,10 @@
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { InstanceState } from "@/effect/instance-state"
+import { InstanceState } from "@/effect"
 import { SessionID, MessageID } from "@/session/schema"
 import { zod } from "@/util/effect-zod"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { withStatics } from "@/util/schema"
 import { QuestionID } from "./schema"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
@@ -21,6 +21,15 @@ export namespace Question {
     description: Schema.String.annotate({
       description: "Explanation of choice",
     }),
+    // kilocode_change start - optional i18n keys so clients can translate while still
+    // replying with the canonical English label (backend matches on `label`).
+    labelKey: Schema.optional(Schema.String).annotate({
+      description: "Optional i18n key for the label; clients translate and still reply with `label`",
+    }),
+    descriptionKey: Schema.optional(Schema.String).annotate({
+      description: "Optional i18n key for the description",
+    }),
+    // kilocode_change end
   }) {
     static readonly zod = zod(this)
   }
@@ -38,6 +47,14 @@ export namespace Question {
     multiple: Schema.optional(Schema.Boolean).annotate({
       description: "Allow selecting multiple choices",
     }),
+    // kilocode_change start - optional i18n keys for question text and header
+    questionKey: Schema.optional(Schema.String).annotate({
+      description: "Optional i18n key for the question text; clients fall back to `question` when missing",
+    }),
+    headerKey: Schema.optional(Schema.String).annotate({
+      description: "Optional i18n key for the header; clients fall back to `header` when missing",
+    }),
+    // kilocode_change end
   }
 
   export class Info extends Schema.Class<Info>("QuestionInfo")({

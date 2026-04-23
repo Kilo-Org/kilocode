@@ -19,6 +19,11 @@ dependencies {
 
     implementation(project(":shared"))
 
+    implementation(libs.commonmark)
+    implementation(libs.commonmark.autolink)
+    implementation(libs.commonmark.tables)
+    implementation(libs.commonmark.strikethrough)
+
     testImplementation(kotlin("test"))
     testImplementation("junit:junit:4.13.2")
     testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.11.4")

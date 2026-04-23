@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åbn Terminal",
+  "agentManager.tab.newOptions": "Flere nye faneindstillinger",
+
+  "agentManager.terminal.new": "Ny terminalfane",
+  "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
+  "agentManager.terminal.connectionError": "forbindelsesfejl til terminal",
+  "agentManager.terminal.errorTitle": "Terminalfejl",
   "agentManager.setup.failed": "Opsætning af worktree mislykkedes",
   "agentManager.setup.settingUp": "Opsætter worktree",
   "agentManager.setup.error.git_not_found":

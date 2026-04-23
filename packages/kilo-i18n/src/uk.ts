@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "Скасувати",
   "marketplace.contribute.prompt": "Бракує навички, режиму або MCP-сервера?",
   "marketplace.contribute.cta": "Зробити внесок на GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Реалізувати",
+  "plan.followup.question": "Готові реалізувати?",
+  "plan.followup.answer.newSession": "Почати нову сесію",
+  "plan.followup.answer.newSession.description": "Реалізувати в новій сесії з чистим контекстом",
+  "plan.followup.answer.continue": "Продовжити тут",
+  "plan.followup.answer.continue.description": "Реалізувати план у цій сесії",
 }

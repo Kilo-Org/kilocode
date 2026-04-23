@@ -1,6 +1,6 @@
 import { NodeTracerProvider } from "@opentelemetry/sdk-trace-node"
 import { SimpleSpanProcessor } from "@opentelemetry/sdk-trace-base"
-import { Resource } from "@opentelemetry/resources"
+import { resourceFromAttributes } from "@opentelemetry/resources"
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions"
 import type { Tracer } from "@opentelemetry/api"
 import { PostHogSpanExporter } from "./otel-exporter.js"
@@ -36,7 +36,7 @@ export namespace TracerSetup {
     exporter.setEnabled(options.enabled)
 
     provider = new NodeTracerProvider({
-      resource: new Resource({
+      resource: resourceFromAttributes({
         [ATTR_SERVICE_NAME]: options.appName,
         [ATTR_SERVICE_VERSION]: options.version,
       }),
