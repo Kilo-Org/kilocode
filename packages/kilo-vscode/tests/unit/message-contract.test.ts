@@ -14,7 +14,7 @@ import fs from "node:fs"
 import path from "node:path"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
-const MESSAGES_FILE = path.join(ROOT, "webview-ui/src/types/messages.ts")
+const MESSAGES_DIR = path.join(ROOT, "webview-ui/src/types/messages")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 const KILO_PROVIDER_UTILS_FILE = path.join(ROOT, "src/kilo-provider-utils.ts")
 // Some wire types (partUpdated, partsUpdated) live in a file shared by the
@@ -25,13 +25,21 @@ function readFile(filePath: string): string {
   return fs.readFileSync(filePath, "utf-8")
 }
 
+function readMessagesDir(): string {
+  return fs
+    .readdirSync(MESSAGES_DIR)
+    .filter((f) => f.endsWith(".ts"))
+    .map((f) => readFile(path.join(MESSAGES_DIR, f)))
+    .join("\n")
+}
+
 function readMessageTypeSources(): string {
-  return readFile(MESSAGES_FILE) + "\n" + readFile(SHARED_STREAM_MESSAGES_FILE)
+  return readMessagesDir() + "\n" + readFile(SHARED_STREAM_MESSAGES_FILE)
 }
 
 describe("ExtensionMessage type members", () => {
   it("all members of ExtensionMessage union are defined as interfaces/types in messages.ts", () => {
-    const content = readFile(MESSAGES_FILE)
+    const content = readMessagesDir()
 
     // Extract ExtensionMessage union members
     const unionMatch = content.match(
@@ -54,7 +62,7 @@ describe("ExtensionMessage type members", () => {
   })
 
   it("all members of WebviewMessage union are defined as interfaces/types in messages.ts", () => {
-    const content = readFile(MESSAGES_FILE)
+    const content = readMessagesDir()
 
     const unionMatch = content.match(/export type WebviewMessage\s*=\s*([\s\S]*?)(?=\n\/\/|$)/)
     if (!unionMatch) {

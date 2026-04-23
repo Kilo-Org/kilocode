@@ -381,10 +381,10 @@ describe("constants", () => {
   })
 
   it("KNOWN_KEYS matches all keys in the Config interface (drift guard)", async () => {
-    // Read the Config interface from messages.ts and extract its keys.
+    // Read the Config interface from messages/config.ts and extract its keys.
     // If someone adds a new field to Config, this test fails as a reminder
     // to also add it to KNOWN_KEYS in settings-io.ts.
-    const src = await Bun.file(require("path").join(__dirname, "../../webview-ui/src/types/messages.ts")).text()
+    const src = await Bun.file(require("path").join(__dirname, "../../webview-ui/src/types/messages/config.ts")).text()
     const match = src.match(/export interface Config \{([^}]+)\}/)
     expect(match).not.toBeNull()
     const body = match![1]
