@@ -89,6 +89,18 @@ describe("messageTurns", () => {
       { user: "message_4", assistant: [] },
     ])
   })
+
+  it("surfaces leading assistant output as a partial turn", () => {
+    const messages = [assistant("message_2", "message_1"), assistant("message_3", "message_1"), user("message_4")]
+    const turns = messageTurns(messages)
+
+    expect(
+      turns.map((turn) => ({ id: turn.id, partial: turn.partial, assistant: turn.assistant.map((msg) => msg.id) })),
+    ).toEqual([
+      { id: "message_1", partial: true, assistant: ["message_2", "message_3"] },
+      { id: "message_4", partial: undefined, assistant: [] },
+    ])
+  })
 })
 
 describe("stableMessageTurns", () => {
@@ -111,6 +123,15 @@ describe("stableMessageTurns", () => {
 
     expect(next[0]).not.toBe(prev[0])
     expect(next[0]?.assistant.map((msg) => msg.id)).toEqual(["message_2", "message_3"])
+  })
+
+  it("keeps partial turn identities stable while their assistant messages are unchanged", () => {
+    const a2 = assistant("message_2", "message_1")
+    const a3 = assistant("message_3", "message_1")
+    const prev = messageTurns([a2, a3])
+    const next = stableMessageTurns(messageTurns([a2, a3, user("message_4")]), prev)
+
+    expect(next[0]).toBe(prev[0])
   })
 })
 

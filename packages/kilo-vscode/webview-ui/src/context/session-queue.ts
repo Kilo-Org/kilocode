@@ -4,10 +4,30 @@ export interface MessageTurn {
   id: string
   user: Message
   assistant: Message[]
+  partial?: boolean
+}
+
+function partial(messages: Message[]): MessageTurn | undefined {
+  const first = messages[0]
+  if (!first) return undefined
+  const id = first.parentID ?? `${first.id}:partial`
+  return {
+    id,
+    user: {
+      id,
+      sessionID: first.sessionID,
+      role: "user",
+      createdAt: first.createdAt,
+      time: first.time,
+    },
+    assistant: messages,
+    partial: true,
+  }
 }
 
 export function messageTurns(messages: Message[], boundary?: string): MessageTurn[] {
   const result: MessageTurn[] = []
+  const lead: Message[] = []
   const by = new Map<string, MessageTurn>()
 
   for (const msg of messages) {
@@ -20,11 +40,22 @@ export function messageTurns(messages: Message[], boundary?: string): MessageTur
     }
 
     if (msg.role !== "assistant") continue
-    const turn = (msg.parentID ? by.get(msg.parentID) : undefined) ?? result[result.length - 1]
-    if (turn) turn.assistant.push(msg)
+    const turn = msg.parentID ? by.get(msg.parentID) : undefined
+    if (turn) {
+      turn.assistant.push(msg)
+      continue
+    }
+    const last = result[result.length - 1]
+    if (last) {
+      last.assistant.push(msg)
+      continue
+    }
+    lead.push(msg)
   }
 
-  return result
+  const stub = partial(lead)
+  if (!stub) return result
+  return [stub, ...result]
 }
 
 function sameMessages(a: Message[], b: Message[]) {
@@ -42,7 +73,8 @@ export function stableMessageTurns(next: MessageTurn[], prev: MessageTurn[] = []
   return next.map((turn) => {
     const old = by.get(turn.user.id)
     if (!old) return turn
-    if (old.user !== turn.user) return turn
+    if (old.partial !== turn.partial) return turn
+    if (!turn.partial && old.user !== turn.user) return turn
     if (!sameMessages(old.assistant, turn.assistant)) return turn
     return old
   })
