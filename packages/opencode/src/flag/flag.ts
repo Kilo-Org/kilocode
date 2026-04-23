@@ -69,7 +69,6 @@ export namespace Flag {
     Config.withDefault(false),
   )
   export const KILO_EXPERIMENTAL_PLAN_MODE = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_PLAN_MODE")
-  export const KILO_EXPERIMENTAL_WORKSPACES = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES")
   export const KILO_EXPERIMENTAL_MARKDOWN = !falsy("KILO_EXPERIMENTAL_MARKDOWN")
   export const KILO_MODELS_URL = process.env["KILO_MODELS_URL"]
   export const KILO_MODELS_PATH = process.env["KILO_MODELS_PATH"]
@@ -77,7 +76,10 @@ export namespace Flag {
   export const KILO_DB = process.env["KILO_DB"]
   export const KILO_DISABLE_CHANNEL_DB = truthy("KILO_DISABLE_CHANNEL_DB")
   export const KILO_SKIP_MIGRATIONS = truthy("KILO_SKIP_MIGRATIONS")
-  export const KILO_STRICT_CONFIG_DEPS = truthy("KILO_STRICT_CONFIG_DEPS")
+
+  export const KILO_WORKSPACE_ID = process.env["KILO_WORKSPACE_ID"]
+  export const KILO_EXPERIMENTAL_HTTPAPI = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_HTTPAPI")
+  export const KILO_EXPERIMENTAL_WORKSPACES = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES")
 
   function number(key: string) {
     const value = process.env[key]

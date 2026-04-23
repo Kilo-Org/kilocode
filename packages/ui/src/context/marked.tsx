@@ -1,5 +1,4 @@
 import { marked } from "marked"
-import markedKatex from "marked-katex-extension"
 // kilocode_change: marked-shiki highlighted code blocks synchronously during
 // parse, freezing the main thread on session switches with many code blocks
 // (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
@@ -7,6 +6,9 @@ import markedKatex from "marked-katex-extension"
 // This import was re-added by an upstream merge; removing it restores the
 // two-pass rendering design.
 import katex from "katex"
+// kilocode_change start: import types for double-dollar math extension
+import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
+// kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
@@ -382,6 +384,11 @@ registerCustomTheme("Kilo", () => {
   } as unknown as ThemeRegistrationResolved)
 })
 
+// kilocode_change start: double-dollar-only math rules for marked.
+const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
+const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
+// kilocode_change end
+
 function renderMathInText(text: string): string {
   let result = text
 
@@ -398,18 +405,9 @@ function renderMathInText(text: string): string {
     }
   })
 
-  // Inline math: $...$
-  const inlineMathRegex = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g
-  result = result.replace(inlineMathRegex, (_, math) => {
-    try {
-      return katex.renderToString(math, {
-        displayMode: false,
-        throwOnError: false,
-      })
-    } catch {
-      return `$${math}$`
-    }
-  })
+  // kilocode_change: removed single-dollar inline math ($...$) rendering.
+  // Single $ is far more common as a currency symbol in agent responses
+  // (e.g. $93K, $307K) than as a LaTeX delimiter. Only $$...$$ is supported.
 
   return result
 }
@@ -671,10 +669,55 @@ export const { use: useMarked, provider: MarkedProvider } = createSimpleContext(
           // kilocode_change end
         },
       },
-      markedKatex({
-        throwOnError: false,
-        nonStandard: true,
-      }),
+      // kilocode_change start: enable only double-dollar math.
+      // Single $ is far more common as a currency symbol in agent responses
+      // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
+      // marked-katex-extension inline tokenizer because Marked falls through
+      // to later tokenizers when an override returns undefined.
+      {
+        extensions: [
+          {
+            name: "doubleKatexBlock",
+            level: "block" as const,
+            tokenizer(src) {
+              const match = src.match(BLOCK)
+              const text = match?.[1]
+              if (!match || !text) return undefined
+              return {
+                type: "doubleKatexBlock",
+                raw: match[0],
+                text: text.trim(),
+              }
+            },
+            renderer(token) {
+              return `${katex.renderToString(token.text, { displayMode: true, throwOnError: false })}\n`
+            },
+          } satisfies TokenizerAndRendererExtension,
+          {
+            name: "doubleKatexInline",
+            level: "inline" as const,
+            start(src) {
+              const index = src.indexOf("$$")
+              if (index === -1) return undefined
+              return index
+            },
+            tokenizer(src) {
+              const match = src.match(INLINE)
+              const text = match?.[1]
+              if (!match || !text) return undefined
+              return {
+                type: "doubleKatexInline",
+                raw: match[0],
+                text: text.trim(),
+              }
+            },
+            renderer(token) {
+              return katex.renderToString(token.text, { displayMode: true, throwOnError: false })
+            },
+          } satisfies TokenizerAndRendererExtension,
+        ],
+      } satisfies MarkedExtension,
+      // kilocode_change end
       // kilocode_change: markedShiki removed — the custom `code` renderer
       // above returns plain <pre><code data-lang="..."> and markdown.tsx
       // calls deferredHighlight() after paint. Running Shiki inside parse

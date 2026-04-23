@@ -9,10 +9,11 @@ import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
 import PROMPT_KIMI from "./prompt/kimi.txt"
+import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
-import type { Provider } from "@/provider/provider"
+import type { Provider } from "@/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
 import { Skill } from "@/skill"
@@ -20,6 +21,7 @@ import { Skill } from "@/skill"
 // kilocode_change start
 import SOUL from "../kilocode/soul.txt"
 import { staticEnvLines, type EditorContext } from "../kilocode/editor-context"
+import { isLing } from "../kilocode/model-match"
 // kilocode_change end
 
 export namespace SystemPrompt {
@@ -46,6 +48,8 @@ export namespace SystemPrompt {
         return [PROMPT_CODEX]
       case "gemini":
         return [PROMPT_GEMINI]
+      case "ling":
+        return [PROMPT_LING]
       case "trinity":
         return [PROMPT_TRINITY]
     }
@@ -63,6 +67,7 @@ export namespace SystemPrompt {
     if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
     if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
     if (model.api.id.toLowerCase().includes("kimi")) return [PROMPT_KIMI]
+    if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
     return [PROMPT_DEFAULT]
   }
 

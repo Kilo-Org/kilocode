@@ -3,6 +3,11 @@ import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 
 const DEBOUNCE_MS = 100
+// Grace window after a real user interaction (wheel/pointer/key/touch) during
+// which a ResizeObserver or non-user scroll event must not snap the view back
+// to the bottom. Long enough to cover a single scroll gesture plus the
+// DEBOUNCE_MS window used by handleScroll to flip userScrolled.
+const USER_INTERACTION_GRACE_MS = 300
 
 export interface AutoScrollOptions {
   working: () => boolean
@@ -18,6 +23,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let cleanup: (() => void) | undefined
   let userInitiated = false
   let lastScrollTop: number | undefined
+  let lastInteraction = 0
 
   const threshold = () => options.bottomThreshold ?? 10
 
@@ -43,7 +49,11 @@ export function createAutoScroll(options: AutoScrollOptions) {
       if (scroll && nested && nested !== scroll) return
     }
     userInitiated = true
+    lastInteraction = performance.now()
   }
+
+  const recentlyInteracted = () =>
+    lastInteraction > 0 && performance.now() - lastInteraction < USER_INTERACTION_GRACE_MS
 
   const scrollToBottomNow = (behavior: ScrollBehavior) => {
     const el = scroll
@@ -119,7 +129,11 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }
 
     if (!store.userScrolled && !byUser) {
-      if (el.scrollTop < (lastScrollTop ?? el.scrollTop)) {
+      // virtua fires programmatic scroll events as it measures virtualized
+      // items. Don't let those snap the view back to the bottom while the
+      // user is mid-gesture — the wheel event fires before the scroll event,
+      // so `recentlyInteracted()` is reliable here.
+      if (el.scrollTop < (lastScrollTop ?? el.scrollTop) || recentlyInteracted()) {
         stop()
       } else {
         scrollToBottomNow("auto")
@@ -161,6 +175,15 @@ export function createAutoScroll(options: AutoScrollOptions) {
         return
       }
       if (store.userScrolled) {
+        return
+      }
+      // Virtualized lists (virtua) re-measure items during user scroll, firing
+      // resize events that race ahead of handleScroll's DEBOUNCE_MS window.
+      // If the user just interacted with the scroller and is no longer near
+      // the bottom, treat the resize as a layout reflow on top of their
+      // scroll — pause auto-follow instead of snapping back to the bottom.
+      if (el && recentlyInteracted() && distanceFromBottom(el) > threshold()) {
+        stop()
         return
       }
       // ResizeObserver fires after layout, before paint.

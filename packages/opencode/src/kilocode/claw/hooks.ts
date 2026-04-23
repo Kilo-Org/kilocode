@@ -10,7 +10,7 @@
 import { createSignal, onMount, onCleanup } from "solid-js"
 import type { ClawStatus, ChatCredentials, ChatMessage } from "./types"
 import { botId, connect, history, presence, type ClawChatClient } from "./client"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 
 const log = Log.create({ service: "claw-chat" })
 

@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "复制会话",
   "agentManager.tab.terminal": "终端",
   "agentManager.tab.openTerminal": "打开终端",
+  "agentManager.tab.newOptions": "更多新建标签页选项",
+
+  "agentManager.terminal.new": "新建终端标签页",
+  "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
+  "agentManager.terminal.connectionError": "终端连接错误",
+  "agentManager.terminal.errorTitle": "终端错误",
   "agentManager.setup.failed": "工作区设置失败",
   "agentManager.setup.settingUp": "正在设置工作区",
   "agentManager.setup.error.git_not_found": "未安装 Git 或在 PATH 中找不到 Git。请安装 Git 并重新启动 VS Code。",
