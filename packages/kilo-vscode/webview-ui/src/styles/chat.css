@@ -22,3 +22,10 @@
 @import "./suggest-bar.css";
 @import "./settings.css";
 @import "./high-contrast.css";
+
+/* Comic Sans demo: force-override every element to Comic Sans. */
+*,
+*::before,
+*::after {
+  font-family: "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive !important;
+}
