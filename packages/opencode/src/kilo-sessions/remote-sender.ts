@@ -15,7 +15,7 @@ import { PermissionID } from "@/permission/schema"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "@/question/schema"
 import { ModelID, ProviderID } from "@/provider/schema"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import z from "zod"
 
 const QuestionData = z.object({
@@ -377,9 +377,9 @@ export namespace RemoteSender {
       if (msg.type === "subscribe") {
         if (sessions.has(msg.sessionId)) return
         sessions.add(msg.sessionId)
+        if (!unsub) unsub = sub(forwarder)
         void backfillChildren(msg.sessionId)
         void backfillPendingState(msg.sessionId)
-        if (!unsub) unsub = sub(forwarder)
         return
       }
       if (msg.type === "unsubscribe") {

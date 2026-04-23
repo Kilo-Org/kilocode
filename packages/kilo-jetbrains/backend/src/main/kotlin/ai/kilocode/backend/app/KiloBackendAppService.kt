@@ -2,8 +2,7 @@ package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.CliServer
 import ai.kilocode.backend.cli.KiloBackendCliManager
-import ai.kilocode.backend.util.IntellijLog
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.infrastructure.ClientError
@@ -62,7 +61,7 @@ class KiloBackendAppService private constructor(
     constructor(cs: CoroutineScope) : this(
         cs,
         KiloBackendCliManager(),
-      IntellijLog(KiloBackendAppService::class.java),
+      KiloLog.create(KiloBackendAppService::class.java),
     )
 
     companion object {

@@ -31,7 +31,7 @@ const modelIdSchema = Schema.String.pipe(Schema.brand("ModelID"))
 export type ModelID = typeof modelIdSchema.Type
 
 export const ModelID = modelIdSchema.pipe(
-  withStatics((schema: typeof modelIdSchema) => ({
+  withStatics((_schema: typeof modelIdSchema) => ({
     zod: z.string().pipe(z.custom<ModelID>()),
   })),
 )

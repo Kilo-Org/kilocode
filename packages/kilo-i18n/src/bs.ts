@@ -76,4 +76,12 @@ export const dict = {
   "marketplace.warning.cancel": "Otkaži",
   "marketplace.contribute.prompt": "Nedostaje vještina, način rada ili MCP server?",
   "marketplace.contribute.cta": "Doprinesi na GitHub-u",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementiraj",
+  "plan.followup.question": "Spreman za implementaciju?",
+  "plan.followup.answer.newSession": "Pokreni novu sesiju",
+  "plan.followup.answer.newSession.description": "Implementiraj u novoj sesiji s čistim kontekstom",
+  "plan.followup.answer.continue": "Nastavi ovdje",
+  "plan.followup.answer.continue.description": "Implementiraj plan u ovoj sesiji",
 }

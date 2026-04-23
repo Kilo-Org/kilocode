@@ -7,15 +7,16 @@ import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ModelID, ProviderID } from "../../src/provider/schema"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
+import { Provider } from "../../src/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import { Global } from "../../src/global"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
 import path from "path"
 import fs from "fs/promises"
 import { tmpdir } from "../fixture/fixture"
@@ -266,6 +267,103 @@ describe("plan follow-up", () => {
       await expect(pending).resolves.toBe("break")
     }))
 
+  test("ask - emits a single-select question with the canonical answers and custom enabled on CLI", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      // On CLI the main prompt input is hidden while a blocking question is active, so
+      // "Type your own answer" must remain available — i.e. custom must not be false.
+      expect(q.custom).not.toBe(false)
+      expect(q.multiple).not.toBe(true)
+      expect(q.options.map((item) => item.label)).toEqual([
+        PlanFollowup.ANSWER_NEW_SESSION,
+        PlanFollowup.ANSWER_CONTINUE,
+      ])
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+    }))
+
+  test("ask - hides custom answer row on VS Code where the main prompt input handles typed replies", () =>
+    withInstance(async () => {
+      const prev = process.env.KILO_CLIENT
+      try {
+        process.env.KILO_CLIENT = "vscode"
+        const seeded = await seed({ text: "1. Build" })
+        const pending = PlanFollowup.ask({
+          sessionID: seeded.sessionID,
+          messages: seeded.messages,
+          abort: AbortSignal.any([]),
+        })
+
+        const item = await waitQuestion(seeded.sessionID)
+        expect(item).toBeDefined()
+        if (!item) return
+        const q = item.questions[0]
+        expect(q).toBeDefined()
+        if (!q) return
+
+        // On VS Code the dock's main prompt input already accepts free text as a reply,
+        // so the "Type your own answer" row is redundant and must be hidden.
+        expect(q.custom).toBe(false)
+
+        await question.reject(item.id)
+        await expect(pending).resolves.toBe("break")
+      } finally {
+        process.env.KILO_CLIENT = prev
+      }
+    }))
+
+  test("ask - emits i18n keys alongside the canonical English labels", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      const q = item.questions[0]
+      expect(q).toBeDefined()
+      if (!q) return
+
+      // i18n keys for question-level strings
+      expect(q.questionKey).toBe("plan.followup.question")
+      expect(q.headerKey).toBe("plan.followup.header")
+
+      // i18n keys for option labels — order matters: newSession is first, continue second.
+      expect(q.options.map((o) => o.labelKey)).toEqual([
+        "plan.followup.answer.newSession",
+        "plan.followup.answer.continue",
+      ])
+      expect(q.options.map((o) => o.descriptionKey)).toEqual([
+        "plan.followup.answer.newSession.description",
+        "plan.followup.answer.continue.description",
+      ])
+
+      // Canonical English labels stay on the wire — the server still matches on `label`,
+      // so translating the UI must not change the reply format.
+      expect(q.options.map((o) => o.label)).toEqual([PlanFollowup.ANSWER_NEW_SESSION, PlanFollowup.ANSWER_CONTINUE])
+
+      await question.reject(item.id)
+      await expect(pending).resolves.toBe("break")
+    }))
+
   test("ask - returns continue and creates code message on Continue here", () =>
     withInstance(async () => {
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
@@ -347,6 +445,40 @@ describe("plan follow-up", () => {
       if (!part || part.type !== "text") return
       expect(part.text).toBe("Add rollback support too")
       expect(part.synthetic).toBe(true)
+    }))
+
+  test("ask - retargets prompt queue so injected message is visible in scope", () =>
+    withInstance(async () => {
+      const { KiloSessionPromptQueue } = await import("../../src/kilocode/session/prompt-queue")
+      const seeded = await seed({ text: "1. Refactor\n2. Ship" })
+
+      // Simulate the prompt queue having a target set (like during a running loop)
+      const original = seeded.messages.find((m) => m.info.role === "user")!.info.id
+      KiloSessionPromptQueue.retarget(seeded.sessionID, original)
+
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      // The injected user message must be visible when scoped
+      const all = await Session.messages({ sessionID: seeded.sessionID })
+      const scoped = KiloSessionPromptQueue.scope(seeded.sessionID, all)
+      const injected = scoped.findLast((m) => m.info.role === "user")
+      expect(injected).toBeDefined()
+      const part = injected!.parts.find((p) => p.type === "text")
+      expect(part?.type === "text" && part.text).toBe("Implement the plan above.")
     }))
 
   test("ask - creates a new session on Start new session with handover and todos", () =>
@@ -800,6 +932,276 @@ describe("plan follow-up", () => {
       expect(part.text).toContain("Implement the following plan:")
       expect(part.text).not.toContain("## Handover from Planning Session")
       expect(part.text).not.toContain("## Todo List")
+    }))
+
+  test("ask - fires session.created before generateHandover resolves on Start new session", () =>
+    withInstance(async () => {
+      // Regression guard: the VS Code extension gates `session.created` SSE events
+      // behind a 30-second pendingFollowup TTL. If startNew awaits the handover
+      // LLM call before creating the session, a slow LLM response expires the TTL
+      // and the webview never learns about the new session. This test asserts the
+      // session is created *before* the handover resolves, guaranteeing the SSE
+      // event fires while the TTL is still fresh.
+      const seeded = await seed({ text: "1. Build" })
+
+      let createdAt: number | undefined
+      let handoverResolvedAt: number | undefined
+      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+        // Ignore the seeded planning session; we only care about the follow-up.
+        if (event.properties.info.id === seeded.sessionID) return
+        if (createdAt === undefined) createdAt = performance.now()
+      })
+
+      const deferred = Promise.withResolvers<string>()
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const llmSpy = spyOn(LLM, "stream").mockResolvedValue({
+        text: deferred.promise.then((t) => {
+          handoverResolvedAt = performance.now()
+          return t
+        }),
+      } as any)
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
+        info: {
+          id: MessageID.make("msg_test"),
+          role: "assistant",
+          sessionID: SessionID.make("ses_test"),
+          time: { created: Date.now() },
+          parentID: MessageID.make("msg_parent"),
+          modelID: ModelID.make("test"),
+          providerID: ProviderID.make("test"),
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: {
+            total: 0,
+            input: 0,
+            output: 0,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+        },
+        parts: [],
+      } as MessageV2.WithParts)
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          modelSpy.mockRestore()
+          llmSpy.mockRestore()
+          loop.mockRestore()
+          unsub()
+        },
+      }
+
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      // Poll until session.created fires. With the fix, this happens promptly
+      // because Session.create runs before generateHandover. Without the fix,
+      // startNew would still be blocked on the deferred LLM stream.
+      for (let i = 0; i < 100; i++) {
+        if (createdAt !== undefined) break
+        await Bun.sleep(10)
+      }
+      expect(createdAt).toBeDefined()
+      // Handover must still be pending; if it had resolved, the race is open.
+      expect(handoverResolvedAt).toBeUndefined()
+
+      deferred.resolve("## Discoveries\n\nexample")
+      await expect(pending).resolves.toBe("break")
+
+      expect(handoverResolvedAt).toBeDefined()
+      expect(createdAt!).toBeLessThan(handoverResolvedAt!)
+    }))
+
+  test("ask - injects plan message before generateHandover resolves on Start new session", () =>
+    withInstance(async () => {
+      // Regression guard: the plan text must appear in the new session tab
+      // immediately after the tab switch — without waiting for the slow handover
+      // LLM call. The handover is then appended to the same part in-place.
+      const seeded = await seed({ text: "1. Build" })
+
+      let followup: SessionID | undefined
+      const unsub = Bus.subscribe(Session.Event.Created, (event) => {
+        if (event.properties.info.id === seeded.sessionID) return
+        if (!followup) followup = event.properties.info.id
+      })
+
+      const deferred = Promise.withResolvers<string>()
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const llmSpy = spyOn(LLM, "stream").mockResolvedValue({
+        text: deferred.promise,
+      } as any)
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
+        info: {
+          id: MessageID.make("msg_test"),
+          role: "assistant",
+          sessionID: SessionID.make("ses_test"),
+          time: { created: Date.now() },
+          parentID: MessageID.make("msg_parent"),
+          modelID: ModelID.make("test"),
+          providerID: ProviderID.make("test"),
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [],
+      } as MessageV2.WithParts)
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          modelSpy.mockRestore()
+          llmSpy.mockRestore()
+          loop.mockRestore()
+          unsub()
+        },
+      }
+
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      // Poll until the plan text lands. Handover is still pending because
+      // deferred has not resolved yet.
+      for (let i = 0; i < 100; i++) {
+        if (followup) {
+          const msgs = await Session.messages({ sessionID: followup })
+          const user = msgs.find((m) => m.info.role === "user")
+          const part = user?.parts.find((p) => p.type === "text")
+          if (part?.type === "text" && part.text.includes("Implement the following plan:")) break
+        }
+        await Bun.sleep(10)
+      }
+
+      expect(followup).toBeDefined()
+      if (!followup) return
+      const initial = await Session.messages({ sessionID: followup })
+      const initialUser = initial.find((m) => m.info.role === "user")
+      const initialPart = initialUser?.parts.find((p) => p.type === "text")
+      expect(initialPart?.type).toBe("text")
+      if (initialPart?.type !== "text") return
+      expect(initialPart.text).toContain("Implement the following plan:")
+      expect(initialPart.text).toContain("1. Build")
+      // Handover is still deferred — must not be present yet.
+      expect(initialPart.text).not.toContain("## Handover from Planning Session")
+
+      deferred.resolve("## Discoveries\n\nexample")
+      await expect(pending).resolves.toBe("break")
+
+      // Same part ID updated in-place — handover section now present.
+      const final = await Session.messages({ sessionID: followup })
+      const finalUser = final.find((m) => m.info.role === "user")
+      const finalPart = finalUser?.parts.find((p) => p.type === "text")
+      if (finalPart?.type !== "text") return
+      expect(finalPart.id).toBe(initialPart.id)
+      expect(finalPart.text).toContain("Implement the following plan:")
+      expect(finalPart.text).toContain("## Handover from Planning Session")
+      expect(finalPart.text).toContain("example")
+    }))
+
+  test("ask - marks new session busy while handover is pending and clears on abort", () =>
+    withInstance(async () => {
+      const seeded = await seed({ text: "1. Build" })
+
+      let followup: SessionID | undefined
+      const states: Array<{ sessionID: SessionID; type: string }> = []
+      const created = Bus.subscribe(Session.Event.Created, (event) => {
+        if (event.properties.info.id === seeded.sessionID) return
+        if (!followup) followup = event.properties.info.id
+      })
+      const status = Bus.subscribe(SessionStatus.Event.Status, (event) => {
+        states.push({ sessionID: event.properties.sessionID, type: event.properties.status.type })
+      })
+
+      const deferred = Promise.withResolvers<string>()
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(fakeAgent as any)
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
+      const llmSpy = spyOn(LLM, "stream").mockResolvedValue({
+        text: deferred.promise,
+      } as any)
+      const loop = spyOn(PlanFollowupRuntime, "loop").mockResolvedValue({
+        info: {
+          id: MessageID.make("msg_test"),
+          role: "assistant",
+          sessionID: SessionID.make("ses_test"),
+          time: { created: Date.now() },
+          parentID: MessageID.make("msg_parent"),
+          modelID: ModelID.make("test"),
+          providerID: ProviderID.make("test"),
+          mode: "code",
+          agent: "code",
+          path: { cwd: "/tmp", root: "/tmp" },
+          cost: 0,
+          tokens: { total: 0, input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        },
+        parts: [],
+      } as MessageV2.WithParts)
+      using _ = {
+        [Symbol.dispose]() {
+          agentSpy.mockRestore()
+          modelSpy.mockRestore()
+          llmSpy.mockRestore()
+          loop.mockRestore()
+          created()
+          status()
+        },
+      }
+
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_NEW_SESSION]],
+      })
+
+      for (let i = 0; i < 100; i++) {
+        if (followup && states.some((x) => x.sessionID === followup && x.type === "busy")) break
+        await Bun.sleep(10)
+      }
+
+      expect(followup).toBeDefined()
+      if (!followup) return
+      expect(states.some((x) => x.sessionID === followup && x.type === "busy")).toBe(true)
+
+      const { SessionPrompt } = await import("../../src/session/prompt")
+      await SessionPrompt.cancel(followup)
+      deferred.resolve("## Discoveries\n\nexample")
+      await expect(pending).resolves.toBe("break")
+
+      expect(states.some((x) => x.sessionID === followup && x.type === "idle")).toBe(true)
+      expect(loop).not.toHaveBeenCalled()
     }))
 
   test("ask - returns break when assistant text is empty", () =>

@@ -110,6 +110,7 @@ export interface PendingRequest {
   prefix: string
   suffix: string
   promise: Promise<void>
+  resolve?: () => void
 }
 
 // ============================================================================

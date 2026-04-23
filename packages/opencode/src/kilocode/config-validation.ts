@@ -2,8 +2,10 @@
 import path from "path"
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser"
 import { ConfigProtection } from "./permission/config-paths"
-import { ConfigMarkdown } from "@/config/markdown"
-import { Config } from "@/config/config"
+import { ConfigMarkdown } from "@/config"
+import { Config } from "@/config"
+import { ConfigAgent } from "@/config"
+import { ConfigCommand } from "@/config"
 import { ConfigPaths } from "@/config/paths"
 import { Instance } from "@/project/instance"
 
@@ -70,7 +72,7 @@ export namespace ConfigValidation {
     const config =
       schema === "command" ? { ...md.data, template: md.content.trim() } : { ...md.data, prompt: md.content.trim() }
 
-    const zod = schema === "command" ? Config.Command : Config.Agent
+    const zod = schema === "command" ? ConfigCommand.Info : ConfigAgent.Info
     const result = zod.safeParse(config)
     if (!result.success) {
       const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")

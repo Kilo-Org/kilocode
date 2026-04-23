@@ -13,7 +13,6 @@ import type {
   QuestionRequest,
   SessionStatus,
   TextPart,
-  Workspace,
   Config as SdkConfig,
 } from "@kilocode/sdk/v2"
 import type { CliRenderer, ParsedKey, RGBA, SlotMode } from "@opentui/core"

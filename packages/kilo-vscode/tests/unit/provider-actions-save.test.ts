@@ -1,12 +1,14 @@
 import { describe, expect, it } from "bun:test"
 import { fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
 
-function createCtx() {
+type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
+
+function createCtx(existing: ExistingGlobal = { disabled_providers: [] }) {
   const calls = {
     set: [] as Array<{ providerID: string; auth: { type: string; key: string } }>,
     remove: [] as Array<{ providerID: string }>,
     posts: [] as unknown[],
-    config: [] as unknown[],
+    config: [] as Array<{ config: Record<string, unknown> }>,
     cached: [] as unknown[],
     refresh: 0,
     dispose: 0,
@@ -26,8 +28,8 @@ function createCtx() {
       },
       global: {
         config: {
-          get: async () => ({ data: { disabled_providers: [] } }),
-          update: async (input: unknown) => {
+          get: async () => ({ data: existing }),
+          update: async (input: { config: Record<string, unknown> }) => {
             calls.config.push(input)
             return { data: input }
           },
@@ -89,6 +91,105 @@ describe("saveCustomProvider", () => {
 
     expect(calls.remove).toHaveLength(0)
     expect(calls.set).toEqual([{ providerID: "myprovider", auth: { type: "api", key: "sk-test" } }])
+  })
+
+  // Regression tests for https://github.com/Kilo-Org/kilocode/issues/9186
+  //
+  // The CLI's config.update endpoint deep-merges its payload with the existing
+  // global config. When the user removes a model or variant from a custom
+  // provider and saves, the removed entry stays on disk because the save
+  // payload only lists the surviving entries. stripNulls in the merge layer
+  // will remove keys explicitly set to null — the save path must emit these
+  // sentinels for removed model ids and variant names.
+  it("emits null sentinels for models removed since last save", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-keep": { name: "Keep" },
+            "model-gone": { name: "Gone" },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-keep": { name: "Keep" },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const payload = calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>
+    expect(payload.myprovider.models["model-keep"]).toBeDefined()
+    expect(payload.myprovider.models["model-gone"]).toBeNull()
+  })
+
+  it("emits null sentinels for variants removed from a model that still exists", async () => {
+    const existing = {
+      disabled_providers: [],
+      provider: {
+        myprovider: {
+          npm: "@ai-sdk/openai-compatible",
+          name: "My Provider",
+          options: { baseURL: "https://example.com/v1" },
+          models: {
+            "model-1": {
+              name: "Model One",
+              reasoning: true,
+              variants: {
+                high: { reasoningEffort: "high" },
+                low: { reasoningEffort: "low" },
+              },
+            },
+          },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    const next = {
+      name: "My Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          reasoning: true,
+          variants: { high: { reasoningEffort: "high" } },
+        },
+      },
+    }
+    await saveCustomProvider(ctx, "req", "myprovider", next, undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const model = (
+      calls.config[0].config.provider as Record<
+        string,
+        { models: Record<string, { variants?: Record<string, unknown> }> }
+      >
+    ).myprovider.models["model-1"]
+    expect(model.variants).toBeDefined()
+    expect(model.variants?.high).toBeDefined()
+    expect(model.variants?.low).toBeNull()
+  })
+
+  it("does not emit sentinels when the provider is new", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx()
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    const models = (calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>).myprovider
+      .models
+    expect(Object.values(models).every((v) => v !== null)).toBe(true)
   })
 })
 

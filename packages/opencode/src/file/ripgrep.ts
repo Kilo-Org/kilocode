@@ -4,9 +4,8 @@ import { fileURLToPath } from "url"
 import z from "zod"
 import { Cause, Context, Effect, Layer, Queue, Stream } from "effect"
 import { ripgrep } from "ripgrep"
-import { makeRuntime } from "@/effect/run-service"
-import { Filesystem } from "@/util/filesystem"
-import { Log } from "@/util/log"
+import { Filesystem } from "@/util"
+import { Log } from "@/util"
 import { RipgrepStream } from "../kilocode/ripgrep-stream" // kilocode_change - share UTF-8 stream decoding
 
 export namespace Ripgrep {
@@ -568,18 +567,4 @@ export namespace Ripgrep {
   )
 
   export const defaultLayer = layer
-
-  const { runPromise } = makeRuntime(Service, defaultLayer)
-
-  export function files(input: FilesInput) {
-    return runPromise((svc) => Stream.toAsyncIterableEffect(svc.files(input)))
-  }
-
-  export function tree(input: TreeInput) {
-    return runPromise((svc) => svc.tree(input))
-  }
-
-  export function search(input: SearchInput) {
-    return runPromise((svc) => svc.search(input))
-  }
 }
