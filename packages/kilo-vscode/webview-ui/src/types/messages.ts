@@ -355,7 +355,14 @@ export interface ProviderModel {
   options?: { description?: string }
   recommendedIndex?: number
   isFree?: boolean
-  cost?: { input: number; output: number }
+  cost?: {
+    input: number
+    output: number
+    cache?: {
+      read: number
+      write: number
+    }
+  }
 }
 
 export interface Provider {
