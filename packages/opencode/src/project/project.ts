@@ -342,6 +342,7 @@ export const layer: Layer.Layer<
           cwd: input.worktree,
           absolute: true,
           include: "file",
+          ignore: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**", "**/out/**", "**/target/**"],
         })
         .pipe(Effect.orDie)
       const shortest = matches.sort((a, b) => a.length - b.length)[0]
