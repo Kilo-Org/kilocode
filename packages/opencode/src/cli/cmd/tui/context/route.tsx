@@ -1,16 +1,16 @@
-import { createStore, unwrap } from "solid-js/store"
+import { createStore, reconcile, unwrap } from "solid-js/store" // kilocode_change
 import { createSimpleContext } from "./helper"
 import type { PromptInfo } from "../component/prompt/history"
 
 export type HomeRoute = {
   type: "home"
-  initialPrompt?: PromptInfo
+  prompt?: PromptInfo
 }
 
 export type SessionRoute = {
   type: "session"
   sessionID: string
-  initialPrompt?: PromptInfo
+  prompt?: PromptInfo
 }
 
 // kilocode_change start
@@ -29,13 +29,14 @@ export type Route = HomeRoute | SessionRoute | PluginRoute | KiloClawRoute // ki
 
 export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
   name: "Route",
-  init: () => {
+  init: (props: { initialRoute?: Route }) => {
     const [store, setStore] = createStore<Route>(
-      process.env["KILO_ROUTE"]
-        ? JSON.parse(process.env["KILO_ROUTE"])
-        : {
-            type: "home",
-          },
+      props.initialRoute ??
+        (process.env["KILO_ROUTE"]
+          ? JSON.parse(process.env["KILO_ROUTE"])
+          : {
+              type: "home",
+            }),
     )
 
     // kilocode_change start
@@ -48,7 +49,7 @@ export const { use: useRoute, provider: RouteProvider } = createSimpleContext({
       },
       navigate(route: Route) {
         previous = structuredClone(unwrap(store)) // kilocode_change
-        setStore(route)
+        setStore(reconcile(route))
       },
       // kilocode_change start
       back() {

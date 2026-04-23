@@ -6,16 +6,22 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
+import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 
@@ -30,7 +36,7 @@ import kotlinx.coroutines.flow.filter
  */
 class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     companion object {
-        private val LOG = Logger.getInstance(KiloSessionRpcApiImpl::class.java)
+        private val LOG = KiloLog.create(KiloSessionRpcApiImpl::class.java)
     }
 
     private val workspaces: KiloBackendWorkspaceManager
@@ -88,14 +94,56 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
                 is ChatEventDto.MessageUpdated -> event.sessionID
                 is ChatEventDto.PartUpdated -> event.sessionID
                 is ChatEventDto.PartDelta -> event.sessionID
+                is ChatEventDto.PartRemoved -> event.sessionID
                 is ChatEventDto.TurnOpen -> event.sessionID
                 is ChatEventDto.TurnClose -> event.sessionID
                 is ChatEventDto.Error -> event.sessionID
                 is ChatEventDto.MessageRemoved -> event.sessionID
+                is ChatEventDto.PermissionAsked -> event.sessionID
+                is ChatEventDto.PermissionReplied -> event.sessionID
+                is ChatEventDto.QuestionAsked -> event.sessionID
+                is ChatEventDto.QuestionReplied -> event.sessionID
+                is ChatEventDto.QuestionRejected -> event.sessionID
+                is ChatEventDto.SessionStatusChanged -> event.sessionID
+                is ChatEventDto.SessionIdle -> event.sessionID
+                is ChatEventDto.SessionCompacted -> event.sessionID
+                is ChatEventDto.SessionDiffChanged -> event.sessionID
+                is ChatEventDto.TodoUpdated -> event.sessionID
             }
-            sid == id
+            val passes = sid == null || sid == id
+            if (passes) LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+            else LOG.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
+            passes
         }
 
     override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =
         chat.updateConfig(directory, config)
+
+    // ------ permission / question resolution ------
+
+    override suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto) {
+        LOG.info("replyPermission: requestId=$requestId, reply=${reply.reply}")
+        chat.replyPermission(requestId, directory, reply)
+    }
+
+    override suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto) {
+        LOG.info("savePermissionRules: requestId=$requestId")
+        chat.savePermissionRules(requestId, directory, rules)
+    }
+
+    override suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto) {
+        LOG.info("replyQuestion: requestId=$requestId, answers=${answers.answers.size}")
+        chat.replyQuestion(requestId, directory, answers)
+    }
+
+    override suspend fun rejectQuestion(requestId: String, directory: String) {
+        LOG.info("rejectQuestion: requestId=$requestId")
+        chat.rejectQuestion(requestId, directory)
+    }
+
+    override suspend fun pendingPermissions(directory: String): List<PermissionRequestDto> =
+        chat.pendingPermissions(directory)
+
+    override suspend fun pendingQuestions(directory: String): List<QuestionRequestDto> =
+        chat.pendingQuestions(directory)
 }

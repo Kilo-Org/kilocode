@@ -1,6 +1,6 @@
 import * as path from "path"
 import os from "os"
-import { Filesystem } from "../util/filesystem"
+import { Filesystem } from "../util"
 
 export namespace KilocodePaths {
   const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()

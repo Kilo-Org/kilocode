@@ -161,6 +161,8 @@ Pin a specific model using the `provider/model` format:
 model: anthropic/claude-sonnet-4-20250514
 ```
 
+The model selector also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the **reset button** in the model selector (visible when your active model differs from what the config specifies).
+
 ### `steps`
 
 Limits the number of agentic iterations (tool call rounds) before the agent is forced to respond with text only. Useful for preventing runaway agents:
@@ -378,6 +380,8 @@ Pin a specific model using the `provider/model` format:
 ```yaml
 model: anthropic/claude-sonnet-4-20250514
 ```
+
+The TUI also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the model picker (`Ctrl+X m`) and select a different model, or remove the saved pick from `~/.local/state/kilo/model.json`.
 
 ### `steps`
 

@@ -53,6 +53,35 @@ function gitOps(handler: (args: string[], cwd: string) => Promise<string>): GitO
   return new GitOps({ log: () => undefined, runGit: handler })
 }
 
+describe("GitOps", () => {
+  it("resolveDefaultBranch returns undefined on cache hit when there is no remote HEAD", async () => {
+    let calls = 0
+    const git = new GitOps({
+      log: () => undefined,
+      runGit: async (args) => {
+        calls++
+        if (args[0] === "symbolic-ref") throw new Error("no remote HEAD")
+        if (args[0] === "branch" && args[1] === "--show-current") return "main"
+        if (args[0] === "config" && args[1] === "branch.main.remote") return "origin"
+        if (args[0] === "rev-parse" && args[3] === "@{upstream}") throw new Error("no upstream")
+        return ""
+      },
+    })
+
+    // First call sets cache
+    const first = await git.resolveDefaultBranch("/test")
+    expect(first).toBeUndefined()
+    expect(calls).toBeGreaterThan(0)
+
+    // Second call reads from cache
+    const beforeSecondCall = calls
+    const second = await git.resolveDefaultBranch("/test")
+    expect(second).toBeUndefined()
+    // Should not have made any new git calls for the exact same resolution
+    expect(calls).toBe(beforeSecondCall)
+  })
+})
+
 describe("GitStatsPoller", () => {
   it("does not overlap polling runs", async () => {
     let running = 0

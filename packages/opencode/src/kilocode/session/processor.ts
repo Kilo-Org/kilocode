@@ -4,7 +4,7 @@ import { SessionNetwork } from "@/session/network"
 import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import type { MessageV2 } from "@/session/message-v2"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { Effect } from "effect"
 import { Flag } from "@/flag/flag"
 

@@ -1,7 +1,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencode-ai/shared/util/error"
 import { fileURLToPath } from "url"
 import { Effect, Layer } from "effect"
 import { Instance } from "../../src/project/instance"
@@ -9,10 +9,10 @@ import { ModelID, ProviderID } from "../../src/provider/schema"
 import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
 
-Log.init({ print: false })
+void Log.init({ print: false })
 
 function run<A, E>(fx: Effect.Effect<A, E, SessionPrompt.Service | Session.Service>) {
   return Effect.runPromise(
@@ -61,12 +61,11 @@ function chat(text: string) {
 function hanging(ready: () => void) {
   const encoder = new TextEncoder()
   let timer: ReturnType<typeof setTimeout> | undefined
-  const first =
-    `data: ${JSON.stringify({
-      id: "chatcmpl-1",
-      object: "chat.completion.chunk",
-      choices: [{ delta: { role: "assistant" } }],
-    })}` + "\n\n"
+  const first = `data: ${JSON.stringify({
+    id: "chatcmpl-1",
+    object: "chat.completion.chunk",
+    choices: [{ delta: { role: "assistant" } }],
+  })}\n\n`
   const rest =
     [
       `data: ${JSON.stringify({
@@ -318,7 +317,7 @@ describe("session.prompt regression", () => {
           ),
       })
     } finally {
-      server.stop(true)
+      void server.stop(true)
     }
   })
 
@@ -411,7 +410,7 @@ describe("session.prompt regression", () => {
           ),
       })
     } finally {
-      server.stop(true)
+      void server.stop(true)
     }
   })
 })

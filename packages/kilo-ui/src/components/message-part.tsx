@@ -43,8 +43,8 @@ import { Checkbox } from "./checkbox"
 import { DiffChanges } from "./diff-changes"
 import { Markdown } from "./markdown"
 import { ImagePreview } from "./image-preview"
-import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/util/path"
-import { checksum } from "@opencode-ai/util/encode"
+import { getDirectory as _getDirectory, getFilename } from "@opencode-ai/shared/util/path"
+import { checksum } from "@opencode-ai/shared/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
@@ -706,6 +706,7 @@ export function UserMessageDisplay(props: {
   interrupted?: boolean
   animate?: boolean
   queued?: boolean
+  onFork?: () => void
   onRevert?: () => void
 }) {
   const data = useData()
@@ -846,6 +847,21 @@ export function UserMessageDisplay(props: {
                     </span>
                   </Show>
                 </span>
+              </Show>
+              <Show when={props.onFork}>
+                <Tooltip value={i18n.t("ui.message.forkMessage")} placement="right" gutter={4}>
+                  <IconButton
+                    icon="fork"
+                    size="normal"
+                    variant="ghost"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      props.onFork?.()
+                    }}
+                    aria-label={i18n.t("ui.message.forkMessage")}
+                  />
+                </Tooltip>
               </Show>
               <Show when={props.onRevert}>
                 <Tooltip value={i18n.t("ui.message.revertMessage")} placement="right" gutter={4}>

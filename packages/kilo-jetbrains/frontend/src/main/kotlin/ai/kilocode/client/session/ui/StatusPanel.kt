@@ -1,9 +1,9 @@
 package ai.kilocode.client.session.ui
 
-import ai.kilocode.client.session.model.SessionEvent
-import ai.kilocode.client.session.model.SessionModel
-import ai.kilocode.client.session.model.SessionModelListener
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionController
+import ai.kilocode.client.session.SessionControllerEvent
+import ai.kilocode.client.session.SessionControllerListener
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -29,8 +29,8 @@ import javax.swing.SwingConstants
 /**
  * Welcome panel showing app + workspace initialization progress.
  *
- * Pure view — listens to [SessionModel] events and reads
- * [SessionState][ai.kilocode.client.session.model.SessionState] for data.
+ * Pure view — listens to [SessionController] events and reads
+ * [SessionModel][ai.kilocode.client.session.model.SessionModel] for data.
  * No coroutines, no service references.
  *
  * Uses icon+label rows for each resource being loaded. Icons act as
@@ -39,8 +39,8 @@ import javax.swing.SwingConstants
  */
 class StatusPanel(
     parent: Disposable,
-    private val model: SessionModel,
-) : JPanel(GridBagLayout()), SessionModelListener, Disposable {
+    private val controller: SessionController,
+) : JPanel(GridBagLayout()), SessionControllerListener, Disposable {
 
     init {
         Disposer.register(parent, this)
@@ -110,19 +110,19 @@ class StatusPanel(
         add(body, GridBagConstraints())
 
         resetAll()
-        model.addListener(this, this)
+        controller.addListener(this, this)
     }
 
-    override fun onEvent(event: SessionEvent) {
+    override fun onEvent(event: SessionControllerEvent) {
         when (event) {
-            is SessionEvent.AppChanged -> {
-                renderApp(model.chat.app)
+            is SessionControllerEvent.AppChanged -> {
+                renderApp(controller.model.app)
                 revalidate()
                 repaint()
             }
 
-            is SessionEvent.WorkspaceChanged -> {
-                renderWorkspace(model.chat.workspace)
+            is SessionControllerEvent.WorkspaceChanged -> {
+                renderWorkspace(controller.model.workspace)
                 revalidate()
                 repaint()
             }
@@ -187,7 +187,7 @@ class StatusPanel(
     }
 
     private fun renderWorkspace(state: KiloWorkspaceStateDto) {
-        val appReady = model.chat.app.status == KiloAppStatusDto.READY
+        val appReady = controller.model.app.status == KiloAppStatusDto.READY
         val visible = appReady || state.status != KiloWorkspaceStatusDto.PENDING
         wsSection.isVisible = visible
         if (!visible) return
@@ -241,7 +241,7 @@ class StatusPanel(
             KiloAppStatusDto.CONNECTING -> KiloBundle.message("toolwindow.status.connecting")
             KiloAppStatusDto.LOADING -> KiloBundle.message("toolwindow.status.loading")
             KiloAppStatusDto.READY -> {
-                val ver = model.chat.version
+                val ver = controller.model.version
                 if (ver != null) KiloBundle.message("toolwindow.status.connected.version", ver)
                 else KiloBundle.message("toolwindow.status.connected")
             }

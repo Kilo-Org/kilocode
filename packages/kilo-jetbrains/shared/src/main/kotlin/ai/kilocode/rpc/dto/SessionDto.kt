@@ -32,6 +32,9 @@ data class SessionSummaryDto(
 data class SessionStatusDto(
     val type: String,
     val message: String? = null,
+    val attempt: Int? = null,
+    val next: Long? = null,
+    val requestID: String? = null,
 )
 
 @Serializable

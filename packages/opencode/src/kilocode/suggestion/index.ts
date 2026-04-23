@@ -1,7 +1,7 @@
 import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
-import { Log } from "../../util/log"
+import { Log } from "../../util"
 import z from "zod"
 
 export namespace Suggestion {
@@ -34,7 +34,12 @@ export namespace Suggestion {
       sessionID: Identifier.schema("session"),
       text: z.string().describe("Suggestion text shown to the user"),
       actions: z.array(Action).min(1).max(2).describe("Available actions the user can take"),
-      blocking: z.boolean().optional().describe("Whether this suggestion blocks prompt input (default: true)"),
+      blocking: z
+        .boolean()
+        .optional()
+        .describe(
+          "Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.",
+        ),
       tool: z
         .object({
           messageID: z.string(),

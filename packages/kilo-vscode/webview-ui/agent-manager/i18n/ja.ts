@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.terminal": "ターミナル",
   "agentManager.tab.openTerminal": "ターミナルを開く",
+  "agentManager.tab.newOptions": "新しいタブのその他のオプション",
+
+  "agentManager.terminal.new": "新しいターミナルタブ",
+  "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
+  "agentManager.terminal.connectionError": "ターミナル接続エラー",
+  "agentManager.terminal.errorTitle": "ターミナルエラー",
   "agentManager.setup.failed": "ワークスペースのセットアップに失敗しました",
   "agentManager.setup.settingUp": "ワークスペースをセットアップ中",
   "agentManager.setup.error.git_not_found":
