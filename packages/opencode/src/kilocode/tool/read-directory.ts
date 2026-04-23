@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { lstat } from "fs/promises"
 import * as path from "path"
-import { AppFileSystem } from "../../filesystem"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Instance } from "../../project/instance"
 import { isBinaryFile, lines } from "../../tool/read"
 

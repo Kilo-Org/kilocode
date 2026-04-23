@@ -8,4 +8,10 @@ export const logo = {
   ],
 }
 // kilocode_change end
-export const marks = "_^~"
+
+export const go = {
+  left: ["", "", "", ""], // kilocode_change
+  right: ["", "", "", ""], // kilocode_change
+}
+
+export const marks = "_^~,"

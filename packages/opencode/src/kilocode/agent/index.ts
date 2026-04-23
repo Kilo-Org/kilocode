@@ -1,9 +1,9 @@
 // kilocode_change - new file
 import { Permission } from "@/permission"
-import { NamedError } from "@opencode-ai/util/error"
-import { Glob } from "../../util/glob"
-import { Truncate } from "../../tool/truncate"
-import { Config } from "../../config/config"
+import { NamedError } from "@opencode-ai/shared/util/error"
+import { Glob } from "@opencode-ai/shared/util/glob"
+import { Truncate } from "../../tool"
+import { Config } from "../../config"
 import { Instance } from "../../project/instance"
 import { makeRuntime } from "@/effect/run-service"
 import { Global } from "@/global"
@@ -404,7 +404,7 @@ export async function remove(name: string) {
   let found = false
 
   // 1. Delete .md files from config directories
-  const { Config } = await import("../../config/config")
+  const { Config } = await import("../../config")
   const dirs = await Config.directories()
   const patterns = ["{agent,agents}/**/" + name + ".md", "{mode,modes}/" + name + ".md"]
   for (const dir of dirs) {

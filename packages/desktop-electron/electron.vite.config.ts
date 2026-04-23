@@ -60,6 +60,9 @@ export default defineConfig({
     plugins: [appPlugin],
     publicDir: "../../../app/public",
     root: "src/renderer",
+    define: {
+      "import.meta.env.VITE_KILO_CHANNEL": JSON.stringify(channel),
+    },
     build: {
       rollupOptions: {
         input: {

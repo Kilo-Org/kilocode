@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "İptal",
   "marketplace.contribute.prompt": "Bir yetenek, mod veya MCP sunucusu mu eksik?",
   "marketplace.contribute.cta": "GitHub'da katkıda bulun",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Uygula",
+  "plan.followup.question": "Uygulamaya hazır mısın?",
+  "plan.followup.answer.newSession": "Yeni oturum başlat",
+  "plan.followup.answer.newSession.description": "Temiz bir bağlamla yeni bir oturumda uygula",
+  "plan.followup.answer.continue": "Burada devam et",
+  "plan.followup.answer.continue.description": "Planı bu oturumda uygula",
 }

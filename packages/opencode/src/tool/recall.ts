@@ -1,10 +1,10 @@
 // kilocode_change - new file
 import z from "zod"
 import { Effect } from "effect"
-import { Tool } from "./tool"
+import * as Tool from "./tool"
 import { Instance } from "../project/instance"
-import { Locale } from "../util/locale"
-import { Filesystem } from "../util/filesystem" // kilocode_change
+import { Locale } from "../util"
+import { Filesystem } from "../util" // kilocode_change
 import { WorktreeFamily } from "../kilocode/worktree-family" // kilocode_change
 import DESCRIPTION from "./recall.txt"
 
