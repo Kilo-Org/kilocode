@@ -205,7 +205,7 @@ export class GitOps {
     const remote = await this.resolveRemote(cwd, branch)
     const cacheKey = `default-branch:${cwd}:${remote}`
     const cached = this.getCached(cacheKey)
-    if (cached !== undefined) return cached
+    if (cached !== undefined) return cached === "" ? undefined : cached
 
     const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
     const result = head || undefined

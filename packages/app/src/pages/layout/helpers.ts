@@ -1,4 +1,4 @@
-import { getFilename } from "@opencode-ai/util/path"
+import { getFilename } from "@opencode-ai/shared/util/path"
 import { type Session } from "@kilocode/sdk/v2/client"
 
 type SessionStore = {

@@ -8,7 +8,7 @@ import ai.kilocode.client.app.Workspace
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -37,7 +37,7 @@ import javax.swing.JPanel
 class KiloToolWindowFactory : ToolWindowFactory, DumbAware {
 
     companion object {
-        private val LOG = Logger.getInstance(KiloToolWindowFactory::class.java)
+        private val LOG = KiloLog.create(KiloToolWindowFactory::class.java)
     }
 
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {

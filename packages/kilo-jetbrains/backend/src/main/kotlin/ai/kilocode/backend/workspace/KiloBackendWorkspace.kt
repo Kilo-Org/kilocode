@@ -2,7 +2,7 @@ package ai.kilocode.backend.workspace
 
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.app.SseEvent
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.dto.SessionDto

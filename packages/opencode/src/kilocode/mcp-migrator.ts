@@ -1,8 +1,9 @@
 import * as fs from "fs/promises"
 import * as path from "path"
-import { Config } from "../config/config"
-import { Log } from "../util/log"
-import { Filesystem } from "../util/filesystem"
+import { Config } from "../config"
+import { ConfigMCP } from "../config/mcp"
+import { Log } from "../util"
+import { Filesystem } from "../util"
 import { KilocodePaths } from "./paths"
 
 export namespace McpMigrator {
@@ -33,7 +34,7 @@ export namespace McpMigrator {
   }
 
   export interface MigrationResult {
-    mcp: Record<string, Config.Mcp>
+    mcp: Record<string, ConfigMCP.Info>
     warnings: string[]
     skipped: Array<{ name: string; reason: string }>
   }
@@ -50,13 +51,13 @@ export namespace McpMigrator {
     }
   }
 
-  export function convertServer(name: string, server: KilocodeMcpServer): Config.Mcp | null {
+  export function convertServer(name: string, server: KilocodeMcpServer): ConfigMCP.Info | null {
     if (isRemote(server)) {
       if (!server.url) {
         log.warn("remote MCP server missing url, skipping", { name })
         return null
       }
-      const config: Config.Mcp = {
+      const config: ConfigMCP.Info = {
         type: "remote",
         url: server.url,
         ...(server.headers && Object.keys(server.headers).length > 0 && { headers: server.headers }),
@@ -74,7 +75,7 @@ export namespace McpMigrator {
     const command = [server.command, ...(server.args ?? [])]
 
     // Build the MCP config object
-    const config: Config.Mcp = {
+    const config: ConfigMCP.Info = {
       type: "local",
       command,
       ...(server.env && Object.keys(server.env).length > 0 && { environment: server.env }),
@@ -90,7 +91,7 @@ export namespace McpMigrator {
   }): Promise<MigrationResult> {
     const warnings: string[] = []
     const skipped: Array<{ name: string; reason: string }> = []
-    const mcp: Record<string, Config.Mcp> = {}
+    const mcp: Record<string, ConfigMCP.Info> = {}
 
     const allServers: Array<{ name: string; server: KilocodeMcpServer }> = []
 
@@ -152,7 +153,7 @@ export namespace McpMigrator {
   export async function loadMcpConfig(
     projectDir: string,
     skipGlobalPaths?: boolean,
-  ): Promise<Record<string, Config.Mcp>> {
+  ): Promise<Record<string, ConfigMCP.Info>> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 

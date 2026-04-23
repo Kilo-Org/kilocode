@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "Cancelar",
   "marketplace.contribute.prompt": "¿Falta una skill, modo o servidor MCP?",
   "marketplace.contribute.cta": "Contribuir en GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementar",
+  "plan.followup.question": "¿Listo para implementar?",
+  "plan.followup.answer.newSession": "Iniciar nueva sesión",
+  "plan.followup.answer.newSession.description": "Implementar en una sesión nueva con contexto limpio",
+  "plan.followup.answer.continue": "Continuar aquí",
+  "plan.followup.answer.continue.description": "Implementar el plan en esta sesión",
 }

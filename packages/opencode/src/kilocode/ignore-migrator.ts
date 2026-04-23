@@ -1,7 +1,8 @@
 import * as path from "path"
 import os from "os"
-import { Log } from "../util/log"
-import type { Config } from "../config/config"
+import { Log } from "../util"
+import type { Config } from "../config"
+import type { ConfigPermission } from "../config"
 
 export namespace IgnoreMigrator {
   const log = Log.create({ service: "kilocode.ignore-migrator" })
@@ -16,7 +17,7 @@ export namespace IgnoreMigrator {
   }
 
   export interface MigrationResult {
-    permission: Config.Permission
+    permission: ConfigPermission.Info
     warnings: string[]
     patternCount: number
   }
@@ -121,8 +122,8 @@ export namespace IgnoreMigrator {
    * 2. Add deny patterns
    * 3. Add negated patterns (allow) last to override denies
    */
-  export function buildPermissionRules(patterns: IgnorePattern[]): Record<string, Config.PermissionAction> {
-    const rules: Record<string, Config.PermissionAction> = {
+  export function buildPermissionRules(patterns: IgnorePattern[]): Record<string, ConfigPermission.Action> {
+    const rules: Record<string, ConfigPermission.Action> = {
       "*": "allow", // Default: allow all
     }
 
@@ -183,7 +184,7 @@ export namespace IgnoreMigrator {
     const rules = buildPermissionRules(allPatterns)
 
     // 4. Create permission config for both read and edit
-    const permission: Config.Permission = {
+    const permission: ConfigPermission.Info = {
       read: rules,
       edit: rules,
     }
@@ -199,7 +200,7 @@ export namespace IgnoreMigrator {
    * Load .kilocodeignore and return permission config.
    * Handles all logging internally.
    */
-  export async function loadIgnoreConfig(projectDir: string, skipGlobalPaths?: boolean): Promise<Config.Permission> {
+  export async function loadIgnoreConfig(projectDir: string, skipGlobalPaths?: boolean): Promise<ConfigPermission.Info> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 

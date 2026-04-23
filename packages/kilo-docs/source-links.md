@@ -11,6 +11,8 @@
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
 - <https://app.kilo.ai/claw>
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/UpgradeView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx -->
 - <https://app.kilo.ai/config.json>
@@ -91,6 +93,7 @@
 - <https://kilo.ai/install>
   <!-- packages/opencode/src/installation/index.ts -->
 - <https://kilo.ai/kiloclaw>
+  <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
 - <https://kilo.ai/support>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
@@ -100,7 +103,7 @@
 - <https://models.dev>
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://models.dev/model-schema.json#/$defs/Model>
-  <!-- packages/opencode/src/config/config.ts -->
+  <!-- packages/opencode/src/config/model-id.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/provider/provider.ts -->
@@ -116,7 +119,7 @@
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-go-upsell.tsx -->
   <!-- packages/opencode/src/session/retry.ts -->
 - <https://opencode.ai/tui.json>
-  <!-- packages/opencode/src/config/tui-migrate.ts -->
+  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/use-cases/usage-accounting>

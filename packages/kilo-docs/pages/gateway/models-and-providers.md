@@ -92,20 +92,17 @@ Highest performance and capability for any task. Frontier requests are sent with
 
 ### `kilo-auto/balanced`
 
-Great balance of price and capability. Balanced routes to the same model regardless of mode, with low reasoning effort.
+Great balance of price and capability. The resolved model depends on the API interface used by the client.
 
-| Mode      | Resolved Model         |
-| --------- | ---------------------- |
-| All modes | `openai/gpt-5.3-codex` |
+| API interface         | Resolved Model               | Reasoning effort |
+| --------------------- | ---------------------------- | ---------------- |
+| Completions (default) | `qwen/qwen3.6-plus`          | enabled          |
+| Responses API         | `openai/gpt-5.3-codex`       | low              |
+| Messages API          | `anthropic/claude-haiku-4.5` | medium           |
 
 ### `kilo-auto/free`
 
-Free with limited capability. No credits required. Requests are split across the available free models; the mapping updates server-side as free model availability shifts.
-
-| Routing | Resolved Model                |
-| ------- | ----------------------------- |
-| 80%     | `minimax/minimax-m2.5:free`   |
-| 20%     | `stepfun/step-3.5-flash:free` |
+Free with limited capability. No credits required. The resolved model is selected dynamically per session from a curated set of available free models; the mapping updates server-side as free model availability shifts.
 
 ### `kilo-auto/small`
 

@@ -42,24 +42,14 @@ describe("postprocessAutocompleteSuggestion", () => {
       expect(result).toBe("test")
     })
 
-    it("handles Mercury/Granite prefix duplication", () => {
+    it("handles Mercury prefix duplication", () => {
       const result = postprocessAutocompleteSuggestion({
         suggestion: "const x = 42",
         prefix: "const x = ",
         suffix: "",
-        model: "granite-20b",
+        model: "inception/mercury-edit",
       })
       expect(result).toBe("42")
-    })
-
-    it("handles Gemini/Gemma file separator", () => {
-      const result = postprocessAutocompleteSuggestion({
-        suggestion: "const x = 1<|file_separator|>",
-        prefix: "",
-        suffix: "",
-        model: "gemini-pro",
-      })
-      expect(result).toBe("const x = 1")
     })
   })
 

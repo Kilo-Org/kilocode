@@ -2,7 +2,7 @@ import { useMarked, deferredHighlight, fnv1a } from "../context/marked"
 import { useI18n } from "../context/i18n"
 import DOMPurify from "dompurify"
 import morphdom from "morphdom"
-import { checksum } from "@opencode-ai/util/encode"
+import { checksum } from "@opencode-ai/shared/util/encode"
 import { ComponentProps, createEffect, createResource, createSignal, onCleanup, splitProps } from "solid-js"
 import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
@@ -51,7 +51,7 @@ function escape(text: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
+    .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;")
 }
 
@@ -294,6 +294,18 @@ export function Markdown(
   const highlightState = { gen: 0, signal: { aborted: false } }
   // kilocode_change end
 
+  // kilocode_change start: rAF-coalesced morphdom render.
+  // During LLM token streaming, content updates arrive at 60–200Hz. Each
+  // token reparses the full accumulated HTML (temp.innerHTML = content) and
+  // diffs it via morphdom. CPU profile of a 7s streaming window showed 2,940
+  // ParseHTML events totaling ~619ms (~46% of blocked main-thread time). The
+  // user can only see one frame per 16ms anyway, so cap parses at ≤1 per
+  // animation frame.
+  let pendingFrame: number | undefined
+  let pendingContent: string | undefined
+  let pendingLabels: { copy: string; copied: string } | undefined
+  // kilocode_change end
+
   createEffect(() => {
     const container = root()
     const content = local.text ? (html.latest ?? html() ?? "") : ""
@@ -301,6 +313,15 @@ export function Markdown(
     if (isServer) return
 
     if (!content) {
+      // kilocode_change start: cancel any in-flight coalesced render so a
+      // clear takes precedence over a pending parse.
+      if (pendingFrame !== undefined) {
+        cancelAnimationFrame(pendingFrame)
+        pendingFrame = undefined
+        pendingContent = undefined
+        pendingLabels = undefined
+      }
+      // kilocode_change end
       container.innerHTML = ""
       return
     }
@@ -313,61 +334,86 @@ export function Markdown(
     // kilocode_change start
     const fast = tryFastRender(container, content, local.streaming, decorate, setupCodeCopy, () => labels, copyCleanup)
     if (fast.handled) {
+      // Fast path took over; drop any pending coalesced morphdom from a
+      // previous streaming turn on this same element.
+      if (pendingFrame !== undefined) {
+        cancelAnimationFrame(pendingFrame)
+        pendingFrame = undefined
+        pendingContent = undefined
+        pendingLabels = undefined
+      }
       copyCleanup = fast.copyCleanup
       kickHighlight(container, labels)
       return
     }
     // kilocode_change end
 
-    const temp = document.createElement("div")
-    temp.innerHTML = content
-    decorate(temp, labels)
+    // kilocode_change start: queue the latest content for a single rAF tick.
+    // Further updates before the frame runs simply overwrite pendingContent,
+    // so K rapid updates collapse to 1 parse instead of K.
+    pendingContent = content
+    pendingLabels = labels
+    if (pendingFrame !== undefined) return
+    pendingFrame = requestAnimationFrame(() => {
+      pendingFrame = undefined
+      const next = pendingContent
+      const nextLabels = pendingLabels
+      pendingContent = undefined
+      pendingLabels = undefined
+      if (next === undefined || nextLabels === undefined) return
+      if (!container.isConnected) return
 
-    // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
-    // During streaming, morphdom re-runs on every token. Without this guard,
-    // it would revert already-highlighted <pre> blocks back to plain code.
-    morphdom(container, temp, {
-      childrenOnly: true,
-      onBeforeElUpdated: (fromEl, toEl) => {
-        if (
-          fromEl instanceof HTMLButtonElement &&
-          toEl instanceof HTMLButtonElement &&
-          fromEl.getAttribute("data-slot") === "markdown-copy-button" &&
-          toEl.getAttribute("data-slot") === "markdown-copy-button" &&
-          fromEl.getAttribute("data-copied") === "true"
-        ) {
-          setCopyState(toEl, labels, true)
-        }
-        if (fromEl.isEqualNode(toEl)) return false
-        // Preserve Shiki-highlighted blocks — don't let morphdom revert them
-        // to plain <pre><code> during streaming re-renders.
-        // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
-        // We compare data-source-hash (a lightweight FNV-1a hash stored by
-        // deferredHighlight on the highlighted <pre>) against a hash of the
-        // incoming code text to detect mid-stream content changes: if the code
-        // changed, we let morphdom update so the block can be re-queued for
-        // highlighting with the new content.
-        if (
-          fromEl instanceof HTMLElement &&
-          fromEl.tagName === "PRE" &&
-          fromEl.classList.contains("shiki") &&
-          toEl instanceof HTMLElement &&
-          toEl.tagName === "PRE" &&
-          !toEl.classList.contains("shiki")
-        ) {
-          const fromHash = fromEl.getAttribute("data-source-hash")
-          const toCode = toEl.querySelector("code")?.textContent ?? ""
-          if (fromHash === fnv1a(toCode)) return false
-          // Source changed during streaming — fall through so morphdom replaces
-          // the stale highlighted block with the updated plain block, which will
-          // be re-highlighted on the next deferredHighlight pass.
-        }
-        return true
-      },
+      const temp = document.createElement("div")
+      temp.innerHTML = next
+      decorate(temp, nextLabels)
+
+      // kilocode_change start: morphdom guard for highlighted blocks (issue #6221)
+      // During streaming, morphdom re-runs on every token. Without this guard,
+      // it would revert already-highlighted <pre> blocks back to plain code.
+      morphdom(container, temp, {
+        childrenOnly: true,
+        onBeforeElUpdated: (fromEl, toEl) => {
+          if (
+            fromEl instanceof HTMLButtonElement &&
+            toEl instanceof HTMLButtonElement &&
+            fromEl.getAttribute("data-slot") === "markdown-copy-button" &&
+            toEl.getAttribute("data-slot") === "markdown-copy-button" &&
+            fromEl.getAttribute("data-copied") === "true"
+          ) {
+            setCopyState(toEl, nextLabels, true)
+          }
+          if (fromEl.isEqualNode(toEl)) return false
+          // Preserve Shiki-highlighted blocks — don't let morphdom revert them
+          // to plain <pre><code> during streaming re-renders.
+          // Note: "shiki" class is on <pre> (set by Shiki's codeToHtml output).
+          // We compare data-source-hash (a lightweight FNV-1a hash stored by
+          // deferredHighlight on the highlighted <pre>) against a hash of the
+          // incoming code text to detect mid-stream content changes: if the code
+          // changed, we let morphdom update so the block can be re-queued for
+          // highlighting with the new content.
+          if (
+            fromEl instanceof HTMLElement &&
+            fromEl.tagName === "PRE" &&
+            fromEl.classList.contains("shiki") &&
+            toEl instanceof HTMLElement &&
+            toEl.tagName === "PRE" &&
+            !toEl.classList.contains("shiki")
+          ) {
+            const fromHash = fromEl.getAttribute("data-source-hash")
+            const toCode = toEl.querySelector("code")?.textContent ?? ""
+            if (fromHash === fnv1a(toCode)) return false
+            // Source changed during streaming — fall through so morphdom replaces
+            // the stale highlighted block with the updated plain block, which will
+            // be re-highlighted on the next deferredHighlight pass.
+          }
+          return true
+        },
+      })
+      // kilocode_change end
+
+      kickHighlight(container, nextLabels)
     })
     // kilocode_change end
-
-    kickHighlight(container, labels)
   })
 
   // kilocode_change start: progressive Shiki highlighting (issue #6221, PR #7102).
@@ -398,6 +444,14 @@ export function Markdown(
     // completion callback doesn't touch the unmounted DOM.
     highlightState.signal.aborted = true
     highlightState.gen++
+    // kilocode_change: cancel any queued rAF parse so it doesn't touch the
+    // unmounted DOM after dispose.
+    if (pendingFrame !== undefined) {
+      cancelAnimationFrame(pendingFrame)
+      pendingFrame = undefined
+      pendingContent = undefined
+      pendingLabels = undefined
+    }
     if (copyCleanup) copyCleanup()
   })
 
@@ -405,7 +459,7 @@ export function Markdown(
     <div
       data-component="markdown"
       classList={{
-        ...(local.classList ?? {}),
+        ...local.classList,
         [local.class ?? ""]: !!local.class,
       }}
       ref={setRoot}
