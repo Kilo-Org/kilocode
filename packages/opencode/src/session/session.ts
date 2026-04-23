@@ -318,7 +318,7 @@ export const getUsage = (input: {
   const tokens = {
     total,
     input: adjustedInputTokens,
-    output: safe(outputTokens - reasoningTokens),
+    output: Math.max(0, safe(outputTokens - reasoningTokens)),
     reasoning: reasoningTokens,
     cache: {
       write: cacheWriteInputTokens,
