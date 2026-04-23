@@ -55,6 +55,10 @@ export function toPartialRow(info: DeepPartial<Session.Info>) {
     time_updated: grab(info, "time", (v) => grab(v, "updated")),
     time_compacting: grab(info, "time", (v) => grab(v, "compacting")),
     time_archived: grab(info, "time", (v) => grab(v, "archived")),
+    // kilocode_change start - session metadata fields
+    current_state: grab(info, "currentState"),
+    recent_progress: grab(info, "recentProgress"),
+    // kilocode_change end
   }
 
   return Object.fromEntries(Object.entries(obj).filter(([_, val]) => val !== undefined))

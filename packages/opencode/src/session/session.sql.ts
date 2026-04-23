@@ -37,6 +37,10 @@ export const SessionTable = sqliteTable(
     // kilocode_change end
     revert: text({ mode: "json" }).$type<{ messageID: MessageID; partID?: PartID; snapshot?: string; diff?: string }>(),
     permission: text({ mode: "json" }).$type<Permission.Ruleset>(),
+    // kilocode_change start - session metadata fields
+    current_state: text(),
+    recent_progress: text(),
+    // kilocode_change end
     ...Timestamps,
     time_compacting: integer(),
     time_archived: integer(),

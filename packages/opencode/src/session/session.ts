@@ -80,6 +80,10 @@ export function fromRow(row: SessionRow): Info {
       compacting: row.time_compacting ?? undefined,
       archived: row.time_archived ?? undefined,
     },
+    // kilocode_change start - session metadata fields
+    currentState: row.current_state ?? undefined,
+    recentProgress: row.recent_progress ?? undefined,
+    // kilocode_change end
   }
 }
 
@@ -104,6 +108,10 @@ export function toRow(info: Info) {
     time_updated: info.time.updated,
     time_compacting: info.time.compacting,
     time_archived: info.time.archived,
+    // kilocode_change start - session metadata fields
+    current_state: info.currentState ?? null,
+    recent_progress: info.recentProgress ?? null,
+    // kilocode_change end
   }
 }
 
@@ -165,6 +173,10 @@ export const Info = z
         diff: z.string().optional(),
       })
       .optional(),
+    // kilocode_change start - session metadata fields
+    currentState: z.string().optional(),
+    recentProgress: z.string().optional(),
+    // kilocode_change end
   })
   .meta({
     ref: "Session",

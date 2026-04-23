@@ -1124,6 +1124,8 @@ export type Session = {
     snapshot?: string
     diff?: string
   }
+  currentState?: string
+  recentProgress?: string
 }
 
 export type EventSessionCreated = {
