@@ -36,6 +36,7 @@ export const UIRoutes = (): Hono =>
         return c.json({ error: "Not Found" }, 404)
       }
     } else {
+      // kilocode_change - return 404 instead of proxying to app.opencode.ai
       return c.json({ error: "Not Found" }, 404)
     }
   })
