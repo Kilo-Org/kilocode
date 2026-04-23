@@ -16,6 +16,7 @@ import type { Provider } from "@/provider"
 import { ModelID, ProviderID } from "@/provider/schema"
 import { Effect } from "effect"
 import { SessionNetwork } from "./network" // kilocode_change
+import { KiloRequestSize } from "@/kilocode/session/request-size" // kilocode_change
 import { EffectLogger } from "@/effect"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
@@ -890,14 +891,17 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 
   const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
+  // kilocode_change start - last-mile trimming of older tool outputs when the
+  // accumulated payload approaches the 4MB provider request limit.
+  const trimmed = KiloRequestSize.trim(result)
+  const final = trimmed.messages.filter((msg) => msg.parts.some((part) => part.type !== "step-start"))
+  // kilocode_change end
+
   return yield* Effect.promise(() =>
-    convertToModelMessages(
-      result.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
-      {
-        //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
-        tools,
-      },
-    ),
+    convertToModelMessages(final, {
+      //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
+      tools,
+    }),
   )
 })
 
