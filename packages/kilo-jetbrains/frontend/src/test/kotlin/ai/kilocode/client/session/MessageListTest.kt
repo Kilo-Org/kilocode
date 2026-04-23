@@ -11,7 +11,11 @@ class MessageListTest : SessionControllerTestBase() {
 
         emit(ChatEventDto.MessageUpdated("ses_test", msg("msg1", "ses_test", "assistant")))
 
-        assertModelEvents("MessageAdded msg1", modelEvents)
+        // MessageAdded fires first; TurnAdded fires after regroup
+        assertModelEvents("""
+            MessageAdded msg1
+            TurnAdded msg1 [msg1]
+        """, modelEvents)
         assertNotNull(m.model.message("msg1"))
     }
 
@@ -50,6 +54,7 @@ class MessageListTest : SessionControllerTestBase() {
 
         assertModelEvents("""
             MessageAdded msg1
+            TurnAdded msg1 [msg1]
             ContentAdded msg1/prt1
         """, modelEvents)
         assertModel(
@@ -90,7 +95,7 @@ class MessageListTest : SessionControllerTestBase() {
         emit(ChatEventDto.PartRemoved("ses_test", "msg1", "prt1"))
 
         assertNull(m.model.message("msg1")!!.parts["prt1"])
-        assertModelEvents("ContentRemoved msg1/prt1", modelEvents)
+        assertModelEvents("ContentRemoved msg1/prt1", modelEvents)  // no regroup for content ops
     }
 
     fun `test PartRemoved unknown part is noop`() {

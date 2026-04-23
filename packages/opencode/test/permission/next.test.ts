@@ -4,13 +4,13 @@ import os from "os"
 import path from "path" // kilocode_change
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { Bus } from "../../src/bus"
-import { Config } from "../../src/config/config" // kilocode_change
+import { Config } from "../../src/config" // kilocode_change
 import { Global } from "../../src/global" // kilocode_change
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { Permission } from "../../src/permission"
 import { PermissionID } from "../../src/permission/schema"
 import { Instance } from "../../src/project/instance"
-import { provideInstance, provideTmpdirInstance, tmpdir, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, provideTmpdirInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { MessageID, SessionID } from "../../src/session/schema"
 
@@ -1029,7 +1029,7 @@ it.live("pending permission rejects on instance dispose", () =>
     }).pipe(run, Effect.forkScoped)
 
     expect(yield* waitForPending(1).pipe(run)).toHaveLength(1)
-    yield* Effect.promise(() => Instance.provide({ directory: dir, fn: () => Instance.dispose() }))
+    yield* Effect.promise(() => Instance.provide({ directory: dir, fn: () => void Instance.dispose() }))
 
     const exit = yield* Fiber.await(fiber)
     expect(Exit.isFailure(exit)).toBe(true)

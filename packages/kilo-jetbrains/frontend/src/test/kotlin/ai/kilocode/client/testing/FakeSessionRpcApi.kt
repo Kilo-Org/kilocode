@@ -54,6 +54,9 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     /** Pending questions returned by [pendingQuestions]. */
     val pendingQuestionList = mutableListOf<QuestionRequestDto>()
 
+    /** Optional custom event stream factory for routing tests. */
+    var eventFlow: ((String, String) -> Flow<ChatEventDto>)? = null
+
     // --- Call tracking ---
 
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
@@ -119,7 +122,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun events(id: String, directory: String): Flow<ChatEventDto> {
         assertNotEdt("events")
-        return events
+        return eventFlow?.invoke(id, directory) ?: events
     }
 
     override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) {

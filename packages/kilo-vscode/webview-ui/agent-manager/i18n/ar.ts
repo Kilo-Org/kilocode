@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "تفريع الجلسة",
   "agentManager.tab.terminal": "الطرفية",
   "agentManager.tab.openTerminal": "فتح الطرفية",
+  "agentManager.tab.newOptions": "المزيد من خيارات علامات التبويب الجديدة",
+
+  "agentManager.terminal.new": "علامة تبويب جديدة للمحطة الطرفية",
+  "agentManager.terminal.ended": "انتهت المحطة الطرفية — أغلق علامة التبويب للإخفاء",
+  "agentManager.terminal.connectionError": "خطأ في اتصال المحطة الطرفية",
+  "agentManager.terminal.errorTitle": "خطأ في المحطة الطرفية",
   "agentManager.setup.failed": "فشل إعداد مساحة العمل",
   "agentManager.setup.settingUp": "جارٍ إعداد مساحة العمل",
   "agentManager.setup.error.git_not_found": "Git غير مثبت أو غير موجود في PATH. يرجى تثبيت Git وإعادة تشغيل VS Code.",

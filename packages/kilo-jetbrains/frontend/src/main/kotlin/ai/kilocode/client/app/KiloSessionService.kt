@@ -2,6 +2,7 @@
 
 package ai.kilocode.client.app
 
+import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -16,7 +17,7 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.project.Project
 import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +47,7 @@ class KiloSessionService internal constructor(
     constructor(project: Project, cs: CoroutineScope) : this(project, cs, null)
 
     companion object {
-        private val LOG = Logger.getInstance(KiloSessionService::class.java)
+        private val LOG = KiloLog.create(KiloSessionService::class.java)
     }
 
     private val _sessions = MutableStateFlow<List<SessionDto>>(emptyList())
@@ -78,7 +79,7 @@ class KiloSessionService internal constructor(
                 val result = call { list(dir) }
                 _sessions.value = result.sessions
             } catch (e: Exception) {
-                LOG.warn("session list failed", e)
+                LOG.warn("kind=session-list dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             }
         }
     }
@@ -99,7 +100,7 @@ class KiloSessionService internal constructor(
                 call { delete(id, dir) }
                 refresh(dir)
             } catch (e: Exception) {
-                LOG.warn("session delete failed", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             }
         }
     }
@@ -110,7 +111,7 @@ class KiloSessionService internal constructor(
             try {
                 call { setDirectory(id, dir) }
             } catch (e: Exception) {
-                LOG.warn("setDirectory failed", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=session setDirectory=true dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             }
         }
     }
@@ -119,10 +120,15 @@ class KiloSessionService internal constructor(
 
     /** Send a text prompt to a session. */
     suspend fun prompt(id: String, dir: String, text: String) {
-        LOG.info("prompt: session=$id, dir=$dir, text=${text.take(80)}")
+        val meta = if (LOG.isDebugEnabled) {
+            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(text)}"
+        } else {
+            "kind=prompt chars=${text.length}"
+        }
+        LOG.info("${ChatLogSummary.sid(id)} $meta")
         val dto = PromptDto(parts = listOf(PromptPartDto(type = "text", text = text)))
         call { prompt(id, dir, dto) }
-        LOG.info("prompt: RPC returned successfully")
+        LOG.info("${ChatLogSummary.sid(id)} kind=prompt ok=true")
     }
 
     /** Abort ongoing processing for a session. */
@@ -133,14 +139,23 @@ class KiloSessionService internal constructor(
     /** Load message history for a session. */
     suspend fun messages(id: String, dir: String): List<MessageWithPartsDto> =
         call { messages(id, dir) }
+            .also { LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(it)} ${ChatLogSummary.dir(dir)}" } }
 
     /** Subscribe to streaming chat events for a session. */
     fun events(id: String, dir: String): Flow<ChatEventDto> {
         val api = rpc
         return if (api != null) flow {
-            api.events(id, dir).collect { emit(it) }
+            api.events(id, dir).collect {
+                LOG.debug { ChatLogSummary.event(it) }
+                emit(it)
+            }
         } else flow {
-            durable { KiloSessionRpcApi.getInstance().events(id, dir).collect { emit(it) } }
+            durable {
+                KiloSessionRpcApi.getInstance().events(id, dir).collect {
+                    LOG.debug { ChatLogSummary.event(it) }
+                    emit(it)
+                }
+            }
         }
     }
 

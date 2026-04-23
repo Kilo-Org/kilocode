@@ -6,6 +6,7 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.KiloBackendChatManager
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
+import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -20,7 +21,7 @@ import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.filter
 
@@ -35,7 +36,7 @@ import kotlinx.coroutines.flow.filter
  */
 class KiloSessionRpcApiImpl : KiloSessionRpcApi {
     companion object {
-        private val LOG = Logger.getInstance(KiloSessionRpcApiImpl::class.java)
+        private val LOG = KiloLog.create(KiloSessionRpcApiImpl::class.java)
     }
 
     private val workspaces: KiloBackendWorkspaceManager
@@ -109,7 +110,10 @@ class KiloSessionRpcApiImpl : KiloSessionRpcApi {
                 is ChatEventDto.SessionDiffChanged -> event.sessionID
                 is ChatEventDto.TodoUpdated -> event.sessionID
             }
-            sid == null || sid == id
+            val passes = sid == null || sid == id
+            if (passes) LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+            else LOG.debug { "${ChatLogSummary.sid(id)} pass=false srcSid=$sid ${ChatLogSummary.eventBody(event)}" }
+            passes
         }
 
     override suspend fun updateConfig(directory: String, config: ConfigUpdateDto) =

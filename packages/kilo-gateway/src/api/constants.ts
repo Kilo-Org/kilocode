@@ -70,6 +70,6 @@ export const HEADER_FEATURE = "X-KILOCODE-FEATURE"
 /** Environment variable name for feature override */
 export const ENV_FEATURE = "KILOCODE_FEATURE"
 
-export const PROMPTS = ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"] as const
+export const PROMPTS = ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo", "ling"] as const
 
 export const AI_SDK_PROVIDERS = ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"] as const

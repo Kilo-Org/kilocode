@@ -1,4 +1,4 @@
-import type { NamedError } from "@opencode-ai/util/error"
+import type { NamedError } from "@opencode-ai/shared/util/error"
 
 export const KILO_ERROR_CODES = {
   PAID_MODEL_AUTH_REQUIRED: "PAID_MODEL_AUTH_REQUIRED",

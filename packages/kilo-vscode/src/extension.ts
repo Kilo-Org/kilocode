@@ -64,6 +64,9 @@ export function activate(context: vscode.ExtensionContext) {
     }
   })
 
+  // Prewarm the CLI backend early so autocomplete is ready before first editor use.
+  ensureBackendForAutocomplete(connectionService)
+
   // Track all open tab panel providers so toolbar button commands can target them.
   // NOTE: The editor/title toolbar for tab panels intentionally omits Agent Manager
   // and Marketplace buttons (unlike the sidebar). Too many icons causes VS Code to
@@ -300,7 +303,9 @@ export function activate(context: vscode.ExtensionContext) {
       agentManagerProvider.postMessage({ type: "action", action: "tabNext" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.showTerminal", () => {
-      agentManagerProvider.showTerminalForCurrentSession()
+      // Route through the webview so it can reach into the active session
+      // state and open the VS Code integrated terminal for it.
+      agentManagerProvider.postMessage({ type: "action", action: "showTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.runScript", () => {
       agentManagerProvider.postMessage({ type: "action", action: "runScript" })
@@ -314,6 +319,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     vscode.commands.registerCommand("kilo-code.new.agentManager.newTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newTab" })
+    }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.newTerminal", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "newTerminal" })
     }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.closeTab", () => {
       agentManagerProvider.postMessage({ type: "action", action: "closeTab" })
@@ -354,9 +362,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register autocomplete provider
   registerAutocompleteProvider(context, connectionService)
-
-  // Start the CLI backend server eagerly so autocomplete works without opening a Kilo tab.
-  ensureBackendForAutocomplete(connectionService)
 
   // Register commit message generation
   registerCommitMessageService(context, connectionService)

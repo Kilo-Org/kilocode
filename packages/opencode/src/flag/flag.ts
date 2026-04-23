@@ -10,166 +10,100 @@ function falsy(key: string) {
   return value === "false" || value === "0"
 }
 
-export namespace Flag {
-  export const OTEL_EXPORTER_OTLP_ENDPOINT = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"]
-  export const OTEL_EXPORTER_OTLP_HEADERS = process.env["OTEL_EXPORTER_OTLP_HEADERS"]
-
-  export const KILO_AUTO_SHARE = truthy("KILO_AUTO_SHARE")
-  export const KILO_AUTO_HEAP_SNAPSHOT = truthy("KILO_AUTO_HEAP_SNAPSHOT")
-  export const KILO_GIT_BASH_PATH = process.env["KILO_GIT_BASH_PATH"]
-  export const KILO_CONFIG = process.env["KILO_CONFIG"]
-  export declare const KILO_PURE: boolean
-  export declare const KILO_TUI_CONFIG: string | undefined
-  export declare const KILO_CONFIG_DIR: string | undefined
-  export declare const KILO_PLUGIN_META_FILE: string | undefined
-  export const KILO_CONFIG_CONTENT = process.env["KILO_CONFIG_CONTENT"]
-  export const KILO_DISABLE_AUTOUPDATE = truthy("KILO_DISABLE_AUTOUPDATE")
-  export const KILO_ALWAYS_NOTIFY_UPDATE = truthy("KILO_ALWAYS_NOTIFY_UPDATE")
-  export const KILO_DISABLE_PRUNE = truthy("KILO_DISABLE_PRUNE")
-  export const KILO_DISABLE_TERMINAL_TITLE = truthy("KILO_DISABLE_TERMINAL_TITLE")
-  export const KILO_SHOW_TTFD = truthy("KILO_SHOW_TTFD")
-  export const KILO_PERMISSION = process.env["KILO_PERMISSION"]
-  export const KILO_DISABLE_DEFAULT_PLUGINS = truthy("KILO_DISABLE_DEFAULT_PLUGINS")
-  export const KILO_DISABLE_LSP_DOWNLOAD = truthy("KILO_DISABLE_LSP_DOWNLOAD")
-  export const KILO_ENABLE_EXPERIMENTAL_MODELS = truthy("KILO_ENABLE_EXPERIMENTAL_MODELS")
-  export const KILO_DISABLE_AUTOCOMPACT = truthy("KILO_DISABLE_AUTOCOMPACT")
-  export const KILO_DISABLE_MODELS_FETCH = truthy("KILO_DISABLE_MODELS_FETCH")
-  export const KILO_DISABLE_MOUSE = truthy("KILO_DISABLE_MOUSE")
-  export const KILO_DISABLE_CLAUDE_CODE = truthy("KILO_DISABLE_CLAUDE_CODE")
-  export const KILO_DISABLE_CLAUDE_CODE_PROMPT =
-    KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT")
-  export const KILO_DISABLE_CLAUDE_CODE_SKILLS =
-    KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_SKILLS")
-  export const KILO_DISABLE_EXTERNAL_SKILLS =
-    KILO_DISABLE_CLAUDE_CODE_SKILLS || truthy("KILO_DISABLE_EXTERNAL_SKILLS")
-  export declare const KILO_DISABLE_PROJECT_CONFIG: boolean
-  export const KILO_FAKE_VCS = process.env["KILO_FAKE_VCS"]
-  export declare const KILO_CLIENT: string
-  export const KILO_SERVER_PASSWORD = process.env["KILO_SERVER_PASSWORD"]
-  export const KILO_SERVER_USERNAME = process.env["KILO_SERVER_USERNAME"]
-  export const KILO_ENABLE_QUESTION_TOOL = truthy("KILO_ENABLE_QUESTION_TOOL")
-
-  // Experimental
-  export const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")
-  export const KILO_EXPERIMENTAL_FILEWATCHER = Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(
-    Config.withDefault(false),
-  )
-  export const KILO_EXPERIMENTAL_DISABLE_FILEWATCHER = Config.boolean(
-    "KILO_EXPERIMENTAL_DISABLE_FILEWATCHER",
-  ).pipe(Config.withDefault(false))
-  export const KILO_EXPERIMENTAL_ICON_DISCOVERY =
-    KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_ICON_DISCOVERY")
-
-  const copy = process.env["KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"]
-  export const KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT =
-    copy === undefined ? process.platform === "win32" : truthy("KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT")
-  export const KILO_ENABLE_EXA =
-    truthy("KILO_ENABLE_EXA") || KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_EXA")
-  export const KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS = number("KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS")
-  export const KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX = number("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX")
-  export const KILO_EXPERIMENTAL_OXFMT = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_OXFMT")
-  export const KILO_EXPERIMENTAL_LSP_TY = truthy("KILO_EXPERIMENTAL_LSP_TY")
-  export const KILO_EXPERIMENTAL_LSP_TOOL = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_LSP_TOOL")
-  export const KILO_DISABLE_FILETIME_CHECK = Config.boolean("KILO_DISABLE_FILETIME_CHECK").pipe(
-    Config.withDefault(false),
-  )
-  export const KILO_EXPERIMENTAL_PLAN_MODE = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_PLAN_MODE")
-  export const KILO_EXPERIMENTAL_WORKSPACES = KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES")
-  export const KILO_EXPERIMENTAL_MARKDOWN = !falsy("KILO_EXPERIMENTAL_MARKDOWN")
-  export const KILO_MODELS_URL = process.env["KILO_MODELS_URL"]
-  export const KILO_MODELS_PATH = process.env["KILO_MODELS_PATH"]
-  export const KILO_DISABLE_EMBEDDED_WEB_UI = truthy("KILO_DISABLE_EMBEDDED_WEB_UI")
-  export const KILO_DB = process.env["KILO_DB"]
-  export const KILO_DISABLE_CHANNEL_DB = truthy("KILO_DISABLE_CHANNEL_DB")
-  export const KILO_SKIP_MIGRATIONS = truthy("KILO_SKIP_MIGRATIONS")
-  export const KILO_STRICT_CONFIG_DEPS = truthy("KILO_STRICT_CONFIG_DEPS")
-
-  function number(key: string) {
-    const value = process.env[key]
-    if (!value) return undefined
-    const parsed = Number(value)
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
-  }
-
-  export declare const KILO_SESSION_RETRY_LIMIT: number | undefined // kilocode_change — dynamic getter below
+function number(key: string) {
+  const value = process.env[key]
+  if (!value) return undefined
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
 }
 
-// kilocode_change start — Dynamic getter for KILO_SESSION_RETRY_LIMIT
-// Must be evaluated at access time so tests can set the env var at runtime
-Object.defineProperty(Flag, "KILO_SESSION_RETRY_LIMIT", {
-  get() {
-    const value = process.env["KILO_SESSION_RETRY_LIMIT"]
-    if (!value) return undefined
-    const parsed = Number(value)
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined
-  },
-  enumerable: true,
-  configurable: false,
-})
-// kilocode_change end
+const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")
+const KILO_DISABLE_CLAUDE_CODE = truthy("KILO_DISABLE_CLAUDE_CODE")
+const KILO_DISABLE_CLAUDE_CODE_SKILLS = KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_SKILLS")
+const copy = process.env["KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"]
 
-// Dynamic getter for KILO_DISABLE_PROJECT_CONFIG
-// This must be evaluated at access time, not module load time,
-// because external tooling may set this env var at runtime
-Object.defineProperty(Flag, "KILO_DISABLE_PROJECT_CONFIG", {
-  get() {
+export const Flag = {
+  OTEL_EXPORTER_OTLP_ENDPOINT: process.env["OTEL_EXPORTER_OTLP_ENDPOINT"],
+  OTEL_EXPORTER_OTLP_HEADERS: process.env["OTEL_EXPORTER_OTLP_HEADERS"],
+
+  KILO_AUTO_SHARE: truthy("KILO_AUTO_SHARE"),
+  KILO_AUTO_HEAP_SNAPSHOT: truthy("KILO_AUTO_HEAP_SNAPSHOT"),
+  KILO_GIT_BASH_PATH: process.env["KILO_GIT_BASH_PATH"],
+  KILO_CONFIG: process.env["KILO_CONFIG"],
+  KILO_CONFIG_CONTENT: process.env["KILO_CONFIG_CONTENT"],
+  KILO_DISABLE_AUTOUPDATE: truthy("KILO_DISABLE_AUTOUPDATE"),
+  KILO_ALWAYS_NOTIFY_UPDATE: truthy("KILO_ALWAYS_NOTIFY_UPDATE"),
+  KILO_DISABLE_PRUNE: truthy("KILO_DISABLE_PRUNE"),
+  KILO_DISABLE_TERMINAL_TITLE: truthy("KILO_DISABLE_TERMINAL_TITLE"),
+  KILO_SHOW_TTFD: truthy("KILO_SHOW_TTFD"),
+  KILO_PERMISSION: process.env["KILO_PERMISSION"],
+  KILO_DISABLE_DEFAULT_PLUGINS: truthy("KILO_DISABLE_DEFAULT_PLUGINS"),
+  KILO_DISABLE_LSP_DOWNLOAD: truthy("KILO_DISABLE_LSP_DOWNLOAD"),
+  KILO_ENABLE_EXPERIMENTAL_MODELS: truthy("KILO_ENABLE_EXPERIMENTAL_MODELS"),
+  KILO_DISABLE_AUTOCOMPACT: truthy("KILO_DISABLE_AUTOCOMPACT"),
+  KILO_DISABLE_MODELS_FETCH: truthy("KILO_DISABLE_MODELS_FETCH"),
+  KILO_DISABLE_MOUSE: truthy("KILO_DISABLE_MOUSE"),
+  KILO_DISABLE_CLAUDE_CODE,
+  KILO_DISABLE_CLAUDE_CODE_PROMPT: KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_PROMPT"),
+  KILO_DISABLE_CLAUDE_CODE_SKILLS,
+  KILO_DISABLE_EXTERNAL_SKILLS: KILO_DISABLE_CLAUDE_CODE_SKILLS || truthy("KILO_DISABLE_EXTERNAL_SKILLS"),
+  KILO_FAKE_VCS: process.env["KILO_FAKE_VCS"],
+  KILO_SERVER_PASSWORD: process.env["KILO_SERVER_PASSWORD"],
+  KILO_SERVER_USERNAME: process.env["KILO_SERVER_USERNAME"],
+  KILO_ENABLE_QUESTION_TOOL: truthy("KILO_ENABLE_QUESTION_TOOL"),
+
+  // Experimental
+  KILO_EXPERIMENTAL,
+  KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(Config.withDefault(false)),
+  KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
+    Config.withDefault(false),
+  ),
+  KILO_EXPERIMENTAL_ICON_DISCOVERY: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_ICON_DISCOVERY"),
+  KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT:
+    copy === undefined ? process.platform === "win32" : truthy("KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"),
+  KILO_ENABLE_EXA: truthy("KILO_ENABLE_EXA") || KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_EXA"),
+  KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: number("KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),
+  KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX: number("KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
+  KILO_EXPERIMENTAL_OXFMT: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_OXFMT"),
+  KILO_EXPERIMENTAL_LSP_TY: truthy("KILO_EXPERIMENTAL_LSP_TY"),
+  KILO_EXPERIMENTAL_LSP_TOOL: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_LSP_TOOL"),
+  KILO_EXPERIMENTAL_PLAN_MODE: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_PLAN_MODE"),
+  KILO_EXPERIMENTAL_MARKDOWN: !falsy("KILO_EXPERIMENTAL_MARKDOWN"),
+  KILO_MODELS_URL: process.env["KILO_MODELS_URL"],
+  KILO_MODELS_PATH: process.env["KILO_MODELS_PATH"],
+  KILO_DISABLE_EMBEDDED_WEB_UI: truthy("KILO_DISABLE_EMBEDDED_WEB_UI"),
+  KILO_DB: process.env["KILO_DB"],
+  KILO_DISABLE_CHANNEL_DB: truthy("KILO_DISABLE_CHANNEL_DB"),
+  KILO_SKIP_MIGRATIONS: truthy("KILO_SKIP_MIGRATIONS"),
+  KILO_STRICT_CONFIG_DEPS: truthy("KILO_STRICT_CONFIG_DEPS"),
+
+  KILO_WORKSPACE_ID: process.env["KILO_WORKSPACE_ID"],
+  KILO_EXPERIMENTAL_HTTPAPI: truthy("KILO_EXPERIMENTAL_HTTPAPI"),
+  KILO_EXPERIMENTAL_WORKSPACES: KILO_EXPERIMENTAL || truthy("KILO_EXPERIMENTAL_WORKSPACES"),
+
+  // Evaluated at access time (not module load) because tests, the CLI, and
+  // external tooling set these env vars at runtime.
+  get KILO_DISABLE_PROJECT_CONFIG() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")
   },
-  enumerable: true,
-  configurable: false,
-})
-
-// Dynamic getter for KILO_TUI_CONFIG
-// This must be evaluated at access time, not module load time,
-// because tests and external tooling may set this env var at runtime
-Object.defineProperty(Flag, "KILO_TUI_CONFIG", {
-  get() {
+  get KILO_TUI_CONFIG() {
     return process.env["KILO_TUI_CONFIG"]
   },
-  enumerable: true,
-  configurable: false,
-})
-
-// Dynamic getter for KILO_CONFIG_DIR
-// This must be evaluated at access time, not module load time,
-// because external tooling may set this env var at runtime
-Object.defineProperty(Flag, "KILO_CONFIG_DIR", {
-  get() {
+  get KILO_CONFIG_DIR() {
     return process.env["KILO_CONFIG_DIR"]
   },
-  enumerable: true,
-  configurable: false,
-})
-
-// Dynamic getter for KILO_PURE
-// This must be evaluated at access time, not module load time,
-// because the CLI can set this flag at runtime
-Object.defineProperty(Flag, "KILO_PURE", {
-  get() {
+  get KILO_PURE() {
     return truthy("KILO_PURE")
   },
-  enumerable: true,
-  configurable: false,
-})
-
-// Dynamic getter for KILO_PLUGIN_META_FILE
-// This must be evaluated at access time, not module load time,
-// because tests and external tooling may set this env var at runtime
-Object.defineProperty(Flag, "KILO_PLUGIN_META_FILE", {
-  get() {
+  get KILO_PLUGIN_META_FILE() {
     return process.env["KILO_PLUGIN_META_FILE"]
   },
-  enumerable: true,
-  configurable: false,
-})
-
-// Dynamic getter for KILO_CLIENT
-// This must be evaluated at access time, not module load time,
-// because some commands override the client at runtime
-Object.defineProperty(Flag, "KILO_CLIENT", {
-  get() {
+  get KILO_CLIENT() {
     return process.env["KILO_CLIENT"] ?? "cli"
   },
-  enumerable: true,
-  configurable: false,
-})
+  // kilocode_change start
+  get KILO_SESSION_RETRY_LIMIT() {
+    return number("KILO_SESSION_RETRY_LIMIT")
+  },
+  // kilocode_change end
+}
