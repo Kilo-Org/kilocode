@@ -2,8 +2,11 @@ import { test, expect } from "bun:test"
 import { $ } from "bun"
 import { Snapshot } from "../../src/snapshot"
 import { Instance } from "../../src/project/instance"
-import { Filesystem } from "../../src/util/filesystem"
+import { Filesystem } from "../../src/util"
+import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
+
+Log.init({ print: false })
 
 async function bootstrap() {
   return tmpdir({

@@ -1,0 +1,30 @@
+Use this tool to suggest a local code review to the user after completing implementation work.
+
+This tool is ONLY for suggesting code review. Do NOT use it to suggest running tests, committing, pushing, or any other action.
+
+Guidelines:
+- Before calling this tool, write the normal final response summarizing what changed, validation, and any caveats
+- Call this tool only after that final response text, as the final action in the turn
+- Never use this tool as a replacement for the final response summary
+- Only suggest review when you are at least 90% confident the user's request is fully addressed
+- Do not suggest review after every edit or partial implementation turn
+- Do not repeat a review suggestion that was already dismissed in this conversation
+- Keep the suggestion text concise and actionable
+- Provide 1-2 actions maximum
+- Make each action prompt self-contained so it can be injected as a synthetic user message
+- If you need a real answer from the user, use the `question` tool instead
+
+When to suggest a review:
+- Only when the user's original request was to implement a feature, fix a bug, or perform a refactor that they initiated, AND the resulting diff is substantial enough that another independent pass could meaningfully catch issues
+
+Do NOT suggest a review when:
+- The user is responding to or processing external code-review feedback (GitHub PR comments, reviewer notes) — those changes are already under review
+- The task is reactive to an existing signal (CI/lint failures, reported issues, triage work, applying fixes the user or a tool already identified)
+- The user asked for non-implementation work (research, explanation, git commit/push, triage, documentation-only changes, config tweaks)
+- The changes are trivial (typos, comments, formatting, single-line tweaks, small cosmetic fixes)
+- The current work is itself a review activity (a prior `/local-review*` turn, reviewing someone else's code)
+
+Choosing the right review command for the action prompt:
+- Use `/local-review-uncommitted` as the action prompt for uncommitted working-tree changes (staged, unstaged, and untracked files)
+- Use `/local-review` as the action prompt for committed branch-level changes
+- Prefer `/local-review-uncommitted` when the work you just did has not been committed yet

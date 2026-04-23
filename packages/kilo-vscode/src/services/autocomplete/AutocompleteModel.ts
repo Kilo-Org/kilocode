@@ -4,18 +4,6 @@ import type { KiloConnectionService } from "../cli-backend"
 const DEFAULT_MODEL = "mistralai/codestral-2508"
 const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
 
-/** Chunk from an LLM streaming response */
-export type ApiStreamChunk =
-  | { type: "text"; text: string }
-  | {
-      type: "usage"
-      totalCost?: number
-      inputTokens?: number
-      outputTokens?: number
-      cacheReadTokens?: number
-      cacheWriteTokens?: number
-    }
-
 export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
   public profileName: string | null = null
@@ -34,10 +22,6 @@ export class AutocompleteModel {
     this.connectionService = service
   }
 
-  public supportsFim(): boolean {
-    return true
-  }
-
   /**
    * Generate a FIM (Fill-in-the-Middle) completion via the CLI backend.
    * Uses the SDK's kilo.fim() SSE endpoint which handles auth and streaming.
@@ -54,12 +38,7 @@ export class AutocompleteModel {
       throw new Error("Connection service is not available")
     }
 
-    const state = this.connectionService.getConnectionState()
-    if (state !== "connected") {
-      throw new Error(`CLI backend is not connected (state: ${state})`)
-    }
-
-    const client = this.connectionService.getClient()
+    const client = await this.connectionService.getClientAsync()
 
     let cost = 0
     let inputTokens = 0
@@ -107,20 +86,6 @@ export class AutocompleteModel {
     }
   }
 
-  /**
-   * Generate response via chat completions (holefiller fallback).
-   * Not used when FIM is supported, but kept for compatibility.
-   */
-  public async generateResponse(
-    systemPrompt: string,
-    userPrompt: string,
-    onChunk: (chunk: ApiStreamChunk) => void,
-  ): Promise<ResponseMetaData> {
-    // FIM is the primary strategy; this method is a fallback.
-    // For now, throw — callers should use generateFimResponse via supportsFim().
-    throw new Error("Chat-based completions are not supported via CLI backend. Use FIM (supportsFim() returns true).")
-  }
-
   public getModelName(): string {
     return DEFAULT_MODEL
   }
@@ -146,13 +111,13 @@ export class AutocompleteModel {
    * Returns false on any error (not connected, fetch failed, etc.).
    */
   public async hasBalance(): Promise<boolean> {
-    if (!this.connectionService || this.connectionService.getConnectionState() !== "connected") {
+    if (!this.connectionService) return false
+    try {
+      const client = await this.connectionService.getClientAsync()
+      const result = await client.kilo.profile().catch(() => null)
+      return (result?.data?.balance?.balance ?? 0) > 0
+    } catch {
       return false
     }
-    const result = await this.connectionService
-      .getClient()
-      .kilo.profile()
-      .catch(() => null)
-    return (result?.data?.balance?.balance ?? 0) > 0
   }
 }

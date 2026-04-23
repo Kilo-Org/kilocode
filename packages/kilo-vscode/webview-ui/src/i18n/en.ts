@@ -183,6 +183,21 @@ export const dict = {
   "model.tooltip.reasoning.allowed": "Allows reasoning",
   "model.tooltip.reasoning.none": "No reasoning",
   "model.tooltip.context": "Context limit {{limit}}",
+  "model.preview.label.released": "Released",
+  "model.preview.label.input": "Input",
+  "model.preview.label.output": "Output",
+  "model.preview.label.cached": "Cached",
+  "model.preview.label.average": "Est. Average Cost",
+  "model.preview.label.context": "Context",
+  "model.preview.value.notSupported": "Not supported",
+  "model.preview.tooltip.average":
+    "The estimated average cost is based on a typical ratio of input, output, and cache read tokens.",
+  "model.preview.badge.reasoning": "Reasoning",
+  "model.preview.modality.text": "Text",
+  "model.preview.modality.image": "Images",
+  "model.preview.modality.audio": "Audio",
+  "model.preview.modality.video": "Video",
+  "model.preview.modality.pdf": "PDF",
 
   "common.search.placeholder": "Search",
   "common.goBack": "Back",
@@ -754,6 +769,34 @@ export const dict = {
   "provider.custom.models.id.placeholder": "model-id",
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Display Name",
+  "provider.custom.models.reasoning.label": "Reasoning",
+  "provider.custom.models.variants.label": "Variants",
+  "provider.custom.models.variants.add": "Add variant",
+  "provider.custom.models.variants.remove": "Remove variant",
+  "provider.custom.models.variants.name.label": "Name",
+  "provider.custom.models.variants.name.placeholder": "e.g. thinking",
+  "provider.custom.models.variants.option.unset": "(not set)",
+  "provider.custom.models.variants.enableThinking.label": "Enable thinking (e.g. Alibaba)",
+  "provider.custom.models.variants.enableThinking.placeholder": "enable_thinking",
+  "provider.custom.models.variants.enableThinking.true": "true",
+  "provider.custom.models.variants.enableThinking.false": "false",
+  "provider.custom.models.variants.thinking.label": "Thinking type (e.g. Z.ai)",
+  "provider.custom.models.variants.thinking.placeholder": "thinking",
+  "provider.custom.models.variants.thinking.enabled": "enabled",
+  "provider.custom.models.variants.thinking.disabled": "disabled",
+  "provider.custom.models.variants.chatTemplateArgs.label":
+    "Enable thinking via chat template args (e.g. Hugging Face)",
+  "provider.custom.models.variants.chatTemplateArgs.placeholder": "chat_template_args",
+  "provider.custom.models.variants.chatTemplateArgs.true": "true",
+  "provider.custom.models.variants.chatTemplateArgs.false": "false",
+  "provider.custom.models.variants.reasoningEffort.label": "Reasoning effort",
+  "provider.custom.models.variants.reasoningEffort.placeholder": "reasoningEffort",
+  "provider.custom.models.variants.reasoningEffort.none": "none",
+  "provider.custom.models.variants.reasoningEffort.minimal": "minimal",
+  "provider.custom.models.variants.reasoningEffort.low": "low",
+  "provider.custom.models.variants.reasoningEffort.medium": "medium",
+  "provider.custom.models.variants.reasoningEffort.high": "high",
+  "provider.custom.models.variants.reasoningEffort.xhigh": "xhigh",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
   "provider.custom.models.fetch": "Fetch models",
@@ -936,10 +979,17 @@ export const dict = {
   "session.messages.welcome":
     "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
   "session.messages.scrollToBottom": "Scroll to bottom",
+  "session.messages.initializing": "Initializing...",
+  "session.messages.taskStarting": "Starting...",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.retrying": "Retrying (attempt {{ attempt }})… {{ message }}",
   "session.status.working": "Working...",
+  "session.status.offline": "Network disconnected — reconnecting...",
+
+  "ui.sessionTurn.cancel": "Cancel",
+  "ui.sessionTurn.status.thinking": "Thinking...",
+  "ui.sessionTurn.status.consideringNextSteps": "Considering next steps...",
 
   "dialog.model.noProviders": "No providers",
 
@@ -948,6 +998,7 @@ export const dict = {
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",
+  "context.usage.olderSessions": "{{count}} older sessions",
   "context.stats.thisSession": "This session",
 
   "time.justNow": "just now",
@@ -1063,6 +1114,14 @@ export const dict = {
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
+  "settings.experimental.remote.title": "Remote Control",
+  "settings.experimental.remote.description":
+    "Enable remote control of sessions via Kilo Cloud. This will also affect CLIs on this machine.",
+  "settings.experimental.remote.current": "Current state:",
+  "settings.experimental.remote.startup": "Auto-enable on startup:",
+  "settings.experimental.remote.active": "Active",
+  "settings.experimental.remote.inactive": "Inactive",
+  "settings.experimental.remote.hint": "Use /remote in chat to toggle",
   "settings.experimental.toolToggles": "Tool Toggles",
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
@@ -1171,8 +1230,19 @@ export const dict = {
   "settings.agentBehaviour.editMode.prompt": "System Prompt",
   "settings.agentBehaviour.editMode.save": "Done",
   "settings.agentBehaviour.editMode.back": "Back to list",
-  "settings.agentBehaviour.editMode.native": "Built-in mode (read-only definition)",
+  "settings.agentBehaviour.editMode.native":
+    "This is a built-in mode. Its base definition cannot be changed, but you can configure overrides below.",
   "settings.agentBehaviour.editMode.promptOverride": "Custom prompt override for this built-in mode",
+  "settings.agentBehaviour.badge.subagent": "subagent",
+  "settings.agentBehaviour.permissions.title": "Calculated Permissions",
+  "settings.agentBehaviour.permissions.count": "{{count}} rules",
+  "settings.agentBehaviour.permissions.effective": "Effective (wildcard):",
+  "settings.agentBehaviour.permissions.col.tool": "Tool",
+  "settings.agentBehaviour.permissions.col.pattern": "Pattern",
+  "settings.agentBehaviour.permissions.col.action": "Action",
+  "settings.agentBehaviour.permissions.copy": "Copy permissions as JSON",
+  "settings.agentBehaviour.permissions.hint":
+    "Rules are evaluated in order — last matching rule wins. This is the resolved ruleset from the CLI backend.",
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
@@ -1216,6 +1286,16 @@ export const dict = {
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
+
+  "settings.commitMessage.title": "Commit Message",
+  "settings.commitMessage.override.title": "Use Custom Prompt",
+  "settings.commitMessage.override.description":
+    "Override the default commit message prompt. When enabled, your custom prompt fully replaces the built-in conventional commits prompt.",
+  "settings.commitMessage.prompt.title": "Custom Prompt",
+  "settings.commitMessage.prompt.description":
+    "System prompt sent to the AI when generating commit messages. This replaces the default prompt entirely.",
+  "settings.commitMessage.prompt.placeholder":
+    "e.g. Generate commit messages in Spanish following conventional commits format. Return ONLY the commit message.",
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
@@ -1348,12 +1428,15 @@ export const dict = {
   "settings.saveBar.unsavedChanges": "Unsaved changes",
   "settings.saveBar.discard": "Discard",
   "settings.saveBar.save": "Save",
+  "settings.saveBar.saving": "Saving…",
   "settings.saveBar.warning.one": "One session is running and will be interrupted",
   "settings.saveBar.warning.many": "Several sessions are running and will be interrupted",
   "settings.saveBar.saveAnyway": "Save anyway",
   "settings.saveBar.cancel": "Cancel",
+  "settings.saveBar.saveFailed": "Couldn't save settings",
 
   "notifications.action.next": "Next",
   "notifications.action.close": "Close",
   "notifications.action.tryModel": "Try {{model}}",
+  "notifications.action.tryModelGeneric": "Try Model",
 }

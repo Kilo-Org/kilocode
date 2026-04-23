@@ -219,9 +219,15 @@ export function GrowBox(props: GrowBoxProps) {
 
   const targetHeight = () => Math.max(0, Math.ceil(body?.getBoundingClientRect().height ?? 0))
 
-  const setHeight = (nextMode: "mount" | "toggle" = "mount") => {
+  // `next` is already measured; avoids a `body.getBoundingClientRect()` layout
+  // read in the watch-mode streaming hot path, where ResizeObserver hands us
+  // the contentRect/contentBoxSize the browser has already computed.
+  // Also skips sub-pixel updates (<2px) that the spring would absorb
+  // imperceptibly anyway — cuts per-token spring work when tokens add tiny
+  // height deltas.
+  const setHeightMeasured = (next: number, nextMode: "mount" | "toggle" = "mount") => {
     if (!root || !open()) return
-    const next = targetHeight()
+    if (Math.abs(next - springTarget) < 2) return
     if (reduce()) {
       springTarget = next
       height.jump(next)
@@ -234,7 +240,6 @@ export function GrowBox(props: GrowBoxProps) {
       root.style.overflow = next > 0 ? "visible" : "clip"
       return
     }
-    if (next === springTarget) return
     const prev = currentHeight()
     if (Math.abs(next - prev) < 1) {
       springTarget = next
@@ -249,6 +254,8 @@ export function GrowBox(props: GrowBoxProps) {
     mode = nextMode
     height.set(next)
   }
+
+  const setHeight = (nextMode: "mount" | "toggle" = "mount") => setHeightMeasured(targetHeight(), nextMode)
 
   onMount(() => {
     if (!root || !body) return
@@ -294,12 +301,19 @@ export function GrowBox(props: GrowBoxProps) {
     })
 
     if (watch()) {
-      observer = new ResizeObserver(() => {
+      // Reuse the browser-measured contentBoxSize/contentRect from the
+      // observer entries instead of calling body.getBoundingClientRect() —
+      // during streaming this fires ~60Hz, and each gBCR would force a
+      // synchronous layout pass (profile showed ~9% of blocked main-thread
+      // time in gBCR calls from this callback).
+      observer = new ResizeObserver((entries) => {
         if (!open()) return
+        const last = entries[entries.length - 1]
+        const measured = Math.max(0, Math.ceil(last?.contentBoxSize?.[0]?.blockSize ?? last?.contentRect?.height ?? 0))
         if (resizeFrame !== undefined) return
         resizeFrame = requestAnimationFrame(() => {
           resizeFrame = undefined
-          setHeight("mount")
+          setHeightMeasured(measured, "mount")
         })
       })
       observer.observe(body)

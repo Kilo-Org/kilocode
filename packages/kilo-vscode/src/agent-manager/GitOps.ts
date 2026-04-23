@@ -4,11 +4,14 @@ import * as fs from "fs/promises"
 import { spawn } from "../util/process"
 import simpleGit from "simple-git"
 import { parseWorktreeList, normalizePath } from "./git-import"
+import type { Semaphore } from "./semaphore"
 
 interface GitOpsOptions {
   log: (...args: unknown[]) => void
   /** Override git command execution for testing. */
   runGit?: (args: string[], cwd: string) => Promise<string>
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
 }
 
 export interface ApplyConflict {
@@ -33,7 +36,7 @@ interface ExecOptions {
   stdin?: string
 }
 
-interface ExecResult {
+export interface ExecResult {
   code: number
   stdout: string
   stderr: string
@@ -62,19 +65,76 @@ export function nonInteractiveEnv(): NodeJS.ProcessEnv {
 export class GitOps {
   private readonly log: (...args: unknown[]) => void
   private readonly runGit: (args: string[], cwd: string) => Promise<string>
+  private readonly controller = new AbortController()
+  private readonly semaphore: Semaphore | undefined
+  private readonly resolutionCache = new Map<string, { value: string; expires: number }>()
+  private static readonly CACHE_TTL_MS = 60000
+  private static readonly MAX_CACHE_SIZE = 100
+
+  get disposed(): boolean {
+    return this.controller.signal.aborted
+  }
 
   constructor(options: GitOpsOptions) {
     this.log = options.log
+    this.semaphore = options.semaphore
     this.runGit =
       options.runGit ??
       ((args, cwd) =>
-        simpleGit(cwd)
+        simpleGit(cwd, { abort: this.controller.signal })
           .raw(args)
           .then((out) => out.trim()))
   }
 
+  dispose(): void {
+    if (!this.controller.signal.aborted) {
+      this.controller.abort()
+    }
+    this.resolutionCache.clear()
+  }
+
+  private getCached(key: string): string | undefined {
+    const entry = this.resolutionCache.get(key)
+    if (entry && entry.expires > Date.now()) {
+      return entry.value
+    }
+    return undefined
+  }
+
+  private setCached(key: string, value: string): void {
+    if (this.resolutionCache.size >= GitOps.MAX_CACHE_SIZE) {
+      let oldestKey: string | undefined
+      let oldestExpiry = Infinity
+      for (const [k, v] of this.resolutionCache) {
+        if (v.expires < oldestExpiry) {
+          oldestExpiry = v.expires
+          oldestKey = k
+        }
+      }
+      if (oldestKey) this.resolutionCache.delete(oldestKey)
+    }
+    this.resolutionCache.set(key, { value, expires: Date.now() + GitOps.CACHE_TTL_MS })
+  }
+
   private raw(args: string[], cwd: string): Promise<string> {
-    return this.runGit(args, cwd)
+    const signal = this.controller.signal
+    if (signal.aborted) return Promise.reject(new Error("GitOps disposed"))
+    const invoke = () =>
+      new Promise<string>((resolve, reject) => {
+        const onAbort = () => reject(new Error("GitOps disposed"))
+        signal.addEventListener("abort", onAbort, { once: true })
+        this.runGit(args, cwd).then(
+          (value) => {
+            signal.removeEventListener("abort", onAbort)
+            resolve(value)
+          },
+          (err) => {
+            signal.removeEventListener("abort", onAbort)
+            reject(err)
+          },
+        )
+      })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
   /** Return the name of the currently checked-out branch, or `"HEAD"` if detached. */
@@ -89,38 +149,68 @@ export class GitOps {
    * 3. Falls back to `origin`
    */
   async resolveRemote(cwd: string, branch?: string): Promise<string> {
+    const cacheKey = `remote:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached) return cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"], cwd).catch(
       () => "",
     )
-    if (upstream.includes("/")) return upstream.split("/")[0]
+    if (upstream.includes("/")) {
+      const result = upstream.split("/")[0]
+      this.setCached(cacheKey, result)
+      return result
+    }
 
     const name = branch || (await this.raw(["branch", "--show-current"], cwd).catch(() => ""))
     if (name) {
       const configured = await this.raw(["config", `branch.${name}.remote`], cwd).catch(() => "")
-      if (configured) return configured
+      if (configured) {
+        this.setCached(cacheKey, configured)
+        return configured
+      }
     }
 
-    return "origin"
+    const result = "origin"
+    this.setCached(cacheKey, result)
+    return result
   }
 
   /** Resolve the upstream tracking ref for `branch`, or `undefined` if none is set. Note: the `@{upstream}` check uses the current HEAD, not `branch`. */
   async resolveTrackingBranch(cwd: string, branch: string): Promise<string | undefined> {
+    const cacheKey = `tracking:${cwd}:${branch}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const upstream = await this.raw(["rev-parse", "--abbrev-ref", "@{upstream}"], cwd).catch(() => "")
-    if (upstream) return upstream
+    if (upstream) {
+      this.setCached(cacheKey, upstream)
+      return upstream
+    }
 
     const remote = await this.resolveRemote(cwd, branch)
     const ref = `${remote}/${branch}`
     const resolved = await this.raw(["rev-parse", "--verify", ref], cwd).catch(() => "")
-    if (resolved) return ref
+    if (resolved) {
+      this.setCached(cacheKey, ref)
+      return ref
+    }
 
+    this.setCached(cacheKey, "")
     return undefined
   }
 
   /** Resolve the repo's default branch via <remote>/HEAD. */
   async resolveDefaultBranch(cwd: string, branch?: string): Promise<string | undefined> {
     const remote = await this.resolveRemote(cwd, branch)
+    const cacheKey = `default-branch:${cwd}:${remote}`
+    const cached = this.getCached(cacheKey)
+    if (cached !== undefined) return cached === "" ? undefined : cached
+
     const head = await this.raw(["symbolic-ref", "--short", `refs/remotes/${remote}/HEAD`], cwd).catch(() => "")
-    return head || undefined
+    const result = head || undefined
+    this.setCached(cacheKey, result ?? "")
+    return result
   }
 
   async hasRemoteRef(cwd: string, ref: string): Promise<boolean> {
@@ -130,14 +220,14 @@ export class GitOps {
   }
 
   /** Return the set of worktree paths for the repo, excluding bare entries. */
-  async listWorktreePaths(cwd: string): Promise<Set<string>> {
+  async listWorktreePaths(cwd: string): Promise<Map<string, string>> {
     const raw = await this.raw(["worktree", "list", "--porcelain"], cwd)
-    const paths = new Set<string>()
+    const result = new Map<string, string>()
     for (const entry of parseWorktreeList(raw)) {
       if (entry.bare) continue
-      paths.add(normalizePath(entry.path))
+      result.set(normalizePath(entry.path), entry.branch)
     }
-    return paths
+    return result
   }
 
   /**
@@ -260,6 +350,55 @@ export class GitOps {
     }
   }
 
+  /**
+   * Revert a single file in a worktree back to the merge-base state.
+   * For modified/deleted files: restores the file from the merge-base commit.
+   * For added (new) files: removes the file from the worktree.
+   */
+  async revertFile(
+    cwd: string,
+    baseBranch: string,
+    file: string,
+    status?: "added" | "deleted" | "modified",
+  ): Promise<{ ok: boolean; message: string }> {
+    // Validate path: no absolute paths, no ".." traversal
+    if (nodePath.isAbsolute(file) || file.split(/[\\/]/).includes("..")) {
+      return { ok: false, message: "Invalid file path" }
+    }
+
+    const base = (await this.raw(["merge-base", "HEAD", baseBranch], cwd).catch(() => "")).trim()
+    if (!base) {
+      return { ok: false, message: "Could not resolve merge-base" }
+    }
+
+    if (status === "added") {
+      // New file — remove it from disk and unstage
+      const full = nodePath.resolve(cwd, file)
+      const root = await fs.realpath(cwd)
+      const resolved = await fs.realpath(full).catch(() => full)
+      if (resolved !== root && !resolved.startsWith(root + nodePath.sep)) {
+        return { ok: false, message: "File path outside worktree" }
+      }
+      await fs.rm(full, { force: true })
+      // Also remove from git index in case it was staged
+      await this.raw(["rm", "--cached", "--force", "--ignore-unmatch", "--", file], cwd).catch(() => "")
+      return { ok: true, message: "Removed added file" }
+    }
+
+    // Modified or deleted file — restore from merge-base
+    const result = await this.exec(["checkout", base, "--", file], cwd)
+    if (result.code !== 0) {
+      return { ok: false, message: result.stderr.trim() || "Failed to revert file" }
+    }
+    // Only unstage for modified files. For deleted files the checkout already
+    // restored the file into the index correctly — resetting to HEAD would drop
+    // it from the index and make it appear as a new untracked file.
+    if (status === "modified") {
+      await this.raw(["reset", "HEAD", "--", file], cwd).catch(() => "")
+    }
+    return { ok: true, message: "Reverted file to base" }
+  }
+
   async checkApplyPatch(targetPath: string, patch: string): Promise<ApplyCheckResult> {
     if (!patch.trim()) {
       return { ok: true, conflicts: [], message: "No changes to apply" }
@@ -334,37 +473,54 @@ export class GitOps {
     return [{ reason: "Patch does not apply cleanly" }]
   }
 
+  /**
+   * Run a git command returning `{code, stdout, stderr}`. Gated by the shared
+   * semaphore and respects the dispose abort signal. Never throws — commands
+   * with non-zero exit codes resolve normally (nothrow semantics), making this
+   * suitable for callers that need to tolerate legitimate failures (e.g.
+   * `merge-base` on an orphan branch, `ls-files --error-unmatch`).
+   */
+  execGit(args: string[], cwd: string, options?: { stdin?: string }): Promise<ExecResult> {
+    return this.exec(args, cwd, options)
+  }
+
   private exec(args: string[], cwd: string, options?: ExecOptions): Promise<ExecResult> {
-    return new Promise((resolve) => {
-      const child = spawn("git", args, {
-        cwd,
-        env: options?.env,
-        stdio: ["pipe", "pipe", "pipe"],
-      })
+    if (this.controller.signal.aborted) {
+      return Promise.resolve({ code: 1, stdout: "", stderr: "GitOps disposed" })
+    }
+    const invoke = () =>
+      new Promise<ExecResult>((resolve) => {
+        const child = spawn("git", args, {
+          cwd,
+          env: options?.env,
+          signal: this.controller.signal,
+          stdio: ["pipe", "pipe", "pipe"],
+        })
 
-      if (options?.stdin !== undefined) {
-        if (!child.stdin) {
-          resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
-          return
+        if (options?.stdin !== undefined) {
+          if (!child.stdin) {
+            resolve({ code: 1, stdout: "", stderr: "stdin not available for git process" })
+            return
+          }
+          child.stdin.end(options.stdin)
         }
-        child.stdin.end(options.stdin)
-      }
 
-      const out: Buffer[] = []
-      const err: Buffer[] = []
-      child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
-      child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
+        const out: Buffer[] = []
+        const err: Buffer[] = []
+        child.stdout?.on("data", (chunk: Buffer) => out.push(chunk))
+        child.stderr?.on("data", (chunk: Buffer) => err.push(chunk))
 
-      child.on("error", (error) => {
-        resolve({ code: 1, stdout: "", stderr: error.message })
-      })
-      child.on("close", (code) => {
-        resolve({
-          code: code ?? 1,
-          stdout: Buffer.concat(out).toString("utf8"),
-          stderr: Buffer.concat(err).toString("utf8"),
+        child.on("error", (error) => {
+          resolve({ code: 1, stdout: "", stderr: error.message })
+        })
+        child.on("close", (code) => {
+          resolve({
+            code: code ?? 1,
+            stdout: Buffer.concat(out).toString("utf8"),
+            stderr: Buffer.concat(err).toString("utf8"),
+          })
         })
       })
-    })
+    return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 }

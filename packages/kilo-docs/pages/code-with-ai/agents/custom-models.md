@@ -18,27 +18,6 @@ Kilo Code ships with a curated list of models for each provider, but you can use
 Add custom models under the `provider.<provider_id>.models` key in your config file. The model key becomes the model ID you reference elsewhere.
 
 {% tabs %}
-{% tab label="CLI" %}
-
-**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
-
-```jsonc
-{
-  "$schema": "https://app.kilo.ai/config.json",
-  "model": "lmstudio/my-custom-model",
-  "provider": {
-    "lmstudio": {
-      "models": {
-        "my-custom-model": {
-          "name": "My Custom Model",
-        },
-      },
-    },
-  },
-}
-```
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 1. Open **Settings** (gear icon) and go to the **Providers** tab.
@@ -63,6 +42,27 @@ Add custom models under the `provider.<provider_id>.models` key in your config f
 To edit an existing custom provider, click the **Edit provider** button next to it in the connected providers section.
 
 For additional model configuration (token limits, tool calling, reasoning, variants), edit the `kilo.jsonc` config file directly — see the **CLI** tab for the format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "model": "lmstudio/my-custom-model",
+  "provider": {
+    "lmstudio": {
+      "models": {
+        "my-custom-model": {
+          "name": "My Custom Model",
+        },
+      },
+    },
+  },
+}
+```
 
 {% /tab %}
 {% /tabs %}
@@ -91,14 +91,14 @@ All fields are optional. When a model ID matches one already in the built-in cat
 | `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
 | `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)              |
 
-### Token Limits (`limit`)
+### Token Limits (limit)
 
 The `limit` object controls how Kilo manages the model's context window and output length. These values are specified in **tokens**.
 
 | Sub-field | Type     | Required | Description                                                                                                                                                                                        |
 | --------- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `context` | `number` | No      | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window.                                |
-| `output`  | `number` |  No      | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default.                                         |
+| `context` | `number` | No       | The model's total context window size (e.g., `131072` for a 128K model). Used to determine when conversation history should be compacted to stay within the window.                                |
+| `output`  | `number` | No       | The maximum number of tokens the model can generate in a single response. Sent to the provider as `max_tokens` or equivalent. Capped at 32,000 by default.                                         |
 | `input`   | `number` | No       | An optional stricter input limit. Some providers enforce an input token ceiling that is lower than the full context window. When set, compaction triggers against this value instead of `context`. |
 
 ```jsonc
@@ -263,7 +263,7 @@ Override options or define reasoning variants for a built-in model:
 }
 ```
 
-### Using the `id` field to map model names
+### Using the id field to map model names
 
 If the model key in your config differs from what the provider expects, use the `id` field:
 

@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test"
 import { MessageV2 } from "../../src/session/message-v2"
 import { KILO_ERROR_CODES, isKiloError, parseKiloErrorCode } from "../../src/kilocode/kilo-errors"
 import { SessionRetry } from "../../src/session/retry"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencode-ai/shared/util/error"
 
 /**
  * Helper to create a mock APIError object (as returned by .toObject())

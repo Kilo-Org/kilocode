@@ -3,9 +3,14 @@ import * as fs from "fs/promises"
 import * as os from "os"
 import * as nodePath from "path"
 import { GitOps } from "../../src/agent-manager/GitOps"
+import { Semaphore } from "../../src/agent-manager/semaphore"
 
-function ops(handler: (args: string[], cwd: string) => Promise<string>): GitOps {
-  return new GitOps({ log: () => undefined, runGit: handler })
+function ops(handler: (args: string[], cwd: string) => Promise<string>, semaphore?: Semaphore): GitOps {
+  return new GitOps({ log: () => undefined, runGit: handler, semaphore })
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function runGit(cwd: string, args: string[]): string {
@@ -473,6 +478,116 @@ describe("GitOps", () => {
         // small.txt: "hello".split("\n").length = 1, huge.bin: skipped (0)
         expect(stats.additions).toBe(1)
       })
+    })
+  })
+
+  describe("dispose", () => {
+    it("aborts in-flight runGit calls quickly", async () => {
+      let resolved = false
+      const git = new GitOps({
+        log: () => undefined,
+        runGit: async () => {
+          await sleep(5000)
+          resolved = true
+          return "should not reach"
+        },
+      })
+
+      const start = Date.now()
+      const pending = git.currentBranch("/repo")
+      git.dispose()
+      await pending
+      const elapsed = Date.now() - start
+      expect(elapsed).toBeLessThan(500)
+      expect(resolved).toBe(false)
+    })
+
+    it("causes subsequent runGit calls to fail immediately", async () => {
+      let called = false
+      const git = new GitOps({
+        log: () => undefined,
+        runGit: async () => {
+          called = true
+          return "ok"
+        },
+      })
+      git.dispose()
+
+      // currentBranch swallows errors — should return "" without calling runGit
+      const result = await git.currentBranch("/repo")
+      expect(result).toBe("")
+      expect(called).toBe(false)
+    })
+
+    it("reports disposed state", () => {
+      const git = ops(async () => "ok")
+      expect(git.disposed).toBe(false)
+      git.dispose()
+      expect(git.disposed).toBe(true)
+    })
+
+    it("kills in-flight exec (spawn) processes", async () => {
+      await withRepo(async (cwd) => {
+        const git = new GitOps({ log: () => undefined })
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "one\n", "utf8")
+        runGit(cwd, ["add", "-A"])
+        runGit(cwd, ["-c", "user.name=Test", "-c", "user.email=test@example.com", "commit", "-m", "init"])
+        await fs.writeFile(nodePath.join(cwd, "a.txt"), "two\n", "utf8")
+
+        const branch = runGit(cwd, ["branch", "--show-current"]) || "HEAD"
+        const pending = git.buildWorktreePatch(cwd, branch)
+        // Give spawn a moment to start, then dispose
+        await sleep(10)
+        git.dispose()
+
+        // Should either reject or return (but process should be killed)
+        try {
+          await pending
+        } catch {
+          // expected — aborted
+        }
+        expect(git.disposed).toBe(true)
+      })
+    })
+
+    it("is safe to call multiple times", () => {
+      const git = ops(async () => "ok")
+      git.dispose()
+      git.dispose()
+      expect(git.disposed).toBe(true)
+    })
+  })
+
+  describe("semaphore integration", () => {
+    it("limits concurrent raw() calls", async () => {
+      let running = 0
+      let peak = 0
+      const sem = new Semaphore(2)
+      const git = ops(async () => {
+        running++
+        peak = Math.max(peak, running)
+        await sleep(10)
+        running--
+        return "ok"
+      }, sem)
+
+      await Promise.all(Array.from({ length: 6 }, () => git.currentBranch("/repo")))
+      expect(peak).toBe(2)
+    })
+
+    it("works without a semaphore (no gating)", async () => {
+      let running = 0
+      let peak = 0
+      const git = ops(async () => {
+        running++
+        peak = Math.max(peak, running)
+        await sleep(10)
+        running--
+        return "ok"
+      })
+
+      await Promise.all(Array.from({ length: 4 }, () => git.currentBranch("/repo")))
+      expect(peak).toBe(4)
     })
   })
 })

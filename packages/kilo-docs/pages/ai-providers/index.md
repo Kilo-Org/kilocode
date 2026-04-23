@@ -61,6 +61,28 @@ Route requests through unified APIs with additional features:
 In the **VSCode (Legacy)** version, API keys use VS Code's Secret Storage. In the current **VSCode & CLI** version, keys are set via environment variables or referenced in `kilo.json` config files. See individual provider pages for setup instructions for each platform.
 {% /callout %}
 
+## Disabling Built-in Providers
+
+You can prevent specific providers from loading using `disabled_providers` in your `kilo.json` (or `kilo.jsonc`). This is useful to hide models from built-in or detected providers that you don't intend to use.
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "disabled_providers": ["kilo", "openai"]
+}
+```
+
+To allow only specific providers and disable everything else, use `enabled_providers` instead:
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "enabled_providers": ["anthropic"]
+}
+```
+
+Both fields accept provider IDs — the lowercase identifier used in the `provider/model` format (e.g. `kilo`, `anthropic`, `openai`, `google`, `groq`).
+
 ## Next Steps
 
 - **New to Kilo Code?** Start with the [Kilo Code provider](/docs/ai-providers/kilocode) - no setup required

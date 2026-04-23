@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.1.22",
+  "version": "7.2.20",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -50,6 +50,17 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "taskDefinitions": [
+      {
+        "type": "kilo-worktree-setup",
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The setup script command to execute"
+          }
+        }
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -79,6 +90,11 @@
         "command": "kilo-code.new.agentManagerOpen",
         "title": "Agent Manager",
         "icon": "$(circuit-board)"
+      },
+      {
+        "command": "kilo-code.new.kiloClawOpen",
+        "title": "KiloClaw",
+        "icon": "$(comment-discussion)"
       },
       {
         "command": "kilo-code.new.marketplaceButtonClicked",
@@ -155,6 +171,12 @@
         "icon": "$(terminal)"
       },
       {
+        "command": "kilo-code.new.agentManager.runScript",
+        "title": "Agent Manager: Run Script",
+        "category": "Kilo Code",
+        "icon": "$(play)"
+      },
+      {
         "command": "kilo-code.new.agentManager.toggleDiff",
         "title": "Agent Manager: Toggle Diff Panel",
         "category": "Kilo Code",
@@ -169,6 +191,11 @@
       {
         "command": "kilo-code.new.agentManager.newTab",
         "title": "Agent Manager: New Tab",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.newTerminal",
+        "title": "Agent Manager: New Terminal Tab (Experimental)",
         "category": "Kilo Code"
       },
       {
@@ -309,6 +336,11 @@
         "command": "kilo-code.new.generateTerminalCommand",
         "title": "Generate Terminal Command",
         "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.takeHeapSnapshot",
+        "title": "Take Heap Snapshot",
+        "category": "Kilo Code"
       }
     ],
     "submenus": [
@@ -339,18 +371,23 @@
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.marketplaceButtonClicked",
+          "command": "kilo-code.new.kiloClawOpen",
           "group": "navigation@3",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.profileButtonClicked",
+          "command": "kilo-code.new.marketplaceButtonClicked",
           "group": "navigation@4",
           "when": "view == kilo-code.SidebarProvider"
         },
         {
-          "command": "kilo-code.new.settingsButtonClicked",
+          "command": "kilo-code.new.profileButtonClicked",
           "group": "navigation@5",
+          "when": "view == kilo-code.SidebarProvider"
+        },
+        {
+          "command": "kilo-code.new.settingsButtonClicked",
+          "group": "navigation@6",
           "when": "view == kilo-code.SidebarProvider"
         }
       ],
@@ -498,6 +535,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.runScript",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && (isMac || !terminalFocus)"
+      },
+      {
         "command": "kilo-code.new.agentManager.toggleDiff",
         "key": "ctrl+d",
         "mac": "cmd+d",
@@ -513,6 +556,12 @@
         "command": "kilo-code.new.agentManager.newTab",
         "key": "ctrl+t",
         "mac": "cmd+t",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
+        "command": "kilo-code.new.agentManager.newTerminal",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -602,12 +651,14 @@
       {
         "command": "kilo-code.new.cycleAgentMode",
         "key": "ctrl+.",
-        "mac": "cmd+."
+        "mac": "cmd+.",
+        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
-        "mac": "cmd+shift+."
+        "mac": "cmd+shift+.",
+        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
@@ -821,7 +872,7 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "knip": "5.85.0",
-    "prettier": "^3.8.1",
+    "prettier": "3.6.2",
     "qrcode": "^1.5.4",
     "storybook": "10.2.10",
     "storybook-solidjs-vite": "10.0.9",
@@ -838,6 +889,11 @@
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@thisbeyond/solid-dnd": "0.7.5",
+    "@xterm/addon-clipboard": "0.2.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/addon-unicode-graphemes": "0.4.0",
+    "@xterm/addon-web-links": "0.12.0",
+    "@xterm/xterm": "6.0.0",
     "diff": "8.0.4",
     "dotenv": "^16.4.7",
     "fastest-levenshtein": "^1.0.16",
@@ -849,7 +905,9 @@
     "quick-lru": "^7.0.0",
     "simple-git": "3.35.2",
     "solid-js": "^1.9.11",
+    "stream-chat": "9.38.0",
     "uri-js": "^4.4.1",
+    "virtua": "catalog:",
     "web-tree-sitter": "^0.24.7",
     "yaml": "2.8.3",
     "zod": "^3.24.2"

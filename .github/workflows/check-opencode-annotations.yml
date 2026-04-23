@@ -1,0 +1,32 @@
+name: Check opencode annotations
+
+on:
+  pull_request:
+    paths:
+      - "packages/opencode/**"
+      - "script/check-opencode-annotations.ts"
+      - ".github/workflows/check-opencode-annotations.yml"
+  workflow_dispatch:
+
+jobs:
+  check-annotations:
+    name: Check kilocode_change annotations
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Check kilocode_change annotations in shared opencode files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            bun run script/check-opencode-annotations.ts --base "$BASE_SHA"
+          else
+            echo "No PR base SHA available (workflow_dispatch without PR context) — skipping."
+          fi

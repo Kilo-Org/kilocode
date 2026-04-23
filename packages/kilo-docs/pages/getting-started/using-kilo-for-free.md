@@ -1,92 +1,77 @@
 ---
 title: "Using Kilo for Free"
-description: "Learn how to use Kilo Code without spending money by configuring free models for agentic tasks, autocomplete, and CLI background tasks"
+description: "How to use Kilo Code for free — Auto Model Free, finding free models, free autocomplete, and free background tasks"
 ---
 
 # Using Kilo for Free
 
-Kilo Code can be used completely free of charge, but you need to understand where Kilo uses AI models and configure each one appropriately.
+Kilo Code can be used completely free of charge. There are three places where Kilo uses AI model inference, and each can be configured to use free models.
 
-## When Kilo Uses Model Inference
+## Where Kilo Uses Models
 
-Kilo uses AI model inference in three places:
+1. **Agentic interactions** — Conversations with coding agents in IDE extensions (VS Code, JetBrains), CLI, and cloud services like App Builder and Code Reviewer
+2. **Autocomplete** — In-editor code completions as you type (IDE extensions only)
+3. **Background tasks** — Automatic session titles and context summarization
 
-1. **Agentic interactions** - Coding assistant conversations in IDE extensions (VS Code, JetBrains), CLI, and cloud services like App Builder and Code Reviewer
-2. **Autocomplete** - In-editor code completions as you type (IDE extensions only)
-3. **CLI Background tasks** - Automatic session titles and context summarization (CLI only)
-
-Each of these can consume credits by default. **For a completely free Kilo experience, you must configure all three to use free models.**
+Each of these consumes credits by default. **To use Kilo entirely for free, configure all three to use free models.**
 
 ## Free Agentic Usage
 
-Kilo Code provides access to [free models](/docs/code-with-ai/agents/free-and-budget-models) for your coding tasks through the Kilo Gateway and partner providers.
+Kilo provides free models for coding tasks through the Kilo Gateway and partner providers.
 
-### Finding Free Models
+### Auto Model Free
 
-Free models are clearly labeled in the model picker across all Kilo platforms. To find and use them:
+The easiest way to get started is [**Auto Model Free**](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`). This is a Kilo-provided model tier that automatically routes your requests to the best available free models — no configuration needed.
+
+### Finding Other Free Models
+
+You can also browse and select individual free models. In the model picker, type `free` to filter the list — free models are clearly labeled across all platforms.
 
 **In the IDE Extensions (VS Code, JetBrains):**
 
 1. Click on the current model below the chat window
-2. Browse the model list—free models are labeled as "(free)"
-3. Select your preferred free model
+2. Type `free` in the search box
+3. Select any model labeled "(free)"
 
 **In the CLI:**
 
-1. Open the CLI by running `kilo`
-2. Use the `/models` command to browse available models
-3. Free models are labeled as "free"
-4. Select a free model for your tasks
+1. Run `kilo` to open the CLI
+2. Use the `/models` command
+3. Type `free` to filter the list
 
-### Free Models for Cloud Tasks
+{% callout type="note" %}
+Some free models may be rate limited by the upstream provider. If you hit a rate limit, try switching to a different free model.
+{% /callout %}
 
-Kilo's cloud services—including App Builder, Code Reviewer, and other cloud-based features—also support free models. When configuring a cloud task:
+### Cloud Tasks
 
-1. Look for the model selection dropdown
-2. Free models are labeled as "(free)" in the dropdown
-3. Select any free model to avoid using credits
+Kilo's cloud services — App Builder, Code Reviewer, and others — also support free models. Select any model labeled "(free)" in the model dropdown when configuring a cloud task.
 
 {% callout type="tip" %}
-The available free models change over time as Kilo partners with different AI inference providers. Check our [free and budget models guide](/docs/code-with-ai/agents/free-and-budget-models) for the latest options, and subscribe to our blog or join our Discord for updates.
+Available free models change over time as Kilo partners with different inference providers. Subscribe to our blog or join our [Discord](https://kilo.ai/discord) for updates.
 {% /callout %}
 
 ## Free Autocomplete
 
-Kilo Code's autocomplete feature provides AI-powered code completions as you type in the IDE extensions.
+Kilo's autocomplete feature provides AI-powered code completions as you type in IDE extensions.
 
-### Default Behavior
-
-By default, autocomplete is routed through the Kilo Code provider and uses credits from your account.
-
-### If You Don't Have Credits
-
-If you run out of credits and haven't configured a free alternative, autocomplete will stop working. Your main coding workflow won't be affected -- you just won't get AI-powered completions.
+By default, autocomplete routes through the Kilo provider and uses credits. If you run out of credits without a free alternative configured, autocomplete stops working — but your main coding workflow is unaffected.
 
 ### How to Get It Free
 
-Add your own Mistral Codestral API key via **BYOK (Bring Your Own Key)** on the Kilo Gateway. Mistral offers a free tier for Codestral, and when you configure a BYOK key, autocomplete requests are routed using your key — billed directly by Mistral at $0 on your Kilo balance.
+Add your own Mistral AI (Codestral) API key via **BYOK (Bring Your Own Key)** on the Kilo Gateway. Mistral offers a free tier for Codestral. When you configure a BYOK key, autocomplete requests use your key directly — at no cost on your Kilo balance.
 
-For step-by-step instructions, see our [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup).
+See the [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup) for step-by-step instructions.
 
-## Free CLI Background Tasks
+## Free Background Tasks
 
-The Kilo CLI uses AI in the background for quality-of-life features that enhance your experience like context compression and titling sessions.
+Kilo uses a small model in the background for tasks like session titling. By default this is Kilo Auto Small, which consumes credits. If the small model is unavailable, Kilo falls back to your primary model — which may also consume credits if it's a paid model.
 
-### Default Behavior
+To avoid credit usage for background tasks, set the small model to a free model:
 
-By default, CLI background tasks use `gpt-5-nano`, which consumes credits.
+**In the VS Code extension:** Go to **Settings → Models** and change the small model to any free model.
 
-### If You Don't Have Credits
-
-Background tasks degrade gracefully when you don't have credits:
-
-- **Session titles** fall back to truncating your first message instead of generating a smart summary
-- **Context management** uses simple truncation instead of intelligent summarization
-- **Your main workflow continues uninterrupted** - these are convenience features, not requirements
-
-### How to Get It Free
-
-Configure the `small_model` parameter in `~/.config/kilo/config.json` to use a free model:
+**In the CLI:** Set the `small_model` parameter in `~/.config/kilo/config.json`:
 
 ```json
 {
@@ -94,11 +79,11 @@ Configure the `small_model` parameter in `~/.config/kilo/config.json` to use a f
 }
 ```
 
-Replace `your-preferred-free-model` with any free model available in the model picker.
+Replace `your-preferred-free-model` with any free model from the model picker.
 
 ## Related Resources
 
-- [Free and Budget Models](/docs/code-with-ai/agents/free-and-budget-models) - Complete guide to free and budget-friendly model options
-- [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup) - Step-by-step autocomplete setup via BYOK
-- [Autocomplete](/docs/code-with-ai/features/autocomplete) - Full autocomplete documentation
-- [CLI Documentation](/docs/code-with-ai/platforms/cli) - Complete CLI reference
+- [Auto Model](/docs/code-with-ai/agents/auto-model) — Smart model routing including the free tier
+- [Mistral Setup Guide](/docs/code-with-ai/features/autocomplete/mistral-setup) — Free autocomplete via BYOK
+- [Autocomplete](/docs/code-with-ai/features/autocomplete) — Full autocomplete documentation
+- [CLI Documentation](/docs/code-with-ai/platforms/cli) — Complete CLI reference

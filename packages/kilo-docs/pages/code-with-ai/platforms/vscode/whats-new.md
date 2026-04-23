@@ -37,7 +37,13 @@ See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actio
 
 ### Is the context progress graph still available?
 
-The context progress graph will be [added soon](https://github.com/Kilo-Org/kilocode/issues/8210) for users who like to see it.
+Yes — the context progress graph (also known as the task timeline) is now available. It appears at the top of the chat panel and shows:
+
+- **Timeline bars** — colored bars representing session activity (different colors for read, write, tool, error, and text parts)
+- **Context window progress** — a three-segment bar showing used, reserved, and available tokens, with a visual indicator when usage exceeds 50%
+- **Token breakdown** — input, output, cache writes, and cache reads display
+
+You can expand or collapse the graph — your preference is saved in the `kilo-code.new.showTaskTimeline` setting.
 
 ### I like to closely monitor and approve the behavior of the agent. How can I do that better in the new version?
 
@@ -61,6 +67,14 @@ The Agent Manager also includes a built-in diff reviewer that shows every change
 
 You can now trigger local AI-powered code reviews directly by using two commands: **`/local-review`** to review all changes on your current branch vs the base branch, and **`/local-review-uncommitted`** to review staged and unstaged changes.
 See the [Code Reviews](/docs/automate/code-reviews/overview) documentation for the full setup and options.
+
+### How can I see the cost of each model?
+
+In the model picker dropdown, click the expand button in the upper-right corner to switch to the full model picker view. From there, click on any model to see its details — including input and output pricing per million tokens, the context window size, and which capabilities the model supports (reasoning, text, images, etc.). This makes it easy to compare costs before selecting a model.
+
+### How do I set context limits or other parameters for custom models?
+
+If you're using a custom model (e.g. via your own API key or a self-hosted provider), you can configure the context window size, max output tokens, and other parameters in your model settings. See the [Custom Models](/docs/code-with-ai/agents/custom-models) documentation for the full guide on adding and configuring custom models.
 
 ### Where did my custom profiles go?
 
