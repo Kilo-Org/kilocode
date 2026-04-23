@@ -133,8 +133,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       })
 
       const filePath = path.join(Global.Path.state, "model.json")
+      // kilocode_change start - serialize writes so rapid save() calls cannot tear model.json
+      // (writeJson is fire-and-forget; without a chain, concurrent writeFile calls can interleave
+      // and leave the file as truncated/invalid JSON on Windows and under I/O contention).
       const state = {
         pending: false,
+        chain: Promise.resolve() as Promise<unknown>,
       }
 
       function save() {
@@ -143,13 +147,15 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return
         }
         state.pending = false
-        Filesystem.writeJson(filePath, {
-          model: modelStore.model, // kilocode_change
+        const data = {
+          model: modelStore.model,
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
-        })
+        }
+        state.chain = state.chain.then(() => Filesystem.writeJson(filePath, data)).catch(() => {})
       }
+      // kilocode_change end
 
       Filesystem.readJson(filePath)
         .then((x: any) => {
