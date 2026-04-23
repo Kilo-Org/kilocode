@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "ยกเลิก",
   "marketplace.contribute.prompt": "ไม่พบทักษะ โหมด หรือเซิร์ฟเวอร์ MCP ที่ต้องการ?",
   "marketplace.contribute.cta": "ร่วมสมทบบน GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "ดำเนินการ",
+  "plan.followup.question": "พร้อมดำเนินการหรือยัง?",
+  "plan.followup.answer.newSession": "เริ่มเซสชันใหม่",
+  "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
+  "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
+  "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
 }

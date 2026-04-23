@@ -1,8 +1,8 @@
 import { generateText } from "ai"
 import { mergeDeep } from "remeda"
-import { Provider } from "@/provider/provider"
-import { ProviderTransform } from "@/provider/transform"
-import { Log } from "@/util/log"
+import { Provider } from "@/provider"
+import { ProviderTransform } from "@/provider"
+import { Log } from "@/util"
 
 const log = Log.create({ service: "enhance-prompt" })
 

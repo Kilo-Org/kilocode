@@ -9,22 +9,17 @@ import { useSDK } from "../../../cli/cmd/tui/context/sdk"
 import { tint, useTheme } from "../../../cli/cmd/tui/context/theme"
 import { useDialog } from "../../../cli/cmd/tui/ui/dialog"
 
-const dismiss = {
-  label: "Dismiss",
-  description: "Dismiss this suggestion and continue",
-}
-
-export function SuggestPrompt(props: {
-  request: SuggestionRequest
-  nonBlocking?: boolean
-  inputFocused?: () => boolean
-}) {
+// The footer-mounted overlay only ever hosts blocking suggestions now; the
+// built-in suggest tool emits non-blocking requests that render inline at
+// the tool-part slot via `SuggestBar`. See `./bar.tsx` and the dispatch in
+// `cli/cmd/tui/routes/session/index.tsx`.
+export function SuggestPrompt(props: { request: SuggestionRequest }) {
   const sdk = useSDK()
   const { theme } = useTheme()
   const keybind = useKeybind()
   const dialog = useDialog()
 
-  const options = createMemo(() => [...props.request.actions, dismiss])
+  const options = createMemo(() => props.request.actions)
   const [selected, setSelected] = createSignal(0)
   const [busy, setBusy] = createSignal(false)
 
@@ -54,16 +49,18 @@ export function SuggestPrompt(props: {
   }
 
   function choose(index: number) {
-    if (index >= props.request.actions.length) {
-      reject()
-      return
-    }
     accept(index)
   }
 
   useKeyboard((evt) => {
     if (dialog.stack.length > 0) return
-    if (props.nonBlocking && props.inputFocused?.()) return
+    if (evt.defaultPrevented) return
+
+    if (evt.name === "escape") {
+      evt.preventDefault()
+      reject()
+      return
+    }
 
     const total = options().length
     const max = Math.min(total, 9)
@@ -95,7 +92,7 @@ export function SuggestPrompt(props: {
       return
     }
 
-    if (evt.name === "escape" || keybind.match("app_exit", evt)) {
+    if (keybind.match("app_exit", evt)) {
       evt.preventDefault()
       reject()
     }
@@ -119,7 +116,6 @@ export function SuggestPrompt(props: {
           <For each={options()}>
             {(opt, i) => {
               const active = () => i() === selected()
-              const muted = () => i() === props.request.actions.length
               return (
                 <box
                   onMouseOver={() => setSelected(i())}
@@ -133,7 +129,7 @@ export function SuggestPrompt(props: {
                       </text>
                     </box>
                     <box backgroundColor={active() ? theme.backgroundElement : undefined}>
-                      <text fg={active() ? theme.secondary : muted() ? theme.textMuted : theme.text}>{opt.label}</text>
+                      <text fg={active() ? theme.secondary : theme.text}>{opt.label}</text>
                     </box>
                   </box>
 

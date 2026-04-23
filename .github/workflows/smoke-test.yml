@@ -40,19 +40,12 @@ permissions:
 jobs:
   smoke-test:
     name: Smoke Test
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     env:
       KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
       KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     steps:
-      - name: Free disk space
-        continue-on-error: true
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
-                      /usr/local/share/boost /opt/hostedtoolcache
-          sudo docker image prune --all --force
-
       - name: Checkout kilo-bench
         uses: actions/checkout@v4
         with:

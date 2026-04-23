@@ -85,7 +85,7 @@ export namespace ConfigProtection {
    */
   export function isRequest(request: {
     permission: string
-    patterns: string[]
+    patterns: readonly string[]
     metadata?: Record<string, any>
   }): boolean {
     if (request.permission === "external_directory") {

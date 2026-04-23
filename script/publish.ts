@@ -4,34 +4,6 @@ import { Script } from "@opencode-ai/script"
 import { $ } from "bun"
 import { fileURLToPath } from "url"
 
-const highlightsTemplate = `
-<!--
-Add highlights before publishing. Delete this section if no highlights.
-
-- For multiple highlights, use multiple <highlight> tags
-- Highlights with the same source attribute get grouped together
--->
-
-<!--
-<highlight source="SourceName (TUI/Desktop/Web/Core)">
-  <h2>Feature title goes here</h2>
-  <p short="Short description used for Desktop Recap">
-    Full description of the feature or change
-  </p>
-
-  https://github.com/user-attachments/assets/uuid-for-video (you will want to drag & drop the video or picture)
-
-  <img
-    width="1912"
-    height="1164"
-    alt="image"
-    src="https://github.com/user-attachments/assets/uuid-for-image"
-  />
-</highlight>
--->
-
-`
-
 console.log("=== publishing ===\n")
 
 // kilocode_change start - consume changesets on the publish runner so changelog
@@ -90,13 +62,33 @@ await $`bun install`
 await import(`../packages/sdk/js/script/build.ts`)
 
 if (Script.release) {
-  // kilocode_change start - commit and tag both release and rc version bumps
+  // kilocode_change start - commit, tag, and push with rebase + retry to handle
+  // concurrent merges to main. Rebase (instead of cherry-pick) handles
+  // overlapping file changes cleanly, and the retry loop covers the narrow
+  // window between fetch and push where another commit could land.
   await $`git commit -am "release: v${Script.version}"`
   await $`git tag v${Script.version}`
-  await $`git fetch origin`
-  await $`git cherry-pick HEAD..origin/main`.nothrow()
-  await $`git push origin HEAD --tags --no-verify --force-with-lease`
-  await new Promise((resolve) => setTimeout(resolve, 5_000))
+  const retries = 3
+  for (let i = 1; i <= retries; i++) {
+    await $`git fetch origin main`
+    const rebase = await $`git rebase origin/main`.nothrow()
+    if (rebase.exitCode !== 0) {
+      console.error(`rebase failed (attempt ${i}/${retries}), aborting rebase`)
+      await $`git rebase --abort`.nothrow()
+      if (i === retries)
+        throw new Error("failed to rebase release commit onto origin/main after " + retries + " attempts")
+      await new Promise((r) => setTimeout(r, 3_000))
+      continue
+    }
+    const push = await $`git push origin HEAD:main --tags --no-verify --force-with-lease`.nothrow()
+    if (push.exitCode === 0) {
+      console.log("release commit pushed successfully")
+      break
+    }
+    console.warn(`push rejected (attempt ${i}/${retries}), retrying...`)
+    if (i === retries) throw new Error("failed to push release commit after " + retries + " attempts")
+    await new Promise((r) => setTimeout(r, 3_000))
+  }
   // kilocode_change end
 
   // kilocode_change start

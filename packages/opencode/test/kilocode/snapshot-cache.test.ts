@@ -2,8 +2,8 @@ import { test, expect } from "bun:test"
 import { $ } from "bun"
 import { Snapshot } from "../../src/snapshot"
 import { Instance } from "../../src/project/instance"
-import { Filesystem } from "../../src/util/filesystem"
-import { Log } from "../../src/util/log"
+import { Filesystem } from "../../src/util"
+import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })

@@ -69,4 +69,12 @@ export const dict = {
   "marketplace.warning.cancel": "キャンセル",
   "marketplace.contribute.prompt": "スキル、モード、MCP サーバーが見つかりませんか？",
   "marketplace.contribute.cta": "GitHub で貢献する",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "実装",
+  "plan.followup.question": "実装する準備はできましたか？",
+  "plan.followup.answer.newSession": "新しいセッションを開始",
+  "plan.followup.answer.newSession.description": "クリーンなコンテキストの新しいセッションで実装する",
+  "plan.followup.answer.continue": "ここで続行",
+  "plan.followup.answer.continue.description": "このセッションで計画を実装する",
 }
