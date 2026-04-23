@@ -1,8 +1,4 @@
-import type {
-  InstallMarketplaceItemOptions,
-  MarketplaceFilters,
-  MarketplaceItem,
-} from "../marketplace"
+import type { InstallMarketplaceItemOptions, MarketplaceFilters, MarketplaceItem } from "../marketplace"
 import type { FileAttachment } from "./parts"
 import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"

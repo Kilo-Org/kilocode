@@ -1,10 +1,7 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { PartBatch, PartUpdate } from "../../../../src/shared/stream-messages"
 import type { SessionMode } from "../../context/worktree-mode"
-import type {
-  MarketplaceItem,
-  MarketplaceInstalledMetadata,
-} from "../marketplace"
+import type { MarketplaceItem, MarketplaceInstalledMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
 import type { CloudSessionInfo, Message, MessageLoadMode, SessionInfo } from "./sessions"
