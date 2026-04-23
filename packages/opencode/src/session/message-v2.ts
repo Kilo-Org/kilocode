@@ -891,17 +891,16 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 
   const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
-  // kilocode_change start - last-mile trimming of older tool outputs when the
-  // accumulated payload approaches the 4MB provider request limit.
-  const trimmed = KiloRequestSize.trim(result)
-  const final = trimmed.messages.filter((msg) => msg.parts.some((part) => part.type !== "step-start"))
-  // kilocode_change end
+  const trimmed = KiloRequestSize.trim(result).messages // kilocode_change - aggressively trim older tool outputs when request nears 4MB
 
   return yield* Effect.promise(() =>
-    convertToModelMessages(final, {
-      //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
-      tools,
-    }),
+    convertToModelMessages(
+      trimmed.filter((msg) => msg.parts.some((part) => part.type !== "step-start")),
+      {
+        //@ts-expect-error (convertToModelMessages expects a ToolSet but only actually needs tools[name]?.toModelOutput)
+        tools,
+      },
+    ),
   )
 })
 
