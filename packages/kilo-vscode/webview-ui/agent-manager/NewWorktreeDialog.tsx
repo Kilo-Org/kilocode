@@ -1,6 +1,6 @@
 // New Worktree dialog — prompt, versions, model, mode, import tab
 
-import { Component, For, Show, createSignal, createMemo, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createSignal, createEffect, createMemo, onMount, onCleanup } from "solid-js"
 import type { AgentManagerBranchesMessage, AgentManagerImportResultMessage, BranchInfo } from "../src/types/messages"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { showToast } from "@kilocode/kilo-ui/toast"
@@ -8,10 +8,14 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Popover } from "@kilocode/kilo-ui/popover"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useVSCode } from "../src/context/vscode"
+import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
+import { useProvider } from "../src/context/provider"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
+import { ThinkingSelectorBase } from "../src/components/shared/ThinkingSelector"
 import {
   MultiModelSelector,
   type ModelAllocations,
@@ -20,7 +24,8 @@ import {
   allocationsToArray,
 } from "./MultiModelSelector"
 import { useLanguage } from "../src/context/language"
-import { useImageAttachments } from "../src/hooks/useImageAttachments"
+import { useImageAttachments, type ImageAttachment } from "../src/hooks/useImageAttachments"
+import { convertToMentionPath } from "../src/utils/path-mentions"
 import { BranchSelect } from "./BranchSelect"
 
 type VersionCount = 1 | 2 | 3 | 4
@@ -55,7 +60,9 @@ function sanitizeBranchName(name: string): string {
 export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
+  const server = useServer()
   const session = useSession()
+  const provider = useProvider()
 
   const [tab, setTab] = createSignal<DialogTab>("new")
 
@@ -67,9 +74,10 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   // --- New tab state ---
   const [name, setName] = createSignal("")
-  const [prompt, setPrompt] = createSignal("")
+  const cached = vscode.getState<Record<string, unknown>>()
+  const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(null)
+  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(session.selected())
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(session.selectedAgent())
@@ -80,19 +88,89 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
+  const [variant, setVariant] = createSignal<string | undefined>(session.currentVariant())
+
+  // Variant list for the currently selected model
+  const variants = createMemo(() => {
+    const sel = model()
+    if (!sel) return []
+    const found = provider.findModel(sel)
+    if (!found?.variants) return []
+    return Object.keys(found.variants)
+  })
+
+  // Current effective variant — falls back to first available if stored value is invalid
+  const effectiveVariant = createMemo(() => {
+    const list = variants()
+    if (list.length === 0) return undefined
+    const stored = variant()
+    return stored && list.includes(stored) ? stored : list[0]
+  })
+
+  // True when the user has changed the model from the session/config default
+  const overridden = createMemo(() => {
+    const sel = model()
+    const cfg = session.selected()
+    if (!sel || !cfg) return false
+    return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
+  })
+
+  // Reset variant when model changes and stored variant is not in new list
+  createEffect(() => {
+    const list = variants()
+    if (list.length === 0) {
+      setVariant(undefined)
+      return
+    }
+    const stored = variant()
+    if (!stored || !list.includes(stored)) setVariant(list[0])
+  })
 
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setPrompt(result)
+    persistPrompt(result)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
+
+  // Restore cached images from webview state
+  const cachedImages = cached?.advancedDialogImages as ImageAttachment[] | undefined
+  if (cachedImages?.length) imageAttach.replace(cachedImages)
+
+  const persistPrompt = (value: string) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogPrompt: value || undefined })
+  }
+
+  const persistImages = (imgs: ImageAttachment[]) => {
+    const state = vscode.getState<Record<string, unknown>>() ?? {}
+    vscode.setState({ ...state, advancedDialogImages: imgs.length > 0 ? imgs : undefined })
+  }
+
+  // Auto-persist images to webview state on any change
+  createEffect(() => persistImages(imageAttach.images()))
 
   let textareaRef: HTMLTextAreaElement | undefined
 
   onMount(() => {
-    requestAnimationFrame(() => {
-      if (!textareaRef) return
-      textareaRef.focus()
-      textareaRef.select()
-    })
     setBranchesLoading(true)
     vscode.postMessage({ type: "agentManager.requestBranches" })
+    // Resize textarea if restoring a cached prompt
+    if (prompt()) adjustHeight()
   })
 
   const effectiveBaseBranch = () => baseBranch() ?? defaultBranch()
@@ -134,12 +212,15 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
+      variant: isCompare ? undefined : effectiveVariant(),
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
       modelAllocations: allocations,
       files: imgFiles,
     })
 
+    persistPrompt("")
+    persistImages([])
     props.onClose()
   }
 
@@ -179,7 +260,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
       if (ev.success) {
         props.onClose()
       } else {
-        showToast({ variant: "error", title: t("agentManager.import.failed"), description: ev.message })
+        const description = ev.errorCode ? t(`agentManager.setup.error.${ev.errorCode}`) : ev.message
+        showToast({ variant: "error", title: t("agentManager.import.failed"), description })
       }
     }
   })
@@ -246,7 +328,14 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   <For each={imageAttach.images()}>
                     {(img) => (
                       <div class="image-attachment">
-                        <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                        <img
+                          src={img.dataUrl}
+                          alt={img.filename}
+                          title={img.filename}
+                          onClick={() =>
+                            vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
+                          }
+                        />
                         <button
                           type="button"
                           class="image-attachment-remove"
@@ -264,6 +353,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <div class="prompt-input-ghost-wrapper am-prompt-input-ghost-wrapper">
                   <textarea
                     ref={textareaRef}
+                    autofocus
                     class="prompt-input am-prompt-input"
                     placeholder={t(
                       isMac
@@ -272,7 +362,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                     )}
                     value={prompt()}
                     onInput={(e) => {
-                      setPrompt(e.currentTarget.value)
+                      const val = e.currentTarget.value
+                      setPrompt(val)
+                      persistPrompt(val)
                       adjustHeight()
                     }}
                     onPaste={(e) => imageAttach.handlePaste(e)}
@@ -282,17 +374,32 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               </div>
               <div class="prompt-input-hint">
                 <div class="prompt-input-hint-selectors">
+                  <Show when={session.agents().length > 1}>
+                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                  </Show>
                   <Show when={!compareMode()}>
                     <ModelSelectorBase
                       value={model()}
-                      onSelect={(pid, mid) => setModel(pid && mid ? { providerID: pid, modelID: mid } : null)}
+                      onSelect={(pid, mid) => {
+                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                      }}
                       placement="top-start"
-                      allowClear
-                      clearLabel="Default"
                     />
-                  </Show>
-                  <Show when={session.agents().length > 1}>
-                    <ModeSwitcherBase agents={session.agents()} value={agent()} onSelect={setAgent} />
+                    <ThinkingSelectorBase variants={variants()} value={effectiveVariant()} onSelect={setVariant} />
+                    <Show when={overridden()}>
+                      <Tooltip value={t("prompt.action.resetModel")} placement="top">
+                        <Button
+                          variant="ghost"
+                          size="small"
+                          onClick={() => setModel(session.selected())}
+                          aria-label={t("prompt.action.resetModel")}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M3.72 3.72a.75.75 0 011.06 0L8 6.94l3.22-3.22a.75.75 0 111.06 1.06L9.06 8l3.22 3.22a.75.75 0 11-1.06 1.06L8 9.06l-3.22 3.22a.75.75 0 01-1.06-1.06L6.94 8 3.72 4.78a.75.75 0 010-1.06z" />
+                          </svg>
+                        </Button>
+                      </Tooltip>
+                    </Show>
                   </Show>
                 </div>
                 <div class="prompt-input-hint-actions" />
@@ -329,8 +436,10 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           setHighlightedIndex(0)
                         }
                       }}
-                      placement="bottom-start"
+                      placement="top-start"
+                      flip={false}
                       sameWidth
+                      portal={false}
                       class="am-dropdown"
                       trigger={
                         <button class="am-selector-trigger" type="button">
@@ -433,14 +542,16 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                         {count}
                       </button>
                     ))}
-                    <button
-                      class="am-nv-pill am-nv-pill-compare"
-                      onClick={() => setCompareMode(true)}
-                      type="button"
-                      title={t("agentManager.dialog.compareModels")}
+                    <Tooltip
+                      value={t("agentManager.dialog.compareModels.tooltip")}
+                      placement="top"
+                      contentClass="am-tooltip-wrap"
                     >
-                      <Icon name="layers" size="small" />
-                    </button>
+                      <button class="am-nv-pill am-nv-pill-compare" onClick={() => setCompareMode(true)} type="button">
+                        <Icon name="layers" size="small" />
+                        <span class="am-nv-pill-compare-label">{t("agentManager.dialog.compareModels")}</span>
+                      </button>
+                    </Tooltip>
                   </div>
                   <Show when={versions() > 1}>
                     <span class="am-nv-version-hint">
@@ -475,7 +586,8 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                 <Popover
                   open={compareOpen()}
                   onOpenChange={setCompareOpen}
-                  placement="bottom-start"
+                  placement="top-start"
+                  flip={false}
                   sameWidth
                   class="am-compare-popover"
                   trigger={
@@ -518,7 +630,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                   </>
                 }
               >
-                {t("agentManager.dialog.createWorkspace")}
+                {t("agentManager.dialog.createWorktree")}
               </Show>
             </Button>
           </div>
@@ -571,8 +683,10 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
               <Popover
                 open={branchOpen()}
                 onOpenChange={setBranchOpen}
-                placement="bottom-start"
+                placement="top-start"
+                flip={false}
                 sameWidth
+                portal={false}
                 class="am-dropdown"
                 trigger={
                   <button class="am-selector-trigger" disabled={isPending()} type="button">

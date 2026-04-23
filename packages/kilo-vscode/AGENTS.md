@@ -62,12 +62,15 @@ Every client spawns or connects to a `kilo serve` process and communicates via H
 ## Commands
 
 ```bash
+bun run extension        # Build + launch VS Code with the extension in dev mode
 bun run compile          # Type-check + lint + build
 bun run watch            # Watch mode (esbuild + tsc)
 bun run test             # Run tests (requires pretest compilation)
 bun run lint             # ESLint on src/
 bun run format           # Run formatter (do this before committing to avoid styling-only changes in commits)
 ```
+
+The `extension` commands also work from the repo root. Pass `--insiders` to prefer VS Code Insiders, `--workspace PATH` to open a different folder, `--clean` to wipe cached state, or `--wait` to block until VS Code closes. VS Code is auto-detected on macOS, Linux, and Windows; override with `--app-path` or `VSCODE_EXEC_PATH`.
 
 Single test: `bun run test -- --grep "test name"`
 
@@ -152,15 +155,15 @@ The Agent Manager is a feature within this extension (not a separate product). I
 
 ### How It Differs From the Sidebar
 
-| Aspect        | Sidebar                    | Agent Manager                                           |
-| ------------- | -------------------------- | ------------------------------------------------------- |
-| Location      | Activity bar sidebar panel | Editor tab (full panel)                                 |
-| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI               |
-| Git isolation | Uses workspace root        | Each session can get its own worktree branch            |
-| State         | No dedicated state file    | `.kilocode/agent-manager.json`                          |
-| Terminals     | None                       | Dedicated VS Code terminal per session                  |
-| Setup scripts | None                       | Configurable `.kilocode/setup-script` runs per worktree |
-| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt         |
+| Aspect        | Sidebar                    | Agent Manager                                       |
+| ------------- | -------------------------- | --------------------------------------------------- |
+| Location      | Activity bar sidebar panel | Editor tab (full panel)                             |
+| Sessions      | Single session at a time   | Multiple parallel sessions with tabbed UI           |
+| Git isolation | Uses workspace root        | Each session can get its own worktree branch        |
+| State         | No dedicated state file    | `.kilo/agent-manager.json`                          |
+| Terminals     | None                       | Dedicated VS Code terminal per session              |
+| Setup scripts | None                       | Configurable `.kilo/setup-script` runs per worktree |
+| Multi-version | Not supported              | Up to 4 parallel worktrees with the same prompt     |
 
 ### Architecture
 
@@ -183,6 +186,12 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 - **Prefer kilo-ui styles**: Always reuse existing kilo-ui CSS variables, tokens, and component styles instead of writing custom CSS. If a style doesn't exist in kilo-ui yet, add it there and reuse it rather than inlining or duplicating styles in the webview.
 - **Icons**: kilo-ui has 75+ custom SVG icons in [`packages/ui/src/components/icon.tsx`](../../packages/ui/src/components/icon.tsx). To list all available icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
 
+## Docs Screenshot Stories
+
+When adding or updating Storybook stories for screenshots used by docs, make the story content match the docs page closely before replacing the docs image. Do not replace screenshots from VSCode Legacy docs tabs or sections.
+
+Generated screenshot baselines live under `packages/kilo-docs/public/img/screenshot-tests/` and are referenced from docs as `/docs/img/screenshot-tests/...`. If a generated VS Code visual-regression screenshot is used in docs, add the docs usage to the `DOCS` map in `tests/visual-regression.spec.ts` and keep `tests/visual-regression.spec.mts` in sync while that file exists.
+
 ## Debugging
 
 - Extension logs: "Extension Host" output channel (not Debug Console)
@@ -192,15 +201,21 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 ## Naming Conventions
 
 - All VSCode commands must use `kilo-code.new.` prefix (not `kilo-code.`)
-- All view IDs must use `kilo-code.new.` prefix (e.g., `kilo-code.new.sidebarView`)
-
-## Coexistence with Old Extension
-
-While the old extension coexists, runtime labels append `(NEW)` — controlled by the flag in [`constants.ts`](src/constants.ts). Static labels in `package.json` must be updated separately. Remove this convention once the old extension is retired.
+- All view IDs must use `kilo-code.new.` prefix, **except** the sidebar view which uses `kilo-code.SidebarProvider` to preserve user sidebar position when upgrading from the legacy extension
 
 ## Kilocode Change Markers
 
 This package is entirely Kilo-specific — `kilocode_change` markers are NOT needed in any files under `packages/kilo-vscode/`. The markers are only necessary when modifying shared upstream opencode files.
+
+## Process Spawning (Windows)
+
+On Windows, any `spawn`/`execFile`/`exec` call that does not set `windowsHide: true` will flash a cmd.exe console window at the user. To prevent this, **never import `spawn`, `execFile`, or `exec` from `child_process` directly**. Use the wrappers in `src/util/process.ts` instead — they enforce `windowsHide: true` automatically:
+
+```ts
+import { spawn, exec } from "../util/process"
+```
+
+The `spawn` wrapper covers long-lived processes (e.g. `kilo serve`). The `exec` wrapper covers short commands (e.g. `git`, `tar`). If you need the raw callback form of `execFile` for some reason, pass `windowsHide: true` explicitly in the options object.
 
 ## Style
 
@@ -210,6 +225,10 @@ Follow monorepo root AGENTS.md style guide:
 - Single-word variable names when possible
 - Avoid `try`/`catch`, avoid `any` type
 - ESLint enforces: curly braces, strict equality, semicolons, camelCase/PascalCase imports
+
+## File Size Caps (maxLines)
+
+Large files in `src/agent-manager/` have `maxLines` caps enforced by `tests/unit/agent-manager-arch.test.ts`. **Do not raise these caps.** If adding a feature would exceed a cap, extract logic into a vscode-free helper module and call it from the provider. See `fork-session.ts` and `format-keybinding.ts` for examples of this pattern.
 
 ## Markdown Tables
 

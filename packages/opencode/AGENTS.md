@@ -49,6 +49,12 @@ export const get = fn(z.object({ id: z.string() }), async (input) => { ... })
 
 **Logging** -- Use `Log.create({ service: "name" })` pattern.
 
+## Process Spawning (Windows)
+
+On Windows, any `spawn`/`execFile` call without `windowsHide: true` will flash a cmd.exe console window at the user. Use `Process.spawn` from `src/util/process.ts` — it enforces `windowsHide: true` automatically. For `Bun.spawn`/`Bun.spawnSync`, pass `windowsHide` via the options object if the subprocess could create a visible console.
+
+The MCP `StdioClientTransport` (third-party SDK) is handled separately via a process shim in `src/mcp/index.ts` that sets `process.type = "browser"` when running inside the VS Code extension (`KILO_PLATFORM=vscode`), which causes the SDK's internal `isElectron()` check to return `true` and enable `windowsHide`.
+
 ## Storage
 
 Filesystem-based JSON, not a database. Data lives in `~/.local/share/kilo/storage/`. Keys are path arrays: `Storage.write(["session", projectID, sessionID], data)`.

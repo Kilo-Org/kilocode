@@ -20,6 +20,7 @@ export class TelemetryProxy {
   }
 
   static capture(event: TelemetryEventName, properties?: Record<string, unknown>) {
+    console.log("[telemetry]", event, properties ?? "")
     TelemetryProxy.getInstance().capture(event, properties)
   }
 

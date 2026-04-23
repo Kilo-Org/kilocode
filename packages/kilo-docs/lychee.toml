@@ -30,4 +30,13 @@ exclude = [
   'https://tbench.ai/',
   # GitHub URLs cause persistent HTTP/2 protocol errors when checked from GitHub Actions runners
   '^https?://github\.com/',
+  # Redirects to login page, blocked by bots
+  '^https?://vercel\.link/',
+  # API base URL, returns 404 when fetched directly
+  '^https?://api\.apertis\.ai/v1/?$',
+  # Redirects to authenticated Google Cloud console
+  '^https?://console\.cloud\.google\.com',
+  # Consistently times out in CI
+  '^https?://opncd\.ai',
+  '^https?://zod\.dev/v4/changelog',
 ]

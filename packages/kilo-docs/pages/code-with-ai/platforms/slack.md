@@ -21,7 +21,7 @@ Kilo for Slack brings the power of Kilo Code directly into your Slack workspace.
 ## Supported Platforms
 
 | Platform | Integration Type | Details                                                             |
-| -------- | ---------------- | --------------------------------------------------------------------|
+| -------- | ---------------- | ------------------------------------------------------------------- |
 | GitHub   | GitHub App       | [GitHub Setup Guide](/docs/automate/integrations#connecting-github) |
 | GitLab   | OAuth or PAT     | [GitLab Setup Guide](/docs/automate/integrations#connecting-gitlab) |
 

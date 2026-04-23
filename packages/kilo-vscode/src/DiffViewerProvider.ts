@@ -1,8 +1,8 @@
 import * as vscode from "vscode"
-import type { FileDiff } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { WorktreeDiffClient, type DiffTarget } from "./worktree-diff-client"
 import {
   appendOutput,
   getWorkspaceRoot,
@@ -21,10 +21,10 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private lastDiffHash: string | undefined
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: DiffTarget | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
-  private onSendComments: ((comments: unknown[]) => void) | undefined
+  private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -38,7 +38,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     appendOutput(this.outputChannel, "DiffViewer", ...args)
   }
 
-  public setCommentHandler(handler: (comments: unknown[]) => void): void {
+  public setCommentHandler(handler: (comments: unknown[], autoSend: boolean) => void): void {
     this.onSendComments = handler
   }
 
@@ -48,21 +48,32 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
-    this.panel = vscode.window.createWebviewPanel(DiffViewerProvider.viewType, "Changes", vscode.ViewColumn.One, {
+    const panel = vscode.window.createWebviewPanel(DiffViewerProvider.viewType, "Changes", vscode.ViewColumn.One, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [this.extensionUri],
     })
 
-    this.panel.iconPath = {
+    this.wirePanel(panel)
+  }
+
+  /** Re-wire a deserialized panel after extension restart. */
+  public deserializePanel(panel: vscode.WebviewPanel): void {
+    this.wirePanel(panel)
+  }
+
+  private wirePanel(panel: vscode.WebviewPanel): void {
+    this.panel = panel
+
+    panel.iconPath = {
       light: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-light.svg"),
       dark: vscode.Uri.joinPath(this.extensionUri, "assets", "icons", "kilo-dark.svg"),
     }
 
-    this.panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
-    this.panel.webview.html = this.getHtml(this.panel.webview)
+    panel.webview.onDidReceiveMessage((msg) => this.onMessage(msg), undefined, [])
+    panel.webview.html = this.getHtml(panel.webview)
 
-    this.panel.onDidDispose(() => {
+    panel.onDidDispose(() => {
       this.log("Panel disposed")
       this.stopDiffPolling()
       this.panel = undefined
@@ -84,7 +95,7 @@ export class DiffViewerProvider implements vscode.Disposable {
     }
 
     if (type === "diffViewer.sendComments" && Array.isArray(msg.comments)) {
-      this.onSendComments?.(msg.comments)
+      this.onSendComments?.(msg.comments, !!msg.autoSend)
       return
     }
 
@@ -97,13 +108,49 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
+    if (type === "diffViewer.revertFile" && typeof msg.file === "string") {
+      void this.revertFile(msg.file)
+      return
+    }
+
     if (type === "openFile" && typeof msg.filePath === "string") {
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     }
   }
 
-  private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
-    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args))
+  private async revertFile(file: string): Promise<void> {
+    const target = this.cachedDiffTarget ?? (await this.resolveLocalDiffTarget())
+    if (!target) {
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: "error",
+        message: "Could not resolve diff target",
+      })
+      return
+    }
+
+    try {
+      const diff = new WorktreeDiffClient(this.connectionService.getClient(), this.gitOps, (...args) =>
+        this.log(...args),
+      )
+      const result = await diff.revertFile(target, file)
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: result.ok ? "success" : "error",
+        message: result.message,
+      })
+      if (result.ok) void this.pollDiff()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.log("Failed to revert file:", message)
+      this.post({ type: "diffViewer.revertFileResult", file, status: "error", message })
+    }
+  }
+
+  private async resolveLocalDiffTarget(): Promise<DiffTarget | undefined> {
+    return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 
   private async initialFetch(): Promise<void> {
@@ -201,6 +248,7 @@ export class DiffViewerProvider implements vscode.Disposable {
 
   public dispose(): void {
     this.stopDiffPolling()
+    this.gitOps.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
   }

@@ -6,11 +6,13 @@ import { createMemo, createResource, createEffect, onMount, onCleanup, Index, Sh
 import { createStore } from "solid-js/store"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
+import { getScrollAcceleration } from "../../util/scroll"
+import { useTuiConfig } from "../../context/tui-config"
 import { useTheme, selectedForeground } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useTerminalDimensions } from "@opentui/solid"
-import { Locale } from "@/util/locale"
+import { Locale } from "@/util"
 import type { PromptInfo } from "./history"
 import { useFrecency } from "./frecency"
 
@@ -49,6 +51,7 @@ function extractLineRange(input: string) {
 export type AutocompleteRef = {
   onInput: (value: string) => void
   onKeyDown: (e: KeyEvent) => void
+  onCursorChange: () => void
   visible: false | "@" | "/"
 }
 
@@ -81,6 +84,7 @@ export function Autocomplete(props: {
   const { theme } = useTheme()
   const dimensions = useTerminalDimensions()
   const frecency = useFrecency()
+  const tuiConfig = useTuiConfig()
 
   const [store, setStore] = createStore({
     index: 0,
@@ -108,7 +112,7 @@ export function Autocomplete(props: {
 
   const position = createMemo(() => {
     if (!store.visible) return { x: 0, y: 0, width: 0 }
-    const dims = dimensions()
+    dimensions()
     positionTick()
     const anchor = props.anchor()
     const parent = anchor.parent
@@ -247,7 +251,7 @@ export function Autocomplete(props: {
         const width = props.anchor().width - 4
         options.push(
           ...sortedFiles.map((item): AutocompleteOption => {
-            const baseDir = (sync.data.path.directory || process.cwd()).replace(/\/+$/, "")
+            const baseDir = (sync.path.directory || process.cwd()).replace(/\/+$/, "")
             const fullPath = `${baseDir}/${item}`
             const urlObj = pathToFileURL(fullPath)
             let filename = item
@@ -579,6 +583,18 @@ export function Autocomplete(props: {
             e.preventDefault()
             return
           }
+          // kilocode_change start
+          if (name === "right") {
+            // Right arrow should not accept the suggestion when cursor is not
+            // within the filter region (not near where the suggestion is being added)
+            const cursor = props.input().cursorOffset
+            if (cursor <= store.index) {
+              hide()
+              // Don't preventDefault - let cursor move normally
+              return
+            }
+          }
+          // kilocode_change end
         }
         if (!store.visible) {
           if (e.name === "@") {
@@ -594,6 +610,23 @@ export function Autocomplete(props: {
           }
         }
       },
+      // kilocode_change start
+      onCursorChange() {
+        if (!store.visible) return
+        const cursor = props.input().cursorOffset
+        const value = props.input().plainText
+        if (
+          // Cursor moved before the trigger
+          cursor <= store.index ||
+          // There is a space between the trigger and the cursor
+          props.input().getTextRange(store.index, cursor).match(/\s/) ||
+          // "/<command>" is not the sole content — dismiss slash popup once args are typed
+          (store.visible === "/" && value.match(/^\S+\s+\S+\s*$/))
+        ) {
+          hide()
+        }
+      },
+      // kilocode_change end
     })
   })
 
@@ -605,6 +638,7 @@ export function Autocomplete(props: {
   })
 
   let scroll: ScrollBoxRenderable
+  const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
 
   return (
     <box
@@ -622,6 +656,7 @@ export function Autocomplete(props: {
         backgroundColor={theme.backgroundMenu}
         height={height()}
         scrollbarOptions={{ visible: false }}
+        scrollAcceleration={scrollAcceleration()}
       >
         <Index
           each={options()}

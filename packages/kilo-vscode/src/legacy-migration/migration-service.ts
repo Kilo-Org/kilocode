@@ -15,6 +15,9 @@ import type {
   PermissionObjectConfig,
 } from "@kilocode/sdk/v2/client"
 import { PROVIDER_MAP, UNSUPPORTED_PROVIDERS, DEFAULT_MODE_SLUGS } from "./provider-mapping"
+import type { ProviderMapping } from "./provider-mapping"
+import { NATIVE_MODE_DEFAULTS } from "./native-mode-defaults"
+import { getMigrationErrorMessage } from "./errors/migration-error"
 import type {
   LegacyProviderProfiles,
   LegacyProviderSettings,
@@ -23,23 +26,30 @@ import type {
   LegacyMcpServer,
   LegacySettings,
   LegacyAutocompleteSettings,
+  LegacyPromptComponent,
   LegacyMigrationData,
   MigrationSelections,
   MigrationAutoApprovalSelections,
   MigrationProviderInfo,
   MigrationMcpServerInfo,
   MigrationCustomModeInfo,
-  MigrationResultItem,
+  MigrationSessionInfo,
+  MigrationSessionProgress,
 } from "./legacy-types"
+import { buildSessionMeta, buildSessionProgress } from "./migration-session-progress"
+import type { MigrationResultItem } from "./migration-types"
+import { createSessionID } from "./sessions/lib/ids"
+import { migrate as migrateSession } from "./sessions/migrate"
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const SECRET_KEY = "roo_cline_config_api_config"
+const CODEX_OAUTH_SECRET_KEY = "openai-codex-oauth-credentials"
 const MIGRATION_STATUS_KEY = "kilo.legacyMigrationStatus"
 
-type MigrationStatus = "completed" | "skipped"
+type MigrationStatus = "completed" | "completed_with_errors" | "skipped"
 
 // ---------------------------------------------------------------------------
 // Status helpers
@@ -65,12 +75,18 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
+  const prompts = readLegacyCustomModePrompts(context)
   const settings = readLegacySettings(context)
+  const sessions = await readSessionsInGlobalStorage(context)
 
-  const providers = buildProviderList(profiles)
+  const oauthProviders = new Set<string>()
+  const codexRaw = await context.secrets.get(CODEX_OAUTH_SECRET_KEY)
+  if (codexRaw) oauthProviders.add("openai-codex")
+
+  const providers = buildProviderList(profiles, oauthProviders)
   const mcpServers = buildMcpServerList(mcpSettings)
-  const modes = buildCustomModeList(customModes)
-  const defaultModel = resolveDefaultModel(profiles)
+  const modes = buildCustomModeList(customModes, prompts)
+  const defaultModel = resolveDefaultModel(profiles, oauthProviders)
 
   const hasSettings =
     settings.autoApprovalEnabled !== undefined ||
@@ -86,16 +102,42 @@ export async function detectLegacyData(context: vscode.ExtensionContext): Promis
     Boolean(settings.language) ||
     Boolean(settings.autocomplete)
 
-  const hasData = providers.length > 0 || mcpServers.length > 0 || modes.length > 0 || hasSettings
+  const hasData =
+    providers.length > 0 || mcpServers.length > 0 || modes.length > 0 || hasSettings || sessions.length > 0
 
   return {
     providers,
     mcpServers,
     customModes: modes,
+    sessions: sessions.length > 0 ? sessions : undefined,
     defaultModel,
     settings: hasSettings ? settings : undefined,
     hasData,
   }
+}
+
+async function readSessionsInGlobalStorage(context: vscode.ExtensionContext) {
+  const items = context.globalState.get<{ id: string; task?: string; workspace?: string; ts?: number }[]>(
+    "taskHistory",
+    [],
+  )
+  const base = vscode.Uri.joinPath(context.globalStorageUri, "tasks")
+  const sessions: MigrationSessionInfo[] = []
+  for (const item of items) {
+    const file = vscode.Uri.joinPath(base, item.id, "api_conversation_history.json")
+    const exists = await vscode.workspace.fs.stat(file).then(
+      () => true,
+      () => false,
+    )
+    if (!exists) continue
+    sessions.push({
+      id: item.id,
+      title: item.task?.trim() || item.id,
+      directory: item.workspace?.trim() || "",
+      time: item.ts ?? 0,
+    })
+  }
+  return sessions
 }
 
 // ---------------------------------------------------------------------------
@@ -107,6 +149,11 @@ export type ProgressCallback = (
   status: "migrating" | "success" | "warning" | "error",
   message?: string,
 ) => void
+
+export type SessionProgressCallback = (progress: MigrationSessionProgress) => void
+
+const SESSION_DELAY = 300
+const SESSION_SUMMARY_DELAY = 1000
 
 /**
  * Executes migration for the selected items.
@@ -120,12 +167,16 @@ export async function migrate(
   client: KiloClient,
   selections: MigrationSelections,
   onProgress: ProgressCallback,
+  onSessionProgress?: SessionProgressCallback,
   cachedSettings?: LegacySettings,
+  cachedSessions?: MigrationSessionInfo[],
 ): Promise<MigrationResultItem[]> {
   const profiles = await readLegacyProviderProfiles(context)
   const mcpSettings = await readLegacyMcpSettings(context)
   const customModes = await readLegacyCustomModes(context)
+  const prompts = readLegacyCustomModePrompts(context)
   const legacySettings = cachedSettings ?? readLegacySettings(context)
+  const sessions = cachedSessions ?? (await readSessionsInGlobalStorage(context))
 
   const results: MigrationResultItem[] = []
 
@@ -137,7 +188,7 @@ export async function migrate(
       continue
     }
     onProgress(profileName, "migrating")
-    const result = await migrateProvider(profileName, settings, client)
+    const result = await migrateProvider(context, profileName, settings, client)
     results.push(result)
     onProgress(profileName, result.status, result.message)
   }
@@ -173,21 +224,88 @@ export async function migrate(
   }
 
   // Migrate custom modes as agents
-  if (selections.customModes.length > 0 && customModes) {
+  if (selections.customModes.length > 0) {
     const agentConfig: Record<string, AgentConfig> = {}
+    // Build a lookup of detected modes by slug so we can resolve nativeSlug
+    const detected = buildCustomModeList(customModes, prompts)
     for (const slug of selections.customModes) {
-      const mode = customModes.find((m) => m.slug === slug)
-      if (!mode) {
+      const info = detected.find((m) => m.slug === slug)
+      if (!info) {
         results.push({ item: slug, category: "customMode", status: "error", message: "Mode not found" })
         continue
       }
-      onProgress(mode.name, "migrating")
-      agentConfig[slug] = convertCustomMode(mode)
-      results.push({ item: mode.name, category: "customMode", status: "success" })
-      onProgress(mode.name, "success")
+
+      if (info.nativeSlug) {
+        // Modified native mode — merge YAML custom mode + customModePrompts
+        const merged = buildMergedNativeMode(
+          customModes?.find((m) => m.slug === info.nativeSlug),
+          prompts?.[info.nativeSlug],
+          info.nativeSlug,
+        )
+        if (merged) {
+          onProgress(info.name, "migrating")
+          const agent = convertCustomMode(merged)
+          // Set explicit name so the UI shows "(Custom)" instead of title-casing the slug
+          agent.name = info.name
+          agentConfig[slug] = agent
+          results.push({ item: info.name, category: "customMode", status: "success" })
+          onProgress(info.name, "success")
+        } else {
+          results.push({
+            item: info.name,
+            category: "customMode",
+            status: "error",
+            message: "Failed to build merged mode",
+          })
+        }
+      } else {
+        // Regular custom mode (existing behavior)
+        const mode = customModes?.find((m) => m.slug === slug)
+        if (!mode) {
+          results.push({ item: slug, category: "customMode", status: "error", message: "Mode not found" })
+          continue
+        }
+        onProgress(mode.name, "migrating")
+        agentConfig[slug] = convertCustomMode(mode)
+        results.push({ item: mode.name, category: "customMode", status: "success" })
+        onProgress(mode.name, "success")
+      }
     }
     if (Object.keys(agentConfig).length > 0) {
       await client.global.config.update({ config: { agent: agentConfig } })
+    }
+  }
+
+  if (selections.sessions?.length) {
+    const list = selections.sessions
+    for (const [index, item] of list.entries()) {
+      onProgress(item.id, "migrating")
+      const session = sessions.find((entry: MigrationSessionInfo) => entry.id === item.id)
+      const meta = buildSessionMeta(session, index, list.length)
+      const progress = buildSessionProgress(meta, onSessionProgress)
+      const result = await migrateSession(item, context, client, meta, progress)
+      const reason = result.ok ? "Session migrated" : result.message
+      results.push({
+        item: item.id,
+        category: "session",
+        status: result.ok ? "success" : "error",
+        message: reason,
+      })
+      onProgress(item.id, result.ok ? "success" : "error", reason)
+      if (index < list.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, SESSION_DELAY))
+      }
+    }
+    const last = list.at(-1)
+    const session = last ? sessions.find((item: MigrationSessionInfo) => item.id === last.id) : undefined
+    if (session && onSessionProgress) {
+      onSessionProgress({
+        session,
+        index: list.length,
+        total: list.length,
+        phase: "summary",
+      })
+      await new Promise((resolve) => setTimeout(resolve, SESSION_SUMMARY_DELAY))
     }
   }
 
@@ -245,6 +363,7 @@ export async function migrate(
  */
 export async function clearLegacyData(context: vscode.ExtensionContext): Promise<void> {
   await context.secrets.delete(SECRET_KEY)
+  await context.secrets.delete(CODEX_OAUTH_SECRET_KEY)
 
   const legacyStateKeys = [
     "kilo-code.allowedCommands",
@@ -308,6 +427,7 @@ export async function clearLegacyData(context: vscode.ExtensionContext): Promise
 // ---------------------------------------------------------------------------
 
 async function migrateProvider(
+  context: vscode.ExtensionContext,
   profileName: string,
   settings: LegacyProviderSettings,
   client: KiloClient,
@@ -336,9 +456,52 @@ async function migrateProvider(
     }
   }
 
+  // OAuth providers store credentials in a separate VS Code secret
+  if (mapping.oauthSecretKey) {
+    const creds = await readOAuthCredentials(context, mapping.oauthSecretKey)
+    if (!creds) {
+      return { item: profileName, category: "provider", status: "warning", message: "No OAuth credentials found" }
+    }
+    await client.auth.set({ providerID: mapping.id, auth: { type: "oauth" as const, ...creds } })
+    return { item: profileName, category: "provider", status: "success" }
+  }
+
+  // Providers that use env/ADC-based auth (e.g. Vertex AI) — skip auth.set, only migrate config options
+  if (mapping.skipAuth) {
+    await migrateConfigFields(mapping, settings, client)
+    // Warn users who had inline service account credentials — the CLI uses ADC only
+    const hadCredentials = Boolean(settings.vertexJsonCredentials ?? settings.vertexKeyFile)
+    return {
+      item: profileName,
+      category: "provider",
+      status: hadCredentials ? "warning" : "success",
+      message: hadCredentials
+        ? "Project and location migrated. The new CLI uses Application Default Credentials — set GOOGLE_APPLICATION_CREDENTIALS or run 'gcloud auth application-default login'"
+        : undefined,
+    }
+  }
+
   const apiKey = settings[mapping.key] as string | undefined
   if (!apiKey) {
     return { item: profileName, category: "provider", status: "warning", message: "No API key found in profile" }
+  }
+
+  // The profile endpoint requires type:"oauth". The legacy extension stored the same Kilo
+  // API token — write it in the OAuth format the new extension expects (matching device-auth:
+  // access + refresh + 1-year expiry).
+  if (mapping.id === "kilo") {
+    const org = mapping.organizationIdField ? (settings[mapping.organizationIdField] as string | undefined) : undefined
+    await client.auth.set({
+      providerID: "kilo",
+      auth: {
+        type: "oauth" as const,
+        access: apiKey,
+        refresh: apiKey,
+        expires: Date.now() + 365 * 24 * 60 * 60 * 1000,
+        accountId: org,
+      },
+    })
+    return { item: profileName, category: "provider", status: "success" }
   }
 
   // For providers that support an organization ID (e.g. Kilo Gateway), migrate using OAuth
@@ -363,7 +526,27 @@ async function migrateProvider(
     }
   }
 
+  await migrateConfigFields(mapping, settings, client)
+
   return { item: profileName, category: "provider", status: "success" }
+}
+
+async function migrateConfigFields(
+  mapping: ProviderMapping,
+  settings: LegacyProviderSettings,
+  client: KiloClient,
+): Promise<void> {
+  if (!mapping.configFields?.length) return
+  const opts: Record<string, string> = {}
+  for (const { from, option } of mapping.configFields) {
+    const val = settings[from] as string | undefined
+    if (val) opts[option] = val
+  }
+  if (Object.keys(opts).length > 0) {
+    await client.global.config.update({
+      config: { provider: { [mapping.id]: { options: opts } } },
+    })
+  }
 }
 
 async function migrateDefaultModel(settings: LegacyProviderSettings, client: KiloClient): Promise<MigrationResultItem> {
@@ -564,7 +747,7 @@ async function migrateAutocomplete(settings: LegacyAutocompleteSettings): Promis
       item: "Autocomplete settings",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }
@@ -612,7 +795,7 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
       item: "Language preference",
       category: "settings",
       status: "error",
-      message: err instanceof Error ? err.message : String(err),
+      message: getMigrationErrorMessage(err),
     }
   }
 }
@@ -622,9 +805,18 @@ async function migrateLanguage(language: string): Promise<MigrationResultItem> {
 // ---------------------------------------------------------------------------
 
 function convertMcpServer(server: LegacyMcpServer): McpLocalConfig | McpRemoteConfig | null {
+  const enabled = server.disabled ? { enabled: false as const } : {}
+  // Legacy stores timeout in seconds, the new config expects milliseconds
+  const timeout = server.timeout !== undefined ? server.timeout * 1000 : undefined
   if (server.type === "sse" || server.type === "streamable-http") {
     if (!server.url) return null
-    return { type: "remote", url: server.url, headers: server.headers }
+    return {
+      type: "remote",
+      url: server.url,
+      headers: server.headers,
+      ...(timeout !== undefined && { timeout }),
+      ...enabled,
+    }
   }
   // Default: stdio
   if (!server.command) return null
@@ -633,7 +825,8 @@ function convertMcpServer(server: LegacyMcpServer): McpLocalConfig | McpRemoteCo
     type: "local",
     command,
     environment: server.env,
-    ...(server.timeout !== undefined && { timeout: server.timeout }),
+    ...(timeout !== undefined && { timeout }),
+    ...enabled,
   }
 }
 
@@ -690,13 +883,53 @@ function convertCustomModePermissions(groups: LegacyCustomMode["groups"]): Permi
 }
 
 function convertCustomMode(mode: LegacyCustomMode): AgentConfig {
-  const prompt = [mode.roleDefinition, mode.customInstructions].filter(Boolean).join("\n\n")
+  const parts = [mode.roleDefinition]
+  if (mode.customInstructions?.trim()) {
+    parts.push(
+      [
+        "USER'S CUSTOM INSTRUCTIONS",
+        "",
+        "The following additional instructions are provided by the user, and should be followed to the best of your ability.",
+        "",
+        `Mode-specific Instructions:\n${mode.customInstructions.trim()}`,
+      ].join("\n"),
+    )
+  }
   return {
     mode: "primary",
-    description: mode.customInstructions ?? mode.roleDefinition?.slice(0, 120),
-    prompt,
+    description: mode.description ?? mode.whenToUse ?? mode.roleDefinition?.slice(0, 120),
+    prompt: parts.filter(Boolean).join("\n\n"),
     permission: convertCustomModePermissions(mode.groups),
   }
+}
+
+// ---------------------------------------------------------------------------
+// Internal — OAuth credential helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Reads OAuth credentials stored in a separate VS Code secret (e.g. openai-codex-oauth-credentials).
+ * Returns the fields needed by the CLI's Auth.Oauth type, or null if absent/malformed.
+ */
+async function readOAuthCredentials(
+  context: vscode.ExtensionContext,
+  secretKey: string,
+): Promise<{ access: string; refresh: string; expires: number; accountId?: string } | null> {
+  const raw = await context.secrets.get(secretKey)
+  if (!raw) return null
+  const parsed = (() => {
+    try {
+      return JSON.parse(raw) as Record<string, unknown>
+    } catch {
+      return null
+    }
+  })()
+  if (!parsed) return null
+  const access = parsed.access_token as string | undefined
+  const refresh = parsed.refresh_token as string | undefined
+  const expires = parsed.expires as number | undefined
+  if (!access || !refresh || expires === undefined) return null
+  return { access, refresh, expires, accountId: parsed.accountId as string | undefined }
 }
 
 // ---------------------------------------------------------------------------
@@ -740,6 +973,10 @@ async function readLegacyCustomModes(context: vscode.ExtensionContext): Promise<
   if (!bytes) return null
   const text = Buffer.from(bytes).toString("utf8")
   return parseCustomModesYaml(text)
+}
+
+function readLegacyCustomModePrompts(context: vscode.ExtensionContext): Record<string, LegacyPromptComponent> | null {
+  return context.globalState.get<Record<string, LegacyPromptComponent>>("customModePrompts") ?? null
 }
 
 function readLegacySettings(context: vscode.ExtensionContext): LegacySettings {
@@ -921,7 +1158,10 @@ function parseCustomModesYaml(text: string): LegacyCustomMode[] | null {
 // Internal — building display lists for the wizard
 // ---------------------------------------------------------------------------
 
-function buildProviderList(profiles: LegacyProviderProfiles | null): MigrationProviderInfo[] {
+function buildProviderList(
+  profiles: LegacyProviderProfiles | null,
+  oauthProviders: Set<string>,
+): MigrationProviderInfo[] {
   if (!profiles?.apiConfigs) return []
 
   return Object.entries(profiles.apiConfigs).map(([profileName, settings]) => {
@@ -932,7 +1172,13 @@ function buildProviderList(profiles: LegacyProviderProfiles | null): MigrationPr
     const modelField = mapping?.modelField ?? "apiModelId"
     const model = settings[modelField] as string | undefined
 
-    const hasApiKey = mapping ? Boolean(settings[mapping.key]) : false
+    const hasApiKey = mapping?.oauthSecretKey
+      ? oauthProviders.has(provider)
+      : mapping?.skipAuth
+        ? (mapping.configFields?.some((f) => Boolean(settings[f.from])) ?? false)
+        : mapping
+          ? Boolean(settings[mapping.key])
+          : false
 
     return {
       profileName,
@@ -947,22 +1193,117 @@ function buildProviderList(profiles: LegacyProviderProfiles | null): MigrationPr
 
 function buildMcpServerList(settings: LegacyMcpSettings | null): MigrationMcpServerInfo[] {
   if (!settings?.mcpServers) return []
-  return Object.entries(settings.mcpServers)
-    .filter(([, server]) => !server.disabled)
-    .map(([name, server]) => ({ name, type: server.type ?? "stdio" }))
+  return Object.entries(settings.mcpServers).map(([name, server]) => ({
+    name,
+    type: server.type ?? "stdio",
+    disabled: server.disabled,
+  }))
 }
 
-function buildCustomModeList(modes: LegacyCustomMode[] | null): MigrationCustomModeInfo[] {
-  if (!modes) return []
-  return modes.filter((m) => !DEFAULT_MODE_SLUGS.has(m.slug)).map((m) => ({ name: m.name, slug: m.slug }))
+/** @internal — exported for testing only */
+export function buildCustomModeList(
+  modes: LegacyCustomMode[] | null,
+  prompts: Record<string, LegacyPromptComponent> | null,
+): MigrationCustomModeInfo[] {
+  const result: MigrationCustomModeInfo[] = []
+
+  // Non-native custom modes (existing behavior)
+  if (modes) {
+    for (const m of modes) {
+      if (!DEFAULT_MODE_SLUGS.has(m.slug)) {
+        result.push({ name: m.name, slug: m.slug })
+      }
+    }
+  }
+
+  // Modified native modes — detect user modifications and offer migration under a new slug
+  for (const slug of DEFAULT_MODE_SLUGS) {
+    const defaults = NATIVE_MODE_DEFAULTS[slug]
+    if (!defaults) continue // "build" has no legacy defaults
+
+    const yaml = modes?.find((m) => m.slug === slug)
+    const prompt = prompts?.[slug]
+
+    if (!isNativeModeModified(yaml, prompt, defaults)) continue
+
+    const name = yaml?.name ?? defaults.name
+    result.push({ name: `${name} (Custom)`, slug: `${slug}-custom`, nativeSlug: slug })
+  }
+
+  return result
 }
 
-function resolveDefaultModel(profiles: LegacyProviderProfiles | null): { provider: string; model: string } | undefined {
+/**
+ * Checks whether a native mode has been meaningfully modified from its defaults.
+ * A full YAML override always counts as modified. For customModePrompts, we compare
+ * each field against the known default and only count it if it actually differs.
+ * @internal — exported for testing only
+ */
+export function isNativeModeModified(
+  yaml: LegacyCustomMode | undefined,
+  prompt: LegacyPromptComponent | undefined,
+  defaults: { roleDefinition: string; customInstructions?: string; whenToUse?: string; description?: string },
+): boolean {
+  if (yaml) return true
+  if (!prompt) return false
+
+  if (prompt.roleDefinition && prompt.roleDefinition !== defaults.roleDefinition) return true
+  if (prompt.customInstructions && prompt.customInstructions !== (defaults.customInstructions ?? "")) return true
+  if (prompt.whenToUse && prompt.whenToUse !== (defaults.whenToUse ?? "")) return true
+  if (prompt.description && prompt.description !== (defaults.description ?? "")) return true
+
+  return false
+}
+
+/**
+ * Builds a merged LegacyCustomMode for a modified native mode by combining the YAML
+ * custom mode (if any) with customModePrompts overrides. When only prompts exist, the
+ * native defaults provide the base structure (name, groups).
+ * @internal — exported for testing only
+ */
+export function buildMergedNativeMode(
+  yaml: LegacyCustomMode | undefined,
+  prompt: LegacyPromptComponent | undefined,
+  slug: string,
+): LegacyCustomMode | null {
+  const defaults = NATIVE_MODE_DEFAULTS[slug]
+  if (!defaults) return null
+
+  const base: LegacyCustomMode = yaml
+    ? { ...yaml }
+    : {
+        slug,
+        name: defaults.name,
+        roleDefinition: defaults.roleDefinition,
+        customInstructions: defaults.customInstructions,
+        whenToUse: defaults.whenToUse,
+        description: defaults.description,
+        groups: [...defaults.groups],
+      }
+
+  // Overlay customModePrompts on top (matching legacy runtime behavior)
+  if (prompt) {
+    if (prompt.roleDefinition) base.roleDefinition = prompt.roleDefinition
+    if (prompt.customInstructions) base.customInstructions = prompt.customInstructions
+    if (prompt.whenToUse) base.whenToUse = prompt.whenToUse
+    if (prompt.description) base.description = prompt.description
+  }
+
+  return base
+}
+
+function resolveDefaultModel(
+  profiles: LegacyProviderProfiles | null,
+  oauthProviders: Set<string>,
+): { provider: string; model: string } | undefined {
   if (!profiles?.currentApiConfigName) return undefined
   const active = profiles.apiConfigs[profiles.currentApiConfigName]
   if (!active?.apiProvider) return undefined
   const mapping = PROVIDER_MAP[active.apiProvider]
   if (!mapping) return undefined
+  // If the active profile requires OAuth credentials (e.g. openai-codex) but they are
+  // unavailable, do not offer default-model migration — it would write a broken reference.
+  if (mapping.oauthSecretKey && !oauthProviders.has(active.apiProvider)) return undefined
   const modelField = mapping.modelField ?? "apiModelId"
   const model = active[modelField] as string | undefined
   if (!model) return undefined

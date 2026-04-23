@@ -20,6 +20,7 @@ export interface AnnotationMeta {
   file: string
   side: AnnotationSide
   line: number
+  editing?: boolean
 }
 
 interface AnnotationHandlers {
@@ -69,6 +70,35 @@ function makeActionButton(title: string, icon: SVGSVGElement, action: () => void
     action()
   })
   return button
+}
+
+export function buildFileAnnotations(
+  file: string,
+  fileComments: ReviewComment[],
+  edit: string | null,
+  draft: { file: string; side: AnnotationSide; line: number } | null,
+  draftMeta: AnnotationMeta | null,
+): { annotations: DiffLineAnnotation<AnnotationMeta>[]; draftMeta: AnnotationMeta | null } {
+  const result: DiffLineAnnotation<AnnotationMeta>[] = fileComments.map((c) => ({
+    side: c.side,
+    lineNumber: c.line,
+    metadata: {
+      type: "comment" as const,
+      comment: c,
+      file: c.file,
+      side: c.side,
+      line: c.line,
+      editing: c.id === edit,
+    },
+  }))
+
+  if (draft && draft.file === file) {
+    if (!draftMeta || draftMeta.file !== draft.file || draftMeta.side !== draft.side || draftMeta.line !== draft.line) {
+      draftMeta = { type: "draft", comment: null, file: draft.file, side: draft.side, line: draft.line }
+    }
+    result.push({ side: draft.side, lineNumber: draft.line, metadata: draftMeta })
+  }
+  return { annotations: result, draftMeta }
 }
 
 export function buildReviewAnnotation(
@@ -146,7 +176,7 @@ export function buildReviewAnnotation(
   }
 
   const comment = meta.comment!
-  if (handlers.editing === comment.id) {
+  if (meta.editing) {
     wrapper.className = "am-annotation am-annotation-draft"
 
     const header = document.createElement("div")
@@ -221,7 +251,11 @@ export function buildReviewAnnotation(
 
   actions.appendChild(
     makeActionButton(handlers.labels.sendToChat, makeIcon("M1 1l14 7-14 7V9l10-1L1 7z"), () => {
-      window.dispatchEvent(new MessageEvent("message", { data: { type: "appendReviewComments", comments: [comment] } }))
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          data: { type: "appendReviewComments", comments: [comment], autoSend: true },
+        }),
+      )
       handlers.deleteComment(comment.id)
     }),
   )

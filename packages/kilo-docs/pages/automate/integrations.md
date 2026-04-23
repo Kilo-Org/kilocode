@@ -9,10 +9,10 @@ Kilo Integrations lets you connect your GitHub or GitLab account (soon Bitbucket
 
 ## Supported Platforms
 
-| Platform | Integration Type | Details                           |
-| -------- | ---------------- | --------------------------------- |
-| GitHub   | GitHub App       | [GitHub Setup](#connecting-github)|
-| GitLab   | OAuth or PAT     | [GitLab Setup](#connecting-gitlab)|
+| Platform | Integration Type | Details                            |
+| -------- | ---------------- | ---------------------------------- |
+| GitHub   | GitHub App       | [GitHub Setup](#connecting-github) |
+| GitLab   | OAuth or PAT     | [GitLab Setup](#connecting-gitlab) |
 
 ## What You Can Do With Integrations
 

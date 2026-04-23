@@ -26,12 +26,14 @@ import { $ } from "bun"
 import { Glob } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { defaultConfig } from "../utils/config"
+import { oursHasKilocodeChanges } from "../utils/git"
 
 export interface I18nTransformResult {
   file: string
   replacements: number
   preserved: number
   dryRun: boolean
+  flagged?: boolean
 }
 
 export interface I18nTransformOptions {
@@ -300,6 +302,13 @@ export async function transformConflictedI18n(
   for (const file of files) {
     if (!isI18nFile(file)) {
       debug(`Skipping non-i18n file: ${file}`)
+      continue
+    }
+
+    // If our version has kilocode_change markers, flag for manual resolution
+    if (!options.dryRun && (await oursHasKilocodeChanges(file))) {
+      warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+      results.push({ file, replacements: 0, preserved: 0, dryRun: false, flagged: true })
       continue
     }
 

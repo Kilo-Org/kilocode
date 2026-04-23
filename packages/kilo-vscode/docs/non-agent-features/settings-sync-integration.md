@@ -1,7 +1,6 @@
 # Settings Sync Integration
 
 **Priority:** P3
-**Status:** ❌ Not started
 
 ## Remaining Work
 

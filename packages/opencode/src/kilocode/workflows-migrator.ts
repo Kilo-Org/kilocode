@@ -1,14 +1,20 @@
-
 import * as fs from "fs/promises"
 import * as path from "path"
 import os from "os"
-import type { Config } from "../config/config"
-import { Filesystem } from "../util/filesystem"
+import type { Config } from "../config"
+import type { ConfigCommand } from "../config"
+import { Filesystem } from "../util"
 import { KilocodePaths } from "./paths"
 
 export namespace WorkflowsMigrator {
-  const KILOCODE_WORKFLOWS_DIR = ".kilocode/workflows"
-  const GLOBAL_WORKFLOWS_DIR = path.join(os.homedir(), ".kilocode", "workflows")
+  const home = () => process.env.HOME || process.env.USERPROFILE || os.homedir()
+
+  // .kilocode first (lower precedence), .kilo second (higher precedence / wins)
+  const KILO_WORKFLOWS_DIRS = [".kilocode/workflows", ".kilo/workflows"]
+  const globalWorkflowsDirs = () => [
+    path.join(home(), ".kilocode", "workflows"),
+    path.join(home(), ".kilo", "workflows"),
+  ]
 
   export interface KilocodeWorkflow {
     name: string
@@ -18,7 +24,7 @@ export namespace WorkflowsMigrator {
   }
 
   export interface MigrationResult {
-    commands: Record<string, Config.Command>
+    commands: Record<string, ConfigCommand.Info>
     warnings: string[]
   }
 
@@ -72,18 +78,21 @@ export namespace WorkflowsMigrator {
       const vscodeWorkflowsDir = path.join(KilocodePaths.vscodeGlobalStorage(), "workflows")
       workflows.push(...(await loadWorkflowsFromDir(vscodeWorkflowsDir, "global")))
 
-      // 2. Home directory ~/.kilocode/workflows (fallback/alternative location)
-      workflows.push(...(await loadWorkflowsFromDir(GLOBAL_WORKFLOWS_DIR, "global")))
+      // 2. Home directories ~/.kilocode/workflows and ~/.kilo/workflows
+      for (const dir of globalWorkflowsDirs()) {
+        workflows.push(...(await loadWorkflowsFromDir(dir, "global")))
+      }
     }
 
-    // 3. Project workflows (.kilocode/workflows/)
-    const projectWorkflowsDir = path.join(projectDir, KILOCODE_WORKFLOWS_DIR)
-    workflows.push(...(await loadWorkflowsFromDir(projectWorkflowsDir, "project")))
+    // 3. Project workflows (.kilo/workflows/ and .kilocode/workflows/)
+    for (const dir of KILO_WORKFLOWS_DIRS) {
+      workflows.push(...(await loadWorkflowsFromDir(path.join(projectDir, dir), "project")))
+    }
 
     return workflows
   }
 
-  export function convertToCommand(workflow: KilocodeWorkflow): Config.Command {
+  export function convertToCommand(workflow: KilocodeWorkflow): ConfigCommand.Info {
     return {
       template: workflow.content,
       description: extractDescription(workflow.content) ?? `Workflow: ${workflow.name}`,
@@ -96,7 +105,7 @@ export namespace WorkflowsMigrator {
     skipGlobalPaths?: boolean
   }): Promise<MigrationResult> {
     const warnings: string[] = []
-    const commands: Record<string, Config.Command> = {}
+    const commands: Record<string, ConfigCommand.Info> = {}
 
     const workflows = await discoverWorkflows(options.projectDir, options.skipGlobalPaths)
 

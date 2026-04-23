@@ -47,7 +47,6 @@ export class FimPromptBuilder {
     }
 
     return {
-      strategy: "fim",
       formattedPrefix,
       prunedSuffix,
       autocompleteInput,

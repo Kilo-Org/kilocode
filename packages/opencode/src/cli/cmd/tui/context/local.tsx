@@ -1,4 +1,5 @@
 import { createStore } from "solid-js/store"
+import { createSimpleContext } from "./helper"
 import { batch, createEffect, createMemo } from "solid-js"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
@@ -6,13 +7,19 @@ import { uniqueBy } from "remeda"
 import path from "path"
 import { Global } from "@/global"
 import { iife } from "@/util/iife"
-import { createSimpleContext } from "./helper"
 import { useToast } from "../ui/toast"
-import { Provider } from "@/provider/provider"
 import { useArgs } from "./args"
 import { useSDK } from "./sdk"
 import { RGBA } from "@opentui/core"
-import { Filesystem } from "@/util/filesystem"
+import { Filesystem } from "@/util"
+
+export function parseModel(model: string) {
+  const [providerID, ...rest] = model.split("/")
+  return {
+    providerID: providerID,
+    modelID: rest.join("/"),
+  }
+}
 
 export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
   name: "Local",
@@ -37,10 +44,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const agent = iife(() => {
       const agents = createMemo(() => sync.data.agent.filter((x) => x.mode !== "subagent" && !x.hidden))
       const visibleAgents = createMemo(() => sync.data.agent.filter((x) => !x.hidden))
-      const [agentStore, setAgentStore] = createStore<{
-        current: string
-      }>({
-        current: agents()[0].name,
+      const [agentStore, setAgentStore] = createStore({
+        current: undefined as string | undefined,
       })
       const { theme } = useTheme()
       const colors = createMemo(() => [
@@ -57,7 +62,13 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return agents()
         },
         current() {
-          return agents().find((x) => x.name === agentStore.current)!
+          // kilocode_change start - fall back to first agent when current is removed (e.g. org switch)
+          const found = agents().find((x) => x.name === agentStore.current)
+          if (found) return found
+          const fallback = agents().at(0)
+          if (fallback) setAgentStore("current", fallback.name)
+          return fallback
+          // kilocode_change end
         },
         set(name: string) {
           if (!agents().some((x) => x.name === name))
@@ -74,6 +85,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             if (next < 0) next = agents().length - 1
             if (next >= agents().length) next = 0
             const value = agents()[next]
+            if (!value) return // kilocode_change - guard against empty agent list during org switch
             setAgentStore("current", value.name)
           })
         },
@@ -132,6 +144,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
         state.pending = false
         Filesystem.writeJson(filePath, {
+          model: modelStore.model, // kilocode_change
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
@@ -142,6 +155,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         .then((x: any) => {
           if (Array.isArray(x.recent)) setModelStore("recent", x.recent)
           if (Array.isArray(x.favorite)) setModelStore("favorite", x.favorite)
+          if (typeof x.model === "object" && x.model !== null) setModelStore("model", x.model) // kilocode_change
           if (typeof x.variant === "object" && x.variant !== null) setModelStore("variant", x.variant)
         })
         .catch(() => {})
@@ -153,7 +167,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const args = useArgs()
       const fallbackModel = createMemo(() => {
         if (args.model) {
-          const { providerID, modelID } = Provider.parseModel(args.model)
+          const { providerID, modelID } = parseModel(args.model)
           if (isModelValid({ providerID, modelID })) {
             return {
               providerID,
@@ -163,7 +177,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         }
 
         if (sync.data.config.model) {
-          const { providerID, modelID } = Provider.parseModel(sync.data.config.model)
+          const { providerID, modelID } = parseModel(sync.data.config.model)
           if (isModelValid({ providerID, modelID })) {
             return {
               providerID,
@@ -192,10 +206,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
       const currentModel = createMemo(() => {
         const a = agent.current()
+        if (!a) return fallbackModel() // kilocode_change - guard against empty agent list
         return (
           getFirstValidModel(
-            () => modelStore.model[a.name],
-            () => a.model,
+            () => a && modelStore.model[a.name],
+            () => a && a.model,
             fallbackModel,
           ) ?? undefined
         )
@@ -206,6 +221,11 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         get ready() {
           return modelStore.ready
         },
+        // kilocode_change start - expose saved per-agent pick for auto-apply guard
+        saved(name: string) {
+          return modelStore.model[name]
+        },
+        // kilocode_change end
         recent() {
           return modelStore.recent
         },
@@ -240,7 +260,10 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (next >= recent.length) next = 0
           const val = recent[next]
           if (!val) return
-          setModelStore("model", agent.current().name, { ...val })
+          const a = agent.current()
+          if (!a) return
+          setModelStore("model", a.name, { ...val })
+          save() // kilocode_change
         },
         cycleFavorite(direction: 1 | -1) {
           const favorites = modelStore.favorite.filter((item) => isModelValid(item))
@@ -266,7 +289,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
           const next = favorites[index]
           if (!next) return
-          setModelStore("model", agent.current().name, { ...next })
+          const a = agent.current()
+          if (!a) return
+          setModelStore("model", a.name, { ...next })
           const uniq = uniqueBy([next, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
           if (uniq.length > 10) uniq.pop()
           setModelStore(
@@ -285,7 +310,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               })
               return
             }
-            setModelStore("model", agent.current().name, model)
+            const a = agent.current()
+            if (!a) return
+            setModelStore("model", a.name, model)
             if (options?.recent) {
               const uniq = uniqueBy([model, ...modelStore.recent], (x) => `${x.providerID}/${x.modelID}`)
               if (uniq.length > 10) uniq.pop()
@@ -293,8 +320,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
                 "recent",
                 uniq.map((x) => ({ providerID: x.providerID, modelID: x.modelID })),
               )
-              save()
             }
+            save() // kilocode_change
           })
         },
         toggleFavorite(model: { providerID: string; modelID: string }) {
@@ -321,11 +348,17 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           })
         },
         variant: {
-          current() {
+          selected() {
             const m = currentModel()
             if (!m) return undefined
             const key = `${m.providerID}/${m.modelID}`
             return modelStore.variant[key]
+          },
+          current() {
+            const v = this.selected()
+            if (!v) return undefined
+            if (!this.list().includes(v)) return undefined
+            return v
           },
           list() {
             const m = currentModel()
@@ -339,7 +372,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             const m = currentModel()
             if (!m) return
             const key = `${m.providerID}/${m.modelID}`
-            setModelStore("variant", key, value)
+            setModelStore("variant", key, value ?? "default")
             save()
           },
           cycle() {
@@ -380,7 +413,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
 
     // Automatically update model when agent changes
     createEffect(() => {
+      // kilocode_change start - wait for persistence load and skip when a per-agent pick already exists (#9050)
+      if (!model.ready) return
       const value = agent.current()
+      if (!value) return // guard against empty agent list during org switch
+      if (model.saved(value.name)) return
+      // kilocode_change end
       if (value.model) {
         if (isModelValid(value.model))
           model.set({

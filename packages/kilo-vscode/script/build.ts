@@ -6,8 +6,9 @@ import { existsSync, mkdirSync, rmSync, chmodSync } from "node:fs"
 const packageJsonPath = join(import.meta.dir, "..", "package.json")
 const packageJson = await Bun.file(packageJsonPath).json()
 const version = process.env.KILO_VERSION ? process.env.KILO_VERSION : packageJson.version
+const prerelease = process.env.KILO_PRE_RELEASE === "true"
 
-console.log(`Building VSCode extension version: ${version}`)
+console.log(`Building VSCode extension version: ${version}${prerelease ? " (pre-release)" : ""}`)
 
 if (packageJson.version !== version) {
   console.log(`Updating package.json version from ${packageJson.version} to ${version}`)
@@ -30,6 +31,7 @@ const targets = [
   { target: "darwin-x64", cliDir: "@kilocode/cli-darwin-x64", binary: "kilo" },
   { target: "darwin-arm64", cliDir: "@kilocode/cli-darwin-arm64", binary: "kilo" },
   { target: "win32-x64", cliDir: "@kilocode/cli-windows-x64", binary: "kilo.exe" },
+  { target: "win32-arm64", cliDir: "@kilocode/cli-windows-arm64", binary: "kilo.exe" },
 ]
 
 const binDir = join(import.meta.dir, "..", "bin")
@@ -79,9 +81,11 @@ for (const config of targets) {
 
   console.log(`  ✅ Binary ready at ${targetBinary}`)
 
-  console.log(`  📦 Packaging .vsix for ${config.target}...`)
+  console.log(`  📦 Packaging .vsix for ${config.target}${prerelease ? " (pre-release)" : ""}...`)
   const vsixPath = join(outDir, `kilo-vscode-${config.target}.vsix`)
-  await $`vsce package --pre-release --no-dependencies --skip-license --target ${config.target} -o ${vsixPath}`.env({
+  const args = ["--no-dependencies", "--skip-license", "--target", config.target, "-o", vsixPath]
+  if (prerelease) args.push("--pre-release")
+  await $`vsce package ${args}`.env({
     ...process.env,
     npm_config_ignore_scripts: "true",
   })

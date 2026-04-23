@@ -3,12 +3,14 @@
  * Text input with send/abort buttons, ghost-text autocomplete, and @ file mention support
  */
 
-import { Component, createSignal, createEffect, on, For, Index, onCleanup, onMount, Show, untrack } from "solid-js"
+import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
@@ -19,18 +21,23 @@ import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
-import { useImageAttachments } from "../../hooks/useImageAttachments"
+import { useTerminalContext } from "../../hooks/useTerminalContext"
+import { hasTerminalMention } from "../../hooks/terminal-context-utils"
+import { useSlashCommand } from "../../hooks/useSlashCommand"
+import { useGhostText } from "../../hooks/useGhostText"
+import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
+import { convertToMentionPath } from "../../utils/path-mentions"
+import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments } from "./prompt-input-utils"
-import type { ReviewComment } from "../../types/messages"
+import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
+import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
-
-const AUTOCOMPLETE_DEBOUNCE_MS = 500
-const MIN_TEXT_LENGTH = 3
+import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
 
 // Per-session input text storage (module-level so it survives remounts)
 const drafts = new Map<string, string>()
 const reviewDrafts = new Map<string, ReviewComment[]>()
+const imageDrafts = new Map<string, ImageAttachment[]>()
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
   if (incoming.length === 0) return current
@@ -41,33 +48,81 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
   return [...map.values()]
 }
 
-export const PromptInput: Component = () => {
+interface PromptInputProps {
+  blocked?: () => boolean
+  /** When true, session is busy only because a suggestion is pending — treat as idle for input */
+  suggesting?: () => boolean
+  /** When true, session is busy only because a question is pending — treat as idle for input */
+  questioning?: () => boolean
+  boxId?: string
+  pendingSessionID?: string
+}
+
+export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(vscode)
+  const mention = useFileMention(
+    vscode,
+    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
+  )
+  const terminal = useTerminalContext(vscode)
+  const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
+  imageAttach.setFilePathDropHandler((paths) => {
+    const cwd = server.workspaceDirectory()
+    const resolved = paths.map((p) => convertToMentionPath(p, cwd))
+    const ref = textareaRef
+    if (!ref) return
+    const val = ref.value
+    const cursor = ref.selectionStart ?? val.length
+    const before = val.substring(0, cursor)
+    const after = val.substring(cursor)
+    const inserted = resolved.map((p) => `@${p}`).join(" ")
+    const result = before + inserted + " " + after
+    ref.value = result
+    setText(result)
+    mention.addPaths(resolved, cwd)
+    const pos = cursor + inserted.length + 1
+    ref.setSelectionRange(pos, pos)
+    ref.focus()
+    adjustHeight()
+  })
+  const history = usePromptHistory()
 
-  const sessionKey = () => session.currentSessionID() ?? "__new__"
+  const boxKey = () => props.boxId ?? "prompt:default"
+  const rawKey = () =>
+    sessionDraftKey(session.currentSessionID()) ??
+    pendingDraftKey(props.pendingSessionID ?? session.draftSessionID()) ??
+    "new"
+  const draftKey = () => scopeDraftKey(boxKey(), rawKey())
+  const saveDraft = (key: string, next: string, comments: ReviewComment[], imgs: ImageAttachment[]) => {
+    if (next) drafts.set(key, next)
+    else drafts.delete(key)
+    if (comments.length > 0) reviewDrafts.set(key, comments)
+    else reviewDrafts.delete(key)
+    if (imgs.length > 0) imageDrafts.set(key, imgs)
+    else imageDrafts.delete(key)
+  }
 
   const [text, setText] = createSignal("")
-  const [ghostText, setGhostText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
-  const [chatAutocompleteEnabled, setChatAutocompleteEnabled] = createSignal(false)
   const [enhancing, setEnhancing] = createSignal(false)
   let enhanceCounter = 0
   let preEnhanceText: string | null = null
 
+  const ghost = useGhostText(vscode, text, () => server.isConnected())
+
   const replaceReviewComments = (next: ReviewComment[]) => {
     setReviewComments(next)
     if (next.length === 0) {
-      reviewDrafts.delete(sessionKey())
+      reviewDrafts.delete(draftKey())
       return
     }
-    reviewDrafts.set(sessionKey(), next)
+    reviewDrafts.set(draftKey(), next)
   }
 
   const clearReviewComments = () => replaceReviewComments([])
@@ -127,23 +182,22 @@ export const PromptInput: Component = () => {
   let textareaRef: HTMLTextAreaElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
-  let debounceTimer: ReturnType<typeof setTimeout> | undefined
-  let requestCounter = 0
+  let slashDropdownRef: HTMLDivElement | undefined
   // Save/restore input text when switching sessions.
-  // Uses `on()` to track only sessionKey — avoids re-running on every keystroke.
+  // Uses `on()` to track only draftKey — avoids re-running on every keystroke.
   createEffect(
-    on(sessionKey, (key, prev) => {
+    on(draftKey, (key, prev) => {
       if (prev !== undefined && prev !== key) {
-        drafts.set(prev, untrack(text))
-        const pending = untrack(reviewComments)
-        if (pending.length > 0) reviewDrafts.set(prev, pending)
-        else reviewDrafts.delete(prev)
+        saveDraft(prev, untrack(text), untrack(reviewComments), untrack(imageAttach.images))
       }
       const draft = drafts.get(key) ?? ""
       const pending = reviewDrafts.get(key) ?? []
       setText(draft)
-      setGhostText("")
       setReviewComments(pending)
+      imageAttach.replace(imageDrafts.get(key) ?? [])
+      setEnhancing(false)
+      preEnhanceText = null
+      history.reset()
       if (textareaRef) {
         textareaRef.value = draft
         // Reset height then adjust
@@ -154,43 +208,98 @@ export const PromptInput: Component = () => {
     }),
   )
 
+  // Seed prompt history from the current session's user messages (e.g., when a
+  // session is loaded that has existing conversation). Tracks userMessages()
+  // reactively so newly loaded sessions automatically contribute to history.
+  // Strip review-comment markdown prefix so only the user's draft is stored.
+  const REVIEW_PREFIX = /^## Review Comments\n[\s\S]*?\n\n/
+  createEffect(() => {
+    const msgs = session.userMessages()
+    if (msgs.length === 0) return
+    const texts = msgs.map((m) => {
+      const parts = session.getParts(m.id)
+      const raw = parts
+        .filter((p): p is TextPart => p.type === "text")
+        .map((p) => p.text)
+        .join("")
+      return raw.replace(REVIEW_PREFIX, "")
+    })
+    history.seed(texts)
+  })
+
   // Focus textarea when any part of the app requests it
-  const onFocusPrompt = () => textareaRef?.focus()
+  const onFocusPrompt = (event: Event) => {
+    const focus = () => {
+      const ref = textareaRef
+      if (!ref) return
+      ref.focus({ preventScroll: true })
+    }
+    focus()
+    if (!(event instanceof CustomEvent) || !event.detail?.restore) return
+    const restore = () => {
+      window.focus()
+      focus()
+    }
+    queueMicrotask(restore)
+    requestAnimationFrame(() => {
+      restore()
+      requestAnimationFrame(restore)
+      setTimeout(restore, 0)
+      setTimeout(restore, 50)
+    })
+  }
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
-    const prompt = text().trim()
-    // Pre-populate the draft for the new (empty) session so the effect restores it
-    if (prompt) drafts.set("__new__", prompt)
+    const draft = text().trim()
+    const comments = reviewComments()
+    const imgs = imageAttach.images()
     session.clearCurrentSession()
+    // After clearing, draftKey() points to the "new" bucket — save there
+    // so the session-switch effect restores the prompt in the new-task view.
+    saveDraft(draftKey(), draft, comments, imgs)
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
 
-  const isBusy = () => session.status() === "busy"
+  // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
+  const onCompact = () => {
+    if (session.status() === "busy") return
+    if (session.messages().length === 0) return
+    if (!session.selected()) return
+    session.compact()
+  }
+  window.addEventListener("compactSession", onCompact)
+  onCleanup(() => window.removeEventListener("compactSession", onCompact))
+
+  const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
-  const canSend = () =>
-    (text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0) &&
-    !isBusy() &&
-    !isDisabled()
+  const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
+  const showStop = () => isBusy() && !hasInput()
+  const isAtEnd = () =>
+    textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
+  const highlightMentions = () => {
+    const paths = new Set(mention.mentionedPaths())
+    if (hasTerminalMention(text())) paths.add("terminal")
+    return paths
+  }
+  const placeholder = () => {
+    switch (server.connectionState()) {
+      case "connecting":
+        return language.t("prompt.placeholder.connecting")
+      case "error":
+        return language.t("prompt.placeholder.error")
+      default:
+        return language.t("prompt.placeholder.default")
+    }
+  }
 
   const unsubscribe = vscode.onMessage((message) => {
-    if (message.type === "chatCompletionResult") {
-      const result = message as { type: "chatCompletionResult"; text: string; requestId: string }
-      if (result.requestId === `chat-ac-${requestCounter}` && result.text) {
-        setGhostText(result.text)
-      }
-    }
-
-    if (message.type === "autocompleteSettingsLoaded") {
-      setChatAutocompleteEnabled(message.settings.enableChatAutocomplete)
-    }
-
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
-      setGhostText("")
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -202,25 +311,79 @@ export const PromptInput: Component = () => {
       const separator = current && !current.endsWith("\n") ? "\n\n" : ""
       const next = current + separator + message.text
       setText(next)
-      setGhostText("")
       if (textareaRef) {
         textareaRef.value = next
         adjustHeight()
         textareaRef.focus()
         textareaRef.scrollTop = textareaRef.scrollHeight
+        syncHighlightScroll()
       }
     }
 
     if (message.type === "appendReviewComments") {
+      const empty = !text().trim() && reviewComments().length === 0 && imageAttach.images().length === 0
       const merged = mergeReviewComments(reviewComments(), message.comments)
       replaceReviewComments(merged)
-      textareaRef?.focus()
+      if (message.autoSend && empty && !isDisabled() && !props.blocked?.()) {
+        void handleSend()
+      } else {
+        textareaRef?.focus()
+      }
     }
 
     if (message.type === "triggerTask") {
-      if (isBusy() || isDisabled()) return
+      if (isDisabled()) return
       const sel = session.selected()
       session.sendMessage(message.text, sel?.providerID, sel?.modelID)
+    }
+
+    if (message.type === "sendMessageFailed") {
+      const failed = message as import("../../types/messages").SendMessageFailedMessage
+      // Only restore draft if the failure is for the current session and the
+      // input is empty (user hasn't started typing something new).
+      const target = scopeDraftKey(
+        boxKey(),
+        sessionDraftKey(failed.sessionID) ?? pendingDraftKey(failed.draftID) ?? "new",
+      )
+      if (target === draftKey() && !text().trim() && imageAttach.images().length === 0) {
+        if (failed.text) {
+          setText(failed.text)
+          if (textareaRef) {
+            textareaRef.value = failed.text
+            adjustHeight()
+            textareaRef.focus()
+          }
+        }
+        const images = (failed.files ?? [])
+          .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
+          .map((f) => ({
+            id: crypto.randomUUID(),
+            filename: f.filename ?? "image",
+            mime: f.mime,
+            dataUrl: f.url,
+          }))
+        if (images.length > 0) {
+          imageAttach.replace(images)
+          imageDrafts.set(target, images)
+        }
+      }
+    }
+
+    if (message.type === "sessionCreated" && message.draftID) {
+      const target = scopeDraftKey(boxKey(), pendingDraftKey(message.draftID) ?? "new")
+      const next = scopeDraftKey(boxKey(), sessionDraftKey(message.session.id) ?? "new")
+      const draft = drafts.get(target)
+      const pending = reviewDrafts.get(target)
+      const imgs = imageDrafts.get(target)
+      if (draft !== undefined) drafts.set(next, draft)
+      if (pending) reviewDrafts.set(next, pending)
+      if (imgs) imageDrafts.set(next, imgs)
+      drafts.delete(target)
+      reviewDrafts.delete(target)
+      imageDrafts.delete(target)
+      if (!session.currentSessionID() && (props.pendingSessionID ?? session.draftSessionID()) === message.draftID) {
+        session.setDraftSessionID(message.session.id)
+      }
     }
 
     if (message.type === "action" && message.action === "focusInput") {
@@ -229,9 +392,8 @@ export const PromptInput: Component = () => {
 
     if (message.type === "enhancePromptResult") {
       const result = message as import("../../types/messages").EnhancePromptResultMessage
-      if (result.requestId === `enhance-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
         setText(result.text)
-        setGhostText("")
         setEnhancing(false)
         if (textareaRef) {
           textareaRef.value = result.text
@@ -243,57 +405,45 @@ export const PromptInput: Component = () => {
 
     if (message.type === "enhancePromptError") {
       const result = message as import("../../types/messages").EnhancePromptErrorMessage
-      if (result.requestId === `enhance-${enhanceCounter}`) {
+      if (result.requestId === `enhance-${draftKey()}-${enhanceCounter}`) {
         setEnhancing(false)
       }
     }
   })
 
-  onMount(() => {
-    vscode.postMessage({ type: "requestAutocompleteSettings" })
-  })
-
   onCleanup(() => {
     // Persist current draft before unmounting
-    const current = text()
-    if (current) drafts.set(sessionKey(), current)
-    const pending = reviewComments()
-    if (pending.length > 0) reviewDrafts.set(sessionKey(), pending)
-    else reviewDrafts.delete(sessionKey())
+    saveDraft(draftKey(), text(), reviewComments(), imageAttach.images())
     unsubscribe()
-    if (debounceTimer) clearTimeout(debounceTimer)
   })
 
-  const requestAutocomplete = (val: string) => {
-    if (val.length < MIN_TEXT_LENGTH || isDisabled() || !chatAutocompleteEnabled()) {
-      setGhostText("")
-      return
-    }
-    requestCounter++
-    vscode.postMessage({ type: "requestChatCompletion", text: val, requestId: `chat-ac-${requestCounter}` })
-  }
-
   const acceptSuggestion = () => {
-    const suggestion = ghostText()
-    if (!suggestion) return
+    const result = ghost.accept()
+    if (!result) return
 
-    const newText = text() + suggestion
-    setText(newText)
-    setGhostText("")
-    vscode.postMessage({ type: "chatCompletionAccepted", suggestionLength: suggestion.length })
+    const val = text() + result.text
+    setText(val)
 
     if (textareaRef) {
-      textareaRef.value = newText
+      textareaRef.value = val
       adjustHeight()
+      syncHighlightScroll()
     }
   }
 
-  const dismissSuggestion = () => setGhostText("")
+  const syncGhost = () => ghost.sync(textareaRef)
 
   const scrollToActiveItem = () => {
     if (!dropdownRef) return
     const items = dropdownRef.querySelectorAll(".file-mention-item")
     const active = items[mention.mentionIndex()] as HTMLElement | undefined
+    if (active) active.scrollIntoView({ block: "nearest" })
+  }
+
+  const scrollToActiveSlashItem = () => {
+    if (!slashDropdownRef) return
+    const items = slashDropdownRef.querySelectorAll(".slash-command-item")
+    const active = items[slash.index()] as HTMLElement | undefined
     if (active) active.scrollIntoView({ block: "nearest" })
   }
 
@@ -326,19 +476,13 @@ export const PromptInput: Component = () => {
     setText(val)
     preEnhanceText = null
     adjustHeight()
-    setGhostText("")
     syncHighlightScroll()
+    history.reset()
 
+    slash.onInput(val, target.selectionStart ?? val.length)
     mention.onInput(val, target.selectionStart ?? val.length)
-
-    if (mention.showMention()) {
-      setGhostText("")
-      if (debounceTimer) clearTimeout(debounceTimer)
-      return
-    }
-
-    if (debounceTimer) clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => requestAutocomplete(val), AUTOCOMPLETE_DEBOUNCE_MS)
+    ghost.setMentionOpen(slash.show() || mention.showMention())
+    ghost.scheduleRequest(val, textareaRef)
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -348,7 +492,6 @@ export const PromptInput: Component = () => {
       const restored = preEnhanceText
       preEnhanceText = null
       setText(restored)
-      setGhostText("")
       if (textareaRef) {
         textareaRef.value = restored
         adjustHeight()
@@ -356,21 +499,55 @@ export const PromptInput: Component = () => {
       return
     }
 
+    if (slash.onKeyDown(e, textareaRef, setText, adjustHeight)) {
+      ghost.setMentionOpen(slash.show())
+      queueMicrotask(scrollToActiveSlashItem)
+      return
+    }
+
     if (mention.onKeyDown(e, textareaRef, setText, adjustHeight)) {
-      setGhostText("")
+      ghost.setMentionOpen(mention.showMention())
       queueMicrotask(scrollToActiveItem)
       return
     }
 
-    if ((e.key === "Tab" || e.key === "ArrowRight") && ghostText()) {
+    // Prompt history: ArrowUp/ArrowDown at cursor boundaries cycles through sent prompts
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      const start = textareaRef?.selectionStart ?? 0
+      const end = textareaRef?.selectionEnd ?? 0
+      if (start !== end) return // don't replace active text selection
+      const cursor = start
+      const direction = e.key === "ArrowUp" ? ("up" as const) : ("down" as const)
+      const entry = history.navigate(direction, text(), cursor)
+      if (entry !== null) {
+        e.preventDefault()
+        setText(entry)
+        if (textareaRef) {
+          textareaRef.value = entry
+          adjustHeight()
+          const pos = direction === "up" ? 0 : entry.length
+          textareaRef.setSelectionRange(pos, pos)
+        }
+        return
+      }
+    }
+
+    if (e.key === "Tab" && ghost.text()) {
+      if (!isAtEnd()) return
       e.preventDefault()
       acceptSuggestion()
       return
     }
-    if (e.key === "Escape" && ghostText()) {
+    if (e.key === "ArrowRight" && ghost.text()) {
+      if (!isAtEnd()) return
+      e.preventDefault()
+      acceptSuggestion()
+      return
+    }
+    if (e.key === "Escape" && ghost.text()) {
       e.preventDefault()
       e.stopPropagation()
-      dismissSuggestion()
+      ghost.dismiss()
       return
     }
     if (e.key === "Escape" && isBusy()) {
@@ -379,9 +556,8 @@ export const PromptInput: Component = () => {
       session.abort()
       return
     }
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
       e.preventDefault()
-      dismissSuggestion()
       handleSend()
     }
   }
@@ -394,7 +570,6 @@ export const PromptInput: Component = () => {
     if (!draft) {
       const description = language.t("prompt.action.enhanceDescription")
       setText(description)
-      setGhostText("")
       if (textareaRef) {
         textareaRef.value = description
         adjustHeight()
@@ -405,34 +580,77 @@ export const PromptInput: Component = () => {
     preEnhanceText = text()
     enhanceCounter++
     setEnhancing(true)
-    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${enhanceCounter}` })
+    vscode.postMessage({ type: "enhancePrompt", text: draft, requestId: `enhance-${draftKey()}-${enhanceCounter}` })
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const draft = text().trim()
+
+    // Detect slash command (hoisted for both client and server command checks).
+    // Prioritize exact name matches over hint/alias matches so that a server
+    // command named e.g. "continue" is not hijacked by a client alias.
+    const cmdMatch = draft.match(/^\/(\S+)/)
+    const word = cmdMatch?.[1]
+    const matched = word
+      ? (slash.commands().find((c) => c.name === word) ?? slash.commands().find((c) => c.hints.includes(word)))
+      : undefined
+
+    // Client-side slash command — runs locally without a backend round-trip
+    if (matched?.action) {
+      setText("")
+      clearReviewComments()
+      imageAttach.clear()
+      mention.closeMention()
+      slash.close()
+      drafts.delete(draftKey())
+      reviewDrafts.delete(draftKey())
+      imageDrafts.delete(draftKey())
+      if (textareaRef) textareaRef.style.height = "auto"
+      matched.action()
+      return
+    }
+
     const imgs = imageAttach.images()
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isBusy() || isDisabled()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
 
     const mentionFiles = mention.parseFileAttachments(draft)
-    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl }))
-    const allFiles = [...mentionFiles, ...imgFiles]
-
+    const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const sel = session.selected()
+    const pendingId = props.pendingSessionID ?? session.draftSessionID()
+    const sid = session.currentSessionID()
+
+    const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {
+      showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
+      return undefined
+    })
+    if (hasTerminalMention(message) && !terminalFile) return
+
+    const allFiles = [...mentionFiles, ...imgFiles, ...(terminalFile ? [terminalFile] : [])]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
-    session.sendMessage(message, sel?.providerID, sel?.modelID, attachments)
+    const key = draftKey()
+    // Server-side slash command (cmdMatch/matched already computed above)
+    if (matched) {
+      const rest = draft.slice(cmdMatch![0].length).trim()
+      const args = review && rest ? `${review}\n\n${rest}` : rest || review
+      session.sendCommand(matched.name, args, sel?.providerID, sel?.modelID, attachments, pendingId)
+    } else {
+      session.sendMessage(message, sel?.providerID, sel?.modelID, attachments, pendingId)
+    }
 
-    requestCounter++
+    history.append(draft)
+    history.reset()
     setText("")
-    setGhostText("")
     clearReviewComments()
     imageAttach.clear()
-    if (debounceTimer) clearTimeout(debounceTimer)
     mention.closeMention()
-    drafts.delete(sessionKey())
+    slash.close()
+    drafts.delete(key)
+    reviewDrafts.delete(key)
+    imageDrafts.delete(key)
 
     if (textareaRef) textareaRef.style.height = "auto"
   }
@@ -499,25 +717,101 @@ export const PromptInput: Component = () => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">No files or folders found</div>}
           >
             <For each={mention.mentionResults()}>
-              {(path, index) => (
+              {(item, index) => (
                 <div
                   class="file-mention-item"
                   classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
                   onMouseDown={(e) => {
                     e.preventDefault()
-                    if (textareaRef) mention.selectFile(path, textareaRef, setText, adjustHeight)
+                    if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
                   }}
                   onMouseEnter={() => mention.setMentionIndex(index())}
                 >
-                  <FileIcon node={{ path, type: "file" }} class="file-mention-icon" />
-                  <span class="file-mention-name">{fileName(path)}</span>
-                  <span class="file-mention-dir">{dirName(path)}</span>
+                  {item.type === "terminal" ? (
+                    <>
+                      <Icon name="console" class="file-mention-icon" />
+                      <span class="file-mention-name">{item.label}</span>
+                      <span class="file-mention-dir">{item.description}</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileIcon
+                        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+                        class="file-mention-icon"
+                      />
+                      <span class="file-mention-name">
+                        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+                      </span>
+                      <span class="file-mention-dir">{dirName(item.value)}</span>
+                    </>
+                  )}
                 </div>
               )}
             </For>
+          </Show>
+        </div>
+      </Show>
+      <Show when={slash.show()}>
+        <div class="slash-command-dropdown" ref={slashDropdownRef}>
+          <Show when={slash.results().length > 0} fallback={<div class="slash-command-empty">No commands found</div>}>
+            {(() => {
+              const all = slash.results()
+              const actions = all.filter((c) => c.action)
+              const server = all.filter((c) => !c.action)
+              const offset = actions.length
+              return (
+                <>
+                  <Show when={actions.length > 0}>
+                    <div class="slash-command-group-label">Actions</div>
+                    <For each={actions}>
+                      {(cmd, idx) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": idx() === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                          }}
+                          onMouseEnter={() => slash.setIndex(idx())}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                  <Show when={server.length > 0}>
+                    <Show when={actions.length > 0}>
+                      <div class="slash-command-separator" />
+                    </Show>
+                    <div class="slash-command-group-label">Commands</div>
+                    <For each={server}>
+                      {(cmd, idx) => (
+                        <div
+                          class="slash-command-item"
+                          classList={{ "slash-command-item--active": idx() + offset === slash.index() }}
+                          onMouseDown={(e) => {
+                            e.preventDefault()
+                            if (textareaRef) slash.select(cmd, textareaRef, setText, adjustHeight)
+                          }}
+                          onMouseEnter={() => slash.setIndex(idx() + offset)}
+                        >
+                          <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.description}>
+                            <span class="slash-command-desc">{cmd.description}</span>
+                          </Show>
+                        </div>
+                      )}
+                    </For>
+                  </Show>
+                </>
+              )
+            })()}
           </Show>
         </div>
       </Show>
@@ -526,7 +820,14 @@ export const PromptInput: Component = () => {
           <For each={imageAttach.images()}>
             {(img) => (
               <div class="image-attachment">
-                <img src={img.dataUrl} alt={img.filename} title={img.filename} />
+                <img
+                  src={img.dataUrl}
+                  alt={img.filename}
+                  title={img.filename}
+                  onClick={() =>
+                    vscode.postMessage({ type: "previewImage", dataUrl: img.dataUrl, filename: img.filename })
+                  }
+                />
                 <button
                   type="button"
                   class="image-attachment-remove"
@@ -543,29 +844,33 @@ export const PromptInput: Component = () => {
       <div class="prompt-input-wrapper">
         <div class="prompt-input-ghost-wrapper">
           <div class="prompt-input-highlight-overlay" ref={highlightRef} aria-hidden="true">
-            <Index each={buildHighlightSegments(text(), mention.mentionedPaths())}>
+            <Index each={buildHighlightSegments(text(), highlightMentions())}>
               {(seg) => (
                 <Show when={seg().highlight} fallback={<span>{seg().text}</span>}>
                   <span class="prompt-input-file-mention">{seg().text}</span>
                 </Show>
               )}
             </Index>
-            <Show when={ghostText()}>
-              <span class="prompt-input-ghost-text">{ghostText()}</span>
+            <Show when={ghost.text()}>
+              <span class="prompt-input-ghost-text">{ghost.text()}</span>
             </Show>
           </div>
           <textarea
             ref={textareaRef}
             class="prompt-input"
-            placeholder={
-              isDisabled() ? language.t("prompt.placeholder.connecting") : language.t("prompt.placeholder.default")
-            }
+            classList={{ "prompt-input--disabled": isDisabled() }}
+            placeholder={placeholder()}
             value={text()}
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onKeyUp={syncGhost}
             onPaste={handlePaste}
+            onClick={syncGhost}
+            onFocus={syncGhost}
+            onBlur={syncGhost}
+            onSelect={syncGhost}
             onScroll={syncHighlightScroll}
-            disabled={isDisabled()}
+            aria-disabled={isDisabled()}
             rows={1}
           />
         </div>
@@ -603,13 +908,16 @@ export const PromptInput: Component = () => {
             </Button>
           </Tooltip>
           <Show
-            when={isBusy()}
+            when={showStop()}
             fallback={
-              <Tooltip value={language.t("prompt.action.send")} placement="top">
+              <Tooltip
+                value={props.blocked?.() ? language.t("prompt.action.send.blocked") : language.t("prompt.action.send")}
+                placement="top"
+              >
                 <Button
                   variant="ghost"
                   size="small"
-                  onClick={handleSend}
+                  onClick={() => void handleSend()}
                   disabled={!canSend()}
                   aria-label={language.t("prompt.action.send")}
                 >

@@ -14,7 +14,7 @@ export interface TerminalHandle {
 export interface TerminalHost {
   createTerminal(opts: { cwd: string; name: string }): TerminalHandle
   activeTerminal(): TerminalHandle | undefined
-  workspacePath(): string | undefined
+  repoPath(): string | undefined
   showWarning(msg: string): void
   setContext(key: string, value: boolean): void
   onTerminalClosed(cb: (handle: TerminalHandle) => void): Disposable
@@ -30,7 +30,7 @@ export interface Disposable {
 /**
  * Manages terminals for agent manager sessions.
  * Each session can have an associated terminal that opens in the session's worktree directory,
- * or the main workspace folder for local sessions.
+ * or the main repo folder for local sessions.
  */
 export class SessionTerminalManager {
   private static readonly LOCAL_KEY = "__local__"
@@ -82,15 +82,15 @@ export class SessionTerminalManager {
 
   /**
    * Show (or create) a terminal for the given session.
-   * Resolves CWD from the worktree state, falling back to workspace root.
+   * Resolves CWD from the worktree state, falling back to repo root.
    */
   showTerminal(sessionId: string, state: WorktreeStateManager | undefined): void {
     // If terminal already exists, just focus it
     if (this.showExisting(sessionId, false)) return
 
-    const workspacePath = this.host.workspacePath()
+    const repoPath = this.host.repoPath()
     const worktreePath = state?.directoryFor(sessionId)
-    const cwd = worktreePath ?? workspacePath
+    const cwd = worktreePath ?? repoPath
 
     if (!cwd) {
       this.log(`showTerminal: no cwd resolved for session ${sessionId}`)
@@ -106,15 +106,15 @@ export class SessionTerminalManager {
   }
 
   /**
-   * Show (or create) a terminal for the local workspace (no session required).
+   * Show (or create) a terminal for the local repo (no session required).
    * Used when the user triggers a terminal in local mode without an active session.
    */
   showLocalTerminal(): void {
     if (this.showExisting(SessionTerminalManager.LOCAL_KEY, false)) return
 
-    const cwd = this.host.workspacePath()
+    const cwd = this.host.repoPath()
     if (!cwd) {
-      this.log("showLocalTerminal: no workspace folder open")
+      this.log("showLocalTerminal: no repo folder open")
       this.host.showWarning("Open a folder to use the local terminal")
       return
     }

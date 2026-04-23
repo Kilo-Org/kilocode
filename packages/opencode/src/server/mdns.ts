@@ -1,4 +1,4 @@
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { Bonjour } from "bonjour-service"
 
 const log = Log.create({ service: "mdns" })
@@ -12,8 +12,8 @@ export namespace MDNS {
     if (bonjour) unpublish()
 
     try {
-      const host = domain ?? "opencode.local"
-      const name = `opencode-${port}`
+      const host = domain ?? "kilo.local" // kilocode_change
+      const name = `kilo-${port}` // kilocode_change
       bonjour = new Bonjour()
       const service = bonjour.publish({
         name,

@@ -3,24 +3,33 @@
  * Main chat container that combines all chat components
  */
 
-import { Component, For, Show, createSignal, createEffect, on, onCleanup, onMount } from "solid-js"
+import { Component, Show, createEffect, createMemo, createSignal, on, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
+import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { showToast } from "@kilocode/kilo-ui/toast"
 import { TaskHeader } from "./TaskHeader"
 import { MessageList } from "./MessageList"
 import { PromptInput } from "./PromptInput"
-import { QuestionDock } from "./QuestionDock"
-import { UPSTREAM_SUPPRESSED_TOOLS } from "./AssistantMessage"
+import { PermissionDock } from "./PermissionDock"
+import { StartupErrorBanner } from "./StartupErrorBanner"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
-import type { PermissionRequest } from "../../types/messages"
+import { useServer } from "../../context/server"
+import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-utils"
 
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
+  onShowHistory?: () => void
+  onForkMessage?: (sessionId: string, messageId: string) => void
   readonly?: boolean
+  /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
+  continueInWorktree?: boolean
+  promptBoxId?: string
+  pendingSessionID?: string
 }
 
 export const ChatView: Component<ChatViewProps> = (props) => {
@@ -28,22 +37,43 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
+  const server = useServer()
   // Show "Show Changes" only in the standalone sidebar, not inside Agent Manager
   const isSidebar = () => worktreeMode === undefined
+  // Show "Continue in Worktree": only when explicitly enabled via prop
+  const canContinueInWorktree = () => props.continueInWorktree === true
 
   const id = () => session.currentSessionID()
   const hasMessages = () => session.messages().length > 0
   const idle = () => session.status() !== "busy"
-  const sessionQuestions = () => session.questions().filter((q) => q.sessionID === id())
-  const sessionPermissions = () => session.permissions().filter((p) => p.sessionID === id())
 
-  const questionRequest = () => sessionQuestions().find((q) => !q.tool)
-  const permissionRequest = () => sessionPermissions().find((p) => !p.tool)
-  // Only block the prompt when there's a non-todo permission (todo permissions are shown inline)
-  const isInlinePermission = (p: PermissionRequest) => p.tool && UPSTREAM_SUPPRESSED_TOOLS.has(p.toolName)
-  const blocked = () => sessionPermissions().some((p) => !isInlinePermission(p)) || sessionQuestions().length > 0
+  // "Continue in Worktree" state
+  const [transferring, setTransferring] = createSignal(false)
+  const [transferDetail, setTransferDetail] = createSignal("")
 
-  // When a bottom-dock permission/question disappears while the session is busy,
+  // Permissions and questions scoped to this session's family (self + subagents).
+  // Each ChatView only sees its own session tree — no cross-session leakage.
+  // Memoized so the BFS walk in sessionFamily() runs once per reactive update,
+  // not once per accessor call (questionRequest, permissionRequest, blocked all read these).
+  const familyPermissions = createMemo(() => session.scopedPermissions(id()))
+  const familyQuestions = createMemo(() => session.scopedQuestions(id()))
+  const familySuggestions = createMemo(() => session.scopedSuggestions(id()))
+  // Non-tool questions (standalone, not from the question tool) render inline in
+  // the message list since they don't have an associated tool part in the conversation.
+  // Tool-linked questions render inline at their tool part position via AssistantMessage.
+  const standaloneQuestions = createMemo(() => familyQuestions().filter((q) => !q.tool))
+  const standaloneSuggestions = createMemo(() => familySuggestions().filter((s) => !s.tool))
+  const permissionRequest = () => familyPermissions().find((p) => p.sessionID === id()) ?? familyPermissions()[0]
+  // Prompt input is decoupled from questions/suggestions — only permissions block.
+  // Pending questions and suggestions are auto-dismissed in sendMessage/sendCommand.
+  const blocked = () => isPromptBlocked(familyPermissions().length)
+  // Session is busy only because a suggestion tool call is pending — prompt should behave as idle
+  const suggesting = () => isSuggesting(blocked(), familySuggestions().length)
+  // Session is busy only because a question tool call is pending — prompt should behave as idle
+  const questioning = () => isQuestioning(blocked(), familyQuestions().length)
+  const dock = () => !props.readonly || !!permissionRequest()
+
+  // When a bottom-dock permission disappears while the session is busy,
   // the scroll container grows taller. Dispatch a custom event so MessageList can
   // resume auto-scroll.
   createEffect(
@@ -54,105 +84,154 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     }),
   )
 
-  const [responding, setResponding] = createSignal(false)
-
   onMount(() => {
+    if (props.readonly) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && session.status() === "busy") {
-        e.preventDefault()
-        session.abort()
-      }
+      if (e.key !== "Escape" || session.status() === "idle" || e.defaultPrevented) return
+      e.preventDefault()
+      session.abort()
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
   })
 
-  const decide = (response: "once" | "always" | "reject") => {
+  // Listen for "Continue in Worktree" progress messages
+  {
+    const labels: Record<string, string> = {
+      capturing: "Capturing changes...",
+      creating: "Creating worktree...",
+      setup: "Running setup...",
+      transferring: "Transferring changes...",
+      forking: "Starting session...",
+    }
+    const cleanup = vscode.onMessage((msg) => {
+      if (msg.type !== "continueInWorktreeProgress") return
+      const m = msg as { status: string; error?: string }
+      if (m.status === "done") {
+        setTransferring(false)
+        setTransferDetail("")
+        return
+      }
+      if (m.status === "error") {
+        setTransferring(false)
+        setTransferDetail("")
+        showToast({ title: m.error ?? "Failed to continue in worktree" })
+        return
+      }
+      setTransferDetail(labels[m.status] ?? "Working...")
+    })
+    onCleanup(cleanup)
+  }
+
+  const decide = (response: "once" | "always" | "reject", approvedAlways: string[], deniedAlways: string[]) => {
     const perm = permissionRequest()
-    if (!perm || responding()) return
-    setResponding(true)
-    session.respondToPermission(perm.id, response)
-    setResponding(false)
+    if (!perm || session.respondingPermissions().has(perm.id)) return
+    session.respondToPermission(perm.id, response, approvedAlways, deniedAlways)
   }
 
   return (
     <div class="chat-view">
-      <TaskHeader />
+      <TaskHeader readonly={props.readonly} />
       <div class="chat-messages-wrapper">
         <div class="chat-messages">
-          <MessageList onSelectSession={props.onSelectSession} />
+          <MessageList
+            onSelectSession={props.onSelectSession}
+            onShowHistory={props.onShowHistory}
+            onForkMessage={props.onForkMessage}
+            questions={standaloneQuestions}
+            suggestions={standaloneSuggestions}
+            readonly={props.readonly}
+          />
         </div>
       </div>
 
-      <Show when={!props.readonly}>
+      <Show when={dock()}>
         <div class="chat-input">
-          <Show when={questionRequest()} keyed>
-            {(req) => <QuestionDock request={req} />}
+          <Show when={server.connectionState() === "error" && server.errorMessage()}>
+            <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
           </Show>
           <Show when={permissionRequest()} keyed>
             {(perm) => (
-              <div data-component="tool-part-wrapper" data-permission="true">
-                <BasicTool
-                  icon="checklist"
-                  locked
-                  defaultOpen
-                  trigger={{
-                    title: language.t("notification.permission.title"),
-                    subtitle: perm.toolName,
-                  }}
-                >
-                  <Show when={perm.patterns.length > 0}>
-                    <div class="permission-dock-patterns">
-                      <For each={perm.patterns}>
-                        {(pattern) => <code class="permission-dock-pattern">{pattern}</code>}
-                      </For>
-                    </div>
-                  </Show>
-                </BasicTool>
-                <div data-component="permission-prompt">
-                  <div data-slot="permission-actions">
-                    <Button variant="ghost" size="small" onClick={() => decide("reject")} disabled={responding()}>
-                      {language.t("ui.permission.deny")}
-                    </Button>
-                    <Button variant="secondary" size="small" onClick={() => decide("always")} disabled={responding()}>
-                      {language.t("ui.permission.allowAlways")}
-                    </Button>
-                    <Button variant="primary" size="small" onClick={() => decide("once")} disabled={responding()}>
-                      {language.t("ui.permission.allowOnce")}
-                    </Button>
-                  </div>
-                  <p data-slot="permission-hint">{language.t("ui.permission.sessionHint")}</p>
-                </div>
-              </div>
+              <PermissionDock
+                request={perm}
+                responding={session.respondingPermissions().has(perm.id)}
+                onDecide={decide}
+              />
             )}
           </Show>
-          <Show when={hasMessages() && idle() && !blocked()}>
+          <Show when={!props.readonly && hasMessages() && idle() && !blocked()}>
             <div class="new-task-button-wrapper">
-              <Button
-                variant="secondary"
-                size="small"
-                data-full-width="true"
-                onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequest"))}
-                aria-label={language.t("command.session.new.task")}
-              >
-                {language.t("command.session.new.task")}
-              </Button>
-              <Show when={isSidebar()}>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  data-full-width="true"
-                  onClick={() => vscode.postMessage({ type: "openChanges" })}
-                  aria-label={language.t("command.session.show.changes")}
-                >
-                  <Icon name="file-tree" size="small" />
-                  {language.t("command.session.show.changes")}
-                </Button>
-              </Show>
+              <div class="session-actions-row">
+                <Tooltip value="Start a new conversation" placement="top">
+                  <Button
+                    variant="secondary"
+                    size="small"
+                    onClick={() => window.dispatchEvent(new CustomEvent("newTaskRequest"))}
+                    aria-label={language.t("command.session.new.task")}
+                  >
+                    {language.t("command.session.new.task")}
+                  </Button>
+                </Tooltip>
+                <Show when={canContinueInWorktree() && server.gitInstalled()}>
+                  <Tooltip value="Continue in isolated worktree" placement="top">
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      disabled={transferring()}
+                      onClick={() => {
+                        const sid = id()
+                        if (!sid) return
+                        setTransferring(true)
+                        setTransferDetail("Capturing changes...")
+                        vscode.postMessage({ type: "continueInWorktree", sessionId: sid })
+                      }}
+                      aria-label="Continue in Worktree"
+                    >
+                      <Show when={transferring()} fallback={<Icon name="branch" size="small" />}>
+                        <Spinner class="chat-spinner-small" />
+                      </Show>
+                      {transferring() ? transferDetail() : "Worktree"}
+                    </Button>
+                  </Tooltip>
+                </Show>
+                <Show when={isSidebar() && server.gitInstalled()}>
+                  <Tooltip
+                    value={
+                      session.worktreeStats()?.files
+                        ? `${session.worktreeStats()!.files} file${session.worktreeStats()!.files > 1 ? "s" : ""} changed · +${session.worktreeStats()!.additions} -${session.worktreeStats()!.deletions}`
+                        : "No file changes"
+                    }
+                    placement="top"
+                    class="session-diff-wrapper"
+                  >
+                    <button
+                      class="session-diff-badge"
+                      classList={{
+                        "session-diff-badge--empty": !session.worktreeStats()?.files,
+                        "session-diff-badge--has-changes": !!session.worktreeStats()?.files,
+                      }}
+                      onClick={() => vscode.postMessage({ type: "openChanges" })}
+                      aria-label={language.t("command.session.show.changes")}
+                    >
+                      <Icon name="layers" size="small" />
+                      <Show when={session.worktreeStats()?.files}>
+                        <span class="session-diff-add">+{session.worktreeStats()!.additions}</span>
+                        <span class="session-diff-del">-{session.worktreeStats()!.deletions}</span>
+                      </Show>
+                    </button>
+                  </Tooltip>
+                </Show>
+              </div>
             </div>
           </Show>
-          <Show when={!blocked()}>
-            <PromptInput />
+          <Show when={!props.readonly}>
+            <PromptInput
+              blocked={blocked}
+              suggesting={suggesting}
+              questioning={questioning}
+              boxId={props.promptBoxId}
+              pendingSessionID={props.pendingSessionID}
+            />
           </Show>
         </div>
       </Show>

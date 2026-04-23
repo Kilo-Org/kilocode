@@ -30,6 +30,7 @@ export interface KilocodeNotification {
   message: string
   action?: KilocodeNotificationAction
   showIn?: string[]
+  suggestModelId?: string
 }
 
 // Profile types from kilo-gateway
@@ -65,6 +66,25 @@ interface CloudSessionInfo {
 }
 
 // Full cloud session data for preview (from /kilo/cloud/session/:id)
+export interface CloudSessionMessage {
+  info: {
+    id: string
+    sessionID: string
+    role: "user" | "assistant"
+    time: { created: number; completed?: number }
+    cost?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+    tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+    [key: string]: unknown
+  }
+  parts: Array<{
+    id: string
+    sessionID: string
+    messageID: string
+    type: string
+    [key: string]: unknown
+  }>
+}
+
 export interface CloudSessionData {
   info: {
     id: string
@@ -72,24 +92,7 @@ export interface CloudSessionData {
     time: { created: number; updated: number }
     [key: string]: unknown
   }
-  messages: Array<{
-    info: {
-      id: string
-      sessionID: string
-      role: "user" | "assistant"
-      time: { created: number; completed?: number }
-      cost?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
-      tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
-      [key: string]: unknown
-    }
-    parts: Array<{
-      id: string
-      sessionID: string
-      messageID: string
-      type: string
-      [key: string]: unknown
-    }>
-  }>
+  messages: CloudSessionMessage[]
 }
 
 /** VS Code editor context sent alongside messages to the CLI backend */
@@ -111,6 +114,4 @@ export interface EditorContext {
   activeFile?: string
   /** User's default shell (from vscode.env.shell) */
   shell?: string
-  /** User's timezone (e.g. "Europe/Amsterdam") */
-  timezone?: string
 }

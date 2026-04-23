@@ -4,6 +4,7 @@ import {
   syncMentionedPaths,
   buildTextAfterMentionSelect,
   buildFileAttachments,
+  buildMentionResults,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -26,6 +27,33 @@ describe("AT_PATTERN", () => {
 
   it("matches empty @", () => {
     expect(AT_PATTERN.test("@")).toBe(true)
+  })
+})
+
+describe("buildMentionResults", () => {
+  it("includes terminal for empty mention query", () => {
+    const result = buildMentionResults("", [])
+    expect(result[0]).toEqual({
+      type: "terminal",
+      value: "terminal",
+      label: "Terminal",
+      description: "Active terminal output",
+    })
+  })
+
+  it("includes terminal for matching prefix", () => {
+    const result = buildMentionResults("term", ["src/terminal.ts"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file"])
+  })
+
+  it("omits terminal for unrelated query", () => {
+    const result = buildMentionResults("src", ["src/index.ts"])
+    expect(result.map((item) => item.type)).toEqual(["file"])
+  })
+
+  it("includes folder results", () => {
+    const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }])
   })
 })
 
@@ -53,6 +81,25 @@ describe("syncMentionedPaths", () => {
     const paths = new Set(["foo.ts"])
     syncMentionedPaths(paths, "no references")
     expect(paths.has("foo.ts")).toBe(true)
+  })
+
+  it("does not false-match when a shorter path is prefix of a longer one", () => {
+    const paths = new Set(["src/a.ts", "src/a.tsx"])
+    const result = syncMentionedPaths(paths, "@src/a.tsx only")
+    expect(result.has("src/a.tsx")).toBe(true)
+    expect(result.has("src/a.ts")).toBe(false)
+  })
+
+  it("matches @path at end of text (no trailing space)", () => {
+    const paths = new Set(["foo.ts"])
+    const result = syncMentionedPaths(paths, "check @foo.ts")
+    expect(result.has("foo.ts")).toBe(true)
+  })
+
+  it("matches @path at start of text", () => {
+    const paths = new Set(["foo.ts"])
+    const result = syncMentionedPaths(paths, "@foo.ts is important")
+    expect(result.has("foo.ts")).toBe(true)
   })
 })
 

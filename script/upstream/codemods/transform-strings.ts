@@ -40,6 +40,9 @@ const STRING_REPLACEMENTS: StringReplacement[] = [
   // Binary name references (be careful with these)
   { pattern: /\bopencode upgrade\b/g, replacement: "kilo upgrade" },
 
+  // HTTP header prefix
+  { pattern: /x-opencode-/g, replacement: "x-kilo-" },
+
   // Environment variables (exclude OPENCODE_API_KEY - upstream Zen SaaS key)
   { pattern: /\bOPENCODE_(?!API_KEY\b)([A-Z_]+)\b/g, replacement: "KILO_$1" },
   { pattern: /\bVITE_OPENCODE_/g, replacement: "VITE_KILO_" },

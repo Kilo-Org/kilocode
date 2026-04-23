@@ -4,29 +4,14 @@ import type { KiloConnectionService } from "../cli-backend"
 const DEFAULT_MODEL = "mistralai/codestral-2508"
 const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
 
-/** Chunk from an LLM streaming response */
-export type ApiStreamChunk =
-  | { type: "text"; text: string }
-  | {
-      type: "usage"
-      totalCost?: number
-      inputTokens?: number
-      outputTokens?: number
-      cacheReadTokens?: number
-      cacheWriteTokens?: number
-    }
-
 export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
   public profileName: string | null = null
   public profileType: string | null = null
-  public loaded = false
-  public hasKilocodeProfileWithNoBalance = false
 
   constructor(connectionService?: KiloConnectionService) {
     if (connectionService) {
       this.connectionService = connectionService
-      this.loaded = true
     }
   }
 
@@ -35,25 +20,6 @@ export class AutocompleteModel {
    */
   public setConnectionService(service: KiloConnectionService): void {
     this.connectionService = service
-  }
-
-  /**
-   * Load model configuration.
-   * Returns true if the connection service is available.
-   */
-  public async reload(): Promise<boolean> {
-    this.loaded = true
-
-    if (this.connectionService) {
-      const state = this.connectionService.getConnectionState()
-      return state === "connected"
-    }
-
-    return false
-  }
-
-  public supportsFim(): boolean {
-    return true
   }
 
   /**
@@ -72,17 +38,16 @@ export class AutocompleteModel {
       throw new Error("Connection service is not available")
     }
 
-    const state = this.connectionService.getConnectionState()
-    if (state !== "connected") {
-      throw new Error(`CLI backend is not connected (state: ${state})`)
-    }
-
-    const client = this.connectionService.getClient()
+    const client = await this.connectionService.getClientAsync()
 
     let cost = 0
     let inputTokens = 0
     let outputTokens = 0
 
+    // Capture SSE-level errors so they propagate to the caller. The SDK's SSE
+    // client catches HTTP errors (402, 401, 429, 5xx) internally and silently
+    // ends the stream. Without this, errors never reach ErrorBackoff.
+    let sseError: Error | undefined
     const { stream } = await client.kilo.fim(
       {
         prefix,
@@ -91,7 +56,13 @@ export class AutocompleteModel {
         maxTokens: 256,
         temperature: 0.2,
       },
-      { signal },
+      {
+        signal,
+        sseMaxRetryAttempts: 1,
+        onSseError: (error) => {
+          sseError = error instanceof Error ? error : new Error(String(error))
+        },
+      },
     )
 
     for await (const chunk of stream) {
@@ -104,6 +75,8 @@ export class AutocompleteModel {
       if (chunk.cost !== undefined) cost = chunk.cost
     }
 
+    if (sseError) throw sseError
+
     return {
       cost,
       inputTokens,
@@ -111,20 +84,6 @@ export class AutocompleteModel {
       cacheWriteTokens: 0,
       cacheReadTokens: 0,
     }
-  }
-
-  /**
-   * Generate response via chat completions (holefiller fallback).
-   * Not used when FIM is supported, but kept for compatibility.
-   */
-  public async generateResponse(
-    systemPrompt: string,
-    userPrompt: string,
-    onChunk: (chunk: ApiStreamChunk) => void,
-  ): Promise<ResponseMetaData> {
-    // FIM is the primary strategy; this method is a fallback.
-    // For now, throw — callers should use generateFimResponse via supportsFim().
-    throw new Error("Chat-based completions are not supported via CLI backend. Use FIM (supportsFim() returns true).")
   }
 
   public getModelName(): string {
@@ -144,5 +103,21 @@ export class AutocompleteModel {
       return false
     }
     return this.connectionService.getConnectionState() === "connected"
+  }
+
+  /**
+   * Check the user's credit balance via the profile endpoint.
+   * Returns true if the user has a positive balance, false otherwise.
+   * Returns false on any error (not connected, fetch failed, etc.).
+   */
+  public async hasBalance(): Promise<boolean> {
+    if (!this.connectionService) return false
+    try {
+      const client = await this.connectionService.getClientAsync()
+      const result = await client.kilo.profile().catch(() => null)
+      return (result?.data?.balance?.balance ?? 0) > 0
+    } catch {
+      return false
+    }
   }
 }

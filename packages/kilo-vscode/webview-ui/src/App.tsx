@@ -4,8 +4,10 @@ import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
+import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
 import { Code } from "@kilocode/kilo-ui/code"
 import { Diff } from "@kilocode/kilo-ui/diff"
+import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
 import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
@@ -17,7 +19,7 @@ import { ConfigProvider } from "./context/config"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
-import { KiloNotifications } from "./components/chat/KiloNotifications"
+import { MarketplaceView } from "./components/marketplace"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
 
@@ -26,44 +28,31 @@ import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrid
 registerExpandedTaskTool()
 // Apply VS Code sidebar preferences to other tools (e.g. bash expanded by default).
 registerVscodeToolOverrides()
-import SessionList from "./components/history/SessionList"
-import CloudSessionList from "./components/history/CloudSessionList"
+import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
 import { NotificationsProvider } from "./context/notifications"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import "./styles/chat.css"
 
-type ViewType = "newTask" | "marketplace" | "history" | "cloudHistory" | "profile" | "settings" | "migration" // legacy-migration
-const VALID_VIEWS = new Set<string>([
-  "newTask",
-  "marketplace",
-  "history",
-  "cloudHistory",
-  "profile",
-  "settings",
-  "migration",
-]) // legacy-migration
-
-const DummyView: Component<{ title: string }> = (props) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        "justify-content": "center",
-        "align-items": "center",
-        height: "100%",
-        "min-height": "200px",
-        "font-size": "24px",
-        color: "var(--vscode-foreground)",
-      }}
-    >
-      <h1>{props.title}</h1>
-    </div>
-  )
-}
+type ViewType = "newTask" | "marketplace" | "history" | "profile" | "settings" | "subAgentViewer"
+const VALID_VIEWS = new Set<string>(["newTask", "marketplace", "history", "profile", "settings", "subAgentViewer"])
 
 /**
  * Bridge our session store to the DataProvider's expected Data shape.
+ *
+ * CRITICAL: `data` is a plain object with getters — NOT a createMemo wrapping
+ * the whole shape. Wrapping the shape in a memo defeats Solid's fine-grained
+ * reactivity: any single `store.parts[X]` mutation would re-run the outer
+ * memo, producing a fresh POJO, which invalidates every downstream consumer
+ * that reads `data.store.*` — including all mounted SessionTurn memos that
+ * scan all messages in the session. With hundreds of messages and a dozen
+ * visible turns, per-token streaming ends up doing O(N × visible_turns) work
+ * per delta, which is why long sessions stream slowly.
+ *
+ * By exposing the underlying Solid store directly via getters, consumers
+ * reading `data.store.message[X]` or `data.store.part[Y]` subscribe to only
+ * that specific key. A text-delta on message Y only invalidates consumers
+ * that actually read `part[Y]`, not the whole tree.
  */
 export const DataBridge: Component<{ children: any }> = (props) => {
   const session = useSession()
@@ -71,49 +60,64 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   const prov = useProvider()
   const server = useServer()
 
-  const data = createMemo(() => {
-    const id = session.currentSessionID()
-    const allParts = session.allParts()
-    // Expose ALL session messages (including child sessions from sub-agents),
-    // not just the current session. This lets VscodeSessionTurn and
-    // TaskToolExpanded read child session data from the DataProvider store.
-    const allMessages = Object.fromEntries(
-      Object.entries(session.allMessages() as Record<string, SDKMessage[]>)
-        .filter(([, msgs]) => (msgs as SDKMessage[]).length > 0)
-        .map(([sid, msgs]) => [sid, msgs as SDKMessage[]]),
-    )
-    return {
-      session: session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
-      session_status: session.allStatusMap() as unknown as Record<string, any>,
-      session_diff: {} as Record<string, any[]>,
-      message: allMessages,
-      part: Object.fromEntries(
-        Object.entries(allParts)
-          .filter(([, parts]) => (parts as SDKPart[]).length > 0)
-          .map(([msgId, parts]) => [msgId, parts as unknown as SDKPart[]]),
-      ),
-      permission: (() => {
-        const grouped: Record<string, any[]> = {}
-        for (const p of session.permissions()) {
-          const sid = p.sessionID
-          if (!sid) continue
-          ;(grouped[sid] ??= []).push(p)
-        }
-        return grouped
-      })(),
-      // Questions are handled directly by QuestionDock via session.questions(),
-      // not through DataProvider. The DataProvider's question field is unused here.
-      question: {},
-      provider: {
-        all: Object.values(prov.providers()) as unknown as any[],
-        connected: prov.connected(),
-        default: prov.defaults(),
-      } as unknown as any,
+  // Memos for fields that change infrequently (not per-token) — cheap and
+  // avoids allocating a fresh array/object on every consumer read.
+  const sessionList = createMemo(
+    () => session.sessions().map((s) => ({ ...s, id: s.id, role: "user" as const })) as unknown as any[],
+  )
+
+  const permissionsBySession = createMemo(() => {
+    const grouped: Record<string, any[]> = {}
+    for (const p of session.permissions()) {
+      const sid = p.sessionID
+      if (!sid) continue
+      ;(grouped[sid] ??= []).push(p)
     }
+    return grouped
   })
 
+  const providerData = createMemo(() => ({
+    all: Object.values(prov.providers()) as unknown as any[],
+    connected: prov.connected(),
+    default: prov.defaults(),
+  }))
+
+  // Stable object with reactive getters — passes through to Solid stores so
+  // consumers keep per-key reactivity. The family-filter previously done here
+  // was counter-productive: consumers only ever do per-session-id / per-
+  // message-id lookups, so they never see unrelated entries in practice, and
+  // the filter pass itself was the source of the O(N) cascade.
+  const data = {
+    get session() {
+      return sessionList()
+    },
+    get session_status() {
+      return session.allStatusMap() as unknown as Record<string, any>
+    },
+    get session_diff() {
+      return {} as Record<string, any[]>
+    },
+    get message() {
+      return session.allMessages() as unknown as Record<string, SDKMessage[]>
+    },
+    get part() {
+      return session.allParts() as unknown as Record<string, SDKPart[]>
+    },
+    get permission() {
+      return permissionsBySession()
+    },
+    // Questions are handled directly by QuestionDock via session.questions(),
+    // not through DataProvider. The DataProvider's question field is unused here.
+    get question() {
+      return {}
+    },
+    get provider() {
+      return providerData() as unknown as any
+    },
+  }
+
   const respond = (input: { sessionID: string; permissionID: string; response: "once" | "always" | "reject" }) => {
-    session.respondToPermission(input.permissionID, input.response)
+    session.respondToPermission(input.permissionID, input.response, [], [])
   }
 
   const reply = (input: { requestID: string; answers: string[][] }) => {
@@ -128,6 +132,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const openUrl = (url: string) => {
+    vscode.postMessage({ type: "openExternal", url })
+  }
+
   const directory = () => {
     const dir = server.workspaceDirectory()
     if (!dir) return ""
@@ -136,12 +144,14 @@ export const DataBridge: Component<{ children: any }> = (props) => {
 
   return (
     <DataProvider
-      data={data()}
+      data={data}
       directory={directory()}
+      // @ts-expect-error — onPermissionRespond/onQuestion* are extension-specific props not yet in kilo-ui's DataProvider types
       onPermissionRespond={respond}
       onQuestionReply={reply}
       onQuestionReject={reject}
       onOpenFile={open}
+      onOpenUrl={openUrl}
     >
       {props.children}
     </DataProvider>
@@ -164,8 +174,13 @@ export const LanguageBridge: Component<{ children: any }> = (props) => {
 // Inner app component that uses the contexts
 const AppContent: Component = () => {
   const [currentView, setCurrentView] = createSignal<ViewType>("newTask")
+  const [settingsTab, setSettingsTab] = createSignal<string | undefined>()
+  // legacy-migration: state-driven flag independent of currentView to avoid
+  // race conditions with SettingsEditorProvider's navigate messages.
+  const [migrationNeeded, setMigrationNeeded] = createSignal(false)
   const session = useSession()
   const server = useServer()
+  const vscode = useVSCode()
 
   const handleViewAction = (action: string) => {
     switch (action) {
@@ -179,16 +194,36 @@ const AppContent: Component = () => {
       case "historyButtonClicked":
         setCurrentView("history")
         break
-      case "cloudHistoryButtonClicked":
-        setCurrentView("cloudHistory")
-        break
       case "profileButtonClicked":
         setCurrentView("profile")
         break
       case "settingsButtonClicked":
         setCurrentView("settings")
         break
+      case "cycleAgentMode":
+        if (document.hasFocus()) cycleAgent(1)
+        break
+      case "cyclePreviousAgentMode":
+        if (document.hasFocus()) cycleAgent(-1)
+        break
     }
+  }
+
+  const cycleAgent = (direction: 1 | -1) => {
+    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
+    if (available.length <= 1) return
+    const current = session.selectedAgent()
+    const idx = available.findIndex((a) => a.name === current)
+    const raw = idx + direction
+    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
+    const agent = available[next]
+    if (agent) session.selectAgent(agent.name)
+  }
+
+  const handleForked = (message: { type?: string; sessionID?: string }) => {
+    if (message.type !== "sessionForked" || !message.sessionID) return
+    session.selectSession(message.sessionID)
+    setCurrentView("newTask")
   }
 
   onMount(() => {
@@ -199,13 +234,25 @@ const AppContent: Component = () => {
         handleViewAction(message.action)
       }
       if (message?.type === "navigate" && message.view && VALID_VIEWS.has(message.view)) {
-        console.log("[Kilo New] App: 🧭 navigate:", message.view)
+        console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
+        if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
         console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
         session.selectCloudSession(message.sessionId)
         setCurrentView("newTask")
+      }
+      handleForked(message)
+      if (message?.type === "viewSubAgentSession" && message.sessionID) {
+        console.log("[Kilo New] App: 🔍 viewSubAgentSession:", message.sessionID)
+        session.setCurrentSessionID(message.sessionID)
+        setCurrentView("subAgentViewer")
+      }
+      // legacy-migration: state-driven migration wizard
+      if (message?.type === "migrationState") {
+        console.log("[Kilo New] App: 🔄 migrationState:", message.needed)
+        setMigrationNeeded(message.needed)
       }
     }
     window.addEventListener("message", handler)
@@ -217,47 +264,66 @@ const AppContent: Component = () => {
     setCurrentView("newTask")
   }
 
+  const handleForkMessage = (sessionId: string, messageId: string) => {
+    vscode.postMessage({ type: "forkSession", sessionId, messageId })
+  }
+
   return (
     <div class="container">
-      <Switch fallback={<ChatView />}>
-        <Match when={currentView() === "newTask"}>
-          <Show when={!session.currentSessionID()}>
-            <KiloNotifications />
-          </Show>
-          <ChatView onSelectSession={handleSelectSession} />
-        </Match>
-        <Match when={currentView() === "marketplace"}>
-          <DummyView title="Marketplace" />
-        </Match>
-        <Match when={currentView() === "history"}>
-          <SessionList onSelectSession={handleSelectSession} />
-        </Match>
-        <Match when={currentView() === "cloudHistory"}>
-          <CloudSessionList
-            onSelectSession={(cloudSessionId) => {
-              session.selectCloudSession(cloudSessionId)
-              setCurrentView("newTask")
-            }}
-          />
-        </Match>
-        <Match when={currentView() === "profile"}>
-          <ProfileView
-            profileData={server.profileData()}
-            deviceAuth={server.deviceAuth()}
-            onLogin={server.startLogin}
-            onBack={() => setCurrentView("newTask")}
-          />
-        </Match>
-        <Match when={currentView() === "settings"}>
-          <Settings onBack={() => setCurrentView("newTask")} onMigrateClick={() => setCurrentView("migration")} />
-          {/* legacy-migration */}
-        </Match>
-        {/* legacy-migration start */}
-        <Match when={currentView() === "migration"}>
-          <MigrationWizard onBack={() => setCurrentView("newTask")} onComplete={() => setCurrentView("newTask")} />
-        </Match>
-        {/* legacy-migration end */}
-      </Switch>
+      {/* legacy-migration start — state-driven overlay, independent of currentView */}
+      <Show
+        when={migrationNeeded()}
+        fallback={
+          <Switch
+            fallback={
+              <ChatView
+                continueInWorktree
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                promptBoxId="sidebar:fallback"
+              />
+            }
+          >
+            <Match when={currentView() === "newTask"}>
+              <ChatView
+                onSelectSession={handleSelectSession}
+                onShowHistory={() => setCurrentView("history")}
+                onForkMessage={session.status() === "idle" ? handleForkMessage : undefined}
+                continueInWorktree
+                promptBoxId="sidebar:new-task"
+              />
+            </Match>
+            <Match when={currentView() === "marketplace"}>
+              <MarketplaceView />
+            </Match>
+            <Match when={currentView() === "history"}>
+              <HistoryView onSelectSession={handleSelectSession} onBack={() => setCurrentView("newTask")} />
+            </Match>
+            <Match when={currentView() === "profile"}>
+              <ProfileView
+                profileData={server.profileData()}
+                deviceAuth={server.deviceAuth()}
+                onLogin={server.startLogin}
+              />
+            </Match>
+            <Match when={currentView() === "settings"}>
+              <Settings
+                tab={settingsTab()}
+                onTabChange={setSettingsTab}
+                onMigrateClick={() => {
+                  setMigrationNeeded(true)
+                  vscode.postMessage({ type: "requestLegacyMigrationData" })
+                }}
+              />
+            </Match>
+            <Match when={currentView() === "subAgentViewer"}>
+              <ChatView readonly />
+            </Match>
+          </Switch>
+        }
+      >
+        <MigrationWizard onBack={() => setMigrationNeeded(false)} onComplete={() => setMigrationNeeded(false)} />
+      </Show>
+      {/* legacy-migration end */}
     </div>
   )
 }
@@ -273,17 +339,19 @@ const App: Component = () => {
               <MarkedProvider>
                 <DiffComponentProvider component={Diff}>
                   <CodeComponentProvider component={Code}>
-                    <ProviderProvider>
-                      <ConfigProvider>
-                        <NotificationsProvider>
-                          <SessionProvider>
-                            <DataBridge>
-                              <AppContent />
-                            </DataBridge>
-                          </SessionProvider>
-                        </NotificationsProvider>
-                      </ConfigProvider>
-                    </ProviderProvider>
+                    <FileComponentProvider component={File}>
+                      <ProviderProvider>
+                        <ConfigProvider>
+                          <NotificationsProvider>
+                            <SessionProvider>
+                              <DataBridge>
+                                <AppContent />
+                              </DataBridge>
+                            </SessionProvider>
+                          </NotificationsProvider>
+                        </ConfigProvider>
+                      </ProviderProvider>
+                    </FileComponentProvider>
                   </CodeComponentProvider>
                 </DiffComponentProvider>
               </MarkedProvider>

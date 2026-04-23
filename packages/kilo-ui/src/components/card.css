@@ -4,4 +4,8 @@
   border-radius: 2px;
   padding: 8px;
   border: 1px solid var(--border-weak-base);
+
+  &[data-variant="warning"] {
+    padding: 12px 14px;
+  }
 }

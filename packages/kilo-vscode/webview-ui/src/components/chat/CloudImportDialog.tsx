@@ -33,6 +33,10 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
       setError(language.t("session.cloud.import.invalid"))
       return
     }
+    if (!id.startsWith("ses_")) {
+      setError(language.t("session.cloud.import.legacy"))
+      return
+    }
     props.onImport(id)
     dialog.close()
   }
@@ -52,7 +56,7 @@ export const CloudImportDialog: Component<CloudImportDialogProps> = (props) => {
           error={error()}
         />
         <div class="dialog-confirm-actions">
-          <Button variant="ghost" size="large" onClick={() => dialog.close()}>
+          <Button variant="secondary" size="large" onClick={() => dialog.close()}>
             {language.t("common.cancel")}
           </Button>
           <Button variant="primary" size="large" onClick={submit}>

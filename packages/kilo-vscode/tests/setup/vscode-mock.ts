@@ -51,6 +51,18 @@ const mockVscode = {
       update: async () => {},
     }),
     asRelativePath: (pathOrUri: string) => pathOrUri,
+    fs: {
+      createDirectory: async () => {},
+      writeFile: async () => {},
+      readFile: async () => new Uint8Array(),
+      readDirectory: async () => [],
+      delete: async () => {},
+      stat: async () => ({ type: 1, ctime: 0, mtime: 0, size: 0 }),
+    },
+  },
+  StatusBarAlignment: { Left: 1, Right: 2 },
+  ThemeColor: class {
+    constructor(public id: string) {}
   },
   window: {
     activeTextEditor: undefined,
@@ -59,6 +71,15 @@ const mockVscode = {
     showTextDocument: async () => {},
     showWarningMessage: async () => undefined,
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
+    createStatusBarItem: () => ({
+      text: "",
+      tooltip: "",
+      color: undefined as unknown,
+      command: undefined as string | undefined,
+      show: noop,
+      hide: noop,
+      dispose: noop,
+    }),
   },
   commands: {
     registerCommand: () => ({ dispose: noop }),

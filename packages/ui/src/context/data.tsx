@@ -1,15 +1,19 @@
-import type { Message, Session, Part, FileDiff, SessionStatus, ProviderListResponse } from "@kilocode/sdk/v2"
+import type { Message, Session, Part, SnapshotFileDiff, SessionStatus, ProviderListResponse } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { PreloadMultiFileDiffResult } from "@pierre/diffs/ssr"
 
 type Data = {
+  agent?: {
+    name: string
+    color?: string
+  }[]
   provider?: ProviderListResponse
   session: Session[]
   session_status: {
     [sessionID: string]: SessionStatus
   }
   session_diff: {
-    [sessionID: string]: FileDiff[]
+    [sessionID: string]: SnapshotFileDiff[]
   }
   session_diff_preload?: {
     [sessionID: string]: PreloadMultiFileDiffResult<any>[]
@@ -28,6 +32,8 @@ export type SessionHrefFn = (sessionID: string) => string
 
 export type OpenFileFn = (filePath: string, line?: number, column?: number) => void // kilocode_change
 
+export type OpenUrlFn = (url: string) => void // kilocode_change
+
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: (props: {
@@ -36,6 +42,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     onNavigateToSession?: NavigateToSessionFn
     onSessionHref?: SessionHrefFn
     onOpenFile?: OpenFileFn // kilocode_change
+    onOpenUrl?: OpenUrlFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -47,6 +54,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       navigateToSession: props.onNavigateToSession,
       sessionHref: props.onSessionHref,
       openFile: props.onOpenFile, // kilocode_change
+      openUrl: props.onOpenUrl, // kilocode_change
     }
   },
 })

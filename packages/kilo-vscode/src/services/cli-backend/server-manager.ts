@@ -1,8 +1,10 @@
-import { spawn, ChildProcess } from "child_process"
+import { type ChildProcess } from "child_process"
+import { spawn } from "../../util/process"
 import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
+import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 
 export interface ServerInstance {
@@ -10,6 +12,8 @@ export interface ServerInstance {
   password: string
   process: ChildProcess
 }
+
+const STARTUP_TIMEOUT_SECONDS = 30
 
 export class ServerManager {
   private instance: ServerInstance | null = null
@@ -62,9 +66,20 @@ export class ServerManager {
 
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
+      const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+      // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
+      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+        cwd: spawnCwd,
         env: {
           ...process.env,
+          // Force mimalloc (the allocator Bun ships with) to return freed pages
+          // to the OS immediately instead of retaining them in its arenas.
+          // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
+          // RSS per call on Windows, causing the Agent Manager (which polls git
+          // once per second per worktree) to reach multi-GB RSS in minutes.
+          // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
+          MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
@@ -76,6 +91,8 @@ export class ServerManager {
           KILO_MACHINE_ID: vscode.env.machineId,
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
+          KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
+          ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,
@@ -83,6 +100,7 @@ export class ServerManager {
       console.log("[Kilo New] ServerManager: 📦 Process spawned with PID:", serverProcess.pid)
 
       let resolved = false
+      const stderrLines: string[] = []
 
       serverProcess.stdout?.on("data", (data: Buffer) => {
         const output = data.toString()
@@ -99,6 +117,7 @@ export class ServerManager {
       serverProcess.stderr?.on("data", (data: Buffer) => {
         const errorOutput = data.toString()
         console.error("[Kilo New] ServerManager: ⚠️ CLI Server stderr:", errorOutput)
+        stderrLines.push(errorOutput)
       })
 
       serverProcess.on("error", (error) => {
@@ -114,18 +133,27 @@ export class ServerManager {
           this.instance = null
         }
         if (!resolved) {
-          reject(new Error(`CLI process exited with code ${code} before server started`))
+          const { userMessage, userDetails } = toErrorMessage(
+            t("server.processExited", { code: code ?? "null" }),
+            stderrLines,
+            cliPath,
+          )
+          reject(new ServerStartupError(userMessage, userDetails))
         }
       })
 
-      // Timeout after 30 seconds
       setTimeout(() => {
         if (!resolved) {
-          console.error("[Kilo New] ServerManager: ⏰ Server startup timeout (30s)")
+          console.error(`[Kilo New] ServerManager: ⏰ Server startup timeout (${STARTUP_TIMEOUT_SECONDS}s)`)
           ServerManager.killProcess(serverProcess)
-          reject(new Error("Server startup timeout"))
+          const { userMessage, userDetails } = toErrorMessage(
+            t("server.startupTimeout", { seconds: STARTUP_TIMEOUT_SECONDS }),
+            stderrLines,
+            cliPath,
+          )
+          reject(new ServerStartupError(userMessage, userDetails))
         }
-      }, 30000)
+      }, STARTUP_TIMEOUT_SECONDS * 1000)
     })
   }
 
@@ -181,5 +209,50 @@ export class ServerManager {
     // unref so this timer doesn't prevent the extension host from exiting
     timer.unref()
     proc.on("exit", () => clearTimeout(timer))
+  }
+}
+
+export class ServerStartupError extends Error {
+  readonly userMessage: string
+  readonly userDetails: string
+  constructor(userMessage: string, userDetails: string) {
+    super(userDetails)
+    this.name = "ServerStartupError"
+    this.userMessage = userMessage
+    this.userDetails = userDetails
+  }
+}
+
+function stripAnsi(str: string): string {
+  return str.replace(/\x1b\[[0-9;]*m/g, "")
+}
+
+export function toErrorMessage(
+  error: string,
+  stderrLines: string[],
+  cliPath?: string,
+): {
+  userMessage: string
+  userDetails: string
+  error: string
+} {
+  let lines = stderrLines.flatMap((line) => line.split("\n"))
+
+  const errorLine = lines.map(stripAnsi).find((line) => /Error:\s+/.test(line))
+  const userMessage = errorLine
+    ? errorLine.match(/Error:\s+(.+)/)![1].trim()
+    : stripAnsi([...lines].reverse().find((line) => line.trim() !== "") ?? error).trim()
+
+  lines = [error, ...lines]
+  if (cliPath && cliPath.trim() !== "") {
+    lines = [`CLI path: ${cliPath}`, ...lines]
+  }
+
+  const detailsText = lines.map(stripAnsi).join("\n").trim()
+
+  return {
+    userMessage,
+    userDetails: detailsText,
+    error,
   }
 }

@@ -19,10 +19,12 @@ A user or organization may want to use BYOK to:
 Kilo Gateway currently supports BYOK keys for these providers:
 
 - Anthropic
-- OpenAI
+- AWS Bedrock
 - Google AI Studio
+- Inception
 - Minimax
 - Mistral AI
+- OpenAI
 - xAI
 - Z.AI
 
@@ -32,6 +34,29 @@ Kilo Gateway currently supports BYOK keys for these providers:
 2. Navigate to the [Bring Your Own Key (BYOK) page](https://app.kilo.ai/byok), available in the sidebar under `Account`.
 3. Click `Add Your First Key`, select the provider, and paste your API key.
 4. Save.
+
+### AWS Bedrock configuration
+
+AWS Bedrock requires credentials in a different format than other providers. Instead of a single API key, you must provide your AWS credentials as a JSON object:
+
+```json
+{
+  "accessKeyId": "AKIA...",
+  "secretAccessKey": "...",
+  "region": "us-east-1"
+}
+```
+
+| Field             | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `accessKeyId`     | Your AWS access key ID                                                   |
+| `secretAccessKey` | Your AWS secret access key                                               |
+| `region`          | The AWS region where Bedrock is enabled (e.g., `us-east-1`, `eu-west-1`) |
+
+Your IAM user or role must have the following permissions:
+
+- `bedrock:InvokeModel`
+- `bedrock:InvokeModelWithResponseStream`
 
 ## How Bring Your Own Key works
 
