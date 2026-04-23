@@ -15,7 +15,11 @@ export function kiloProviderOptions(options: { [x: string]: any }) {
       openrouter.reasoning && "effort" in openrouter.reasoning ? openrouter.reasoning?.effort : undefined,
     textVerbosity: openrouter.verbosity,
     store: false,
-    forceReasoning: openrouter.reasoning?.enabled === false || openrouter.reasoning?.effort === "none" ? false : true,
+    forceReasoning:
+      openrouter.reasoning?.enabled === false ||
+      (openrouter.reasoning && "effort" in openrouter.reasoning && openrouter.reasoning.effort === "none")
+        ? false
+        : true,
   } satisfies OpenAIResponsesProviderOptions
   result.anthropic = {
     thinking: { type: openrouter.reasoning?.enabled ? "adaptive" : "disabled" },
