@@ -165,9 +165,8 @@ export function init() {
   createEffect(() => {
     if (!args.yolo) return
     if (route.data.type !== "session") return
-    if (!TuiYolo.consume()) return
     if (!args.sessionID && !args.continue && !args.fork) return
-    TuiYolo.set(route.data.sessionID, true)
+    TuiYolo.boot(route.data.sessionID)
   })
 
   createEffect(() => {
@@ -175,7 +174,7 @@ export function init() {
     const req = sync.data.permission[route.data.sessionID]?.[0]
     if (!req) return
     if (!TuiYolo.shouldReply(route.data.sessionID, req.id)) return
-    TuiYolo.mark(req.id)
+    TuiYolo.mark(route.data.sessionID, req.id)
     void sdk.client.permission.reply({ requestID: req.id, reply: "once" })
   })
 
@@ -199,7 +198,7 @@ export function init() {
         if (next) {
           const req = sync.data.permission[sessionID]?.[0]
           if (req && TuiYolo.shouldReply(sessionID, req.id)) {
-            TuiYolo.mark(req.id)
+            TuiYolo.mark(sessionID, req.id)
             const result = await sdk.client.permission.reply({ requestID: req.id, reply: "once" })
             if (result.error) {
               TuiYolo.set(sessionID, false)

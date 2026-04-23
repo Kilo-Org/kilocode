@@ -751,9 +751,7 @@ export function Prompt(props: PromptProps) {
       }
 
       sessionID = res.data.id
-      if (args.yolo && !args.sessionID && !args.continue && TuiYolo.consume()) {
-        TuiYolo.set(sessionID, true)
-      }
+      if (args.yolo && !args.sessionID && !args.continue) TuiYolo.boot(sessionID)
     }
     // kilocode_change end
 
