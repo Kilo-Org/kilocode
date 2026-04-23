@@ -668,13 +668,17 @@ const AgentManagerContent: Component = () => {
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
 
-  // Pin new sessions/terminals at the tab bar's tail (see tab-order-sync).
+  // Pin new tabs at the tail (see tab-order-sync); strip ephemeral ids so agent-manager.json stays clean.
+  const persistTabOrder = (key: string, order: string[]) => {
+    const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
+    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
+  }
   const tabOrderSync = createTabOrderSync({
     LOCAL,
     REVIEW_TAB_ID,
     order: worktreeTabOrder,
     setOrder: setWorktreeTabOrder,
-    persist: (key, order) => vscode.postMessage({ type: "agentManager.setTabOrder", key, order }),
+    persist: persistTabOrder,
     localSessionIDs,
     sessions: session.sessions,
     managedSessions,
@@ -2081,12 +2085,8 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel === null) return
     const key = sel === LOCAL ? LOCAL : sel
-    // Persist the full mixed order. Terminal IDs are ephemeral; on
-    // reload their PTYs are gone and `applyTabOrder` filters them out.
     const order = worktreeTabOrder()[key]
-    if (order && order.length > 0) {
-      vscode.postMessage({ type: "agentManager.setTabOrder", key, order })
-    }
+    if (order && order.length > 0) persistTabOrder(key, order)
   }
 
   const draggedTab = createMemo(() => {

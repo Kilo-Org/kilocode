@@ -164,6 +164,40 @@ describe("createTabOrderSync.insertAfter", () => {
   })
 })
 
+describe("createTabOrderSync persistence filter", () => {
+  it("callers strip transient ids before persisting (review + terminal:* never hit disk)", () => {
+    // Mirror AgentManagerApp's real filter: strip review + terminal ids.
+    const { state, sync } = scene({
+      sessions: ["s1", "pending_1"],
+      terminals: { LOCAL: ["terminal:abc"] },
+      review: { LOCAL: true },
+    })
+    // Rebuild sync with a filtering persist to mimic the call site.
+    const filteredSync = createTabOrderSync({
+      LOCAL: "LOCAL",
+      REVIEW_TAB_ID: "review",
+      order: () => state.order,
+      setOrder: (u) => {
+        state.order = u(state.order)
+      },
+      persist: (key, order) => {
+        const clean = order.filter((id) => id !== "review" && !id.startsWith("terminal:"))
+        state.persisted.push({ key, order: clean })
+      },
+      localSessionIDs: () => state.localIds,
+      sessions: () => [],
+      managedSessions: () => [],
+      reviewOpenByContext: () => state.review,
+      terminalIdsFor: (key) => state.terminals[key] ?? [],
+    })
+    filteredSync.append("LOCAL", "pending_1")
+    // In-memory order still has terminals/review for drag state.
+    expect(state.order.LOCAL).toEqual(["s1", "review", "terminal:abc", "pending_1"])
+    // Persisted payload is session-only.
+    expect(state.persisted.at(-1)?.order).toEqual(["s1", "pending_1"])
+  })
+})
+
 describe("createTabOrderSync cross-method scenario", () => {
   it("preserves position through terminal → pending → real lifecycle", () => {
     const s = scene({ sessions: ["s1"] })

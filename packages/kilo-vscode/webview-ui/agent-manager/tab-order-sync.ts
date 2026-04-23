@@ -11,9 +11,10 @@ export interface TabOrderSyncDeps {
   /** Constants that identify the local context and review tab. */
   LOCAL: string
   REVIEW_TAB_ID: string
-  /** Read/update the persisted `contextKey → ordered tab ids` map. */
+  /** Read/update the `contextKey → ordered tab ids` map (in-memory). */
   order: () => Record<string, string[]>
   setOrder: (updater: (prev: Record<string, string[]>) => Record<string, string[]>) => void
+  /** Persist to durable state. Callers should strip transient ids here. */
   persist: (key: string, value: string[]) => void
   /** State accessors used to rebuild the base order `[sessions, review, terminals]`. */
   localSessionIDs: () => string[]
