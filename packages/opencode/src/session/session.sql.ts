@@ -118,6 +118,28 @@ export const SessionEntryTable = sqliteTable(
   ],
 )
 
+export const TaskTable = sqliteTable(
+  "task",
+  {
+    id: text().primaryKey(),
+    session_id: text()
+      .$type<SessionID>()
+      .notNull()
+      .references(() => SessionTable.id, { onDelete: "cascade" }),
+    title: text().notNull(),
+    description: text().notNull().default(""),
+    status: text().notNull().default("open"),
+    priority: text().notNull().default("medium"),
+    assignee: text(),
+    depends_on: text(),
+    worktree: text(),
+    pr: text(),
+    summary: text(),
+    ...Timestamps,
+  },
+  (table) => [index("task_session_idx").on(table.session_id)],
+)
+
 export const PermissionTable = sqliteTable("permission", {
   project_id: text()
     .primaryKey()
