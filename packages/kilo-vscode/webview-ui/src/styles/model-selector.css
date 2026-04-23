@@ -494,8 +494,13 @@
 }
 
 .mode-switcher-item-desc {
+  display: block;
   font-size: 11px;
   color: var(--text-weak, var(--vscode-descriptionForeground));
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .mode-switcher-item.selected .mode-switcher-item-name {
