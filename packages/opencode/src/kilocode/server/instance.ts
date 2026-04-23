@@ -6,6 +6,7 @@ import { Hono } from "hono"
 import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { TelemetryRoutes } from "../../server/routes/instance/telemetry"
+import { TaskRoutes } from "../../server/routes/instance/task"
 import { CommitMessageRoutes } from "./routes/commit-message"
 import { EnhancePromptRoutes } from "../../server/routes/instance/enhance-prompt"
 import { KilocodeRoutes } from "../../server/routes/instance/kilocode"
@@ -26,6 +27,7 @@ import { Bus } from "@/bus"
 
 export function register(app: Hono): Hono {
   return app
+    .route("/session", TaskRoutes())
     .route("/permission", PermissionKilocodeRoutes())
     .route("/network", NetworkRoutes())
     .route("/suggestion", SuggestionRoutes())
