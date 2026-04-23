@@ -891,7 +891,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 
   const tools = Object.fromEntries(Array.from(toolNames).map((toolName) => [toolName, { toModelOutput }]))
 
-  // kilocode_change start - aggressively trim older tool outputs when request nears 4MB
+  // kilocode_change start - drop older inline media (data URLs) when they'd push the request past ~4MB
   const sized = KiloRequestSize.trim(result).messages
   // kilocode_change end
 
