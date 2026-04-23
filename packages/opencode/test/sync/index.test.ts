@@ -15,12 +15,10 @@ const original = Flag.KILO_EXPERIMENTAL_WORKSPACES
 beforeEach(() => {
   Database.close()
 
-  // @ts-expect-error don't do this normally, but it works
   Flag.KILO_EXPERIMENTAL_WORKSPACES = true
 })
 
 afterEach(() => {
-  // @ts-expect-error don't do this normally, but it works
   Flag.KILO_EXPERIMENTAL_WORKSPACES = original
 })
 

@@ -14,7 +14,6 @@ const { Instance } = await import("../../src/project/instance")
 
 const experimental = Flag.KILO_EXPERIMENTAL_WORKSPACES
 
-// @ts-expect-error tests override the flag directly
 Flag.KILO_EXPERIMENTAL_WORKSPACES = true
 
 afterEach(async () => {
@@ -28,7 +27,6 @@ afterAll(() => {
     process.env.KILO_DISABLE_DEFAULT_PLUGINS = disableDefault
   }
 
-  // @ts-expect-error restore original test flag value
   Flag.KILO_EXPERIMENTAL_WORKSPACES = experimental
 })
 

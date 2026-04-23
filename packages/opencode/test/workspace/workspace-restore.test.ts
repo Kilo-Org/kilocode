@@ -25,14 +25,12 @@ const original = Flag.KILO_EXPERIMENTAL_WORKSPACES
 
 beforeEach(() => {
   Database.close()
-  // @ts-expect-error test override
   Flag.KILO_EXPERIMENTAL_WORKSPACES = true
 })
 
 afterEach(async () => {
   mock.restore()
   await Instance.disposeAll()
-  // @ts-expect-error test override
   Flag.KILO_EXPERIMENTAL_WORKSPACES = original
   await resetDatabase()
 })

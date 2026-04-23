@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.2.14",
+  "version": "7.2.20",
   "name": "@opencode-ai/shared",
   "type": "module",
   "license": "MIT",
@@ -35,5 +35,6 @@
   },
   "overrides": {
     "drizzle-orm": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

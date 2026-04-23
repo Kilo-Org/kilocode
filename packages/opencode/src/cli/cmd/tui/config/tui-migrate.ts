@@ -26,7 +26,6 @@ const TuiLegacy = z
 interface MigrateInput {
   cwd: string
   directories: string[]
-  custom?: string
 }
 
 /**
@@ -134,8 +133,11 @@ async function backupAndStripLegacy(file: string, source: string) {
 
 async function opencodeFiles(input: { directories: string[]; cwd: string }) {
   // kilocode_change start: use kilo directory everywhere
-  const project = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await ConfigPaths.projectFiles("kilo", input.cwd)
+  const project = Flag.KILO_DISABLE_PROJECT_CONFIG
+    ? []
+    : await Filesystem.findUp(["kilo.json", "kilo.jsonc"], input.cwd, undefined, { rootFirst: true })
   const files = [...project, ...ConfigPaths.fileInDirectory(Global.Path.config, "kilo")]
+  // kilocode_change end
   for (const dir of unique(input.directories)) {
     files.push(...ConfigPaths.fileInDirectory(dir, "kilo"))
   }
@@ -149,4 +151,3 @@ async function opencodeFiles(input: { directories: string[]; cwd: string }) {
   )
   return existing.filter((file): file is string => !!file)
 }
-// kilocode_change end

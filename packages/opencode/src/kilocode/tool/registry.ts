@@ -49,11 +49,6 @@ export namespace KiloToolRegistry {
     return [...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []), tools.recall]
   }
 
-  /** Check whether exa-based tools (codesearch/websearch) are enabled for a provider */
-  export function exa(providerID: ProviderID): boolean {
-    return providerID === ProviderID.kilo || Flag.KILO_ENABLE_EXA
-  }
-
   /** Check for E2E LLM URL (uses KILO_E2E_LLM_URL env var) */
   export function e2e(): boolean {
     return !!process.env["KILO_E2E_LLM_URL"]
