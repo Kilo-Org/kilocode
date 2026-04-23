@@ -82,6 +82,7 @@ export const Info = z
         baseURL: z.string().optional(),
         enterpriseUrl: z.string().optional().describe("GitHub Enterprise URL for copilot authentication"),
         setCacheKey: z.boolean().optional().describe("Enable promptCacheKey for this provider (default false)"),
+        // kilocode_change start
         timeout: z
           .union([
             z
@@ -105,6 +106,7 @@ export const Info = z
           .describe(
             "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted.",
           ),
+        // kilocode_change end
       })
       .catchall(z.any())
       .optional(),

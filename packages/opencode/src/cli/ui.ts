@@ -48,6 +48,7 @@ export function empty() {
   blank = true
 }
 
+// kilocode_change start
 export function logo(pad?: string) {
   if (!process.stdout.isTTY && !process.stderr.isTTY) {
     const result = []
@@ -105,6 +106,7 @@ export function logo(pad?: string) {
   })
   return result.join("").trimEnd()
 }
+// kilocode_change end
 
 export async function input(prompt: string): Promise<string> {
   const readline = require("readline")

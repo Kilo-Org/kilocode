@@ -157,7 +157,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
     }
     // kilocode_change end
 
-    const fullSyncedSessions = new Set<string>()
+    const fullSyncedSessions = new Set<string>() // kilocode_change
     let syncedWorkspace = project.workspace.current()
 
     event.subscribe((event) => {
