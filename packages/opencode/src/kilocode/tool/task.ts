@@ -2,7 +2,7 @@
 import { Permission } from "@/permission"
 import type { Session } from "../../session"
 import type { Agent } from "../../agent/agent"
-import type { Config } from "../../config/config"
+import type { Config } from "../../config"
 
 export namespace KiloTask {
   /** Reject primary agents used as subagents */

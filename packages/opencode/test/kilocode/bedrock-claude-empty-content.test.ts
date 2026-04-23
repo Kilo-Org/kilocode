@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ProviderTransform } from "../../src/provider/transform"
+import { ProviderTransform } from "../../src/provider"
 
 describe("ProviderTransform.message - bedrock claude empty content filtering", () => {
   const model = {

@@ -16,7 +16,10 @@ export function createSdkForServer({
 
   return createKiloClient({
     ...config,
-    headers: { ...config.headers, ...auth },
+    headers: {
+      ...(config.headers instanceof Headers ? Object.fromEntries(config.headers.entries()) : config.headers),
+      ...auth,
+    },
     baseUrl: server.url,
   })
 }

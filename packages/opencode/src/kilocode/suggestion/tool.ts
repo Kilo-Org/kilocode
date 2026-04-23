@@ -1,10 +1,12 @@
 import { Command } from "../../command"
-import { Log } from "../../util/log"
+import { Log } from "../../util"
 import z from "zod"
 import { Effect } from "effect"
 import DESCRIPTION from "./tool.txt"
-import { Tool } from "../../tool/tool"
+import { Tool } from "../../tool"
 import { Suggestion } from "./index"
+import { SessionStatus } from "../../session/status"
+import { SessionID } from "../../session/schema"
 
 const log = Log.create({ service: "tool.suggest" })
 
@@ -61,6 +63,7 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
           sessionID: ctx.sessionID,
           text: params.suggest,
           actions: params.actions,
+          blocking: false, // render above an active input; VS Code does the same
           tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
         })
 
@@ -71,6 +74,13 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
           })
         ctx.abort.addEventListener("abort", listener, { once: true })
 
+        // Mark the session as idle while waiting for user interaction so the
+        // session doesn't appear stuck/busy. The loop will set it back to busy
+        // when the suggestion resolves and processing continues.
+        await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "idle" }).catch((err) => {
+          log.warn("failed to set idle status", { err })
+        })
+
         const action = await promise
           .catch((error) => {
             if (error instanceof Suggestion.DismissedError) return undefined
@@ -79,6 +89,15 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
           .finally(() => {
             ctx.abort.removeEventListener("abort", listener)
           })
+
+        // Restore busy immediately on accept so the session doesn't flash idle
+        // while the follow-up response is being generated. The next runLoop
+        // iteration sets busy too, but not until after the stream finalizes.
+        if (action) {
+          await SessionStatus.set(SessionID.make(ctx.sessionID), { type: "busy" }).catch((err) => {
+            log.warn("failed to restore busy status", { err })
+          })
+        }
 
         if (!action) {
           const metadata: Meta = {

@@ -206,6 +206,10 @@ export interface QuestionOption {
   label: string
   description: string
   mode?: string
+  // Optional i18n keys — the backend fills these for strings it wants translated in the webview.
+  // The canonical English `label` stays on the reply wire, so server-side matching is unaffected.
+  labelKey?: string
+  descriptionKey?: string
 }
 
 export interface QuestionInfo {
@@ -214,6 +218,9 @@ export interface QuestionInfo {
   options: QuestionOption[]
   multiple?: boolean
   custom?: boolean
+  // Optional i18n keys for question text and header (see QuestionOption for details).
+  questionKey?: string
+  headerKey?: string
 }
 
 export interface QuestionRequest {
@@ -349,7 +356,14 @@ export interface ProviderModel {
   options?: { description?: string }
   recommendedIndex?: number
   isFree?: boolean
-  cost?: { input: number; output: number }
+  cost?: {
+    input: number
+    output: number
+    cache?: {
+      read: number
+      write: number
+    }
+  }
 }
 
 export interface Provider {
@@ -572,6 +586,11 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+}
+
+export interface SessionForkedMessage {
+  type: "sessionForked"
+  sessionID: string
 }
 
 export interface SessionUpdatedMessage {
@@ -1033,6 +1052,30 @@ export interface AgentManagerStateMessage {
   runScriptPath?: string
 }
 
+// ---------------------------------------------------------------------------
+// Agent Manager terminal messages
+// ---------------------------------------------------------------------------
+
+export interface AgentManagerTerminalCreatedMessage {
+  type: "agentManager.terminal.created"
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+  terminalId: string
+  title: string
+  wsUrl: string
+}
+
+export interface AgentManagerTerminalClosedMessage {
+  type: "agentManager.terminal.closed"
+  terminalId: string
+}
+
+export interface AgentManagerTerminalErrorMessage {
+  type: "agentManager.terminal.error"
+  terminalId?: string
+  message: string
+}
+
 export interface AgentManagerRunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
 }
@@ -1066,6 +1109,12 @@ export interface RecentsLoadedMessage {
 export interface FavoritesLoadedMessage {
   type: "favoritesLoaded"
   favorites: ModelSelection[]
+}
+
+// Per-mode model selections loaded from model.json (extension → webview)
+export interface ModelSelectionsLoadedMessage {
+  type: "modelSelectionsLoaded"
+  selections: Record<string, ModelSelection>
 }
 
 export interface BranchInfo {
@@ -1529,6 +1578,7 @@ export type ExtensionMessage =
   | PermissionErrorMessage
   | TodoUpdatedMessage
   | SessionCreatedMessage
+  | SessionForkedMessage
   | SessionUpdatedMessage
   | SessionDeletedMessage
   | MessageRemovedMessage
@@ -1600,6 +1650,9 @@ export type ExtensionMessage =
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage
+  | AgentManagerTerminalCreatedMessage
+  | AgentManagerTerminalClosedMessage
+  | AgentManagerTerminalErrorMessage
   // legacy-migration start
   | MigrationStateMessage
   | LegacyMigrationDataMessage
@@ -1623,6 +1676,7 @@ export type ExtensionMessage =
   | CustomProviderModelsFetchedMessage
   | RecentsLoadedMessage
   | FavoritesLoadedMessage
+  | ModelSelectionsLoadedMessage
   | LanguageChangedMessage
   | ContinueInWorktreeProgressMessage
   | WorktreeStatsLoadedMessage
@@ -2056,6 +2110,13 @@ export interface ForkSessionRequest {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
+}
+
+export interface SidebarForkSessionRequest {
+  type: "forkSession"
+  sessionId: string
+  messageId?: string
 }
 
 // Close (remove) a session from its worktree
@@ -2136,6 +2197,26 @@ export interface CopyToClipboardRequest {
 // Show existing local terminal when switching to local context (no-op if none exists)
 export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
+}
+
+// Create a new xterm terminal tab in the given worktree context (null = local)
+export interface AgentManagerTerminalCreateRequest {
+  type: "agentManager.terminal.create"
+  worktreeId: string | null
+}
+
+// Close a terminal tab
+export interface AgentManagerTerminalCloseRequest {
+  type: "agentManager.terminal.close"
+  terminalId: string
+}
+
+// Notify the extension of an xterm resize so it can update the backend PTY dimensions
+export interface AgentManagerTerminalResizeRequest {
+  type: "agentManager.terminal.resize"
+  terminalId: string
+  cols: number
+  rows: number
 }
 
 // Open a file in the selected worktree for a specific session
@@ -2423,6 +2504,23 @@ export interface RequestFavoritesMessage {
   type: "requestFavorites"
 }
 
+// Per-mode model selection persistence (webview → extension)
+export interface PersistModelSelectionRequest {
+  type: "persistModelSelection"
+  agent: string
+  providerID: string
+  modelID: string
+}
+
+export interface ClearModelSelectionRequest {
+  type: "clearModelSelection"
+  agent: string
+}
+
+export interface RequestModelSelectionsMessage {
+  type: "requestModelSelections"
+}
+
 // Continue in Worktree: transfer sidebar session + git state to an isolated worktree
 export interface ContinueInWorktreeRequest {
   type: "continueInWorktree"
@@ -2557,6 +2655,7 @@ export type WebviewMessage =
   | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | ForkSessionRequest
+  | SidebarForkSessionRequest
   | CloseSessionRequest
   | PersistSessionRequest
   | ForgetSessionRequest
@@ -2626,6 +2725,9 @@ export type WebviewMessage =
   | RequestRecentsMessage
   | ToggleFavoriteRequest
   | RequestFavoritesMessage
+  | PersistModelSelectionRequest
+  | ClearModelSelectionRequest
+  | RequestModelSelectionsMessage
   | ToggleRemoteMessage
   | SetRemoteEnabledMessage
   | RequestRemoteStatusMessage
@@ -2637,6 +2739,9 @@ export type WebviewMessage =
   | ToggleSectionCollapsedRequest
   | MoveToSectionRequest
   | MoveSectionRequest
+  | AgentManagerTerminalCreateRequest
+  | AgentManagerTerminalCloseRequest
+  | AgentManagerTerminalResizeRequest
 
 // ============================================
 // VS Code API type

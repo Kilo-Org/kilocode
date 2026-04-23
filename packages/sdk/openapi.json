@@ -11430,6 +11430,14 @@ $ bun run --conditions=browser ./src/index.ts generate
           "description": {
             "description": "Explanation of choice",
             "type": "string"
+          },
+          "labelKey": {
+            "description": "Optional i18n key for the label; clients translate and still reply with `label`",
+            "type": "string"
+          },
+          "descriptionKey": {
+            "description": "Optional i18n key for the description",
+            "type": "string"
           }
         },
         "required": ["label", "description"]
@@ -11455,6 +11463,14 @@ $ bun run --conditions=browser ./src/index.ts generate
           "multiple": {
             "description": "Allow selecting multiple choices",
             "type": "boolean"
+          },
+          "questionKey": {
+            "description": "Optional i18n key for the question text; clients fall back to `question` when missing",
+            "type": "string"
+          },
+          "headerKey": {
+            "description": "Optional i18n key for the header; clients fall back to `header` when missing",
+            "type": "string"
           },
           "custom": {
             "description": "Allow typing a custom answer (default: true)",
@@ -11765,7 +11781,7 @@ $ bun run --conditions=browser ./src/index.ts generate
             }
           },
           "blocking": {
-            "description": "Whether this suggestion blocks prompt input (default: true)",
+            "description": "Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.",
             "type": "boolean"
           },
           "tool": {
@@ -15671,14 +15687,14 @@ $ bun run --conditions=browser ./src/index.ts generate
           },
           "prompt": {
             "type": "string",
-            "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"]
+            "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo", "ling"]
           },
           "isFree": {
             "type": "boolean"
           },
           "ai_sdk_provider": {
             "type": "string",
-            "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
+            "enum": ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"]
           }
         },
         "required": [
