@@ -2,9 +2,7 @@ import { cmd } from "../cmd"
 import { UI } from "@/cli/ui"
 import { tui } from "./app"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
-import { TuiConfig } from "@/config/tui"
-import { Instance } from "@/project/instance"
-import { existsSync } from "fs"
+import { TuiConfig } from "@/cli/cmd/tui/config/tui"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 
@@ -81,10 +79,6 @@ export const AttachCommand = cmd({
         const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()
-      const config = await Instance.provide({
-        directory: directory && existsSync(directory) ? directory : process.cwd(),
-        fn: () => TuiConfig.get(),
-      })
       // kilocode_change start - import cloud session before TUI renders
       if (args.cloudFork && args.session) {
         UI.println("Importing session from cloud...")
@@ -103,6 +97,7 @@ export const AttachCommand = cmd({
         args.cloudFork = false
       }
       // kilocode_change end
+      const config = await TuiConfig.get()
       await tui({
         url: args.url,
         config,

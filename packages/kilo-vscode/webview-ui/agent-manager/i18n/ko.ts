@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "세션 포크",
   "agentManager.tab.terminal": "터미널",
   "agentManager.tab.openTerminal": "터미널 열기",
+  "agentManager.tab.newOptions": "더 많은 새 탭 옵션",
+
+  "agentManager.terminal.new": "새 터미널 탭",
+  "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",
+  "agentManager.terminal.connectionError": "터미널 연결 오류",
+  "agentManager.terminal.errorTitle": "터미널 오류",
   "agentManager.setup.failed": "워크스페이스 설정 실패",
   "agentManager.setup.settingUp": "워크스페이스 설정 중",
   "agentManager.setup.error.git_not_found":

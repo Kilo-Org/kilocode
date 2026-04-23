@@ -1,5 +1,49 @@
 # kilo-code
 
+## 7.2.19
+
+## 7.2.18
+
+## 7.2.17
+
+### Minor Changes
+
+- [#9207](https://github.com/Kilo-Org/kilocode/pull/9207) [`4d85c23`](https://github.com/Kilo-Org/kilocode/commit/4d85c232681fb6844521bda5209dd021d742edd6) - Support forking Agent Manager sessions from a specific user message.
+
+- [#9244](https://github.com/Kilo-Org/kilocode/pull/9244) [`18442f6`](https://github.com/Kilo-Org/kilocode/commit/18442f695dee16ce98e1fe06c74cea74e6e18be0) - Support forking sidebar conversations from any user message.
+
+### Patch Changes
+
+- [#9305](https://github.com/Kilo-Org/kilocode/pull/9305) [`b4cb8c3`](https://github.com/Kilo-Org/kilocode/commit/b4cb8c3c04b6f7918032840785d3f6a6a8d077ac) - Prewarm the autocomplete backend on activation so inline completions are ready on first keystroke without opening the Kilo sidebar, and refresh autocomplete state when workspace folders change.
+
+- [#9318](https://github.com/Kilo-Org/kilocode/pull/9318) [`bfe4482`](https://github.com/Kilo-Org/kilocode/commit/bfe44822ed51292606daeb34325a0847d381ba40) - Prevent canceled autocomplete debounce requests from staying pending indefinitely.
+
+- [#9316](https://github.com/Kilo-Org/kilocode/pull/9316) [`bf98bbe`](https://github.com/Kilo-Org/kilocode/commit/bf98bbe34d2b143d0f7e5f50aa3732715ded75a0) - Cap autocomplete ignore path caching so long sessions do not retain unlimited paths.
+
+- [#9239](https://github.com/Kilo-Org/kilocode/pull/9239) [`2b17a7b`](https://github.com/Kilo-Org/kilocode/commit/2b17a7b4e80bb2bd30bd95d047c31ad17dd339b6) - Fix custom provider model and variant deletions being silently reverted on save. Removing a model or reasoning variant from a custom provider now actually removes it from your config.
+
+- [#9241](https://github.com/Kilo-Org/kilocode/pull/9241) [`6c0439b`](https://github.com/Kilo-Org/kilocode/commit/6c0439b0003d2bd011a9aa5bf0b634c18a0e9771) - Fix custom provider variant name validation showing inline errors correctly when a variant name is left empty
+
+- [#9208](https://github.com/Kilo-Org/kilocode/pull/9208) [`acd5798`](https://github.com/Kilo-Org/kilocode/commit/acd5798d99027e4281c8b7fb6c741ff8d63d8c2c) - Fixed Agent Manager incorrectly duplicating worktree sessions into the Local tab when forking a session or using "Continue in Worktree".
+
+- [#7960](https://github.com/Kilo-Org/kilocode/pull/7960) [`d1aed36`](https://github.com/Kilo-Org/kilocode/commit/d1aed364fb5d8aa6d45800c3647a7e1a1287c427) - Add KiloClaw chat panel to the VS Code extension
+
+- [#9245](https://github.com/Kilo-Org/kilocode/pull/9245) [`ec5ac2e`](https://github.com/Kilo-Org/kilocode/commit/ec5ac2e19f69052dae375c9ddc2f7edb67c62358) - Fix the "Continue here" button not submitting after a plan is finished. Picking an option on a single-question prompt now sends the reply immediately — matching the CLI behaviour — and the redundant "Type your own answer" row no longer appears on the plan follow-up question.
+
+- [#9246](https://github.com/Kilo-Org/kilocode/pull/9246) [`c529142`](https://github.com/Kilo-Org/kilocode/commit/c529142d7273092f657f02c66f39f06e9ed55ecc) - Translate the follow-up prompt shown after finishing a plan. The "Ready to implement?" question, "Start new session" and "Continue here" buttons, and their descriptions now respect the language configured in the VS Code sidebar.
+
+- [#9129](https://github.com/Kilo-Org/kilocode/pull/9129) [`60709fd`](https://github.com/Kilo-Org/kilocode/commit/60709fd015aa206c7466a6197642f144280ea2be) - Fix duplicate text shown when typing a custom answer in the question tool. The preview text above the input field is now hidden while editing, so only the input value is visible.
+
+- [#9195](https://github.com/Kilo-Org/kilocode/pull/9195) [`7038ce0`](https://github.com/Kilo-Org/kilocode/commit/7038ce0612179c72d4d369cdd7e337995c3a56fd) - Fix queued follow-up messages so they stay stacked at the bottom of the chat while the previous turn is still being processed, instead of getting interleaved with tool output.
+
+- [#9194](https://github.com/Kilo-Org/kilocode/pull/9194) [`0ace2f9`](https://github.com/Kilo-Org/kilocode/commit/0ace2f960f634c27199468c214cebd0154c998db) - Restore earlier chat history when scrolling through virtualized message lists.
+
+- [#9236](https://github.com/Kilo-Org/kilocode/pull/9236) [`6f17bb7`](https://github.com/Kilo-Org/kilocode/commit/6f17bb753bc83ba8fbe999fefe109275370637d1) - Fix chat scroll jumping back to the bottom while the session is busy — you can now scroll up to read earlier context while a response is streaming or while a question is waiting for your answer.
+
+- [#9199](https://github.com/Kilo-Org/kilocode/pull/9199) [`7a1388d`](https://github.com/Kilo-Org/kilocode/commit/7a1388d8d5849aac017a02a33527603c48d0b0a4) - Fix a stuck session state when the suggest tool was left open. If the suggestion was never accepted or dismissed (for example, because VS Code was closed while it was showing), the session stayed marked as busy and any follow-up messages appeared queued forever. The session is now marked idle while waiting for a response to a suggestion.
+
+- [#9141](https://github.com/Kilo-Org/kilocode/pull/9141) [`61ec925`](https://github.com/Kilo-Org/kilocode/commit/61ec925c509d6437942c23a604aaaeefa16d3c3f) - Restore spacing between sub-agent output and the following user message in the VS Code chat.
+
 ## 7.2.14
 
 ### Minor Changes

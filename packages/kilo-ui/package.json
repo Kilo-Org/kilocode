@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-ui",
-  "version": "7.2.14",
+  "version": "7.2.20",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -62,6 +62,7 @@
     "./line-comment-annotations": "./src/components/line-comment-annotations.tsx",
     "./animated-number": "./src/components/animated-number.tsx",
     "./text-reveal": "./src/components/text-reveal.tsx",
+    "./text-shimmer": "./src/components/text-shimmer.tsx",
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
@@ -114,7 +115,7 @@
   },
   "dependencies": {
     "@kobalte/core": "0.13.11",
-    "@opencode-ai/util": "workspace:*",
+    "@opencode-ai/shared": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@solid-primitives/lifecycle": "0.1.2",
     "@solid-primitives/media": "2.3.3",

@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
@@ -38,6 +40,7 @@ class PromptPanel(
 ) : JPanel(BorderLayout()) {
 
     companion object {
+        private val LOG = KiloLog.create(PromptPanel::class.java)
         private val SEND_ICON: Icon = IconLoader.getIcon("/icons/send.svg", PromptPanel::class.java)
         private val STOP_ICON: Icon = IconLoader.getIcon("/icons/stop.svg", PromptPanel::class.java)
         private const val EDITOR_LINES = 3
@@ -56,13 +59,13 @@ class PromptPanel(
             ed.scrollPane.horizontalScrollBarPolicy =
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             ed.contentComponent.addKeyListener(object : KeyAdapter() {
-                override fun keyPressed(e: KeyEvent) {
-                    if (e.keyCode == KeyEvent.VK_ENTER && !e.isShiftDown) {
-                        e.consume()
-                        submit()
-                    }
-                }
-            })
+                 override fun keyPressed(e: KeyEvent) {
+                     if (e.keyCode == KeyEvent.VK_ENTER && !e.isShiftDown) {
+                         e.consume()
+                         submit("enter")
+                     }
+                 }
+             })
         }
     }
 
@@ -74,7 +77,10 @@ class PromptPanel(
         isEnabled = false
         maximumSize = Dimension(JBUI.scale(28), Short.MAX_VALUE.toInt())
         preferredSize = Dimension(JBUI.scale(28), JBUI.scale(24))
-        addActionListener { if (busy) onAbort() else submit() }
+        addActionListener {
+            if (busy) onAbort()
+            else submit("button")
+        }
     }
 
     @Volatile
@@ -122,9 +128,10 @@ class PromptPanel(
         editor.requestFocusInWindow()
     }
 
-    private fun submit() {
+    private fun submit(src: String) {
         if (busy) return
         val txt = text()
+        LOG.debug { "${ChatLogSummary.prompt(txt)} src=$src busy=$busy" }
         if (txt.isNotEmpty()) {
             onSend(txt)
         }
