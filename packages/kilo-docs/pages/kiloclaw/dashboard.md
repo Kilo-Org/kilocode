@@ -100,7 +100,7 @@ You can pin your instance to a specific OpenClaw version and variant from the Se
 
 Select a version and variant from the dropdowns and click **Save**. To return to automatic updates, clear the version pin and save.
 
-See [Version Pinning](/docs/kiloclaw/version-pinning) for details.
+See [Version Pinning](/docs/kiloclaw/control-ui/version-pinning) for details.
 
 ### Version Status Indicators
 
@@ -199,4 +199,4 @@ These are the beta specifications for machines and subject to change without not
 - [OpenClaw Control UI](/docs/kiloclaw/control-ui)
 - [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/pricing)
+- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)

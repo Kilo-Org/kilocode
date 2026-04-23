@@ -1,0 +1,279 @@
+/* KiloClaw webview styles */
+
+/* Root */
+.kiloclaw-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Main layout: chat (left) + sidebar (right) */
+.kiloclaw-layout {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Center layout for setup/upgrade/loading */
+.kiloclaw-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+}
+
+/* Loading */
+.kiloclaw-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Card overrides for setup/upgrade views */
+.kiloclaw-card {
+  max-width: 480px;
+  width: 100%;
+}
+
+.kiloclaw-card-subtitle {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-card-text {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vscode-descriptionForeground);
+}
+
+/* Chat panel */
+.kiloclaw-chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Chat header */
+.kiloclaw-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex-shrink: 0;
+}
+
+.kiloclaw-chat-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kiloclaw-chat-header-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vscode-foreground);
+}
+
+/* Status dots */
+.kiloclaw-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kiloclaw-dot-online {
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.kiloclaw-dot-offline {
+  background: var(--vscode-descriptionForeground, #888);
+}
+
+.kiloclaw-dot-warning {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.kiloclaw-dot-error {
+  background: var(--vscode-editorError-foreground, #f14c4c);
+}
+
+/* Messages area */
+.kiloclaw-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kiloclaw-empty {
+  color: var(--vscode-descriptionForeground);
+  font-size: 13px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* Message bubble */
+.kiloclaw-msg {
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 85%;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.kiloclaw-msg-user {
+  align-self: flex-end;
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-bottom-right-radius: 2px;
+}
+
+.kiloclaw-msg-bot {
+  align-self: flex-start;
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  color: var(--vscode-foreground);
+  border: 1px solid var(--vscode-panel-border);
+  border-bottom-left-radius: 2px;
+}
+
+.kiloclaw-msg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  gap: 12px;
+}
+
+.kiloclaw-msg-author {
+  font-weight: 600;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.kiloclaw-msg-time {
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.kiloclaw-msg-body {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Markdown inside bot messages — reset spacing for inline rendering */
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] {
+  white-space: normal;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:first-child {
+  margin-top: 0;
+}
+
+.kiloclaw-msg-bot .kiloclaw-msg-body [data-component="markdown"] p:last-child {
+  margin-bottom: 0;
+}
+
+/* Input area */
+.kiloclaw-input-wrap {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--vscode-panel-border);
+  flex-shrink: 0;
+}
+
+.kiloclaw-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 4px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: var(--vscode-font-family);
+  line-height: 1.4;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.kiloclaw-input:focus {
+  outline: none;
+  border-color: var(--vscode-focusBorder);
+}
+
+.kiloclaw-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.kiloclaw-input::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+}
+
+/* Status sidebar */
+.kiloclaw-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--vscode-panel-border);
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--vscode-sideBar-background, var(--vscode-editor-background));
+}
+
+.kiloclaw-sidebar-title {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-sidebar-section {
+  margin-bottom: 16px;
+}
+
+.kiloclaw-sidebar-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground);
+  margin-bottom: 6px;
+}
+
+.kiloclaw-sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+}
+
+.kiloclaw-sidebar-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  padding: 2px 0;
+}
+
+.kiloclaw-sidebar-muted {
+  color: var(--vscode-descriptionForeground);
+}

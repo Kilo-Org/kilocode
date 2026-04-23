@@ -1,0 +1,22 @@
+diff --git a/dist/types/insights.d.ts b/dist/types/insights.d.ts
+index 1234567..abcdefg 100644
+--- a/dist/types/insights.d.ts
++++ b/dist/types/insights.d.ts
+@@ -27,7 +27,7 @@ export declare function buildWsFatalInsight(connection: StableWSConnection, event
+     user_details: import("./types").UserResponse | import("./types").OwnUserResponse | undefined;
+     device: import("./types").BaseDeviceFields | undefined;
+     client_id: string | undefined;
+-    ws_details: import("ws") | undefined;
++    ws_details: typeof import("ws") | undefined;
+     ws_consecutive_failures: number;
+     ws_total_failures: number;
+     request_id: string | undefined;
+@@ -47,7 +47,7 @@ export declare function buildWsSuccessAfterFailureInsight(connection: StableWSCon
+     user_details: import("./types").UserResponse | import("./types").OwnUserResponse | undefined;
+     device: import("./types").BaseDeviceFields | undefined;
+     client_id: string | undefined;
+-    ws_details: import("ws") | undefined;
++    ws_details: typeof import("ws") | undefined;
+     ws_consecutive_failures: number;
+     ws_total_failures: number;
+     request_id: string | undefined;

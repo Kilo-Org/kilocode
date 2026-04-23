@@ -56,18 +56,31 @@ Once configured, the Review Agent runs automatically on PR/MR events. For platfo
 
 Code Reviewer is also available locally. This is valuable for developers who want to review their code before pushing a pull request to their team publicly, or for developers who want reviews and don't need to ship a pull request to GitHub.
 
-### VS Code
+{% tabs %}
+{% tab label="VSCode" %}
 
-Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
-
-![VS Code interface showing Review option in mode dropdown](/docs/img/code-reviewer/review-mode.png "Review Mode")
-
-### CLI
-
-The CLI provides two commands for local code reviews:
+Two slash commands are available for local code reviews:
 
 - **`/local-review`** — Review all changes on your current branch vs the base branch
 - **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Two slash commands are available for local code reviews:
+
+- **`/local-review`** — Review all changes on your current branch vs the base branch
+- **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
+
+{% image src="/docs/img/code-reviewer/review-mode.png" alt="VS Code interface showing Review option in mode dropdown" width="800" caption="Review Mode" /%}
+
+{% /tab %}
+{% /tabs %}
 
 ## How Code Reviews Work
 

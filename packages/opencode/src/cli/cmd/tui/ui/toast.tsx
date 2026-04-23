@@ -5,7 +5,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { SplitBorder } from "../component/border"
 import { TextAttributes } from "@opentui/core"
 import z from "zod"
-import { TuiEvent } from "../event"
+import { type TuiEvent } from "../event"
 
 export type ToastOptions = z.infer<typeof TuiEvent.ToastShow.properties>
 
@@ -56,14 +56,24 @@ function init() {
 
   const toast = {
     show(options: ToastOptions) {
-      const parsedOptions = TuiEvent.ToastShow.properties.parse(options)
-      const { duration, ...currentToast } = parsedOptions
+      const { duration, ...currentToast } = options
       setStore("currentToast", currentToast)
       if (timeoutHandle) clearTimeout(timeoutHandle)
-      timeoutHandle = setTimeout(() => {
-        setStore("currentToast", null)
-      }, duration).unref()
+      // kilocode_change start
+      timeoutHandle = null
+      if (duration && duration > 0) {
+        timeoutHandle = setTimeout(() => {
+          setStore("currentToast", null)
+          timeoutHandle = null
+        }, duration).unref()
+      }
     },
+    dismiss() {
+      if (timeoutHandle) clearTimeout(timeoutHandle)
+      timeoutHandle = null
+      setStore("currentToast", null)
+    },
+    // kilocode_change end
     error: (err: any) => {
       if (err instanceof Error)
         return toast.show({

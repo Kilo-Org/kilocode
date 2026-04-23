@@ -10,9 +10,15 @@
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "opencode#test": {
+    "@kilocode/cli#test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["*"]
+    },
+    "@kilocode/cli#test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
     },
     "@opencode-ai/app#test": {
       "dependsOn": ["^build"],
@@ -22,6 +28,15 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**"],
       "env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
+    },
+    "@kilocode/kilo-jetbrains#build": {
+      "dependsOn": ["@kilocode/cli#build"],
+      "outputs": ["build/distributions/**"]
+    },
+    "@opencode-ai/app#test:ci": {
+      "dependsOn": ["^build"],
+      "outputs": [".artifacts/unit/junit.xml"],
+      "passThroughEnv": ["*"]
     }
   }
 }

@@ -1,5 +1,6 @@
 .error-card {
   padding-bottom: 0;
+  background-color: var(--surface-critical-base);
 }
 
 .error-card [data-component="collapsible"] {

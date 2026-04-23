@@ -1,85 +1,104 @@
 import z from "zod"
 import * as path from "path"
-import { Tool } from "./tool"
+import { Effect } from "effect"
+import * as Tool from "./tool"
 import { LSP } from "../lsp"
 import { createTwoFilesPatch } from "diff"
 import DESCRIPTION from "./write.txt"
 import { Bus } from "../bus"
 import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
-import { FileTime } from "../file/time"
-import { Filesystem } from "../util/filesystem"
+import { Format } from "../format"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Instance } from "../project/instance"
-import { trimDiff } from "./edit"
-import { assertExternalDirectory } from "./external-directory"
+import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
+import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
+import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
 
-const MAX_DIAGNOSTICS_PER_FILE = 20
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
 
-export const WriteTool = Tool.define("write", {
-  description: DESCRIPTION,
-  parameters: z.object({
-    content: z.string().describe("The content to write to the file"),
-    filePath: z.string().describe("The absolute path to the file to write (must be absolute, not relative)"),
-  }),
-  async execute(params, ctx) {
-    const filepath = path.isAbsolute(params.filePath) ? params.filePath : path.join(Instance.directory, params.filePath)
-    await assertExternalDirectory(ctx, filepath)
-
-    const exists = await Filesystem.exists(filepath)
-    const contentOld = exists ? await Filesystem.readText(filepath) : ""
-    if (exists) await FileTime.assert(ctx.sessionID, filepath)
-
-    const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
-    await ctx.ask({
-      permission: "edit",
-      patterns: [path.relative(Instance.worktree, filepath)],
-      always: ["*"],
-      metadata: {
-        filepath,
-        diff,
-      },
-    })
-
-    await Filesystem.write(filepath, params.content)
-    await Bus.publish(File.Event.Edited, {
-      file: filepath,
-    })
-    await Bus.publish(FileWatcher.Event.Updated, {
-      file: filepath,
-      event: exists ? "change" : "add",
-    })
-    FileTime.read(ctx.sessionID, filepath)
-
-    let output = "Wrote file successfully."
-    await LSP.touchFile(filepath, true)
-    const diagnostics = await LSP.diagnostics()
-    const normalizedFilepath = Filesystem.normalizePath(filepath)
-    let projectDiagnosticsCount = 0
-    for (const [file, issues] of Object.entries(diagnostics)) {
-      const errors = issues.filter((item) => item.severity === 1)
-      if (errors.length === 0) continue
-      const limited = errors.slice(0, MAX_DIAGNOSTICS_PER_FILE)
-      const suffix =
-        errors.length > MAX_DIAGNOSTICS_PER_FILE ? `\n... and ${errors.length - MAX_DIAGNOSTICS_PER_FILE} more` : ""
-      if (file === normalizedFilepath) {
-        output += `\n\nLSP errors detected in this file, please fix:\n<diagnostics file="${filepath}">\n${limited.map(LSP.Diagnostic.pretty).join("\n")}${suffix}\n</diagnostics>`
-        continue
-      }
-      if (projectDiagnosticsCount >= MAX_PROJECT_DIAGNOSTICS_FILES) continue
-      projectDiagnosticsCount++
-      output += `\n\nLSP errors detected in other files:\n<diagnostics file="${file}">\n${limited.map(LSP.Diagnostic.pretty).join("\n")}${suffix}\n</diagnostics>`
-    }
+export const WriteTool = Tool.define(
+  "write",
+  Effect.gen(function* () {
+    const lsp = yield* LSP.Service
+    const fs = yield* AppFileSystem.Service
+    const bus = yield* Bus.Service
+    const format = yield* Format.Service
 
     return {
-      title: path.relative(Instance.worktree, filepath),
-      metadata: {
-        diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
-        filepath,
-        exists: exists,
-      },
-      output,
+      description: DESCRIPTION,
+      parameters: z.object({
+        content: z.string().describe("The content to write to the file"),
+        filePath: z.string().describe("The absolute path to the file to write (must be absolute, not relative)"),
+      }),
+      execute: (params: { content: string; filePath: string }, ctx: Tool.Context) =>
+        Effect.gen(function* () {
+          const filepath = path.isAbsolute(params.filePath)
+            ? params.filePath
+            : path.join(Instance.directory, params.filePath)
+          yield* assertExternalDirectoryEffect(ctx, filepath)
+
+          const exists = yield* fs.existsSafe(filepath)
+          // kilocode_change start - preserve file encoding on write
+          const pre = exists ? yield* EncodedIO.read(filepath) : { text: "", encoding: "utf-8" }
+          const contentOld = pre.text
+          const encoding = pre.encoding
+          // kilocode_change end
+
+          const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
+          const filediff = buildFileDiff(filepath, contentOld, params.content) // kilocode_change
+          yield* ctx.ask({
+            permission: "edit",
+            patterns: [path.relative(Instance.worktree, filepath)],
+            always: ["*"],
+            metadata: {
+              filepath,
+              diff,
+              filediff, // kilocode_change
+            },
+          })
+
+          yield* EncodedIO.write(filepath, params.content, encoding) // kilocode_change - preserve encoding; replaces fs.writeWithDirs
+          yield* format.file(filepath)
+          yield* bus.publish(File.Event.Edited, { file: filepath })
+          yield* bus.publish(FileWatcher.Event.Updated, {
+            file: filepath,
+            event: exists ? "change" : "add",
+          })
+
+          let output = "Wrote file successfully."
+          yield* lsp.touchFile(filepath, true)
+          const diagnostics = yield* lsp.diagnostics()
+          const normalizedFilepath = AppFileSystem.normalizePath(filepath)
+          let projectDiagnosticsCount = 0
+          for (const [file, issues] of Object.entries(diagnostics)) {
+            const current = file === normalizedFilepath
+            if (!current && projectDiagnosticsCount >= MAX_PROJECT_DIAGNOSTICS_FILES) continue
+            const block = LSP.Diagnostic.report(current ? filepath : file, issues)
+            if (!block) continue
+            if (current) {
+              output += `\n\nLSP errors detected in this file, please fix:\n${block}`
+              continue
+            }
+            projectDiagnosticsCount++
+            output += `\n\nLSP errors detected in other files:\n${block}`
+          }
+          output += yield* Effect.promise(() => ConfigValidation.check(filepath)) // kilocode_change
+
+          return {
+            title: path.relative(Instance.worktree, filepath),
+            metadata: {
+              diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
+              filepath,
+              exists: exists,
+              diff, // kilocode_change
+              filediff, // kilocode_change
+            },
+            output,
+          }
+        }).pipe(Effect.orDie),
     }
-  },
-})
+  }),
+)

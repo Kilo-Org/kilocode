@@ -1,6 +1,7 @@
 ---
 title: "Custom Subagents"
 description: "Create and configure custom subagents in Kilo Code's CLI"
+platform: new
 ---
 
 # Custom Subagents
@@ -8,7 +9,7 @@ description: "Create and configure custom subagents in Kilo Code's CLI"
 Kilo Code's CLI supports **custom subagents** — specialized AI assistants that can be invoked by primary agents or manually via `@` mentions. Subagents run in their own isolated sessions with tailored prompts, models, tool access, and permissions, enabling you to build purpose-built workflows for tasks like code review, documentation, security audits, and more.
 
 {% callout type="info" %}
-Custom subagents are currently configured through the config file (`kilo.json`) or via markdown agent files. UI-based configuration is not yet available.
+Custom subagents are currently configured through the config file (`kilo.jsonc`) or via markdown agent files. UI-based configuration is not yet available.
 {% /callout %}
 
 ## What Are Subagents?
@@ -47,7 +48,7 @@ There are two ways to define custom subagents: through JSON configuration or mar
 
 ### Method 1: JSON Configuration
 
-Add agents to the `agent` section of your `kilo.json` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
+Add agents to the `agent` section of your `kilo.jsonc` config file. Any key that doesn't match a built-in agent name creates a new custom agent.
 
 ```json
 {
@@ -245,8 +246,8 @@ Agent configurations are merged from multiple sources. Later sources override ea
 
 1. **Built-in agent defaults** (native agents defined in the codebase)
 2. **Global config** (`~/.config/kilo/config.json`)
-3. **Global agent markdown files** (`~/.config/kilo/agents/*.md`)
-4. **Project config** (`kilo.json` in the project root)
+3. **Project config** (`kilo.jsonc` in the project root)
+4. **Global agent markdown files** (`~/.config/kilo/agents/*.md`)
 5. **Project agent markdown files** (`.kilo/agents/*.md`)
 
 When overriding a built-in agent, properties are merged — only the fields you specify are overridden. When creating a new custom agent, unspecified fields use sensible defaults (`mode: "all"`, full permissions inherited from global config).
@@ -373,5 +374,5 @@ To disable a built-in agent entirely:
 
 - [Custom Modes](/docs/customize/custom-modes) — Create specialized primary agents with tool restrictions
 - [Custom Rules](/docs/customize/custom-rules) — Define rules that apply to specific file types or situations
-- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Coordinate complex tasks by delegating to subagents
+- [Orchestrator Mode](/docs/code-with-ai/agents/orchestrator-mode) — Legacy mode for task delegation (now built into all agents)
 - [Task Tool](/docs/automate/tools/new-task) — The tool used to invoke subagents

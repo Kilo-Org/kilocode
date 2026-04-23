@@ -147,6 +147,54 @@ describe("seedSessionStatuses", () => {
     expect(map.get("s1")).toBe("busy")
     expect(msgs).toEqual([])
   })
+
+  // ---- reconcile=false (SSE reconnect) ----
+
+  it("skips reconciliation when reconcile=false", async () => {
+    const client = createClient({ data: {} })
+    const map = new Map<string, SessionStatus["type"]>([["s1", "busy"]])
+    const { msgs, post } = collect()
+
+    await seedSessionStatuses(client, "/repo", map, post, false)
+
+    // Session stays busy — reconciliation skipped on SSE reconnect
+    expect(map.get("s1")).toBe("busy")
+    expect(msgs).toEqual([])
+  })
+
+  it("still seeds server entries when reconcile=false", async () => {
+    const client = createClient({
+      data: { s1: { type: "busy" }, s2: { type: "retry", attempt: 1, message: "err", next: 1000 } },
+    })
+    const map = new Map<string, SessionStatus["type"]>()
+    const { msgs, post } = collect()
+
+    await seedSessionStatuses(client, "/repo", map, post, false)
+
+    expect(map.get("s1")).toBe("busy")
+    expect(map.get("s2")).toBe("retry")
+    expect(msgs).toEqual([
+      { type: "sessionStatus", sessionID: "s1", status: "busy" },
+      { type: "sessionStatus", sessionID: "s2", status: "retry", attempt: 1, message: "err", next: 1000 },
+    ])
+  })
+
+  it("does not reset stale entries when reconcile=false but updates confirmed ones", async () => {
+    const client = createClient({ data: { confirmed: { type: "busy" } } })
+    const map = new Map<string, SessionStatus["type"]>([
+      ["stale", "busy"],
+      ["confirmed", "retry"],
+    ])
+    const { msgs, post } = collect()
+
+    await seedSessionStatuses(client, "/repo", map, post, false)
+
+    // stale: stays busy (no reconciliation)
+    expect(map.get("stale")).toBe("busy")
+    // confirmed: updated to busy from server
+    expect(map.get("confirmed")).toBe("busy")
+    expect(msgs).toEqual([{ type: "sessionStatus", sessionID: "confirmed", status: "busy" }])
+  })
 })
 
 // ---------------------------------------------------------------------------

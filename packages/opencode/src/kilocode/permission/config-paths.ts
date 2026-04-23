@@ -80,18 +80,21 @@ export namespace ConfigProtection {
 
   /**
    * Determine if a permission request targets config files.
-   * Checks `edit` and `external_directory` permissions — read access is not restricted.
+   * Gates `edit` permissions and bash-originated `external_directory` requests.
+   * File-tool reads are not restricted.
    */
   export function isRequest(request: {
     permission: string
-    patterns: string[]
+    patterns: readonly string[]
     metadata?: Record<string, any>
   }): boolean {
-    // external_directory patterns are absolute globs like "/Users/alex/.config/kilo/*"
     if (request.permission === "external_directory") {
+      // File tools include metadata.filepath. They may read global config
+      // without prompting, but edits are still protected separately via `edit`.
+      if (request.metadata?.filepath) return false
       for (const pattern of request.patterns) {
         const dir = pattern.replace(/\/\*$/, "")
-        if (isAbsolute(dir)) return true
+        if (path.isAbsolute(dir) && isAbsolute(dir)) return true
       }
       return false
     }

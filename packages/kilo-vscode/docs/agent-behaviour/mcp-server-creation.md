@@ -2,7 +2,7 @@
 
 **Priority:** P2
 
-The legacy MCP Servers sub-tab (842 lines) had full server lifecycle management. The new sub-tab can only view and remove servers.
+The legacy MCP Servers sub-tab (842 lines) had full server lifecycle management. The new sub-tab supports viewing, removing, and toggling servers with live connection status.
 
 ## Side-by-Side Comparison
 
@@ -12,8 +12,8 @@ The legacy MCP Servers sub-tab (842 lines) had full server lifecycle management.
 | Add server              | Via edit config file buttons     | Not available                                                 |
 | Remove server           | Delete button + confirmation     | Remove button + confirmation                                  |
 | Edit server config      | Via edit config file buttons     | Not available                                                 |
-| Connection status       | Colored dot (green/yellow/red)   | Not displayed                                                 |
-| Enable/disable toggle   | `ToggleSwitch` per server        | Not available                                                 |
+| Connection status       | Colored dot (green/yellow/red)   | Live status display                                           |
+| Enable/disable toggle   | `ToggleSwitch` per server        | Connect/disconnect toggle                                     |
 | Restart/refresh         | Per-server refresh button        | Not available                                                 |
 | Refresh all             | "Refresh All MCP Servers" button | Not available                                                 |
 | Edit Global MCP config  | Button to open file              | Not available                                                 |
@@ -42,8 +42,6 @@ The new extension has none of this expandable detail.
 
 - **Add MCP Server dialog**: Form to define a new server with name, transport type (stdio/SSE), command+args or URL, environment variables. Write to CLI config via `updateConfig()`
 - **Edit MCP Server**: Allow modifying existing server configurations
-- **Connection status indicators**: Display per-server connection state. Requires CLI to expose MCP connection status via API or SSE events
-- **Enable/disable toggle**: Per-server toggle that writes to CLI config without removing the server
 - **Restart/refresh button**: Per-server and "refresh all" buttons. Requires CLI endpoint to restart MCP servers
 - **Edit config file buttons**: Quick links to open global/project MCP config in the editor
 
