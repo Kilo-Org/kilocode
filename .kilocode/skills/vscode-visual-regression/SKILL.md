@@ -59,7 +59,7 @@ export const MyStoryName: Story = {
   name: "MyComponent — description of variant",
   render: () => (
     <StoryProviders>
-      <div style={{ width: "420px", height: "400px" }}>
+      <div style={{ "max-height": "400px", overflow: "auto" }}>
         <MyComponent someProp="value" />
       </div>
     </StoryProviders>
@@ -71,7 +71,8 @@ export const MyStoryName: Story = {
 
 - **Always start with `/** @jsxImportSource solid-js \*/`\*\* — required for SolidJS JSX compilation.
 - **Always wrap in `<StoryProviders>`** — provides all required contexts (VSCode, Server, Config, Provider, Session, I18n, Dialog, Marked, Data, Diff, Code). Without it, components that call `useVSCode()`, `useSession()`, etc. will throw.
-- **Set explicit dimensions** on a wrapper div so the screenshot has a deterministic size. Use `width: "420px"` for sidebar-width components (the standard VS Code sidebar). Use `width: "200px"` for narrow/collapsed states.
+- **Do NOT set an explicit `width` on the wrapper div.** The Playwright viewport is already 420px wide (or 200px for narrow stories). Setting `width: "420px"` leaves no room for a vertical scrollbar and causes right-side cropping in screenshots. Let the viewport control the width.
+- **Use `max-height` not `height` for the wrapper div** when you need to constrain vertical size. A fixed `height` forces a scrollbar even when content is short; `max-height` avoids unnecessary scrollbars that would eat into the available horizontal space.
 - **Meta `title`** determines the snapshot subdirectory. Use PascalCase or slash-notation (e.g., `"Composite/Webview"`). Playwright transforms it: `"Composite/Webview"` becomes `composite-webview/` in the snapshots folder.
 - **Export name** determines the story ID. The Storybook ID is `{lowercase-title}--{kebab-export-name}`. For example, `title: "Chat"` + `export const ChatViewIdle` produces ID `chat--chat-view-idle`.
 - **Snapshot path** is derived automatically: `tests/visual-regression.spec.ts-snapshots/{title-slug}/{variant-slug}.png`. Example: `chat/chat-view-idle-chromium-linux.png`.

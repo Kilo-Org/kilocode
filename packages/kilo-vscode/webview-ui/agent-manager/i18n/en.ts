@@ -20,6 +20,17 @@ export const dict = {
   "agentManager.worktree.copyPath": "Copy Path",
   "agentManager.worktree.openInVscode": "Open in VS Code",
   "agentManager.worktree.rename": "Rename",
+  "agentManager.worktree.moveToSection": "Move to Section",
+  "agentManager.worktree.newSection": "New Section",
+  "agentManager.worktree.ungrouped": "Ungrouped",
+  "agentManager.section.rename": "Rename Section",
+  "agentManager.section.setColor": "Set Color",
+  "agentManager.section.delete": "Delete Section",
+  "agentManager.section.defaultColor": "Default",
+  "agentManager.section.defaultName": "New Section",
+  "agentManager.section.moveUp": "Move Up",
+  "agentManager.section.moveDown": "Move Down",
+  "agentManager.section.count": "{{count}}",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Base",
@@ -32,6 +43,7 @@ export const dict = {
   "agentManager.session.untitled": "Untitled",
   "agentManager.session.newSession": "New Session",
   "agentManager.session.openInWorktree": "Open in worktree",
+  "agentManager.session.openLocally": "Open locally",
   "agentManager.session.readonly": "Read-only session",
   "agentManager.session.noSessions": "No sessions open",
 
@@ -40,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
+  "agentManager.tab.newOptions": "More new-tab options",
+
+  "agentManager.terminal.new": "New Terminal Tab",
+  "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
+  "agentManager.terminal.connectionError": "terminal connection error",
+  "agentManager.terminal.errorTitle": "Terminal error",
 
   "agentManager.setup.failed": "Worktree setup failed",
   "agentManager.setup.settingUp": "Setting up worktree",
@@ -48,6 +66,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Open a folder that contains a git repository to use worktrees.",
   "agentManager.setup.error.lfs_missing":
     "This repository uses Git LFS, but git-lfs was not found. Please install Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "This repository has no commits yet. Create an initial commit before using worktrees.",
   "agentManager.shortcuts.title": "Keyboard Shortcuts",
   "agentManager.shortcuts.category.sidebar": "Sidebar",
   "agentManager.shortcuts.category.tabs": "Tabs",
@@ -64,6 +84,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "New tab",
   "agentManager.shortcuts.closeTab": "Close tab",
   "agentManager.shortcuts.toggleTerminal": "Toggle terminal",
+  "agentManager.shortcuts.runScript": "Run script",
+  "agentManager.run.options": "Run options",
+  "agentManager.run.configure": "Configure run script",
   "agentManager.shortcuts.openAgentManager": "Open Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",
@@ -102,6 +125,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Toggle diff",
   "agentManager.diff.openFile": "Open file",
+  "agentManager.diff.revertFile": "Revert file",
+  "agentManager.diff.revertSuccess": "File reverted",
+  "agentManager.diff.revertError": "Revert failed",
   "agentManager.open.button": "Open",
   "agentManager.open.tooltip": "Open this worktree in VS Code",
   "agentManager.apply.button": "Apply to local",

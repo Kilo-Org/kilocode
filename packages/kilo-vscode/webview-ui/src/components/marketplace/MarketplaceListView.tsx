@@ -12,6 +12,7 @@ import type {
 import { useLanguage } from "../../context/language"
 import { isInstalled } from "./utils"
 import { ItemCard } from "./ItemCard"
+import { MarketplaceContribute } from "./MarketplaceContribute"
 
 interface StatusOption {
   value: string
@@ -124,7 +125,15 @@ export const MarketplaceListView = (props: Props) => {
           </div>
         }
       >
-        <Show when={filtered().length > 0} fallback={<p class="marketplace-empty">{props.emptyMessage}</p>}>
+        <Show
+          when={filtered().length > 0}
+          fallback={
+            <div class="marketplace-empty">
+              <span class="marketplace-empty-message">{props.emptyMessage}</span>
+              <MarketplaceContribute />
+            </div>
+          }
+        >
           <div class="marketplace-grid">
             <For each={filtered()}>
               {(item) => {
@@ -144,6 +153,7 @@ export const MarketplaceListView = (props: Props) => {
               }}
             </For>
           </div>
+          <MarketplaceContribute />
         </Show>
       </Show>
     </div>

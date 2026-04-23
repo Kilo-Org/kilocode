@@ -3,11 +3,15 @@ import { createStore } from "solid-js/store"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
 
 const DEBOUNCE_MS = 100
+// Grace window after a real user interaction (wheel/pointer/key/touch) during
+// which a ResizeObserver or non-user scroll event must not snap the view back
+// to the bottom. Long enough to cover a single scroll gesture plus the
+// DEBOUNCE_MS window used by handleScroll to flip userScrolled.
+const USER_INTERACTION_GRACE_MS = 300
 
 export interface AutoScrollOptions {
   working: () => boolean
   onUserInteracted?: () => void
-  overflowAnchor?: "none" | "auto" | "dynamic"
   bottomThreshold?: number
 }
 
@@ -15,10 +19,11 @@ export function createAutoScroll(options: AutoScrollOptions) {
   let scroll: HTMLElement | undefined
   let settling = false
   let settleTimer: ReturnType<typeof setTimeout> | undefined
-  let autoTimer: ReturnType<typeof setTimeout> | undefined
   let stopTimer: ReturnType<typeof setTimeout> | undefined
   let cleanup: (() => void) | undefined
-  let auto: { time: number } | undefined
+  let userInitiated = false
+  let lastScrollTop: number | undefined
+  let lastInteraction = 0
 
   const threshold = () => options.bottomThreshold ?? 10
 
@@ -37,36 +42,22 @@ export function createAutoScroll(options: AutoScrollOptions) {
     return el.scrollHeight - el.clientHeight > 1
   }
 
-  // Browsers can dispatch scroll events asynchronously. If new content arrives
-  // between us calling `scrollTo()` and the subsequent `scroll` event firing,
-  // the handler can see a non-zero `distanceFromBottom` and incorrectly assume
-  // the user scrolled.
-  const markAuto = (_el: HTMLElement) => {
-    auto = { time: Date.now() }
-
-    if (autoTimer) clearTimeout(autoTimer)
-    autoTimer = setTimeout(() => {
-      auto = undefined
-      autoTimer = undefined
-    }, 250)
-  }
-
-  const isAuto = (_el: HTMLElement) => {
-    const a = auto
-    if (!a) return false
-
-    if (Date.now() - a.time > 250) {
-      auto = undefined
-      return false
+  const markUser = (e: Event) => {
+    if (e instanceof WheelEvent) {
+      const target = e.target instanceof Element ? e.target : undefined
+      const nested = target?.closest("[data-scrollable]")
+      if (scroll && nested && nested !== scroll) return
     }
-
-    return true
+    userInitiated = true
+    lastInteraction = performance.now()
   }
+
+  const recentlyInteracted = () =>
+    lastInteraction > 0 && performance.now() - lastInteraction < USER_INTERACTION_GRACE_MS
 
   const scrollToBottomNow = (behavior: ScrollBehavior) => {
     const el = scroll
     if (!el) return
-    markAuto(el)
     if (behavior === "smooth") {
       el.scrollTo({ top: el.scrollHeight, behavior })
       return
@@ -74,6 +65,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
 
     // `scrollTop` assignment bypasses any CSS `scroll-behavior: smooth`.
     el.scrollTop = el.scrollHeight
+    lastScrollTop = el.scrollTop
   }
 
   const scrollToBottom = (force: boolean) => {
@@ -121,19 +113,32 @@ export function createAutoScroll(options: AutoScrollOptions) {
     const el = scroll
     if (!el) return
 
+    const byUser = userInitiated
+    userInitiated = false
+    const distance = distanceFromBottom(el)
+
     if (!canScroll(el)) {
       if (store.userScrolled) setStore("userScrolled", false)
       return
     }
 
-    if (distanceFromBottom(el) < threshold()) {
+    if (distance < threshold()) {
       if (store.userScrolled) setStore("userScrolled", false)
+      lastScrollTop = el.scrollTop
       return
     }
 
-    // Ignore scroll events triggered by our own scrollToBottom calls.
-    if (!store.userScrolled && isAuto(el)) {
-      scrollToBottom(false)
+    if (!store.userScrolled && !byUser) {
+      // virtua fires programmatic scroll events as it measures virtualized
+      // items. Don't let those snap the view back to the bottom while the
+      // user is mid-gesture — the wheel event fires before the scroll event,
+      // so `recentlyInteracted()` is reliable here.
+      if (el.scrollTop < (lastScrollTop ?? el.scrollTop) || recentlyInteracted()) {
+        stop()
+      } else {
+        scrollToBottomNow("auto")
+      }
+      lastScrollTop = el.scrollTop
       return
     }
 
@@ -145,7 +150,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
       const cur = scroll
       if (!cur) return
       if (distanceFromBottom(cur) < threshold()) return
-      if (!store.userScrolled && isAuto(cur)) return
       stop()
     }, DEBOUNCE_MS)
   }
@@ -153,22 +157,6 @@ export function createAutoScroll(options: AutoScrollOptions) {
   const handleInteraction = () => {
     if (!active()) return
     stop()
-  }
-
-  const updateOverflowAnchor = (el: HTMLElement) => {
-    const mode = options.overflowAnchor ?? "dynamic"
-
-    if (mode === "none") {
-      el.style.overflowAnchor = "none"
-      return
-    }
-
-    if (mode === "auto") {
-      el.style.overflowAnchor = "auto"
-      return
-    }
-
-    el.style.overflowAnchor = store.userScrolled ? "auto" : "none"
   }
 
   createResizeObserver(
@@ -179,8 +167,25 @@ export function createAutoScroll(options: AutoScrollOptions) {
         if (store.userScrolled) setStore("userScrolled", false)
         return
       }
-      if (!active()) return
-      if (store.userScrolled) return
+      if (!active()) {
+        if (!store.userScrolled && el && distanceFromBottom(el) > threshold()) {
+          scrollToBottomNow("auto")
+          return
+        }
+        return
+      }
+      if (store.userScrolled) {
+        return
+      }
+      // Virtualized lists (virtua) re-measure items during user scroll, firing
+      // resize events that race ahead of handleScroll's DEBOUNCE_MS window.
+      // If the user just interacted with the scroller and is no longer near
+      // the bottom, treat the resize as a layout reflow on top of their
+      // scroll — pause auto-follow instead of snapping back to the bottom.
+      if (el && recentlyInteracted() && distanceFromBottom(el) > threshold()) {
+        stop()
+        return
+      }
       // ResizeObserver fires after layout, before paint.
       // Keep the bottom locked in the same frame to avoid visible
       // "jump up then catch up" artifacts while streaming content.
@@ -206,18 +211,8 @@ export function createAutoScroll(options: AutoScrollOptions) {
     }),
   )
 
-  createEffect(() => {
-    // Track `userScrolled` even before `scrollRef` is attached, so we can
-    // update overflow anchoring once the element exists.
-    store.userScrolled
-    const el = scroll
-    if (!el) return
-    updateOverflowAnchor(el)
-  })
-
   onCleanup(() => {
     if (settleTimer) clearTimeout(settleTimer)
-    if (autoTimer) clearTimeout(autoTimer)
     if (stopTimer) clearTimeout(stopTimer)
     if (cleanup) cleanup()
   })
@@ -229,15 +224,24 @@ export function createAutoScroll(options: AutoScrollOptions) {
         cleanup = undefined
       }
 
+      lastScrollTop = undefined
       scroll = el
 
       if (!el) return
 
-      updateOverflowAnchor(el)
+      el.style.overflowAnchor = "auto"
       el.addEventListener("wheel", handleWheel, { passive: true })
+      el.addEventListener("wheel", markUser, { passive: true, capture: true })
+      el.addEventListener("pointerdown", markUser, { passive: true })
+      el.addEventListener("keydown", markUser, { passive: true })
+      el.addEventListener("touchstart", markUser, { passive: true })
 
       cleanup = () => {
         el.removeEventListener("wheel", handleWheel)
+        el.removeEventListener("wheel", markUser, { capture: true })
+        el.removeEventListener("pointerdown", markUser)
+        el.removeEventListener("keydown", markUser)
+        el.removeEventListener("touchstart", markUser)
       }
     },
     contentRef: (el: HTMLElement | undefined) => setStore("contentRef", el),

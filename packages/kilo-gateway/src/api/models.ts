@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { getKiloUrlFromToken } from "../auth/token.js"
-import { DEFAULT_HEADERS } from "../headers.js"
+import { getDefaultHeaders, buildKiloHeaders } from "../headers.js"
 import { KILO_API_BASE, KILO_OPENROUTER_BASE, MODELS_FETCH_TIMEOUT_MS, PROMPTS, AI_SDK_PROVIDERS } from "./constants.js"
 
 /**
@@ -48,12 +48,15 @@ const openRouterModelsResponseSchema = z.object({
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
 /**
- * Parse API price string to number (e.g. "0.00001" -> 0.00001)
+ * Parse API price string to number, converting from per-token to per-million-tokens.
+ * The API returns prices in $/token, but downstream cost calculation (getUsage)
+ * divides by 1,000,000 expecting $/M tokens.
  */
 function parseApiPrice(price: string | null | undefined): number | undefined {
   if (!price) return undefined
   const parsed = parseFloat(price)
-  return isNaN(parsed) ? undefined : parsed
+  if (isNaN(parsed)) return undefined
+  return parsed * 1_000_000 // Convert $/token → $/M tokens
 }
 
 /**
@@ -85,7 +88,8 @@ export async function fetchKiloModels(options?: {
     // Fetch models with timeout
     const response = await fetch(modelsURL, {
       headers: {
-        ...DEFAULT_HEADERS,
+        ...getDefaultHeaders(),
+        ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: AbortSignal.timeout(MODELS_FETCH_TIMEOUT_MS),
@@ -111,6 +115,11 @@ export async function fetchKiloModels(options?: {
     for (const model of result.data.data) {
       // Skip image generation models
       if (model.architecture?.output_modalities?.includes("image")) {
+        continue
+      }
+
+      // Skip models that don't support tools — Kilo requires tool calling
+      if (!model.supported_parameters?.includes("tools")) {
         continue
       }
 

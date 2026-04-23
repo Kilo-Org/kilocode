@@ -17,8 +17,8 @@ import DisplayTab from "./DisplayTab"
 import AutocompleteTab from "./AutocompleteTab"
 import NotificationsTab from "./NotificationsTab"
 import ContextTab from "./ContextTab"
-import TerminalTab from "./TerminalTab"
-import PromptsTab from "./PromptsTab"
+
+import CommitMessageTab from "./CommitMessageTab"
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
@@ -34,9 +34,10 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { isDirty, saveConfig, discardConfig } = useConfig()
+  const { isDirty, saving, saveError, saveConfig, discardConfig } = useConfig()
   const session = useSession()
-  const [active, setActive] = createSignal(props.tab ?? "providers")
+  const [active, setActive] = createSignal(props.tab ?? "models")
+  const [errorExpanded, setErrorExpanded] = createSignal(false)
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -138,13 +139,10 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="server" />
             <span class="label">{language.t("settings.context.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="terminal">
-            <Icon name="console" />
-            <span class="label">{language.t("settings.terminal.title")}</span>
-          </Tabs.Trigger>
-          <Tabs.Trigger value="prompts">
-            <Icon name="comment" />
-            <span class="label">{language.t("settings.prompts.title")}</span>
+
+          <Tabs.Trigger value="commitMessage">
+            <Icon name="edit" />
+            <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
@@ -200,13 +198,10 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.context.title")}</h3>
           <ContextTab />
         </Tabs.Content>
-        <Tabs.Content value="terminal">
-          <h3>{language.t("settings.terminal.title")}</h3>
-          <TerminalTab />
-        </Tabs.Content>
-        <Tabs.Content value="prompts">
-          <h3>{language.t("settings.prompts.title")}</h3>
-          <PromptsTab />
+
+        <Tabs.Content value="commitMessage">
+          <h3>{language.t("settings.commitMessage.title")}</h3>
+          <CommitMessageTab />
         </Tabs.Content>
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
@@ -227,27 +222,45 @@ const Settings: Component<SettingsProps> = (props) => {
         </Tabs.Content>
       </Tabs>
 
-      {/* Save bar — visible when there are unsaved config changes */}
+      {/* Save bar — slides in when there are unsaved config changes */}
       <Show when={isDirty()}>
-        <div
-          style={{
-            display: "flex",
-            "align-items": "center",
-            "justify-content": "flex-end",
-            gap: "8px",
-            padding: "8px 16px",
-            "border-top": "1px solid var(--border-weak-base)",
-          }}
-        >
-          <span style={{ "font-size": "12px", color: "var(--foreground-secondary)", "margin-right": "auto" }}>
-            {language.t("settings.saveBar.unsavedChanges")}
-          </span>
-          <Button variant="ghost" size="small" onClick={discardConfig}>
-            {language.t("settings.saveBar.discard")}
-          </Button>
-          <Button variant="primary" size="small" onClick={handleSave}>
-            {language.t("settings.saveBar.save")}
-          </Button>
+        <div class="settings-save-bar-wrap">
+          <Show when={saveError()}>
+            {(err) => (
+              <div class="settings-save-bar-error">
+                <div
+                  class="settings-save-bar-error-header"
+                  onClick={() => setErrorExpanded((v) => !v)}
+                  role="button"
+                  aria-expanded={errorExpanded()}
+                >
+                  <span
+                    class={`settings-save-bar-error-chevron${
+                      errorExpanded() ? " settings-save-bar-error-chevron-expanded" : ""
+                    }`}
+                  >
+                    <Icon name="chevron-right" size="small" />
+                  </span>
+                  <span class="settings-save-bar-error-title">
+                    {language.t("settings.saveBar.saveFailed")}:{" "}
+                    <span class="settings-save-bar-error-firstline">{err().message}</span>
+                  </span>
+                </div>
+                <Show when={errorExpanded()}>
+                  <pre class="settings-save-bar-error-details">{err().details ?? err().message}</pre>
+                </Show>
+              </div>
+            )}
+          </Show>
+          <div class="settings-save-bar">
+            <span class="settings-save-bar-label">{language.t("settings.saveBar.unsavedChanges")}</span>
+            <Button variant="ghost" size="small" onClick={discardConfig} disabled={saving()}>
+              {language.t("settings.saveBar.discard")}
+            </Button>
+            <Button variant="primary" size="small" onClick={handleSave} disabled={saving()}>
+              {saving() ? language.t("settings.saveBar.saving") : language.t("settings.saveBar.save")}
+            </Button>
+          </div>
         </div>
       </Show>
     </div>

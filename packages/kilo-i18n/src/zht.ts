@@ -66,4 +66,14 @@ export const dict = {
   "marketplace.warning.busyMany": "多個工作階段正在執行，將被中斷",
   "marketplace.warning.installAnyway": "仍然安裝",
   "marketplace.warning.cancel": "取消",
+  "marketplace.contribute.prompt": "缺少技能、模式或 MCP 伺服器？",
+  "marketplace.contribute.cta": "在 GitHub 上貢獻",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "實作",
+  "plan.followup.question": "準備好實作了嗎？",
+  "plan.followup.answer.newSession": "開啟新工作階段",
+  "plan.followup.answer.newSession.description": "在具有乾淨上下文的新工作階段中實作",
+  "plan.followup.answer.continue": "在此繼續",
+  "plan.followup.answer.continue.description": "在本工作階段中實作計畫",
 }

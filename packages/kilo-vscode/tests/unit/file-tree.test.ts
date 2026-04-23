@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test"
-import { buildFileTree, flatten, flattenChain, type FileTreeNode } from "../../webview-ui/agent-manager/file-tree-utils"
+import {
+  buildFileTree,
+  flatten,
+  flattenChain,
+  treeOrder,
+  type FileTreeNode,
+} from "../../webview-ui/agent-manager/file-tree-utils"
 import type { WorktreeFileDiff } from "../../webview-ui/src/types/messages"
 
 function diff(file: string, status?: "added" | "deleted" | "modified"): WorktreeFileDiff {
@@ -13,13 +19,13 @@ describe("buildFileTree", () => {
     expect(buildFileTree([])).toEqual([])
   })
 
-  it("places root-level files at the top", () => {
+  it("sorts root-level files alphabetically", () => {
     const tree = buildFileTree([diff("README.md"), diff("package.json")])
     expect(tree).toHaveLength(2)
-    expect(tree[0]!.name).toBe("README.md")
-    expect(tree[0]!.path).toBe("README.md")
+    expect(tree[0]!.name).toBe("package.json")
+    expect(tree[0]!.path).toBe("package.json")
     expect(tree[0]!.children).toBeUndefined()
-    expect(tree[1]!.name).toBe("package.json")
+    expect(tree[1]!.name).toBe("README.md")
   })
 
   it("groups files under shared directories", () => {
@@ -66,15 +72,15 @@ describe("buildFileTree", () => {
     expect(tree[0]!.children![0]!.children![0]!.children![0]!.children![0]!.name).toBe("e.ts")
   })
 
-  it("mixes root-level files with directory files", () => {
+  it("sorts directories before files at each level", () => {
     const tree = buildFileTree([diff("README.md"), diff("src/index.ts"), diff("test/index.test.ts")])
-    expect(tree).toHaveLength(3) // README.md, src/, test/
-    expect(tree[0]!.name).toBe("README.md")
-    expect(tree[0]!.children).toBeUndefined()
-    expect(tree[1]!.name).toBe("src")
+    expect(tree).toHaveLength(3) // src/, test/, README.md
+    expect(tree[0]!.name).toBe("src")
+    expect(tree[0]!.children).toHaveLength(1)
+    expect(tree[1]!.name).toBe("test")
     expect(tree[1]!.children).toHaveLength(1)
-    expect(tree[2]!.name).toBe("test")
-    expect(tree[2]!.children).toHaveLength(1)
+    expect(tree[2]!.name).toBe("README.md")
+    expect(tree[2]!.children).toBeUndefined()
   })
 
   it("attaches diff data to leaf nodes", () => {
@@ -87,6 +93,17 @@ describe("buildFileTree", () => {
   it("does not attach diff data to directory nodes", () => {
     const tree = buildFileTree([diff("src/a.ts")])
     expect(tree[0]!.diff).toBeUndefined()
+  })
+
+  it("sorts directories before files within each level", () => {
+    const tree = buildFileTree([diff("src/a.ts"), diff("src/b/c.ts")])
+    const src = tree[0]!
+    expect(src.children).toHaveLength(2)
+    // Directory before file
+    expect(src.children![0]!.name).toBe("b")
+    expect(src.children![0]!.children).toBeDefined()
+    expect(src.children![1]!.name).toBe("a.ts")
+    expect(src.children![1]!.children).toBeUndefined()
   })
 
   it("separates diverging paths with common prefix", () => {
@@ -308,5 +325,84 @@ describe("flatten", () => {
     expect(result[0]!.name).toBe("src")
     expect(result[0]!.children).toHaveLength(1)
     expect(result[0]!.children![0]!.name).toBe("index.ts")
+  })
+})
+
+// ── treeOrder ──────────────────────────────────────────────────────────────
+
+describe("treeOrder", () => {
+  it("returns empty array for empty input", () => {
+    expect(treeOrder([])).toEqual([])
+  })
+
+  it("returns single-element array unchanged", () => {
+    const input = [diff("a.ts")]
+    expect(treeOrder(input)).toEqual(input)
+  })
+
+  it("groups files by directory", () => {
+    // Git lexicographic order interleaves directories: a/x, b/y, a/z
+    // but buildFileTree groups by directory: a/{x,z}, b/{y}
+    const input = [diff("a/x.ts"), diff("b/y.ts"), diff("a/z.ts")]
+    const result = treeOrder(input)
+    expect(result.map((d) => d.file)).toEqual(["a/x.ts", "a/z.ts", "b/y.ts"])
+  })
+
+  it("groups untracked files with their directory siblings", () => {
+    // The actual bug: backend appends untracked/new files AFTER all tracked
+    // files. settings-io.ts (untracked, added) ends up after all the tracked
+    // i18n modifications, but should appear with its directory siblings.
+    const input = [
+      diff("src/components/settings/about.ts"), // tracked modification
+      diff("src/i18n/ar.ts"), // tracked modification
+      diff("src/i18n/de.ts"), // tracked modification
+      diff("src/i18n/en.ts"), // tracked modification
+      diff("src/components/settings/settings-io.ts"), // untracked, appended last
+      diff("tests/unit/settings-io.test.ts"), // untracked, appended last
+    ]
+    const result = treeOrder(input)
+    // Tree groups by directory: components/settings/ together, i18n/ together
+    // Directories sorted alphabetically: components/ before i18n/ before tests/
+    expect(result.map((d) => d.file)).toEqual([
+      "src/components/settings/about.ts",
+      "src/components/settings/settings-io.ts", // now grouped with about.ts!
+      "src/i18n/ar.ts",
+      "src/i18n/de.ts",
+      "src/i18n/en.ts",
+      "tests/unit/settings-io.test.ts",
+    ])
+  })
+
+  it("reorders when git path sort diverges from tree grouping", () => {
+    // Files from the same directory are scattered in the input (e.g. because
+    // untracked files are appended after tracked files)
+    const input = [
+      diff("pkg/tests/a.test.ts"),
+      diff("pkg/webview/src/components/x.ts"),
+      diff("pkg/webview/src/i18n/ar.ts"),
+      diff("pkg/webview/src/i18n/de.ts"),
+      diff("pkg/tests/b.test.ts"),
+    ]
+    const result = treeOrder(input)
+    // Tree groups and sorts: tests/{a,b}, webview/src/{components/x, i18n/{ar,de}}
+    expect(result.map((d) => d.file)).toEqual([
+      "pkg/tests/a.test.ts",
+      "pkg/tests/b.test.ts",
+      "pkg/webview/src/components/x.ts",
+      "pkg/webview/src/i18n/ar.ts",
+      "pkg/webview/src/i18n/de.ts",
+    ])
+  })
+
+  it("sorts root-level files alphabetically", () => {
+    const input = [diff("README.md"), diff("package.json"), diff("tsconfig.json")]
+    const result = treeOrder(input)
+    expect(result.map((d) => d.file)).toEqual(["package.json", "README.md", "tsconfig.json"])
+  })
+
+  it("puts directories before files at each level", () => {
+    const input = [diff("README.md"), diff("src/a.ts"), diff("src/b.ts"), diff("tsconfig.json")]
+    const result = treeOrder(input)
+    expect(result.map((d) => d.file)).toEqual(["src/a.ts", "src/b.ts", "README.md", "tsconfig.json"])
   })
 })

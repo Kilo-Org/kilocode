@@ -1,6 +1,7 @@
-import { spawn } from "node:child_process"
+import launch from "cross-spawn"
 import { randomBytes } from "node:crypto" // kilocode_change
 import { type Config } from "./gen/types.gen.js"
+import { stop, bindAbort } from "../process.js"
 
 // kilocode_change start - Merge existing KILO_CONFIG_CONTENT with new config
 // This preserves Kilocode-injected modes when spawning nested CLI instances
@@ -69,22 +70,26 @@ export async function createKiloServer(options?: ServerOptions) {
   if (options.config?.logLevel) args.push(`--log-level=${options.config.logLevel}`)
 
   // kilocode_change start
-  const proc = spawn(`kilo`, args, {
+  const proc = launch(`kilo`, args, {
     // kilocode_change end
-    signal: options.signal,
     env: {
       ...process.env,
       KILO_SERVER_PASSWORD: password, // kilocode_change
       KILO_CONFIG_CONTENT: buildConfigEnv(options.config), // kilocode_change
     },
   })
+  let clear = () => {}
 
   const url = await new Promise<string>((resolve, reject) => {
     const id = setTimeout(() => {
+      clear()
+      stop(proc)
       reject(new Error(`Timeout waiting for server to start after ${options.timeout}ms`))
     }, options.timeout)
     let output = ""
+    let resolved = false
     proc.stdout?.on("data", (chunk) => {
+      if (resolved) return
       output += chunk.toString()
       const lines = output.split("\n")
       for (const line of lines) {
@@ -93,9 +98,14 @@ export async function createKiloServer(options?: ServerOptions) {
           // kilocode_change end
           const match = line.match(/on\s+(https?:\/\/[^\s]+)/)
           if (!match) {
-            throw new Error(`Failed to parse server url from output: ${line}`)
+            clear()
+            stop(proc)
+            clearTimeout(id)
+            reject(new Error(`Failed to parse server url from output: ${line}`))
+            return
           }
           clearTimeout(id)
+          resolved = true
           resolve(match[1]!)
           return
         }
@@ -116,19 +126,18 @@ export async function createKiloServer(options?: ServerOptions) {
       clearTimeout(id)
       reject(error)
     })
-    if (options.signal) {
-      options.signal.addEventListener("abort", () => {
-        clearTimeout(id)
-        reject(new Error("Aborted"))
-      })
-    }
+    clear = bindAbort(proc, options.signal, () => {
+      clearTimeout(id)
+      reject(options.signal?.reason)
+    })
   })
 
   return {
     url,
     password,
     close() {
-      proc.kill()
+      clear()
+      stop(proc)
     },
   }
 }
@@ -150,19 +159,22 @@ export function createKiloTui(options?: TuiOptions) {
   }
 
   // kilocode_change start
-  const proc = spawn(`kilo`, args, {
+  const proc = launch(`kilo`, args, {
     // kilocode_change end
-    signal: options?.signal,
     stdio: "inherit",
+    windowsHide: true,
     env: {
       ...process.env,
       KILO_CONFIG_CONTENT: buildConfigEnv(options?.config), // kilocode_change
     },
   })
 
+  const clear = bindAbort(proc, options?.signal)
+
   return {
     close() {
-      proc.kill()
+      clear()
+      stop(proc)
     },
   }
 }

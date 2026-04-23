@@ -20,6 +20,17 @@ export const dict = {
   "agentManager.worktree.copyPath": "Pad kopiëren",
   "agentManager.worktree.openInVscode": "Openen in VS Code",
   "agentManager.worktree.rename": "Hernoemen",
+  "agentManager.worktree.moveToSection": "Verplaatsen naar sectie",
+  "agentManager.worktree.newSection": "Nieuwe sectie",
+  "agentManager.worktree.ungrouped": "Niet gegroepeerd",
+  "agentManager.section.rename": "Sectie hernoemen",
+  "agentManager.section.setColor": "Kleur instellen",
+  "agentManager.section.delete": "Sectie verwijderen",
+  "agentManager.section.defaultColor": "Standaard",
+  "agentManager.section.defaultName": "Nieuwe sectie",
+  "agentManager.section.moveUp": "Omhoog verplaatsen",
+  "agentManager.section.moveDown": "Omlaag verplaatsen",
+  "agentManager.section.count": "{{count}}",
 
   "agentManager.hoverCard.branch": "BRANCH",
   "agentManager.hoverCard.base": "Basis",
@@ -32,6 +43,7 @@ export const dict = {
   "agentManager.session.untitled": "Naamloos",
   "agentManager.session.newSession": "Nieuwe sessie",
   "agentManager.session.openInWorktree": "Openen in worktree",
+  "agentManager.session.openLocally": "Lokaal openen",
   "agentManager.session.readonly": "Alleen-lezen sessie",
   "agentManager.session.noSessions": "Geen open sessies",
 
@@ -40,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sessie forken",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
+  "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+
+  "agentManager.terminal.new": "Nieuw terminaltabblad",
+  "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.connectionError": "terminalverbindingsfout",
+  "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",
   "agentManager.setup.settingUp": "Worktree instellen",
@@ -48,6 +66,8 @@ export const dict = {
   "agentManager.setup.error.not_git_repo": "Open een map die een git repository bevat om worktrees te gebruiken.",
   "agentManager.setup.error.lfs_missing":
     "Deze repository gebruikt Git LFS, maar git-lfs is niet gevonden. Installeer Git LFS.",
+  "agentManager.setup.error.no_commits":
+    "Deze repository heeft nog geen commits. Maak een initiële commit voordat je worktrees gebruikt.",
   "agentManager.shortcuts.title": "Sneltoetsen",
   "agentManager.shortcuts.category.sidebar": "Zijbalk",
   "agentManager.shortcuts.category.tabs": "Tabbladen",
@@ -64,6 +84,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
   "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.runScript": "Script uitvoeren",
+  "agentManager.run.options": "Uitvoeropties",
+  "agentManager.run.configure": "Uitvoerscript configureren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager openen",
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",
@@ -103,6 +126,9 @@ export const dict = {
 
   "agentManager.diff.toggle": "Diff in-/uitschakelen",
   "agentManager.diff.openFile": "Bestand openen",
+  "agentManager.diff.revertFile": "Bestand terugzetten",
+  "agentManager.diff.revertSuccess": "Bestand teruggezet",
+  "agentManager.diff.revertError": "Terugzetten mislukt",
   "agentManager.open.button": "Openen",
   "agentManager.open.tooltip": "Open deze worktree in VS Code",
   "agentManager.apply.button": "Toepassen op lokaal",

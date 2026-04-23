@@ -1,14 +1,23 @@
 import * as vscode from "vscode"
 import { AutocompleteModel } from "../AutocompleteModel"
-import { AutocompleteContext, VisibleCodeContext } from "../types"
+import type { AutocompleteContext, VisibleCodeContext } from "../types"
 import { removePrefixOverlap } from "../continuedev/core/autocomplete/postprocessing/removePrefixOverlap.js"
 import { AutocompleteTelemetry } from "../classic-auto-complete/AutocompleteTelemetry"
 import { postprocessAutocompleteSuggestion } from "../classic-auto-complete/uselessSuggestionFilter"
 import { VisibleCodeTracker } from "../context/VisibleCodeTracker"
 import { FileIgnoreController } from "../shims/FileIgnoreController"
 import type { KiloConnectionService } from "../../cli-backend"
-import type { ChatCompletionRequestMessage, ChatCompletionResponseSender } from "./handleChatCompletionRequest"
 import { finalizeChatSuggestion, buildChatPrefix } from "./chat-autocomplete-utils"
+
+interface ChatCompletionRequestMessage {
+  type: "requestChatCompletion"
+  text: string
+  requestId: string
+}
+
+interface ChatCompletionResponseSender {
+  postMessage(message: { type: "chatCompletionResult"; text: string; requestId: string }): void
+}
 
 /**
  * Chat textarea autocomplete with cached per-request objects.
@@ -89,22 +98,9 @@ export class ChatTextAreaAutocomplete {
     let response = ""
 
     try {
-      // Use FIM if supported, otherwise fall back to chat-based completion
-      if (this.model.supportsFim()) {
-        await this.model.generateFimResponse(prefix, suffix, (chunk) => {
-          response += chunk
-        })
-      } else {
-        // Fall back to chat-based completion for models without FIM support
-        const systemPrompt = this.getChatSystemPrompt()
-        const userPrompt = this.getChatUserPrompt(prefix)
-
-        await this.model.generateResponse(systemPrompt, userPrompt, (chunk) => {
-          if (chunk.type === "text") {
-            response += chunk.text
-          }
-        })
-      }
+      await this.model.generateFimResponse(prefix, suffix, (chunk) => {
+        response += chunk
+      })
 
       const latencyMs = Date.now() - startTime
 
@@ -142,35 +138,6 @@ export class ChatTextAreaAutocomplete {
       )
       return { suggestion: "" }
     }
-  }
-
-  /**
-   * Get system prompt for chat-based completion
-   */
-  private getChatSystemPrompt(): string {
-    return `You are an intelligent chat completion assistant. Your task is to complete the user's message naturally based on the provided context.
-
-## RULES
-- Provide a natural, conversational completion
-- Be concise - typically 1-15 words
-- Match the user's tone and style
-- Use context from visible code if relevant
-- NEVER repeat what the user already typed
-- NEVER start with comments (//, /*, #)
-- If the user is in the middle of typing a word (e.g., "hel"), include the COMPLETE word in your response (e.g., "hello world" not just "lo world")
-- This allows proper prefix matching to remove the overlap correctly
-- Return ONLY the completion text, no explanations or formatting`
-  }
-
-  /**
-   * Get user prompt for chat-based completion
-   */
-  private getChatUserPrompt(prefix: string): string {
-    return `${prefix}
-
-TASK: Complete the user's message naturally. 
-- If the user is mid-word (e.g., typed "hel"), return the COMPLETE word (e.g., "hello world") so prefix matching can work correctly
-- Return ONLY the completion text (what comes next), no explanations.`
   }
 
   private async buildPrefix(userText: string, visibleCodeContext?: VisibleCodeContext): Promise<string> {

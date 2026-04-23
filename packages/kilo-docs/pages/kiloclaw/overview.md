@@ -96,7 +96,7 @@ For more information on use cases:
 - [Dashboard Reference](/docs/kiloclaw/dashboard)
 - [Connecting Chat Platforms](/docs/kiloclaw/chat-platforms)
 - [Troubleshooting](/docs/kiloclaw/troubleshooting)
-- [KiloClaw Pricing](/docs/kiloclaw/pricing)
+- [KiloClaw Pricing](/docs/kiloclaw/faq/pricing)
 - [Gateway Usage and Billing](/docs/gateway/usage-and-billing)
 - [Agent Manager](/docs/automate/agent-manager)
 - [OpenClaw Documentation](https://docs.openclaw.ai)

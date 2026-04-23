@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/router"
 import Link from "next/link"
-import { SectionNav } from "../lib/types"
+import { Platform, SectionNav } from "../lib/types"
 import { Nav } from "../lib/nav"
 
 // Define navigation items for each major section
@@ -66,6 +66,16 @@ const ChevronLeft = () => (
     <path d="M10 4L6 8L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
+
+function PlatformBadge({ platform }: { platform?: Platform }) {
+  if (!platform || platform === "all") return null
+  const label = platform === "legacy" ? "Legacy" : "New"
+  return (
+    <span className="platform-badge" data-platform={platform}>
+      {label}
+    </span>
+  )
+}
 
 interface SideNavProps {
   isMobileOpen?: boolean
@@ -268,6 +278,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
                         <div className="nav-item-with-toggle">
                           <Link href={link.href} onClick={handleLinkClick}>
                             {link.children}
+                            <PlatformBadge platform={link.platform} />
                           </Link>
                           <button
                             type="button"
@@ -290,6 +301,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
                                 <li key={subLink.href} className={subActive ? "active" : ""}>
                                   <Link href={subLink.href} onClick={handleLinkClick}>
                                     {subLink.children}
+                                    <PlatformBadge platform={subLink.platform} />
                                   </Link>
                                 </li>
                               )
@@ -300,6 +312,7 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
                     ) : (
                       <Link href={link.href} onClick={handleLinkClick}>
                         {link.children}
+                        <PlatformBadge platform={link.platform} />
                       </Link>
                     )}
                   </li>
@@ -477,6 +490,29 @@ export function SideNav({ isMobileOpen = false, onMobileClose }: SideNavProps) {
           background-color: var(--bg-secondary);
           color: var(--accent-color);
           font-weight: 500;
+        }
+
+        .nav-links :global(.platform-badge) {
+          display: inline-block;
+          font-size: 0.625rem;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+          padding: 0.0625rem 0.3125rem;
+          border-radius: 0.1875rem;
+          margin-left: 0.375rem;
+          vertical-align: middle;
+          line-height: 1.4;
+        }
+
+        .nav-links :global(.platform-badge[data-platform="legacy"]) {
+          background-color: rgba(139, 92, 246, 0.12);
+          color: rgb(139, 92, 246);
+        }
+
+        .nav-links :global(.platform-badge[data-platform="new"]) {
+          background-color: rgba(34, 197, 94, 0.12);
+          color: rgb(34, 197, 94);
         }
       `}</style>
     </div>

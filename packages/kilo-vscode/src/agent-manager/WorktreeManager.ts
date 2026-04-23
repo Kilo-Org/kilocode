@@ -10,10 +10,8 @@ import * as path from "path"
 import * as fs from "fs"
 import { randomUUID } from "crypto"
 import simpleGit, { type SimpleGit } from "simple-git"
-
-const TEMP_PREFIX = ".kilo-delete-"
 import { generateBranchName, sanitizeBranchName } from "./branch-name"
-import type { GitOps } from "./GitOps"
+import { type GitOps, nonInteractiveEnv } from "./GitOps"
 import { execWithShellEnv } from "./shell-env"
 import {
   parsePRUrl,
@@ -28,6 +26,9 @@ import {
   type PRInfo,
   type BranchListItem,
 } from "./git-import"
+
+const TEMP_PREFIX = ".kilo-delete-"
+const RM_OPTS: fs.RmOptions = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 }
 
 interface WorktreeInfo {
   branch: string
@@ -388,7 +389,7 @@ export class WorktreeManager {
     if (branch) await this.deleteBranch(branch)
 
     // 4. Background delete — fire-and-forget, cross-platform
-    fs.promises.rm(temp, { recursive: true, force: true }).catch((err) => {
+    fs.promises.rm(temp, RM_OPTS).catch((err) => {
       this.log(`Background cleanup failed for ${temp}: ${err}`)
     })
   }
@@ -411,7 +412,7 @@ export class WorktreeManager {
         for (const e of entries) {
           if (e.isDirectory() && e.name.startsWith(TEMP_PREFIX)) {
             const stale = path.join(this.dir, e.name)
-            fs.promises.rm(stale, { recursive: true, force: true }).catch((err) => {
+            fs.promises.rm(stale, RM_OPTS).catch((err) => {
               this.log(`Failed to clean orphaned temp dir ${stale}: ${err}`)
             })
           }
@@ -661,10 +662,11 @@ export class WorktreeManager {
         }
       }
 
-      // Either not cached or cache is stale - do the fetch
+      // Either not cached or cache is stale - do the fetch.
+      // Use non-interactive env to prevent SSH passphrase popups.
       onProgress?.("fetching", `Fetching ${remote}/${branch}...`)
       try {
-        await this.git.fetch(remote, branch)
+        await simpleGit(this.root).env(nonInteractiveEnv()).fetch(remote, branch)
         WorktreeManager.fetchCache.set(cacheKey, Date.now())
         if (await this.refExistsLocally(`${remote}/${branch}`)) {
           return {
@@ -854,6 +856,15 @@ export class WorktreeManager {
       if (branches.all.length > 0) return branches.all[0]
     } catch (e) {
       this.log(`defaultBranch: branchLocal failed: ${e}`)
+    }
+
+    // Check if this is an empty repo with no commits (unborn branch).
+    // rev-parse --verify HEAD exits non-zero only when HEAD has no target
+    // commit, which is the definitive test for an unborn branch.
+    try {
+      await this.git.raw(["rev-parse", "--verify", "HEAD"])
+    } catch {
+      throw new Error("This repository has no commits yet. Create an initial commit before using worktrees.")
     }
 
     throw new Error("Could not determine default branch")

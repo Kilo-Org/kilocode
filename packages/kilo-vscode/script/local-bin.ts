@@ -24,9 +24,40 @@ const opencodeDir = join(packagesDir, "opencode")
 const targetBinDir = join(kiloVscodeDir, "bin")
 const binName = process.platform === "win32" ? "kilo.exe" : "kilo"
 const targetBinPath = join(targetBinDir, binName)
+const versionFile = join(targetBinDir, ".cli-version")
 
 function log(msg: string) {
   console.log(`[local-bin] ${msg}`)
+}
+
+async function cliSourceHash(): Promise<string | null> {
+  try {
+    const result = await $`git log -1 --format=%H -- .`.cwd(opencodeDir).quiet()
+    return result.text().trim() || null
+  } catch {
+    return null
+  }
+}
+
+async function isDirty(): Promise<boolean> {
+  try {
+    const result = await $`git status --porcelain -- .`.cwd(opencodeDir).quiet()
+    return result.text().trim().length > 0
+  } catch {
+    return false
+  }
+}
+
+async function isStale(): Promise<boolean> {
+  if (await isDirty()) return true
+  const hash = await cliSourceHash()
+  if (!hash) return false // can't determine — assume fresh
+  try {
+    const stored = (await Bun.file(versionFile).text()).trim()
+    return stored !== hash
+  } catch {
+    return true // no version file — treat as stale
+  }
 }
 
 function platformTag(): string {
@@ -114,8 +145,12 @@ async function ensureBuiltBinary(): Promise<string> {
 
 async function main() {
   const targetFile = Bun.file(targetBinPath)
+  const exists = await targetFile.exists()
 
-  if ((await targetFile.exists()) && !forceRebuild) {
+  const stale = exists && !forceRebuild && (await isStale())
+  const rebuild = forceRebuild || stale
+
+  if (exists && !rebuild) {
     const st = statSync(targetBinPath)
     log(
       `CLI binary already present at ${relative(kiloVscodeDir, targetBinPath)} (${Math.round(st.size / 1024 / 1024)}MB). Use --force to rebuild.`,
@@ -123,8 +158,8 @@ async function main() {
     return
   }
 
-  if ((await targetFile.exists()) && forceRebuild) {
-    log(`Removing existing binary (--force).`)
+  if (exists && rebuild) {
+    log(stale ? `CLI source has changed — rebuilding.` : `Removing existing binary (--force).`)
     rmSync(targetBinPath)
     // Also remove the prebuilt dist so ensureBuiltBinary() triggers a fresh build
     const distDir = join(opencodeDir, "dist")
@@ -143,6 +178,10 @@ async function main() {
   await $`mkdir -p ${targetBinDir}`
   await $`cp ${sourceBinPath} ${targetBinPath}`
   chmodSync(targetBinPath, 0o755)
+
+  // Record the CLI source version so future runs detect when a rebuild is needed
+  const hash = await cliSourceHash()
+  if (hash) await Bun.write(versionFile, hash + "\n")
 
   log(`Copied CLI binary from ${relative(packagesDir, sourceBinPath)} -> ${relative(kiloVscodeDir, targetBinPath)}`)
 }
