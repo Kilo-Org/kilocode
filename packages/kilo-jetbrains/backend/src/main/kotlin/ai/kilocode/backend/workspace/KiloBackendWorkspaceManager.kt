@@ -3,7 +3,7 @@ package ai.kilocode.backend.workspace
 import ai.kilocode.backend.app.KiloAppState
 import ai.kilocode.backend.app.KiloBackendSessionManager
 import ai.kilocode.backend.app.SseEvent
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharedFlow

@@ -3,7 +3,12 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionListDto
 import ai.kilocode.rpc.dto.SessionStatusDto
@@ -66,4 +71,24 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
 
     /** Update config (model, agent/mode, temperature). */
     suspend fun updateConfig(directory: String, config: ConfigUpdateDto)
+
+    // ------ permission / question resolution ------
+
+    /** Reply to a pending permission request (once, always, or reject). */
+    suspend fun replyPermission(requestId: String, directory: String, reply: PermissionReplyDto)
+
+    /** Save always-rules for a pending permission request before replying. */
+    suspend fun savePermissionRules(requestId: String, directory: String, rules: PermissionAlwaysRulesDto)
+
+    /** Reply to a pending question with user answers. */
+    suspend fun replyQuestion(requestId: String, directory: String, answers: QuestionReplyDto)
+
+    /** Reject a pending question. */
+    suspend fun rejectQuestion(requestId: String, directory: String)
+
+    /** List all pending permission requests (caller filters by session). */
+    suspend fun pendingPermissions(directory: String): List<PermissionRequestDto>
+
+    /** List all pending question requests (caller filters by session). */
+    suspend fun pendingQuestions(directory: String): List<QuestionRequestDto>
 }

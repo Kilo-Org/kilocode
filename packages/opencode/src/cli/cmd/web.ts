@@ -35,7 +35,7 @@ export const WebCommand = cmd({
   describe: "start kilo server and open web interface", // kilocode_change
   handler: async (args) => {
     if (!Flag.KILO_SERVER_PASSWORD) {
-      UI.println(UI.Style.TEXT_WARNING_BOLD + "!  " + "KILO_SERVER_PASSWORD is not set; server is unsecured.")
+      UI.println(UI.Style.TEXT_WARNING_BOLD + "!  KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
     const opts = await resolveNetworkOptions(args)
     const server = await Server.listen(opts)

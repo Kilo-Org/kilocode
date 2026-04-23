@@ -35,11 +35,11 @@ mock.module("@kilocode/kilo-gateway", () => ({
 import { tmpdir } from "../fixture/fixture"
 import { Global } from "../../src/global"
 import { Instance } from "../../src/project/instance"
-import { Provider } from "../../src/provider/provider"
+import { Provider } from "../../src/provider"
 import { ProviderID } from "../../src/provider/schema"
-import { Filesystem } from "../../src/util/filesystem"
+import { Filesystem } from "../../src/util"
 import { ModelCache } from "../../src/provider/model-cache"
-import { ModelsDev } from "../../src/provider/models"
+import { ModelsDev } from "../../src/provider"
 import { Auth } from "../../src/auth"
 
 function paid(providers: Awaited<ReturnType<typeof Provider.list>>) {

@@ -1,15 +1,20 @@
 [versions]
-intellij-platform = "2025.3"
+intellij-platform = "2026.1"
 intellij-gradle-plugin = "2.14.0"
-intellij-rpc-plugin = "2.3.20-0.1"
+intellij-rpc-plugin = "2.3.20-RC2-0.1"
 kotlin-jvm-plugin = "2.3.20"
 kotlin-serialization-plugin = "2.3.20"
 kotlin-serialization = "1.11.0"
 okhttp = "4.12.0"
 openapi-generator = "7.21.0"
 detekt = "1.23.8"
+commonmark = "0.28.0"
 
 [libraries]
+commonmark = { module = "org.commonmark:commonmark", version.ref = "commonmark" }
+commonmark-autolink = { module = "org.commonmark:commonmark-ext-autolink", version.ref = "commonmark" }
+commonmark-tables = { module = "org.commonmark:commonmark-ext-gfm-tables", version.ref = "commonmark" }
+commonmark-strikethrough = { module = "org.commonmark:commonmark-ext-gfm-strikethrough", version.ref = "commonmark" }
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 okhttp-sse = { module = "com.squareup.okhttp3:okhttp-sse", version.ref = "okhttp" }
 okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }

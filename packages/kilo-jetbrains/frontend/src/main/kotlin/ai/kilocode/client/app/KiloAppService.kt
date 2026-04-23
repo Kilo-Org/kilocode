@@ -7,7 +7,7 @@ import ai.kilocode.rpc.dto.HealthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.KiloLog
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +32,7 @@ class KiloAppService internal constructor(
     constructor(cs: CoroutineScope) : this(cs, null)
 
     companion object {
-        private val LOG = Logger.getInstance(KiloAppService::class.java)
+        private val LOG = KiloLog.create(KiloAppService::class.java)
         private val init = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
     }
 

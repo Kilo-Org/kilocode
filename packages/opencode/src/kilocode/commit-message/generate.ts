@@ -1,7 +1,7 @@
-import { Provider } from "@/provider/provider"
+import { Provider } from "@/provider"
 import { LLM } from "@/session/llm"
 import { Agent } from "@/agent/agent"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import type { CommitMessageRequest, CommitMessageResponse, GitContext } from "./types"
 import { getGitContext } from "./git-context"
 

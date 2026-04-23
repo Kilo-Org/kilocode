@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { EOL } from "os"
-import { Config } from "../../config/config"
+import { Config } from "../../config"
 import { bootstrap } from "../bootstrap"
 import { cmd } from "./cmd"
 import { UI } from "../ui"

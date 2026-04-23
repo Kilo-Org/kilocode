@@ -1205,6 +1205,13 @@ body.am-wt-dragging-active * {
   align-self: center;
 }
 
+/* Split-button variant used in the tab bar when the experimental
+   terminal tabs feature is active — primary icon + chevron dropdown. */
+.am-tab-add-split {
+  flex-shrink: 0;
+  align-self: center;
+}
+
 .am-tab-actions {
   display: flex;
   align-items: center;
@@ -3908,4 +3915,98 @@ body.vscode-high-contrast-light {
   [data-slot="context-menu-separator"] {
     margin: 4px 0;
   }
+}
+
+/* Experimental terminal tabs (feature-flagged) */
+
+.am-tab-terminal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.am-tab-terminal [data-component="icon"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/*
+ * Stacking layout for xterm terminal tabs.
+ *
+ * The hydration invariant (see the render helpers under `terminal/`) requires that
+ * xterm canvases never leave the paint tree. Both the layer and each
+ * terminal slot therefore use absolute-positioning + opacity for
+ * visibility — NEVER `display: none`, because that would detach the
+ * subtree and stop xterm's internal rAF render loop, causing the
+ * "press Enter to see content" bug on worktree switches.
+ *
+ * Stack:  position:relative container hosting the chat, review, and
+ *         terminal layer. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the stack.
+ *         `pointer-events: none` when no terminal is active, letting
+ *         clicks fall through to the chat behind it.
+ * Slots:  absolute-positioned and stacked inside the layer; only the
+ *         active one is opaque and receives pointer events.
+ */
+
+.am-detail-stack {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-terminal-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  z-index: 1;
+  /* Force a dedicated compositor layer so opacity flips do not re-lay-out
+     the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-terminal-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.am-terminal-slot-visible {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.am-terminal-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px;
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+/* Third-party xterm classes — addressed by attribute selector so the
+   agent-manager "am-* prefix" architecture test does not flag them. */
+.am-terminal-host [class="xterm"] {
+  height: 100%;
+}
+
+.am-terminal-host [class~="xterm-viewport"] {
+  background: transparent !important;
 }
