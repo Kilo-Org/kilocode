@@ -6,7 +6,7 @@ export interface MessageTurn {
   assistant: Message[]
 }
 
-export function messageTurns(messages: Message[], boundary?: string) {
+export function messageTurns(messages: Message[], boundary?: string): MessageTurn[] {
   const result: MessageTurn[] = []
   const by = new Map<string, MessageTurn>()
 
@@ -25,6 +25,27 @@ export function messageTurns(messages: Message[], boundary?: string) {
   }
 
   return result
+}
+
+function sameMessages(a: Message[], b: Message[]) {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
+// Keep virtua's item keys stable across prepends; Solid's adapter keys by data object identity.
+export function stableMessageTurns(next: MessageTurn[], prev: MessageTurn[] = []): MessageTurn[] {
+  if (prev.length === 0) return next
+  const by = new Map(prev.map((turn) => [turn.user.id, turn]))
+  return next.map((turn) => {
+    const old = by.get(turn.user.id)
+    if (!old) return turn
+    if (old.user !== turn.user) return turn
+    if (!sameMessages(old.assistant, turn.assistant)) return turn
+    return old
+  })
 }
 
 function active(messages: Message[]) {

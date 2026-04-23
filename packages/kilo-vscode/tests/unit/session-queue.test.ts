@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test"
-import { activeUserMessageID, messageTurns, queuedUserMessageIDs } from "../../webview-ui/src/context/session-queue"
+import {
+  activeUserMessageID,
+  messageTurns,
+  queuedUserMessageIDs,
+  stableMessageTurns,
+} from "../../webview-ui/src/context/session-queue"
 import type { Message } from "../../webview-ui/src/types/messages"
 
 const base = {
@@ -83,6 +88,29 @@ describe("messageTurns", () => {
       { user: "message_3", assistant: [] },
       { user: "message_4", assistant: [] },
     ])
+  })
+})
+
+describe("stableMessageTurns", () => {
+  it("keeps existing turn identities stable when older turns are prepended", () => {
+    const u1 = user("message_1")
+    const a2 = assistant("message_2", "message_1")
+    const u3 = user("message_3")
+    const prev = messageTurns([u1, a2, u3])
+    const next = stableMessageTurns(messageTurns([user("message_0"), u1, a2, u3]), prev)
+
+    expect(next[1]).toBe(prev[0])
+    expect(next[2]).toBe(prev[1])
+  })
+
+  it("replaces a turn identity when its assistant messages change", () => {
+    const u1 = user("message_1")
+    const a2 = assistant("message_2", "message_1")
+    const prev = messageTurns([u1, a2])
+    const next = stableMessageTurns(messageTurns([u1, a2, assistant("message_3", "message_1")]), prev)
+
+    expect(next[0]).not.toBe(prev[0])
+    expect(next[0]?.assistant.map((msg) => msg.id)).toEqual(["message_2", "message_3"])
   })
 })
 
