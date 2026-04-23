@@ -73,15 +73,6 @@ By default, API requests time out after 10 minutes. Local models can be slow, if
 ### Configure Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-- Open the Kilo Code panel ({% kiloCodeIcon size="1em" /%}).
-- Click the Settings gear icon ({% codicon name="gear" /%}).
-- Select "Ollama" as the API Provider.
-- Select the model configured in the previous step.
-- (Optional) You can configure the base URL if you're running Ollama on a different machine. The default is `http://localhost:11434`.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Ollama. No API key is needed since Ollama runs locally. You can configure the base URL if Ollama is running on a different host.
@@ -112,6 +103,15 @@ Then set your default model:
   "model": "ollama/qwen3-coder:30b",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+- Open the Kilo Code panel ({% kiloCodeIcon size="1em" /%}).
+- Click the Settings gear icon ({% codicon name="gear" /%}).
+- Select "Ollama" as the API Provider.
+- Select the model configured in the previous step.
+- (Optional) You can configure the base URL if you're running Ollama on a different machine. The default is `http://localhost:11434`.
 
 {% /tab %}
 {% /tabs %}

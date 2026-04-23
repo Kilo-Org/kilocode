@@ -96,7 +96,7 @@ For **session** export and import, use the CLI commands:
 - `kilo import` -- import session data
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Kilo Code allows you to manage your configuration settings effectively through export, import, and reset options. These features are useful for backing up your setup, sharing configurations with others, or restoring default settings if needed.
 
@@ -188,7 +188,7 @@ Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of 
 The CLI does not currently expose the same experimental feature toggles as the **VSCode (Legacy)** version. Configuration of model behavior, file editing strategies, and other advanced options is handled directly in the JSONC config files. Refer to the auto-generated `$schema` in your `kilo.jsonc` for the full list of available options.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% callout type="info" %}
 These features are experimental and may change in future releases. They provide advanced control over Kilo Code's behavior for specific use cases.

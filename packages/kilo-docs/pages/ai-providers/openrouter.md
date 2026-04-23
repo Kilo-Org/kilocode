@@ -17,15 +17,6 @@ OpenRouter is an AI platform that provides access to a wide variety of language 
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "OpenRouter" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your OpenRouter API key into the "OpenRouter API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-5.  **(Optional) Custom Base URL:** If you need to use a custom base URL for the OpenRouter API, check "Use custom base URL" and enter the URL. Leave this blank for most users.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add OpenRouter and enter your API key.
@@ -62,6 +53,15 @@ Then set your default model:
   "model": "openrouter/anthropic/claude-sonnet-4-20250514",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "OpenRouter" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your OpenRouter API key into the "OpenRouter API Key" field.
+4.  **Select Model:** Choose your desired model from the "Model" dropdown.
+5.  **(Optional) Custom Base URL:** If you need to use a custom base URL for the OpenRouter API, check "Use custom base URL" and enter the URL. Leave this blank for most users.
 
 {% /tab %}
 {% /tabs %}

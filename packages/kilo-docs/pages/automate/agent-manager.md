@@ -249,7 +249,7 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 - **Worktree creation fails** — ensure Git is installed and the workspace is a valid git repository. Open the main repository (where `.git` is a directory), not an existing worktree checkout.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 The Agent Manager is a dedicated control panel for running and supervising Kilo Code agents as interactive CLI processes. It supports:
 

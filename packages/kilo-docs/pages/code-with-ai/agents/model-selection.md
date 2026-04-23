@@ -38,7 +38,7 @@ While the specifics change constantly, some principles stay consistent:
 - **Model precedence:** `--model` flag → Per-agent config → Last used in session → Global config → Recent models → First available.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 - Use the **model dropdown** in the chat panel to select a model for each conversation.
 - Configure **API profiles** in Settings to group provider + model combinations and switch between them quickly.

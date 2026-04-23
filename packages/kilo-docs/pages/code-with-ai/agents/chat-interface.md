@@ -26,7 +26,7 @@ Click the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar to 
 Open your terminal and run `kilo` to launch the interactive terminal interface (TUI). You'll see a prompt where you can start typing requests immediately. The TUI is fully keyboard-driven — no mouse required.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Find the Kilo Code icon ({% kiloCodeIcon /%}) in VS Code's Primary Side Bar. Click it to open the chat panel.
 
@@ -94,7 +94,7 @@ The extension automatically passes context from your editor, including your open
 Type `@` in the TUI to get file autocomplete suggestions, or mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` to explicitly include files. The agent can also discover files on its own using its built-in tools.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% image src="/docs/img/the-chat-interface/the-chat-interface-1.png" alt="Chat interface components labeled with callouts" width="800" caption="Everything you need is right here" /%}
 
@@ -206,7 +206,7 @@ This feature streamlines the interaction when Kilo Code requires clarification, 
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% callout type="tip" %}
 **Move Kilo Code to the Secondary Side Bar** for a better layout. Right-click on the Kilo Code icon in the Activity Bar and select **Move To → Secondary Side Bar**. This lets you see the Explorer, Search, Source Control, etc. alongside Kilo Code.

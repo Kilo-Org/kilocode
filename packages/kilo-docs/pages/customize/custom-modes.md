@@ -453,7 +453,7 @@ If you have existing `.kilocodemodes` or `custom_modes.yaml` files from the VSCo
 Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orchestrator`) are skipped during migration since they map to built-in agents (`build` → `code`, `architect` → `plan`).
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Sticky Models for Efficient Workflow
 
@@ -579,7 +579,7 @@ Create a new agent called "Documentation Writer". It should only be able to read
 Kilo will create the appropriate `.kilo/agents/docs-writer.md` file with the right frontmatter.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 You can create and configure custom modes in several ways:
 
@@ -912,7 +912,7 @@ permission:
 The **VSCode (Legacy)** version's `fileRegex` approach is automatically converted to permission rules during migration.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Regular expressions (`fileRegex`) in the **VSCode** version offer fine-grained control over file editing permissions within tool groups.
 
@@ -1147,7 +1147,7 @@ Focus on:
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Basic Documentation Writer (YAML)
 
@@ -1242,7 +1242,7 @@ customModes:
 - **Legacy modes are auto-migrated:** If you have `.kilocodemodes` files, they'll be converted on startup — no manual migration needed
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Common Issues
 

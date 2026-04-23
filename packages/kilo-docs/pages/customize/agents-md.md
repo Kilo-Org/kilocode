@@ -165,7 +165,7 @@ In the new platform, AGENTS.md is loaded alongside other instruction sources. Th
 | **[Skills](/docs/customize/skills)**             | Both      | `.kilo/skills/`, config `skills` key       | Loaded on demand |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 AGENTS.md works alongside Kilo Code's other configuration systems:
 
@@ -205,7 +205,7 @@ export KILO_DISABLE_EXTERNAL_SKILLS=true
 AGENTS.md itself cannot be individually disabled — it is always loaded if present. To override its instructions, use higher-priority sources like the `instructions` config key or agent-specific prompts.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 AGENTS.md support is **enabled by default**. To disable it, edit `settings.json`:
 

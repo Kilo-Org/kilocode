@@ -41,7 +41,7 @@ Key features include:
 The extension shares its configuration with the CLI. Settings in `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) apply to both the CLI and the extension.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Installation
 

@@ -101,7 +101,7 @@ The CLI is backward compatible with `.kilocode/rules/` directories. Existing rul
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Project Rules
 
@@ -176,7 +176,7 @@ Rules are managed by editing the `instructions` array in your `kilo.jsonc` confi
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
 
@@ -225,7 +225,7 @@ If `.kilocode/rules/` directories exist in your project, their contents are auto
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### General Rules (Any Mode)
 
@@ -297,7 +297,7 @@ Rules are applied on the next interaction. You can also edit `kilo.jsonc` throug
 Rules are applied on the next interaction.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Using the UI Interface
 
@@ -421,7 +421,7 @@ If your rules aren't being followed:
 3. **Restart the session**: Start a new chat session to pick up config changes.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 If your custom rules aren't being properly followed:
 

@@ -65,7 +65,7 @@ Git commit message generation is a **VS Code extension feature**. It is not avai
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Customizing the Commit Template
 

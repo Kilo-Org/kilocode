@@ -40,7 +40,7 @@ There are several ways to switch agents:
 - **Config file:** Set the `default_agent` key in your configuration to change the default agent on startup.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% youtube url="https://youtu.be/cS4vQfX528w" caption="Explaining the different modes in Kilo Code" /%}
 
@@ -195,7 +195,7 @@ The VSCode extension and CLI do not include a built-in Review agent. Code review
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Code Mode (Default)
 

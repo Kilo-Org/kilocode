@@ -36,7 +36,7 @@ The extension also adds code actions to the **terminal context menu**:
 - **Explain Command:** Asks Kilo to explain a terminal command or its output.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## What are Code Actions?
 

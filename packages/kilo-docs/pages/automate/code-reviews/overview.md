@@ -73,7 +73,7 @@ Two slash commands are available for local code reviews:
 - **`/local-review-uncommitted`** — Review uncommitted changes (staged + unstaged)
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Select 'Review' from the mode dropdown after making local changes, and click 'Send' for AI-powered feedback and suggestions.
 

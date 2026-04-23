@@ -66,7 +66,7 @@ You can also exclude paths from the file watcher separately using `watcher.ignor
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 1. Create a `.kilocodeignore` file at the root of your project.
 2. Add patterns for files or folders you want Kilo Code to avoid.
@@ -132,7 +132,7 @@ In addition to your explicit permission rules:
 If a file is denied by a permission rule, the tool will report that access was blocked.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Kilo Code checks `.kilocodeignore` before accessing files in tools like:
 
@@ -231,7 +231,7 @@ The `watcher.ignore` setting controls which paths the file watcher skips. This i
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Visibility in Lists
 

@@ -18,14 +18,6 @@ xAI is the company behind Grok, a large language model known for its conversatio
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "xAI" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your xAI API key into the "xAI API Key" field.
-4.  **Select Model:** Choose your desired Grok model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add xAI and enter your API key.
@@ -62,6 +54,14 @@ Then set your default model:
   "model": "xai/grok-3",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "xAI" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your xAI API key into the "xAI API Key" field.
+4.  **Select Model:** Choose your desired Grok model from the "Model" dropdown.
 
 {% /tab %}
 {% /tabs %}

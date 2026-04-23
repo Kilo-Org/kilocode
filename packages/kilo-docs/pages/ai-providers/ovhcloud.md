@@ -25,14 +25,6 @@ You can report any bugs or feedbacks by chatting with us in our [Discord server]
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "OVHcloud AI Endpoints" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your AI Endpoints API key into the "OVHcloud AI Endpoints API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add OVHcloud AI Endpoints and enter your API key.
@@ -69,6 +61,14 @@ Then set your default model:
   "model": "ovhcloud/model-name",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "OVHcloud AI Endpoints" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your AI Endpoints API key into the "OVHcloud AI Endpoints API Key" field.
+4.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
 {% /tab %}
 {% /tabs %}

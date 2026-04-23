@@ -18,14 +18,6 @@ Kilo Code supports accessing models through the Mistral AI API, including both s
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Mistral" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Mistral API key into the "Mistral API Key" field if you're using a `mistral` model. If you intend to use `codestral-latest`, see the "Codestral" section below.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Mistral and enter your API key.
@@ -62,6 +54,14 @@ Then set your default model:
   "model": "mistral/mistral-large-latest",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "Mistral" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your Mistral API key into the "Mistral API Key" field if you're using a `mistral` model. If you intend to use `codestral-latest`, see the "Codestral" section below.
+4.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
 {% /tab %}
 {% /tabs %}

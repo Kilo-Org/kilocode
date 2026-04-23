@@ -51,7 +51,7 @@ Checkpoints are controlled by the `snapshot` boolean in your `kilo.jsonc` config
 When enabled, the system automatically captures snapshots at each step of a task.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Access checkpoint settings in Kilo Code settings under the "Checkpoints" section:
 
@@ -88,7 +88,7 @@ Snapshots respect your `.gitignore` rules. Files ignored by Git (such as `node_m
 {% /callout %}
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% callout type="info" title="Important Notes" %}
 
@@ -176,7 +176,7 @@ Checkpoints are captured automatically at each step of a task. In the CLI termin
 - **Per-file revert**: Selectively undo changes to specific files while keeping others
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Checkpoints are integrated directly into your workflow through the chat interface.
 
@@ -272,7 +272,7 @@ Snapshot data is stored per-project and is periodically cleaned up. A background
 When using the Agent Manager with git worktrees, each worktree gets its own isolated snapshot repository. This prevents snapshot data from one worktree interfering with another while sharing underlying Git objects for storage efficiency.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Checkpoint Architecture
 

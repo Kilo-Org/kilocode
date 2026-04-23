@@ -37,7 +37,7 @@ Kilo Code uses [Playwright](https://playwright.dev/) for browser automation. Add
 Playwright downloads Chromium automatically on first use.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 By default, Kilo Code uses a built-in browser that:
 
@@ -98,7 +98,7 @@ Key characteristics:
 | `browser_drag`       | Drags an element to a target        | Drag-and-drop interactions            |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 The browser_action tool controls a browser instance that returns screenshots and console logs after each action, allowing you to see the results of interactions.
 
@@ -140,7 +140,7 @@ Browser automation settings are available under **Settings → Browser**:
 Browser automation is configured in your `kilo.jsonc` file. No additional settings are required — Playwright manages the browser lifecycle automatically.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% callout type="info" title="Default Browser Settings" %}
 

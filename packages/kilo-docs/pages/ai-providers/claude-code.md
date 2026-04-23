@@ -35,14 +35,6 @@ The specific models available depend on your Claude subscription and plan. See [
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "Claude Code" from the "API Provider" dropdown.
-3. **Select Model:** Choose your desired Claude model from the "Model" dropdown.
-4. **(Optional) Custom CLI Path:** If you installed Claude Code to a location other than the default `claude` command, enter the full path to your Claude executable in the "Claude Code Path" field. Most users won't need to change this.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 {% callout type="warning" %}
@@ -84,6 +76,14 @@ Then set your default model:
   "model": "anthropic/claude-sonnet-4-20250514",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2. **Select Provider:** Choose "Claude Code" from the "API Provider" dropdown.
+3. **Select Model:** Choose your desired Claude model from the "Model" dropdown.
+4. **(Optional) Custom CLI Path:** If you installed Claude Code to a location other than the default `claude` command, enter the full path to your Claude executable in the "Claude Code Path" field. Most users won't need to change this.
 
 {% /tab %}
 {% /tabs %}

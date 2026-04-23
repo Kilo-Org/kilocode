@@ -195,7 +195,7 @@ If no compaction agent is set, the current session's model is used.
 | `KILO_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | Overrides the 32,000 default output-token ceiling |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## The Solution: Intelligent Condensing
 

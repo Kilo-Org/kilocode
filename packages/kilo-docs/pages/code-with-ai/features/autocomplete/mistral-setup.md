@@ -74,7 +74,7 @@ Your Editor → Kilo Gateway (with your key) → Mistral
 - **Seeing charges on your Kilo balance?** If you haven't configured BYOK, autocomplete defaults to using your Kilo credits. Add your Codestral key via BYOK to route requests through your own Mistral account.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Video Walkthrough
 

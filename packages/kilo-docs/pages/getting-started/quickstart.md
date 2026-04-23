@@ -105,7 +105,7 @@ kilo run --auto "fix the failing tests in test/auth.test.ts"
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Video Tour
 

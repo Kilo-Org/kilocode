@@ -257,7 +257,7 @@ This is a custom example showing the available configuration options — it does
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Quick Start Guide
 

@@ -95,7 +95,7 @@ These tools help manage the conversation and task flow:
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Tools are organized into logical groups based on their functionality:
 

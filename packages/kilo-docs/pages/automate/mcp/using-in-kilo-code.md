@@ -82,7 +82,7 @@ The CLI accepts several config filenames. The recommended file is `kilo.json`:
 | **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json`                |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 MCP server configurations can be managed at two levels: **global** (applies across all workspaces) and **project-level** (specific to a single project). Project-level configuration takes precedence over global settings.
 
@@ -123,7 +123,7 @@ Add MCP servers under the `mcp` key in your config file. Each server has a uniqu
 You can disable a server by setting `enabled` to `false` without removing it from your config.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Both global and project-level files use a JSON format with a `mcpServers` object containing named server configurations:
 
@@ -205,7 +205,7 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `timeout`     | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ```json
 {
@@ -269,7 +269,7 @@ In the VS Code extension, open **Settings → MCP**, click **Add Server**, and c
 | `timeout` | Number  | No       | Timeout in ms for fetching tools from the MCP server. Default: 30000. |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ```json
 {
@@ -386,7 +386,7 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Editing MCP Settings Files
 
@@ -432,7 +432,7 @@ Set the `timeout` field (in milliseconds) in the server's config entry. The defa
 Set the `timeout` field (in milliseconds) in the server's config entry. The default is 30000 (30 seconds).
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 To set the maximum time to wait for a response after a tool call to the MCP server:
 
@@ -485,7 +485,7 @@ Add `permission` entries to your config to auto-approve specific tools. MCP tool
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 MCP tool auto-approval works on a per-tool basis and is disabled by default. To configure auto-approval:
 
@@ -565,7 +565,7 @@ Use `npx` directly:
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Windows
 
@@ -689,7 +689,7 @@ Example: "Analyze the performance of my API" might use an MCP tool that tests AP
 - **Slow Performance:** Increase the `timeout` value for the specific MCP server in your config.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 - **Server Not Responding:** Check if the server process is running and verify network connectivity
 - **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).

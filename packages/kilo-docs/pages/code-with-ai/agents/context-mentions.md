@@ -111,7 +111,7 @@ This means the agent can explore your entire project as needed, rather than bein
 | **Trust the agent's tools**    | The agent can search, read, and explore your codebase — let it do the discovery work               |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Context mentions are a powerful way to provide Kilo Code with specific information about your project, allowing it to perform tasks more accurately and efficiently. You can use mentions to refer to files, folders, problems, and Git commits. Context mentions start with the `@` symbol.
 

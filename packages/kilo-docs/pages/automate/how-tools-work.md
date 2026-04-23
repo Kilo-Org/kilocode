@@ -30,7 +30,7 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 | Workflow | Manage task flow and sub-agents            | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill` |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 | Category | Purpose                                    | Tool Names                                                               |
 | :------- | :----------------------------------------- | :----------------------------------------------------------------------- |
@@ -61,7 +61,7 @@ When a tool is proposed, you'll see an approval prompt in the **Permission Dock*
 The extension shows the file path and proposed content for review. Click **Approve** to execute or **Deny** to cancel.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 {% callout type="info" title="Tool Approval UI" %}
 When a tool is proposed, you'll see Save and Reject buttons along with an optional Auto-approve checkbox for trusted operations.
@@ -136,7 +136,7 @@ To pre-configure permissions in your config file:
 This safety mechanism ensures you maintain control over which files are modified, what commands are executed, and how your codebase is changed.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Every tool use requires your explicit approval. When Kilo proposes a tool, you'll see:
 
@@ -175,7 +175,7 @@ This safety mechanism ensures you maintain control over which files are modified
 | `skill`       | Invokes a reusable skill (Markdown instruction module) | Workflow |
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 | Tool Name                    | Description                                         | Category |
 | :--------------------------- | :-------------------------------------------------- | :------- |

@@ -32,7 +32,7 @@ kilo auth list
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 1. Click **"Try Kilo Code for Free"** in the extension
 2. Sign in with your Google account
@@ -134,7 +134,7 @@ To set a default model:
 ```
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 1. Click the {% kilo-code-icon /%} icon in the VS Code sidebar
 2. Select your API provider from the dropdown

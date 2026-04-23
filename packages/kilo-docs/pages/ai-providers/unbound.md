@@ -21,14 +21,6 @@ Unbound allows you configure a list of supported models in your application, and
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2.  **Select Provider:** Choose "Unbound" from the "API Provider" dropdown.
-3.  **Enter API Key:** Paste your Unbound API key into the "Unbound API Key" field.
-4.  **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Unbound and enter your API key.
@@ -41,6 +33,14 @@ The extension stores this in your `kilo.json` config file. You can also edit the
 {% callout type="warning" %}
 Unbound is not yet available as a CLI provider. Check the [Kilo Code releases](https://github.com/Kilo-Org/kilocode/releases) for updates on provider support.
 {% /callout %}
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1.  **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2.  **Select Provider:** Choose "Unbound" from the "API Provider" dropdown.
+3.  **Enter API Key:** Paste your Unbound API key into the "Unbound API Key" field.
+4.  **Select Model:** Choose your desired model from the "Model" dropdown.
 
 {% /tab %}
 {% /tabs %}

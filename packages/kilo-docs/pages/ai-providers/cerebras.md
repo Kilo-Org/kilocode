@@ -18,14 +18,6 @@ Cerebras is known for their ultra-fast AI inference powered by the Cerebras CS-3
 ## Configuration in Kilo Code
 
 {% tabs %}
-{% tab label="VSCode (Legacy)" %}
-
-1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
-2. **Select Provider:** Choose "Cerebras" from the "API Provider" dropdown.
-3. **Enter API Key:** Paste your Cerebras API key into the "Cerebras API Key" field.
-4. **Select Model:** Choose your desired model from the "Model" dropdown.
-
-{% /tab %}
 {% tab label="VSCode" %}
 
 Open **Settings** (gear icon) and go to the **Providers** tab to add Cerebras and enter your API key.
@@ -62,6 +54,14 @@ Then set your default model:
   "model": "cerebras/llama-4-scout-17b-16e-instruct",
 }
 ```
+
+{% /tab %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
+2. **Select Provider:** Choose "Cerebras" from the "API Provider" dropdown.
+3. **Enter API Key:** Paste your Cerebras API key into the "Cerebras API Key" field.
+4. **Select Model:** Choose your desired model from the "Model" dropdown.
 
 {% /tab %}
 {% /tabs %}

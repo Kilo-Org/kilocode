@@ -10,15 +10,24 @@ Providing console logs helps us pinpoint exactly what's going wrong with your in
 ## Opening Developer Tools
 
 {% tabs %}
-{% tab label="VS Code" %}
+{% tab label="VSCode" %}
 
 1. **Open the Command Palette**: Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
 2. **Search for Developer Tools**: Type `Developer: Open Webview Developer Tools` and select it
 
 {% /tab %}
-{% tab label="JetBrains" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
-### Enable JCEF Debugging
+### VS Code (Legacy)
+
+1. **Open the Command Palette**: Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (Mac)
+2. **Search for Developer Tools**: Type `Developer: Open Webview Developer Tools` and select it
+
+### JetBrains
+
+The JetBrains plugin is based on the legacy VS Code extension and uses JCEF for its webview.
+
+#### Enable JCEF Debugging
 
 1. Open your JetBrains IDE and go to **Help → Find Action** (or press `Cmd+Shift+A` / `Ctrl+Shift+A`)
 2. Type `Registry` and open it
@@ -27,7 +36,7 @@ Providing console logs helps us pinpoint exactly what's going wrong with your in
    - `ide.browser.jcef.contextMenu.devTools.enabled` → check the box
 4. Restart your IDE after making these changes
 
-### Connect Chrome DevTools
+#### Connect Chrome DevTools
 
 1. Make sure the **Kilo Code panel is open** in your IDE (the debug target won't appear unless the webview is active)
 2. Open Chrome (or any Chromium-based browser like Edge or Arc)

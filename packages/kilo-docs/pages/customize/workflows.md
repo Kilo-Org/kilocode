@@ -57,7 +57,7 @@ Workflows can leverage all built-in tools: `read`, `glob`, `grep`, `edit`, `writ
 The new extension automatically migrates legacy workflows from `.kilocode/workflows/` to the new command format on startup. You can also manually move files and remove the `.md` extension from invocations.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Workflows are markdown files stored in `.kilocode/workflows/`:
 
@@ -146,7 +146,7 @@ Parameters needed (ask if not provided):
 Trigger this workflow by typing `/submit-pr` in the chat.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Create a file called `submit-pr.md` in your `.kilocode/workflows` directory:
 

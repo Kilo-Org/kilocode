@@ -153,7 +153,7 @@ URL-based instruction sources are fetched at session start with a 5-second timeo
 If your project contains `.kilocoderules` files from the VSCode extension, these are still loaded via auto-migration. However, migrating to `AGENTS.md` is recommended for new projects.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## Setting Custom Instructions
 

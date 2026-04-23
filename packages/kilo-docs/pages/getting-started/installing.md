@@ -10,7 +10,7 @@ Get started with Kilo Code by installing it on your preferred platform. Choose y
 ## Choose Your Platform
 
 {% tabs %}
-{% tab label="VS Code" %}
+{% tab label="VSCode" %}
 
 ## VS Code Extension
 
@@ -33,11 +33,13 @@ The "pre-release" label is a VS Code Marketplace distribution channel — the ex
 {% partial file="install-cli.md" /%}
 
 {% /tab %}
-{% tab label="VS Code (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
+
+The JetBrains plugin is based on the legacy VS Code extension, so both are covered here.
 
 ## VS Code Legacy Extension
 
-The legacy extension is the previous version of Kilo Code for VS Code. It is still available but is no longer actively developed. We recommend installing the current extension (see the **VS Code** tab).
+The legacy extension is the previous version of Kilo Code for VS Code. It is still available but is no longer actively developed. We recommend installing the current extension (see the **VSCode** tab).
 
 To install or switch back to the legacy version:
 
@@ -45,9 +47,6 @@ To install or switch back to the legacy version:
 2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
 3. Search for "Kilo Code"
 4. Click the dropdown arrow next to **Install** and select **Switch to Release Version**
-
-{% /tab %}
-{% tab label="JetBrains" %}
 
 ## JetBrains IDEs
 

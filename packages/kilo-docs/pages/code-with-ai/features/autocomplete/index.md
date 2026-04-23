@@ -50,7 +50,7 @@ You can temporarily disable autocomplete by clicking the status bar item to **sn
 The extension automatically detects if **GitHub Copilot** inline suggestions are enabled and warns you about potential conflicts. Disable Copilot's inline completions for the best experience with Kilo Code autocomplete.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ## How Autocomplete Works
 
@@ -146,7 +146,7 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 4. **Check the status bar tooltip**: Hover the status bar item to see autocomplete state and cost tracking
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 4. **Balance speed and quality**: Faster models provide quicker suggestions but may be less accurate
 5. **Adjust trigger delay**: Find the sweet spot between responsiveness and avoiding too many API calls

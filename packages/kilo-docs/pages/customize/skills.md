@@ -154,7 +154,7 @@ You can configure extra skill locations and remote skill URLs in your `kilo.json
 The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or paths relative to the project root. The `skills.urls` key accepts URLs pointing to remote `SKILL.md` files that are fetched on demand.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 ### Global Skills (User-Level)
 
@@ -213,7 +213,7 @@ The new platform does not use mode-specific skill directories. All skills are lo
 If you need a skill to only apply in certain situations, write a clear and specific `description` in the SKILL.md frontmatter so the agent knows when to use it.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 To create a skill that only appears in a specific mode, place it in a `skills-{mode-slug}` directory:
 
@@ -243,7 +243,7 @@ When multiple skills share the same name, project-level skills (`.kilo/skills/`)
 When multiple skills share the same name, project-level skills (`.kilo/skills/`) take precedence over global skills (`~/.kilo/skills/`). Skills from compatibility directories (`.claude/skills/`, `.agents/skills/`) and additional configured paths are loaded alongside project and global skills.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 When multiple skills share the same name, Kilo Code uses these priority rules:
 
@@ -282,7 +282,7 @@ Skills are discovered when a session starts. The CLI scans all configured skill 
 Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Skills are discovered when Kilo Code initializes:
 
@@ -414,7 +414,7 @@ These additional files can be referenced from your skill's instructions, allowin
 3. Start a new session to pick up the skill
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 1. Create the skill directory:
 
@@ -487,7 +487,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 - **Remote URLs** — Use the `skills.urls` config key to load skills directly from URLs without manually downloading them
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 You can discover and install community-created skills through:
 
@@ -524,7 +524,7 @@ You can discover and install community-created skills through:
 4. **Check config paths**: If using `skills.paths` or `skills.urls`, verify the paths and URLs are correct in your `kilo.jsonc`.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 1. **Check the Output panel**: Open `View` → `Output` → Select "Kilo Code" from dropdown. Look for skill-related errors.
 
@@ -562,7 +562,7 @@ When the agent uses a skill, it invokes the `skill` tool with the skill's name. 
 When the agent uses a skill, it invokes the `skill` tool with the skill's name. Look for a `skill` tool call in the conversation to confirm a skill was loaded. The tool output includes the full skill content injected into context.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 To see if a skill was actually used during a conversation, look for a `read_file` tool call in the chat that targets a `SKILL.md` file. When the agent decides to use a skill, it reads the full skill file into context—this appears as a file read operation in the conversation.
 
@@ -594,7 +594,7 @@ While the new platform does not yet have a built-in marketplace UI, skills from 
 While the new platform does not yet have a built-in marketplace UI, skills from the [Kilo Marketplace repository](https://github.com/Kilo-Org/kilo-marketplace) can be manually downloaded into your `.kilo/skills/` directory or loaded via `skills.urls` in config.
 
 {% /tab %}
-{% tab label="VSCode (Legacy)" %}
+{% tab label="VSCode (Legacy) & JetBrains" %}
 
 Skills submitted to the marketplace are browsable and installable directly from the Marketplace tab in the **VSCode** version.
 
