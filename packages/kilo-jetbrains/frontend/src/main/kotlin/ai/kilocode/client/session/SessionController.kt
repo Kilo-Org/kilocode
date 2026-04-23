@@ -28,7 +28,8 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -57,7 +58,7 @@ class SessionController(
 ) : Disposable {
 
     companion object {
-        private val LOG = Logger.getInstance(SessionController::class.java)
+        private val LOG = KiloLog.create(SessionController::class.java)
     }
 
     init {
@@ -82,18 +83,23 @@ class SessionController(
     }
 
     fun prompt(text: String) {
+        val sid = sessionId ?: "pending"
+        LOG.debug { "${ChatLogSummary.sid(sid)} ${ChatLogSummary.prompt(text)} ${ChatLogSummary.dir(directory)}" }
         showMessages()
         cs.launch {
             try {
                 val id = sessionId ?: run {
                     val session = sessions.create(directory)
                     sessionId = session.id
+                    val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
+                    LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
                     subscribeEvents()
                     session.id
                 }
                 sessions.prompt(id, directory, text)
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=prompt dispatched=true" }
             } catch (e: Exception) {
-                LOG.warn("prompt failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: sid)} kind=prompt dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
                     model.setState(SessionState.Error(msg))
@@ -103,35 +109,39 @@ class SessionController(
     }
 
     fun abort() {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=abort" }
         val id = sessionId ?: return
         cs.launch {
             try {
                 sessions.abort(id, directory)
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=abort ok=true" }
             } catch (e: Exception) {
-                LOG.warn("abort failed", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=abort dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
 
     fun selectAgent(name: String) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=config agent=$name" }
         model.agent = name
         cs.launch {
             try {
                 sessions.updateConfig(directory, ConfigUpdateDto(agent = name))
             } catch (e: Exception) {
-                LOG.warn("selectAgent failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=config agent=$name dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
         fire(SessionControllerEvent.WorkspaceReady)
     }
 
     fun selectModel(provider: String, id: String) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=config model=$provider/$id" }
         model.model = "$provider/$id"
         cs.launch {
             try {
                 sessions.updateConfig(directory, ConfigUpdateDto(model = "$provider/$id"))
             } catch (e: Exception) {
-                LOG.warn("selectModel failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=config model=$provider/$id dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
         fire(SessionControllerEvent.WorkspaceReady)
@@ -140,32 +150,38 @@ class SessionController(
     // ------ permission / question resolution ------
 
     fun replyPermission(requestId: String, reply: PermissionReplyDto, rules: PermissionAlwaysRulesDto? = null) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=permission rid=$requestId reply=${reply.reply}" }
         cs.launch {
             try {
                 if (rules != null) sessions.savePermissionRules(requestId, directory, rules)
                 sessions.replyPermission(requestId, directory, reply)
+                LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=permission rid=$requestId ok=true" }
             } catch (e: Exception) {
-                LOG.warn("replyPermission failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=permission rid=$requestId reply=${reply.reply} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
 
     fun replyQuestion(requestId: String, answers: QuestionReplyDto) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size}" }
         cs.launch {
             try {
                 sessions.replyQuestion(requestId, directory, answers)
+                LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId ok=true" }
             } catch (e: Exception) {
-                LOG.warn("replyQuestion failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId answers=${answers.answers.size} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
 
     fun rejectQuestion(requestId: String) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId rejected=true" }
         cs.launch {
             try {
                 sessions.rejectQuestion(requestId, directory)
+                LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId ok=true" }
             } catch (e: Exception) {
-                LOG.warn("rejectQuestion failed", e)
+                LOG.warn("${ChatLogSummary.sid(sessionId ?: "pending")} kind=question rid=$requestId rejected=true dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
@@ -174,6 +190,10 @@ class SessionController(
         if (sessionId != null) {
             loadHistory()
             subscribeEvents()
+        }
+
+        model.addListener(this) { event ->
+            LOG.debug { "session=$sessionId model: $event" }
         }
 
         app.connect()
@@ -226,25 +246,34 @@ class SessionController(
         cs.launch {
             try {
                 val history = sessions.messages(id, directory)
+                LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(history)}" }
                 edt {
                     this@SessionController.model.loadHistory(history)
                     if (!model.isEmpty()) showMessages()
                 }
                 recoverPending(id)
             } catch (e: Exception) {
-                LOG.warn("loadHistory failed", e)
+                LOG.warn("${ChatLogSummary.sid(id)} kind=history dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
             }
         }
     }
 
     private fun subscribeEvents() {
         val id = sessionId ?: return
+        LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=true" }
         eventJob?.cancel()
         eventJob = cs.launch {
-            sessions.events(id, directory).collect { event ->
-                // Defensive session ID guard: skip events for other sessions
-                if (!matchesSession(event, id)) return@collect
-                edt { handle(event) }
+            try {
+                sessions.events(id, directory).collect { event ->
+                    if (!matchesSession(event, id)) {
+                        LOG.debug { "${ChatLogSummary.sid(id)} pass=false ${ChatLogSummary.eventBody(event)}" }
+                        return@collect
+                    }
+                    LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
+                    edt { handle(event) }
+                }
+            } finally {
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=false" }
             }
         }
     }
@@ -255,6 +284,15 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
+            val branch = when {
+                permissions.isNotEmpty() -> "permission"
+                questions.isNotEmpty() -> "question"
+                status != null -> "status"
+                else -> "idle"
+            }
+            LOG.debug {
+                "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
+            }
             edt {
                 if (permissions.isNotEmpty()) {
                     model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
@@ -265,7 +303,7 @@ class SessionController(
                 }
             }
         } catch (e: Exception) {
-            LOG.warn("recoverPending failed", e)
+            LOG.warn("${ChatLogSummary.sid(id)} kind=recovery dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
     }
 
@@ -276,6 +314,7 @@ class SessionController(
      * for "busy" because no more-specific state has arrived yet.
      */
     private fun seedStatus(dto: SessionStatusDto) {
+        LOG.debug { "${ChatLogSummary.sid(sessionId ?: "pending")} evt=session.status ${ChatLogSummary.status(dto)}" }
         val state = when (dto.type) {
             "busy" -> SessionState.Busy(KiloBundle.message("session.status.considering"))
             "retry" -> SessionState.Retry(
@@ -293,6 +332,7 @@ class SessionController(
     }
 
     private fun handle(event: ChatEventDto) {
+        LOG.debug { ChatLogSummary.event(event) }
         when (event) {
             is ChatEventDto.MessageUpdated -> {
                 val added = model.upsertMessage(event.info)
@@ -443,6 +483,7 @@ class SessionController(
     }
 
     private fun fire(event: SessionControllerEvent, before: (() -> Unit)? = null) {
+        LOG.debug { "session=$sessionId controller: $event" }
         val application = ApplicationManager.getApplication()
         if (application.isDispatchThread) {
             before?.invoke()

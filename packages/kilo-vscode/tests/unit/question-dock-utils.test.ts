@@ -132,8 +132,8 @@ describe("resolveOptimisticQuestionAgent", () => {
 })
 
 describe("pickOutcome", () => {
-  it("submits immediately on a single-question single-select option pick", () => {
-    expect(pickOutcome({ single: true, multi: false, custom: false })).toEqual({ kind: "submit" })
+  it("keeps a single-question single-select option pick pending until explicit submit", () => {
+    expect(pickOutcome({ single: true, multi: false, custom: false })).toEqual({ kind: "stay" })
   })
 
   it("advances to the next tab on a multi-question single-select option pick", () => {

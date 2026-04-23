@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 7.2.19
+
+### Patch Changes
+
+- Updated dependencies [[`3b73cf4`](https://github.com/Kilo-Org/kilocode/commit/3b73cf474ee7bd81ac1cb4a0153906059f3a2d3a)]:
+  - @kilocode/kilo-gateway@7.2.19
+  - @kilocode/kilo-telemetry@7.2.19
+
+## 7.2.18
+
+### Patch Changes
+
+- [#9300](https://github.com/Kilo-Org/kilocode/pull/9300) [`0d0dabe`](https://github.com/Kilo-Org/kilocode/commit/0d0dabe59838e48ec8633227c508531e2296dde9) - Fix the "Start new session" button on the plan follow-up prompt not switching the VS Code Agent Manager to the new session when handover generation is slow. The new session now opens immediately, shows the plan text right away, stays visibly busy while the handover summary is being prepared, and appends that summary once it finishes generating.
+
 ## 7.2.17
 
 ### Patch Changes

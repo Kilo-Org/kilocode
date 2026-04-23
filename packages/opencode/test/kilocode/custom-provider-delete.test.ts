@@ -9,7 +9,7 @@
 // delete them cleanly.
 
 import { describe, expect, it } from "bun:test"
-import { Config } from "../../src/config/config"
+import * as Config from "../../src/config/config"
 import { KilocodeConfig } from "../../src/kilocode/config/config"
 
 describe("Config.Info — null sentinels for custom provider deletes", () => {

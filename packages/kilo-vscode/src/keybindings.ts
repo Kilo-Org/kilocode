@@ -87,21 +87,29 @@ function extensionDefaults(id: string): KeybindingEntry | undefined {
 /**
  * Walk user keybindings in order, applying override semantics:
  *  - `command: id`      → sets the effective binding to this entry's key
- *  - `command: -id`     → removes the current binding (matches any bound key for display)
+ *  - `command: -id`     → removes the matching bound key
  *
  * Later entries win, matching VS Code's "last wins" resolution for display purposes.
  */
 function applyOverrides(id: string, user: KeybindingEntry[], fallback: string | undefined) {
   const unbind = `-${id}`
-  return user.reduce<string | undefined>((current, entry) => {
+  const active = fallback ? [fallback] : []
+  for (const entry of user) {
     if (entry.command === id) {
-      return platformKey(entry)
+      const key = platformKey(entry)
+      if (key) active.push(key)
     }
     if (entry.command === unbind) {
-      return undefined
+      const key = platformKey(entry)
+      if (!key) {
+        active.splice(0)
+        continue
+      }
+      const index = active.findIndex((item) => same(item, key))
+      if (index >= 0) active.splice(index, 1)
     }
-    return current
-  }, fallback)
+  }
+  return active.at(-1)
 }
 
 function platformKey(entry: KeybindingEntry) {
@@ -109,6 +117,14 @@ function platformKey(entry: KeybindingEntry) {
     return entry.mac || entry.key
   }
   return entry.key
+}
+
+function same(a: string, b: string) {
+  return clean(a) === clean(b)
+}
+
+function clean(input: string) {
+  return input.toLowerCase().replace(/\s+/g, "")
 }
 
 async function readUserKeybindings(context?: vscode.ExtensionContext) {

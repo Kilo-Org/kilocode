@@ -167,7 +167,7 @@ export const ChatViewWithPendingQuestionEmptyInput: Story = {
 // ---------------------------------------------------------------------------
 
 export const QuestionDockSingle: Story = {
-  name: "QuestionDock — single question",
+  name: "QuestionDock — single question (explicit submit)",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} questions={[singleQuestion]}>
       <div style={{ width: "100%" }}>

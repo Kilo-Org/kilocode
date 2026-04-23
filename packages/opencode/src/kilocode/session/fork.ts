@@ -1,7 +1,7 @@
 import { Session } from "@/session"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionID, PartID } from "@/session/schema"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 
 const log = Log.create({ service: "session.fork" })
 

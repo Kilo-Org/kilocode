@@ -9,7 +9,6 @@
 import { createKilo, type KiloProvider } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { AiSdkProvider, Prompt } from "@/provider/models"
-import { Env } from "@/env"
 import { ProviderID, ModelID } from "@/provider/schema"
 import z from "zod"
 import { Effect } from "effect"
@@ -28,8 +27,8 @@ export const REQUEST_TIMEOUT_MS = 120_000 // 2 minutes
 
 type BundledSDK = { languageModel(modelId: string): LanguageModelV3 }
 
-export const KILO_BUNDLED_PROVIDERS: Record<string, (options: any) => BundledSDK> = {
-  "@kilocode/kilo-gateway": createKilo as unknown as (options: any) => BundledSDK,
+export const KILO_BUNDLED_PROVIDERS: Record<string, () => Promise<(options: any) => BundledSDK>> = {
+  "@kilocode/kilo-gateway": async () => createKilo as unknown as (options: any) => BundledSDK,
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +83,8 @@ export function patchConfigModel(cfg: any, existing: any) {
 type CustomDep = {
   auth: (id: string) => Effect.Effect<any | undefined>
   config: () => Effect.Effect<any>
+  env: () => Effect.Effect<Record<string, string | undefined>>
+  get: (key: string) => Effect.Effect<string | undefined>
 }
 
 // Mirrors upstream's CustomLoader return type so Object.entries preserves proper typing
@@ -120,7 +121,7 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
       }),
 
     kilo: Effect.fnUntraced(function* (input: any) {
-      const env = Env.all()
+      const env = yield* dep.env()
       const hasKey = yield* Effect.gen(function* () {
         if (input.env.some((item: string) => env[item])) return true
         if (yield* dep.auth(input.id)) return true
@@ -172,7 +173,11 @@ export function kiloCustomLoaders(dep: CustomDep): Record<string, CustomLoader> 
 // replace but where specific values differ (headers, branding, env vars).
 // ---------------------------------------------------------------------------
 
-export function patchCustomLoaderResult(providerID: string, result: { options?: Record<string, any> }) {
+export function patchCustomLoaderResult(
+  providerID: string,
+  result: { options?: Record<string, any> },
+  env: Record<string, string | undefined>,
+) {
   if (!result.options) return
 
   switch (providerID) {
@@ -203,11 +208,11 @@ export function patchCustomLoaderResult(providerID: string, result: { options?: 
       break
     case "azure": {
       // Extend env var lookup for Azure baseURL / resource name
-      const url = result.options.baseURL ?? Env.get("AZURE_OPENAI_ENDPOINT")
+      const url = result.options.baseURL ?? env["AZURE_OPENAI_ENDPOINT"]
       const resource = (() => {
         const name = result.options.resourceName
         if (typeof name === "string" && name.trim() !== "") return name
-        return Env.get("AZURE_RESOURCE_NAME") ?? Env.get("AZURE_OPENAI_RESOURCE_NAME")
+        return env["AZURE_RESOURCE_NAME"] ?? env["AZURE_OPENAI_RESOURCE_NAME"]
       })()
       if (url) {
         result.options.baseURL = url

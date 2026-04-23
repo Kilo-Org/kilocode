@@ -8,23 +8,24 @@ import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import z from "zod"
 import { SessionID, MessageID, PartID } from "./schema"
 import { MessageV2 } from "./message-v2"
-import { Log } from "../util/log"
+import { Log } from "../util"
 import { SessionRevert } from "./revert"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
-import { Session } from "."
+import * as Session from "./session"
 import { Agent } from "../agent/agent"
-import { Provider } from "../provider/provider"
+import { Provider } from "../provider"
 import { ModelID, ProviderID } from "../provider/schema"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
+import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
 import { Bus } from "../bus"
-import { ProviderTransform } from "../provider/transform"
+import { ProviderTransform } from "../provider"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
 import CODE_SWITCH from "../session/prompt/code-switch.txt"
 import MAX_STEPS from "../session/prompt/max-steps.txt"
-import { ToolRegistry } from "../tool/registry"
+import { ToolRegistry } from "../tool"
 import { MCP } from "../mcp"
 import { LSP } from "../lsp"
 import { FileTime } from "../file/time"
@@ -35,24 +36,25 @@ import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import * as Stream from "effect/Stream"
 import { Command } from "../command"
 import { pathToFileURL, fileURLToPath } from "url"
-import { ConfigMarkdown } from "../config/markdown"
+import { ConfigMarkdown } from "../config"
 import { SessionSummary } from "./summary"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencode-ai/shared/util/error"
 import { SessionProcessor } from "./processor"
-import { Tool } from "@/tool/tool"
+import { Tool } from "@/tool"
 import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
-import { AppFileSystem } from "@/filesystem"
-import { Truncate } from "@/tool/truncate"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
+import { Truncate } from "@/tool"
 import { decodeDataUrl } from "@/util/data-url"
-import { Process } from "@/util/process"
+import { Process } from "@/util"
 import { Cause, Effect, Exit, Layer, Option, Scope, Context } from "effect"
-import { EffectLogger } from "@/effect/logger"
-import { InstanceState } from "@/effect/instance-state"
+import { EffectLogger } from "@/effect"
+import { InstanceState } from "@/effect"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
+import { EffectBridge } from "@/effect"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -113,11 +115,7 @@ export namespace SessionPrompt {
       const sys = yield* SystemPrompt.Service
       const llm = yield* LLM.Service
       const runner = Effect.fn("SessionPrompt.runner")(function* () {
-        const ctx = yield* Effect.context()
-        return {
-          promise: <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromiseWith(ctx)(effect),
-          fork: <A, E>(effect: Effect.Effect<A, E>) => Effect.runForkWith(ctx)(effect),
-        }
+        return yield* EffectBridge.make()
       })
       const ops = Effect.fn("SessionPrompt.ops")(function* () {
         const run = yield* runner()
@@ -415,9 +413,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         })) {
           const schema = ProviderTransform.schema(input.model, z.toJSONSchema(item.parameters))
           tools[item.id] = tool({
-            id: item.id as any,
             description: item.description,
-            inputSchema: jsonSchema(schema as any),
+            inputSchema: jsonSchema(schema),
             execute(args, options) {
               return run.promise(
                 Effect.gen(function* () {
@@ -504,7 +501,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
                 const truncated = yield* truncate.output(textParts.join("\n\n"), {}, input.agent)
                 const metadata = {
-                  ...(result.metadata ?? {}),
+                  ...result.metadata,
                   truncated: truncated.truncated,
                   ...(truncated.truncated && { outputPath: truncated.outputPath }),
                 }
@@ -1343,6 +1340,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           // kilocode_change — cache environment details per turn (prompt caching)
           const envCache: KiloSessionPrompt.EnvCache = {}
           closeReasons.delete(sessionID) // kilocode_change
+          let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
           const ctx = yield* InstanceState.context
           const slog = elog.with({ sessionID })
           let structured: unknown | undefined
@@ -1424,7 +1422,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                 auto: task.auto,
                 overflow: task.overflow,
               })
-              if (result === "stop") break
+              // kilocode_change start - compaction.process only returns "stop" after
+              // setting ContextOverflowError on the summary message; surface as turn error
+              if (result === "stop") {
+                closeReasons.set(sessionID, "error")
+                break
+              }
+              // kilocode_change end
               continue
             }
 
@@ -1433,6 +1437,22 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               lastFinished.summary !== true &&
               (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model }))
             ) {
+              // kilocode_change start
+              const guard = KiloSessionPrompt.guardCompactionAttempt({
+                sessionID,
+                attempts: compactionAttempts,
+                closeReasons,
+                message: lastFinished,
+              })
+              if (guard.exhausted) {
+                // lastFinished is a prior turn's assistant — record exhaustion on the
+                // message whose size tipped us past the compaction cap.
+                yield* sessions.updateMessage(lastFinished)
+                yield* bus.publish(Session.Event.Error, { sessionID, error: guard.error })
+                break
+              }
+              compactionAttempts++
+              // kilocode_change end
               yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
               continue
             }
@@ -1570,6 +1590,20 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               }
               // kilocode_change end
               if (result === "compact") {
+                // kilocode_change start
+                const guard = KiloSessionPrompt.guardCompactionAttempt({
+                  sessionID,
+                  attempts: compactionAttempts,
+                  closeReasons,
+                  message: handle.message,
+                })
+                if (guard.exhausted) {
+                  yield* sessions.updateMessage(handle.message)
+                  yield* bus.publish(Session.Event.Error, { sessionID, error: guard.error })
+                  return "break" as const
+                }
+                compactionAttempts++
+                // kilocode_change end
                 yield* compaction.create({
                   sessionID,
                   agent: lastUser.agent,
@@ -1898,12 +1932,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     onSuccess: (output: unknown) => void
   }): AITool {
     // Remove $schema property if present (not needed for tool input)
-    const { $schema, ...toolSchema } = input.schema
+    const { $schema: _, ...toolSchema } = input.schema
 
     return tool({
-      id: "StructuredOutput" as any,
       description: STRUCTURED_OUTPUT_DESCRIPTION,
-      inputSchema: jsonSchema(toolSchema as any),
+      inputSchema: jsonSchema(toolSchema as JSONSchema7),
       async execute(args) {
         // AI SDK validates args against inputSchema before calling execute()
         input.onSuccess(args)
