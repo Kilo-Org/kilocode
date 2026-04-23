@@ -77,6 +77,9 @@ The exact list of available models depends on your SAP AI Core configuration and
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2. **Select Provider:** Choose "SAP AI Core" from the "API Provider" dropdown.
 3. **Enter Credentials:**
@@ -90,6 +93,47 @@ The exact list of available models depends on your SAP AI Core configuration and
    - **Foundation Models Mode:** Leave unchecked to use foundation models with deployments
 5. **Select Model:** Choose your desired model from the dropdown
 6. **Select Deployment:** (Foundation Models Mode only) Choose an active deployment for your selected model
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Open **Settings** (gear icon) and go to the **Providers** tab to add SAP AI Core. Enter your OAuth2 client credentials (Client ID, Client Secret, Base URL, and Auth URL) in the provider settings.
+
+The extension stores this in your `kilo.json` config file. You can also edit the config file directly — see the **CLI** tab for the file format.
+
+{% /tab %}
+{% tab label="CLI" %}
+
+SAP AI Core uses OAuth2 client credentials for authentication. Set the credentials as environment variables or in your config file:
+
+**Environment variables:**
+
+```bash
+export AICORE_SERVICE_KEY='{"your": "service-key-json"}'
+export AICORE_DEPLOYMENT_ID="your-deployment-id"
+export AICORE_RESOURCE_GROUP="your-resource-group"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "sap-ai-core": {},
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "sap-ai-core/model-name",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Deployments (Foundation Models Mode)
 

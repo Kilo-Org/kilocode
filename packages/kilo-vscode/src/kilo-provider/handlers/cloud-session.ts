@@ -8,6 +8,7 @@
 import type { KiloClient, Session, TextPartInput, FilePartInput } from "@kilocode/sdk/v2/client"
 import type { CloudSessionData, EditorContext } from "../../services/cli-backend/types"
 import { getErrorMessage, sessionToWebview, mapCloudSessionMessageToWebviewMessage } from "../../kilo-provider-utils"
+import type { MessageFile } from "../message-files"
 
 export interface CloudSessionContext {
   readonly client: KiloClient | null
@@ -19,6 +20,11 @@ export interface CloudSessionContext {
   postMessage(msg: unknown): void
   getWorkspaceDirectory(sessionId?: string): string
   gatherEditorContext(): Promise<EditorContext>
+  runWithMessageConfirmation?<T>(
+    messageID: string | undefined,
+    label: string,
+    run: () => Promise<T>,
+  ): Promise<T | undefined>
 }
 
 /** Fetch cloud sessions list and send to webview. */
@@ -110,7 +116,7 @@ export async function handleImportAndSend(
   modelID?: string,
   agent?: string,
   variant?: string,
-  files?: Array<{ mime: string; url: string }>,
+  files?: MessageFile[],
   command?: string,
   commandArgs?: string,
 ): Promise<void> {
@@ -123,6 +129,7 @@ export async function handleImportAndSend(
     return
   }
 
+  const client = ctx.client
   const dir = ctx.getWorkspaceDirectory()
 
   // Step 1: Import the cloud session with fresh IDs
@@ -163,38 +170,48 @@ export async function handleImportAndSend(
   })
 
   // Step 2: Send the user's message/command on the new local session
+  const run = ctx.runWithMessageConfirmation ?? ((_id, _label, fn) => fn())
   try {
-    if (messageID) {
-      ctx.connectionService.recordMessageSessionId(messageID, session.id)
-    }
+    await run(messageID, "Cloud import send", async () => {
+      if (messageID) {
+        ctx.connectionService.recordMessageSessionId(messageID, session.id)
+      }
 
-    if (command) {
-      const parts = files?.map((f) => ({ type: "file" as const, mime: f.mime, url: f.url }))
-      await ctx.client.session.command(
-        {
-          sessionID: session.id,
-          directory: dir,
-          command,
-          arguments: commandArgs ?? "",
-          messageID,
-          model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
-          agent,
-          variant,
-          parts,
-        },
-        { throwOnError: true },
-      )
-    } else {
+      if (command) {
+        const parts = files?.map((f) => ({
+          type: "file" as const,
+          mime: f.mime,
+          url: f.url,
+          filename: f.filename,
+          source: f.source,
+        }))
+        await client.session.command(
+          {
+            sessionID: session.id,
+            directory: dir,
+            command,
+            arguments: commandArgs ?? "",
+            messageID,
+            model: providerID && modelID ? `${providerID}/${modelID}` : undefined,
+            agent,
+            variant,
+            parts,
+          },
+          { throwOnError: true },
+        )
+        return
+      }
+
       const parts: Array<TextPartInput | FilePartInput> = []
       if (files) {
         for (const f of files) {
-          parts.push({ type: "file", mime: f.mime, url: f.url })
+          parts.push({ type: "file", mime: f.mime, url: f.url, filename: f.filename, source: f.source })
         }
       }
       parts.push({ type: "text", text })
 
       const editorContext = await ctx.gatherEditorContext()
-      await ctx.client.session.promptAsync(
+      await client.session.promptAsync(
         {
           sessionID: session.id,
           directory: dir,
@@ -207,7 +224,7 @@ export async function handleImportAndSend(
         },
         { throwOnError: true },
       )
-    }
+    })
   } catch (err) {
     console.error("[Kilo New] Failed to send message after cloud import:", err)
     ctx.postMessage({
@@ -215,6 +232,7 @@ export async function handleImportAndSend(
       error: err instanceof Error ? err.message : "Failed to send message after import",
       text,
       sessionID: session.id,
+      draftID: session.id,
       messageID,
       files,
     })

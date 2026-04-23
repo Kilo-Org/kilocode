@@ -7,8 +7,10 @@ description: "Connect a dedicated Google account to KiloClaw for access to Gmail
 
 Connect a dedicated Google account to KiloClaw so it can interact with Google Workspace services — Gmail, Calendar, Drive, Docs, Sheets, Slides, Tasks, People, Forms, Chat, Classroom, and Apps Script.
 
-{% callout type="warning" title="Use a standalone Google account" %}
-We strongly recommend creating a **dedicated Google account** specifically for KiloClaw rather than connecting your personal Google account. This keeps your personal data separate and gives you full control over what KiloClaw can access. Throughout this guide, "the KiloClaw Google account" refers to this dedicated account.
+{% callout type="warning" title="Use a dedicated Google account" %}
+We recommend creating a **dedicated Google account** for KiloClaw. This keeps your personal data separate and gives you full control over what KiloClaw can access.
+
+If you are using Google Workspace, we recommend creating the bot account inside the Google Workspace.
 {% /callout %}
 
 ## What You Get
@@ -41,6 +43,8 @@ Before you begin, make sure you have:
 - **Docker** installed and running on your machine
 
 ## Setup
+
+{% youtube url="https://youtu.be/PX444_j3O4I" title="Google Workspace Setup Guide" caption="How to connect your Google account to KiloClaw" /%}
 
 1. Go to the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
 2. Find the **Google Account** section

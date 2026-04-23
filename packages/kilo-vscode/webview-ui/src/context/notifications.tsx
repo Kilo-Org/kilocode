@@ -17,7 +17,7 @@ interface NotificationsContextValue {
   dismiss: (id: string) => void
 }
 
-const NotificationsContext = createContext<NotificationsContextValue>()
+export const NotificationsContext = createContext<NotificationsContextValue>()
 
 export const NotificationsProvider: ParentComponent = (props) => {
   const vscode = useVSCode()

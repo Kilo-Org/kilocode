@@ -1,6 +1,7 @@
 ---
 title: "System Notifications"
 description: "Configure native OS notifications for Kilo Code"
+platform: legacy
 ---
 
 # System Notifications

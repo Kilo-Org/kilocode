@@ -46,6 +46,7 @@ const EXCLUDE_PATTERNS = [
   /^https?:\/\/ingest\.kilosessions\.ai/,
   /^https?:\/\/api\.openai\.com/,
   /^https?:\/\/api\.github\.com/,
+  /^https?:\/\/api\.githubcopilot\.com/,
   /^https?:\/\/api\.cloudflare\.com/,
   /^https?:\/\/api\.releases\.hashicorp\.com/,
   /^https?:\/\/auth\.openai\.com/,
@@ -82,7 +83,7 @@ const SKIP_DIRS = ["node_modules", ".storybook", "stories", "test", "tests", "__
 const SKIP_PATH_SEGMENTS = ["continuedev"]
 
 // Individual files to skip (data files full of non-user-facing URLs)
-const SKIP_FILES = ["models-snapshot.ts"]
+const SKIP_FILES = ["models-snapshot.ts", "models-snapshot.js"]
 
 function shouldExclude(url: string): boolean {
   return EXCLUDE_PATTERNS.some((re) => re.test(url))

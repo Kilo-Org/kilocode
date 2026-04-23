@@ -20,10 +20,11 @@ Kilo Gateway currently supports BYOK keys for these providers:
 
 - Anthropic
 - AWS Bedrock
-- OpenAI
 - Google AI Studio
+- Inception
 - Minimax
 - Mistral AI
+- OpenAI
 - xAI
 - Z.AI
 

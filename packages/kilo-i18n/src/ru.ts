@@ -69,4 +69,14 @@ export const dict = {
   "marketplace.warning.busyMany": "Несколько сеансов выполняются и будут прерваны",
   "marketplace.warning.installAnyway": "Установить в любом случае",
   "marketplace.warning.cancel": "Отмена",
+  "marketplace.contribute.prompt": "Не хватает навыка, режима или MCP-сервера?",
+  "marketplace.contribute.cta": "Внести вклад на GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Реализовать",
+  "plan.followup.question": "Готовы реализовать?",
+  "plan.followup.answer.newSession": "Начать новую сессию",
+  "plan.followup.answer.newSession.description": "Реализовать в новой сессии с чистым контекстом",
+  "plan.followup.answer.continue": "Продолжить здесь",
+  "plan.followup.answer.continue.description": "Реализовать план в этой сессии",
 }

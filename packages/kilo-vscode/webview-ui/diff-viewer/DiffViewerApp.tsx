@@ -26,6 +26,16 @@ const DiffViewerContent: Component = () => {
   const [loading, setLoading] = createSignal(true)
   const [comments, setComments] = createSignal<ReviewComment[]>([])
   const [diffStyle, setDiffStyle] = createSignal<DiffStyle>("unified")
+  const [reverting, setReverting] = createSignal<Set<string>>(new Set())
+
+  const markReverting = (file: string, active: boolean) => {
+    setReverting((prev) => {
+      const next = new Set(prev)
+      if (active) next.add(file)
+      else next.delete(file)
+      return next
+    })
+  }
 
   const unsubscribe = vscode.onMessage((msg) => {
     if (msg.type === "diffViewer.diffs") {
@@ -35,6 +45,11 @@ const DiffViewerContent: Component = () => {
 
     if (msg.type === "diffViewer.loading") {
       setLoading(msg.loading)
+      return
+    }
+
+    if (msg.type === "diffViewer.revertFileResult") {
+      markReverting(msg.file, false)
       return
     }
   })
@@ -67,6 +82,11 @@ const DiffViewerContent: Component = () => {
       onOpenFile={(relativePath) => {
         post({ type: "openFile", filePath: relativePath })
       }}
+      onRevertFile={(file) => {
+        markReverting(file, true)
+        post({ type: "diffViewer.revertFile", file })
+      }}
+      revertingFiles={reverting()}
       onClose={() => {
         post({ type: "diffViewer.close" })
       }}

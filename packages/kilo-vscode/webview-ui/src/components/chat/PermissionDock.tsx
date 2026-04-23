@@ -19,6 +19,7 @@ import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
 import { describePatterns, resolveLabel, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
+import { PermissionDiff } from "./PermissionDiff"
 import type { PermissionRequest } from "../../types/messages"
 
 let rulesExpandedPreference = false
@@ -45,6 +46,13 @@ export const PermissionDock: Component<{
   const description = createMemo(() =>
     command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
   )
+
+  const filediff = () => {
+    if (props.request.toolName !== "edit" && props.request.toolName !== "write") return null
+    const fd = props.request.args?.filediff
+    if (!fd || typeof fd !== "object") return null
+    return fd as NonNullable<PermissionRequest["args"]["filediff"]>
+  }
 
   // Pre-populate toggle states from existing config rules so previously
   // approved/denied patterns show their saved state immediately.
@@ -137,10 +145,14 @@ export const PermissionDock: Component<{
     }
   }
 
-  // Auto-focus the dock when it appears so keyboard shortcuts work immediately
+  // Keep keyboard shortcuts when the webview already has focus, but do not
+  // steal focus from the editor, terminal, or other VS Code surfaces.
   createEffect(() => {
     void props.request.id
-    requestAnimationFrame(() => root?.focus())
+    requestAnimationFrame(() => {
+      if (!document.hasFocus()) return
+      root?.focus()
+    })
   })
 
   return (
@@ -234,6 +246,8 @@ export const PermissionDock: Component<{
             </div>
           )
         })()}
+
+        <Show when={filediff()}>{(fd) => <PermissionDiff filediff={fd()} />}</Show>
 
         <div data-slot="permission-actions">
           <Button

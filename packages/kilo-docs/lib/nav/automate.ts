@@ -15,7 +15,14 @@ export const AutomateNav: NavSection[] = [
           { href: "/automate/code-reviews/gitlab", children: "GitLab" },
         ],
       },
-      { href: "/automate/agent-manager", children: "Agent Manager" },
+      {
+        href: "/automate/agent-manager",
+        children: "Agent Manager",
+        subLinks: [
+          { href: "/automate/agent-manager", children: "Reference" },
+          { href: "/automate/agent-manager-workflows", children: "Workflows" },
+        ],
+      },
     ],
   },
   {
@@ -29,6 +36,7 @@ export const AutomateNav: NavSection[] = [
       {
         href: "/automate/extending/auto-launch",
         children: "Auto-launch Configuration",
+        platform: "legacy",
       },
       {
         href: "/automate/mcp/overview",
@@ -53,8 +61,8 @@ export const AutomateNav: NavSection[] = [
   {
     title: "Tools",
     links: [
-      { href: "/automate/how-tools-work", children: "How Tools Work" },
-      { href: "/automate/tools", children: "Tools Details" },
+      { href: "/automate/how-tools-work", children: "How Tools Work", platform: "legacy" },
+      { href: "/automate/tools", children: "Tools Details", platform: "legacy" },
     ],
   },
 ]

@@ -15,6 +15,7 @@ import { dict as ru } from "./ru"
 import { dict as th } from "./th"
 import { dict as zh } from "./zh"
 import { dict as tr } from "./tr"
+import { dict as uk } from "./uk"
 import { dict as zht } from "./zht"
 import { type dict as enDict } from "./en"
 
@@ -35,13 +36,19 @@ const bundles: Record<string, Record<string, string>> = {
   ru,
   th,
   tr,
+  uk,
   zh,
   zht,
 }
 
 function resolveLocale(lang: string): string {
   const lower = lang.toLowerCase()
-  if (lower.startsWith("zh")) return lower.includes("hant") ? "zht" : "zh"
+  if (lower.startsWith("zh")) {
+    if (lower === "zht") return "zht"
+    const traditional =
+      lower.includes("hant") || lower.includes("-tw") || lower.includes("-hk") || lower.includes("-mo")
+    return traditional ? "zht" : "zh"
+  }
   if (lower.startsWith("nb") || lower.startsWith("nn")) return "no"
   if (lower.startsWith("pt")) return "br"
   for (const key of Object.keys(bundles)) {

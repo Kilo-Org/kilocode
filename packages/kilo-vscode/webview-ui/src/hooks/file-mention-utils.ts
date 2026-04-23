@@ -1,12 +1,40 @@
-import type { FileAttachment } from "../types/messages"
+import type { FileAttachment, FileSearchItem } from "../types/messages"
+import { TERMINAL_MENTION } from "./terminal-context-utils"
 
 export const AT_PATTERN = /(?:^|\s)@(\S*)$/
+
+export type MentionResult =
+  | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
+  | { type: "file"; value: string }
+  | { type: "folder"; value: string }
+
+export const TERMINAL_RESULT: MentionResult = {
+  type: "terminal",
+  value: TERMINAL_MENTION,
+  label: "Terminal",
+  description: "Active terminal output",
+}
 
 /**
  * Escape special regex characters in a string so it can be used in a RegExp.
  */
 function escape(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+export function getTerminalMentionResult(query: string): MentionResult[] {
+  const normalized = query.toLowerCase()
+  if (!TERMINAL_MENTION.startsWith(normalized)) return []
+  return [TERMINAL_RESULT]
+}
+
+export function buildMentionResults(query: string, items: Array<FileSearchItem | string>): MentionResult[] {
+  const results: MentionResult[] = items.map((item) => {
+    if (typeof item === "string") return { type: "file", value: item }
+    if (item.type === "folder") return { type: "folder", value: item.path }
+    return { type: "file", value: item.path }
+  })
+  return [...getTerminalMentionResult(query), ...results]
 }
 
 /**
@@ -28,7 +56,7 @@ export function syncMentionedPaths(prev: Set<string>, text: string): Set<string>
 }
 
 /**
- * Replace the @mention pattern before the cursor with the selected file path.
+ * Replace the @mention pattern before the cursor with the selected path.
  * Returns the new text string.
  */
 export function buildTextAfterMentionSelect(before: string, after: string, path: string): string {

@@ -26,13 +26,20 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { Code } from "@kilocode/kilo-ui/code"
 import { File } from "@kilocode/kilo-ui/file"
 import { SessionContext } from "../context/session"
+import { NotificationsContext } from "../context/notifications"
 import { LanguageContext } from "../context/language"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
 import { dict as kiloEn } from "@kilocode/kilo-i18n/en"
 import { resolveTemplate } from "../context/language-utils"
-import type { Config, PermissionRequest, QuestionRequest } from "../types/messages"
+import type {
+  Config,
+  KilocodeNotification,
+  PermissionRequest,
+  QuestionRequest,
+  SuggestionRequest,
+} from "../types/messages"
 
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
@@ -60,6 +67,7 @@ const MOCK_PROVIDERS = {
         name: "Anthropic: Claude Sonnet 4.6",
         inputPrice: 0.003,
         outputPrice: 0.015,
+        limit: { context: 200000, output: 8192 },
       },
     },
   },
@@ -98,20 +106,34 @@ export const defaultMockData = {
 }
 
 // ---------------------------------------------------------------------------
-// Mock SessionContext value — only the subset used by components
+// Mock NotificationsContext value
 // ---------------------------------------------------------------------------
 
 function noop() {}
+
+function mockNotificationsValue(items: KilocodeNotification[] = []) {
+  return {
+    notifications: () => items,
+    filteredNotifications: () => items,
+    dismiss: noop,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock SessionContext value — only the subset used by components
+// ---------------------------------------------------------------------------
 
 export function mockSessionValue(overrides?: {
   id?: string
   permissions?: PermissionRequest[]
   questions?: QuestionRequest[]
+  suggestions?: SuggestionRequest[]
   status?: string
 }) {
   const id = overrides?.id ?? "story-session-001"
   const permissions = overrides?.permissions ?? []
   const qs = overrides?.questions ?? []
+  const suggestions = overrides?.suggestions ?? []
   const status = (overrides?.status ?? "idle") as "idle" | "busy"
 
   return {
@@ -129,27 +151,35 @@ export function mockSessionValue(overrides?: {
     statusText: () => (status === "idle" ? undefined : "Thinking…"),
     busySince: () => (status === "busy" ? Date.now() - 2000 : undefined),
     loading: () => false,
+    loadingOlderMessages: () => false,
+    hasOlderMessages: () => false,
+    messageMutation: () => undefined,
     messages: () => [],
     userMessages: () => [],
     allMessages: () => ({}),
     allParts: () => ({}),
     allStatusMap: () => ({}),
-    familyData: () => ({ messages: {}, parts: {}, status: {} }),
     getParts: () => [],
+    hydrateParts: noop,
     todos: () => [],
     permissions: () => permissions,
     respondingPermissions: () => new Set<string>(),
     questions: () => qs,
     questionErrors: () => new Set<string>(),
+    suggestions: () => suggestions,
+    suggestionErrors: () => new Set<string>(),
+    respondingSuggestions: () => new Set<string>(),
     scopedPermissions: (sid?: string) => (sid ? permissions.filter((p) => p.sessionID === sid) : permissions),
     scopedQuestions: (sid?: string) => (sid ? qs.filter((q) => q.sessionID === sid) : qs),
+    scopedSuggestions: (sid?: string) => (sid ? suggestions.filter((item) => item.sessionID === sid) : suggestions),
     selected: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     selectModel: noop,
     hasModelOverride: () => false,
     clearModelOverride: noop,
-    totalCost: () => 0,
+    costBreakdown: () => [],
     contextUsage: () => undefined,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
+    allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
     refreshSkills: noop,
     removeSkill: noop,
@@ -163,20 +193,27 @@ export function mockSessionValue(overrides?: {
     revert: () => undefined,
     revertedCount: () => 0,
     summary: () => undefined,
+    worktreeStats: () => undefined,
     revertSession: noop,
     unrevertSession: noop,
+    favoriteModels: () => [],
+    toggleFavorite: noop,
     variantList: () => [],
     currentVariant: () => undefined,
     selectVariant: noop,
     sendMessage: noop,
+    sendCommand: noop,
     abort: noop,
     compact: noop,
     respondToPermission: noop,
     replyToQuestion: noop,
     rejectQuestion: noop,
+    acceptSuggestion: noop,
+    dismissSuggestion: noop,
     createSession: noop,
     clearCurrentSession: noop,
     loadSessions: noop,
+    loadOlderMessages: noop,
     selectSession: noop,
     deleteSession: noop,
     renameSession: noop,
@@ -194,6 +231,8 @@ interface StoryProvidersProps {
   data?: any
   permissions?: PermissionRequest[]
   questions?: QuestionRequest[]
+  suggestions?: SuggestionRequest[]
+  notifications?: KilocodeNotification[]
   status?: string
   sessionID?: string
   /** When provided, injects a mock ConfigContext with this config instead of the real ConfigProvider. */
@@ -209,6 +248,8 @@ const ConfigWrapper: ParentComponent<{ config?: Config }> = (props) => {
       config: () => props.config!,
       loading: () => false,
       isDirty: () => false,
+      saving: () => false,
+      saveError: () => null,
       updateConfig: noop,
       saveConfig: noop,
       discardConfig: noop,
@@ -224,8 +265,10 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
     id: props.sessionID,
     permissions: props.permissions,
     questions: props.questions,
+    suggestions: props.suggestions,
     status: props.status,
   })
+  const notifications = mockNotificationsValue(props.notifications)
   const [locale] = createSignal<"en">("en")
 
   return (
@@ -243,23 +286,25 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                 }}
               >
                 <I18nProvider value={{ locale: () => "en", t }}>
-                  <SessionContext.Provider value={session as any}>
-                    <DataProvider data={data()} directory="/project/">
-                      <DiffComponentProvider component={Diff}>
-                        <CodeComponentProvider component={Code}>
-                          <FileComponentProvider component={File}>
-                            <MarkedProvider>
-                              {props.noPadding ? (
-                                props.children
-                              ) : (
-                                <div style={{ padding: "12px" }}>{props.children}</div>
-                              )}
-                            </MarkedProvider>
-                          </FileComponentProvider>
-                        </CodeComponentProvider>
-                      </DiffComponentProvider>
-                    </DataProvider>
-                  </SessionContext.Provider>
+                  <NotificationsContext.Provider value={notifications}>
+                    <SessionContext.Provider value={session as any}>
+                      <DataProvider data={data()} directory="/project/">
+                        <DiffComponentProvider component={Diff}>
+                          <CodeComponentProvider component={Code}>
+                            <FileComponentProvider component={File}>
+                              <MarkedProvider>
+                                {props.noPadding ? (
+                                  props.children
+                                ) : (
+                                  <div style={{ padding: "12px" }}>{props.children}</div>
+                                )}
+                              </MarkedProvider>
+                            </FileComponentProvider>
+                          </CodeComponentProvider>
+                        </DiffComponentProvider>
+                      </DataProvider>
+                    </SessionContext.Provider>
+                  </NotificationsContext.Provider>
                 </I18nProvider>
               </LanguageContext.Provider>
             </DialogProvider>

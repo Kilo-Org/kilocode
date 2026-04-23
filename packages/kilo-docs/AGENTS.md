@@ -30,6 +30,12 @@ Use the Markdoc image tag format:
 
 Note that this site is served under kilo.ai/docs so the `/docs` prefix **must** be present in every image path.
 
+#### Generated screenshots
+
+When updating screenshots for active docs pages, prefer generated screenshot-test assets from `packages/kilo-docs/public/img/screenshot-tests/` and reference them as `/docs/img/screenshot-tests/...`. Only replace a hand-captured image when the generated screenshot matches the docs content closely. Do not replace screenshots in VSCode Legacy docs tabs or sections.
+
+If a docs page references a generated VS Code visual-regression screenshot, record that usage in `packages/kilo-vscode/tests/visual-regression.spec.ts` by adding the story ID to the `DOCS` map. Keep `packages/kilo-vscode/tests/visual-regression.spec.mts` in sync while that file exists. If no matching generated screenshot exists, add or update a Storybook story in `packages/kilo-vscode/webview-ui/src/stories/` and let visual-regression CI generate the baseline.
+
 Image attributes:
 
 | Attribute | Type   | Required | Description                                 |
