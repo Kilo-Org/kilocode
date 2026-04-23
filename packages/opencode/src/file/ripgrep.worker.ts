@@ -1,5 +1,5 @@
 import { ripgrep } from "ripgrep"
-import { RipgrepStream } from "../kilocode/ripgrep-stream" // kilocode_change - share UTF-8 stream decoding
+import { KiloRipgrepStream } from "../kilocode/kilo-ripgrep-stream" // kilocode_change - share UTF-8 stream decoding
 
 function env() {
   const env = Object.fromEntries(
@@ -68,10 +68,10 @@ onmessage = async (evt: MessageEvent<Run>) => {
     let buf = ""
     let err = ""
     // kilocode_change start - keep decoder state across stdout chunks
-    const decoder = RipgrepStream.decoder()
+    const decoder = KiloRipgrepStream.decoder()
     const out = {
       write(chunk: unknown) {
-        buf = RipgrepStream.drain(decoder, buf, chunk, (line) => postMessage({ type: "line", line: clean(line) }))
+        buf = KiloRipgrepStream.drain(decoder, buf, chunk, (line) => postMessage({ type: "line", line: clean(line) }))
       },
     }
     // kilocode_change end

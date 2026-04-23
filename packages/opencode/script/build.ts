@@ -219,9 +219,7 @@ for (const item of targets) {
       execArgv: [`--user-agent=kilo/${Script.version}`, "--use-system-ca", "--"], // kilocode_change
       windows: {},
     },
-    files: {
-      ...(embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {}),
-    },
+    files: embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {},
     entrypoints: [
       "./src/index.ts",
       parserWorker,

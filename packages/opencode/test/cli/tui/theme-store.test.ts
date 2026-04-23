@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { Log } from "../../../src/util/log"
+import { Log } from "../../../src/util"
 
 Log.init({ print: false })
 
@@ -44,7 +44,7 @@ test("hasTheme checks theme presence", () => {
 test("resolveTheme rejects circular color refs", () => {
   const item = structuredClone(DEFAULT_THEMES.opencode)
   item.defs = {
-    ...(item.defs ?? {}),
+    ...item.defs,
     one: "two",
     two: "one",
   }

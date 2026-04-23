@@ -6,8 +6,8 @@ import type { GitContext } from "@/kilocode/commit-message/types"
 // breaking other test files, we spread real exports and only override what
 // this test needs.
 
-const realLog = await import("@/util/log")
-const realProvider = await import("@/provider/provider")
+const realLog = await import("@/util")
+const realProvider = await import("@/provider")
 const realLLM = await import("@/session/llm")
 const realAgent = await import("@/agent/agent")
 const realGitContext = await import("@/kilocode/commit-message/git-context")
@@ -37,7 +37,7 @@ mock.module("@/kilocode/commit-message/git-context", () => ({
   },
 }))
 
-mock.module("@/provider/provider", () => ({
+mock.module("@/provider", () => ({
   ...realProvider,
   Provider: {
     ...realProvider.Provider,
@@ -68,7 +68,7 @@ mock.module("@/agent/agent", () => ({
   Agent: {},
 }))
 
-mock.module("@/util/log", () => ({
+mock.module("@/util", () => ({
   ...realLog,
   Log: {
     ...realLog.Log,

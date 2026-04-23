@@ -52,7 +52,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Cost-conscious developers who want better results than free models at a fraction of frontier cost.
 
-**What it does**: Uses GPT 5.3 Codex — a cost-effective model with strong reasoning and coding capabilities — for every mode. Unlike Frontier, Balanced does not vary its underlying model by mode.
+**What it does**: Routes to a cost-effective model based on the API interface used by the client. Requests using the Completions API (default) route to `qwen/qwen3.6-plus`; Responses API requests route to `openai/gpt-5.3-codex`; Messages API requests route to `anthropic/claude-haiku-4.5`. Unlike Frontier, Balanced does not vary its underlying model by mode.
 
 **Pricing**: Paid, but significantly cheaper than Frontier.
 
@@ -62,7 +62,7 @@ For the current mode-to-model mappings, see the [Auto Model user docs](/docs/cod
 
 **Who it's for**: Users who want to try Kilo without a credit card, students, hobbyists, and anyone exploring AI-assisted coding.
 
-**What it does**: Splits requests across the best available free models, weighted by a deterministic per-session hash so a given session sticks with one model. As free model availability changes due to promotional periods, the split and the underlying models are updated transparently server-side. Users always get the best free option without having to track which models are currently available.
+**What it does**: Routes each session to one of the best available free models, selected deterministically based on the session (or user/IP) so a given session sticks with one model. The full candidate pool is determined server-side from curated preferred free models, and updated transparently as availability changes due to promotional periods. Users always get the best free option without having to track which models are currently available.
 
 **Pricing**: Free. No credits required.
 

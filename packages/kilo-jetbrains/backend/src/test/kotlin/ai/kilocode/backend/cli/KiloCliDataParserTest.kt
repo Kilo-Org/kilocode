@@ -3,8 +3,11 @@ package ai.kilocode.backend.cli
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -463,6 +466,380 @@ class KiloCliDataParserTest {
     fun `buildConfigPartial - temperature without agent defaults to ask`() {
         val result = KiloCliDataParser.buildConfigPartial(ConfigUpdateDto(temperature = 0.5))
         assertTrue(result.contains(""""agent":{"ask":{"temperature":0.5}}"""))
+    }
+
+    // ================================================================
+    // parseChatEvent — permission / question events
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - permission asked`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_1",
+                "sessionID": "ses_1",
+                "permission": "edit",
+                "patterns": ["*.kt"],
+                "always": [],
+                "metadata": {"file": "src/A.kt"},
+                "tool": {"messageID": "msg_1", "callID": "call_1"}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.PermissionAsked)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("perm_1", result.request.id)
+        assertEquals("edit", result.request.permission)
+        assertEquals(listOf("*.kt"), result.request.patterns)
+        assertEquals("src/A.kt", result.request.metadata["file"])
+        assertEquals("msg_1", result.request.tool?.messageID)
+    }
+
+    @Test
+    fun `parseChatEvent - permission replied`() {
+        val data = globalEvent("""
+            "type": "permission.replied",
+            "properties": { "sessionID": "ses_1", "requestID": "perm_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.replied", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.PermissionReplied)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("perm_1", result.requestID)
+    }
+
+    @Test
+    fun `parseChatEvent - question asked`() {
+        val data = globalEvent("""
+            "type": "question.asked",
+            "properties": {
+                "id": "q_1",
+                "sessionID": "ses_1",
+                "questions": [{"question": "Pick one", "header": "Choice", "options": [{"label": "A", "description": "Option A"}]}],
+                "tool": null
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("question.asked", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.QuestionAsked)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("q_1", result.request.id)
+        assertEquals(1, result.request.questions.size)
+        assertEquals("Pick one", result.request.questions[0].question)
+        assertEquals("A", result.request.questions[0].options[0].label)
+    }
+
+    @Test
+    fun `parseChatEvent - question replied`() {
+        val data = globalEvent("""
+            "type": "question.replied",
+            "properties": { "sessionID": "ses_1", "requestID": "q_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("question.replied", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.QuestionReplied)
+        assertEquals("q_1", result.requestID)
+    }
+
+    @Test
+    fun `parseChatEvent - question rejected`() {
+        val data = globalEvent("""
+            "type": "question.rejected",
+            "properties": { "sessionID": "ses_1", "requestID": "q_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("question.rejected", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.QuestionRejected)
+        assertEquals("q_1", result.requestID)
+    }
+
+    // ================================================================
+    // parseChatEvent — session.status with retry/offline detail
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - session status idle`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": { "sessionID": "ses_1", "status": {"type": "idle"} }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.status", data) as ChatEventDto.SessionStatusChanged
+        assertEquals("idle", result.status.type)
+        assertNull(result.status.attempt)
+        assertNull(result.status.requestID)
+    }
+
+    @Test
+    fun `parseChatEvent - session status retry with attempt and next`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": {
+                "sessionID": "ses_1",
+                "status": {"type": "retry", "message": "Retrying...", "attempt": 2, "next": 5000}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.status", data) as ChatEventDto.SessionStatusChanged
+        assertEquals("retry", result.status.type)
+        assertEquals("Retrying...", result.status.message)
+        assertEquals(2, result.status.attempt)
+        assertEquals(5000L, result.status.next)
+    }
+
+    @Test
+    fun `parseChatEvent - session status offline with requestID`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": {
+                "sessionID": "ses_1",
+                "status": {"type": "offline", "message": "No network", "requestID": "req_abc"}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.status", data) as ChatEventDto.SessionStatusChanged
+        assertEquals("offline", result.status.type)
+        assertEquals("No network", result.status.message)
+        assertEquals("req_abc", result.status.requestID)
+    }
+
+    // ================================================================
+    // parseChatEvent — message.part.removed
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - message part removed`() {
+        val data = globalEvent("""
+            "type": "message.part.removed",
+            "properties": { "sessionID": "ses_1", "messageID": "msg_1", "partID": "part_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("message.part.removed", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.PartRemoved)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals("msg_1", result.messageID)
+        assertEquals("part_1", result.partID)
+    }
+
+    // ================================================================
+    // parseChatEvent — todo.updated
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - todo updated`() {
+        val data = globalEvent("""
+            "type": "todo.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "todos": [
+                    {"content": "Write tests", "status": "in_progress", "priority": "high"},
+                    {"content": "Review PR", "status": "pending", "priority": "medium"}
+                ]
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("todo.updated", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.TodoUpdated)
+        assertEquals("ses_1", result.sessionID)
+        assertEquals(2, result.todos.size)
+        assertEquals("Write tests", result.todos[0].content)
+        assertEquals("high", result.todos[0].priority)
+    }
+
+    // ================================================================
+    // parseChatEvent — session.idle / session.compacted / session.diff
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - session idle`() {
+        val data = globalEvent("""
+            "type": "session.idle",
+            "properties": { "sessionID": "ses_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.idle", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionIdle)
+        assertEquals("ses_1", result.sessionID)
+    }
+
+    @Test
+    fun `parseChatEvent - session compacted`() {
+        val data = globalEvent("""
+            "type": "session.compacted",
+            "properties": { "sessionID": "ses_1" }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.compacted", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionCompacted)
+    }
+
+    @Test
+    fun `parseChatEvent - session diff`() {
+        val data = globalEvent("""
+            "type": "session.diff",
+            "properties": {
+                "sessionID": "ses_1",
+                "diff": [{"file": "src/A.kt", "additions": 3, "deletions": 1, "patch": "@@ ..."}]
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("session.diff", data)
+        assertNotNull(result)
+        assertTrue(result is ChatEventDto.SessionDiffChanged)
+        assertEquals(1, result.diff.size)
+        assertEquals("src/A.kt", result.diff[0].file)
+        assertEquals(3, result.diff[0].additions)
+    }
+
+    // ================================================================
+    // parseChatEvent — part with callID
+    // ================================================================
+
+    @Test
+    fun `parseChatEvent - part updated with callID`() {
+        val data = globalEvent("""
+            "type": "message.part.updated",
+            "properties": {
+                "sessionID": "ses_1",
+                "part": {
+                    "id": "part_1",
+                    "sessionID": "ses_1",
+                    "messageID": "msg_1",
+                    "type": "tool",
+                    "tool": "bash",
+                    "callID": "call_abc",
+                    "state": { "status": "running" }
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("message.part.updated", data) as ChatEventDto.PartUpdated
+        assertEquals("call_abc", result.part.callID)
+        assertEquals("bash", result.part.tool)
+    }
+
+    // ================================================================
+    // parseSessionStatus — full detail
+    // ================================================================
+
+    @Test
+    fun `parseSessionStatus - retry preserves attempt and next`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": {
+                "sessionID": "ses_retry",
+                "status": {"type": "retry", "message": "Rate limited", "attempt": 3, "next": 10000}
+            }
+        """)
+        val result = KiloCliDataParser.parseSessionStatus(data)
+        assertNotNull(result)
+        assertEquals("ses_retry", result.first)
+        assertEquals("retry", result.second.type)
+        assertEquals(3, result.second.attempt)
+        assertEquals(10000L, result.second.next)
+    }
+
+    @Test
+    fun `parseSessionStatus - offline preserves requestID`() {
+        val data = globalEvent("""
+            "type": "session.status",
+            "properties": {
+                "sessionID": "ses_off",
+                "status": {"type": "offline", "message": "Offline", "requestID": "req_xyz"}
+            }
+        """)
+        val result = KiloCliDataParser.parseSessionStatus(data)
+        assertNotNull(result)
+        assertEquals("req_xyz", result.second.requestID)
+    }
+
+    // ================================================================
+    // buildPermissionReplyJson
+    // ================================================================
+
+    @Test
+    fun `buildPermissionReplyJson - once reply`() {
+        val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "once"))
+        assertEquals("""{"reply":"once"}""", result)
+    }
+
+    @Test
+    fun `buildPermissionReplyJson - always reply with message`() {
+        val result = KiloCliDataParser.buildPermissionReplyJson(PermissionReplyDto(reply = "always", message = "approved"))
+        assertTrue(result.contains(""""reply":"always""""))
+        assertTrue(result.contains(""""message":"approved""""))
+    }
+
+    // ================================================================
+    // buildPermissionAlwaysRulesJson
+    // ================================================================
+
+    @Test
+    fun `buildPermissionAlwaysRulesJson - approved list`() {
+        val result = KiloCliDataParser.buildPermissionAlwaysRulesJson(
+            PermissionAlwaysRulesDto(approvedAlways = listOf("src/**"), deniedAlways = emptyList())
+        )
+        assertTrue(result.contains(""""approvedAlways":["src/**"]"""))
+        assertTrue(result.contains(""""deniedAlways":[]"""))
+    }
+
+    // ================================================================
+    // buildQuestionReplyJson
+    // ================================================================
+
+    @Test
+    fun `buildQuestionReplyJson - single question single answer`() {
+        val result = KiloCliDataParser.buildQuestionReplyJson(QuestionReplyDto(answers = listOf(listOf("A"))))
+        assertEquals("""{"answers":[["A"]]}""", result)
+    }
+
+    @Test
+    fun `buildQuestionReplyJson - multiple questions`() {
+        val result = KiloCliDataParser.buildQuestionReplyJson(
+            QuestionReplyDto(answers = listOf(listOf("A", "B"), listOf("Yes")))
+        )
+        assertEquals("""{"answers":[["A","B"],["Yes"]]}""", result)
+    }
+
+    // ================================================================
+    // parsePermissionRequests / parseQuestionRequests
+    // ================================================================
+
+    @Test
+    fun `parsePermissionRequests - parses list`() {
+        val raw = """[
+            {"id": "p1", "sessionID": "s1", "permission": "edit", "patterns": ["*.kt"], "always": [], "metadata": {}}
+        ]"""
+        val result = KiloCliDataParser.parsePermissionRequests(raw)
+        assertEquals(1, result.size)
+        assertEquals("p1", result[0].id)
+        assertEquals("edit", result[0].permission)
+    }
+
+    @Test
+    fun `parsePermissionRequests - empty list`() {
+        assertEquals(emptyList(), KiloCliDataParser.parsePermissionRequests("[]"))
+    }
+
+    @Test
+    fun `parseQuestionRequests - parses list`() {
+        val raw = """[
+            {"id": "q1", "sessionID": "s1", "questions": [{"question": "pick", "header": "h", "options": []}]}
+        ]"""
+        val result = KiloCliDataParser.parseQuestionRequests(raw)
+        assertEquals(1, result.size)
+        assertEquals("q1", result[0].id)
     }
 
     // ================================================================

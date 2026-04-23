@@ -2,7 +2,8 @@ import { afterEach, expect, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { Global } from "../../src/global"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
+import * as Process from "../../src/util/process" // kilocode_change
 import { tmpdir } from "../fixture/fixture"
 
 const log = Global.Path.log
@@ -42,3 +43,47 @@ test("init cleanup keeps the newest timestamped logs", async () => {
   expect(next).not.toContain(list[0]!)
   expect(next).toContain(list.at(-1)!)
 })
+
+// kilocode_change start
+const root = path.join(import.meta.dir, "../..")
+const worker = path.join(import.meta.dir, "../fixture/log-init-worker.ts")
+
+test("uses single log directory for rotation history", async () => {
+  await using tmp = await tmpdir()
+
+  const out = await Process.run([process.execPath, "--conditions=browser", worker, tmp.path], {
+    cwd: root,
+    nothrow: true,
+  })
+
+  const dir = path.join(tmp.path, "share", "kilo", "log")
+  const history = path.join(dir, ".log-history")
+
+  expect(out.code).toBe(0)
+  expect(out.stderr.toString()).not.toContain("log stream error:")
+  expect(out.stdout.toString()).toBe(path.join(dir, "dev.log"))
+
+  const stat = await fs.stat(history)
+  expect(stat.isFile()).toBe(true)
+})
+
+test("skips rotation rename when active log file is missing", async () => {
+  await using tmp = await tmpdir()
+
+  const out = await Process.run([process.execPath, "--conditions=browser", worker, tmp.path, "missing"], {
+    cwd: root,
+    nothrow: true,
+  })
+
+  const dir = path.join(tmp.path, "share", "kilo", "log")
+  const list = (await fs.readdir(dir)).sort()
+  const next = list.filter((file) => /^\d{8}-\d{4}-\d{2}-dev\.log$/.test(file))
+  const stat = await fs.stat(path.join(dir, next[0]!))
+
+  expect(out.code).toBe(0)
+  expect(out.stderr.toString()).not.toContain("log stream error:")
+  expect(list).toContain("dev.log")
+  expect(next).toHaveLength(1)
+  expect(stat.size).toBe(0)
+})
+// kilocode_change end

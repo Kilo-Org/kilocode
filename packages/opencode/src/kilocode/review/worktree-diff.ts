@@ -6,7 +6,7 @@ import path from "node:path"
 import z from "zod"
 import { FileIgnore } from "@/file/ignore"
 import { Snapshot } from "@/snapshot"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 
 export namespace WorktreeDiff {
   export const Item = Snapshot.FileDiff.extend({
