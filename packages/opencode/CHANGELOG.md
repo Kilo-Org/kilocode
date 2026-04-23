@@ -1,5 +1,39 @@
 # @kilocode/cli
 
+## 7.2.19
+
+### Patch Changes
+
+- Updated dependencies [[`3b73cf4`](https://github.com/Kilo-Org/kilocode/commit/3b73cf474ee7bd81ac1cb4a0153906059f3a2d3a)]:
+  - @kilocode/kilo-gateway@7.2.19
+  - @kilocode/kilo-telemetry@7.2.19
+
+## 7.2.18
+
+### Patch Changes
+
+- [#9300](https://github.com/Kilo-Org/kilocode/pull/9300) [`0d0dabe`](https://github.com/Kilo-Org/kilocode/commit/0d0dabe59838e48ec8633227c508531e2296dde9) - Fix the "Start new session" button on the plan follow-up prompt not switching the VS Code Agent Manager to the new session when handover generation is slow. The new session now opens immediately, shows the plan text right away, stays visibly busy while the handover summary is being prepared, and appends that summary once it finishes generating.
+
+## 7.2.17
+
+### Patch Changes
+
+- [#9276](https://github.com/Kilo-Org/kilocode/pull/9276) [`e6310c5`](https://github.com/Kilo-Org/kilocode/commit/e6310c5292b43745c3c6e75a08bb584f7f1fd6d5) - Add Alibaba to `kiloProviderOptions` so thinking is enabled correctly when routing through the Kilo gateway with `ai_sdk_provider: "alibaba"`.
+
+- [#9120](https://github.com/Kilo-Org/kilocode/pull/9120) [`d40fc1c`](https://github.com/Kilo-Org/kilocode/commit/d40fc1c71cde67568c37f30a9653ec1ac2a84131) - Make the `description` parameter of the bash tool optional.
+
+- [#9239](https://github.com/Kilo-Org/kilocode/pull/9239) [`2b17a7b`](https://github.com/Kilo-Org/kilocode/commit/2b17a7b4e80bb2bd30bd95d047c31ad17dd339b6) - Fix custom provider model and variant deletions being silently reverted on save. Removing a model or reasoning variant from a custom provider now actually removes it from your config.
+
+- [#9193](https://github.com/Kilo-Org/kilocode/pull/9193) [`f025e34`](https://github.com/Kilo-Org/kilocode/commit/f025e34b6a91d3e5bd6e5b174105a77ea6d87f6d) - Clarify suggest tool guidance so the assistant writes its final summary before offering a local review.
+
+- [#9164](https://github.com/Kilo-Org/kilocode/pull/9164) [`448dba8`](https://github.com/Kilo-Org/kilocode/commit/448dba8ca595ff95220ab660cbc93ca40b90a19b) - Update `@ai-sdk/anthropic` to 3.0.71, adding `xhigh` effort for Opus 4.7 adaptive thinking (3.0.70) and fixing fine-grained tool streaming beta header for Opus 4.7 (3.0.71)
+
+- [#9170](https://github.com/Kilo-Org/kilocode/pull/9170) [`297b988`](https://github.com/Kilo-Org/kilocode/commit/297b988a211933e106bf2864518e3542587d3f0b) - Update `@ai-sdk/amazon-bedrock` to 4.0.96 and `@ai-sdk/google-vertex` to 4.0.112, both of which include Opus 4.7 support with `xhigh` adaptive thinking effort
+
+- Updated dependencies [[`8b90eec`](https://github.com/Kilo-Org/kilocode/commit/8b90eec6d0852305ae4379088b1003c1d4e74e6a), [`448dba8`](https://github.com/Kilo-Org/kilocode/commit/448dba8ca595ff95220ab660cbc93ca40b90a19b)]:
+  - @kilocode/kilo-gateway@7.3.0
+  - @kilocode/kilo-telemetry@7.2.15
+
 ## 7.2.14
 
 ### Patch Changes

@@ -25,6 +25,7 @@ import { isPromptBlocked, isSuggesting, isQuestioning } from "./prompt-input-uti
 interface ChatViewProps {
   onSelectSession?: (id: string) => void
   onShowHistory?: () => void
+  onForkMessage?: (sessionId: string, messageId: string) => void
   readonly?: boolean
   /** When true, show the "Continue in Worktree" button. Defaults to true in the sidebar. */
   continueInWorktree?: boolean
@@ -140,6 +141,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <MessageList
             onSelectSession={props.onSelectSession}
             onShowHistory={props.onShowHistory}
+            onForkMessage={props.onForkMessage}
             questions={standaloneQuestions}
             suggestions={standaloneSuggestions}
             readonly={props.readonly}

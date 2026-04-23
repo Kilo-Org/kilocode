@@ -5,7 +5,7 @@ import { useDialog } from "@tui/ui/dialog"
 import { useSync } from "@tui/context/sync"
 import { useProject } from "@tui/context/project"
 import { For, Match, Switch, Show, createMemo } from "solid-js"
-import { Installation } from "../../../../installation"
+import { InstallationVersion } from "../../../../installation/version"
 import { Global } from "@/global" // kilocode_change
 
 export type DialogStatusProps = {}
@@ -55,7 +55,7 @@ export function DialogStatus() {
         </text>
       </box>
       {/* kilocode_change start */}
-      <text fg={theme.textMuted}>Kilo v{Installation.VERSION}</text>
+      <text fg={theme.textMuted}>Kilo v{InstallationVersion}</text>
       {/* kilocode_change end */}
       {/* kilocode_change start */}
       <box>

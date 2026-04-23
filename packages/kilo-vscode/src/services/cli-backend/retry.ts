@@ -1,4 +1,4 @@
-// Replicated from packages/util/src/retry.ts to avoid adding @opencode-ai/util
+// Replicated from packages/shared/src/util/retry.ts to avoid adding @opencode-ai/shared
 // as a dependency of the extension. Keep in sync with the original.
 
 const TRANSIENT = [

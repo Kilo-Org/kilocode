@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
+  "agentManager.tab.newOptions": "Više opcija nove kartice",
+
+  "agentManager.terminal.new": "Nova kartica terminala",
+  "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
+  "agentManager.terminal.connectionError": "greška u vezi terminala",
+  "agentManager.terminal.errorTitle": "Greška terminala",
   "agentManager.setup.failed": "Postavljanje radnog prostora neuspješno",
   "agentManager.setup.settingUp": "Postavljanje radnog prostora",
   "agentManager.setup.error.git_not_found":

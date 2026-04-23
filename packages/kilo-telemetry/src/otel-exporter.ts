@@ -101,8 +101,9 @@ export class PostHogSpanExporter implements SpanExporter {
     }
 
     // Add parent ID if present
-    if (span.parentSpanId) {
-      properties.$ai_parent_id = span.parentSpanId
+    const parentSpanId = span.parentSpanContext?.spanId
+    if (parentSpanId) {
+      properties.$ai_parent_id = parentSpanId
     }
 
     // Map span attributes to PostHog properties

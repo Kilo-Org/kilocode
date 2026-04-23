@@ -9,10 +9,15 @@ type Slot = {
   readonly tail: Promise<void>
 }
 
+type Target = {
+  readonly base: MessageID
+  readonly extras: ReadonlySet<MessageID>
+}
+
 export namespace KiloSessionPromptQueue {
   const tails = new Map<SessionID, Promise<void>>()
   const versions = new Map<SessionID, number>()
-  const targets = new Map<SessionID, MessageID>()
+  const targets = new Map<SessionID, Target>()
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
   const settle = (promise: Promise<void>) =>
@@ -27,15 +32,30 @@ export namespace KiloSessionPromptQueue {
     })
   }
 
+  /**
+   * Exempt an injected user message from being hidden by scope().
+   * Called after PlanFollowup.inject() so the injected follow-up is visible
+   * without also unhiding unrelated prompts that were queued mid-turn.
+   */
+  export function retarget(sessionID: SessionID, id: MessageID) {
+    const current = targets.get(sessionID)
+    if (!current) return
+    const extras = new Set(current.extras)
+    extras.add(id)
+    targets.set(sessionID, { base: current.base, extras })
+  }
+
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
     const target = targets.get(sessionID)
     if (!target) return messages
 
     const hidden = new Set(
-      messages.filter((item) => item.info.role === "user" && item.info.id > target).map((item) => item.info.id),
+      messages
+        .filter((item) => item.info.role === "user" && item.info.id > target.base && !target.extras.has(item.info.id))
+        .map((item) => item.info.id),
     )
     const visible = messages.filter((item) => {
-      if (item.info.role === "user") return item.info.id <= target
+      if (item.info.role === "user") return !hidden.has(item.info.id)
       if (item.info.role === "assistant") return !hidden.has(item.info.parentID)
       return true
     })
@@ -45,12 +65,14 @@ export namespace KiloSessionPromptQueue {
     // was written after the queue event). Ordering by time_created alone puts
     // the queued prompt before the prior turn's final assistant reply, which
     // makes the next request end with an assistant message and trips Anthropic's
-    // prefill rejection. Move the target user message and any of its own turn's
-    // assistant messages to the end so the request always ends with the queued
-    // user prompt (or with its own turn's latest assistant step).
+    // prefill rejection. Move the target user message (and any injected
+    // follow-ups) plus their own turn's assistant messages to the end so the
+    // request always ends with the queued user prompt (or its latest assistant
+    // step).
+    const ownsID = (id: MessageID) => id === target.base || target.extras.has(id)
     const owns = (item: MessageV2.WithParts) => {
-      if (item.info.role === "user") return item.info.id === target
-      if (item.info.role === "assistant") return item.info.parentID === target
+      if (item.info.role === "user") return ownsID(item.info.id)
+      if (item.info.role === "assistant") return ownsID(item.info.parentID)
       return false
     }
     const before: MessageV2.WithParts[] = []
@@ -81,12 +103,12 @@ export namespace KiloSessionPromptQueue {
             if (slot.version !== version(sessionID)) return cancelled
             return Effect.acquireUseRelease(
               Effect.sync(() => {
-                targets.set(sessionID, target)
+                targets.set(sessionID, { base: target, extras: new Set() })
               }),
               () => work,
               () =>
                 Effect.sync(() => {
-                  if (targets.get(sessionID) === target) targets.delete(sessionID)
+                  if (targets.get(sessionID)?.base === target) targets.delete(sessionID)
                 }),
             )
           }),

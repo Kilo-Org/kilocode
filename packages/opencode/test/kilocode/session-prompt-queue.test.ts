@@ -8,7 +8,7 @@ import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, SessionID } from "../../src/session/schema"
-import { Log } from "../../src/util/log"
+import { Log } from "../../src/util"
 import { tmpdir } from "../fixture/fixture"
 
 Log.init({ print: false })
@@ -186,6 +186,39 @@ describe("session prompt queue", () => {
     )
 
     expect(ids).toEqual([m1, a1, a1tail, m2, a2step1])
+  })
+
+  test("retarget keeps older queued prompts hidden", async () => {
+    // Regression: retargeting used to move the visible-message boundary forward,
+    // which unhid any user prompts queued between the base and the injected
+    // follow-up. Exempt the follow-up without reopening the boundary.
+    const sessionID = SessionID.make("session_retarget_hide")
+    const base = MessageID.make("message_b1")
+    const ans = MessageID.make("message_b2")
+    const queued = MessageID.make("message_b3") // queued while base was running
+    const injected = MessageID.make("message_b4") // injected follow-up
+    const messages = [
+      user(sessionID, base),
+      assistant(sessionID, ans, base),
+      user(sessionID, queued),
+      user(sessionID, injected),
+    ]
+
+    const ids = await Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        base,
+        Effect.sync(() => {
+          KiloSessionPromptQueue.retarget(sessionID, injected)
+          return KiloSessionPromptQueue.scope(sessionID, messages).map((item) => item.info.id)
+        }),
+        Effect.succeed([]),
+      ),
+    )
+
+    expect(ids).not.toContain(queued)
+    expect(ids).toContain(injected)
+    expect(ids[ids.length - 1]).toBe(injected)
   })
 
   test("continues a queued prompt after the active run finishes", async () => {
