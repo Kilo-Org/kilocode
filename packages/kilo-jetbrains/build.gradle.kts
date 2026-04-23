@@ -1,5 +1,6 @@
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.RunIdeTask
 import org.jetbrains.intellij.platform.gradle.tasks.aware.SplitModeAware.SplitModeTarget
 
 group = "ai.kilocode.jetbrains"
@@ -72,7 +73,15 @@ tasks.named<JavaExec>("runIde") {
     }
 }
 
+tasks.withType<RunIdeTask> {
+    val level = providers.gradleProperty("kilo.dev.log.level").orNull ?: "DEBUG"
+    val content = providers.gradleProperty("kilo.dev.log.chat.content").orNull ?: "off"
+    val preview = providers.gradleProperty("kilo.dev.log.chat.preview.max").orNull ?: "160"
+    systemProperty("kilo.dev.log.level", level)
+    systemProperty("kilo.dev.log.chat.content", content)
+    systemProperty("kilo.dev.log.chat.preview.max", preview)
+}
+
 tasks.named<Delete>("clean") {
     delete(layout.buildDirectory)
 }
-

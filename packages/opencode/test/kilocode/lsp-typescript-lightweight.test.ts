@@ -4,7 +4,7 @@
 
 import { describe, test, expect, spyOn, afterEach } from "bun:test"
 import path from "path"
-import { LSPServer } from "../../src/lsp/server"
+import { LSPServer } from "../../src/lsp"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
 import { Flag } from "../../src/flag/flag"
@@ -18,20 +18,17 @@ describe("typescript lightweight mode", () => {
   describe("spawn gate", () => {
     test("Typescript.spawn returns undefined when flag is off", async () => {
       const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
-      // @ts-expect-error - override static flag
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
       try {
         const result = await LSPServer.Typescript.spawn("/tmp/any")
         expect(result).toBeUndefined()
       } finally {
-        // @ts-expect-error
         Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
       }
     })
 
     test("Typescript.spawn calls native_tsgo when flag is on", async () => {
       const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
-      // @ts-expect-error
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = true
       const spy = spyOn(TsCheck, "native_tsgo").mockResolvedValue(undefined)
 
@@ -40,7 +37,6 @@ describe("typescript lightweight mode", () => {
         expect(spy).toHaveBeenCalled()
         expect(result).toBeUndefined() // undefined because mock returns no binary
       } finally {
-        // @ts-expect-error
         Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
         spy.mockRestore()
       }
@@ -80,8 +76,8 @@ describe("typescript lightweight mode", () => {
       expect(src).toContain("native_tsgo")
     })
 
-    test("lsp/index.ts uses TsClient for lightweight diagnostics", async () => {
-      const src = await Bun.file(path.resolve(import.meta.dir, "../../src/lsp/index.ts")).text()
+    test("lsp/lsp.ts uses TsClient for lightweight diagnostics", async () => {
+      const src = await Bun.file(path.resolve(import.meta.dir, "../../src/lsp/lsp.ts")).text()
       expect(src).toContain("TsClient.create")
       expect(src).toContain("KILO_EXPERIMENTAL_LSP_TOOL")
     })

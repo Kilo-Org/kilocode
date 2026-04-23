@@ -1,5 +1,5 @@
 import { createKiloClient } from "@kilocode/sdk/v2"
-import type { GlobalEvent, Event } from "@kilocode/sdk/v2"
+import type { GlobalEvent } from "@kilocode/sdk/v2"
 import { createSimpleContext } from "./helper"
 import { createGlobalEmitter } from "@solid-primitives/event-bus"
 import { batch, onCleanup, onMount } from "solid-js"
