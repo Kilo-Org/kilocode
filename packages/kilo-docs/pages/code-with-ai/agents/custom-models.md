@@ -76,21 +76,21 @@ The `model` key uses the format `provider_id/model_id`, where:
 
 All fields are optional. When a model ID matches one already in the built-in catalog, your values are merged on top of the defaults — you only need to specify what you want to override.
 
-| Field         | Type      | Description                                                                   |
-| ------------- | --------- | ----------------------------------------------------------------------------- |
-| `name`        | `string`  | Display name shown in the model picker                                        |
-| `id`          | `string`  | API-facing model ID sent to the provider. Defaults to the config key          |
-| `tool_call`   | `boolean` | Whether the model supports tool/function calling                              |
-| `reasoning`   | `boolean` | Whether the model supports extended thinking                                  |
-| `temperature` | `boolean` | Whether the model supports the temperature parameter                          |
-| `attachment`  | `boolean` | Whether the model supports generic file attachments (not the same as image input — see `modalities` below) |
-| `modalities`  | `object`  | Input/output modality support: `{ input: ["text", "image", ...], output: ["text", ...] }`. Required for multimodal models — see [Modalities](#modalities) below |
-| `limit`       | `object`  | Token limits: `{ context, output, input? }`                                   |
-| `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`    |
-| `options`     | `object`  | Arbitrary provider-specific model options                                     |
-| `headers`     | `object`  | Custom HTTP headers to include in requests                                    |
-| `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model |
-| `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)              |
+| Field         | Type      | Description                                                                                                     |
+| ------------- | --------- | --------------------------------------------------------------------------------------------------------------- |
+| `name`        | `string`  | Display name shown in the model picker                                                                          |
+| `id`          | `string`  | API-facing model ID sent to the provider. Defaults to the config key                                            |
+| `tool_call`   | `boolean` | Whether the model supports tool/function calling                                                                |
+| `reasoning`   | `boolean` | Whether the model supports extended thinking                                                                    |
+| `temperature` | `boolean` | Whether the model supports the temperature parameter                                                            |
+| `attachment`  | `boolean` | Whether the model supports generic file attachments (not the same as image input — see `modalities` below)      |
+| `modalities`  | `object`  | Input/output modality support: `{ input: ["text", "image", ...], output: ["text", ...] }`. For multimodal models — see [Modalities](#modalities) below |
+| `limit`       | `object`  | Token limits: `{ context, output, input? }`                                                                     |
+| `cost`        | `object`  | Pricing per million tokens: `{ input, output, cache_read?, cache_write? }`                                      |
+| `options`     | `object`  | Arbitrary provider-specific model options                                                                       |
+| `headers`     | `object`  | Custom HTTP headers to include in requests                                                                      |
+| `provider`    | `object`  | Override `{ npm?, api? }` — the AI SDK package or base API URL for this model                                   |
+| `variants`    | `object`  | Named variant configurations (e.g., different reasoning efforts)                                                |
 
 ### Token Limits (limit)
 
@@ -133,10 +133,12 @@ For custom and local models, always set `limit.context` and `limit.output` to ma
 
 The `modalities` object tells Kilo which input and output types the model supports. This is separate from the `attachment` flag — `attachment` controls generic file attachments, while `modalities` determines whether the model can process specific content types like images, audio, or video.
 
-| Sub-field | Type                | Description                                                   |
-| --------- | ------------------- | ------------------------------------------------------------- |
-| `input`   | `string[]`          | Content types the model accepts. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"` |
-| `output`  | `string[]`          | Content types the model can generate. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"` |
+If omitted, Kilo inherits `modalities` from the [models.dev](https://models.dev) catalog when your model ID matches a known entry. Set this explicitly for custom or unlisted multimodal models, or to override typical settings.
+
+| Sub-field | Type       | Description                                                                                       |
+| --------- | ---------- | ------------------------------------------------------------------------------------------------- |
+| `input`   | `string[]` | Content types the model accepts. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"`      |
+| `output`  | `string[]` | Content types the model can generate. Values: `"text"`, `"image"`, `"audio"`, `"video"`, `"pdf"` |
 
 For a multimodal model that accepts images (e.g., Gemma 4, Qwen 3.5):
 
