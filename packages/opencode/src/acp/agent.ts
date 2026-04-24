@@ -529,7 +529,7 @@ export namespace ACP {
       if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
         authMethod._meta = {
           "terminal-auth": {
-            command: "kilocode",
+            command: "kilo",
             args: ["auth", "login"],
             label: "Kilo Code Login",
           },
