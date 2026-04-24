@@ -7,6 +7,7 @@ import { Log } from "@/util"
 import { LocalContext } from "../util"
 import * as Project from "./project"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
+import path from "path" // kilocode_change - detect filesystem roots in permission boundaries
 
 export interface InstanceContext {
   directory: string
@@ -17,6 +18,12 @@ export interface InstanceContext {
 const context = LocalContext.create<InstanceContext>("instance")
 const cache = new Map<string, Promise<InstanceContext>>()
 const project = makeRuntime(Project.Service, Project.defaultLayer)
+
+// kilocode_change start - filesystem roots must not become project permission boundaries
+function root(dir: string) {
+  return path.parse(dir).root === dir
+}
+// kilocode_change end
 
 const disposal = {
   all: undefined as Promise<void> | undefined,
@@ -93,10 +100,10 @@ export const Instance = {
    */
   containsPath(filepath: string, ctx?: InstanceContext) {
     const instance = ctx ?? Instance
-    if (AppFileSystem.contains(instance.directory, filepath)) return true
-    // Non-git projects set worktree to "/" which would match ANY absolute path.
-    // Skip worktree check in this case to preserve external_directory permissions.
-    if (instance.worktree === "/") return false
+    // kilocode_change start - do not let filesystem roots disable external_directory prompts
+    if (!root(instance.directory) && AppFileSystem.contains(instance.directory, filepath)) return true
+    if (root(instance.worktree)) return false
+    // kilocode_change end
     return AppFileSystem.contains(instance.worktree, filepath)
   },
   /**

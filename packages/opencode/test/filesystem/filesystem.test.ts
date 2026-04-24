@@ -308,6 +308,12 @@ describe("AppFileSystem", () => {
     test("contains checks path containment", () => {
       expect(AppFileSystem.contains("/a/b", "/a/b/c")).toBe(true)
       expect(AppFileSystem.contains("/a/b", "/a/c")).toBe(false)
+      // kilocode_change start - harden boundary edge cases
+      expect(AppFileSystem.contains("/a/b", "/a/b/..cache/file")).toBe(true)
+      if (process.platform === "win32") {
+        expect(AppFileSystem.contains("C:\\repo", "D:\\outside\\file.txt")).toBe(false)
+      }
+      // kilocode_change end
     })
 
     test("overlaps detects overlapping paths", () => {
