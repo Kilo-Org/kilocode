@@ -435,6 +435,7 @@ export interface CommandConfig {
 export interface SkillsConfig {
   paths?: string[]
   urls?: string[]
+  disabled?: string[]
 }
 
 export interface CompactionConfig {

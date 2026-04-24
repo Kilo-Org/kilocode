@@ -32,6 +32,7 @@ export class Rule extends Schema.Class<Rule>("PermissionRule")({
   permission: Schema.String,
   pattern: Schema.String,
   action: Action,
+  enabled: Schema.optional(Schema.Boolean).pipe(Schema.withDefault(true)),
 }) {
   static readonly zod = zod(this)
 }

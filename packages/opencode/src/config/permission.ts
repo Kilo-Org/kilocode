@@ -42,6 +42,7 @@ export const Info = z
     z
       .object({
         __originalKeys: z.string().array().optional(),
+        disabled: z.array(z.string()).optional().describe("Patterns of disabled rules"),
         read: Rule.optional(),
         edit: Rule.optional(),
         glob: Rule.optional(),

@@ -6,6 +6,7 @@ export const Info = z.object({
     .array(z.string())
     .optional()
     .describe("URLs to fetch skills from (e.g., https://example.com/.well-known/skills/)"),
+  disabled: z.array(z.string()).optional().describe("Names of disabled skills"),
 })
 
 export type Info = z.infer<typeof Info>

@@ -4,10 +4,11 @@ type Rule = {
   permission: string
   pattern: string
   action: "allow" | "deny" | "ask"
+  enabled?: boolean
 }
 
 export function evaluate(permission: string, pattern: string, ...rulesets: Rule[][]): Rule {
-  const rules = rulesets.flat()
+  const rules = rulesets.flat().filter((rule) => rule.enabled !== false)
   const match = rules.findLast(
     (rule) => Wildcard.match(permission, rule.permission) && Wildcard.match(pattern, rule.pattern),
   )

@@ -34,6 +34,7 @@ export const Info = z.object({
   description: z.string(),
   location: z.string(),
   content: z.string(),
+  enabled: z.boolean().default(true),
 })
 export type Info = z.infer<typeof Info>
 
@@ -260,7 +261,11 @@ export const layer = Layer.effect(
 
     const available = Effect.fn("Skill.available")(function* (agent?: Agent.Info) {
       const s = yield* InstanceState.get(state)
-      const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
+      const cfg = yield* config.get()
+      const disabledSkills = new Set(cfg.skills?.disabled ?? [])
+      const list = Object.values(s.skills)
+        .filter((skill) => !disabledSkills.has(skill.name))
+        .toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
       return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
     })
