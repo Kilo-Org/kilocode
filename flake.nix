@@ -155,6 +155,7 @@
               [
                 bun
                 nodejs_20
+                python3
                 pkg-config
                 openssl
                 git

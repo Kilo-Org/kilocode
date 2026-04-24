@@ -36,6 +36,7 @@ target
 
 # Local dev files
 opencode-dev
+UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
 
@@ -45,3 +46,7 @@ tsconfig.tsbuildinfo
 
 # Kilo
 .kilo/plans/*upstream-merge-report-*.md
+
+# Test Artifacts
+packages/app/.artifacts/
+packages/opencode/.artifacts/

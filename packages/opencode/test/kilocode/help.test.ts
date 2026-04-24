@@ -18,6 +18,9 @@ import { ExportCommand } from "../../src/cli/cmd/export"
 import { ImportCommand } from "../../src/cli/cmd/import"
 import { PrCommand } from "../../src/cli/cmd/pr"
 import { SessionCommand } from "../../src/cli/cmd/session"
+import { RemoteCommand } from "../../src/cli/cmd/remote"
+import { ConfigCommand as ConfigCLICommand } from "../../src/cli/cmd/config"
+import { PluginCommand } from "../../src/cli/cmd/plug"
 import { DbCommand } from "../../src/cli/cmd/db"
 import { HelpCommand } from "../../src/kilocode/help-command"
 
@@ -33,6 +36,13 @@ const TuiStub = {
 const AttachStub = {
   command: "attach <url>",
   describe: "attach to a running kilo server",
+  handler() {},
+}
+
+// Synthetic entry for the yargs built-in .completion() command
+const CompletionStub = {
+  command: "completion",
+  describe: "generate shell completion script",
   handler() {},
 }
 
@@ -56,8 +66,12 @@ const commands = [
   ImportCommand,
   PrCommand,
   SessionCommand,
+  RemoteCommand,
   DbCommand,
+  ConfigCLICommand,
+  PluginCommand,
   HelpCommand,
+  CompletionStub,
 ] as any[]
 
 describe("kilo help --all (markdown)", () => {

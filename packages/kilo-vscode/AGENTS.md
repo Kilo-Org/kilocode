@@ -186,6 +186,12 @@ New webview features must use **`@kilocode/kilo-ui`** components instead of raw 
 - **Prefer kilo-ui styles**: Always reuse existing kilo-ui CSS variables, tokens, and component styles instead of writing custom CSS. If a style doesn't exist in kilo-ui yet, add it there and reuse it rather than inlining or duplicating styles in the webview.
 - **Icons**: kilo-ui has 75+ custom SVG icons in [`packages/ui/src/components/icon.tsx`](../../packages/ui/src/components/icon.tsx). To list all available icon names: `node -e "const c=require('fs').readFileSync('../../packages/ui/src/components/icon.tsx','utf8');[...c.matchAll(/^\\s{2}[\"']?([\\w-]+)[\"']?:\\s*\x60/gm)].map(m=>m[1]).sort().forEach(n=>console.log(n))"`. Icon names use both hyphenated (`arrow-left`) and bare-word (`brain`, `console`, `providers`) keys.
 
+## Docs Screenshot Stories
+
+When adding or updating Storybook stories for screenshots used by docs, make the story content match the docs page closely before replacing the docs image. Do not replace screenshots from VSCode Legacy docs tabs or sections.
+
+Generated screenshot baselines live under `packages/kilo-docs/public/img/screenshot-tests/` and are referenced from docs as `/docs/img/screenshot-tests/...`. If a generated VS Code visual-regression screenshot is used in docs, add the docs usage to the `DOCS` map in `tests/visual-regression.spec.ts` and keep `tests/visual-regression.spec.mts` in sync while that file exists.
+
 ## Debugging
 
 - Extension logs: "Extension Host" output channel (not Debug Console)

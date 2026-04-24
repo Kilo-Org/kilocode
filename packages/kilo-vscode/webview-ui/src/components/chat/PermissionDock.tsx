@@ -145,10 +145,14 @@ export const PermissionDock: Component<{
     }
   }
 
-  // Auto-focus the dock when it appears so keyboard shortcuts work immediately
+  // Keep keyboard shortcuts when the webview already has focus, but do not
+  // steal focus from the editor, terminal, or other VS Code surfaces.
   createEffect(() => {
     void props.request.id
-    requestAnimationFrame(() => root?.focus())
+    requestAnimationFrame(() => {
+      if (!document.hasFocus()) return
+      root?.focus()
+    })
   })
 
   return (

@@ -1,5 +1,7 @@
 export const dict = {
   "ui.sessionReview.title": "セッションの変更",
+  "ui.sessionReview.title.git": "Git の変更",
+  "ui.sessionReview.title.branch": "ブランチの変更",
   "ui.sessionReview.title.lastTurn": "前回ターンの変更",
   "ui.sessionReview.diffStyle.unified": "Unified",
   "ui.sessionReview.diffStyle.split": "Split",
@@ -36,6 +38,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ステップを隠す",
   "ui.sessionTurn.summary.response": "応答",
   "ui.sessionTurn.diff.showMore": "さらに変更を表示 ({{count}})",
+  "ui.sessionTurn.diffs.changed": "変更あり",
+  "ui.sessionTurn.diffs.showAll": "すべて表示",
+  "ui.sessionTurn.diffs.showLess": "表示を減らす",
+  "ui.sessionTurn.diffs.more": "ほか +{{count}} 件のファイル",
 
   "ui.sessionTurn.retry.retrying": "再試行中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}秒後",
@@ -69,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 件のリスト",
   "ui.messagePart.context.list.other": "{{count}} 件のリスト",
   "ui.messagePart.diagnostic.error": "エラー",
+  "ui.messagePart.mcp.input": "入力",
+  "ui.messagePart.mcp.output": "出力",
   "ui.messagePart.title.edit": "編集",
   "ui.messagePart.title.write": "作成",
   "ui.messagePart.option.typeOwnAnswer": "自分の回答を入力",

@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test"
-import { ProviderTransform } from "../../src/provider/transform"
+import { ProviderTransform } from "../../src/provider"
 import { ModelID, ProviderID } from "../../src/provider/schema"
-
-const OUTPUT_TOKEN_MAX = 32000
 
 describe("ProviderTransform.options - setCacheKey", () => {
   const sessionID = "test-session-123"
@@ -102,6 +100,76 @@ describe("ProviderTransform.options - setCacheKey", () => {
     })
     expect(result.store).toBe(false)
   })
+
+  test("should set store=true for azure provider by default", () => {
+    const azureModel = {
+      ...mockModel,
+      providerID: "azure",
+      api: {
+        id: "gpt-4",
+        url: "https://azure.com",
+        npm: "@ai-sdk/azure",
+      },
+    }
+    const result = ProviderTransform.options({
+      model: azureModel,
+      sessionID,
+      providerOptions: {},
+    })
+    expect(result.store).toBe(true)
+  })
+})
+
+describe("ProviderTransform.options - zai/zhipuai thinking", () => {
+  const sessionID = "test-session-123"
+
+  const createModel = (providerID: string) =>
+    ({
+      id: `${providerID}/glm-4.6`,
+      providerID,
+      api: {
+        id: "glm-4.6",
+        url: "https://open.bigmodel.cn/api/paas/v4",
+        npm: "@ai-sdk/openai-compatible",
+      },
+      name: "GLM 4.6",
+      capabilities: {
+        temperature: true,
+        reasoning: true,
+        attachment: true,
+        toolcall: true,
+        input: { text: true, audio: false, image: true, video: false, pdf: true },
+        output: { text: true, audio: false, image: false, video: false, pdf: false },
+        interleaved: false,
+      },
+      cost: {
+        input: 0.001,
+        output: 0.002,
+        cache: { read: 0.0001, write: 0.0002 },
+      },
+      limit: {
+        context: 128000,
+        output: 8192,
+      },
+      status: "active",
+      options: {},
+      headers: {},
+    }) as any
+
+  for (const providerID of ["zai-coding-plan", "zai", "zhipuai-coding-plan", "zhipuai"]) {
+    test(`${providerID} should set thinking cfg`, () => {
+      const result = ProviderTransform.options({
+        model: createModel(providerID),
+        sessionID,
+        providerOptions: {},
+      })
+
+      expect(result.thinking).toEqual({
+        type: "enabled",
+        clear_thinking: false,
+      })
+    })
+  }
 })
 
 describe("ProviderTransform.options - google thinkingConfig gating", () => {
@@ -1219,6 +1287,110 @@ describe("ProviderTransform.message - anthropic empty content filtering", () => 
     expect(result[0].content).toBe("")
     expect(result[1].content).toHaveLength(1)
   })
+
+  test("splits anthropic assistant messages when text trails tool calls", () => {
+    const msgs = [
+      {
+        role: "user",
+        content: [{ type: "text", text: "Check my home directory for PDFs" }],
+      },
+      {
+        role: "assistant",
+        content: [
+          { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+          { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+          { type: "text", text: "I checked your home directory and looked for PDF files." },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          { type: "tool-result", toolCallId: "toolu_1", toolName: "read", output: { type: "text", value: "ok" } },
+          {
+            type: "tool-result",
+            toolCallId: "toolu_2",
+            toolName: "glob",
+            output: { type: "text", value: "No files found" },
+          },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, anthropicModel, {}) as any[]
+
+    expect(result).toHaveLength(4)
+    expect(result[1]).toMatchObject({
+      role: "assistant",
+      content: [{ type: "text", text: "I checked your home directory and looked for PDF files." }],
+    })
+    expect(result[2]).toMatchObject({
+      role: "assistant",
+      content: [
+        { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+        { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+      ],
+    })
+  })
+
+  test("leaves valid anthropic assistant tool ordering unchanged", () => {
+    const msgs = [
+      {
+        role: "assistant",
+        content: [
+          { type: "text", text: "I checked your home directory and looked for PDF files." },
+          { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+          { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, anthropicModel, {}) as any[]
+
+    expect(result).toHaveLength(1)
+    expect(result[0].content).toMatchObject([
+      { type: "text", text: "I checked your home directory and looked for PDF files." },
+      { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+      { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+    ])
+  })
+
+  test("splits vertex anthropic assistant messages when text trails tool calls", () => {
+    const model = {
+      ...anthropicModel,
+      providerID: "google-vertex-anthropic",
+      api: {
+        id: "claude-sonnet-4@20250514",
+        url: "https://us-central1-aiplatform.googleapis.com",
+        npm: "@ai-sdk/google-vertex/anthropic",
+      },
+    }
+
+    const msgs = [
+      {
+        role: "assistant",
+        content: [
+          { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+          { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+          { type: "text", text: "I checked your home directory and looked for PDF files." },
+        ],
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result).toHaveLength(2)
+    expect(result[0]).toMatchObject({
+      role: "assistant",
+      content: [{ type: "text", text: "I checked your home directory and looked for PDF files." }],
+    })
+    expect(result[1]).toMatchObject({
+      role: "assistant",
+      content: [
+        { type: "tool-call", toolCallId: "toolu_1", toolName: "read", input: { filePath: "/root" } },
+        { type: "tool-call", toolCallId: "toolu_2", toolName: "glob", input: { pattern: "**/*.pdf" } },
+      ],
+    })
+  })
 })
 
 describe("ProviderTransform.message - strip openai metadata when store=false", () => {
@@ -1557,6 +1729,35 @@ describe("ProviderTransform.message - providerOptions key remapping", () => {
     expect(result[0].providerOptions?.openai).toBeUndefined()
   })
 
+  test("azure cognitive services remaps providerID to 'azure' key", () => {
+    const model = createModel("azure-cognitive-services", "@ai-sdk/azure")
+    const msgs = [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: "Hello",
+            providerOptions: {
+              "azure-cognitive-services": { part: true },
+            },
+          },
+        ],
+        providerOptions: {
+          "azure-cognitive-services": { someOption: "value" },
+        },
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+    const part = result[0].content[0] as any
+
+    expect(result[0].providerOptions?.azure).toEqual({ someOption: "value" })
+    expect(result[0].providerOptions?.["azure-cognitive-services"]).toBeUndefined()
+    expect(part.providerOptions?.azure).toEqual({ part: true })
+    expect(part.providerOptions?.["azure-cognitive-services"]).toBeUndefined()
+  })
+
   test("copilot remaps providerID to 'copilot' key", () => {
     const model = createModel("github-copilot", "@ai-sdk/github-copilot")
     const msgs = [
@@ -1761,6 +1962,68 @@ describe("ProviderTransform.message - cache control on gateway", () => {
           type: "ephemeral",
         },
       },
+      alibaba: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+    })
+  })
+
+  test("google-vertex-anthropic applies cache control", () => {
+    const model = createModel({
+      providerID: "google-vertex-anthropic",
+      api: {
+        id: "google-vertex-anthropic",
+        url: "https://us-central1-aiplatform.googleapis.com",
+        npm: "@ai-sdk/google-vertex/anthropic",
+      },
+      id: "claude-sonnet-4@20250514",
+    })
+    const msgs = [
+      {
+        role: "system",
+        content: "You are a helpful assistant",
+      },
+      {
+        role: "user",
+        content: "Hello",
+      },
+    ] as any[]
+
+    const result = ProviderTransform.message(msgs, model, {}) as any[]
+
+    expect(result[0].providerOptions).toEqual({
+      anthropic: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      openrouter: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
+      bedrock: {
+        cachePoint: {
+          type: "default",
+        },
+      },
+      openaiCompatible: {
+        cache_control: {
+          type: "ephemeral",
+        },
+      },
+      copilot: {
+        copilot_cache_control: {
+          type: "ephemeral",
+        },
+      },
+      alibaba: {
+        cacheControl: {
+          type: "ephemeral",
+        },
+      },
     })
   })
 })
@@ -1847,7 +2110,8 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({})
+    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
+    expect(result.low).toEqual({ reasoningEffort: "low" })
   })
 
   test("mistral returns empty object", () => {
@@ -1964,6 +2228,7 @@ describe("ProviderTransform.variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-sonnet-4",
         providerID: "kilo",
+        capabilities: { reasoning: false },
         api: {
           id: "anthropic/claude-sonnet-4",
           url: "https://gateway.kilo.ai",
@@ -1978,6 +2243,7 @@ describe("ProviderTransform.variants", () => {
       const model = createMockModel({
         id: "kilo/anthropic/claude-opus-4",
         providerID: "kilo",
+        capabilities: { reasoning: false },
         api: {
           id: "anthropic/claude-opus-4",
           url: "https://gateway.kilo.ai",
@@ -1988,7 +2254,7 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual([])
     })
 
-    test("gpt models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
+    test("gpt models return OPENAI_EFFORTS with reasoning", () => {
       const model = createMockModel({
         id: "kilo/openai/gpt-5",
         providerID: "kilo",
@@ -2000,11 +2266,7 @@ describe("ProviderTransform.variants", () => {
       })
       const result = ProviderTransform.variants(model)
       expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({
-        reasoningEffort: "low",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
-      })
+      expect(result.low).toEqual({ reasoning: { effort: "low" } })
     })
 
     test("gemini-3 models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
@@ -2152,6 +2414,46 @@ describe("ProviderTransform.variants", () => {
         },
         effort: "high",
       })
+    })
+
+    test("anthropic opus 4.7 models return adaptive thinking options with xhigh", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-opus-4-7",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-opus-4-7",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+      expect(result.xhigh).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "xhigh",
+      })
+      expect(result.max).toEqual({
+        thinking: {
+          type: "adaptive",
+        },
+        effort: "max",
+      })
+    })
+
+    test("anthropic opus 4.7 dot-format models return adaptive thinking options with xhigh", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-opus-4-7",
+        providerID: "gateway",
+        api: {
+          id: "anthropic/claude-opus-4.7",
+          url: "https://gateway.ai",
+          npm: "@ai-sdk/gateway",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
     })
 
     test("anthropic models return anthropic thinking options", () => {
@@ -2321,6 +2623,30 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
     })
   })
+
+  // kilocode_change start
+  describe("@ai-sdk/azure", () => {
+    test("gpt-5.4 includes xhigh", () => {
+      const model = createMockModel({
+        id: "gpt-5.4",
+        release_date: "2026-03-05",
+        providerID: "azure",
+        api: {
+          id: "gpt-5.4",
+          url: "https://resource.openai.azure.com/openai",
+          npm: "@ai-sdk/azure",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh"])
+      expect(result.xhigh).toEqual({
+        reasoningEffort: "xhigh",
+        reasoningSummary: "auto",
+        include: ["reasoning.encrypted_content"],
+      })
+    })
+  })
+  // kilocode_change end
 
   describe("@ai-sdk/cerebras", () => {
     test("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
@@ -2580,6 +2906,34 @@ describe("ProviderTransform.variants", () => {
       })
     })
 
+    test("opus 4.7 returns adaptive thinking options with xhigh", () => {
+      const model = createMockModel({
+        id: "anthropic/claude-opus-4-7",
+        providerID: "anthropic",
+        api: {
+          id: "claude-opus-4-7",
+          url: "https://api.anthropic.com",
+          npm: "@ai-sdk/anthropic",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+      expect(result.xhigh).toEqual({
+        thinking: {
+          type: "adaptive",
+          display: "summarized",
+        },
+        effort: "xhigh",
+      })
+      expect(result.max).toEqual({
+        thinking: {
+          type: "adaptive",
+          display: "summarized",
+        },
+        effort: "max",
+      })
+    })
+
     test("returns high and max with thinking config", () => {
       const model = createMockModel({
         id: "anthropic/claude-4",
@@ -2624,6 +2978,34 @@ describe("ProviderTransform.variants", () => {
         reasoningConfig: {
           type: "adaptive",
           maxReasoningEffort: "max",
+        },
+      })
+    })
+
+    test("anthropic opus 4.7 returns adaptive reasoning options with xhigh", () => {
+      const model = createMockModel({
+        id: "bedrock/anthropic-claude-opus-4-7",
+        providerID: "bedrock",
+        api: {
+          id: "anthropic.claude-opus-4-7",
+          url: "https://bedrock.amazonaws.com",
+          npm: "@ai-sdk/amazon-bedrock",
+        },
+      })
+      const result = ProviderTransform.variants(model)
+      expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
+      expect(result.xhigh).toEqual({
+        reasoningConfig: {
+          type: "adaptive",
+          maxReasoningEffort: "xhigh",
+          display: "summarized",
+        },
+      })
+      expect(result.max).toEqual({
+        reasoningConfig: {
+          type: "adaptive",
+          maxReasoningEffort: "max",
+          display: "summarized",
         },
       })
     })

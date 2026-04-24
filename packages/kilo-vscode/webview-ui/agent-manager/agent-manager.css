@@ -508,6 +508,89 @@ button.am-section-toggle:hover .am-section-label {
   margin-left: auto;
 }
 
+.am-run-badge {
+  --am-run-accent: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--am-run-accent) 12%, transparent);
+  color: var(--am-run-accent);
+  font-size: 10px;
+  line-height: 1;
+  margin-left: auto;
+}
+
+.am-run-badge [data-component="icon"] {
+  width: 11px;
+  height: 11px;
+  color: currentColor;
+}
+
+.am-run-badge-label {
+  color: currentColor;
+}
+
+.am-run-badge[data-run-state="running"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+  animation: am-run-pulse 1.5s ease-in-out infinite;
+}
+
+.am-run-badge[data-run-state="stopping"] {
+  --am-run-accent: #fbbf24;
+}
+
+.am-run-badge[data-run-state="success"] {
+  --am-run-accent: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-run-badge[data-run-state="error"] {
+  --am-run-accent: #f87171;
+}
+
+@keyframes am-run-pulse {
+  0%,
+  100% {
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* Toolbar Run button group */
+.am-run-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.am-run-group-chevron {
+  padding: 0 2px !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.am-run-group-chevron [data-component="icon"] {
+  width: 12px;
+  height: 12px;
+}
+
+/* Unconfigured — muted until hover */
+.am-run-unconfigured {
+  opacity: 0.5;
+}
+.am-run-unconfigured:hover {
+  opacity: 0.85;
+}
+
+/* Green accent when running — uses VS Code's standard green token */
+.am-run-active,
+.am-run-active [data-component="icon"] {
+  color: var(--vscode-testing-iconPassed, #34d399) !important;
+}
+
 .am-stat-files {
   color: var(--text-muted);
 }
@@ -1060,6 +1143,11 @@ button.am-section-toggle:hover .am-section-label {
   touch-action: none;
 }
 
+.am-tab-sortable > [data-component="tooltip-trigger"],
+.am-tab-sortable > [data-slot="context-menu-trigger"] > [data-component="tooltip-trigger"] {
+  height: 100%;
+}
+
 .am-tab-dragging {
   opacity: 0.25;
 }
@@ -1113,6 +1201,13 @@ body.am-wt-dragging-active * {
 }
 
 .am-tab-add {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* Split-button variant used in the tab bar when the experimental
+   terminal tabs feature is active — primary icon + chevron dropdown. */
+.am-tab-add-split {
   flex-shrink: 0;
   align-self: center;
 }
@@ -1529,6 +1624,12 @@ body.am-wt-dragging-active * {
 .am-review-diff-content [data-slot="session-review-file-info"] {
   min-width: 0;
   flex: 1 1 auto;
+  cursor: grab;
+}
+
+.am-diff-content [data-slot="session-review-file-info"]:active,
+.am-review-diff-content [data-slot="session-review-file-info"]:active {
+  cursor: grabbing;
 }
 
 .am-diff-content [data-slot="session-review-file-name-container"],
@@ -3814,4 +3915,98 @@ body.vscode-high-contrast-light {
   [data-slot="context-menu-separator"] {
     margin: 4px 0;
   }
+}
+
+/* Experimental terminal tabs (feature-flagged) */
+
+.am-tab-terminal {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-left: 1px solid var(--border-weak-base);
+}
+
+.am-tab-terminal [data-component="icon"] {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/*
+ * Stacking layout for xterm terminal tabs.
+ *
+ * The hydration invariant (see the render helpers under `terminal/`) requires that
+ * xterm canvases never leave the paint tree. Both the layer and each
+ * terminal slot therefore use absolute-positioning + opacity for
+ * visibility — NEVER `display: none`, because that would detach the
+ * subtree and stop xterm's internal rAF render loop, causing the
+ * "press Enter to see content" bug on worktree switches.
+ *
+ * Stack:  position:relative container hosting the chat, review, and
+ *         terminal layer. Sits below the tab bar inside `.am-detail`.
+ * Layer:  absolute-positioned overlay covering the stack.
+ *         `pointer-events: none` when no terminal is active, letting
+ *         clicks fall through to the chat behind it.
+ * Slots:  absolute-positioned and stacked inside the layer; only the
+ *         active one is opaque and receives pointer events.
+ */
+
+.am-detail-stack {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.am-terminal-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  z-index: 1;
+  /* Force a dedicated compositor layer so opacity flips do not re-lay-out
+     the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-terminal-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.am-terminal-slot-visible {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.am-terminal-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  padding: 8px;
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+/* Third-party xterm classes — addressed by attribute selector so the
+   agent-manager "am-* prefix" architecture test does not flag them. */
+.am-terminal-host [class="xterm"] {
+  height: 100%;
+}
+
+.am-terminal-host [class~="xterm-viewport"] {
+  background: transparent !important;
 }

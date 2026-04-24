@@ -7,16 +7,15 @@ import { Flag } from "../../flag/flag"
 import { bootstrap } from "../bootstrap"
 import { EOL } from "os"
 import { text as streamText } from "node:stream/consumers"
-import { Filesystem } from "../../util/filesystem"
-import { createKiloClient, type Message, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
+import { Filesystem } from "../../util"
+import { createKiloClient, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
 import { Server } from "../../server/server"
-import { Provider } from "../../provider/provider"
+import { Provider } from "../../provider"
 import { Agent } from "../../agent/agent"
 import { Permission } from "../../permission"
-import { Tool } from "../../tool/tool"
+import { Tool } from "../../tool"
 import { GlobTool } from "../../tool/glob"
 import { GrepTool } from "../../tool/grep"
-import { ListTool } from "../../tool/ls"
 import { ReadTool } from "../../tool/read"
 import { WebFetchTool } from "../../tool/webfetch"
 import { EditTool } from "../../tool/edit"
@@ -27,16 +26,17 @@ import { TaskTool } from "../../tool/task"
 import { SkillTool } from "../../tool/skill"
 import { BashTool } from "../../tool/bash"
 import { TodoWriteTool } from "../../tool/todo"
-import { Locale } from "../../util/locale"
+import { Locale } from "../../util"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { AppRuntime } from "@/effect/app-runtime"
 
-type ToolProps<T extends Tool.Info> = {
+type ToolProps<T> = {
   input: Tool.InferParameters<T>
   metadata: Tool.InferMetadata<T>
   part: ToolPart
 }
 
-function props<T extends Tool.Info>(part: ToolPart): ToolProps<T> {
+function props<T>(part: ToolPart): ToolProps<T> {
   const state = part.state
   return {
     input: state.input as Tool.InferParameters<T>,
@@ -101,14 +101,6 @@ function grep(info: ToolProps<typeof GrepTool>) {
     icon: "✱",
     title,
     ...(description && { description }),
-  })
-}
-
-function list(info: ToolProps<typeof ListTool>) {
-  const dir = info.input.path ? normalizePath(info.input.path) : ""
-  inline({
-    icon: "→",
-    title: dir ? `List ${dir}` : "List",
   })
 }
 
@@ -250,10 +242,6 @@ export const RunCommand = cmd({
           describe: "fork the session before continuing (requires --continue or --session)",
           type: "boolean",
         })
-        .option("cloud-fork", {
-          describe: "fetch session from cloud and continue locally (requires --session)",
-          type: "boolean",
-        })
         .option("share", {
           type: "boolean",
           describe: "share the session",
@@ -287,13 +275,11 @@ export const RunCommand = cmd({
           type: "string",
           describe: "attach to a running opencode server (e.g., http://localhost:4096)",
         })
-        // kilocode_change start
         .option("password", {
           alias: ["p"],
           type: "string",
           describe: "basic auth password (defaults to KILO_SERVER_PASSWORD)",
         })
-        // kilocode_change end
         .option("dir", {
           type: "string",
           describe: "directory to run in, path on remote server if attaching",
@@ -317,7 +303,12 @@ export const RunCommand = cmd({
           describe: "auto-approve all permissions (for autonomous/pipeline usage)",
           default: false,
         })
-      // kilocode_change end
+        // kilocode_change end
+        .option("dangerously-skip-permissions", {
+          type: "boolean",
+          describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
+          default: false,
+        })
     )
   },
   handler: async (args) => {
@@ -449,7 +440,6 @@ export const RunCommand = cmd({
           if (part.tool === "bash") return bash(props<typeof BashTool>(part))
           if (part.tool === "glob") return glob(props<typeof GlobTool>(part))
           if (part.tool === "grep") return grep(props<typeof GrepTool>(part))
-          if (part.tool === "list") return list(props<typeof ListTool>(part))
           if (part.tool === "read") return read(props<typeof ReadTool>(part))
           if (part.tool === "write") return write(props<typeof WriteTool>(part))
           if (part.tool === "webfetch") return webfetch(props<typeof WebFetchTool>(part))
@@ -592,27 +582,24 @@ export const RunCommand = cmd({
             const permission = event.properties
             if (permission.sessionID !== sessionID) continue
 
-            // kilocode_change start - In auto mode, automatically approve all permissions without prompting
             if (args.auto) {
-              await sdk.permission.respond({
-                sessionID,
-                permissionID: permission.id,
-                response: "always",
+              // kilocode_change - In auto mode, automatically approve all permissions without prompting
+              await sdk.permission.reply({
+                requestID: permission.id,
+                reply: "once",
               })
-              continue
+            } else {
+              UI.println(
+                UI.Style.TEXT_WARNING_BOLD + "!",
+                UI.Style.TEXT_NORMAL +
+                  `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
+              )
+              await sdk.permission.reply({
+                requestID: permission.id,
+                reply: "reject",
+              })
             }
-            // kilocode_change end
-
-            UI.println(
-              UI.Style.TEXT_WARNING_BOLD + "!",
-              UI.Style.TEXT_NORMAL +
-                `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
-            )
-            await sdk.permission.reply({
-              requestID: permission.id,
-              reply: "reject",
-            }) // kilocode_change
-          } // kilocode_change
+          }
           // kilocode_change start - network retry handling
           if (event.type === "session.network.asked") {
             const request = event.properties
@@ -639,6 +626,7 @@ export const RunCommand = cmd({
       // Validate agent if specified
       const agent = await (async () => {
         if (!args.agent) return undefined
+        const name = args.agent
 
         // When attaching, validate against the running server instead of local Instance state.
         if (args.attach) {
@@ -656,12 +644,12 @@ export const RunCommand = cmd({
             return undefined
           }
 
-          const agent = modes.find((a) => a.name === args.agent)
+          const agent = modes.find((a) => a.name === name)
           if (!agent) {
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
               UI.Style.TEXT_NORMAL,
-              `agent "${args.agent}" not found. Falling back to default agent`,
+              `agent "${name}" not found. Falling back to default agent`,
             )
             return undefined
           }
@@ -670,20 +658,20 @@ export const RunCommand = cmd({
             UI.println(
               UI.Style.TEXT_WARNING_BOLD + "!",
               UI.Style.TEXT_NORMAL,
-              `agent "${args.agent}" is a subagent, not a primary agent. Falling back to default agent`,
+              `agent "${name}" is a subagent, not a primary agent. Falling back to default agent`,
             )
             return undefined
           }
 
-          return args.agent
+          return name
         }
 
-        const entry = await Agent.get(args.agent)
+        const entry = await AppRuntime.runPromise(Agent.Service.use((svc) => svc.get(name)))
         if (!entry) {
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${args.agent}" not found. Falling back to default agent`,
+            `agent "${name}" not found. Falling back to default agent`,
           )
           return undefined
         }
@@ -691,11 +679,11 @@ export const RunCommand = cmd({
           UI.println(
             UI.Style.TEXT_WARNING_BOLD + "!",
             UI.Style.TEXT_NORMAL,
-            `agent "${args.agent}" is a subagent, not a primary agent. Falling back to default agent`,
+            `agent "${name}" is a subagent, not a primary agent. Falling back to default agent`,
           )
           return undefined
         }
-        return args.agent
+        return name
       })()
 
       const sessionID = await session(sdk)
@@ -733,11 +721,9 @@ export const RunCommand = cmd({
 
     if (args.attach) {
       const headers = (() => {
-        // kilocode_change start
         const password = args.password ?? process.env.KILO_SERVER_PASSWORD
         if (!password) return undefined
-        const username = process.env.KILO_SERVER_USERNAME ?? "kilo"
-        // kilocode_change end
+        const username = process.env.KILO_SERVER_USERNAME ?? "kilo" // kilocode_change
         const auth = `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()
@@ -748,7 +734,7 @@ export const RunCommand = cmd({
     await bootstrap(process.cwd(), async () => {
       const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const request = new Request(input, init)
-        return Server.Default().fetch(request)
+        return Server.Default().app.fetch(request)
       }) as typeof globalThis.fetch
       const sdk = createKiloClient({ baseUrl: "http://kilo.internal", fetch: fetchFn })
       await execute(sdk)

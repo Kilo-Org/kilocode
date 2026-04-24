@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.openapi.generator)
+    id("build-tasks")
 }
 
 kotlin {
@@ -27,23 +28,22 @@ openApiGenerate {
     apiPackage.set("ai.kilocode.jetbrains.api.client")
     modelPackage.set("ai.kilocode.jetbrains.api.model")
     configOptions.set(mapOf(
-        "serializationLibrary" to "moshi",
+        "serializationLibrary" to "kotlinx_serialization",
         "omitGradleWrapper" to "true",
         "omitGradlePluginVersions" to "true",
         "useCoroutines" to "false",
         "sourceFolder" to "src/main/kotlin",
         "enumPropertyNaming" to "UPPERCASE",
     ))
-    // Remap schema "File" so the generated class is not named java.io.File
     modelNameMappings.set(mapOf(
         "File" to "DiffFileInfo",
     ))
-    // Map empty anyOf references to kotlin.Any
     typeMappings.set(mapOf(
         "AnyOfLessThanGreaterThan" to "kotlin.Any",
         "anyOf<>" to "kotlin.Any",
+        "number" to "kotlin.Double",
+        "decimal" to "kotlin.Double",
     ))
-    // Normalise OpenAPI 3.1 → 3.0-compatible patterns
     openapiNormalizer.set(mapOf(
         "SIMPLIFY_ANYOF_STRING_AND_ENUM_STRING" to "true",
         "SIMPLIFY_ONEOF_ANYOF" to "true",
@@ -54,51 +54,9 @@ openApiGenerate {
     generateModelDocumentation.set(false)
 }
 
-// Fix openapi-generator 3.1.1 codegen bugs in generated Kotlin sources.
-//
-// The OpenAPI spec uses `const: true` on boolean fields (e.g. `healthy`).
-// openapi-generator turns these into single-value enum classes:
-//
-//   val healthy: GlobalHealth200Response.Healthy
-//   enum class Healthy(val value: kotlin.Boolean) { @Json(name = "true") TRUE("true") }
-//
-// Moshi's EnumJsonAdapter calls nextString() for the value, but the server sends
-// a JSON boolean `true`, not a JSON string `"true"`, causing:
-//   JsonDataException: Expected a string but was BOOLEAN at path $.healthy
-//
-// Fix: replace the enum field type with kotlin.Boolean, remove the enum class.
-val fixGeneratedApi by tasks.registering {
+val fixGeneratedApi by tasks.registering(FixGeneratedApiTask::class) {
     dependsOn("openApiGenerate")
-    val dir = generatedApi
-    doLast {
-        // Regex to find boolean const enum declarations inside data classes.
-        // Captures the enum name so we can find and fix the corresponding field.
-        val enumDecl = Regex(
-            """enum class (\w+)\(val value: kotlin\.Boolean\)"""
-        )
-        dir.get().asFile.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
-            var text = file.readText()
-            val names = enumDecl.findAll(text).map { it.groupValues[1] }.toList()
-            if (names.isEmpty()) return@forEach
-
-            for (name in names) {
-                // Replace field type: `val foo: EnclosingClass.EnumName` → `val foo: kotlin.Boolean`
-                text = text.replace(Regex("""(val \w+:\s*)\w+\.$name""")) { m ->
-                    "${m.groupValues[1]}kotlin.Boolean"
-                }
-                // Remove the @JsonClass annotation + enum class block
-                text = text.replace(Regex(
-                    """\n\s*@JsonClass\(generateAdapter = false\)\s*\n\s*enum class $name\(val value: kotlin\.Boolean\)\s*\{[^}]*\}"""
-                ), "")
-                // Remove the orphaned KDoc block that preceded the enum (lines of ` *` ending with `*/`)
-                // These look like:  \n    /**\n     * \n     *\n     * Values: TRUE\n     */
-                text = text.replace(Regex(
-                    """\n\s*/\*\*\s*\n(\s*\*[^\n]*\n)*\s*\*/\s*(?=\n\s*\n)"""
-                ), "")
-            }
-            file.writeText(text)
-        }
-    }
+    generated.set(generatedApi)
 }
 
 tasks.named("compileKotlin") {
@@ -117,33 +75,36 @@ val requiredPlatforms = listOf(
     "windows-arm64",
 )
 
-val checkCli by tasks.registering {
+val localCli by tasks.registering(PrepareLocalCliTask::class) {
+    description = "Prepare local CLI binary for JetBrains dev"
+    val os = providers.systemProperty("os.name").map {
+        val name = it.lowercase()
+        if (name.contains("mac")) return@map "darwin"
+        if (name.contains("win")) return@map "windows"
+        if (name.contains("linux")) return@map "linux"
+        throw GradleException("Unsupported host OS: $it")
+    }
+    val arch = providers.systemProperty("os.arch").map {
+        val name = it.lowercase()
+        if (name == "aarch64" || name == "arm64") return@map "arm64"
+        if (name == "x86_64" || name == "amd64") return@map "x64"
+        throw GradleException("Unsupported host arch: $it")
+    }
+    script.set(rootProject.layout.projectDirectory.file("script/build.ts"))
+    root.set(rootProject.layout.projectDirectory)
+    out.set(cliDir)
+    platform.set(os.zip(arch) { a, b -> "$a-$b" })
+    exe.set(platform.map { if (it.startsWith("windows")) "kilo.exe" else "kilo" })
+}
+
+val prod = production
+val checkCli by tasks.registering(CheckCliTask::class) {
     description = "Verify CLI binaries exist before building"
-    val dir = cliDir.map { it.asFile }
-    val prod = production.get()
-    val platforms = requiredPlatforms.toList()
-    doLast {
-        val resolved = dir.get()
-        if (!resolved.exists() || resolved.listFiles()?.isEmpty() != false) {
-            throw GradleException(
-                "CLI binaries not found at ${resolved.absolutePath}.\n" +
-                "Run 'bun run build' from packages/kilo-jetbrains/ to build CLI and plugin together."
-            )
-        }
-        if (prod) {
-            val missing = platforms.filter { platform ->
-                val dir = File(resolved, platform)
-                val exe = if (platform.startsWith("windows")) "kilo.exe" else "kilo"
-                !File(dir, exe).exists()
-            }
-            if (missing.isNotEmpty()) {
-                throw GradleException(
-                    "Production build requires all platform CLI binaries.\n" +
-                    "Missing: ${missing.joinToString(", ")}\n" +
-                    "Run 'bun run build:production' to build all platforms."
-                )
-            }
-        }
+    dir.set(cliDir)
+    this.production.set(prod)
+    platforms.set(requiredPlatforms)
+    if (!prod.get()) {
+        dependsOn(localCli)
     }
 }
 
@@ -162,6 +123,13 @@ dependencies {
     implementation(project(":shared"))
     implementation(libs.okhttp)
     implementation(libs.okhttp.sse)
-    implementation(libs.moshi)
-    implementation(libs.moshi.kotlin)
+    implementation(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(kotlin("test"))
+}
+
+tasks.test {
+    useJUnitPlatform()
 }

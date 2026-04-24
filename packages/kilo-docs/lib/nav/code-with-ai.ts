@@ -91,6 +91,7 @@ export const CodeWithAiNav: NavSection[] = [
             children: "Task Todo List",
           },
           { href: "/code-with-ai/features/checkpoints", children: "Checkpoints" },
+          { href: "/code-with-ai/features/file-encoding", children: "File Encoding" },
         ],
       },
     ],

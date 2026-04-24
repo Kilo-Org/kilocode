@@ -59,13 +59,15 @@ export function buildKeybindingMap(
 
     if (kb.command.startsWith(AM_PREFIX)) {
       bindings[kb.command.slice(AM_PREFIX.length)] = formatKeybinding(raw, mac)
-    } else if (GLOBAL_KEYBINDINGS[kb.command]) {
-      bindings[GLOBAL_KEYBINDINGS[kb.command]] = formatKeybinding(raw, mac)
+      continue
     }
+    const name = GLOBAL_KEYBINDINGS[kb.command]
+    if (name) bindings[name] = formatKeybinding(raw, mac)
   }
 
   // Ensure fallback bindings are always present (may be missing from
   // cached packageJSON if the extension hasn't been fully reloaded)
+  if (!bindings.runScript) bindings.runScript = formatKeybinding(mac ? "cmd+e" : "ctrl+e", mac)
   if (!bindings.toggleDiff) bindings.toggleDiff = formatKeybinding(mac ? "cmd+d" : "ctrl+d", mac)
   if (!bindings.showShortcuts) bindings.showShortcuts = formatKeybinding(mac ? "cmd+shift+/" : "ctrl+shift+/", mac)
 

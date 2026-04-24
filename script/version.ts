@@ -6,15 +6,10 @@ import { $ } from "bun"
 const output = [`version=${Script.version}`]
 
 if (!Script.preview) {
-  await $`opencode run --command changelog`.cwd(process.cwd())
-  const file = `${process.cwd()}/UPCOMING_CHANGELOG.md`
-  const body = await Bun.file(file)
-    .text()
-    .catch(() => "No notable changes")
-  const dir = process.env.RUNNER_TEMP ?? "/tmp"
-  const notesFile = `${dir}/opencode-release-notes.txt`
-  await Bun.write(notesFile, body)
-  await $`gh release create v${Script.version} -d --title "v${Script.version}" --notes-file ${notesFile}`
+  // kilocode_change start - create draft release; changelog generation and
+  // release notes are handled by publish.ts on the same runner that commits.
+  await $`gh release create v${Script.version} -d --title "v${Script.version}" --notes ""`
+  // kilocode_change end
   const release = await $`gh release view v${Script.version} --json tagName,databaseId`.json()
   output.push(`release=${release.databaseId}`)
   output.push(`tag=${release.tagName}`)

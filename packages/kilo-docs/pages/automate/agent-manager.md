@@ -19,6 +19,10 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 - Session import from existing branches, external worktrees, or GitHub PR URLs
 - "Continue in Worktree" to promote a sidebar session to the Agent Manager
 
+{% callout type="tip" %}
+New to running multiple agents in parallel? The [Agent Manager Workflows](/docs/automate/agent-manager-workflows) guide walks through when to use the sidebar vs. the Agent Manager, how to pick tasks that parallelize well, and the common patterns for testing, reviewing, and integrating changes across worktrees.
+{% /callout %}
+
 ## Opening the Agent Manager
 
 - Keyboard shortcut: `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux)
@@ -33,14 +37,54 @@ Each Agent Manager session runs in an isolated git worktree on a separate branch
 
 ### PR Status Badges
 
-Worktree items in the sidebar display a **PR status badge** when the branch has an associated pull request:
+Each worktree item displays a **PR status badge** when its branch has an associated pull request. The badge shows the PR number (e.g. `#142`) and is color-coded to reflect the current state at a glance. Click the badge to open the PR in your browser.
 
-- **Open** — badge indicating the PR is open (its color can also reflect review and check status)
-- **Merged** — purple badge indicating the PR has been merged
-- **Closed** — red badge indicating the PR was closed without merging
-- **Draft** — gray badge indicating the PR is in draft state
+{% callout type="info" %}
+The GitHub CLI (`gh`) must be installed and authenticated for PR badges to work. If `gh` is missing or not logged in, badges won't appear.
+{% /callout %}
 
-The badge appears on the right side of each worktree item and updates automatically via polling. If the worktree's branch doesn't have a PR yet, no badge is shown.
+#### How PRs are detected
+
+The extension uses `gh` to automatically discover PRs for each worktree branch. Three strategies are tried in order:
+
+1. **Branch tracking ref** — `gh pr view` resolves via the branch's tracking ref (works for fork PRs checked out with `gh pr checkout`)
+2. **Branch name** — `gh pr view <branch>` matches same-repo branches pushed to origin
+3. **HEAD commit SHA** — `gh pr list --search "<sha>"` as a last resort, matching PRs whose head ref points to the exact same commit
+
+You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
+
+#### Badge colors
+
+The badge color reflects the most important signal, evaluated in priority order:
+
+| State             | Color            | Condition                                                    |
+| ----------------- | ---------------- | ------------------------------------------------------------ |
+| Draft             | Gray             | PR is in draft state                                         |
+| Merged            | Purple           | PR has been merged                                           |
+| Closed            | Red              | PR was closed without merging                                |
+| Checks failing    | Red              | Any CI check has failed                                      |
+| Changes requested | Yellow           | A reviewer requested changes                                 |
+| Checks pending    | Yellow (pulsing) | CI checks are still running                                  |
+| Open (default)    | Green            | PR is open, no failing or pending checks, no blocking review |
+
+When checks are pending on an open PR, the badge pulses to indicate activity.
+
+#### Badge icon
+
+The badge shows a **checkmark** icon when the PR review status is "Approved", and a **branch** icon in all other cases.
+
+#### Hover card details
+
+Hovering over a worktree item shows a card with additional PR details:
+
+- **PR number** with a link icon to open it in the browser
+- **State** — Open, Draft, Merged, or Closed
+- **Review** — Approved, Changes Requested, or Pending (when a review exists)
+- **Checks** — how many checks passed out of the total (e.g. `8/10 passed`)
+
+#### Automatic updates
+
+PR badges update automatically in the background. The active worktree refreshes frequently, while other worktrees sync periodically to keep badges current. Polling pauses when the Agent Manager panel is hidden.
 
 ### Creating a New Worktree Session
 
@@ -113,9 +157,12 @@ Right-click the section header and select **Delete Section**. The section is rem
 
 Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It shows a live-updating diff between the worktree and its parent branch.
 
-- Select files and click **Apply to Main Branch** to merge changes
+- Select files and click **Apply to local** to copy the worktree's changes onto your local checkout of the base branch
 - Conflicts are surfaced with a resolution dialog
 - Supports unified and split diff views
+- **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
+
+See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
 ## Terminals
 
@@ -131,6 +178,47 @@ A common workflow is letting the agent work, then switching to the terminal to r
 ## Setup Scripts
 
 Place an executable script at `.kilo/setup-script` in your project root. It runs automatically whenever a new worktree is created (useful for `npm install`, env setup, etc.). Root-level `.env` and `.env.*` files are also auto-copied from the main repo before the setup script runs.
+
+## Run Script
+
+The run button lets you start your project (dev server, build, tests, etc.) directly from the Agent Manager toolbar without switching to a terminal. It executes a shell script you define once, and runs it in the context of whichever worktree is currently selected.
+
+### Setting up a run script
+
+Create a script file in `.kilo/` using the appropriate filename for your platform:
+
+| Platform      | Filename (checked in order)                                            |
+| ------------- | ---------------------------------------------------------------------- |
+| macOS / Linux | `.kilo/run-script`, `.kilo/run-script.sh`                              |
+| Windows       | `.kilo/run-script.ps1`, `.kilo/run-script.cmd`, `.kilo/run-script.bat` |
+
+For example, on macOS / Linux create `.kilo/run-script`:
+
+```sh
+#!/bin/sh
+npm run dev
+```
+
+The next time you click the run button (or press `Cmd+E` / `Ctrl+E`), the script runs in the selected worktree's directory.
+
+{% callout type="tip" %}
+If no run script exists yet, clicking the run button opens a template file for you to fill in.
+{% /callout %}
+
+### Environment variables
+
+Two extra variables are injected into the script's environment:
+
+| Variable        | Value                                                                 |
+| --------------- | --------------------------------------------------------------------- |
+| `WORKTREE_PATH` | Working directory of the selected worktree (or repo root for "local") |
+| `REPO_PATH`     | Repository root                                                       |
+
+### Using the run button
+
+- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a dedicated VS Code task panel.
+- **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
+- **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
 
 ## Session State and Persistence
 
@@ -151,6 +239,7 @@ Agent Manager state is persisted in `.kilo/agent-manager.json`. Sessions, worktr
 | `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree                  |
 | `Cmd+/`                  | `Ctrl+/`                  | Focus terminal for current session               |
 | `Cmd+D`                  | `Ctrl+D`                  | Toggle diff panel                                |
+| `Cmd+E`                  | `Ctrl+E`                  | Run / stop run script                            |
 | `Cmd+Shift+/`            | `Ctrl+Shift+/`            | Show keyboard shortcuts                          |
 | `Cmd+1` … `Cmd+9`        | `Ctrl+1` … `Ctrl+9`       | Jump to worktree/session by index                |
 

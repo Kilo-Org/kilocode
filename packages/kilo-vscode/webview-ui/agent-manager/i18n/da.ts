@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Forgren session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åbn Terminal",
+  "agentManager.tab.newOptions": "Flere nye faneindstillinger",
+
+  "agentManager.terminal.new": "Ny terminalfane",
+  "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
+  "agentManager.terminal.connectionError": "forbindelsesfejl til terminal",
+  "agentManager.terminal.errorTitle": "Terminalfejl",
   "agentManager.setup.failed": "Opsætning af worktree mislykkedes",
   "agentManager.setup.settingUp": "Opsætter worktree",
   "agentManager.setup.error.git_not_found":
@@ -73,6 +79,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Ny fane",
   "agentManager.shortcuts.closeTab": "Luk fane",
   "agentManager.shortcuts.toggleTerminal": "Skift terminal",
+  "agentManager.shortcuts.runScript": "Kør script",
+  "agentManager.run.options": "Kørselsindstillinger",
+  "agentManager.run.configure": "Konfigurer kørselsscript",
   "agentManager.shortcuts.openAgentManager": "Åbn Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

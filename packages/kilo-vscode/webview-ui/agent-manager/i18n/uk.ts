@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Розгалужити сесію",
   "agentManager.tab.terminal": "Термінал",
   "agentManager.tab.openTerminal": "Відкрити термінал",
+  "agentManager.tab.newOptions": "Інші параметри нової вкладки",
+
+  "agentManager.terminal.new": "Нова вкладка термінала",
+  "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
+  "agentManager.terminal.connectionError": "помилка з'єднання термінала",
+  "agentManager.terminal.errorTitle": "Помилка термінала",
 
   "agentManager.setup.failed": "Налаштування робочого дерева не вдалося",
   "agentManager.setup.settingUp": "Налаштування робочого дерева",
@@ -79,6 +85,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Нова вкладка",
   "agentManager.shortcuts.closeTab": "Закрити вкладку",
   "agentManager.shortcuts.toggleTerminal": "Перемкнути термінал",
+  "agentManager.shortcuts.runScript": "Запустити скрипт",
+  "agentManager.run.options": "Параметри запуску",
+  "agentManager.run.configure": "Налаштувати скрипт запуску",
   "agentManager.shortcuts.openAgentManager": "Відкрити Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Наступний режим агента",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Попередній режим агента",

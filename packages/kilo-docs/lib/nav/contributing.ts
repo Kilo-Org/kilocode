@@ -39,6 +39,10 @@ export const ContributingNav: NavSection[] = [
             children: "Benchmarking",
           },
           {
+            href: "/contributing/architecture/config-schema",
+            children: "CLI Config Schema",
+          },
+          {
             href: "/contributing/architecture/enterprise-mcp-controls",
             children: "Enterprise MCP Controls",
           },

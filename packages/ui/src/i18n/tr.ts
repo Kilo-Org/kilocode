@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Oturum değişiklikleri",
+  "ui.sessionReview.title.git": "Git değişiklikleri",
+  "ui.sessionReview.title.branch": "Dal değişiklikleri",
   "ui.sessionReview.title.lastTurn": "Son tur değişiklikleri",
   "ui.sessionReview.diffStyle.unified": "Birleşik",
   "ui.sessionReview.diffStyle.split": "Bölünmüş",
@@ -43,6 +45,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Adımları gizle",
   "ui.sessionTurn.summary.response": "Yanıt",
   "ui.sessionTurn.diff.showMore": "Daha fazla değişiklik göster ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Değiştirildi",
+  "ui.sessionTurn.diffs.showAll": "Tümünü göster",
+  "ui.sessionTurn.diffs.showLess": "Daha az göster",
+  "ui.sessionTurn.diffs.more": "+{{count}} dosya daha",
 
   "ui.sessionTurn.retry.retrying": "yeniden deneniyor",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}sn içinde",
@@ -76,6 +82,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Hata",
+  "ui.messagePart.mcp.input": "Giriş",
+  "ui.messagePart.mcp.output": "Çıkış",
   "ui.messagePart.title.edit": "Düzenle",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Kendi cevabınızı yazın",

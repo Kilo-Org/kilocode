@@ -32,6 +32,10 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/BranchSelect.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeItem.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SectionHeader.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/render.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
 ]
 const TSX_FILE = TSX_FILES[0]!
@@ -39,6 +43,8 @@ const PROVIDER_FILE = path.join(ROOT, "src/agent-manager/AgentManagerProvider.ts
 const DIFF_CONTROLLER_FILE = path.join(ROOT, "src/agent-manager/worktree-diff-controller.ts")
 const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
+const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
+const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -185,7 +191,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
   // -- onMessage dispatches all expected message types -----------------------
 
   it("provider routing handles all documented agentManager.* message types", () => {
-    const text = provider()
+    const text =
+      provider() + fs.readFileSync(RUN_MESSAGE_FILE, "utf-8") + fs.readFileSync(TERMINAL_ROUTING_FILE, "utf-8")
     const expected = [
       "agentManager.createWorktree",
       "agentManager.deleteWorktree",
@@ -196,6 +203,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.persistSession",
       "agentManager.forgetSession",
       "agentManager.configureSetupScript",
+      "agentManager.configureRunScript",
+      "agentManager.runScript",
+      "agentManager.stopRunScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
       "agentManager.showExistingLocalTerminal",
@@ -203,6 +213,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.requestState",
       "agentManager.setTabOrder",
       "agentManager.setDefaultBaseBranch",
+      "agentManager.terminal.create",
+      "agentManager.terminal.close",
+      "agentManager.terminal.resize",
     ]
     for (const msg of expected) {
       expect(text, `provider routing should handle "${msg}"`).toContain(msg)
@@ -556,6 +569,9 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
+  },
+  "run/task.ts": {
+    note: "vscode adapter for Agent Manager run scripts",
   },
 }
 

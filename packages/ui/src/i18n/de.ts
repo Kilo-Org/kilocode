@@ -4,6 +4,8 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Sitzungsänderungen",
+  "ui.sessionReview.title.git": "Git-Änderungen",
+  "ui.sessionReview.title.branch": "Branch-Änderungen",
   "ui.sessionReview.title.lastTurn": "Änderungen der letzten Runde",
   "ui.sessionReview.diffStyle.unified": "Vereinheitlicht",
   "ui.sessionReview.diffStyle.split": "Geteilt",
@@ -42,6 +44,10 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Schritte ausblenden",
   "ui.sessionTurn.summary.response": "Antwort",
   "ui.sessionTurn.diff.showMore": "Weitere Änderungen anzeigen ({{count}})",
+  "ui.sessionTurn.diffs.changed": "Geändert",
+  "ui.sessionTurn.diffs.showAll": "Alle anzeigen",
+  "ui.sessionTurn.diffs.showLess": "Weniger anzeigen",
+  "ui.sessionTurn.diffs.more": "+{{count}} weitere Dateien",
 
   "ui.sessionTurn.retry.retrying": "erneuter Versuch",
   "ui.sessionTurn.retry.inSeconds": "in {{seconds}}s",
@@ -75,6 +81,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} Liste",
   "ui.messagePart.context.list.other": "{{count}} Listen",
   "ui.messagePart.diagnostic.error": "Fehler",
+  "ui.messagePart.mcp.input": "Eingabe",
+  "ui.messagePart.mcp.output": "Ausgabe",
   "ui.messagePart.title.edit": "Bearbeiten",
   "ui.messagePart.title.write": "Schreiben",
   "ui.messagePart.option.typeOwnAnswer": "Eigene Antwort eingeben",
