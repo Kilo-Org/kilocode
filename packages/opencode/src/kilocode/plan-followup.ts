@@ -6,16 +6,17 @@ import { Flag } from "@/flag/flag"
 import { Global } from "@/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/project/instance"
-import { Provider } from "@/provider/provider"
+import { Provider } from "@/provider"
 import { ProviderID, ModelID } from "@/provider/schema"
 import { Question } from "@/question"
 import { Session } from "@/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
 import { MessageV2 } from "@/session/message-v2"
+import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import path from "path"
 import z from "zod"
@@ -24,6 +25,7 @@ const agents = makeRuntime(Agent.Service, Agent.defaultLayer)
 const providers = makeRuntime(Provider.Service, Provider.defaultLayer)
 const questions = makeRuntime(Question.Service, Question.defaultLayer)
 const todo = makeRuntime(Todo.Service, Todo.defaultLayer)
+const pending = new Map<SessionID, AbortController>()
 
 export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
@@ -147,6 +149,7 @@ export async function generateHandover(input: {
     const result = await stream.text
     return result.trim()
   } catch (error) {
+    if (input.abort?.aborted) return ""
     log.error("handover generation failed", { error })
     return ""
   }
@@ -158,6 +161,14 @@ export namespace PlanFollowup {
   export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+
+  export function abort(sessionID: SessionID) {
+    const ctl = pending.get(sessionID)
+    if (!ctl) return false
+    pending.delete(sessionID)
+    ctl.abort()
+    return true
+  }
 
   function resolveVariant(value: string | undefined, model: Provider.Model | undefined) {
     if (!value) return undefined
@@ -265,7 +276,9 @@ export namespace PlanFollowup {
       questions: [
         {
           question: "Ready to implement?",
+          questionKey: "plan.followup.question",
           header: "Implement",
+          headerKey: "plan.followup.header",
           // On CLI the main prompt input is hidden while a blocking question is active,
           // so we need the custom-answer row to allow a free-text reply. On VS Code the
           // main prompt input below the dock already routes typed text as a question
@@ -275,11 +288,15 @@ export namespace PlanFollowup {
           options: [
             {
               label: ANSWER_NEW_SESSION,
+              labelKey: "plan.followup.answer.newSession",
               description: "Implement in a fresh session with a clean context",
+              descriptionKey: "plan.followup.answer.newSession.description",
             },
             {
               label: ANSWER_CONTINUE,
+              labelKey: "plan.followup.answer.continue",
               description: "Implement the plan in this session",
+              descriptionKey: "plan.followup.answer.continue.description",
             },
           ],
         },
@@ -314,47 +331,118 @@ export namespace PlanFollowup {
       model: input.model,
     })
     const session = await Session.get(input.sessionID)
-    const [handover, todos] = await Promise.all([
-      generateHandover({ messages: input.messages, model: input.model, abort: input.abort }),
-      PlanFollowupRuntime.todo.get(input.sessionID),
-    ])
 
     await Instance.provide({
       directory: session.directory,
       fn: async () => {
-        const file = Session.plan(session)
-        const sections = [
-          `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
-          `Implement the following plan:\n\n${input.plan}`,
-        ]
-
-        if (handover) {
-          sections.push(`## Handover from Planning Session\n\n${handover}`)
-        }
-
-        const todoList = formatTodos(todos)
-        if (todoList) {
-          sections.push(`## Todo List\n\n${todoList}`)
-        }
-
+        // Create the session FIRST so session.created fires immediately while the
+        // VS Code extension's pendingFollowup gate (30s TTL) is still fresh. The
+        // handover generation below can take tens of seconds and must not block
+        // the SSE event that drives the webview tab switch.
         const next = await Session.create({})
-        await inject({
-          sessionID: next.id,
-          agent: "code",
-          model: code.model,
-          text: sections.join("\n\n"),
-          synthetic: false,
-        })
-        if (todos.length) {
-          await PlanFollowupRuntime.todo.update({ sessionID: next.id, todos })
-        }
+        const ctl = new AbortController()
+        pending.set(next.id, ctl)
+        await SessionStatus.set(next.id, { type: "busy" })
         await Bus.publish(TuiEvent.SessionSelect, { sessionID: next.id })
-        void Instance.provide({
-          directory: next.directory,
-          fn: () => PlanFollowupRuntime.loop(next.id),
-        }).catch((error) => {
-          log.error("failed to start follow-up session", { sessionID: next.id, error })
-        })
+
+        const idle = () =>
+          SessionStatus.set(next.id, { type: "idle" }).catch((err) => {
+            log.warn("failed to clear follow-up busy status", { sessionID: next.id, err })
+          })
+
+        try {
+          const file = Session.plan(session)
+          const todos = await PlanFollowupRuntime.todo.get(input.sessionID)
+          const todoList = formatTodos(todos)
+
+          // Assemble the user message text with or without a handover section.
+          // The section order is fixed so the initial and final renders stay
+          // aligned — only the handover block grows in between.
+          const compose = (handover: string) => {
+            const sections = [
+              `Plan file: ${file}\nRead this file first and treat it as the source of truth for implementation.`,
+              `Implement the following plan:\n\n${input.plan}`,
+            ]
+            if (handover) sections.push(`## Handover from Planning Session\n\n${handover}`)
+            if (todoList) sections.push(`## Todo List\n\n${todoList}`)
+            return sections.join("\n\n")
+          }
+
+          // Inject the plan and todos immediately so the new session tab shows
+          // real content right away. The handover section is appended to this
+          // same part in-place once the slow LLM call resolves below.
+          const msg: MessageV2.User = {
+            id: MessageID.ascending(),
+            sessionID: next.id,
+            role: "user",
+            time: { created: Date.now() },
+            agent: "code",
+            model: code.model,
+          }
+          await Session.updateMessage(msg)
+          const pid = PartID.ascending()
+          await Session.updatePart({
+            id: pid,
+            messageID: msg.id,
+            sessionID: next.id,
+            type: "text",
+            text: compose(""),
+            synthetic: false,
+          } satisfies MessageV2.TextPart)
+
+          if (todos.length) {
+            await PlanFollowupRuntime.todo.update({ sessionID: next.id, todos })
+          }
+
+          const handover = await generateHandover({
+            messages: input.messages,
+            model: input.model,
+            abort: input.abort ? AbortSignal.any([input.abort, ctl.signal]) : ctl.signal,
+          })
+          if (ctl.signal.aborted) {
+            await idle()
+            return
+          }
+
+          if (handover) {
+            await Session.updatePart({
+              id: pid,
+              messageID: msg.id,
+              sessionID: next.id,
+              type: "text",
+              text: compose(handover),
+              synthetic: false,
+            } satisfies MessageV2.TextPart)
+          }
+          if (ctl.signal.aborted) {
+            await idle()
+            return
+          }
+
+          const queue = Instance.provide({
+            directory: next.directory,
+            fn: async () => {
+              if (ctl.signal.aborted) {
+                await idle()
+                return
+              }
+              await PlanFollowupRuntime.loop(next.id)
+            },
+          })
+
+          void queue
+            .catch((error) => {
+              log.error("failed to start follow-up session", { sessionID: next.id, error })
+              void idle()
+            })
+            .finally(() => {
+              if (pending.get(next.id) === ctl) pending.delete(next.id)
+            })
+        } catch (error) {
+          if (pending.get(next.id) === ctl) pending.delete(next.id)
+          await idle()
+          throw error
+        }
       },
     })
   }

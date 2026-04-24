@@ -3,9 +3,10 @@ import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
+import { resolveLocalDiffTarget } from "../review-utils"
 import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
-import { WorktreeStateManager } from "./WorktreeStateManager"
+import { remoteRef, WorktreeStateManager } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
 import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
@@ -18,6 +19,7 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
+import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
 import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
@@ -53,6 +55,7 @@ export class AgentManagerProvider implements Disposable {
   private setupScript: SetupScriptService | undefined
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
+  private terminalRouter: TerminalRouter
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -76,6 +79,14 @@ export class AgentManagerProvider implements Disposable {
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
     )
+    this.terminalRouter = new TerminalRouter({
+      getClient: () => this.connectionService.getClient(),
+      getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
+      getRoot: () => this.getRoot(),
+      getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
+      log: (...args) => this.log("[XTerm]", ...args),
+      post: (msg) => this.postToWebview(msg),
+    })
     this.run = new RunController({
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
@@ -271,6 +282,7 @@ export class AgentManagerProvider implements Disposable {
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
     }
+    msg = await this.contextMessage(msg)
     const m = msg as unknown as AgentManagerInMessage
 
     const worktree = await this.onWorktreeMessage(m)
@@ -287,8 +299,39 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.terminalRouter.handle(m)) return null
 
     return msg
+  }
+
+  private async contextMessage(msg: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (msg.type !== "requestGitChangesContext") return msg
+    const ctx = typeof msg.agentManagerContext === "string" ? msg.agentManagerContext : undefined
+    const target = ctx ? await this.contextTarget(ctx) : undefined
+    const sid = typeof msg.sessionID === "string" ? msg.sessionID : this.activeSessionId
+    const next = sid && typeof msg.sessionID !== "string" ? { ...msg, sessionID: sid } : msg
+    if (target) return { ...next, ...target }
+    if (!sid) return next
+
+    const state = this.getStateManager()
+    const session = state?.getSession(sid)
+    const worktree = session?.worktreeId ? state?.getWorktree(session.worktreeId) : undefined
+    if (!worktree) return next
+    return { ...next, contextDirectory: worktree.path, gitChangesBase: remoteRef(worktree) }
+  }
+
+  private async contextTarget(ctx: string): Promise<Record<string, unknown> | undefined> {
+    if (ctx === "local") {
+      const root = this.getRoot()
+      if (!root) return undefined
+      const target = await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), root)
+      if (!target) return { contextDirectory: root }
+      return { contextDirectory: target.directory, gitChangesBase: target.baseBranch }
+    }
+
+    const worktree = this.getStateManager()?.getWorktree(ctx)
+    if (!worktree) return undefined
+    return { contextDirectory: worktree.path, gitChangesBase: remoteRef(worktree) }
   }
 
   private async onWorktreeMessage(m: AgentManagerInMessage): Promise<Record<string, unknown> | null | undefined> {
@@ -1440,14 +1483,6 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /**
-   * Show terminal for the currently active session (triggered by keyboard shortcut).
-   * Posts an action to the webview which will respond with the session ID.
-   */
-  public showTerminalForCurrentSession(): void {
-    this.postToWebview({ type: "action", action: "showTerminal" })
-  }
-
-  /**
    * Reveal the Agent Manager panel and focus the prompt input.
    * Used for the keyboard shortcut to switch back from terminal.
    */
@@ -1519,6 +1554,7 @@ export class AgentManagerProvider implements Disposable {
     this.prBridge.poller.stop()
     this.run.dispose()
     this.terminalManager.dispose()
+    void this.terminalRouter.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
     this.host.dispose()

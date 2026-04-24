@@ -78,7 +78,10 @@ class MessageListUi(
                 is SessionModelEvent.Cleared -> onCleared()
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
-                is SessionModelEvent.Compacted -> Unit
+                is SessionModelEvent.Compacted,
+                is SessionModelEvent.TurnAdded,
+                is SessionModelEvent.TurnUpdated,
+                is SessionModelEvent.TurnRemoved -> Unit
             }
         }
     }

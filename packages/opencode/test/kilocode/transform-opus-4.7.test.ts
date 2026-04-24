@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { ProviderTransform } from "../../src/provider/transform"
+import { ProviderTransform } from "../../src/provider"
 
 function mockModel(overrides: Partial<any> = {}): any {
   return {
@@ -42,7 +42,7 @@ describe("ProviderTransform.variants - Claude Opus 4.7", () => {
     const result = ProviderTransform.variants(model)
     expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
     expect(result.xhigh).toEqual({
-      thinking: { type: "adaptive" },
+      thinking: { type: "adaptive", display: "summarized" },
       effort: "xhigh",
     })
   })
@@ -71,7 +71,7 @@ describe("ProviderTransform.variants - Claude Opus 4.7", () => {
     const result = ProviderTransform.variants(model)
     expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
     expect(result.xhigh).toEqual({
-      reasoningConfig: { type: "adaptive", maxReasoningEffort: "xhigh" },
+      reasoningConfig: { type: "adaptive", maxReasoningEffort: "xhigh", display: "summarized" },
     })
   })
 

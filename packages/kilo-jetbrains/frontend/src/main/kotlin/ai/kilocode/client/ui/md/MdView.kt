@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.md
 
+import ai.kilocode.log.KiloLog
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBHtmlPaneConfiguration
 import com.intellij.ui.components.JBHtmlPaneStyleConfiguration
@@ -77,6 +78,17 @@ abstract class MdView private constructor() {
 
     @Suppress("UnstableApiUsage")
     private class HtmlImpl : MdView() {
+        companion object {
+            private val LOG = KiloLog.create(HtmlImpl::class.java)
+
+            private fun hex(c: Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
+
+            private fun css(text: String): String = text
+                .replace("\\", "\\\\")
+                .replace("'", "\\'")
+                .replace("\n", " ")
+                .replace("\r", " ")
+        }
 
         private val listeners = mutableListOf<LinkListener>()
         private val source = StringBuilder()
@@ -262,7 +274,11 @@ abstract class MdView private constructor() {
             val sheet = StyleSheet()
             val rules = buildOverrideRulesString()
             if (rules.isNotEmpty()) {
-                try { sheet.addRule(rules) } catch (_: Exception) {}
+                try {
+                    sheet.addRule(rules)
+                } catch (err: Exception) {
+                    LOG.warn("kind=markdown css=true failed message=${err.message} rules=$rules", err)
+                }
             }
             return sheet
         }
@@ -274,13 +290,13 @@ abstract class MdView private constructor() {
             foregroundOverride?.let { body.add("color: ${hex(it)}") }
             if (!opaqueState) body.add("background: transparent")
             fontOverride?.let {
-                body.add("font-family: '${it.family}', sans-serif")
+                body.add("font-family: '${css(it.family)}', sans-serif")
                 body.add("font-size: ${it.size}pt")
             }
             if (body.isNotEmpty()) rules.append("body { ${body.joinToString("; ")} } ")
 
             linkColorOverride?.let { rules.append("a { color: ${hex(it)} } ") }
-            codeFontOverride?.let { rules.append("tt, code, samp, pre { font-family: '${it}', monospace } ") }
+            codeFontOverride?.let { rules.append("tt, code, samp, pre { font-family: '${css(it)}', monospace } ") }
             preBgOverride?.let { rules.append("pre { background: ${hex(it)} } ") }
             preFgOverride?.let { rules.append("pre { color: ${hex(it)} } ") }
             codeBgOverride?.let { rules.append("code { background: ${hex(it)} } ") }
@@ -289,10 +305,6 @@ abstract class MdView private constructor() {
             tableBorderOverride?.let { rules.append("th, td { border-color: ${hex(it)} } ") }
 
             return rules.toString().trim()
-        }
-
-        companion object {
-            private fun hex(c: Color): String = String.format("#%02x%02x%02x", c.red, c.green, c.blue)
         }
     }
 }

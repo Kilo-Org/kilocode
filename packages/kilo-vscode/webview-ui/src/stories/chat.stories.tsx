@@ -16,7 +16,7 @@ import { SuggestBar } from "../components/chat/SuggestBar"
 import { MessageList } from "../components/chat/MessageList"
 import { SessionContext } from "../context/session"
 import { ServerContext } from "../context/server"
-import type { QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
+import type { Message, Part, QuestionRequest, SuggestionRequest, TodoItem } from "../types/messages"
 
 const SESSION_ID = "story-session-chat-001"
 
@@ -167,7 +167,7 @@ export const ChatViewWithPendingQuestionEmptyInput: Story = {
 // ---------------------------------------------------------------------------
 
 export const QuestionDockSingle: Story = {
-  name: "QuestionDock — single question",
+  name: "QuestionDock — single question (explicit submit)",
   render: () => (
     <StoryProviders sessionID={SESSION_ID} questions={[singleQuestion]}>
       <div style={{ width: "100%" }}>
@@ -449,10 +449,141 @@ export const MessageListSubagentToQueuedUserSpacing: Story = {
 // TaskHeader with todos
 // ---------------------------------------------------------------------------
 
+const headerNow = 1_700_000_000_000
+const headerUserID = "user-task-header-001"
+const headerAssistantID = "asst-task-header-001"
+const headerMessages: Message[] = [
+  {
+    id: headerUserID,
+    sessionID: SESSION_ID,
+    role: "user",
+    content: "Can you use the update_todo_list tool to create a CLI interface implementation plan?",
+    createdAt: new Date(headerNow - 12000).toISOString(),
+    time: { created: headerNow - 12000 },
+  },
+  {
+    id: headerAssistantID,
+    sessionID: SESSION_ID,
+    role: "assistant",
+    parentID: headerUserID,
+    content: "I'll track the CLI interface implementation with a todo list.",
+    createdAt: new Date(headerNow - 10000).toISOString(),
+    time: { created: headerNow - 10000 },
+    modelID: "anthropic/claude-sonnet-4-6",
+    providerID: "kilo",
+    mode: "default",
+    agent: "code",
+    path: { cwd: "/project", root: "/project" },
+  },
+]
+const headerParts: Record<string, Part[]> = {
+  [headerAssistantID]: [
+    {
+      id: "part-header-read-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "read",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/index.ts" },
+        output: "export async function main() { /* existing CLI bootstrap */ }",
+        title: "Read CLI entrypoint",
+      },
+    },
+    {
+      id: "part-header-text-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "text",
+      text: "I found the existing command registration and argument parsing flow.",
+    },
+    {
+      id: "part-header-glob-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "glob",
+      state: {
+        status: "completed",
+        input: { pattern: "packages/opencode/src/**/*.ts" },
+        output:
+          "packages/opencode/src/cli/index.ts\npackages/opencode/src/command/run.ts\npackages/opencode/src/config/config.ts",
+        title: "Find CLI files",
+      },
+    },
+    {
+      id: "part-header-edit-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "edit",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/index.ts" },
+        output: "Updated the command registry to expose the new interface hook.",
+        title: "Update CLI registry",
+      },
+    },
+    {
+      id: "part-header-bash-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "bash",
+      state: {
+        status: "completed",
+        input: { command: "bun run check-types:webview", description: "Typecheck webview" },
+        output: "Checked 1 project. No type errors found.",
+        title: "Run typecheck",
+      },
+    },
+    {
+      id: "part-header-write-001",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "write",
+      state: {
+        status: "completed",
+        input: { filePath: "packages/opencode/src/cli/interface.ts" },
+        output: "Created the CLI interface implementation scaffold.",
+        title: "Create interface scaffold",
+      },
+    },
+    {
+      id: "part-header-text-002",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "text",
+      text: "Next I am wiring the implementation into the existing command path.",
+    },
+    {
+      id: "part-header-bash-002",
+      sessionID: SESSION_ID,
+      messageID: headerAssistantID,
+      type: "tool",
+      tool: "bash",
+      state: {
+        status: "running",
+        input: { command: "bun test packages/opencode/test/cli.test.ts", description: "Run CLI tests" },
+        title: "Run CLI tests",
+      },
+    },
+  ],
+}
+
 const mockTodosInProgress: TodoItem[] = [
-  { id: "1", content: "Create a haiku about Jan", status: "completed" },
-  { id: "2", content: "Create a poem about Henk", status: "in_progress" },
-  { id: "3", content: "Write a limerick about the team", status: "pending" },
+  { id: "1", content: "Project setup and architecture backlog", status: "completed" },
+  { id: "2", content: "Configuration schema for target jobs", status: "completed" },
+  { id: "3", content: "Core scanning logic", status: "completed" },
+  { id: "4", content: "Build invocation and error handling", status: "completed" },
+  { id: "5", content: "CLI interface implementation", status: "in_progress" },
+  { id: "6", content: "Storage layer implementation", status: "pending" },
+  { id: "7", content: "Character profiles and prompt types", status: "pending" },
+  { id: "8", content: "Local tests and integration tests", status: "pending" },
+  { id: "9", content: "Migration guide", status: "pending" },
+  { id: "10", content: "Release validation", status: "pending" },
 ]
 
 const mockTodosAllDone: TodoItem[] = [
@@ -465,19 +596,22 @@ export const TaskHeaderWithTodos: Story = {
   render: () => {
     const session = {
       ...mockSessionValue({ id: SESSION_ID, status: "busy" }),
-      messages: () => [{ id: "msg-001" }] as any[],
+      messages: () => headerMessages,
       currentSession: () => ({
         id: SESSION_ID,
-        title: "Writing poems about the team",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        title: "Task: Can you use the update_todo_list tool to create a CLI interface implementation?",
+        createdAt: new Date(headerNow - 12000).toISOString(),
+        updatedAt: new Date(headerNow).toISOString(),
       }),
       todos: () => mockTodosInProgress,
+      getParts: (id: string) => headerParts[id] ?? [],
+      contextUsage: () => ({ tokens: 34300, percentage: 17 }),
+      costBreakdown: () => [{ label: "Session", cost: 0.64 }],
     }
     return (
       <StoryProviders sessionID={SESSION_ID} status="busy" noPadding>
         <SessionContext.Provider value={session as any}>
-          <div style={{ width: "380px" }}>
+          <div style={{ width: "100%" }}>
             <TaskHeader />
           </div>
         </SessionContext.Provider>
@@ -545,6 +679,7 @@ const mockServer = {
   vscodeLanguage: () => "en",
   languageOverride: () => undefined,
   workspaceDirectory: () => "/project",
+  gitInstalled: () => true,
 }
 
 export const WelcomeWithSwitcherAndNotification: Story = {

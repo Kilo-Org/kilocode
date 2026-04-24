@@ -164,4 +164,34 @@ describe("fetchMessagePage / cursor fallback", () => {
     expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4", "m5"])
     expect(page.cursor).toBeUndefined()
   })
+
+  it("bounds assistant turn filling when older pages never reach a user message", async () => {
+    const { client, calls } = mockClient([
+      {
+        items: [message("m5", "assistant", 50), message("m6", "assistant", 60)],
+        cursor: "c1",
+      },
+      {
+        items: [message("m3", "assistant", 30), message("m4", "assistant", 40)],
+        cursor: "c2",
+      },
+      {
+        items: [message("m1", "assistant", 10), message("m2", "assistant", 20)],
+        cursor: "c3",
+      },
+      {
+        items: [message("m0", "user", 0)],
+      },
+    ])
+
+    const page = await fetchMessagePage(client as never, {
+      sessionID: "s1",
+      workspaceDir: "/repo",
+      limit: 2,
+    })
+
+    expect(calls.map((call) => call.before)).toEqual([undefined, "c1", "c2"])
+    expect(page.items.map((item) => item.info.id)).toEqual(["m1", "m2", "m3", "m4", "m5", "m6"])
+    expect(page.cursor).toBe("c3")
+  })
 })

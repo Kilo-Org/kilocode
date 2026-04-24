@@ -6,7 +6,7 @@
 import z from "zod"
 import * as path from "path"
 import { Effect } from "effect"
-import { Tool } from "./tool"
+import * as Tool from "./tool"
 import { LSP } from "../lsp"
 import { createTwoFilesPatch, diffLines } from "diff"
 import DESCRIPTION from "./edit.txt"
@@ -14,14 +14,13 @@ import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Bus } from "../bus"
 import { Format } from "../format"
-import { FileTime } from "../file/time"
-import { Filesystem } from "../util/filesystem"
 import { Instance } from "../project/instance"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
-import { AppFileSystem } from "../filesystem"
+import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 
@@ -69,7 +68,6 @@ export const EditTool = Tool.define(
   "edit",
   Effect.gen(function* () {
     const lsp = yield* LSP.Service
-    const filetime = yield* FileTime.Service
     const afs = yield* AppFileSystem.Service
     const format = yield* Format.Service
     const bus = yield* Bus.Service
@@ -96,55 +94,16 @@ export const EditTool = Tool.define(
           let contentOld = ""
           let contentNew = ""
           let cachedFilediff: Snapshot.FileDiff | undefined // kilocode_change
-          yield* filetime.withLock(filePath, () =>
-            Effect.gen(function* () {
-              if (params.oldString === "") {
-                const existed = yield* afs.existsSafe(filePath)
-                if (existed) contentOld = yield* afs.readFileString(filePath) // kilocode_change
-                contentNew = params.newString
-                diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
-                cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
-                yield* ctx.ask({
-                  permission: "edit",
-                  patterns: [path.relative(Instance.worktree, filePath)],
-                  always: ["*"],
-                  metadata: {
-                    filepath: filePath,
-                    diff,
-                    filediff: cachedFilediff, // kilocode_change
-                  },
-                })
-                yield* afs.writeWithDirs(filePath, params.newString)
-                yield* format.file(filePath)
-                yield* bus.publish(File.Event.Edited, { file: filePath })
-                yield* bus.publish(FileWatcher.Event.Updated, {
-                  file: filePath,
-                  event: existed ? "change" : "add",
-                })
-                yield* filetime.read(ctx.sessionID, filePath)
-                return
-              }
-
-              const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
-              if (!info) throw new Error(`File ${filePath} not found`)
-              if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
-              yield* filetime.assert(ctx.sessionID, filePath)
-              contentOld = yield* afs.readFileString(filePath)
-
-              const ending = detectLineEnding(contentOld)
-              const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
-              const next = convertToLineEnding(normalizeLineEndings(params.newString), ending)
-
-              contentNew = replace(contentOld, old, next, params.replaceAll)
-
-              diff = trimDiff(
-                createTwoFilesPatch(
-                  filePath,
-                  filePath,
-                  normalizeLineEndings(contentOld),
-                  normalizeLineEndings(contentNew),
-                ),
-              )
+          yield* Effect.gen(function* () {
+            if (params.oldString === "") {
+              const existed = yield* afs.existsSafe(filePath)
+              // kilocode_change start - preserve file encoding on write
+              const pre = existed ? yield* EncodedIO.read(filePath) : { text: "", encoding: "utf-8" }
+              contentOld = pre.text
+              const encoding = pre.encoding
+              // kilocode_change end
+              contentNew = params.newString
+              diff = trimDiff(createTwoFilesPatch(filePath, filePath, contentOld, contentNew))
               cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
               yield* ctx.ask({
                 permission: "edit",
@@ -156,26 +115,68 @@ export const EditTool = Tool.define(
                   filediff: cachedFilediff, // kilocode_change
                 },
               })
-
-              yield* afs.writeWithDirs(filePath, contentNew)
+              yield* EncodedIO.write(filePath, params.newString, encoding) // kilocode_change - preserve encoding; replaces afs.writeWithDirs
               yield* format.file(filePath)
               yield* bus.publish(File.Event.Edited, { file: filePath })
               yield* bus.publish(FileWatcher.Event.Updated, {
                 file: filePath,
-                event: "change",
+                event: existed ? "change" : "add",
               })
-              contentNew = yield* afs.readFileString(filePath)
-              diff = trimDiff(
-                createTwoFilesPatch(
-                  filePath,
-                  filePath,
-                  normalizeLineEndings(contentOld),
-                  normalizeLineEndings(contentNew),
-                ),
-              )
-              yield* filetime.read(ctx.sessionID, filePath)
-            }).pipe(Effect.orDie),
-          )
+              return
+            }
+
+            const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
+            if (!info) throw new Error(`File ${filePath} not found`)
+            if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
+            // kilocode_change start - preserve file encoding
+            const pre = yield* EncodedIO.read(filePath)
+            contentOld = pre.text
+            const encoding = pre.encoding
+            // kilocode_change end
+
+            const ending = detectLineEnding(contentOld)
+            const old = convertToLineEnding(normalizeLineEndings(params.oldString), ending)
+            const next = convertToLineEnding(normalizeLineEndings(params.newString), ending)
+
+            contentNew = replace(contentOld, old, next, params.replaceAll)
+
+            diff = trimDiff(
+              createTwoFilesPatch(
+                filePath,
+                filePath,
+                normalizeLineEndings(contentOld),
+                normalizeLineEndings(contentNew),
+              ),
+            )
+            cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
+            yield* ctx.ask({
+              permission: "edit",
+              patterns: [path.relative(Instance.worktree, filePath)],
+              always: ["*"],
+              metadata: {
+                filepath: filePath,
+                diff,
+                filediff: cachedFilediff, // kilocode_change
+              },
+            })
+
+            yield* EncodedIO.write(filePath, contentNew, encoding) // kilocode_change - preserve encoding; replaces afs.writeWithDirs
+            yield* format.file(filePath)
+            yield* bus.publish(File.Event.Edited, { file: filePath })
+            yield* bus.publish(FileWatcher.Event.Updated, {
+              file: filePath,
+              event: "change",
+            })
+            contentNew = (yield* EncodedIO.read(filePath)).text // kilocode_change - re-read via encoding-aware helper; replaces afs.readFileString
+            diff = trimDiff(
+              createTwoFilesPatch(
+                filePath,
+                filePath,
+                normalizeLineEndings(contentOld),
+                normalizeLineEndings(contentNew),
+              ),
+            )
+          }).pipe(Effect.orDie)
 
           const filediff: Snapshot.FileDiff = cachedFilediff ?? buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
 
@@ -190,7 +191,7 @@ export const EditTool = Tool.define(
           let output = "Edit applied successfully."
           yield* lsp.touchFile(filePath, true)
           const diagnostics = yield* lsp.diagnostics()
-          const normalizedFilePath = Filesystem.normalizePath(filePath)
+          const normalizedFilePath = AppFileSystem.normalizePath(filePath)
           const block = LSP.Diagnostic.report(filePath, diagnostics[normalizedFilePath] ?? [])
           if (block) output += `\n\nLSP errors detected in this file, please fix:\n${block}`
           output += yield* Effect.promise(() => ConfigValidation.check(filePath)) // kilocode_change
@@ -439,7 +440,7 @@ export const WhitespaceNormalizedReplacer: Replacer = function* (content, find) 
             if (match) {
               yield match[0]
             }
-          } catch (e) {
+          } catch {
             // Invalid regex pattern, skip
           }
         }

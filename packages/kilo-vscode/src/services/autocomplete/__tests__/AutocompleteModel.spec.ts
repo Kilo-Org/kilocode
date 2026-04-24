@@ -75,13 +75,6 @@ describe("AutocompleteModel", () => {
     })
   })
 
-  describe("supportsFim", () => {
-    it("always returns true", () => {
-      const model = new AutocompleteModel()
-      expect(model.supportsFim()).toBe(true)
-    })
-  })
-
   describe("getModelName", () => {
     it("returns the default model", () => {
       const model = new AutocompleteModel()
@@ -162,15 +155,6 @@ describe("AutocompleteModel", () => {
           temperature: 0.2,
         },
         expect.objectContaining({ signal }),
-      )
-    })
-  })
-
-  describe("generateResponse", () => {
-    it("throws because FIM is the primary strategy", async () => {
-      const model = new AutocompleteModel()
-      await expect(model.generateResponse("system", "user", vi.fn())).rejects.toThrow(
-        "Chat-based completions are not supported via CLI backend",
       )
     })
   })

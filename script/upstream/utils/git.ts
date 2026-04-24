@@ -55,7 +55,7 @@ export async function hasUpstreamRemote(): Promise<boolean> {
 }
 
 export async function fetchUpstream(): Promise<void> {
-  const result = await $`git fetch upstream`.quiet().nothrow()
+  const result = await $`git fetch upstream --tags --force`.quiet().nothrow()
   if (result.exitCode !== 0) {
     throw new Error(`Failed to fetch upstream: ${result.stderr.toString()}`)
   }
