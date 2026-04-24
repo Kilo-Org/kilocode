@@ -795,7 +795,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.fetchAndSendGlobalConfig().catch((e) => console.error("[Kilo New] fetchAndSendGlobalConfig failed:", e))
           break
         case "updateConfig":
-          await this.handleUpdateConfig(message.config)
+          await this.handleUpdateConfig(message.config, message.scope)
           break
         case "setLanguage":
           await vscode.workspace
@@ -2251,7 +2251,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Applies a partial config update via the global config endpoint, then pushes
    * the full merged config back to the webview.
    */
-  private async handleUpdateConfig(partial: Partial<Config>): Promise<void> {
+  private async handleUpdateConfig(partial: Partial<Config>, scope: "global" | "project" = "global"): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
       this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
       return
@@ -2264,11 +2264,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
     // Guard against fetchAndSendConfig pushing stale data while the write is in flight.
     this.pending++
+    const dir = this.getWorkspaceDirectory()
 
     // Phase 1: write. Errors here = real save failures the user can fix + retry.
     try {
       await this.connectionService.drainPendingPrompts()
-      await this.client.global.config.update({ config: partial }, { throwOnError: true })
+      await (scope === "project"
+        ? this.client.config.update({ config: partial, directory: dir }, { throwOnError: true })
+        : this.client.global.config.update({ config: partial }, { throwOnError: true }))
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to update config:", error)
       this.postMessage({
@@ -2284,7 +2287,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // transient, so send an optimistic configUpdated to clear the webview's
     // saving/draft state. SSE global.config.updated pushes the real data next.
     try {
-      const dir = this.getWorkspaceDirectory()
       const { data: merged } = await retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true }))
       this.cachedConfigMessage = { type: "configLoaded", config: merged }
       this.postMessage({ type: "configUpdated", config: merged })

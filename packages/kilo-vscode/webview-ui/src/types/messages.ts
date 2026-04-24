@@ -1985,6 +1985,9 @@ export interface RequestGlobalConfigMessage {
 export interface UpdateConfigMessage {
   type: "updateConfig"
   config: Partial<Config>
+  // "global" writes to ~/.config/kilo/kilo.json. "project" writes to the workspace's
+  // kilo.json (or existing kilo.jsonc/opencode.json). Omit for global (default).
+  scope?: "global" | "project"
 }
 
 export interface RequestNotificationSettingsMessage {

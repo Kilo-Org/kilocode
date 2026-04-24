@@ -1839,14 +1839,28 @@ export namespace Config {
 
       const update = Effect.fn("Config.update")(function* (config: Info) {
         const dir = yield* InstanceState.directory
-        const file = path.join(dir, "config.json")
-        const existing = yield* loadFile(file)
-        yield* fs
-          .writeFileString(
-            file,
-            JSON.stringify(KilocodeConfig.mergeConfig(writable(existing), writable(config)), null, 2),
-          )
-          .pipe(Effect.orDie) // kilocode_change
+        // kilocode_change start - target a project config file that is actually loaded.
+        // Prefer .kilo/ subdir (docs' recommended "cleaner setup", and matches the
+        // marketplace installer's convention), then fall back to workspace root, and
+        // finally create .kilo/kilo.json. Previously wrote to config.json, which is
+        // not in the project-level load chain.
+        const candidates = [
+          ...KilocodeConfig.ALL_CONFIG_FILES.map((f) => path.join(dir, ".kilo", f)),
+          ...KilocodeConfig.ALL_CONFIG_FILES.map((f) => path.join(dir, f)),
+        ]
+        const file = candidates.find((f) => existsSync(f)) ?? path.join(dir, ".kilo", "kilo.json")
+        const before = (yield* readConfigFile(file)) ?? "{}"
+        const input = writable(config)
+
+        if (file.endsWith(".jsonc")) {
+          const updated = patchJsonc(before, input)
+          yield* fs.writeWithDirs(file, updated).pipe(Effect.orDie)
+        } else {
+          const existing = parseConfig(before, file)
+          const merged = KilocodeConfig.mergeConfig(writable(existing), input)
+          yield* fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+        }
+        // kilocode_change end
         yield* Effect.promise(() => Instance.dispose())
       })
 

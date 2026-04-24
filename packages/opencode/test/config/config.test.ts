@@ -811,7 +811,7 @@ Hello from new command`,
   })
 })
 
-test("updates config and writes to file", async () => {
+test("updates config and writes to .kilo/kilo.json", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
     directory: tmp.path,
@@ -819,8 +819,31 @@ test("updates config and writes to file", async () => {
       const newConfig = { model: "updated/model" }
       await save(newConfig as any)
 
-      const writtenConfig = await Filesystem.readJson(path.join(tmp.path, "config.json"))
+      // Writes to .kilo/kilo.json by default — that's the documented "cleaner setup"
+      // location and matches what the marketplace installer uses.
+      const writtenConfig = await Filesystem.readJson(path.join(tmp.path, ".kilo", "kilo.json"))
       expect(writtenConfig.model).toBe("updated/model")
+
+      // Roundtrip: the value written should be loaded back by Config.get().
+      const loaded = await load()
+      expect(loaded.model).toBe("updated/model")
+    },
+  })
+})
+
+test("updates existing project kilo.json at workspace root", async () => {
+  await using tmp = await tmpdir()
+  // Pre-seed a kilo.json at the workspace root — Config.update should prefer it
+  // over creating a new file in .kilo/.
+  await writeConfig(tmp.path, { username: "alice" })
+  await Instance.provide({
+    directory: tmp.path,
+    fn: async () => {
+      await save({ model: "updated/model" } as any)
+
+      const merged = await Filesystem.readJson(path.join(tmp.path, "kilo.json"))
+      expect(merged.model).toBe("updated/model")
+      expect(merged.username).toBe("alice")
     },
   })
 })
