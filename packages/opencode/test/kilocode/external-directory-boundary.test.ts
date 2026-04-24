@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
@@ -13,7 +13,7 @@ import { Filesystem } from "../../src/util"
 import { Bus } from "../../src/bus"
 import { Format } from "../../src/format"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, provideTmpdirInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -26,10 +26,6 @@ const ctx = {
   metadata: () => Effect.void,
   ask: () => Effect.void,
 }
-
-afterEach(async () => {
-  await Instance.disposeAll()
-})
 
 const it = testEffect(
   Layer.mergeAll(
@@ -75,25 +71,28 @@ const asks = () => {
 
 describe("kilocode external directory boundaries", () => {
   it.live("asks before writing outside a repo-root session", () =>
-    Effect.gen(function* () {
-      const dir = yield* tmpdirScoped({ git: true })
-      const outer = yield* tmpdirScoped()
-      const file = path.join(outer, "outside.txt")
-      const { items, next } = asks()
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const outer = yield* tmpdirScoped()
+          const file = path.join(outer, "outside.txt")
+          const { items, next } = asks()
 
-      yield* provideInstance(dir)(write({ filePath: file, content: "outside" }, next))
+          yield* write({ filePath: file, content: "outside" }, next)
 
-      const ext = items.find((item) => item.permission === "external_directory")
-      expect(ext).toBeDefined()
-      expect(ext!.patterns).toEqual([glob(path.join(outer, "*"))])
-      expect(ext!.always).toEqual([glob(path.join(outer, "*"))])
-      expect(ext!.metadata).toMatchObject({ filepath: file, parentDir: outer })
+          const ext = items.find((item) => item.permission === "external_directory")
+          expect(ext).toBeDefined()
+          expect(ext!.patterns).toEqual([glob(path.join(outer, "*"))])
+          expect(ext!.always).toEqual([glob(path.join(outer, "*"))])
+          expect(ext!.metadata).toMatchObject({ filepath: file, parentDir: outer })
 
-      const first = items.findIndex((item) => item.permission === "external_directory")
-      const second = items.findIndex((item) => item.permission === "edit")
-      expect(first).toBeGreaterThanOrEqual(0)
-      expect(second).toBeGreaterThan(first)
-    }),
+          const first = items.findIndex((item) => item.permission === "external_directory")
+          const second = items.findIndex((item) => item.permission === "edit")
+          expect(first).toBeGreaterThanOrEqual(0)
+          expect(second).toBeGreaterThan(first)
+        }),
+      { git: true },
+    ),
   )
 
   it.live("asks when the instance directory is a filesystem root", () =>
@@ -103,7 +102,12 @@ describe("kilocode external directory boundaries", () => {
       const file = path.join(outer, "outside-root.txt")
       const { items, next } = asks()
 
-      yield* provideInstance(root)(write({ filePath: file, content: "outside root" }, next))
+      const cleanup = Effect.promise(() => Instance.provide({ directory: root, fn: () => Instance.dispose() })).pipe(
+        Effect.ignore,
+      )
+      yield* provideInstance(root)(write({ filePath: file, content: "outside root" }, next)).pipe(
+        Effect.ensuring(cleanup),
+      )
 
       const ext = items.find((item) => item.permission === "external_directory")
       expect(ext).toBeDefined()
