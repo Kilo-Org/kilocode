@@ -1064,14 +1064,14 @@ unix("shell completes a fast command on the preferred shell", () =>
         const result = yield* prompt.shell({
           sessionID: chat.id,
           agent: "code",
-          command: "pwd",
+          command: "pwd -P", // kilocode_change - compare physical cwd against fixture realpath
         })
 
         expect(result.info.role).toBe("assistant")
         const tool = completedTool(result.parts)
         if (!tool) return
 
-        expect(tool.state.input.command).toBe("pwd")
+        expect(tool.state.input.command).toBe("pwd -P")
         expect(tool.state.output).toContain(dir)
         expect(tool.state.metadata.output).toContain(dir)
         yield* run.assertNotBusy(chat.id)
@@ -1229,6 +1229,7 @@ unix(
         expect(yield* llm.calls).toBe(0)
 
         yield* Fiber.await(sh)
+        yield* llm.wait(1)
         const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
 
         expect(Exit.isSuccess(ea)).toBe(true)
