@@ -857,6 +857,12 @@ export interface ConfigUpdateFailedMessage {
   details?: string
 }
 
+export interface SkillEditResultMessage {
+  type: "skillEditResult"
+  success: boolean
+  error?: string
+}
+
 export interface GlobalConfigLoadedMessage {
   type: "globalConfigLoaded"
   config: Config
@@ -1613,6 +1619,7 @@ export type ExtensionMessage =
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage
+  | SkillEditResultMessage
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
@@ -2020,6 +2027,13 @@ export interface RequestGlobalConfigMessage {
 export interface UpdateConfigMessage {
   type: "updateConfig"
   config: Partial<Config>
+}
+
+export interface EditSkillMessage {
+  type: "editSkill"
+  originalName: string
+  name: string
+  content: string
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -2640,6 +2654,7 @@ export type WebviewMessage =
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | UpdateConfigMessage
+  | EditSkillMessage
   | RequestNotificationSettingsMessage
   | ResetAllSettingsRequest
   | SettingsTabChangedMessage

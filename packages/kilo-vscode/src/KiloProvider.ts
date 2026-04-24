@@ -806,6 +806,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "updateConfig":
           await this.handleUpdateConfig(message.config)
           break
+        case "editSkill":
+          await this.handleEditSkill(message.originalName, message.name, message.content)
+          break
         case "setLanguage":
           await vscode.workspace
             .getConfiguration("kilo-code.new")
@@ -2289,6 +2292,60 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "configUpdated", config: optimistic })
     } finally {
       this.pending--
+    }
+  }
+
+  /**
+   * Handle skill editing request from the webview.
+   * Writes the updated skill content to the SKILL.md file.
+   */
+  private async handleEditSkill(originalName: string, name: string, content: string): Promise<void> {
+    if (!this.client || this.connectionState !== "connected") {
+      this.postMessage({
+        type: "skillEditResult",
+        success: false,
+        error: "Not connected to CLI backend",
+      })
+      return
+    }
+
+    try {
+      const dir = this.getWorkspaceDirectory()
+      
+      // Get the skill location from the CLI
+      const { data: skills } = await this.client.skill.all(
+        { directory: dir },
+        { throwOnError: true },
+      )
+      
+      const skill = skills.find((s) => s.name === originalName)
+      if (!skill) {
+        this.postMessage({
+          type: "skillEditResult",
+          success: false,
+          error: `Skill "${originalName}" not found`,
+        })
+        return
+      }
+
+      const skillUri = vscode.Uri.file(skill.location)
+      const skillContent = Buffer.from(content, "utf8")
+      
+      // Write the updated skill content
+      await vscode.workspace.fs.writeFile(skillUri, skillContent)
+      
+      // Send success message
+      this.postMessage({
+        type: "skillEditResult",
+        success: true,
+      })
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to edit skill:", error)
+      this.postMessage({
+        type: "skillEditResult",
+        success: false,
+        error: getErrorMessage(error) || "Failed to save skill",
+      })
     }
   }
 
