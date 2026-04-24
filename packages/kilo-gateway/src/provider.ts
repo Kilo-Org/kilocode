@@ -79,8 +79,8 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   const openrouter = createOpenRouter(sdkOptions)
   const alibaba = createAlibaba(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
-  const openai = createOpenAI(sdkOptions)
-  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
+  const openai = createOpenAI({ ...sdkOptions, extractReasoning: true })
+  const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible", extractReasoning: true })
 
   return {
     languageModel(modelId) {
