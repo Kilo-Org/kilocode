@@ -1,15 +1,9 @@
 import { chmod, mkdir, readFile, stat as statFile, writeFile } from "fs/promises"
 import { createWriteStream, existsSync, statSync } from "fs"
 import { realpathSync } from "fs"
-import {
-  dirname,
-  isAbsolute,
-  join,
-  relative,
-  resolve as pathResolve,
-  sep,
-  win32,
-} from "path" // kilocode_change - harden containment checks
+// kilocode_change start - harden containment checks
+import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep, win32 } from "path"
+// kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "@opencode-ai/shared/util/glob"

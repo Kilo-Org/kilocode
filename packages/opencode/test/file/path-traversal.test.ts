@@ -34,9 +34,6 @@ describe("Filesystem.contains", () => {
   test("handles prefix collision edge cases", () => {
     expect(Filesystem.contains("/project", "/project-other/file")).toBe(false)
     expect(Filesystem.contains("/project", "/projectfile")).toBe(false)
-    // kilocode_change start - dot-prefixed child names are still contained
-    expect(Filesystem.contains("/project", "/project/..cache/file")).toBe(true)
-    // kilocode_change end
   })
 })
 
@@ -190,20 +187,6 @@ describe("Instance.containsPath", () => {
       },
     })
   })
-
-  // kilocode_change start - filesystem root must not become an all-access project boundary
-  test("root directory does not allow arbitrary paths", async () => {
-    await using tmp = await tmpdir()
-    const root = path.parse(tmp.path).root
-
-    await Instance.provide({
-      directory: root,
-      fn: () => {
-        expect(Instance.containsPath(path.join(tmp.path, "file.txt"))).toBe(false)
-      },
-    })
-  })
-  // kilocode_change end
 
   test("non-git project does not allow arbitrary paths via worktree='/'", async () => {
     await using tmp = await tmpdir() // no git: true

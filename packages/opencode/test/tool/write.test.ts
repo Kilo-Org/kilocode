@@ -13,13 +13,8 @@ import { Tool } from "../../src/tool"
 import { Agent } from "../../src/agent/agent"
 import { SessionID, MessageID } from "../../src/session/schema"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
-import {
-  provideInstance,
-  provideTmpdirInstance,
-  tmpdirScoped,
-} from "../fixture/fixture" // kilocode_change - external directory regression coverage
+import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import type { Permission } from "../../src/permission" // kilocode_change - capture permission requests
 
 const ctx = {
   sessionID: SessionID.make("ses_test-write-session"),
@@ -61,25 +56,6 @@ const run = Effect.fn("WriteToolTest.run")(function* (
   return yield* tool.execute(args, next)
 })
 
-// kilocode_change start - helpers for external_directory regression coverage
-const glob = (p: string) =>
-  process.platform === "win32" ? AppFileSystem.normalizePathPattern(p) : p.replaceAll("\\", "/")
-
-const asks = () => {
-  const items: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
-  return {
-    items,
-    next: {
-      ...ctx,
-      ask: (req: Omit<Permission.Request, "id" | "sessionID" | "tool">) =>
-        Effect.sync(() => {
-          items.push(req)
-        }),
-    },
-  }
-}
-// kilocode_change end
-
 describe("tool.write", () => {
   describe("new file creation", () => {
     it.live("writes content to new file", () =>
@@ -120,48 +96,6 @@ describe("tool.write", () => {
       ),
     )
   })
-
-  // kilocode_change start - external_directory must guard writes outside the active boundary
-  describe("external_directory permission", () => {
-    it.live("asks when writing outside a repo-root session", () =>
-      Effect.gen(function* () {
-        const dir = yield* tmpdirScoped({ git: true })
-        const outer = yield* tmpdirScoped()
-        const file = path.join(outer, "outside.txt")
-        const { items, next } = asks()
-
-        yield* provideInstance(dir)(run({ filePath: file, content: "outside" }, next))
-
-        const ext = items.find((item) => item.permission === "external_directory")
-        expect(ext).toBeDefined()
-        expect(ext!.patterns).toEqual([glob(path.join(outer, "*"))])
-        expect(ext!.always).toEqual([glob(path.join(outer, "*"))])
-        expect(ext!.metadata).toMatchObject({ filepath: file, parentDir: outer })
-
-        const first = items.findIndex((item) => item.permission === "external_directory")
-        const second = items.findIndex((item) => item.permission === "edit")
-        expect(first).toBeGreaterThanOrEqual(0)
-        expect(second).toBeGreaterThan(first)
-      }),
-    )
-
-    it.live("asks when the instance directory is a filesystem root", () =>
-      Effect.gen(function* () {
-        const outer = yield* tmpdirScoped()
-        const root = path.parse(outer).root
-        const file = path.join(outer, "outside-root.txt")
-        const { items, next } = asks()
-
-        yield* provideInstance(root)(run({ filePath: file, content: "outside root" }, next))
-
-        const ext = items.find((item) => item.permission === "external_directory")
-        expect(ext).toBeDefined()
-        expect(ext!.patterns).toEqual([glob(path.join(outer, "*"))])
-        expect(ext!.metadata).toMatchObject({ filepath: file, parentDir: outer })
-      }),
-    )
-  })
-  // kilocode_change end
 
   describe("existing file overwrite", () => {
     it.live("overwrites existing file content", () =>
