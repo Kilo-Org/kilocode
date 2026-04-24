@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
+  "agentManager.tab.newOptions": "Другие параметры новой вкладки",
+
+  "agentManager.terminal.new": "Новая вкладка терминала",
+  "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
+  "agentManager.terminal.connectionError": "ошибка подключения к терминалу",
+  "agentManager.terminal.errorTitle": "Ошибка терминала",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
   "agentManager.setup.settingUp": "Настройка рабочего пространства",
   "agentManager.setup.error.git_not_found":

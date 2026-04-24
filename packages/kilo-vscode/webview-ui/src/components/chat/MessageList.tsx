@@ -29,6 +29,8 @@ import {
   activeUserMessageID as getActiveUserMessageID,
   messageTurns,
   queuedUserMessageIDs,
+  stableMessageTurns,
+  type MessageTurn,
 } from "../../context/session-queue"
 import type { QuestionRequest, SuggestionRequest } from "../../types/messages"
 
@@ -84,7 +86,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const positions = new Map<string, { top: number; userScrolled: boolean }>()
 
   const boundary = () => session.revert()?.messageID
-  const turns = createMemo(() => messageTurns(session.messages(), boundary()))
+  const turns = createMemo((prev: MessageTurn[] | undefined) =>
+    stableMessageTurns(messageTurns(session.messages(), boundary()), prev),
+  )
   const isEmpty = () => turns().length === 0 && !session.loading() && !boundary()
 
   const recent = createMemo(() =>
@@ -151,11 +155,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
         if (pos?.userScrolled) {
           el.scrollTop = pos.top
           autoScroll.pause()
+          maybeLoadOlder()
         } else {
           autoScroll.forceScrollToBottom()
         }
         setPendingRestore(undefined)
-        maybeLoadOlder()
       })
     })
   })

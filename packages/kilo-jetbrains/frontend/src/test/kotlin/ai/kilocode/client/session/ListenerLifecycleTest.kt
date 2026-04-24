@@ -46,16 +46,12 @@ class ListenerLifecycleTest : SessionControllerTestBase() {
         edt { m.prompt("go") }
         flush()
 
+        assertEquals(events1, events2)
         assertControllerEvents("""
             ViewChanged show
             AppChanged
             WorkspaceChanged
         """, events1)
-        assertControllerEvents("""
-            ViewChanged show
-            AppChanged
-            WorkspaceChanged
-        """, events2)
     }
 
     fun `test session status idle fires StateChanged to Idle`() {

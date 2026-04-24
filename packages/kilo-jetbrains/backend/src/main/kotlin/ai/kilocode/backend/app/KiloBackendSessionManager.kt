@@ -1,7 +1,8 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.KiloCliDataParser
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import ai.kilocode.jetbrains.api.client.DefaultApi
 import ai.kilocode.jetbrains.api.model.SessionStatus
 import ai.kilocode.rpc.dto.SessionDto
@@ -63,6 +64,7 @@ class KiloBackendSessionManager(
                     val pair = KiloCliDataParser.parseSessionStatus(event.data)
                     if (pair != null) {
                         _statuses.update { it + pair }
+                        log.debug { "${ChatLogSummary.sid(pair.first)} evt=session.status ${ChatLogSummary.status(pair.second)}" }
                     }
                 }
             }
@@ -117,8 +119,10 @@ class KiloBackendSessionManager(
                 log.warn("Session create failed: HTTP ${response.code}, body=$raw")
                 throw RuntimeException("Session create failed: HTTP ${response.code} — $raw")
             }
-            log.info("Session created: HTTP ${response.code}")
-            return KiloCliDataParser.parseSession(raw!!)
+            val dto = KiloCliDataParser.parseSession(raw!!)
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=session"
+            log.info("${ChatLogSummary.sid(dto.id)} kind=session $meta created=true code=${response.code}")
+            return dto
         }
     }
 
@@ -139,9 +143,10 @@ class KiloBackendSessionManager(
             val raw = requireClient().sessionStatus(directory = dir)
             val mapped = raw.mapValues { (_, v) -> statusDto(v) }
             _statuses.update { it + mapped }
-            log.info("Seeded ${mapped.size} session statuses for $dir")
+            val meta = if (log.isDebugEnabled) ChatLogSummary.dir(dir) else "kind=status"
+            log.info("kind=status $meta seeded=${mapped.size}")
         } catch (e: Exception) {
-            log.warn("Session status seed failed: ${e.message}", e)
+            log.warn("kind=status dir=${ChatLogSummary.dir(dir)} seed=true failed message=${e.message}", e)
         }
     }
 

@@ -148,14 +148,10 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaving(true)
     setSaveError(null)
     // Split so per-project settings (e.g. commit_message.prompt) land in the
-    // workspace's kilo.json instead of the global one.
+    // workspace's kilo.json instead of the global one. Send one message so the
+    // extension confirms only after both scopes are saved.
     const split = splitByScope(changes)
-    if (Object.keys(split.global).length > 0) {
-      vscode.postMessage({ type: "updateConfig", config: split.global, scope: "global" })
-    }
-    if (Object.keys(split.project).length > 0) {
-      vscode.postMessage({ type: "updateConfig", config: split.project, scope: "project" })
-    }
+    vscode.postMessage({ type: "updateConfig", config: split.global, projectConfig: split.project })
   }
 
   function discardConfig() {

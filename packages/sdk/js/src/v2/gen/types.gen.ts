@@ -40,20 +40,6 @@ export type EventServerInstanceDisposed = {
   }
 }
 
-export type EventInstallationUpdated = {
-  type: "installation.updated"
-  properties: {
-    version: string
-  }
-}
-
-export type EventInstallationUpdateAvailable = {
-  type: "installation.update-available"
-  properties: {
-    version: string
-  }
-}
-
 export type EventServerConnected = {
   type: "server.connected"
   properties: {
@@ -102,6 +88,20 @@ export type EventLspUpdated = {
   type: "lsp.updated"
   properties: {
     [key: string]: unknown
+  }
+}
+
+export type EventInstallationUpdated = {
+  type: "installation.updated"
+  properties: {
+    version: string
+  }
+}
+
+export type EventInstallationUpdateAvailable = {
+  type: "installation.update-available"
+  properties: {
+    version: string
   }
 }
 
@@ -224,21 +224,6 @@ export type EventMessagePartDelta = {
   }
 }
 
-export type EventSessionTurnOpen = {
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    reason: "completed" | "error" | "interrupted"
-  }
-}
-
 export type PermissionRequest = {
   id: string
   sessionID: string
@@ -265,6 +250,21 @@ export type EventPermissionReplied = {
     sessionID: string
     requestID: string
     reply: "once" | "always" | "reject"
+  }
+}
+
+export type EventSessionTurnOpen = {
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -457,26 +457,72 @@ export type EventQuestionRejected = {
   properties: QuestionRejected
 }
 
-export type Todo = {
-  /**
-   * Brief description of the task
-   */
-  content: string
-  /**
-   * Current status of the task: pending, in_progress, completed, cancelled
-   */
-  status: string
-  /**
-   * Priority level of the task: high, medium, low
-   */
-  priority: string
+export type EventCommandExecuted = {
+  type: "command.executed"
+  properties: {
+    name: string
+    sessionID: string
+    arguments: string
+    messageID: string
+  }
 }
 
-export type EventTodoUpdated = {
-  type: "todo.updated"
+export type SuggestionAction = {
+  /**
+   * Button or option label (1-5 words)
+   */
+  label: string
+  /**
+   * Brief explanation of what this action does
+   */
+  description?: string
+  /**
+   * Synthetic user prompt to inject when this action is accepted
+   */
+  prompt: string
+}
+
+export type SuggestionRequest = {
+  id: string
+  sessionID: string
+  /**
+   * Suggestion text shown to the user
+   */
+  text: string
+  /**
+   * Available actions the user can take
+   */
+  actions: Array<SuggestionAction>
+  /**
+   * Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.
+   */
+  blocking?: boolean
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+export type EventSuggestionShown = {
+  type: "suggestion.shown"
+  properties: SuggestionRequest
+}
+
+export type EventSuggestionAccepted = {
+  type: "suggestion.accepted"
   properties: {
     sessionID: string
-    todos: Array<Todo>
+    requestID: string
+    index: number
+    action: SuggestionAction
+  }
+}
+
+export type EventSuggestionDismissed = {
+  type: "suggestion.dismissed"
+  properties: {
+    sessionID: string
+    requestID: string
   }
 }
 
@@ -514,79 +560,26 @@ export type EventSessionIdle = {
   }
 }
 
-export type SuggestionAction = {
+export type Todo = {
   /**
-   * Button or option label (1-5 words)
+   * Brief description of the task
    */
-  label: string
+  content: string
   /**
-   * Brief explanation of what this action does
+   * Current status of the task: pending, in_progress, completed, cancelled
    */
-  description?: string
+  status: string
   /**
-   * Synthetic user prompt to inject when this action is accepted
+   * Priority level of the task: high, medium, low
    */
-  prompt: string
+  priority: string
 }
 
-export type SuggestionRequest = {
-  id: string
-  sessionID: string
-  /**
-   * Suggestion text shown to the user
-   */
-  text: string
-  /**
-   * Available actions the user can take
-   */
-  actions: Array<SuggestionAction>
-  /**
-   * Whether this suggestion blocks prompt input (default: true)
-   */
-  blocking?: boolean
-  tool?: {
-    messageID: string
-    callID: string
-  }
-}
-
-export type EventSuggestionShown = {
-  type: "suggestion.shown"
-  properties: SuggestionRequest
-}
-
-export type EventSuggestionAccepted = {
-  type: "suggestion.accepted"
+export type EventTodoUpdated = {
+  type: "todo.updated"
   properties: {
     sessionID: string
-    requestID: string
-    index: number
-    action: SuggestionAction
-  }
-}
-
-export type EventSuggestionDismissed = {
-  type: "suggestion.dismissed"
-  properties: {
-    sessionID: string
-    requestID: string
-  }
-}
-
-export type EventSessionCompacted = {
-  type: "session.compacted"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventCommandExecuted = {
-  type: "command.executed"
-  properties: {
-    name: string
-    sessionID: string
-    arguments: string
-    messageID: string
+    todos: Array<Todo>
   }
 }
 
@@ -594,6 +587,13 @@ export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
     branch?: string
+  }
+}
+
+export type EventSessionCompacted = {
+  type: "session.compacted"
+  properties: {
+    sessionID: string
   }
 }
 
@@ -673,12 +673,21 @@ export type EventWorkspaceFailed = {
   }
 }
 
+export type EventWorkspaceRestore = {
+  type: "workspace.restore"
+  properties: {
+    workspaceID: string
+    sessionID: string
+    total: number
+    step: number
+  }
+}
+
 export type EventWorkspaceStatus = {
   type: "workspace.status"
   properties: {
     workspaceID: string
     status: "connected" | "connecting" | "disconnected" | "error"
-    error?: string
   }
 }
 
@@ -1270,8 +1279,6 @@ export type GlobalEvent = {
   payload:
     | EventProjectUpdated
     | EventServerInstanceDisposed
-    | EventInstallationUpdated
-    | EventInstallationUpdateAvailable
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
@@ -1279,6 +1286,8 @@ export type GlobalEvent = {
     | EventFileWatcherUpdated
     | EventLspClientDiagnostics
     | EventLspUpdated
+    | EventInstallationUpdated
+    | EventInstallationUpdateAvailable
     | EventTuiPromptAppend
     | EventTuiCommandExecute
     | EventTuiToastShow
@@ -1290,24 +1299,24 @@ export type GlobalEvent = {
     | EventSessionNetworkRejected
     | EventSessionNetworkRestored
     | EventMessagePartDelta
-    | EventSessionTurnOpen
-    | EventSessionTurnClose
     | EventPermissionAsked
     | EventPermissionReplied
+    | EventSessionTurnOpen
+    | EventSessionTurnClose
     | EventSessionDiff
     | EventSessionError
     | EventQuestionAsked
     | EventQuestionReplied
     | EventQuestionRejected
-    | EventTodoUpdated
-    | EventSessionStatus
-    | EventSessionIdle
+    | EventCommandExecuted
     | EventSuggestionShown
     | EventSuggestionAccepted
     | EventSuggestionDismissed
-    | EventSessionCompacted
-    | EventCommandExecuted
+    | EventSessionStatus
+    | EventSessionIdle
+    | EventTodoUpdated
     | EventVcsBranchUpdated
+    | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
     | EventWorktreeReady
     | EventWorktreeFailed
@@ -1317,6 +1326,7 @@ export type GlobalEvent = {
     | EventPtyDeleted
     | EventWorkspaceReady
     | EventWorkspaceFailed
+    | EventWorkspaceRestore
     | EventWorkspaceStatus
     | EventMessageUpdated
     | EventMessageRemoved
@@ -1486,7 +1496,7 @@ export type ProviderConfig = {
      */
     setCacheKey?: boolean
     /**
-     * Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.
+     * Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.
      */
     timeout?: number | false
     /**
@@ -1767,7 +1777,7 @@ export type Config = {
         }
   }
   formatter?:
-    | false
+    | boolean
     | {
         [key: string]: {
           disabled?: boolean
@@ -1779,7 +1789,7 @@ export type Config = {
         }
       }
   lsp?:
-    | false
+    | boolean
     | {
         [key: string]:
           | {
@@ -1897,6 +1907,16 @@ export type WellKnownAuth = {
 
 export type Auth = OAuth | ApiAuth | WellKnownAuth
 
+export type Workspace = {
+  id: string
+  type: string
+  name: string
+  branch: string | null
+  directory: string | null
+  extra: unknown | null
+  projectID: string
+}
+
 export type NotFoundError = {
   name: "NotFoundError"
   data: {
@@ -2002,16 +2022,6 @@ export type ToolListItem = {
 }
 
 export type ToolList = Array<ToolListItem>
-
-export type Workspace = {
-  id: string
-  type: string
-  name: string
-  branch: string | null
-  directory: string | null
-  extra: unknown | null
-  projectID: string
-}
 
 export type Worktree = {
   name: string
@@ -2239,8 +2249,6 @@ export type File = {
 export type Event =
   | EventProjectUpdated
   | EventServerInstanceDisposed
-  | EventInstallationUpdated
-  | EventInstallationUpdateAvailable
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
@@ -2248,6 +2256,8 @@ export type Event =
   | EventFileWatcherUpdated
   | EventLspClientDiagnostics
   | EventLspUpdated
+  | EventInstallationUpdated
+  | EventInstallationUpdateAvailable
   | EventTuiPromptAppend
   | EventTuiCommandExecute
   | EventTuiToastShow
@@ -2259,24 +2269,24 @@ export type Event =
   | EventSessionNetworkRejected
   | EventSessionNetworkRestored
   | EventMessagePartDelta
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
   | EventSessionDiff
   | EventSessionError
   | EventQuestionAsked
   | EventQuestionReplied
   | EventQuestionRejected
-  | EventTodoUpdated
-  | EventSessionStatus
-  | EventSessionIdle
+  | EventCommandExecuted
   | EventSuggestionShown
   | EventSuggestionAccepted
   | EventSuggestionDismissed
-  | EventSessionCompacted
-  | EventCommandExecuted
+  | EventSessionStatus
+  | EventSessionIdle
+  | EventTodoUpdated
   | EventVcsBranchUpdated
+  | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
   | EventWorktreeReady
   | EventWorktreeFailed
@@ -2286,6 +2296,7 @@ export type Event =
   | EventPtyDeleted
   | EventWorkspaceReady
   | EventWorkspaceFailed
+  | EventWorkspaceRestore
   | EventWorkspaceStatus
   | EventMessageUpdated
   | EventMessageRemoved
@@ -2620,6 +2631,176 @@ export type AppLogResponses = {
 }
 
 export type AppLogResponse = AppLogResponses[keyof AppLogResponses]
+
+export type ExperimentalWorkspaceAdaptorListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/adaptor"
+}
+
+export type ExperimentalWorkspaceAdaptorListResponses = {
+  /**
+   * Workspace adaptors
+   */
+  200: Array<{
+    type: string
+    name: string
+    description: string
+  }>
+}
+
+export type ExperimentalWorkspaceAdaptorListResponse =
+  ExperimentalWorkspaceAdaptorListResponses[keyof ExperimentalWorkspaceAdaptorListResponses]
+
+export type ExperimentalWorkspaceListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace"
+}
+
+export type ExperimentalWorkspaceListResponses = {
+  /**
+   * Workspaces
+   */
+  200: Array<Workspace>
+}
+
+export type ExperimentalWorkspaceListResponse =
+  ExperimentalWorkspaceListResponses[keyof ExperimentalWorkspaceListResponses]
+
+export type ExperimentalWorkspaceCreateData = {
+  body?: {
+    id?: string
+    type: string
+    branch: string | null
+    extra: unknown | null
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace"
+}
+
+export type ExperimentalWorkspaceCreateErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceCreateError =
+  ExperimentalWorkspaceCreateErrors[keyof ExperimentalWorkspaceCreateErrors]
+
+export type ExperimentalWorkspaceCreateResponses = {
+  /**
+   * Workspace created
+   */
+  200: Workspace
+}
+
+export type ExperimentalWorkspaceCreateResponse =
+  ExperimentalWorkspaceCreateResponses[keyof ExperimentalWorkspaceCreateResponses]
+
+export type ExperimentalWorkspaceStatusData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/status"
+}
+
+export type ExperimentalWorkspaceStatusResponses = {
+  /**
+   * Workspace status
+   */
+  200: Array<{
+    workspaceID: string
+    status: "connected" | "connecting" | "disconnected" | "error"
+  }>
+}
+
+export type ExperimentalWorkspaceStatusResponse =
+  ExperimentalWorkspaceStatusResponses[keyof ExperimentalWorkspaceStatusResponses]
+
+export type ExperimentalWorkspaceRemoveData = {
+  body?: never
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/{id}"
+}
+
+export type ExperimentalWorkspaceRemoveErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceRemoveError =
+  ExperimentalWorkspaceRemoveErrors[keyof ExperimentalWorkspaceRemoveErrors]
+
+export type ExperimentalWorkspaceRemoveResponses = {
+  /**
+   * Workspace removed
+   */
+  200: Workspace
+}
+
+export type ExperimentalWorkspaceRemoveResponse =
+  ExperimentalWorkspaceRemoveResponses[keyof ExperimentalWorkspaceRemoveResponses]
+
+export type ExperimentalWorkspaceSessionRestoreData = {
+  body?: {
+    sessionID: string
+  }
+  path: {
+    id: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/experimental/workspace/{id}/session-restore"
+}
+
+export type ExperimentalWorkspaceSessionRestoreErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ExperimentalWorkspaceSessionRestoreError =
+  ExperimentalWorkspaceSessionRestoreErrors[keyof ExperimentalWorkspaceSessionRestoreErrors]
+
+export type ExperimentalWorkspaceSessionRestoreResponses = {
+  /**
+   * Session replay started
+   */
+  200: {
+    total: number
+  }
+}
+
+export type ExperimentalWorkspaceSessionRestoreResponse =
+  ExperimentalWorkspaceSessionRestoreResponses[keyof ExperimentalWorkspaceSessionRestoreResponses]
 
 export type ProjectListData = {
   body?: never
@@ -3132,141 +3313,6 @@ export type ToolListResponses = {
 }
 
 export type ToolListResponse = ToolListResponses[keyof ToolListResponses]
-
-export type ExperimentalWorkspaceAdaptorListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/adaptor"
-}
-
-export type ExperimentalWorkspaceAdaptorListResponses = {
-  /**
-   * Workspace adaptors
-   */
-  200: Array<{
-    type: string
-    name: string
-    description: string
-  }>
-}
-
-export type ExperimentalWorkspaceAdaptorListResponse =
-  ExperimentalWorkspaceAdaptorListResponses[keyof ExperimentalWorkspaceAdaptorListResponses]
-
-export type ExperimentalWorkspaceListData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace"
-}
-
-export type ExperimentalWorkspaceListResponses = {
-  /**
-   * Workspaces
-   */
-  200: Array<Workspace>
-}
-
-export type ExperimentalWorkspaceListResponse =
-  ExperimentalWorkspaceListResponses[keyof ExperimentalWorkspaceListResponses]
-
-export type ExperimentalWorkspaceCreateData = {
-  body?: {
-    id?: string
-    type: string
-    branch: string | null
-    extra: unknown | null
-  }
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace"
-}
-
-export type ExperimentalWorkspaceCreateErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type ExperimentalWorkspaceCreateError =
-  ExperimentalWorkspaceCreateErrors[keyof ExperimentalWorkspaceCreateErrors]
-
-export type ExperimentalWorkspaceCreateResponses = {
-  /**
-   * Workspace created
-   */
-  200: Workspace
-}
-
-export type ExperimentalWorkspaceCreateResponse =
-  ExperimentalWorkspaceCreateResponses[keyof ExperimentalWorkspaceCreateResponses]
-
-export type ExperimentalWorkspaceStatusData = {
-  body?: never
-  path?: never
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/status"
-}
-
-export type ExperimentalWorkspaceStatusResponses = {
-  /**
-   * Workspace status
-   */
-  200: Array<{
-    workspaceID: string
-    status: "connected" | "connecting" | "disconnected" | "error"
-    error?: string
-  }>
-}
-
-export type ExperimentalWorkspaceStatusResponse =
-  ExperimentalWorkspaceStatusResponses[keyof ExperimentalWorkspaceStatusResponses]
-
-export type ExperimentalWorkspaceRemoveData = {
-  body?: never
-  path: {
-    id: string
-  }
-  query?: {
-    directory?: string
-    workspace?: string
-  }
-  url: "/experimental/workspace/{id}"
-}
-
-export type ExperimentalWorkspaceRemoveErrors = {
-  /**
-   * Bad request
-   */
-  400: BadRequestError
-}
-
-export type ExperimentalWorkspaceRemoveError =
-  ExperimentalWorkspaceRemoveErrors[keyof ExperimentalWorkspaceRemoveErrors]
-
-export type ExperimentalWorkspaceRemoveResponses = {
-  /**
-   * Workspace removed
-   */
-  200: Workspace
-}
-
-export type ExperimentalWorkspaceRemoveResponse =
-  ExperimentalWorkspaceRemoveResponses[keyof ExperimentalWorkspaceRemoveResponses]
 
 export type WorktreeRemoveData = {
   body?: WorktreeRemoveInput
@@ -4898,6 +4944,85 @@ export type ProviderOauthCallbackResponses = {
 }
 
 export type ProviderOauthCallbackResponse = ProviderOauthCallbackResponses[keyof ProviderOauthCallbackResponses]
+
+export type SyncReplayData = {
+  body?: {
+    directory: string
+    events: Array<{
+      id: string
+      aggregateID: string
+      seq: number
+      type: string
+      data: {
+        [key: string]: unknown
+      }
+    }>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sync/replay"
+}
+
+export type SyncReplayErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SyncReplayError = SyncReplayErrors[keyof SyncReplayErrors]
+
+export type SyncReplayResponses = {
+  /**
+   * Replayed sync events
+   */
+  200: {
+    sessionID: string
+  }
+}
+
+export type SyncReplayResponse = SyncReplayResponses[keyof SyncReplayResponses]
+
+export type SyncHistoryListData = {
+  body?: {
+    [key: string]: number
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/sync/history"
+}
+
+export type SyncHistoryListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type SyncHistoryListError = SyncHistoryListErrors[keyof SyncHistoryListErrors]
+
+export type SyncHistoryListResponses = {
+  /**
+   * Sync events
+   */
+  200: Array<{
+    id: string
+    aggregate_id: string
+    seq: number
+    type: string
+    data: {
+      [key: string]: unknown
+    }
+  }>
+}
+
+export type SyncHistoryListResponse = SyncHistoryListResponses[keyof SyncHistoryListResponses]
 
 export type FindTextData = {
   body?: never

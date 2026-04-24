@@ -17,10 +17,26 @@ import com.intellij.openapi.util.Disposer
  *
  * **EDT-only access** — no synchronization. [ai.kilocode.client.session.SessionController] guarantees all
  * reads and writes happen on the EDT.
+ *
+ * In addition to the flat message list, the model maintains a derived
+ * **turn grouping**: a [Turn] starts with each user message and collects
+ * the following assistant messages. Leading assistant messages (before the
+ * first user message) form their own standalone turn.
+ *
+ * Turn grouping is recomputed after every message add/remove, and the
+ * diff is emitted as [SessionModelEvent.TurnAdded], [SessionModelEvent.TurnUpdated],
+ * or [SessionModelEvent.TurnRemoved] events *after* the message event that
+ * triggered the change.
  */
 class SessionModel {
 
+    companion object {
+        /** Part types that are internal server markers and must never be stored or rendered. */
+        val SILENT_PART_TYPES = setOf("step-start", "step-finish")
+    }
+
     private val entries = LinkedHashMap<String, Message>()
+    private val turnEntries = LinkedHashMap<String, Turn>()
 
     var app: KiloAppStateDto = KiloAppStateDto(KiloAppStatusDto.DISCONNECTED)
     var version: String? = null
@@ -57,6 +73,10 @@ class SessionModel {
 
     fun content(messageId: String, contentId: String): Content? = entries[messageId]?.parts?.get(contentId)
 
+    fun turns(): Collection<Turn> = turnEntries.values
+
+    fun turn(id: String): Turn? = turnEntries[id]
+
     fun isEmpty(): Boolean = entries.isEmpty()
 
     fun isReady(): Boolean = app.status == KiloAppStatusDto.READY && workspace.status == KiloWorkspaceStatusDto.READY
@@ -76,6 +96,7 @@ class SessionModel {
         val msg = Message(dto)
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
+        regroup()
         return true
     }
 
@@ -85,12 +106,14 @@ class SessionModel {
         val msg = Message(dto)
         entries[dto.id] = msg
         fire(SessionModelEvent.MessageAdded(msg))
+        regroup()
         return msg
     }
 
     fun removeMessage(id: String) {
         if (entries.remove(id) == null) return
         fire(SessionModelEvent.MessageRemoved(id))
+        regroup()
     }
 
     fun removeContent(messageId: String, contentId: String) {
@@ -100,6 +123,7 @@ class SessionModel {
     }
 
     fun updateContent(messageId: String, dto: PartDto) {
+        if (dto.type in SILENT_PART_TYPES) return
         val msg = entries[messageId] ?: return
         val existing = msg.parts[dto.id]
         if (existing != null) {
@@ -159,22 +183,119 @@ class SessionModel {
         for (msg in history) {
             val item = Message(msg.info)
             for (part in msg.parts) {
+                if (part.type in SILENT_PART_TYPES) continue
                 val content = fromDto(part, part.text)
                 item.parts[content.id] = content
             }
             entries[msg.info.id] = item
         }
+        rebuildTurnsSilently()
         fire(SessionModelEvent.HistoryLoaded)
     }
 
     fun clear() {
         entries.clear()
+        turnEntries.clear()
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
         compactionCount = 0
         fire(SessionModelEvent.Cleared)
     }
+
+    // ------ turn grouping ------
+
+    /**
+     * Recompute the turn grouping after a message was added or removed.
+     * Diffs against the current [turnEntries] and fires [SessionModelEvent.TurnAdded],
+     * [SessionModelEvent.TurnUpdated], or [SessionModelEvent.TurnRemoved] as needed.
+     */
+    private fun regroup() {
+        val groups = computeGroups()
+        val grouped = groups.associate { it }
+        val prev = turnEntries.keys.toList()
+        val next = groups.map { it.first }
+
+        // Turns that no longer exist
+        for (id in prev) {
+            if (id !in grouped) {
+                turnEntries.remove(id)
+                fire(SessionModelEvent.TurnRemoved(id))
+            }
+        }
+
+        // Build the new ordered map; fire Added/Updated as needed
+        val rebuilt = LinkedHashMap<String, Turn>()
+        for ((id, ids) in groups) {
+            val existing = turnEntries[id]
+            if (existing == null) {
+                val turn = Turn(id).also { t -> ids.forEach { t.add(it) } }
+                rebuilt[id] = turn
+                fire(SessionModelEvent.TurnAdded(turn))
+            } else {
+                if (existing.messageIds != ids) {
+                    val turn = Turn(id).also { t -> ids.forEach { t.add(it) } }
+                    rebuilt[id] = turn
+                    fire(SessionModelEvent.TurnUpdated(turn))
+                } else {
+                    rebuilt[id] = existing
+                }
+            }
+        }
+
+        turnEntries.clear()
+        turnEntries.putAll(rebuilt)
+    }
+
+    /**
+     * Rebuild turns from the current message list *without* firing any events.
+     * Used by [loadHistory] and [clear] so the derived state stays consistent
+     * without generating spurious turn events (the caller fires a single bulk event).
+     */
+    private fun rebuildTurnsSilently() {
+        turnEntries.clear()
+        for ((_, ids) in computeGroups()) {
+            val turn = Turn(ids.first())
+            ids.forEach { turn.add(it) }
+            turnEntries[turn.id] = turn
+        }
+    }
+
+    /**
+     * Compute the canonical turn grouping from the current message insertion order.
+     * Each group is a Pair of (turnId, orderedMessageIds).
+     *
+     * Rules:
+     * - A user message always starts a new turn (turn id = user message id).
+     * - Assistant messages following a user message belong to that turn.
+     * - Leading assistant messages (before any user message) anchor their own turn
+     *   (turn id = first assistant message id in that leading block).
+     */
+    private fun computeGroups(): List<Pair<String, List<String>>> {
+        val result = mutableListOf<Pair<String, MutableList<String>>>()
+        var cur: MutableList<String>? = null
+        var curId: String? = null
+
+        for (msg in entries.values) {
+            if (msg.info.role == "user") {
+                if (curId != null && cur != null) result.add(curId to cur)
+                curId = msg.info.id
+                cur = mutableListOf(msg.info.id)
+            } else {
+                if (cur == null) {
+                    curId = msg.info.id
+                    cur = mutableListOf(msg.info.id)
+                } else {
+                    cur.add(msg.info.id)
+                }
+            }
+        }
+
+        if (curId != null && cur != null) result.add(curId to cur)
+        return result.map { (id, ids) -> id to ids.toList() }
+    }
+
+    // ------ private helpers ------
 
     private fun updateExisting(messageId: String, existing: Content, dto: PartDto) {
         when (existing) {
@@ -218,6 +339,24 @@ class SessionModel {
 
     private fun fire(event: SessionModelEvent) {
         for (l in listeners) l.onEvent(event)
+    }
+
+    // ------ string representations ------
+
+    /**
+     * Compact turn-grouping summary for test assertions.
+     *
+     * Format: one line per turn → `turn#<id>: <role>#<id>, ...`
+     */
+    fun toTurnsString(): String {
+        if (turnEntries.isEmpty()) return "(no turns)"
+        return turnEntries.values.joinToString("\n") { turn ->
+            val msgs = turn.messageIds.joinToString(", ") { id ->
+                val msg = entries[id]
+                if (msg != null) "${msg.info.role}#$id" else "?#$id"
+            }
+            "turn#${turn.id}: $msgs"
+        }
     }
 
     override fun toString(): String {

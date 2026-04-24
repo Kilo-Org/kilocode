@@ -1,10 +1,10 @@
-import { Database } from "../../storage/db"
+import { Database } from "../../storage"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { SessionID, MessageID, PartID } from "../../session/schema"
 import { ProjectID } from "../../project/schema"
 import { WorkspaceID } from "../../control-plane/schema"
 import { SessionImportType } from "./types"
-import { Project } from "../../project/project"
+import { Project } from "../../project"
 import { eq } from "drizzle-orm"
 
 const key = (input: unknown) => [input] as never

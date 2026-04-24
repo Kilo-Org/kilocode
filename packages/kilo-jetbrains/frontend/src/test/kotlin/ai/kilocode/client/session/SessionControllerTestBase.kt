@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionModelEvent
+import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -27,6 +28,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import java.awt.event.HierarchyEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -40,6 +42,45 @@ import kotlinx.coroutines.runBlocking
  * real frontend services wired to fake RPC backends, and shared helpers.
  */
 abstract class SessionControllerTestBase : BasePlatformTestCase() {
+
+    protected data class Snapshot(
+        val body: String,
+        val turns: String,
+        val state: SessionState,
+        val diff: List<ai.kilocode.rpc.dto.DiffFileDto>,
+        val todos: List<ai.kilocode.rpc.dto.TodoDto>,
+        val compacted: Int,
+    ) {
+        override fun toString(): String = buildString {
+            appendLine("state=$state")
+            appendLine("turns=$turns")
+            appendLine("diff=$diff")
+            appendLine("todos=$todos")
+            appendLine("compacted=$compacted")
+            append("body=\n$body")
+        }
+    }
+
+    private class Root : javax.swing.JPanel() {
+        private var shown = true
+        override fun isShowing(): Boolean = shown
+        fun showState(show: Boolean) {
+            val prev = shown
+            shown = show
+            if (prev == show) return
+            val event = HierarchyEvent(
+                this,
+                HierarchyEvent.HIERARCHY_CHANGED,
+                this,
+                this.parent,
+                HierarchyEvent.SHOWING_CHANGED.toLong(),
+            )
+            hierarchyListeners.forEach { it.hierarchyChanged(event) }
+        }
+    }
+
+    private val controllers = mutableListOf<SessionController>()
+    private val roots = mutableMapOf<SessionController, Root>()
 
     protected lateinit var rpc: FakeSessionRpcApi
     protected lateinit var appRpc: FakeAppRpcApi
@@ -79,8 +120,27 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
 
     // ------ Controller creation ------
 
-    protected fun controller(id: String? = null) =
-        SessionController(parent, id, sessions, workspace, app, scope)
+    protected fun controller(id: String? = null) = controller(id, Long.MAX_VALUE)
+
+    protected fun controller(id: String? = null, flushMs: Long): SessionController {
+        return controller(id, flushMs, true)
+    }
+
+    protected fun controller(id: String? = null, flushMs: Long, condense: Boolean): SessionController {
+        val root = Root()
+        val m = SessionController(parent, id, sessions, workspace, app, scope, root, flushMs, condense)
+        controllers.add(m)
+        roots[m] = root
+        return m
+    }
+
+    protected fun hide(m: SessionController) {
+        edt { (roots[m] ?: error("missing root")).showState(false) }
+    }
+
+    protected fun show(m: SessionController) {
+        edt { (roots[m] ?: error("missing root")).showState(true) }
+    }
 
     // ------ Event collection ------
 
@@ -109,10 +169,19 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
 
     // ------ EDT + coroutine helpers ------
 
-    /** Let coroutines settle, then drain all pending EDT events. */
+    /** Let coroutines settle without forcing buffered controller delivery. */
+    protected fun settle() = runBlocking {
+        repeat(5) {
+            delay(100)
+            edt { UIUtil.dispatchAllInvocationEvents() }
+        }
+    }
+
+    /** Let coroutines settle, force buffered controller delivery, then drain EDT. */
     protected fun flush() = runBlocking {
         repeat(5) {
             delay(100)
+            controllers.forEach { it.flushEvents() }
             edt { UIUtil.dispatchAllInvocationEvents() }
         }
     }
@@ -154,12 +223,23 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
     }
 
     protected fun assertControllerEvents(expected: String, events: List<SessionControllerEvent>) {
-        assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
+        val exp = expected.trimIndent().lines().map { it.trim() }.filter { it.isNotEmpty() }.sorted()
+        val act = events.map { it.toString() }.sorted()
+        assertEquals(exp.joinToString("\n"), act.joinToString("\n"))
     }
 
     protected fun assertModelEvents(expected: String, events: List<SessionModelEvent>) {
         assertEquals(expected.trimIndent().trim(), events.joinToString("\n"))
     }
+
+    protected fun snapshot(c: SessionController) = Snapshot(
+        body = c.model.toString().trim(),
+        turns = c.model.toTurnsString().trim(),
+        state = c.model.state,
+        diff = c.model.diff.toList(),
+        todos = c.model.todos.toList(),
+        compacted = c.model.compactionCount,
+    )
 
     // ------ DTO factories ------
 
@@ -177,6 +257,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         type: String,
         text: String? = null,
         tool: String? = null,
+        state: String? = null,
+        title: String? = null,
     ) = PartDto(
         id = id,
         sessionID = sid,
@@ -184,6 +266,8 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         type = type,
         text = text,
         tool = tool,
+        state = state,
+        title = title,
     )
 
     protected fun workspaceReady(

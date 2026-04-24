@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { Instance } from "@/project/instance"
 import type { DiffFile, DiffHunk, DiffResult } from "./types"
 

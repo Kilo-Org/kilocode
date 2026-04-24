@@ -18,6 +18,7 @@ import { SetupScriptRunner } from "./SetupScriptRunner"
 import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
+import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
 import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
@@ -53,6 +54,7 @@ export class AgentManagerProvider implements Disposable {
   private setupScript: SetupScriptService | undefined
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
+  private terminalRouter: TerminalRouter
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -76,6 +78,14 @@ export class AgentManagerProvider implements Disposable {
       (msg) => this.outputChannel.appendLine(`[SessionTerminal] ${msg}`),
       createTerminalHost(),
     )
+    this.terminalRouter = new TerminalRouter({
+      getClient: () => this.connectionService.getClient(),
+      getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
+      getRoot: () => this.getRoot(),
+      getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
+      log: (...args) => this.log("[XTerm]", ...args),
+      post: (msg) => this.postToWebview(msg),
+    })
     this.run = new RunController({
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
@@ -287,6 +297,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.terminalRouter.handle(m)) return null
 
     return msg
   }
@@ -1440,14 +1451,6 @@ export class AgentManagerProvider implements Disposable {
   }
 
   /**
-   * Show terminal for the currently active session (triggered by keyboard shortcut).
-   * Posts an action to the webview which will respond with the session ID.
-   */
-  public showTerminalForCurrentSession(): void {
-    this.postToWebview({ type: "action", action: "showTerminal" })
-  }
-
-  /**
    * Reveal the Agent Manager panel and focus the prompt input.
    * Used for the keyboard shortcut to switch back from terminal.
    */
@@ -1519,6 +1522,7 @@ export class AgentManagerProvider implements Disposable {
     this.prBridge.poller.stop()
     this.run.dispose()
     this.terminalManager.dispose()
+    void this.terminalRouter.dispose()
     this.panel?.dispose()
     this.outputChannel.dispose()
     this.host.dispose()

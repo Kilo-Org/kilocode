@@ -11780,7 +11780,7 @@
             }
           },
           "blocking": {
-            "description": "Whether this suggestion blocks prompt input (default: true)",
+            "description": "Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.",
             "type": "boolean"
           },
           "tool": {

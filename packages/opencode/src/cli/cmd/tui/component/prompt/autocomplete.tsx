@@ -12,7 +12,7 @@ import { useTheme, selectedForeground } from "@tui/context/theme"
 import { SplitBorder } from "@tui/component/border"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useTerminalDimensions } from "@opentui/solid"
-import { Locale } from "@/util/locale"
+import { Locale } from "@/util"
 import type { PromptInfo } from "./history"
 import { useFrecency } from "./frecency"
 
@@ -52,6 +52,9 @@ export type AutocompleteRef = {
   onInput: (value: string) => void
   onKeyDown: (e: KeyEvent) => void
   onCursorChange: () => void
+  // kilocode_change start - let the prompt close autocomplete without mutating draft text
+  dismiss: () => void
+  // kilocode_change end
   visible: false | "@" | "/"
 }
 
@@ -112,7 +115,7 @@ export function Autocomplete(props: {
 
   const position = createMemo(() => {
     if (!store.visible) return { x: 0, y: 0, width: 0 }
-    const dims = dimensions()
+    dimensions()
     positionTick()
     const anchor = props.anchor()
     const parent = anchor.parent
@@ -487,6 +490,14 @@ export function Autocomplete(props: {
     })
   }
 
+  // kilocode_change start - keep slash text intact when overlays hide the prompt,
+  // but still allow normal autocomplete dismissal to clean it up.
+  function dismiss() {
+    if (!store.visible) return
+    command.keybinds(true)
+    setStore("visible", false)
+  }
+
   function hide() {
     const text = props.input().plainText
     if (store.visible === "/" && !text.endsWith(" ") && text.startsWith("/")) {
@@ -497,15 +508,20 @@ export function Autocomplete(props: {
         draft.input = props.input().plainText
       })
     }
-    command.keybinds(true)
-    setStore("visible", false)
+    dismiss()
   }
+  // kilocode_change end
 
   onMount(() => {
     props.ref({
       get visible() {
         return store.visible
       },
+      // kilocode_change start
+      dismiss() {
+        dismiss()
+      },
+      // kilocode_change end
       onInput(value) {
         if (store.visible) {
           if (

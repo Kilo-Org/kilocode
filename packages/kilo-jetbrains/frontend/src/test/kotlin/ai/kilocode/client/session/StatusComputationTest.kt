@@ -35,6 +35,7 @@ class StatusComputationTest : SessionControllerTestBase() {
 
         assertModelEvents("""
             MessageAdded msg1
+            TurnAdded msg1 [msg1]
             StateChanged Busy
             StateChanged Idle
             ContentAdded msg1/prt1

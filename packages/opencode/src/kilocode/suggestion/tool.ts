@@ -1,9 +1,9 @@
 import { Command } from "../../command"
-import { Log } from "../../util/log"
+import { Log } from "../../util"
 import z from "zod"
 import { Effect } from "effect"
 import DESCRIPTION from "./tool.txt"
-import { Tool } from "../../tool/tool"
+import { Tool } from "../../tool"
 import { Suggestion } from "./index"
 import { SessionStatus } from "../../session/status"
 import { SessionID } from "../../session/schema"
@@ -63,6 +63,7 @@ export const SuggestTool = Tool.define<typeof Params, Meta, never, "suggest">(
           sessionID: ctx.sessionID,
           text: params.suggest,
           actions: params.actions,
+          blocking: false, // render above an active input; VS Code does the same
           tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
         })
 

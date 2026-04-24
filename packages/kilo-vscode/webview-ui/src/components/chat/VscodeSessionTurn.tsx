@@ -50,6 +50,7 @@ export interface VscodeTurn {
   id: string
   user: WebMessage
   assistant: WebMessage[]
+  partial?: boolean
 }
 
 interface VscodeSessionTurnProps {
@@ -71,7 +72,8 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
 
   createEffect(() => {
     const turn = props.turn
-    session.hydrateParts([turn.user.id, ...turn.assistant.map((m) => m.id)])
+    const ids = turn.partial ? turn.assistant.map((m) => m.id) : [turn.user.id, ...turn.assistant.map((m) => m.id)]
+    session.hydrateParts(ids)
   })
 
   const message = createMemo(() => props.turn.user as SDKMessage & { role: "user" })
@@ -138,33 +140,35 @@ export const VscodeSessionTurn: Component<VscodeSessionTurnProps> = (props) => {
       {(msg) => (
         <div class="vscode-session-turn" data-message={msg().id}>
           {/* User message */}
-          <div
-            class="vscode-session-turn-user"
-            data-revert-disabled={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
-            }
-            title={
-              assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
-                ? language.t("revert.disabled.agentBusy")
-                : undefined
-            }
-          >
-            <UserMessageDisplay
-              message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
-              parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
-              interrupted={interrupted()}
-              queued={props.queued}
-              onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
-              onRevert={
-                assistantMessages().length > 0 && !session.revert()
-                  ? () => {
-                      if (session.status() !== "idle") return
-                      session.revertSession(msg().id)
-                    }
+          <Show when={!props.turn.partial}>
+            <div
+              class="vscode-session-turn-user"
+              data-revert-disabled={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle" ? "" : undefined
+              }
+              title={
+                assistantMessages().length > 0 && !session.revert() && session.status() !== "idle"
+                  ? language.t("revert.disabled.agentBusy")
                   : undefined
               }
-            />
-          </div>
+            >
+              <UserMessageDisplay
+                message={msg() as unknown as Parameters<typeof UserMessageDisplay>[0]["message"]}
+                parts={parts() as unknown as Parameters<typeof UserMessageDisplay>[0]["parts"]}
+                interrupted={interrupted()}
+                queued={props.queued}
+                onFork={props.onForkMessage ? () => props.onForkMessage?.(msg().sessionID, msg().id) : undefined}
+                onRevert={
+                  assistantMessages().length > 0 && !session.revert()
+                    ? () => {
+                        if (session.status() !== "idle") return
+                        session.revertSession(msg().id)
+                      }
+                    : undefined
+                }
+              />
+            </div>
+          </Show>
 
           {/* Assistant parts — flat list, no context grouping */}
           <Show when={assistantMessages().length > 0}>

@@ -103,7 +103,7 @@
 - <https://models.dev>
   <!-- packages/opencode/src/provider/models.ts -->
 - <https://models.dev/model-schema.json#/$defs/Model>
-  <!-- packages/opencode/src/config/config.ts -->
+  <!-- packages/opencode/src/config/model-id.ts -->
 - <https://opencode.ai/>
   <!-- packages/opencode/src/cli/cmd/generate.ts -->
   <!-- packages/opencode/src/provider/provider.ts -->
@@ -119,7 +119,7 @@
   <!-- packages/opencode/src/cli/cmd/tui/component/dialog-go-upsell.tsx -->
   <!-- packages/opencode/src/session/retry.ts -->
 - <https://opencode.ai/tui.json>
-  <!-- packages/opencode/src/config/tui-migrate.ts -->
+  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
 - <https://opencode.ai/zen>
   <!-- packages/kilo-vscode/webview-ui/src/i18n/en.ts -->
 - <https://openrouter.ai/docs/use-cases/usage-accounting>

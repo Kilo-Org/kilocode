@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import type { Diagnostic } from "vscode-languageserver-types"
-import { Log } from "../util/log"
-import { Filesystem } from "../util/filesystem"
+import { Log } from "../util"
+import { Filesystem } from "../util"
 import path from "path"
 import fs from "fs/promises"
 
