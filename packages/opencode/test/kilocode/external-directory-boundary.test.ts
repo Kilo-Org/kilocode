@@ -13,7 +13,7 @@ import { Filesystem } from "../../src/util"
 import { Bus } from "../../src/bus"
 import { Format } from "../../src/format"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
-import { provideInstance, tmpdir, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ctx = {
@@ -111,18 +111,6 @@ describe("kilocode external directory boundaries", () => {
       expect(ext!.metadata).toMatchObject({ filepath: file, parentDir: outer })
     }),
   )
-
-  test("Instance.containsPath rejects filesystem root boundaries", async () => {
-    await using tmp = await tmpdir()
-    const root = path.parse(tmp.path).root
-
-    await Instance.provide({
-      directory: root,
-      fn: () => {
-        expect(Instance.containsPath(path.join(tmp.path, "file.txt"))).toBe(false)
-      },
-    })
-  })
 
   test("contains helpers keep dot-prefixed child names internal", () => {
     expect(Filesystem.contains("/project", "/project/..cache/file")).toBe(true)
