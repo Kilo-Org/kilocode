@@ -31,6 +31,7 @@ import { GovernanceService } from "./services/governance"
 import { WorkstationProfileService } from "./services/workstation"
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { KiloLogger } from "./services/KiloLogger"
+import { HubPanel } from "./panels/HubPanel"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -460,6 +461,9 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("kilo-code.new.kiloClawOpen", () => {
       kiloClawProvider.openPanel()
+    }),
+    vscode.commands.registerCommand("kilo-code.hub.open", () => {
+      HubPanel.open(context)
     }),
     vscode.commands.registerCommand("kilo-code.new.historyButtonClicked", () => {
       const tab = activeTabProvider()

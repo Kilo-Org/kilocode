@@ -173,9 +173,17 @@ const AboutKiloCodeTab: Component<AboutKiloCodeTabProps> = (props) => {
       {/* Version Information */}
       <div style={sectionStyle}>
         <h4 style={headingStyle}>{language.t("settings.aboutKiloCode.versionInfo")}</h4>
-        <div style={{ display: "flex", "align-items": "center" }}>
+        <div style={{ display: "flex", "align-items": "center", "margin-bottom": "8px" }}>
           <span style={labelStyle}>{language.t("settings.aboutKiloCode.version.label")}</span>
           <span style={valueStyle}>{props.extensionVersion ?? "—"}</span>
+        </div>
+        <div style={{ display: "flex", "align-items": "center", "margin-bottom": "8px" }}>
+          <span style={labelStyle}>Edition</span>
+          <span style={{ ...valueStyle, color: "#9B59B6", "font-weight": "600" }}>MAOS</span>
+        </div>
+        <div style={{ display: "flex", "align-items": "center" }}>
+          <span style={labelStyle}>Agents</span>
+          <span style={{ ...valueStyle, color: "#4ECDC4" }}>20 KiloCode Default Agents (kc-01 … kc-20)</span>
         </div>
       </div>
 

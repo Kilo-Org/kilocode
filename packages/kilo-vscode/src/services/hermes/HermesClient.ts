@@ -73,6 +73,16 @@ export class HermesClient {
     return (await res.json()) as TaskCreated
   }
 
+  /** GET /tasks — list all active tasks. */
+  async listTasks(): Promise<TaskStatus[]> {
+    const res = await fetch(this.url("/tasks"), {
+      method: "GET",
+      headers: await this.headers(),
+    })
+    if (!res.ok) throw new Error(`[Hermes] GET /tasks ${res.status}`)
+    return (await res.json()) as TaskStatus[]
+  }
+
   /** GET /tasks/{id}. */
   async getTask(id: string): Promise<TaskStatus> {
     const res = await fetch(this.url(`/tasks/${encodeURIComponent(id)}`), {

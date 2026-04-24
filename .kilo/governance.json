@@ -1,0 +1,517 @@
+{
+  "tiers": [
+    {
+      "level": 0,
+      "name": "observer",
+      "permissions": [
+        "view_audit",
+        "view_status"
+      ]
+    },
+    {
+      "level": 1,
+      "name": "operator",
+      "permissions": [
+        "view_audit",
+        "view_status",
+        "execute_safe_actions",
+        "request_approval"
+      ]
+    },
+    {
+      "level": 2,
+      "name": "admin",
+      "permissions": [
+        "view_audit",
+        "view_status",
+        "execute_safe_actions",
+        "request_approval",
+        "approve_actions",
+        "manage_dangerous_actions",
+        "create_release_verdict"
+      ]
+    },
+    {
+      "level": 3,
+      "name": "superadmin",
+      "permissions": [
+        "view_audit",
+        "view_status",
+        "execute_safe_actions",
+        "request_approval",
+        "approve_actions",
+        "manage_dangerous_actions",
+        "create_release_verdict",
+        "manage_tiers",
+        "override_blocks",
+        "export_audit"
+      ]
+    }
+  ],
+  "tierAssignments": [],
+  "riskThresholds": {
+    "low": {
+      "min": 0,
+      "max": 25
+    },
+    "medium": {
+      "min": 26,
+      "max": 50
+    },
+    "high": {
+      "min": 51,
+      "max": 75
+    },
+    "critical": {
+      "min": 76,
+      "max": 100
+    }
+  },
+  "riskBehaviors": [
+    {
+      "level": "low",
+      "action": "auto-execute",
+      "description": "Low-risk actions are executed automatically without human intervention"
+    },
+    {
+      "level": "medium",
+      "action": "execute-with-logging",
+      "description": "Medium-risk actions are executed but logged for audit review"
+    },
+    {
+      "level": "high",
+      "action": "block-until-approved",
+      "description": "High-risk actions are blocked until explicitly approved by an authorized tier"
+    }
+  ],
+  "pendingApprovals": [],
+  "resolvedApprovals": [],
+  "dangerousActions": [
+    {
+      "id": "git-force-push",
+      "name": "Git Force Push",
+      "description": "Force push to a remote branch, potentially overwriting others' work",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "production-deploy",
+      "name": "Production Deploy",
+      "description": "Deploy changes to the production environment",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "database-migration",
+      "name": "Database Migration",
+      "description": "Execute database schema migration scripts",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "delete-branch",
+      "name": "Delete Branch",
+      "description": "Delete a remote branch from the repository",
+      "severity": "warning",
+      "minimumTier": "operator",
+      "requiresApproval": false,
+      "blocked": false
+    },
+    {
+      "id": "reset-hard",
+      "name": "Git Reset Hard",
+      "description": "Hard reset the working directory, discarding all uncommitted changes",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "env-modify",
+      "name": "Modify Environment Variables",
+      "description": "Modify production environment variables or secrets",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "dependency-major-upgrade",
+      "name": "Major Dependency Upgrade",
+      "description": "Upgrade a dependency to a new major version",
+      "severity": "warning",
+      "minimumTier": "operator",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "security-config-change",
+      "name": "Security Configuration Change",
+      "description": "Modify authentication, authorization, or encryption settings",
+      "severity": "critical",
+      "minimumTier": "superadmin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "vps_deploy",
+      "name": "VPS Deploy",
+      "description": "Deploy services or containers to a VPS instance",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "vps_rollback",
+      "name": "VPS Rollback",
+      "description": "Rollback a VPS deployment to a previous state",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "ssh_root_access",
+      "name": "SSH Root Access",
+      "description": "Obtain root-level SSH access to a remote host",
+      "severity": "critical",
+      "minimumTier": "superadmin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "training_launch",
+      "name": "Training Launch",
+      "description": "Launch a model training or fine-tuning job",
+      "severity": "warning",
+      "minimumTier": "operator",
+      "requiresApproval": false,
+      "blocked": false
+    },
+    {
+      "id": "memory_wipe",
+      "name": "Memory Wipe",
+      "description": "Erase stored agent memory or knowledge-base data",
+      "severity": "critical",
+      "minimumTier": "superadmin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "routing_config_change",
+      "name": "Routing Config Change",
+      "description": "Modify model routing configuration or traffic rules",
+      "severity": "warning",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "governance_modify",
+      "name": "Governance Modify",
+      "description": "Change governance rules, tiers, or approval policies",
+      "severity": "critical",
+      "minimumTier": "superadmin",
+      "requiresApproval": true,
+      "blocked": false
+    },
+    {
+      "id": "zeroclaw_high_risk",
+      "name": "ZeroClaw High Risk",
+      "description": "Execute a ZeroClaw action classified as high-risk",
+      "severity": "critical",
+      "minimumTier": "admin",
+      "requiresApproval": true,
+      "blocked": false
+    }
+  ],
+  "auditLog": [
+    {
+      "id": "mo577fo0-ac6eu8j0",
+      "timestamp": 1776568821264,
+      "actor": "system",
+      "action": "Registered subsystem: onboarding",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"onboarding\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fo0-8vmbti88",
+      "timestamp": 1776568821264,
+      "actor": "system",
+      "action": "Registered subsystem: speech",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"speech\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-e08jtuip",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: hermes",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"hermes\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-9zr1jss9",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: workstation",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"workstation\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-zq2yoe8f",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: training",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"training\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-soze1u4a",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: memory",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"memory\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-xecgmpen",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: routing",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"routing\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-oadin0fu",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: zeroClaw",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"zeroClaw\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-w26lj13k",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: vps",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"vps\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-znrh9mke",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: ssh",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"ssh\" registered with status \"active\""
+    },
+    {
+      "id": "mo577fnz-8vbls7s9",
+      "timestamp": 1776568821263,
+      "actor": "system",
+      "action": "Registered subsystem: governance",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"governance\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-ww8vh4bm",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: speech",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"speech\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-bew4libq",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: hermes",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"hermes\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-lyhobh8f",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: workstation",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"workstation\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-5hexbq2w",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: training",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"training\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-lah90qy9",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: memory",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"memory\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-h6i32x7h",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: routing",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"routing\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-rjaydoil",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: zeroClaw",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"zeroClaw\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-a2wdfnib",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: vps",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"vps\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-an0sppjv",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: ssh",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"ssh\" registered with status \"active\""
+    },
+    {
+      "id": "mo48ztdh-tr6hky6v",
+      "timestamp": 1776511358837,
+      "actor": "system",
+      "action": "Registered subsystem: governance",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"governance\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mx-jw4nwigq",
+      "timestamp": 1776511140153,
+      "actor": "system",
+      "action": "Registered subsystem: speech",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"speech\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mx-o4mg5cux",
+      "timestamp": 1776511140153,
+      "actor": "system",
+      "action": "Registered subsystem: hermes",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"hermes\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mx-p1wnkgpx",
+      "timestamp": 1776511140153,
+      "actor": "system",
+      "action": "Registered subsystem: workstation",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"workstation\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mx-bcrtz2wo",
+      "timestamp": 1776511140153,
+      "actor": "system",
+      "action": "Registered subsystem: training",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"training\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-rdzqisl4",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: memory",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"memory\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-umemd9y7",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: routing",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"routing\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-asj0askd",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: zeroClaw",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"zeroClaw\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-c356evh7",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: vps",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"vps\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-z7eq3as2",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: ssh",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"ssh\" registered with status \"active\""
+    },
+    {
+      "id": "mo48v4mw-fky8n9ez",
+      "timestamp": 1776511140152,
+      "actor": "system",
+      "action": "Registered subsystem: governance",
+      "riskLevel": "low",
+      "result": "auto",
+      "details": "Subsystem \"governance\" registered with status \"active\""
+    }
+  ],
+  "releaseVerdicts": []
+}
