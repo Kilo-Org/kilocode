@@ -14,6 +14,7 @@ const SENSITIVE_PATTERNS = [".env", ".env.*"]
 // path.isAbsolute() on POSIX does not recognise these, so we check explicitly
 // to avoid passing them to the `ignore` package which throws a RangeError.
 const WINDOWS_DRIVE = /^[a-zA-Z]:[/\\]/
+const REALPATH_CACHE_MAX = 1_000
 
 function toPosix(filePath: string): string {
   return filePath.replace(/\\/g, "/")
@@ -32,6 +33,7 @@ export class FileIgnoreController {
   async initialize(): Promise<void> {
     this.ignoreInstance = ignore()
     this.loadedContents = []
+    this.realpathCache.clear()
 
     if (!this.workspacePath) {
       return
@@ -65,6 +67,14 @@ export class FileIgnoreController {
     this.ignoreInstance.add(SENSITIVE_PATTERNS)
   }
 
+  private cacheRealpath(input: string, resolved: string): void {
+    if (this.realpathCache.size >= REALPATH_CACHE_MAX) {
+      const key = this.realpathCache.keys().next().value
+      if (key !== undefined) this.realpathCache.delete(key)
+    }
+    this.realpathCache.set(input, resolved)
+  }
+
   private toRelativePath(filePath: string): string | null {
     if (!filePath) {
       return null
@@ -85,7 +95,7 @@ export class FileIgnoreController {
     } else {
       try {
         resolved = fs.realpathSync(absoluteInput)
-        this.realpathCache.set(absoluteInput, resolved)
+        this.cacheRealpath(absoluteInput, resolved)
       } catch {
         // Keep unresolved path when file does not exist yet.
       }
@@ -142,6 +152,7 @@ export class FileIgnoreController {
 
   dispose(): void {
     this.loadedContents = []
+    this.realpathCache.clear()
     this.ignoreInstance = ignore()
   }
 }

@@ -71,4 +71,12 @@ export const dict = {
   "marketplace.warning.cancel": "إلغاء",
   "marketplace.contribute.prompt": "هل تفتقد مهارة أو وضعًا أو خادم MCP؟",
   "marketplace.contribute.cta": "ساهم على GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "نفّذ",
+  "plan.followup.question": "جاهز للتنفيذ؟",
+  "plan.followup.answer.newSession": "بدء جلسة جديدة",
+  "plan.followup.answer.newSession.description": "نفّذ في جلسة جديدة بسياق نظيف",
+  "plan.followup.answer.continue": "المتابعة هنا",
+  "plan.followup.answer.continue.description": "نفّذ الخطة في هذه الجلسة",
 }

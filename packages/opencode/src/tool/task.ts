@@ -1,4 +1,4 @@
-import { Tool } from "./tool"
+import * as Tool from "./tool"
 import DESCRIPTION from "./task.txt"
 import z from "zod"
 import { Session } from "../session"
@@ -6,7 +6,7 @@ import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import type { SessionPrompt } from "../session/prompt"
-import { Config } from "../config/config"
+import { Config } from "../config"
 import { Effect } from "effect"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
 

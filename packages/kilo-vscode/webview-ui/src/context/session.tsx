@@ -46,7 +46,6 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
-import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
@@ -118,13 +117,6 @@ interface SessionContextValue {
 
   // All session statuses keyed by sessionID (for DataBridge)
   allStatusMap: () => Record<string, SessionStatusInfo>
-
-  // Current session family data (self + subagents) for DataBridge
-  familyData: (sessionID: string | undefined) => {
-    messages: Record<string, Message[]>
-    parts: Record<string, Part[]>
-    status: Record<string, SessionStatusInfo>
-  }
 
   // Parts for a specific message
   getParts: (messageID: string) => Part[]
@@ -449,16 +441,20 @@ export const SessionProvider: ParentComponent = (props) => {
 
   function applyModel(agentName: string, selection: ModelSelection) {
     pushRecent(selection)
+    // Always remember the per-mode model choice so switching modes restores
+    // the last-used model (mirrors CLI TUI's model.json behavior).
+    setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
+    setStore("modelSelections", agentName, selection)
+    // Persist to model.json via the extension host
+    vscode.postMessage({
+      type: "persistModelSelection",
+      agent: agentName,
+      providerID: selection.providerID,
+      modelID: selection.modelID,
+    })
     const sid = currentSessionID()
     if (sid) {
-      // Per-session only — do NOT mutate the global modelSelections map.
-      // Writing globally here would cause every other session (that hasn't
-      // set its own override) to inherit this session's model.
       setStore("sessionOverrides", sid, selection)
-    } else {
-      // No active session (sidebar) — write globally
-      setUserSetAgents((prev) => ({ ...prev, [agentName]: true }))
-      setStore("modelSelections", agentName, selection)
     }
   }
 
@@ -498,6 +494,8 @@ export const SessionProvider: ParentComponent = (props) => {
         delete selections[agentName]
       }),
     )
+    // Clear from model.json via extension host
+    vscode.postMessage({ type: "clearModelSelection", agent: agentName })
     // Also clear per-session override so the session falls back to config default
     const sid = currentSessionID()
     if (sid) {
@@ -660,6 +658,20 @@ export const SessionProvider: ParentComponent = (props) => {
   vscode.postMessage({ type: "requestVariants" })
 
   onCleanup(unsubVariants)
+
+  // Load persisted per-mode model selections from model.json via extension host.
+  // Uses replace semantics so a reset (empty payload) clears old entries.
+  const unsubSelections = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "modelSelectionsLoaded") return
+    setStore("modelSelections", reconcile(message.selections))
+    const flags: Record<string, boolean> = {}
+    for (const name of Object.keys(message.selections)) {
+      flags[name] = true
+    }
+    setUserSetAgents(flags)
+  })
+  vscode.postMessage({ type: "requestModelSelections" })
+  onCleanup(unsubSelections)
 
   // Load persisted recent models from extension globalState
   const unsubRecents = vscode.onMessage((message: ExtensionMessage) => {
@@ -1302,42 +1314,6 @@ export const SessionProvider: ParentComponent = (props) => {
     return family
   }
 
-  function familyData(sessionID: string | undefined) {
-    if (!sessionID) {
-      return {
-        messages: {},
-        parts: {},
-        status: {},
-      }
-    }
-
-    const family = sessionFamily(sessionID)
-    const messages: Record<string, Message[]> = {}
-    const parts: Record<string, Part[]> = {}
-    const status: Record<string, SessionStatusInfo> = {}
-
-    for (const sid of family) {
-      const msgs = store.messages[sid]
-      if (msgs?.length) {
-        messages[sid] = msgs
-        for (const msg of msgs) {
-          const item = store.parts[msg.id]
-          if (!item?.length) continue
-          parts[msg.id] = item
-        }
-      }
-
-      const info = statusMap[sid]
-      if (info) status[sid] = info
-    }
-
-    return {
-      messages,
-      parts,
-      status,
-    }
-  }
-
   /** Return permissions scoped to the given session's family (self + subagents). */
   function scopedPermissions(sessionID: string | undefined): PermissionRequest[] {
     if (!sessionID) return []
@@ -1771,12 +1747,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
-
     vscode.postMessage({
       type: "abort",
       sessionID,
-      queuedMessageIDs,
     })
   }
 
@@ -2226,7 +2199,6 @@ export const SessionProvider: ParentComponent = (props) => {
     allMessages,
     allParts,
     allStatusMap,
-    familyData,
     favoriteModels: () => store.favoriteModels,
     toggleFavorite,
     variantList,

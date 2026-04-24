@@ -47,7 +47,12 @@ If you check config files into version control, make sure they do not contain AP
 
 ### Export and Import
 
-Config files are plain-text and portable — copy them between machines and you're done.
+You can export and import settings from the **About Kilo Code** tab in the Settings UI:
+
+- **Export**: Saves your global config as a `kilo-settings.json` file. Review it before sharing, because config values are exported as-is.
+- **Import**: Loads a previously exported JSON file into the settings draft. Changes are not applied immediately — you can review them and click Save or Discard, just like any manual edit.
+
+Config files are also plain-text and portable — you can copy `~/.config/kilo/kilo.jsonc` between machines directly.
 
 {% /tab %}
 {% tab label="CLI" %}

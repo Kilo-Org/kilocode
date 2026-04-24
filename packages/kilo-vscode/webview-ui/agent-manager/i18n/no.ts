@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Forgrein økt",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Åpne Terminal",
+  "agentManager.tab.newOptions": "Flere alternativer for ny fane",
+
+  "agentManager.terminal.new": "Ny terminalfane",
+  "agentManager.terminal.ended": "terminal avsluttet — lukk fanen for å avvise",
+  "agentManager.terminal.connectionError": "tilkoblingsfeil for terminal",
+  "agentManager.terminal.errorTitle": "Terminalfeil",
   "agentManager.setup.failed": "Oppsett av arbeidsområde mislyktes",
   "agentManager.setup.settingUp": "Setter opp arbeidsområde",
   "agentManager.setup.error.git_not_found":

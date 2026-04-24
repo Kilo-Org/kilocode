@@ -26,7 +26,8 @@ While the specifics change constantly, some principles stay consistent:
 
 - Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
-- **Model precedence:** Session override → Per-agent config → Global config → Recent models → Kilo Auto (free).
+- **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → Kilo Auto (free).
+- The model selector remembers the last model you picked for each agent — switching agents restores your previous choice. A manual pick always beats config settings; use the **reset button** (visible when your active model differs from config) to go back to the config default.
 
 {% /tab %}
 {% tab label="CLI" %}

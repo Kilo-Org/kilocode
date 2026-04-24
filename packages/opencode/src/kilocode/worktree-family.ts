@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { Instance } from "../project/instance"
-import { Project } from "../project/project"
-import { Filesystem } from "../util/filesystem"
+import { Project } from "../project"
+import { Filesystem } from "../util"
 import { Git } from "../git"
 
 export namespace WorktreeFamily {

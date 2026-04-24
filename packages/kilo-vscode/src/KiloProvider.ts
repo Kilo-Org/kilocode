@@ -56,7 +56,14 @@ import { clearCommandsCache, loadCommands } from "./kilo-provider/commands"
 import { fetchMessagePage, MESSAGE_PAGE_LIMIT } from "./kilo-provider/message-page"
 import { childID } from "./kilo-provider/task-session"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
-import { abortSession, parseQueued } from "./kilo-provider/abort"
+import { abortSession } from "./kilo-provider/abort"
+import {
+  buildAutocompleteSettingsMessage,
+  routeAutocompleteMessage,
+  watchAutocompleteConfig,
+} from "./services/autocomplete/settings"
+import * as ModelState from "./kilo-provider/model-state"
+import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -201,6 +208,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private unsubscribeDirectoryProvider: (() => void) | null = null
   private initConnectionPromise: Promise<void> | null = null
   private webviewMessageDisposable: vscode.Disposable | null = null
+  private autocompleteConfigDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
 
@@ -305,11 +313,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return slimParts(parts)
   }
 
-  /**
-   * Synchronize current extension-side state to the webview.
-   * This is primarily used after a webview refresh where early postMessage calls
-   * may have been dropped before the webview registered its message listeners.
-   */
+  private get forkCtx() {
+    return {
+      connection: this.connectionService,
+      post: (msg: { type: "error"; message: string }) => this.postMessage(msg),
+      register: (session: Session) => this.registerSession(session),
+      forked: (session: Session) => this.postMessage({ type: "sessionForked", sessionID: session.id }),
+      status: (sessionID: string) => this.sessionStatusMap.get(sessionID),
+      directory: (sessionID: string) => this.getWorkspaceDirectory(sessionID),
+    }
+  }
+
   private async syncWebviewState(reason: string): Promise<void> {
     const serverInfo = this.connectionService.getServerInfo()
     console.log("[Kilo New] KiloProvider: 🔄 syncWebviewState()", {
@@ -531,21 +545,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({ type: "openCloudSession", sessionId })
   }
 
-  /** Register the handler for "Continue in Worktree" messages from the sidebar. */
   public setContinueInWorktreeHandler(
     handler: (sessionId: string, progress: (status: string, detail?: string, error?: string) => void) => Promise<void>,
   ): void {
     this.continueInWorktreeHandler = handler
   }
 
-  /**
-   * Attach to a webview that already has its own HTML set.
-   * Sets up message handling and connection without overriding HTML content.
-   *
-   * @param options.onBeforeMessage - Optional interceptor called before the standard handler.
-   *   Return null to consume the message (stop propagation), or return the message
-   *   (possibly transformed) to continue with standard handling.
-   */
   public attachToWebview(
     webview: vscode.Webview,
     options?: { onBeforeMessage?: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null> },
@@ -557,12 +562,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.initializeConnection()
   }
 
-  /**
-   * Set up the shared message handler for both sidebar and tab webviews.
-   * Handles ALL message types so tabs have full functionality.
-   */
   private setupWebviewMessageHandler(webview: vscode.Webview): void {
     this.webviewMessageDisposable?.dispose()
+    this.autocompleteConfigDisposable?.dispose()
+    this.autocompleteConfigDisposable = watchAutocompleteConfig((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
       const intercepted = await interceptMessage(message, {
         workspaceDir: (sid) => this.getWorkspaceDirectory(sid ?? this.currentSession?.id),
@@ -574,6 +577,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       message = intercepted
 
       await routeSuggestionWebviewMessage(this.questionCtx, message)
+      if (await ModelState.handleMessage(message.type, message, this.client, (msg) => this.postMessage(msg))) return
+      if (await routeAutocompleteMessage(message, (msg) => this.postMessage(msg))) return
       switch (message.type) {
         case "webviewReady":
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
@@ -616,7 +621,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         }
         case "abort":
           this.cancelRetry(message.sessionID ?? "")
-          await this.handleAbort(message.sessionID, parseQueued(message.queuedMessageIDs))
+          await this.handleAbort(message.sessionID)
           break
         case "revertSession":
           this.handleRevertSession(message.sessionID, message.messageID).catch((e) =>
@@ -708,6 +713,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             post: (msg) => this.postMessage(msg),
           })
           break
+        case "forkSession":
+          handleForkSession(this.forkCtx, message.sessionId, message.messageId).catch((e) =>
+            console.error("[Kilo New] handleForkSession failed:", e),
+          )
+          break
+
         case "retryConnection":
           console.log("[Kilo New] KiloProvider: 🔄 Retrying connection...")
           this.initializeConnection().catch((e) =>
@@ -800,23 +811,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             .update("language", message.locale || undefined, vscode.ConfigurationTarget.Global)
           this.connectionService.notifyLanguageChanged(message.locale as string)
           break
-        case "requestAutocompleteSettings":
-          this.sendAutocompleteSettings()
-          break
-        case "updateAutocompleteSetting": {
-          const allowedKeys = new Set([
-            "enableAutoTrigger",
-            "enableSmartInlineTaskKeybinding",
-            "enableChatAutocomplete",
-          ])
-          if (allowedKeys.has(message.key)) {
-            await vscode.workspace
-              .getConfiguration("kilo-code.new.autocomplete")
-              .update(message.key, message.value, vscode.ConfigurationTarget.Global)
-            this.sendAutocompleteSettings()
-          }
-          break
-        }
         case "requestChatCompletion": {
           if (!this.chatAutocomplete) {
             this.chatAutocomplete = new ChatTextAreaAutocomplete(this.connectionService)
@@ -1254,9 +1248,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     return sessionToWebview(session)
   }
 
-  /**
-   * Handle creating a new session.
-   */
   private async handleCreateSession(): Promise<void> {
     if (!this.client) {
       this.postMessage({
@@ -2558,7 +2549,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
   }
 
-  private async handleAbort(sessionID?: string, queuedMessageIDs: string[] = []): Promise<void> {
+  private async handleAbort(sessionID?: string): Promise<void> {
     if (!this.client) {
       return
     }
@@ -2573,7 +2564,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         client: this.client,
         sessionID: targetSessionID,
         dir: this.getWorkspaceDirectory(targetSessionID),
-        queuedMessageIDs,
       })
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to abort session:", error)
@@ -2834,10 +2824,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
 
     // Re-send all settings to the webview so the UI reflects the reset
-    this.sendAutocompleteSettings()
+    this.postMessage(buildAutocompleteSettingsMessage())
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
     this.postMessage({ type: "variantsLoaded", variants: {} })
@@ -3001,21 +2992,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.streams.flush(sessionID)
     this.postMessage(msg)
-  }
-
-  /**
-   * Read autocomplete settings from VS Code configuration and push to the webview.
-   */
-  private sendAutocompleteSettings(): void {
-    const config = vscode.workspace.getConfiguration("kilo-code.new.autocomplete")
-    this.postMessage({
-      type: "autocompleteSettingsLoaded",
-      settings: {
-        enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
-        enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
-        enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
-      },
-    })
   }
 
   /** Wait until the webview has sent "webviewReady". Resolves immediately when already ready. */
@@ -3334,6 +3310,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.viewStateDisposable?.dispose()
     this.visibilityDisposable?.dispose()
     this.webviewMessageDisposable?.dispose()
+    this.autocompleteConfigDisposable?.dispose()
     this.streams.dispose()
     this.isWebviewReady = false
     this.promptRecoveryQueued = false

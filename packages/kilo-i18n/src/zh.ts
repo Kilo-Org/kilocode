@@ -68,4 +68,12 @@ export const dict = {
   "marketplace.warning.cancel": "取消",
   "marketplace.contribute.prompt": "缺少技能、模式或 MCP 服务器？",
   "marketplace.contribute.cta": "在 GitHub 上贡献",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "实现",
+  "plan.followup.question": "准备好实现了吗？",
+  "plan.followup.answer.newSession": "开启新会话",
+  "plan.followup.answer.newSession.description": "在具有干净上下文的新会话中实现",
+  "plan.followup.answer.continue": "在此继续",
+  "plan.followup.answer.continue.description": "在本会话中实现计划",
 }

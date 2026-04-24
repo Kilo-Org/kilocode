@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Fork Session",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Open Terminal",
+  "agentManager.tab.newOptions": "More new-tab options",
+
+  "agentManager.terminal.new": "New Terminal Tab",
+  "agentManager.terminal.ended": "terminal ended — close tab to dismiss",
+  "agentManager.terminal.connectionError": "terminal connection error",
+  "agentManager.terminal.errorTitle": "Terminal error",
 
   "agentManager.setup.failed": "Worktree setup failed",
   "agentManager.setup.settingUp": "Setting up worktree",

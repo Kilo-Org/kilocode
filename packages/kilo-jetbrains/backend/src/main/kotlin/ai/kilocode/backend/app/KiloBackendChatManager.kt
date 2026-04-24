@@ -1,11 +1,17 @@
 package ai.kilocode.backend.app
 
 import ai.kilocode.backend.cli.KiloCliDataParser
-import ai.kilocode.backend.util.KiloLog
+import ai.kilocode.log.ChatLogSummary
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
+import ai.kilocode.rpc.dto.PermissionReplyDto
+import ai.kilocode.rpc.dto.PermissionRequestDto
 import ai.kilocode.rpc.dto.PromptDto
+import ai.kilocode.rpc.dto.QuestionReplyDto
+import ai.kilocode.rpc.dto.QuestionRequestDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,9 +44,20 @@ class KiloBackendChatManager(
             "message.removed",
             "message.part.updated",
             "message.part.delta",
+            "message.part.removed",
             "session.turn.open",
             "session.turn.close",
             "session.error",
+            "session.status",
+            "session.idle",
+            "session.compacted",
+            "session.diff",
+            "permission.asked",
+            "permission.replied",
+            "question.asked",
+            "question.replied",
+            "question.rejected",
+            "todo.updated",
         )
     }
 
@@ -58,12 +75,12 @@ class KiloBackendChatManager(
         watcher = cs.launch {
             sse.collect { event ->
                 if (event.type in CHAT_EVENTS) {
-                    log.debug("SSE chat event: type=${event.type}, data=${event.data.take(2000)}")
                     val parsed = KiloCliDataParser.parseChatEvent(event.type, event.data)
                     if (parsed != null) {
+                        log.debug { ChatLogSummary.event(parsed) }
                         _events.emit(parsed)
                     } else {
-                        log.warn("SSE parse returned null for type=${event.type}")
+                        log.warn("SSE parse returned null for type=${event.type} bytes=${event.data.length}")
                     }
                 }
             }
@@ -82,13 +99,18 @@ class KiloBackendChatManager(
     // ------ prompt ------
 
     fun prompt(id: String, dir: String, prompt: PromptDto) {
-        log.info("prompt: session=$id, dir=$dir, parts=${prompt.parts.size}, agent=${prompt.agent}, model=${prompt.providerID}/${prompt.modelID}")
+        val meta = if (log.isDebugEnabled) {
+            "${ChatLogSummary.dir(dir)} ${ChatLogSummary.prompt(prompt)}"
+        } else {
+            "kind=prompt parts=${prompt.parts.size}"
+        }
+        log.info("${ChatLogSummary.sid(id)} kind=prompt $meta op=prompt_async")
         val http = requireClient()
         val url = requireBase()
 
         val body = KiloCliDataParser.buildPromptJson(prompt)
         val target = "$url/session/$id/prompt_async?directory=${encode(dir)}"
-        log.debug("prompt: POST $target, body=$body")
+        log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.prompt(prompt)} ${ChatLogSummary.dir(dir)} op=prompt_async send=true" }
         val request = Request.Builder()
             .url(target)
             .post(body.toRequestBody(JSON_TYPE))
@@ -100,14 +122,15 @@ class KiloBackendChatManager(
                 if (!response.isSuccessful) {
                     val raw = response.body?.string()
                     log.warn("prompt_async failed: HTTP $code")
-                    log.debug("prompt_async error body: $raw")
+                    raw?.let { log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async error=${ChatLogSummary.body(it)}" } }
                     throw RuntimeException("prompt_async failed: HTTP $code")
                 }
+                log.debug { "${ChatLogSummary.sid(id)} kind=prompt op=prompt_async ok=true code=$code" }
             }
         } catch (e: RuntimeException) {
             throw e
         } catch (e: Exception) {
-            log.warn("prompt: HTTP call threw exception", e)
+            log.warn("${ChatLogSummary.sid(id)} kind=prompt op=prompt_async dir=${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
             throw RuntimeException("prompt_async HTTP call failed: ${e.message}", e)
         }
     }
@@ -115,6 +138,7 @@ class KiloBackendChatManager(
     // ------ abort ------
 
     fun abort(id: String, dir: String) {
+        log.debug { "${ChatLogSummary.sid(id)} kind=abort ${ChatLogSummary.dir(dir)} op=abort send=true" }
         val http = requireClient()
         val url = requireBase()
 
@@ -126,7 +150,9 @@ class KiloBackendChatManager(
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 log.warn("abort failed: HTTP ${response.code}")
+                return
             }
+            log.debug { "${ChatLogSummary.sid(id)} kind=abort op=abort ok=true code=${response.code}" }
         }
     }
 
@@ -135,6 +161,7 @@ class KiloBackendChatManager(
     fun messages(id: String, dir: String): List<MessageWithPartsDto> {
         val http = requireClient()
         val url = requireBase()
+        log.debug { "${ChatLogSummary.sid(id)} kind=history ${ChatLogSummary.dir(dir)} op=messages send=true" }
 
         val request = Request.Builder()
             .url("$url/session/$id/message?directory=${encode(dir)}")
@@ -147,7 +174,9 @@ class KiloBackendChatManager(
                 return emptyList()
             }
             val raw = response.body?.string() ?: return emptyList()
-            KiloCliDataParser.parseMessages(raw)
+            val parsed = KiloCliDataParser.parseMessages(raw)
+            log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(parsed)} op=messages ok=true code=${response.code}" }
+            parsed
         }
     }
 
@@ -174,7 +203,80 @@ class KiloBackendChatManager(
         }
     }
 
+    // ------ permission / question ------
+
+    fun replyPermission(requestId: String, dir: String, reply: PermissionReplyDto) {
+        log.debug { "kind=permission rid=$requestId ${ChatLogSummary.dir(dir)} op=replyPermission reply=${reply.reply} send=true" }
+        val body = KiloCliDataParser.buildPermissionReplyJson(reply)
+        post("/permission/$requestId/reply?directory=${encode(dir)}", body, "replyPermission", "kind=permission rid=$requestId")
+    }
+
+    fun savePermissionRules(requestId: String, dir: String, rules: PermissionAlwaysRulesDto) {
+        log.debug { "kind=permission rid=$requestId ${ChatLogSummary.dir(dir)} op=savePermissionRules approved=${rules.approvedAlways.size} denied=${rules.deniedAlways.size} send=true" }
+        val body = KiloCliDataParser.buildPermissionAlwaysRulesJson(rules)
+        post("/permission/$requestId/always-rules?directory=${encode(dir)}", body, "savePermissionRules", "kind=permission rid=$requestId")
+    }
+
+    fun replyQuestion(requestId: String, dir: String, answers: QuestionReplyDto) {
+        log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=replyQuestion answers=${answers.answers.size} send=true" }
+        val body = KiloCliDataParser.buildQuestionReplyJson(answers)
+        post("/question/$requestId/reply?directory=${encode(dir)}", body, "replyQuestion", "kind=question rid=$requestId")
+    }
+
+    fun rejectQuestion(requestId: String, dir: String) {
+        log.debug { "kind=question rid=$requestId ${ChatLogSummary.dir(dir)} op=rejectQuestion send=true" }
+        post("/question/$requestId/reject?directory=${encode(dir)}", "{}", "rejectQuestion", "kind=question rid=$requestId")
+    }
+
+    fun pendingPermissions(dir: String): List<PermissionRequestDto> {
+        val raw = get("/permission?directory=${encode(dir)}", "pendingPermissions") ?: return emptyList()
+        val parsed = KiloCliDataParser.parsePermissionRequests(raw)
+        log.debug { "kind=permission ${ChatLogSummary.dir(dir)} op=pendingPermissions ok=true count=${parsed.size}" }
+        return parsed
+    }
+
+    fun pendingQuestions(dir: String): List<QuestionRequestDto> {
+        val raw = get("/question?directory=${encode(dir)}", "pendingQuestions") ?: return emptyList()
+        val parsed = KiloCliDataParser.parseQuestionRequests(raw)
+        log.debug { "kind=question ${ChatLogSummary.dir(dir)} op=pendingQuestions ok=true count=${parsed.size}" }
+        return parsed
+    }
+
     // ------ utilities ------
+
+    private fun post(path: String, body: String, op: String, meta: String) {
+        val http = requireClient()
+        val url = requireBase()
+        val request = Request.Builder()
+            .url("$url$path")
+            .post(body.toRequestBody(JSON_TYPE))
+            .build()
+        http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                log.warn("$op failed: HTTP ${response.code}")
+                return
+            }
+            log.debug { "$meta op=$op ok=true code=${response.code}" }
+        }
+    }
+
+    private fun get(path: String, op: String): String? {
+        val http = requireClient()
+        val url = requireBase()
+        val request = Request.Builder()
+            .url("$url$path")
+            .get()
+            .build()
+        return http.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                log.warn("$op failed: HTTP ${response.code}")
+                null
+            } else {
+                log.debug { "op=$op ok=true code=${response.code}" }
+                response.body?.string()
+            }
+        }
+    }
 
     private fun requireClient(): OkHttpClient =
         client ?: throw IllegalStateException("Chat manager not started")

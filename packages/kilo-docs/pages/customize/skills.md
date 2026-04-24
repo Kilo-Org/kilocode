@@ -5,7 +5,7 @@ description: "Extend Kilo Code capabilities with skills"
 
 # Skills
 
-Kilo Code implements [Agent Skills](https://agentskills.io/), a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
+Kilo Code implements [Agent Skills](https://agentskills.io/home), a lightweight, open format for extending AI agent capabilities with specialized knowledge and workflows.
 
 ## What Are Agent Skills?
 
