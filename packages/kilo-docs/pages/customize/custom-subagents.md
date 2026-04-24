@@ -344,6 +344,112 @@ A primary agent that can only delegate to specific subagents:
 }
 ```
 
+## Agent Prompts
+
+Each agent has a **system prompt** that defines its behavior, expertise, and operating guidelines. Understanding how prompts work helps you customize agents effectively.
+
+### How Prompts Are Applied
+
+When an agent runs, its system prompt is composed of:
+
+1. **Agent prompt** (highest priority) — A custom prompt specific to that agent, if defined
+2. **Provider system prompt** (fallback) — A general system prompt selected based on the model provider (Anthropic, OpenAI, Gemini, etc.)
+
+If an agent has no custom prompt defined, it uses the provider system prompt. This is determined in `session/llm.ts`:
+
+```ts
+// use agent prompt otherwise provider prompt
+...(input.agent.prompt ? [input.agent.prompt] : SystemPrompt.provider(input.model)),
+```
+
+### Built-in Agent Prompts
+
+Some built-in agents have dedicated prompt files located at `packages/opencode/src/agent/prompt/`:
+
+| Agent            | Prompt File               | Description                                      |
+| ---------------- | ------------------------- | ------------------------------------------------ |
+| **explore**      | `prompt/explore.txt`      | File search specialist for codebase exploration  |
+| **debug**        | `prompt/debug.txt`        | Systematic debugging methodology                 |
+| **ask**          | `prompt/ask.txt`          | Read-only Q&A — answers without modifying code   |
+| **orchestrator** | `prompt/orchestrator.txt` | Workflow coordination with wave-based delegation |
+
+Other built-in agents like **code** (default) and **plan** have no custom prompt — they use the provider system prompt (e.g., `anthropic.txt`, `default.txt`, `gemini.txt`) located at `packages/opencode/src/session/prompt/`.
+
+### Viewing Built-in Prompts
+
+There is currently no CLI command or UI to display built-in agent prompts. To view them, read the prompt files directly from the source repository:
+
+- Agent-specific prompts: `packages/opencode/src/agent/prompt/*.txt`
+- Provider system prompts: `packages/opencode/src/session/prompt/*.txt`
+
+### Custom Agent Prompts
+
+Custom agents always use their defined prompt (no provider fallback). Define prompts in two ways:
+
+**Inline (JSON config):**
+
+```json
+{
+  "agent": {
+    "code-reviewer": {
+      "prompt": "You are a code reviewer. Focus on security, performance, and maintainability."
+    }
+  }
+}
+```
+
+**External file reference (JSON config):**
+
+```json
+{
+  "agent": {
+    "code-reviewer": {
+      "prompt": "{file:./prompts/code-review.txt}"
+    }
+  }
+}
+```
+
+The `{file:./path}` syntax resolves relative to the config file location, so this works for both global (`~/.config/kilo/`) and project configs.
+
+**Markdown body (preferred for longer prompts):**
+
+When defining agents via markdown files (`.kilo/agents/*.md`), the markdown body becomes the system prompt:
+
+```markdown
+---
+description: Reviews code for quality and best practices
+mode: subagent
+---
+
+You are a code reviewer. Analyze code for:
+
+- Code quality and best practices
+- Potential bugs and edge cases
+- Performance implications
+- Security considerations
+```
+
+### Overriding Built-in Agent Prompts
+
+You can override the prompt of any built-in agent by specifying a `prompt` field in your config:
+
+```json
+{
+  "agent": {
+    "explore": {
+      "prompt": "You are an enhanced file search specialist that also uses codebase_search..."
+    }
+  }
+}
+```
+
+This completely replaces the built-in prompt. The override follows the standard config precedence (project config > global config > built-in defaults).
+
+{% callout type="tip" %}
+When overriding built-in agents, you typically only want to override specific properties (like `prompt` or `model`), not the entire agent definition. Properties are merged — only the fields you specify are overridden.
+{% /callout %}
+
 ## Overriding Built-in Agents
 
 You can customize built-in agents by using their name in your config. For example, to change the model used by the `explore` subagent:
