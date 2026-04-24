@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.2.21",
+  "version": "7.2.22",
   "name": "@opencode-ai/shared",
   "type": "module",
   "license": "MIT",

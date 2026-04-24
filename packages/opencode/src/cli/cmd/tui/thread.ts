@@ -18,6 +18,7 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { TuiConfig } from "./config/tui"
+import { KILO_PROCESS_ROLE, KILO_RUN_ID, ensureRunID, sanitizedProcessEnv } from "@/util/opencode-process"
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -148,11 +149,13 @@ export const TuiThreadCommand = cmd({
         return
       }
       const cwd = Filesystem.resolve(process.cwd())
+      const env = sanitizedProcessEnv({
+        [KILO_PROCESS_ROLE]: "worker",
+        [KILO_RUN_ID]: ensureRunID(),
+      })
 
       const worker = new Worker(file, {
-        env: Object.fromEntries(
-          Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
-        ),
+        env,
       })
       worker.onerror = (e) => {
         Log.Default.error("thread error", {

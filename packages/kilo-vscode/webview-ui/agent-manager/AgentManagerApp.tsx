@@ -85,6 +85,7 @@ import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { validateLocalSession, nextSelectionAfterDelete, adjacentHint, restoreLocalSessions, LOCAL } from "./navigate"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
+import { createTabOrderSync } from "./tab-order-sync"
 import { ConstrainDragYAxis } from "./sortable-tab"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -667,17 +668,24 @@ const AgentManagerContent: Component = () => {
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false
 
-  /** Append an id to `worktreeTabOrder[key]` and persist server-side.
-   *  Keeps new sessions/terminals at the right end of the tab bar
-   *  instead of slipping in front of already-rendered tabs via
-   *  tabIds()'s `[...sessions, review, ...terminals]` base order. */
-  const appendToTabOrder = (key: string, id: string) => {
-    const current = worktreeTabOrder()[key] ?? []
-    if (current.includes(id)) return
-    const next = [...current, id]
-    setWorktreeTabOrder((prev) => ({ ...prev, [key]: next }))
-    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: next })
+  // Pin new tabs at the tail (see tab-order-sync); strip ephemeral ids so agent-manager.json stays clean.
+  const persistTabOrder = (key: string, order: string[]) => {
+    const durable = order.filter((id) => id !== REVIEW_TAB_ID && !isTerminalTabId(id))
+    vscode.postMessage({ type: "agentManager.setTabOrder", key, order: durable })
   }
+  const tabOrderSync = createTabOrderSync({
+    LOCAL,
+    REVIEW_TAB_ID,
+    order: worktreeTabOrder,
+    setOrder: setWorktreeTabOrder,
+    persist: persistTabOrder,
+    localSessionIDs,
+    sessions: session.sessions,
+    managedSessions,
+    reviewOpenByContext,
+    terminalIdsFor: (key) => terms.forSelection(key).map((t) => t.id),
+  })
+  const appendToTabOrder = tabOrderSync.append
 
   const addPendingTab = () => {
     const id = `${PENDING_PREFIX}${++pendingCounter}`
@@ -1164,9 +1172,8 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
-    // When a session is created, add it as a local tab. This handles both direct
-    // creation from the prompt input and backend-created follow-up sessions (plan
-    // follow-up "Start new session"). Guard against duplicates (HTTP + SSE can both fire).
+    // Add created sessions as local tabs (both direct from the prompt and
+    // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as { type: string; session: { id: string } }
@@ -1175,10 +1182,12 @@ const AgentManagerContent: Component = () => {
       const pending = selection() === LOCAL ? activePendingId() : undefined
       if (pending) {
         setLocalSessionIDs((prev) => prev.map((id) => (id === pending ? created.session.id : id)))
+        tabOrderSync.replaceOrAppend(LOCAL, pending, created.session.id)
         setActivePendingId(undefined)
       } else {
         saveTabMemory()
         setLocalSessionIDs((prev) => [...prev, created.session.id])
+        tabOrderSync.append(LOCAL, created.session.id)
         setSelection(LOCAL)
       }
       vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
@@ -1196,8 +1205,7 @@ const AgentManagerContent: Component = () => {
       setRunStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev }))
     })
 
-    // Terminal messages live in their own subscription to keep the main
-    // message handler's cyclomatic complexity under the lint cap.
+    // Terminal messages have their own subscription to keep main-handler complexity in check.
     const terminalDispatch = createTerminalMessageHandler({
       state: terms,
       activate: termHandlers.activate,
@@ -1257,12 +1265,14 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.sessionAdded") {
         const ev = msg as { type: string; sessionId: string; worktreeId: string }
         saveTabMemory()
+        appendToTabOrder(ev.worktreeId, ev.sessionId)
         setSelection(ev.worktreeId)
         session.selectSession(ev.sessionId)
       }
 
       if (msg.type === "agentManager.sessionForked") {
         const ev = msg as { type: string; sessionId: string; forkedFromId: string; worktreeId?: string }
+        tabOrderSync.insertAfter(ev.worktreeId, ev.forkedFromId, ev.sessionId)
         if (!ev.worktreeId) {
           // Local session: insert new tab after the forked-from tab
           setLocalSessionIDs((prev) => {
@@ -2075,18 +2085,18 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel === null) return
     const key = sel === LOCAL ? LOCAL : sel
-    // Persist the full mixed order. Terminal IDs are ephemeral; on
-    // reload their PTYs are gone and `applyTabOrder` filters them out.
     const order = worktreeTabOrder()[key]
-    if (order && order.length > 0) {
-      vscode.postMessage({ type: "agentManager.setTabOrder", key, order })
-    }
+    if (order && order.length > 0) persistTabOrder(key, order)
   }
 
   const draggedTab = createMemo(() => {
     const id = draggingTab()
     if (!id) return undefined
     if (id === REVIEW_TAB_ID) return { id, title: t("session.tab.review") }
+    if (isTerminalTabId(id)) {
+      const term = terms.lookup().get(id)
+      return term ? { id, title: term.title } : undefined
+    }
     return activeTabs().find((s) => s.id === id)
   })
 

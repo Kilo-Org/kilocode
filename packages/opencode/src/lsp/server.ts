@@ -6,7 +6,7 @@ import { Log } from "../util"
 import { text } from "node:stream/consumers"
 import fs from "fs/promises"
 import { Filesystem } from "../util"
-import { Instance } from "../project/instance"
+import type { InstanceContext } from "../project/instance"
 import { Flag } from "../flag/flag"
 import { Archive } from "../util"
 import { Process } from "../util"
@@ -30,15 +30,15 @@ export interface Handle {
   initialization?: Record<string, any>
 }
 
-type RootFunction = (file: string) => Promise<string | undefined>
+type RootFunction = (file: string, ctx: InstanceContext) => Promise<string | undefined>
 
 const NearestRoot = (includePatterns: string[], excludePatterns?: string[]): RootFunction => {
-  return async (file) => {
+  return async (file, ctx) => {
     if (excludePatterns) {
       const excludedFiles = Filesystem.up({
         targets: excludePatterns,
         start: path.dirname(file),
-        stop: Instance.directory,
+        stop: ctx.directory,
       })
       const excluded = await excludedFiles.next()
       await excludedFiles.return()
@@ -47,11 +47,11 @@ const NearestRoot = (includePatterns: string[], excludePatterns?: string[]): Roo
     const files = Filesystem.up({
       targets: includePatterns,
       start: path.dirname(file),
-      stop: Instance.directory,
+      stop: ctx.directory,
     })
     const first = await files.next()
     await files.return()
-    if (!first.value) return Instance.directory
+    if (!first.value) return ctx.directory
     return path.dirname(first.value)
   }
 }
@@ -61,16 +61,16 @@ export interface Info {
   extensions: string[]
   global?: boolean
   root: RootFunction
-  spawn(root: string): Promise<Handle | undefined>
+  spawn(root: string, ctx: InstanceContext): Promise<Handle | undefined>
 }
 
 export const Deno: Info = {
   id: "deno",
-  root: async (file) => {
+  root: async (file, ctx) => {
     const files = Filesystem.up({
       targets: ["deno.json", "deno.jsonc"],
       start: path.dirname(file),
-      stop: Instance.directory,
+      stop: ctx.directory,
     })
     const first = await files.next()
     await files.return()
@@ -152,8 +152,8 @@ export const ESLint: Info = {
   id: "eslint",
   root: NearestRoot(["package-lock.json", "bun.lockb", "bun.lock", "pnpm-lock.yaml", "yarn.lock"]),
   extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".vue"],
-  async spawn(root) {
-    const eslint = Module.resolve("eslint", Instance.directory)
+  async spawn(root, ctx) {
+    const eslint = Module.resolve("eslint", ctx.directory)
     if (!eslint) return
     log.info("spawning eslint server")
     const serverPath = path.join(Global.Path.bin, "vscode-eslint", "server", "out", "eslintServer.js")
@@ -217,7 +217,7 @@ export const Oxlint: Info = {
     "package.json",
   ]),
   extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts", ".vue", ".astro", ".svelte"],
-  async spawn(root) {
+  async spawn(root, ctx) {
     const ext = process.platform === "win32" ? ".cmd" : ""
 
     const serverTarget = path.join("node_modules", ".bin", "oxc_language_server" + ext)
@@ -230,7 +230,7 @@ export const Oxlint: Info = {
       const candidates = Filesystem.up({
         targets: [target],
         start: root,
-        stop: Instance.worktree,
+        stop: ctx.worktree,
       })
       const first = await candidates.next()
       await candidates.return()
@@ -342,10 +342,10 @@ export const Biome: Info = {
 
 export const Gopls: Info = {
   id: "gopls",
-  root: async (file) => {
-    const work = await NearestRoot(["go.work"])(file)
+  root: async (file, ctx) => {
+    const work = await NearestRoot(["go.work"])(file, ctx)
     if (work) return work
-    return NearestRoot(["go.mod", "go.sum"])(file)
+    return NearestRoot(["go.mod", "go.sum"])(file, ctx)
   },
   extensions: [".go"],
   async spawn(root) {
@@ -808,8 +808,8 @@ export const SourceKit: Info = {
 
 export const RustAnalyzer: Info = {
   id: "rust",
-  root: async (root) => {
-    const crateRoot = await NearestRoot(["Cargo.toml", "Cargo.lock"])(root)
+  root: async (file, ctx) => {
+    const crateRoot = await NearestRoot(["Cargo.toml", "Cargo.lock"])(file, ctx)
     if (crateRoot === undefined) {
       return undefined
     }
@@ -832,7 +832,7 @@ export const RustAnalyzer: Info = {
       currentDir = parentDir
 
       // Stop if we've gone above the app root
-      if (!currentDir.startsWith(Instance.worktree)) break
+      if (!currentDir.startsWith(ctx.worktree)) break
     }
 
     return crateRoot
@@ -1029,8 +1029,8 @@ export const Astro: Info = {
   id: "astro",
   extensions: [".astro"],
   root: NearestRoot(["package-lock.json", "bun.lockb", "bun.lock", "pnpm-lock.yaml", "yarn.lock"]),
-  async spawn(root) {
-    const tsserver = Module.resolve("typescript/lib/tsserver.js", Instance.directory)
+  async spawn(root, ctx) {
+    const tsserver = Module.resolve("typescript/lib/tsserver.js", ctx.directory)
     if (!tsserver) {
       log.info("typescript not found, required for Astro language server")
       return
@@ -1065,7 +1065,7 @@ export const Astro: Info = {
 
 export const JDTLS: Info = {
   id: "jdtls",
-  root: async (file) => {
+  root: async (file, ctx) => {
     // Without exclusions, NearestRoot defaults to instance directory so we can't
     // distinguish between a) no project found and b) project found at instance dir.
     // So we can't choose the root from (potential) monorepo markers first.
@@ -1075,12 +1075,12 @@ export const JDTLS: Info = {
     const exclusionsForMonorepos = gradleMarkers.concat(settingsMarkers)
 
     const [projectRoot, wrapperRoot, settingsRoot] = await Promise.all([
-      NearestRoot(
-        ["pom.xml", "build.gradle", "build.gradle.kts", ".project", ".classpath"],
-        exclusionsForMonorepos,
-      )(file),
-      NearestRoot(gradleMarkers, settingsMarkers)(file),
-      NearestRoot(settingsMarkers)(file),
+      NearestRoot(["pom.xml", "build.gradle", "build.gradle.kts", ".project", ".classpath"], exclusionsForMonorepos)(
+        file,
+        ctx,
+      ),
+      NearestRoot(gradleMarkers, settingsMarkers)(file, ctx),
+      NearestRoot(settingsMarkers)(file, ctx),
     ])
 
     // If projectRoot is undefined we know we are in a monorepo or no project at all.
@@ -1188,18 +1188,18 @@ export const JDTLS: Info = {
 export const KotlinLS: Info = {
   id: "kotlin-ls",
   extensions: [".kt", ".kts"],
-  root: async (file) => {
+  root: async (file, ctx) => {
     // 1) Nearest Gradle root (multi-project or included build)
-    const settingsRoot = await NearestRoot(["settings.gradle.kts", "settings.gradle"])(file)
+    const settingsRoot = await NearestRoot(["settings.gradle.kts", "settings.gradle"])(file, ctx)
     if (settingsRoot) return settingsRoot
     // 2) Gradle wrapper (strong root signal)
-    const wrapperRoot = await NearestRoot(["gradlew", "gradlew.bat"])(file)
+    const wrapperRoot = await NearestRoot(["gradlew", "gradlew.bat"])(file, ctx)
     if (wrapperRoot) return wrapperRoot
     // 3) Single-project or module-level build
-    const buildRoot = await NearestRoot(["build.gradle.kts", "build.gradle"])(file)
+    const buildRoot = await NearestRoot(["build.gradle.kts", "build.gradle"])(file, ctx)
     if (buildRoot) return buildRoot
     // 4) Maven fallback
-    return NearestRoot(["pom.xml"])(file)
+    return NearestRoot(["pom.xml"])(file, ctx)
   },
   async spawn(root) {
     const distPath = path.join(Global.Path.bin, "kotlin-ls")
@@ -1538,7 +1538,7 @@ export const Ocaml: Info = {
 export const BashLS: Info = {
   id: "bash",
   extensions: [".sh", ".bash", ".zsh", ".ksh"],
-  root: async () => Instance.directory,
+  root: async (_file, ctx) => ctx.directory,
   async spawn(root) {
     let binary = which("bash-language-server")
     const args: string[] = []
@@ -1733,7 +1733,7 @@ export const TexLab: Info = {
 export const DockerfileLS: Info = {
   id: "dockerfile",
   extensions: [".dockerfile", "Dockerfile"],
-  root: async () => Instance.directory,
+  root: async (_file, ctx) => ctx.directory,
   async spawn(root) {
     let binary = which("docker-langserver")
     const args: string[] = []
@@ -1798,16 +1798,16 @@ export const Clojure: Info = {
 export const Nixd: Info = {
   id: "nixd",
   extensions: [".nix"],
-  root: async (file) => {
+  root: async (file, ctx) => {
     // First, look for flake.nix - the most reliable Nix project root indicator
-    const flakeRoot = await NearestRoot(["flake.nix"])(file)
-    if (flakeRoot && flakeRoot !== Instance.directory) return flakeRoot
+    const flakeRoot = await NearestRoot(["flake.nix"])(file, ctx)
+    if (flakeRoot && flakeRoot !== ctx.directory) return flakeRoot
 
     // If no flake.nix, fall back to git repository root
-    if (Instance.worktree && Instance.worktree !== Instance.directory) return Instance.worktree
+    if (ctx.worktree && ctx.worktree !== ctx.directory) return ctx.worktree
 
     // Finally, use the instance directory as fallback
-    return Instance.directory
+    return ctx.directory
   },
   async spawn(root) {
     const nixd = which("nixd")

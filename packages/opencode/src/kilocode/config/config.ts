@@ -3,6 +3,7 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import z from "zod"
+import { Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import { Log } from "../../util"
@@ -27,17 +28,14 @@ export namespace KilocodeConfig {
   // ── Config schema extensions ─────────────────────────────────────────
 
   /** Schema for AI-generated commit message configuration. */
-  export const CommitMessageSchema = z
-    .object({
-      prompt: z
-        .string()
-        .optional()
-        .describe(
+  export const CommitMessageSchema = Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.String).annotate({
+        description:
           "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
-        ),
-    })
-    .optional()
-    .describe("Configuration for AI-generated commit messages")
+      }),
+    }),
+  ).annotate({ description: "Configuration for AI-generated commit messages" })
 
   // ── Config file constants ────────────────────────────────────────────
 

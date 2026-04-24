@@ -2998,12 +2998,14 @@ describe("ProviderTransform.variants", () => {
         reasoningConfig: {
           type: "adaptive",
           maxReasoningEffort: "xhigh",
+          display: "summarized",
         },
       })
       expect(result.max).toEqual({
         reasoningConfig: {
           type: "adaptive",
           maxReasoningEffort: "max",
+          display: "summarized",
         },
       })
     })

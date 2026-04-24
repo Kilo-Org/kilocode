@@ -42,7 +42,11 @@ export interface FileMention {
   addPaths: (paths: string[], cwd: string) => void
 }
 
-export function useFileMention(vscode: VSCodeContext, sessionID?: Accessor<string | undefined>): FileMention {
+export function useFileMention(
+  vscode: VSCodeContext,
+  sessionID?: Accessor<string | undefined>,
+  git?: Accessor<boolean>,
+): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
@@ -63,7 +67,7 @@ export function useFileMention(vscode: VSCodeContext, sessionID?: Accessor<strin
     if (message.requestId === `file-search-${fileSearchCounter}`) {
       const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
       workspaceDir = message.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", items))
+      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
       setMentionIndex(0)
     }
   })
@@ -129,7 +133,7 @@ export function useFileMention(vscode: VSCodeContext, sessionID?: Accessor<strin
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
-      setMentionResults(buildMentionResults(query, []))
+      setMentionResults(buildMentionResults(query, [], git?.() ?? true))
       requestFileSearch(query)
     } else {
       closeMention()

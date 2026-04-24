@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 7.2.22
+
+### Patch Changes
+
+- [#9455](https://github.com/Kilo-Org/kilocode/pull/9455) [`567ca0d`](https://github.com/Kilo-Org/kilocode/commit/567ca0d34178a6a896aa58c10cc946565c116d4e) - Fix a 1-2 second startup delay before home content (agents, news, tips) appears in the TUI.
+
+- [#9425](https://github.com/Kilo-Org/kilocode/pull/9425) [`6ee160f`](https://github.com/Kilo-Org/kilocode/commit/6ee160f89c10293d635990798779988d34b092b4) - Preserve typed text in the main prompt when a blocking question, suggestion, permission, or network overlay is shown and then dismissed.
+
 ## 7.2.21
 
 ### Minor Changes

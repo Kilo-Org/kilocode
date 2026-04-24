@@ -717,7 +717,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       return input.partID
     })
 
-    const updatePartDelta = Effect.fn("Session.updatePartDelta")(function* (input: {
+    const updatePartDelta = Effect.fnUntraced(function* (input: {
       sessionID: SessionID
       messageID: MessageID
       partID: PartID
@@ -780,7 +780,6 @@ export function* list(input?: {
   if (input?.workspaceID) {
     conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
   }
-
   // kilocode_change start - directory filtering handled by KiloSession.filters above
   // if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
   //   if (input?.directory) {

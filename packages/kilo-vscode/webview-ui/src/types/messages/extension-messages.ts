@@ -338,6 +338,19 @@ export interface TerminalContextErrorMessage {
   error: string
 }
 
+export interface GitChangesContextResultMessage {
+  type: "gitChangesContextResult"
+  requestId: string
+  content: string
+  truncated?: boolean
+}
+
+export interface GitChangesContextErrorMessage {
+  type: "gitChangesContextError"
+  requestId: string
+  error: string
+}
+
 export interface QuestionRequestMessage {
   type: "questionRequest"
   question: QuestionRequest
@@ -823,6 +836,8 @@ export type ExtensionMessage =
   | FileSearchResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
+  | GitChangesContextResultMessage
+  | GitChangesContextErrorMessage
   | QuestionRequestMessage
   | QuestionResolvedMessage
   | QuestionErrorMessage

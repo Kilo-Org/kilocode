@@ -7,7 +7,6 @@ import { Hono } from "hono"
 import { describeRoute, resolver, validator, openAPIRouteHandler } from "hono-openapi"
 import z from "zod"
 import { errors } from "../../error"
-import { WorkspaceRoutes } from "./workspace"
 import * as KiloServer from "@/kilocode/server/server" // kilocode_change
 
 export function ControlPlaneRoutes(): Hono {
@@ -161,5 +160,4 @@ export function ControlPlaneRoutes(): Hono {
         return c.json(true)
       },
     )
-    .route("/experimental/workspace", WorkspaceRoutes())
 }

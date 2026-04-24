@@ -6,7 +6,9 @@ import { Cause, Context, Effect, Layer, Queue, Stream } from "effect"
 import { ripgrep } from "ripgrep"
 import { Filesystem } from "@/util"
 import { Log } from "@/util"
+import { sanitizedProcessEnv } from "@/util/opencode-process"
 import { KiloRipgrepStream } from "../kilocode/kilo-ripgrep-stream" // kilocode_change - UTF-8 safe stream decoder shared with worker
+
 const log = Log.create({ service: "ripgrep" })
 
 const Stats = z.object({
@@ -156,9 +158,7 @@ type WorkerError = {
 }
 
 function env() {
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter((item): item is [string, string] => item[1] !== undefined),
-  )
+  const env = sanitizedProcessEnv()
   delete env.RIPGREP_CONFIG_PATH
   return env
 }

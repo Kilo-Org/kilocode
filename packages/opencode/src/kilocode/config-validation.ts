@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import path from "path"
 import { type ParseError, parse, printParseErrorCode } from "jsonc-parser"
+import { Schema } from "effect"
 import { ConfigProtection } from "./permission/config-paths"
 import { ConfigMarkdown } from "@/config"
 import { Config } from "@/config"
@@ -72,14 +73,36 @@ export namespace ConfigValidation {
     const config =
       schema === "command" ? { ...md.data, template: md.content.trim() } : { ...md.data, prompt: md.content.trim() }
 
-    const zod = schema === "command" ? ConfigCommand.Info : ConfigAgent.Info
-    const result = zod.safeParse(config)
-    if (!result.success) {
-      const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
-      return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+    if (schema === "command") {
+      const issues = validateEffectSchema(ConfigCommand.Info, config)
+      if (issues) {
+        return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+      }
+    } else {
+      const result = ConfigAgent.Info.safeParse(config)
+      if (!result.success) {
+        const issues = result.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n")
+        return `\n\n<config_validation>\nWARNING: Configuration is invalid at ${label(filepath)}\n${issues}\n</config_validation>`
+      }
     }
 
     return `\n\n<config_validation>\nConfig file validated successfully.\n</config_validation>`
+  }
+
+  function validateEffectSchema<S extends Schema.Decoder<unknown>>(schema: S, input: unknown): string | undefined {
+    const std = Schema.toStandardSchemaV1(schema)["~standard"]
+    const outcome = std.validate(input)
+    // validate may return a Promise only when async rules exist; our schemas are sync.
+    if (outcome instanceof Promise) {
+      throw new Error("Unexpected async validation in ConfigValidation.validateEffectSchema")
+    }
+    if (!("issues" in outcome) || !outcome.issues) return undefined
+    return outcome.issues
+      .map(
+        (i) =>
+          `  ${(i.path ?? []).map((p) => (typeof p === "object" && p !== null ? p.key : p)).join(".")}: ${i.message}`,
+      )
+      .join("\n")
   }
 
   function isConfig(filepath: string): boolean {

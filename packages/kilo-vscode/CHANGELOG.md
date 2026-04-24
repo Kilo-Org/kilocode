@@ -1,5 +1,11 @@
 # kilo-code
 
+## 7.2.22
+
+### Patch Changes
+
+- [#9444](https://github.com/Kilo-Org/kilocode/pull/9444) [`35f13cb`](https://github.com/Kilo-Org/kilocode/commit/35f13cbc8678f80cf6870c233f74f47b028bf705) - Fix restoring and paginating very long VS Code sessions.
+
 ## 7.2.21
 
 ### Minor Changes

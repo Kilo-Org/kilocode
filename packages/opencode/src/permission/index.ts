@@ -503,7 +503,7 @@ export function toConfig(rules: Ruleset): ConfigPermission.Info {
       result[rule.permission] = { "*": existing, [rule.pattern]: rule.action }
       continue
     }
-    existing[rule.pattern] = rule.action
+    result[rule.permission] = { ...existing, [rule.pattern]: rule.action }
   }
   return result
 }

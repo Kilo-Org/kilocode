@@ -128,7 +128,7 @@ export const layer: Layer.Layer<
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
-      const slog = log.clone().tag("sessionID", input.sessionID).tag("messageID", input.assistantMessage.id)
+      const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
 
       const parse = (e: unknown) =>
         MessageV2.fromError(e, {
@@ -224,7 +224,7 @@ export const layer: Layer.Layer<
         return true
       })
 
-      const handleEvent = Effect.fn("SessionProcessor.handleEvent")(function* (value: StreamEvent) {
+      const handleEvent = Effect.fnUntraced(function* (value: StreamEvent) {
         switch (value.type) {
           case "start":
             yield* status.set(ctx.sessionID, { type: "busy" })

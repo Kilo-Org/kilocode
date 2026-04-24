@@ -293,6 +293,13 @@ export interface RequestTerminalContextMessage {
   sessionID?: string
 }
 
+export interface RequestGitChangesContextMessage {
+  type: "requestGitChangesContext"
+  requestId: string
+  sessionID?: string
+  agentManagerContext?: string
+}
+
 export interface ChatCompletionAcceptedMessage {
   type: "chatCompletionAccepted"
   suggestionLength?: number
@@ -926,6 +933,7 @@ export type WebviewMessage =
   | RequestChatCompletionMessage
   | RequestFileSearchMessage
   | RequestTerminalContextMessage
+  | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage

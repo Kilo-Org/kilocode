@@ -22,7 +22,9 @@ import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
+import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
+import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
@@ -65,11 +67,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(
-    vscode,
-    () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID(),
-  )
+  const sid = () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID() ?? undefined
+  const ctx = () => {
+    const id = props.boxId
+    if (!id || !id.startsWith("agent-manager:")) return undefined
+    const rest = id.slice("agent-manager:".length)
+    return rest === "unassigned" ? undefined : rest
+  }
+  const hasGit = () => server.gitInstalled()
+  const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
+  const git = useGitChangesContext(vscode, ctx, hasGit)
   const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
@@ -277,13 +285,14 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
     if (hasTerminalMention(text())) paths.add("terminal")
+    if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
   }
   const placeholder = () => {
@@ -614,21 +623,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || git.pending() || props.blocked?.())
+      return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const sel = session.selected()
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
-    const sid = session.currentSessionID()
+    const id = sid()
 
-    const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {
+    const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
       return undefined
     })
     if (hasTerminalMention(message) && !terminalFile) return
 
-    const allFiles = [...mentionFiles, ...imgFiles, ...(terminalFile ? [terminalFile] : [])]
+    const gitFile = await git.resolveAttachment(message, id).catch((err: Error) => {
+      showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
+      return undefined
+    })
+    if (hasGit() && hasGitChangesMention(message) && !gitFile) return
+
+    const allFiles = [
+      ...mentionFiles,
+      ...imgFiles,
+      ...(terminalFile ? [terminalFile] : []),
+      ...(gitFile ? [gitFile] : []),
+    ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     const key = draftKey()
@@ -733,6 +754,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   {item.type === "terminal" ? (
                     <>
                       <Icon name="console" class="file-mention-icon" />
+                      <span class="file-mention-name">{item.label}</span>
+                      <span class="file-mention-dir">{item.description}</span>
+                    </>
+                  ) : item.type === "git-changes" ? (
+                    <>
+                      <Icon name="branch" class="file-mention-icon" />
                       <span class="file-mention-name">{item.label}</span>
                       <span class="file-mention-dir">{item.description}</span>
                     </>

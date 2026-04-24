@@ -83,7 +83,7 @@ const live: Layer.Layer<
         .clone()
         .tag("providerID", input.model.providerID)
         .tag("modelID", input.model.id)
-        .tag("sessionID", input.sessionID)
+        .tag("session.id", input.sessionID)
         .tag("small", (input.small ?? false).toString())
         .tag("agent", input.agent.name)
         .tag("mode", input.agent.mode)
@@ -340,6 +340,18 @@ const live: Layer.Layer<
 
       const tracer = cfg.experimental?.openTelemetry
         ? Option.getOrUndefined(yield* Effect.serviceOption(OtelTracer.OtelTracer))
+        : undefined
+      const telemetryTracer = tracer
+        ? new Proxy(tracer, {
+            get(target, prop, receiver) {
+              if (prop !== "startSpan") return Reflect.get(target, prop, receiver)
+              return (...args: Parameters<typeof target.startSpan>) => {
+                const span = target.startSpan(...args)
+                span.setAttribute("session.id", input.sessionID)
+                return span
+              }
+            },
+          })
         : undefined
 
       return streamText({

@@ -288,11 +288,12 @@ export function Titlebar() {
                 </div>
               </Show>
               <div id="opencode-titlebar-left" class="flex items-center gap-3 min-w-0 px-2" />
-              {import.meta.env.VITE_KILO_CHANNEL && ["beta", "dev"].includes(import.meta.env.VITE_KILO_CHANNEL) && ( // kilocode_change
-                <div class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono">
-                  {import.meta.env.VITE_KILO_CHANNEL.toUpperCase()}
-                </div>
-              )}
+              {import.meta.env.VITE_KILO_CHANNEL &&
+                ["beta", "dev"].includes(import.meta.env.VITE_KILO_CHANNEL) && ( // kilocode_change
+                  <div class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono">
+                    {import.meta.env.VITE_KILO_CHANNEL.toUpperCase()}
+                  </div>
+                )}
             </div>
           </div>
         </div>
