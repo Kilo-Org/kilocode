@@ -647,9 +647,10 @@ export const layer = Layer.effect(
 
         const deps: Fiber.Fiber<void, never>[] = []
 
+        // kilocode_change start
         for (const dir of unique(directories)) {
           // kilocode_change
-          // kilocode_change start
+          // kilocode_change
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
@@ -870,8 +871,8 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const update = Effect.fn("Config.update")(function* (config: Info) {
-      const dir = yield* InstanceState.directory
       // kilocode_change start - target a project config file that is actually loaded.
+      const dir = yield* InstanceState.directory
       // Prefer .kilo/ subdir (docs' recommended "cleaner setup", and matches the
       // marketplace installer's convention), then fall back to workspace root, and
       // finally create .kilo/kilo.json. Previously wrote to config.json, which is

@@ -853,6 +853,8 @@ Hello from new command`,
   })
 })
 
+// kilocode_change start
+
 test("updates config and writes to .kilo/kilo.json", async () => {
   await using tmp = await tmpdir()
   await Instance.provide({
@@ -911,6 +913,8 @@ test("updates ancestor project config from nested directory", async () => {
     },
   })
 })
+
+// kilocode_change end
 
 test("gets config directories", async () => {
   await using tmp = await tmpdir()
