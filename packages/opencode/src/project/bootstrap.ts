@@ -11,6 +11,7 @@ import { Instance } from "./instance"
 import { Log } from "@/util/log"
 import { FileWatcher } from "@/file/watcher"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
+import * as SleepInhibitorSubscribe from "@/kilocode/sleep-inhibitor/subscribe" // kilocode_change
 import * as Effect from "effect/Effect"
 
 export const InstanceBootstrap = Effect.gen(function* () {
@@ -18,6 +19,7 @@ export const InstanceBootstrap = Effect.gen(function* () {
   yield* Plugin.Service.use((svc) => svc.init())
   // kilocode_change start - bootstrap Kilo session ingest/remote subscriptions instead of ShareNext
   yield* Effect.promise(() => KiloSessions.init()).pipe(Effect.forkDetach)
+  yield* Effect.promise(() => SleepInhibitorSubscribe.init()).pipe(Effect.forkDetach)
   yield* Effect.all(
     [LSP.Service, Format.Service, File.Service, FileWatcher.Service, Vcs.Service, Snapshot.Service].map((s) =>
       Effect.forkDetach(s.use((i) => i.init())),

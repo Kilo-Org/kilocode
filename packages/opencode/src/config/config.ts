@@ -982,6 +982,14 @@ export namespace Config {
         .boolean()
         .optional()
         .describe("Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup."),
+      prevent_idle_sleep: z
+        .boolean()
+        .optional()
+        .describe(
+          "Prevent the system from sleeping while a turn is running. " +
+            "macOS uses IOKit power assertions, Windows uses PowerCreateRequest, " +
+            "Linux uses systemd-inhibit. Defaults to true.",
+        ),
       // kilocode_change end
       autoupdate: z
         .union([z.boolean(), z.literal("notify")])
