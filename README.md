@@ -12,6 +12,8 @@
 
 > Kilo is the all-in-one agentic engineering platform. Build, ship, and iterate faster with the most popular open source coding agent.
 
+<!-- Contributor PR sidebar visibility test. -->
+
 - ✨ Generate code from natural language
 - ✅ Checks its own work
 - 🧪 Run terminal commands
