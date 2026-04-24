@@ -1,18 +1,18 @@
 import z from "zod"
 import { Effect, Scope } from "effect"
-import { createReadStream } from "fs"
 import { open } from "fs/promises"
 import * as path from "path"
+import { Readable } from "stream" // kilocode_change
 import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { LSP } from "../lsp"
-import { FileTime } from "../file/time"
 import DESCRIPTION from "./read.txt"
 import { Instance } from "../project/instance"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
 // kilocode_change start
+import { Encoding } from "../kilocode/encoding"
 import { readDirectoryFiles } from "../kilocode/tool/read-directory"
 // kilocode_change end
 
@@ -34,7 +34,6 @@ export const ReadTool = Tool.define(
     const fs = yield* AppFileSystem.Service
     const instruction = yield* Instruction.Service
     const lsp = yield* LSP.Service
-    const time = yield* FileTime.Service
     const scope = yield* Scope.Scope
 
     const miss = Effect.fn("ReadTool.miss")(function* (filepath: string) {
@@ -78,9 +77,8 @@ export const ReadTool = Tool.define(
       ).pipe(Effect.map((items: string[]) => items.sort((a, b) => a.localeCompare(b))))
     })
 
-    const warm = Effect.fn("ReadTool.warm")(function* (filepath: string, sessionID: Tool.Context["sessionID"]) {
+    const warm = Effect.fn("ReadTool.warm")(function* (filepath: string) {
       yield* lsp.touchFile(filepath, false).pipe(Effect.ignore, Effect.forkIn(scope))
-      yield* time.read(sessionID, filepath)
     })
 
     const run = Effect.fn("ReadTool.execute")(function* (params: z.infer<typeof parameters>, ctx: Tool.Context) {
@@ -209,7 +207,7 @@ export const ReadTool = Tool.define(
       }
       output += "\n</content>"
 
-      yield* warm(filepath, ctx.sessionID)
+      yield* warm(filepath)
 
       if (loaded.length > 0) {
         output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
@@ -237,7 +235,10 @@ export const ReadTool = Tool.define(
 // kilocode_change start
 export async function lines(filepath: string, opts: { limit: number; offset: number }) {
   // kilocode_change end
-  const stream = createReadStream(filepath, { encoding: "utf8" })
+  // kilocode_change start - decode with detected encoding; replaces createReadStream(filepath, { encoding: "utf8" })
+  const encoded = await Encoding.read(filepath)
+  const stream = Readable.from([encoded.text])
+  // kilocode_change end
   const rl = createInterface({
     input: stream,
     // Note: we use the crlfDelay option to recognize all instances of CR LF
@@ -327,6 +328,10 @@ export async function isBinaryFile(filepath: string, fileSize: number): Promise<
     const bytes = Buffer.alloc(sampleSize)
     const result = await fh.read(bytes, 0, sampleSize, 0)
     if (result.bytesRead === 0) return false
+
+    // kilocode_change start - UTF-16 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
+    if (Encoding.hasUtf16Bom(bytes, result.bytesRead)) return false
+    // kilocode_change end
 
     let nonPrintableCount = 0
     for (let i = 0; i < result.bytesRead; i++) {

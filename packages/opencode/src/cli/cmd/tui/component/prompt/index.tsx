@@ -1,4 +1,4 @@
-import { BoxRenderable, TextareaRenderable, MouseEvent, PasteEvent, decodePasteBytes } from "@opentui/core"
+import { BoxRenderable, RGBA, TextareaRenderable, MouseEvent, PasteEvent, decodePasteBytes } from "@opentui/core"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
 import "opentui-spinner/solid"
 import path from "path"
@@ -12,7 +12,7 @@ import { useRoute } from "@tui/context/route"
 import { useSync } from "@tui/context/sync"
 import { useEvent } from "@tui/context/event"
 import { MessageID, PartID } from "@/session/schema"
-import { createStore, produce } from "solid-js/store"
+import { createStore, produce, unwrap } from "solid-js/store"
 import { useKeybind } from "@tui/context/keybind"
 import { usePromptHistory, type PromptInfo } from "./history"
 import { assign } from "./part"
@@ -35,6 +35,7 @@ import { DialogProvider as DialogProviderConnect } from "../dialog-provider"
 import { DialogAlert } from "../../ui/dialog-alert"
 import { useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv"
+import { createFadeIn } from "../../util/signal"
 import { useTextareaKeybindings } from "../textarea-keybindings"
 import { DialogSkill } from "../dialog-skill"
 import { useArgs } from "@tui/context/args"
@@ -75,6 +76,12 @@ function randomIndex(count: number) {
   return Math.floor(Math.random() * count)
 }
 
+function fadeColor(color: RGBA, alpha: number) {
+  return RGBA.fromValues(color.r, color.g, color.b, color.a * alpha)
+}
+
+let stashed: { prompt: PromptInfo; cursor: number } | undefined
+
 export function Prompt(props: PromptProps) {
   let input: TextareaRenderable
   let anchor: BoxRenderable
@@ -95,6 +102,7 @@ export function Prompt(props: PromptProps) {
   const renderer = useRenderer()
   const { theme, syntax } = useTheme()
   const kv = useKV()
+  const animationsEnabled = createMemo(() => kv.get("animations_enabled", true))
   const list = createMemo(() => props.placeholders?.normal ?? [])
   const shell = createMemo(() => props.placeholders?.shell ?? [])
   const [auto, setAuto] = createSignal<AutocompleteRef>()
@@ -435,9 +443,32 @@ export function Prompt(props: PromptProps) {
     },
   }
 
+  onMount(() => {
+    const saved = stashed
+    stashed = undefined
+    if (store.prompt.input) return
+    if (saved && saved.prompt.input) {
+      input.setText(saved.prompt.input)
+      setStore("prompt", saved.prompt)
+      restoreExtmarksFromParts(saved.prompt.parts)
+      input.cursorOffset = saved.cursor
+    }
+  })
+
   onCleanup(() => {
+    if (store.prompt.input) {
+      stashed = { prompt: unwrap(store.prompt), cursor: input.cursorOffset }
+    }
     props.ref?.(undefined)
   })
+
+  // kilocode_change start - close autocomplete while blocking overlays hide the prompt
+  createEffect(() => {
+    if (props.visible === false || props.disabled) {
+      auto()?.dismiss()
+    }
+  })
+  // kilocode_change end
 
   createEffect(() => {
     if (!input || input.isDestroyed) return
@@ -844,6 +875,13 @@ export function Prompt(props: PromptProps) {
     return !!current
   })
 
+  const agentMetaAlpha = createFadeIn(() => !!local.agent.current(), animationsEnabled)
+  const modelMetaAlpha = createFadeIn(() => !!local.agent.current() && store.mode === "normal", animationsEnabled)
+  const variantMetaAlpha = createFadeIn(
+    () => !!local.agent.current() && store.mode === "normal" && showVariant(),
+    animationsEnabled,
+  )
+
   const placeholderText = createMemo(() => {
     if (props.showPlaceholder === false) return undefined
     if (store.mode === "shell") {
@@ -1139,7 +1177,7 @@ export function Prompt(props: PromptProps) {
                 <Show when={local.agent.current()} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
-                      <text fg={highlight()}>
+                      <text fg={fadeColor(highlight(), agentMetaAlpha())}>
                         {/* kilocode_change start */}
                         {store.mode === "shell"
                           ? "Shell"
@@ -1149,14 +1187,19 @@ export function Prompt(props: PromptProps) {
                       </text>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
-                          <text flexShrink={0} fg={keybind.leader ? theme.textMuted : theme.text}>
+                          <text
+                            flexShrink={0}
+                            fg={fadeColor(keybind.leader ? theme.textMuted : theme.text, modelMetaAlpha())}
+                          >
                             {local.model.parsed().model}
                           </text>
-                          <text fg={theme.textMuted}>{currentProviderLabel()}</text>
+                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
                           <Show when={showVariant()}>
-                            <text fg={theme.textMuted}>·</text>
+                            <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
                             <text>
-                              <span style={{ fg: theme.warning, bold: true }}>{local.model.variant.current()}</span>
+                              <span style={{ fg: fadeColor(theme.warning, variantMetaAlpha()), bold: true }}>
+                                {local.model.variant.current()}
+                              </span>
                             </text>
                           </Show>
                         </box>

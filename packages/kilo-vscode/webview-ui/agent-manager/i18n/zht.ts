@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "複製工作階段",
   "agentManager.tab.terminal": "終端機",
   "agentManager.tab.openTerminal": "開啟終端機",
+  "agentManager.tab.newOptions": "更多新增分頁選項",
+
+  "agentManager.terminal.new": "新增終端分頁",
+  "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
+  "agentManager.terminal.connectionError": "終端連線錯誤",
+  "agentManager.terminal.errorTitle": "終端錯誤",
   "agentManager.setup.failed": "工作區設定失敗",
   "agentManager.setup.settingUp": "正在設定工作區",
   "agentManager.setup.error.git_not_found": "未安裝 Git 或在 PATH 中找不到 Git。請安裝 Git 並重新啟動 VS Code。",

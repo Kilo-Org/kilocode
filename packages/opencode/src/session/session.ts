@@ -6,7 +6,6 @@ import { Decimal } from "decimal.js"
 import z from "zod"
 import { type ProviderMetadata, type LanguageModelUsage } from "ai"
 import { Flag } from "../flag/flag"
-import { Installation } from "../installation"
 import { InstallationVersion } from "../installation/version"
 
 import { Database, NotFoundError, eq, and, gte, isNull, desc, like } from "../storage" // kilocode_change - listGlobal delegated to KiloSession
@@ -296,16 +295,18 @@ export const getUsage = (input: {
     input.usage.inputTokenDetails?.cacheReadTokens ?? input.usage.cachedInputTokens ?? 0,
   )
   const cacheWriteInputTokens = safe(
-    (input.usage.inputTokenDetails?.cacheWriteTokens ??
-      input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
-      // google-vertex-anthropic returns metadata under "vertex" key
-      // (AnthropicMessagesLanguageModel custom provider key from 'vertex.anthropic.messages')
-      input.metadata?.["vertex"]?.["cacheCreationInputTokens"] ??
-      // @ts-expect-error
-      input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
-      // @ts-expect-error
-      input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
-      0) as number,
+    Number(
+      input.usage.inputTokenDetails?.cacheWriteTokens ??
+        input.metadata?.["anthropic"]?.["cacheCreationInputTokens"] ??
+        // google-vertex-anthropic returns metadata under "vertex" key
+        // (AnthropicMessagesLanguageModel custom provider key from 'vertex.anthropic.messages')
+        input.metadata?.["vertex"]?.["cacheCreationInputTokens"] ??
+        // @ts-expect-error
+        input.metadata?.["bedrock"]?.["usage"]?.["cacheWriteInputTokens"] ??
+        // @ts-expect-error
+        input.metadata?.["venice"]?.["usage"]?.["cacheCreationInputTokens"] ??
+        0,
+    ),
   )
 
   // AI SDK v6 normalized inputTokens to include cached tokens across all providers
@@ -779,6 +780,15 @@ export function* list(input?: {
   if (input?.workspaceID) {
     conditions.push(eq(SessionTable.workspace_id, input.workspaceID))
   }
+
+  // kilocode_change start - directory filtering handled by KiloSession.filters above
+  // if (!Flag.KILO_EXPERIMENTAL_WORKSPACES) {
+  //   if (input?.directory) {
+  //     conditions.push(eq(SessionTable.directory, input.directory))
+  //   }
+  // }
+  // kilocode_change end
+
   if (input?.roots) {
     conditions.push(isNull(SessionTable.parent_id))
   }

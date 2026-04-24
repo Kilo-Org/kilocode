@@ -1,5 +1,33 @@
 # @kilocode/cli
 
+## 7.2.22
+
+### Patch Changes
+
+- [#9455](https://github.com/Kilo-Org/kilocode/pull/9455) [`567ca0d`](https://github.com/Kilo-Org/kilocode/commit/567ca0d34178a6a896aa58c10cc946565c116d4e) - Fix a 1-2 second startup delay before home content (agents, news, tips) appears in the TUI.
+
+- [#9425](https://github.com/Kilo-Org/kilocode/pull/9425) [`6ee160f`](https://github.com/Kilo-Org/kilocode/commit/6ee160f89c10293d635990798779988d34b092b4) - Preserve typed text in the main prompt when a blocking question, suggestion, permission, or network overlay is shown and then dismissed.
+
+## 7.2.21
+
+### Minor Changes
+
+- [#8587](https://github.com/Kilo-Org/kilocode/pull/8587) [`010a946`](https://github.com/Kilo-Org/kilocode/commit/010a94698e449bdd9270f44e53aa209dd4c7a248) - The agent now detects and preserves the original text encoding of files when reading and editing them, so non-UTF-8 files are displayed correctly to the model and written back in their original encoding. New files are still created as UTF-8 without BOM — detection only applies when overwriting or editing an existing file.
+
+  Supported: UTF-8 (with or without BOM), UTF-16 with BOM, and common legacy Latin and CJK encodings (Shift_JIS, EUC-JP, GB2312, Big5, EUC-KR, Windows-1251, KOI8-R, ISO-8859, and others).
+
+  Not supported: UTF-16 without BOM, UTF-32.
+
+### Patch Changes
+
+- [#9298](https://github.com/Kilo-Org/kilocode/pull/9298) [`8d06a08`](https://github.com/Kilo-Org/kilocode/commit/8d06a083bce0d87ad55adeb57b043cc5607979eb) - CLI suggestions now render inline in the conversation at the position of the suggest tool call, instead of as a separate bar above the prompt input. The inline bar renders as a single full-width row with a subtle background and clickable action buttons, matching the VS Code extension. Dismissal happens automatically when you send a new prompt. Blocking suggestions still use the above-prompt overlay.
+
+- [#9298](https://github.com/Kilo-Org/kilocode/pull/9298) [`2ba203b`](https://github.com/Kilo-Org/kilocode/commit/2ba203b6bdad1b759b26501e74d278d13f77f69b) - CLI suggestions now render above an active input prompt. You can keep typing and submit a new message while a suggestion is on screen — sending a message auto-dismisses the pending suggestion, matching the VS Code extension behavior. The redundant "Dismiss" row has been removed; click an option to accept, or press Esc to dismiss.
+
+- [#9344](https://github.com/Kilo-Org/kilocode/pull/9344) [`c032fc2`](https://github.com/Kilo-Org/kilocode/commit/c032fc2021c55589ff7aee747d8f8a871e77bc56) - Fix an infinite "busy" loop that could occur when a model kept reporting context overflow after every compaction. Each turn now caps compactions at three attempts and closes the turn with a visible context-overflow error instead of silently looping forever.
+
+- [#9408](https://github.com/Kilo-Org/kilocode/pull/9408) [`c214d63`](https://github.com/Kilo-Org/kilocode/commit/c214d63afb426df0b3499b5240fe5ce525561497) - Narrow when the CLI suggests a local code review so it no longer surfaces after PR-comment replies, reactive fixes (CI/lint failures, reported issues), trivial edits, non-implementation work (research, commits, docs), or review-adjacent turns.
+
 ## 7.2.19
 
 ### Patch Changes

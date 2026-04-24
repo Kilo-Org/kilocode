@@ -11,6 +11,7 @@ import { useLayout } from "@/context/layout"
 import { usePlatform } from "@/context/platform"
 import { useCommand } from "@/context/command"
 import { useLanguage } from "@/context/language"
+import { useSettings } from "@/context/settings"
 import { applyPath, backPath, forwardPath } from "./titlebar-history"
 
 type TauriDesktopWindow = {
@@ -40,6 +41,7 @@ export function Titlebar() {
   const platform = usePlatform()
   const command = useCommand()
   const language = useLanguage()
+  const settings = useSettings()
   const theme = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
@@ -78,6 +80,7 @@ export function Titlebar() {
   const canBack = createMemo(() => history.index > 0)
   const canForward = createMemo(() => history.index < history.stack.length - 1)
   const hasProjects = createMemo(() => layout.projects.list().length > 0)
+  const nav = createMemo(() => import.meta.env.VITE_KILO_CHANNEL !== "beta" || settings.general.showNavigation())
 
   const back = () => {
     const next = backPath(history)
@@ -255,13 +258,12 @@ export function Titlebar() {
             <div
               class="flex items-center shrink-0"
               classList={{
-                "translate-x-0": !layout.sidebar.opened(),
-                "-translate-x-[36px]": layout.sidebar.opened(),
+                "-translate-x-[36px]": layout.sidebar.opened() && !!params.dir,
                 "duration-180 ease-out": !layout.sidebar.opened(),
                 "duration-180 ease-in": layout.sidebar.opened(),
               }}
             >
-              <Show when={hasProjects()}>
+              <Show when={hasProjects() && nav()}>
                 <div class="flex items-center gap-0 transition-transform">
                   <Tooltip placement="bottom" value={language.t("common.goBack")} openDelay={2000}>
                     <Button
@@ -286,7 +288,7 @@ export function Titlebar() {
                 </div>
               </Show>
               <div id="opencode-titlebar-left" class="flex items-center gap-3 min-w-0 px-2" />
-              {import.meta.env.VITE_KILO_CHANNEL && ["beta", "dev"].includes(import.meta.env.VITE_KILO_CHANNEL) && (
+              {import.meta.env.VITE_KILO_CHANNEL && ["beta", "dev"].includes(import.meta.env.VITE_KILO_CHANNEL) && ( // kilocode_change
                 <div class="bg-icon-interactive-base text-[#FFF] font-medium px-2 rounded-sm uppercase font-mono">
                   {import.meta.env.VITE_KILO_CHANNEL.toUpperCase()}
                 </div>

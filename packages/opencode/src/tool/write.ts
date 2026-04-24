@@ -9,13 +9,13 @@ import { Bus } from "../bus"
 import { File } from "../file"
 import { FileWatcher } from "../file/watcher"
 import { Format } from "../format"
-import { FileTime } from "../file/time"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Instance } from "../project/instance"
 import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
+import { EncodedIO } from "../kilocode/tool/encoded-io" // kilocode_change
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
 
@@ -24,7 +24,6 @@ export const WriteTool = Tool.define(
   Effect.gen(function* () {
     const lsp = yield* LSP.Service
     const fs = yield* AppFileSystem.Service
-    const filetime = yield* FileTime.Service
     const bus = yield* Bus.Service
     const format = yield* Format.Service
 
@@ -42,8 +41,11 @@ export const WriteTool = Tool.define(
           yield* assertExternalDirectoryEffect(ctx, filepath)
 
           const exists = yield* fs.existsSafe(filepath)
-          const contentOld = exists ? yield* fs.readFileString(filepath) : ""
-          if (exists) yield* filetime.assert(ctx.sessionID, filepath)
+          // kilocode_change start - preserve file encoding on write
+          const pre = exists ? yield* EncodedIO.read(filepath) : { text: "", encoding: "utf-8" }
+          const contentOld = pre.text
+          const encoding = pre.encoding
+          // kilocode_change end
 
           const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, params.content))
           const filediff = buildFileDiff(filepath, contentOld, params.content) // kilocode_change
@@ -58,14 +60,13 @@ export const WriteTool = Tool.define(
             },
           })
 
-          yield* fs.writeWithDirs(filepath, params.content)
+          yield* EncodedIO.write(filepath, params.content, encoding) // kilocode_change - preserve encoding; replaces fs.writeWithDirs
           yield* format.file(filepath)
           yield* bus.publish(File.Event.Edited, { file: filepath })
           yield* bus.publish(FileWatcher.Event.Updated, {
             file: filepath,
             event: exists ? "change" : "add",
           })
-          yield* filetime.read(ctx.sessionID, filepath)
 
           let output = "Wrote file successfully."
           yield* lsp.touchFile(filepath, true)

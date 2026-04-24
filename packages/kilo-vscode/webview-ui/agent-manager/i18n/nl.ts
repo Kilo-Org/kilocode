@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sessie forken",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
+  "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+
+  "agentManager.terminal.new": "Nieuw terminaltabblad",
+  "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.connectionError": "terminalverbindingsfout",
+  "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",
   "agentManager.setup.settingUp": "Worktree instellen",

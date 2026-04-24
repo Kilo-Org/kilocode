@@ -21,6 +21,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class QuestionPanelTest : BasePlatformTestCase() {
@@ -47,7 +48,8 @@ class QuestionPanelTest : BasePlatformTestCase() {
         app = KiloAppService(scope, appRpc)
         workspaces = KiloWorkspaceService(scope, workspaceRpc)
         workspace = workspaces.workspace("/test")
-        controller = SessionController(parent, "ses_test", sessions, workspace, app, scope)
+        val root = JPanel()
+        controller = SessionController(parent, "ses_test", sessions, workspace, app, scope, root)
         panel = QuestionPanel(controller)
     }
 
@@ -69,6 +71,8 @@ class QuestionPanelTest : BasePlatformTestCase() {
                         question = "Pick one",
                         header = "Header",
                         options = listOf(QuestionOption("Yes", "desc")),
+                        multiple = false,
+                        custom = true,
                     )
                 ),
             )
@@ -80,6 +84,6 @@ class QuestionPanelTest : BasePlatformTestCase() {
         assertFalse(panel.isVisible)
         assertEquals(0, panel.componentCount)
         assertTrue(rpc.questionReplies.isEmpty())
-        assertTrue(rpc.questionRejections.isEmpty())
+        assertTrue(rpc.questionRejects.isEmpty())
     }
 }

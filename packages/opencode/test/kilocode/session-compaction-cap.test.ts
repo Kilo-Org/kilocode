@@ -13,7 +13,6 @@ import { Command } from "../../src/command"
 import { Config } from "../../src/config"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { Env } from "../../src/env"
-import { FileTime } from "../../src/file/time"
 import { Ripgrep } from "../../src/file/ripgrep"
 import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { Format } from "../../src/format"
@@ -117,16 +116,6 @@ const lsp = Layer.succeed(
   }),
 )
 
-const filetime = Layer.succeed(
-  FileTime.Service,
-  FileTime.Service.of({
-    read: () => Effect.void,
-    get: () => Effect.succeed(undefined),
-    assert: () => Effect.void,
-    withLock: (_filepath, fn) => fn(),
-  }),
-)
-
 const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
 const runState = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
@@ -143,7 +132,6 @@ function makeHttp() {
     plugin,
     Config.defaultLayer,
     ProviderSvc.defaultLayer,
-    filetime,
     lsp,
     mcp,
     AppFileSystem.defaultLayer,

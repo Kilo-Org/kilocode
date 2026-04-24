@@ -33,6 +33,8 @@
       "@types/cross-spawn": "6.0.6",
       "@octokit/rest": "22.0.0",
       "@hono/zod-validator": "0.4.2",
+      "@opentui/core": "0.1.99",
+      "@opentui/solid": "0.1.99",
       "ulid": "3.0.1",
       "@kobalte/core": "0.13.11",
       "@types/luxon": "3.7.1",
@@ -143,6 +145,6 @@
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
     "stream-chat@9.38.0": "patches/stream-chat@9.38.0.patch"
   },
-  "version": "7.2.20",
+  "version": "7.2.22",
   "peerDependencies": {}
 }

@@ -1,5 +1,33 @@
 # kilo-code
 
+## 7.2.22
+
+### Patch Changes
+
+- [#9444](https://github.com/Kilo-Org/kilocode/pull/9444) [`35f13cb`](https://github.com/Kilo-Org/kilocode/commit/35f13cbc8678f80cf6870c233f74f47b028bf705) - Fix restoring and paginating very long VS Code sessions.
+
+## 7.2.21
+
+### Minor Changes
+
+- [#9268](https://github.com/Kilo-Org/kilocode/pull/9268) [`48c0553`](https://github.com/Kilo-Org/kilocode/commit/48c0553bb7b8abfa06fb352ad7a9cdc7f1af4bc5) - Open xterm.js-powered terminal tabs in the Agent Manager. Click the chevron next to the `+` tab button and pick "New Terminal" (or press `Cmd+Shift+T` / `Ctrl+Shift+T`) to spawn a real shell in the selected worktree or Local directory. Terminals render as proper tabs alongside agent sessions, support mixed drag-reorder with session tabs, and persist their position across webview reloads. The existing VS Code integrated terminal shortcut (`Cmd+/`) is unchanged.
+
+- [#9336](https://github.com/Kilo-Org/kilocode/pull/9336) [`85c578e`](https://github.com/Kilo-Org/kilocode/commit/85c578ed844eba7350ce915cff6b4a98f3eb1bbf) - Add the initial JetBrains session chat UI and improve sandbox debug logging for tracing chat events across frontend and backend.
+
+### Patch Changes
+
+- [#9335](https://github.com/Kilo-Org/kilocode/pull/9335) [`6015ac6`](https://github.com/Kilo-Org/kilocode/commit/6015ac6e7d85fc110a99562674484d3d00167525) - Restore explicit Submit behavior for single-choice question prompts in the VS Code extension so option clicks stay visible for review instead of immediately sending the answer.
+
+- [#9332](https://github.com/Kilo-Org/kilocode/pull/9332) [`0bda9d1`](https://github.com/Kilo-Org/kilocode/commit/0bda9d15ed5ef99fe149fd680a813ca3b4c1d050) - Fix mid-turn message handling so a new prompt sent while the assistant is working no longer aborts the in-flight response. The current LLM reply streams to completion, any pending suggestion or question is automatically dismissed, and the new prompt runs immediately after the current step instead of waiting for the entire multi-step turn to finish.
+
+- [#9119](https://github.com/Kilo-Org/kilocode/pull/9119) [`8e75084`](https://github.com/Kilo-Org/kilocode/commit/8e750846da39c6e78478b468b68fdefcaa37f44f) - Fix TUI freeze on huge-file diffs. Session-summary and file-view patches now use git directly instead of a JavaScript Myers implementation, so files of any size render a full diff without blocking the session.
+
+- [#9341](https://github.com/Kilo-Org/kilocode/pull/9341) [`00ec003`](https://github.com/Kilo-Org/kilocode/commit/00ec003c11476d995556d2b975b4da058f8b958c) - Significantly speed up LLM token streaming in long sessions. The chat view now stays responsive while the model streams a reply, even in sessions with hundreds of messages. Previously, each SSE batch produced ~1.3 seconds of visible freeze (roughly 80 dropped frames); streaming ticks are now inside a single animation frame.
+
+- Updated dependencies [[`00ec003`](https://github.com/Kilo-Org/kilocode/commit/00ec003c11476d995556d2b975b4da058f8b958c)]:
+  - @opencode-ai/ui@7.2.21
+  - @kilocode/kilo-ui@7.2.21
+
 ## 7.2.19
 
 ## 7.2.18
