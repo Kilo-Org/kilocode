@@ -1,8 +1,9 @@
-import { Config } from "../config/config"
+import { Config } from "../config"
+import { ConfigPermission } from "../config"
 import { ModesMigrator } from "./modes-migrator"
-import { RulesMigrator } from "./rules-migrator" // kilocode_change
+import { RulesMigrator } from "./rules-migrator"
 import { WorkflowsMigrator } from "./workflows-migrator"
-import { IgnoreMigrator } from "./ignore-migrator" // kilocode_change
+import { IgnoreMigrator } from "./ignore-migrator"
 
 export namespace KilocodeConfigInjector {
   export interface InjectionResult {
@@ -46,7 +47,6 @@ export namespace KilocodeConfigInjector {
       config.command = workflowsMigration.commands
     }
 
-    // kilocode_change start - Rules migration
     if (options.includeRules !== false) {
       const rulesMigration = await RulesMigrator.migrate({
         projectDir: options.projectDir,
@@ -60,9 +60,7 @@ export namespace KilocodeConfigInjector {
         config.instructions = rulesMigration.instructions
       }
     }
-    // kilocode_change end
 
-    // kilocode_change start - Ignore migration
     if (options.includeIgnore !== false) {
       const ignoreMigration = await IgnoreMigrator.migrate({
         projectDir: options.projectDir,
@@ -75,7 +73,6 @@ export namespace KilocodeConfigInjector {
         config.permission = mergePermissions(config.permission, ignoreMigration.permission)
       }
     }
-    // kilocode_change end
 
     return {
       configJson: JSON.stringify(config),
@@ -87,15 +84,15 @@ export namespace KilocodeConfigInjector {
    * Merge permission configs, preserving order and handling duplicates.
    * Incoming rules take precedence (kilocode patterns override).
    */
-  function mergePermissions(existing: Config.Permission | undefined, incoming: Config.Permission): Config.Permission {
+  function mergePermissions(existing: ConfigPermission.Info | undefined, incoming: ConfigPermission.Info): ConfigPermission.Info {
     if (!existing) return incoming
 
-    const result: Config.Permission = { ...existing }
+    const result: ConfigPermission.Info = { ...existing }
 
     for (const [key, value] of Object.entries(incoming)) {
       if (key === "read" || key === "edit") {
-        const existingRules = (result[key] as Record<string, Config.PermissionAction>) ?? {}
-        const incomingRules = value as Record<string, Config.PermissionAction>
+        const existingRules = (result[key] as Record<string, ConfigPermission.Action>) ?? {}
+        const incomingRules = value as Record<string, ConfigPermission.Action>
         result[key] = { ...existingRules, ...incomingRules }
       } else {
         result[key] = value

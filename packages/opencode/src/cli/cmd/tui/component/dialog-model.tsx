@@ -5,13 +5,17 @@ import { map, pipe, flatMap, entries, filter, sortBy, take } from "remeda"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { useDialog } from "@tui/ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
+import { DialogVariant } from "./dialog-variant"
 import { useKeybind } from "../context/keybind"
 import * as fuzzysort from "fuzzysort"
 
 export function useConnected() {
   const sync = useSync()
+  // kilocode_change - exclude "kilo" (anonymous autoload) alongside "opencode"
   return createMemo(() =>
-    sync.data.provider.some((x) => x.id !== "opencode" || Object.values(x.models).some((y) => y.cost?.input !== 0)),
+    sync.data.provider.some(
+      (x) => (x.id !== "opencode" && x.id !== "kilo") || Object.values(x.models).some((y) => y.cost?.input !== 0),
+    ),
   )
 }
 
@@ -24,6 +28,15 @@ export function DialogModel(props: { providerID?: string }) {
 
   const connected = useConnected()
   const providers = createDialogProviderOptions()
+  // kilocode_change start
+  // Memoize anything that iterates all Kilo models to avoid calculating it for
+  // each Kilo model and tanking the UI at a couple hundred models
+  const kiloRank = createMemo(() => {
+    const provider = sync.data.provider.find((provider) => provider.id === "kilo")
+    const models = provider?.models ?? {}
+    return new Map(Object.entries(models).map(([id, info]) => [id, info.recommendedIndex ?? Infinity] as const))
+  })
+  // kilocode_change end
 
   const showExtra = createMemo(() => connected() && !props.providerID)
 
@@ -50,8 +63,7 @@ export function DialogModel(props: { providerID?: string }) {
             disabled: provider.id === "opencode" && model.id.includes("-nano"),
             footer: model.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
             onSelect: () => {
-              dialog.clear()
-              local.model.set({ providerID: provider.id, modelID: model.id }, { recent: true })
+              onSelect(provider.id, model.id)
             },
           },
         ]
@@ -94,8 +106,7 @@ export function DialogModel(props: { providerID?: string }) {
             disabled: provider.id === "opencode" && model.includes("-nano"),
             footer: info.cost?.input === 0 && provider.id === "opencode" ? "Free" : undefined,
             onSelect() {
-              dialog.clear()
-              local.model.set({ providerID: provider.id, modelID: model }, { recent: true })
+              onSelect(provider.id, model)
             },
           })),
           filter((x) => {
@@ -107,14 +118,8 @@ export function DialogModel(props: { providerID?: string }) {
             return true
           }),
           sortBy(
-            // kilocode_change start - Sort recommended models first for Kilo Gateway
-            (x) => {
-              if (x.value.providerID !== "kilo") return 0
-              const provider = sync.data.provider.find((p) => p.id === "kilo")
-              const model = provider?.models[x.value.modelID]
-              if (model?.recommendedIndex !== undefined) return model.recommendedIndex
-              return Object.keys(provider?.models ?? {}).length
-            },
+            // kilocode_change start - Sort within Recommended / Kilo Gateway
+            (x) => (x.value.providerID === "kilo" ? (kiloRank().get(x.value.modelID) ?? Infinity) : 0),
             // kilocode_change end
             (x) => x.footer !== "Free",
             (x) => x.title,
@@ -151,7 +156,26 @@ export function DialogModel(props: { providerID?: string }) {
     props.providerID ? sync.data.provider.find((x) => x.id === props.providerID) : null,
   )
 
-  const title = createMemo(() => provider()?.name ?? "Select model")
+  const title = createMemo(() => {
+    const value = provider()
+    if (!value) return "Select model"
+    return value.name
+  })
+
+  function onSelect(providerID: string, modelID: string) {
+    local.model.set({ providerID, modelID }, { recent: true })
+    const list = local.model.variant.list()
+    const cur = local.model.variant.selected()
+    if (cur === "default" || (cur && list.includes(cur))) {
+      dialog.clear()
+      return
+    }
+    if (list.length > 0) {
+      dialog.replace(() => <DialogVariant />)
+      return
+    }
+    dialog.clear()
+  }
 
   return (
     <DialogSelect<ReturnType<typeof options>[number]["value"]>

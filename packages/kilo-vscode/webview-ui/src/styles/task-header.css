@@ -1,0 +1,245 @@
+/* ============================================
+   Task Header Todos
+   ============================================ */
+
+[data-component="task-header-todos"] {
+  border-bottom: 1px solid var(--border-weak-base);
+  background-color: var(--background-base);
+  flex-shrink: 0;
+
+  [data-slot="task-header-todos-trigger"] {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-weak);
+    box-sizing: border-box;
+
+    &:hover {
+      color: var(--text-base);
+    }
+  }
+
+  [data-slot="task-header-todos-summary"] {
+    flex: 1;
+
+    &[data-all-done] {
+      color: var(--text-success, var(--vscode-testing-iconPassed, #5cb85c));
+    }
+  }
+
+  [data-slot="task-header-todos-arrow"] {
+    transition: transform 0.15s ease;
+
+    &[data-open] {
+      transform: rotate(180deg);
+    }
+  }
+
+  [data-slot="task-header-todos-list"] {
+    padding: 4px 16px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  [data-slot="task-header-todo-content"] {
+    font-size: 12px;
+    color: var(--text-base);
+
+    &[data-completed] {
+      text-decoration: line-through;
+      color: var(--text-weak);
+    }
+  }
+}
+
+/* ============================================
+   Task Timeline
+   ============================================ */
+
+.task-timeline-outer {
+  width: 100%;
+  overflow: hidden;
+  padding: 0 8px;
+}
+
+.task-timeline {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  touch-action: pan-x;
+  scrollbar-width: none; /* Firefox */
+}
+
+.task-timeline::-webkit-scrollbar {
+  display: none;
+}
+
+.task-timeline-bar {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 1px;
+  overflow: hidden;
+}
+
+.task-timeline-bar-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: 2px 2px 0 0;
+  transition: opacity 0.15s;
+}
+
+.task-timeline-bar:hover .task-timeline-bar-fill {
+  opacity: 0.7;
+}
+
+/* Fade-in animation for new bars */
+.task-timeline-bar-fill--new {
+  animation: timeline-fade-in 0.3s ease-out;
+}
+
+/* Active (latest) bar pulse when session is busy */
+.task-timeline-bar-fill--active {
+  animation: timeline-pulse 2s ease-in-out infinite 0.5s;
+}
+
+@keyframes timeline-fade-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: bottom;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes timeline-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ============================================
+   Context Progress Bar
+   ============================================ */
+
+.context-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.context-progress-count {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.context-progress-bar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--vscode-foreground) 20%, transparent);
+}
+
+.context-progress-used {
+  height: 100%;
+  background: var(--vscode-foreground);
+  transition:
+    width 0.3s ease-out,
+    background 0.3s ease-out;
+}
+
+.context-progress-used--hot {
+  background: color-mix(in srgb, var(--vscode-errorForeground) 60%, rgba(128, 0, 0, 1));
+}
+
+.context-progress-reserved {
+  height: 100%;
+  background: color-mix(in srgb, var(--vscode-foreground) 30%, transparent);
+  transition: width 0.3s ease-out;
+}
+
+.context-progress-available {
+  height: 100%;
+}
+
+/* ============================================
+   Task Header Graph Section
+   ============================================ */
+
+[data-component="task-header-graph"] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 6px;
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+[data-slot="task-header-graph-row"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+/* Token breakdown in expanded state */
+.task-header-tokens {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--vscode-descriptionForeground);
+  white-space: nowrap;
+}
+
+.task-header-tokens-label {
+  font-weight: 600;
+}
+
+.task-header-tokens-value {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Expand toggle */
+[data-slot="task-header-expand"] {
+  all: unset;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+  color: var(--vscode-descriptionForeground);
+  transition:
+    color 0.15s,
+    background 0.15s;
+}
+
+[data-slot="task-header-expand"]:hover {
+  color: var(--vscode-foreground);
+  background: var(--vscode-toolbar-hoverBackground);
+}

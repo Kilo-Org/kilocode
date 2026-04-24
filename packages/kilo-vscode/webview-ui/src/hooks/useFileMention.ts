@@ -1,7 +1,14 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { FileAttachment, WebviewMessage, ExtensionMessage } from "../types/messages"
-import { AT_PATTERN, syncMentionedPaths as _syncMentionedPaths, buildFileAttachments } from "./file-mention-utils"
+import {
+  AT_PATTERN,
+  syncMentionedPaths as _syncMentionedPaths,
+  buildTextAfterMentionSelect,
+  buildFileAttachments,
+  buildMentionResults,
+  type MentionResult,
+} from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
 
@@ -12,7 +19,7 @@ interface VSCodeContext {
 
 export interface FileMention {
   mentionedPaths: Accessor<Set<string>>
-  mentionResults: Accessor<string[]>
+  mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
   onInput: (val: string, cursor: number) => void
@@ -22,8 +29,8 @@ export interface FileMention {
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => boolean
-  selectFile: (
-    path: string,
+  selectMention: (
+    result: MentionResult,
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
@@ -31,12 +38,18 @@ export interface FileMention {
   setMentionIndex: (index: number) => void
   closeMention: () => void
   parseFileAttachments: (text: string) => FileAttachment[]
+  /** Register paths as active mentions (used by drag-and-drop). Pass cwd to ensure buildFileAttachments resolves correctly. */
+  addPaths: (paths: string[], cwd: string) => void
 }
 
-export function useFileMention(vscode: VSCodeContext): FileMention {
+export function useFileMention(
+  vscode: VSCodeContext,
+  sessionID?: Accessor<string | undefined>,
+  git?: Accessor<boolean>,
+): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
-  const [mentionResults, setMentionResults] = createSignal<string[]>([])
+  const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
   let workspaceDir = ""
 
@@ -51,10 +64,10 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "fileSearchResult") return
-    const result = message as { type: "fileSearchResult"; paths: string[]; dir: string; requestId: string }
-    if (result.requestId === `file-search-${fileSearchCounter}`) {
-      workspaceDir = result.dir
-      setMentionResults(result.paths)
+    if (message.requestId === `file-search-${fileSearchCounter}`) {
+      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+      workspaceDir = message.dir
+      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
       setMentionIndex(0)
     }
   })
@@ -68,7 +81,13 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchTimer = setTimeout(() => {
       fileSearchCounter++
-      vscode.postMessage({ type: "requestFileSearch", query, requestId: `file-search-${fileSearchCounter}` })
+      const id = sessionID?.()
+      vscode.postMessage({
+        type: "requestFileSearch",
+        query,
+        requestId: `file-search-${fileSearchCounter}`,
+        ...(id ? { sessionID: id } : {}),
+      })
     }, FILE_SEARCH_DEBOUNCE_MS)
   }
 
@@ -81,8 +100,8 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     setMentionedPaths((prev) => _syncMentionedPaths(prev, text))
   }
 
-  const selectMentionFile = (
-    path: string,
+  const selectMention = (
+    result: MentionResult,
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
@@ -92,19 +111,17 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     const before = val.substring(0, cursor)
     const after = val.substring(cursor)
 
-    const replaced = before.replace(AT_PATTERN, (match) => {
-      const prefix = match.startsWith(" ") ? " " : ""
-      return `${prefix}@${path}`
-    })
-    const newText = replaced + after
-    textarea.value = newText
-    setText(newText)
+    const text = buildTextAfterMentionSelect(before, after, result.value)
+    textarea.value = text
+    setText(text)
 
-    const newCursor = replaced.length
-    textarea.setSelectionRange(newCursor, newCursor)
+    // Position cursor right after the inserted @mention
+    const pos = text.length - after.length
+    textarea.setSelectionRange(pos, pos)
     textarea.focus()
 
-    setMentionedPaths((prev) => new Set([...prev, path]))
+    if (result.type === "file" || result.type === "folder")
+      setMentionedPaths((prev) => new Set([...prev, result.value]))
     closeMention()
     onSelect?.()
   }
@@ -114,8 +131,10 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
     if (match) {
-      setMentionQuery(match[1])
-      requestFileSearch(match[1])
+      const query = match[1] ?? ""
+      setMentionQuery(query)
+      setMentionResults(buildMentionResults(query, [], git?.() ?? true))
+      requestFileSearch(query)
     } else {
       closeMention()
     }
@@ -128,10 +147,11 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     onSelect?: () => void,
   ): boolean => {
     if (!showMention()) return false
+    if (e.isComposing) return false
 
     if (e.key === "ArrowDown") {
       e.preventDefault()
-      setMentionIndex((i) => Math.min(i + 1, mentionResults().length - 1))
+      setMentionIndex((i) => Math.min(i + 1, Math.max(mentionResults().length - 1, 0)))
       return true
     }
     if (e.key === "ArrowUp") {
@@ -140,19 +160,29 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
       return true
     }
     if (e.key === "Enter" || e.key === "Tab") {
-      const path = mentionResults()[mentionIndex()]
-      if (!path) return false
+      const result = mentionResults()[mentionIndex()]
+      if (!result) return false
       e.preventDefault()
-      if (textarea) selectMentionFile(path, textarea, setText, onSelect)
+      if (textarea) selectMention(result, textarea, setText, onSelect)
       return true
     }
     if (e.key === "Escape") {
       e.preventDefault()
+      e.stopPropagation()
       closeMention()
       return true
     }
 
     return false
+  }
+
+  const addPaths = (paths: string[], cwd: string) => {
+    if (cwd) workspaceDir = cwd
+    setMentionedPaths((prev) => {
+      const next = new Set(prev)
+      for (const p of paths) next.add(p)
+      return next
+    })
   }
 
   const parseFileAttachments = (text: string): FileAttachment[] =>
@@ -165,9 +195,10 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     showMention,
     onInput,
     onKeyDown,
-    selectFile: selectMentionFile,
+    selectMention,
     setMentionIndex,
     closeMention,
     parseFileAttachments,
+    addPaths,
   }
 }

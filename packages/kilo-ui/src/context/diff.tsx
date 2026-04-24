@@ -1,2 +1,10 @@
-// kilocode_change - new file
-export * from "@opencode-ai/ui/context/diff"
+import type { ValidComponent } from "solid-js"
+import { createSimpleContext } from "@opencode-ai/ui/context/helper"
+
+const ctx = createSimpleContext<ValidComponent, { component: ValidComponent }>({
+  name: "DiffComponent",
+  init: (props) => props.component,
+})
+
+export const DiffComponentProvider = ctx.provider
+export const useDiffComponent = ctx.use

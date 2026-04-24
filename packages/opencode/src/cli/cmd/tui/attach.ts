@@ -2,6 +2,9 @@ import { cmd } from "../cmd"
 import { UI } from "@/cli/ui"
 import { tui } from "./app"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
+import { TuiConfig } from "@/cli/cmd/tui/config/tui"
+import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
+import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -31,6 +34,10 @@ export const AttachCommand = cmd({
         type: "boolean",
         describe: "fork the session when continuing (use with --continue or --session)",
       })
+      .option("cloud-fork", {
+        type: "boolean",
+        describe: "fetch session from cloud and continue locally (use with --session)",
+      })
       .option("password", {
         alias: ["p"],
         type: "string",
@@ -46,6 +53,15 @@ export const AttachCommand = cmd({
         process.exitCode = 1
         return
       }
+
+      // kilocode_change start
+      const cloudForkError = validateCloudFork(args)
+      if (cloudForkError) {
+        UI.error(cloudForkError)
+        process.exitCode = 1
+        return
+      }
+      // kilocode_change end
 
       const directory = (() => {
         if (!args.dir) return undefined
@@ -63,8 +79,28 @@ export const AttachCommand = cmd({
         const auth = `Basic ${Buffer.from(`opencode:${password}`).toString("base64")}`
         return { Authorization: auth }
       })()
+      // kilocode_change start - import cloud session before TUI renders
+      if (args.cloudFork && args.session) {
+        UI.println("Importing session from cloud...")
+        const sdk = createKiloClient({
+          baseUrl: args.url,
+          directory,
+          headers,
+        })
+        const id = await importCloudSession(sdk, args.session).catch(() => undefined)
+        if (!id) {
+          UI.error("Failed to import session from cloud")
+          process.exitCode = 1
+          return
+        }
+        args.session = id
+        args.cloudFork = false
+      }
+      // kilocode_change end
+      const config = await TuiConfig.get()
       await tui({
         url: args.url,
+        config,
         args: {
           continue: args.continue,
           sessionID: args.session,

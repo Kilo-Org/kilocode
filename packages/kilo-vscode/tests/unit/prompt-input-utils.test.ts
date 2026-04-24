@@ -1,5 +1,14 @@
 import { describe, it, expect } from "bun:test"
-import { fileName, dirName, buildHighlightSegments } from "../../webview-ui/src/components/chat/prompt-input-utils"
+import {
+  fileName,
+  dirName,
+  buildHighlightSegments,
+  atEnd,
+  isPromptBlocked,
+  isPromptBusy,
+  isSuggesting,
+  isQuestioning,
+} from "../../webview-ui/src/components/chat/prompt-input-utils"
 
 describe("fileName", () => {
   it("extracts the last segment of a unix path", () => {
@@ -116,5 +125,103 @@ describe("buildHighlightSegments", () => {
   it("does not partially match longer paths", () => {
     const result = buildHighlightSegments("@foo.ts", new Set(["foo.tsx"]))
     expect(result).toEqual([{ text: "@foo.ts", highlight: false }])
+  })
+})
+
+describe("atEnd", () => {
+  it("returns true when caret is at end with no selection", () => {
+    expect(atEnd(5, 5, 5)).toBe(true)
+  })
+
+  it("returns false when caret is before end", () => {
+    expect(atEnd(4, 4, 5)).toBe(false)
+  })
+
+  it("returns false when there is a selection", () => {
+    expect(atEnd(2, 5, 5)).toBe(false)
+  })
+
+  it("returns true for empty input", () => {
+    expect(atEnd(0, 0, 0)).toBe(true)
+  })
+
+  it("returns false when caret is at start of non-empty input", () => {
+    expect(atEnd(0, 0, 10)).toBe(false)
+  })
+})
+
+describe("isPromptBlocked", () => {
+  it("returns false when zero permissions", () => {
+    expect(isPromptBlocked(0)).toBe(false)
+  })
+
+  it("returns true when permissions exist", () => {
+    expect(isPromptBlocked(1)).toBe(true)
+    expect(isPromptBlocked(3)).toBe(true)
+  })
+
+  it("accepts exactly one argument (locks the API against regression)", () => {
+    // Prevents a future change from reintroducing the question/blocking coupling.
+    // See prompt-send-contract.test.ts for the source-level complement.
+    expect(isPromptBlocked.length).toBe(1)
+  })
+})
+
+describe("isPromptBusy", () => {
+  it("returns true when busy and neither suggesting nor questioning", () => {
+    expect(isPromptBusy("busy", false, false)).toBe(true)
+  })
+
+  it("returns false when idle regardless of suggesting/questioning", () => {
+    expect(isPromptBusy("idle", false, false)).toBe(false)
+    expect(isPromptBusy("idle", true, false)).toBe(false)
+    expect(isPromptBusy("idle", false, true)).toBe(false)
+    expect(isPromptBusy("idle", true, true)).toBe(false)
+  })
+
+  it("returns false when busy but suggesting is true (suggestion decoupling)", () => {
+    expect(isPromptBusy("busy", true, false)).toBe(false)
+  })
+
+  it("returns false when busy but questioning is true (question decoupling)", () => {
+    expect(isPromptBusy("busy", false, true)).toBe(false)
+  })
+
+  it("returns false when busy and both suggesting and questioning", () => {
+    expect(isPromptBusy("busy", true, true)).toBe(false)
+  })
+
+  it("returns true for non-idle non-busy status when not suggesting/questioning", () => {
+    expect(isPromptBusy("retry", false, false)).toBe(true)
+  })
+})
+
+describe("isSuggesting", () => {
+  it("returns true when not blocked and suggestions > 0", () => {
+    expect(isSuggesting(false, 1)).toBe(true)
+    expect(isSuggesting(false, 3)).toBe(true)
+  })
+
+  it("returns false when blocked even with suggestions", () => {
+    expect(isSuggesting(true, 2)).toBe(false)
+  })
+
+  it("returns false when not blocked but no suggestions", () => {
+    expect(isSuggesting(false, 0)).toBe(false)
+  })
+})
+
+describe("isQuestioning", () => {
+  it("returns true when not blocked and questions > 0", () => {
+    expect(isQuestioning(false, 1)).toBe(true)
+    expect(isQuestioning(false, 5)).toBe(true)
+  })
+
+  it("returns false when blocked even with questions", () => {
+    expect(isQuestioning(true, 2)).toBe(false)
+  })
+
+  it("returns false when not blocked but no questions", () => {
+    expect(isQuestioning(false, 0)).toBe(false)
   })
 })

@@ -5,6 +5,10 @@ export const GenerateCommand = {
   command: "generate",
   handler: async () => {
     const specs = await Server.openapi()
+    // kilocode_change start
+    specs.info.title = "kilo"
+    specs.info.description = "kilo api"
+    // kilocode_change end
     for (const item of Object.values(specs.paths)) {
       for (const method of ["get", "post", "put", "delete", "patch"] as const) {
         const operation = item[method]
@@ -15,9 +19,9 @@ export const GenerateCommand = {
           {
             lang: "js",
             source: [
-              `import { createOpencodeClient } from "@kilocode/sdk`,
+              `import { createKiloClient } from "@kilocode/sdk`,
               ``,
-              `const client = createOpencodeClient()`,
+              `const client = createKiloClient()`,
               `await client.${operation.operationId}({`,
               `  ...`,
               `})`,
@@ -27,7 +31,25 @@ export const GenerateCommand = {
         ]
       }
     }
-    const json = JSON.stringify(specs, null, 2)
+    const raw = JSON.stringify(specs, null, 2)
+    // kilocode_change start - replace upstream product name in all descriptions
+      .replaceAll("OpenCode", "Kilo")
+      .replaceAll("opencode.local", "kilo.local")
+      .replaceAll("opencode serve", "kilo serve")
+      .replaceAll("https://opencode.ai/", "https://kilo.ai/")
+    // kilocode_change end
+
+    // Format through prettier so output is byte-identical to committed file
+    // regardless of whether ./script/format.ts runs afterward.
+    const prettier = await import("prettier")
+    const babel = await import("prettier/plugins/babel")
+    const estree = await import("prettier/plugins/estree")
+    const format = prettier.format ?? prettier.default?.format
+    const json = await format(raw, {
+      parser: "json",
+      plugins: [babel.default ?? babel, estree.default ?? estree],
+      printWidth: 120,
+    })
 
     // Wait for stdout to finish writing before process.exit() is called
     await new Promise<void>((resolve, reject) => {

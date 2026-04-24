@@ -6,12 +6,13 @@ import {
   HEADER_EDITORNAME,
   HEADER_MACHINEID,
   HEADER_FEATURE,
-  USER_AGENT,
+  USER_AGENT_BASE,
   CONTENT_TYPE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
+  ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
-  ENV_FEATURE, // kilocode_change
+  ENV_FEATURE,
 } from "./api/constants.js"
 
 /**
@@ -36,19 +37,35 @@ export function getFeatureHeader(): string | undefined {
 }
 
 /**
+ * Get User-Agent header value.
+ * Appends the version from KILOCODE_VERSION when available.
+ */
+export function getUserAgent(): string {
+  const version = process.env[ENV_VERSION]
+  return version ? `${USER_AGENT_BASE}/${version}` : USER_AGENT_BASE
+}
+
+/**
  * Default headers for KiloCode requests
  */
-export const DEFAULT_HEADERS = {
-  "User-Agent": USER_AGENT,
-  "Content-Type": CONTENT_TYPE,
+export function getDefaultHeaders(): Record<string, string> {
+  return {
+    "User-Agent": getUserAgent(),
+    "Content-Type": CONTENT_TYPE,
+  }
 }
 
 /**
  * Get editor name header value
- * Defaults to "opencode" but can be customized
+ * When KILOCODE_EDITOR_NAME is set explicitly, use it verbatim (the caller is
+ * responsible for including the version, e.g. "Visual Studio Code 1.114.0").
+ * Otherwise defaults to "Kilo CLI" and appends KILOCODE_VERSION when available.
  */
 export function getEditorNameHeader(): string {
-  return process.env[ENV_EDITOR_NAME] ?? DEFAULT_EDITOR_NAME
+  const custom = process.env[ENV_EDITOR_NAME]
+  if (custom) return custom
+  const version = process.env[ENV_VERSION]
+  return version ? `${DEFAULT_EDITOR_NAME} ${version}` : DEFAULT_EDITOR_NAME
 }
 
 /**
@@ -62,13 +79,11 @@ export function buildKiloHeaders(
     machineId?: string
   },
 ): Record<string, string> {
-  // kilocode_change start
   const feature = getFeatureHeader()
   const headers: Record<string, string> = {
     [X_KILOCODE_EDITORNAME]: getEditorNameHeader(),
     ...(feature ? { [X_KILOCODE_FEATURE]: feature } : {}),
   }
-  // kilocode_change end
 
   if (metadata?.taskId) {
     headers[X_KILOCODE_TASKID] = metadata.taskId

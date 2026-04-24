@@ -1,4 +1,4 @@
-import type { SSEEvent } from "./types"
+import type { Event } from "@kilocode/sdk/v2/client"
 
 /**
  * Pure session ID resolution for SSE events.
@@ -7,7 +7,7 @@ import type { SSEEvent } from "./types"
  * record the messageID -> sessionID mapping.
  */
 export function resolveEventSessionId(
-  event: SSEEvent,
+  event: Event,
   lookupMessageSessionId: (messageId: string) => string | undefined,
   onMessageUpdated?: (messageId: string, sessionId: string) => void,
 ): string | undefined {
@@ -17,6 +17,7 @@ export function resolveEventSessionId(
       return event.properties.info.id
     case "session.status":
     case "session.idle":
+    case "session.error":
     case "todo.updated":
       return event.properties.sessionID
     case "message.updated":
@@ -41,6 +42,22 @@ export function resolveEventSessionId(
     case "question.rejected":
       return event.properties.sessionID
     default:
+      return resolveSuggestionSessionId(event)
+  }
+}
+
+function resolveSuggestionSessionId(event: Event): string | undefined {
+  switch (event.type) {
+    case "suggestion.shown":
+    case "suggestion.accepted":
+    case "suggestion.dismissed":
+      return event.properties.sessionID
+    default:
+      // session.network.* events are not yet in the SDK Event type union
+      // (pending SDK regeneration). Handle them via string comparison.
+      if ((event.type as string).startsWith("session.network.")) {
+        return (event.properties as { sessionID: string }).sessionID
+      }
       return undefined
   }
 }

@@ -1,30 +1,59 @@
-import type { HttpClient } from "../services/cli-backend"
-import type { Worktree } from "./WorktreeStateManager"
+import * as fs from "fs"
+import * as path from "path"
+import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
+import type { Semaphore } from "./semaphore"
+import { normalizePath } from "./git-import"
+import type { WorktreeDiffEntry } from "./types"
 
 export interface WorktreeStats {
   worktreeId: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
 }
 
 export interface LocalStats {
   branch: string
+  files: number
   additions: number
   deletions: number
-  commits: number
+  ahead: number
+  behind: number
+}
+
+export interface WorktreePresence {
+  worktreeId: string
+  missing: boolean
+  /** Current branch from `git worktree list`, if available. */
+  branch?: string
+}
+
+export interface WorktreePresenceResult {
+  worktrees: WorktreePresence[]
+  degraded: boolean
 }
 
 interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
   getWorkspaceRoot: () => string | undefined
-  getHttpClient: () => HttpClient
+  /**
+   * Compute diff summaries locally (in the extension host) rather than over
+   * HTTP to `kilo serve`. Keeps git spawning out of the Bun process, which
+   * leaks native memory on Windows (oven-sh/bun#18265).
+   */
+  localDiff: (dir: string, base: string) => Promise<WorktreeDiffEntry[]>
   git: GitOps
   onStats: (stats: WorktreeStats[]) => void
   onLocalStats: (stats: LocalStats) => void
+  onWorktreePresence?: (result: WorktreePresenceResult) => void
   log: (...args: unknown[]) => void
   intervalMs?: number
+  /** Shared concurrency gate for child process spawning. */
+  semaphore?: Semaphore
+  hiddenIntervalMs?: number
 }
 
 export class GitStatsPoller {
@@ -34,19 +63,50 @@ export class GitStatsPoller {
   private lastHash: string | undefined
   private lastLocalHash: string | undefined
   private lastLocalStats: LocalStats | undefined
-  private lastStats: Record<string, { additions: number; deletions: number; commits: number }> = {}
+  private lastStats: Record<string, WorktreeStats> = {}
   private readonly intervalMs: number
+  private readonly hiddenIntervalMs: number
   private readonly git: GitOps
+  private skipWorktreeIds = new Set<string>()
+  private visible = true
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
+    this.hiddenIntervalMs = options.hiddenIntervalMs ?? 60000
     this.git = options.git
+  }
+
+  setVisible(visible: boolean): void {
+    if (this.visible === visible) return
+    this.visible = visible
+    if (this.active && this.timer) {
+      clearTimeout(this.timer)
+      this.timer = undefined
+      this.schedule(this.visible ? this.intervalMs : this.hiddenIntervalMs)
+    }
+  }
+
+  /** Replace the entire skip set with the given IDs. */
+  syncSkips(ids: Set<string>): WorktreeStats[] | undefined {
+    this.skipWorktreeIds = ids
+    const stats = Object.values(this.lastStats).filter((item) => !ids.has(item.worktreeId))
+    if (stats.length === 0) return undefined
+    const hash = this.hash(stats)
+    if (hash === this.lastHash) return undefined
+    this.lastHash = hash
+    return stats
+  }
+
+  /** Pre-emptively exclude a single worktree (e.g. before deletion). */
+  skipWorktree(id: string): void {
+    this.skipWorktreeIds.add(id)
   }
 
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
-      this.start()
+      this.active = true
+      void this.poll()
       return
     }
     this.stop()
@@ -65,10 +125,8 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
-  private start(): void {
-    this.stop()
-    this.active = true
-    void this.poll()
+  private currentInterval(): number {
+    return this.visible ? this.intervalMs : this.hiddenIntervalMs
   }
 
   private schedule(delay: number): void {
@@ -84,73 +142,114 @@ export class GitStatsPoller {
     this.busy = true
     return this.fetch().finally(() => {
       this.busy = false
-      this.schedule(this.intervalMs)
+      this.schedule(this.currentInterval())
     })
   }
 
   private async fetch(): Promise<void> {
-    const client = (() => {
-      try {
-        return this.options.getHttpClient()
-      } catch (err) {
-        this.options.log("Failed to get HTTP client for stats:", err)
-        return undefined
-      }
-    })()
-
-    await Promise.all([this.fetchWorktreeStats(client), this.fetchLocalStats(client)])
+    await Promise.all([this.fetchWorktreeStats(), this.fetchLocalStats()])
   }
 
-  private async fetchWorktreeStats(client: HttpClient | undefined): Promise<void> {
+  private async fetchWorktreeStats(): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
-    if (!client) return
 
+    const presence = await this.probeWorktreePresence(worktrees)
+    this.options.onWorktreePresence?.(presence)
+
+    const missing = new Set(
+      presence.degraded ? [] : presence.worktrees.filter((item) => item.missing).map((item) => item.worktreeId),
+    )
+    const available = worktrees.filter((wt) => !missing.has(wt.id))
+    const ids = new Set(available.map((wt) => wt.id))
+    for (const id of Object.keys(this.lastStats)) {
+      if (!ids.has(id)) delete this.lastStats[id]
+    }
+    const active = available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
+    if (active.length === 0) {
+      if (available.length > 0) return
+      if (this.lastHash === "") return
+      this.lastHash = ""
+      this.lastStats = {}
+      this.options.onStats([])
+      return
+    }
+
+    // localDiff runs in-process via GitOps.execGit() which already acquires
+    // the shared semaphore internally; same goes for aheadBehind via
+    // GitOps.raw(). Wrapping either again here would deadlock.
     const stats = (
       await Promise.all(
-        worktrees.map(async (wt) => {
+        active.map(async (wt) => {
           try {
-            const diffs = await client.getWorktreeDiff(wt.path, wt.parentBranch)
+            const base = remoteRef(wt)
+            const [diffs, ab] = await Promise.all([
+              this.options.localDiff(wt.path, base),
+              this.git.aheadBehind(wt.path, base),
+            ])
+            const files = diffs.length
             const additions = diffs.reduce((sum, diff) => sum + diff.additions, 0)
             const deletions = diffs.reduce((sum, diff) => sum + diff.deletions, 0)
-            const commits = await this.git.countMissingOriginCommits(wt.path, wt.parentBranch)
-            return { worktreeId: wt.id, additions, deletions, commits }
+            return { worktreeId: wt.id, files, additions, deletions, ahead: ab.ahead, behind: ab.behind }
           } catch (err) {
             this.options.log(`Failed to fetch worktree stats for ${wt.branch} (${wt.path}):`, err)
-            const prev = this.lastStats[wt.id]
-            if (!prev) return undefined
-            return {
-              worktreeId: wt.id,
-              additions: prev.additions,
-              deletions: prev.deletions,
-              commits: prev.commits,
-            }
+            return this.lastStats[wt.id]
           }
         }),
       )
     ).filter((item): item is WorktreeStats => !!item)
 
-    if (stats.length === 0) return
+    for (const item of stats) this.lastStats[item.worktreeId] = item
 
-    const hash = stats.map((item) => `${item.worktreeId}:${item.additions}:${item.deletions}:${item.commits}`).join("|")
+    const visible = Object.values(this.lastStats).filter((item) => !this.skipWorktreeIds.has(item.worktreeId))
+    if (visible.length === 0) return
+
+    const hash = this.hash(visible)
     if (hash === this.lastHash) return
     this.lastHash = hash
-    this.lastStats = stats.reduce(
-      (acc, item) => {
-        acc[item.worktreeId] = {
-          additions: item.additions,
-          deletions: item.deletions,
-          commits: item.commits,
-        }
-        return acc
-      },
-      {} as Record<string, { additions: number; deletions: number; commits: number }>,
-    )
-
-    this.options.onStats(stats)
+    this.options.onStats(visible)
   }
 
-  private async fetchLocalStats(client: HttpClient | undefined): Promise<void> {
+  private hash(stats: WorktreeStats[]): string {
+    return stats
+      .map(
+        (item) => `${item.worktreeId}:${item.files}:${item.additions}:${item.deletions}:${item.ahead}:${item.behind}`,
+      )
+      .join("|")
+  }
+
+  private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult> {
+    const root = this.options.getWorkspaceRoot()
+    if (!root) {
+      return { worktrees: [], degraded: true }
+    }
+
+    const tracked = await this.git.listWorktreePaths(root).catch((err) => {
+      this.options.log("Failed to list worktree paths:", err)
+      return undefined
+    })
+    if (!tracked) {
+      return { worktrees: [], degraded: true }
+    }
+
+    const worktreeStatuses = await Promise.all(
+      worktrees.map(async (wt) => {
+        const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
+        const normalized = normalizePath(abs)
+        const exists = await fs.promises.access(abs).then(
+          () => true,
+          () => false,
+        )
+        const missing = !exists || !tracked.has(normalized)
+        const branch = tracked.get(normalized)
+        return { worktreeId: wt.id, missing, branch }
+      }),
+    )
+
+    return { worktrees: worktreeStatuses, degraded: false }
+  }
+
+  private async fetchLocalStats(): Promise<void> {
     const root = this.options.getWorkspaceRoot()
     if (!root) return
 
@@ -159,38 +258,30 @@ export class GitStatsPoller {
       if (!branch || branch === "HEAD") return
 
       const tracking = await this.git.resolveTrackingBranch(root, branch)
-
-      // When the HTTP client is unavailable, preserve last-known stats rather
-      // than emitting zeros (which would falsely indicate a clean state).
-      if (!client) {
-        if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
-        const stats: LocalStats = { branch, additions: 0, deletions: 0, commits: 0 }
-        const hash = `local:${branch}:0:0:0`
-        if (hash === this.lastLocalHash) return
-        this.lastLocalHash = hash
-        this.lastLocalStats = stats
-        this.options.onLocalStats(stats)
-        return
-      }
-
-      // When no tracking branch exists (e.g. new local branch with no upstream
-      // and no origin/<branch> ref), compute diff+commit stats against the
-      // repo's default branch so the UI still shows meaningful numbers.
       const base = tracking ?? (await this.git.resolveDefaultBranch(root, branch))
 
+      let files: number
       let additions: number
       let deletions: number
-      let commits: number
+      let ahead: number
+      let behind: number
       try {
         if (base) {
-          const diffs = await client.getWorktreeDiff(root, base)
+          this.options.log(`Local stats: using localDiff with base=${base}`)
+          const [diffs, ab] = await Promise.all([this.options.localDiff(root, base), this.git.aheadBehind(root, base)])
+          files = diffs.length
           additions = diffs.reduce((sum, d) => sum + d.additions, 0)
           deletions = diffs.reduce((sum, d) => sum + d.deletions, 0)
-          commits = await this.git.countMissingOriginCommits(root, base)
+          ahead = ab.ahead
+          behind = ab.behind
         } else {
-          additions = 0
-          deletions = 0
-          commits = 0
+          this.options.log(`Local stats: fallback to workingTreeStats (no base branch)`)
+          const wt = await this.git.workingTreeStats(root)
+          files = wt.files
+          additions = wt.additions
+          deletions = wt.deletions
+          ahead = 0
+          behind = 0
         }
       } catch (err) {
         this.options.log("Failed to fetch local diff stats:", err)
@@ -198,11 +289,15 @@ export class GitStatsPoller {
         return
       }
 
-      const hash = `local:${branch}:${additions}:${deletions}:${commits}`
-      if (hash === this.lastLocalHash) return
+      const hash = `local:${branch}:${files}:${additions}:${deletions}:${ahead}:${behind}`
+      if (hash === this.lastLocalHash) {
+        this.options.log(`Local stats: unchanged (${hash})`)
+        return
+      }
       this.lastLocalHash = hash
 
-      const stats: LocalStats = { branch, additions, deletions, commits }
+      this.options.log(`Local stats: emitting files=${files} +${additions} -${deletions} ↑${ahead} ↓${behind}`)
+      const stats: LocalStats = { branch, files, additions, deletions, ahead, behind }
       this.lastLocalStats = stats
       this.options.onLocalStats(stats)
     } catch (err) {

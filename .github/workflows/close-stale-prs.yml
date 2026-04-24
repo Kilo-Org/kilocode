@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   close-stale-prs:
+    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-2vcpu-ubuntu-2404 # kilocode_change
     timeout-minutes: 15
     steps:

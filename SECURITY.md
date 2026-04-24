@@ -36,12 +36,10 @@ Server mode is opt-in only. When enabled, set `KILO_SERVER_PASSWORD` to require 
 
 # Reporting Security Issues
 
-We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
+We value the contributions of the security research community and recognize the importance of a coordinated approach to vulnerability disclosure. If you have discovered a security vulnerability, we encourage you to let us know immediately. We welcome the opportunity to work with you to resolve the issue promptly.
 
-To report a security issue, please use the GitHub Security Advisory ["Report a Vulnerability"](https://github.com/Kilo-Org/kilocode/security/advisories/new) tab.
+Please email your findings to [security@kilo.ai](mailto:security@kilo.ai). We will acknowledge your report and work with you to resolve the issue.
 
-The team will send a response indicating the next steps in handling your report. After the initial reply to your report, the security team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
+After the initial reply to your report, the security team will keep you informed of the progress towards a fix and full announcement, and may ask for additional information or guidance.
 
-## Escalation
-
-If you do not receive an acknowledgement of your report within 6 business days, you may send an email to hi@kilo.ai
+For more details, see our [Security Disclosure](https://kilo.ai/security) page.

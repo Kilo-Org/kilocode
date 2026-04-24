@@ -8,12 +8,14 @@
  * 3. Injecting Kilo-specific dependencies
  * 4. Preserving Kilo's version number
  * 5. Preserving overrides and patchedDependencies
- * 6. Using "newest wins" strategy for dependency versions
+ * 6. Preserving Kilo's repository configuration
+ * 7. Using "newest wins" strategy for dependency versions
  */
 
 import { $ } from "bun"
 import { info, success, warn, debug } from "../utils/logger"
 import { getCurrentVersion } from "./preserve-versions"
+import { oursHasKilocodeChanges } from "../utils/git"
 
 /**
  * Extract clean version string from a version specifier
@@ -156,7 +158,7 @@ function mergeWithNewestVersions(
 
 export interface PackageJsonResult {
   file: string
-  action: "transformed" | "skipped" | "failed"
+  action: "transformed" | "skipped" | "failed" | "flagged"
   changes: string[]
   dryRun: boolean
 }
@@ -190,8 +192,17 @@ const KILO_DEPENDENCIES: Record<string, Record<string, string>> = {
   },
 }
 
+// Kilo-specific bin entries to set on specific packages
+const KILO_BIN: Record<string, Record<string, string>> = {
+  "packages/opencode/package.json": {
+    kilo: "./bin/kilo",
+    kilocode: "./bin/kilo",
+  },
+}
+
 // Packages that should have their name transformed
 const TRANSFORM_PACKAGE_NAMES: Record<string, string> = {
+  "package.json": "@kilocode/kilo",
   "packages/opencode/package.json": "@kilocode/cli",
   "packages/plugin/package.json": "@kilocode/plugin",
   "packages/sdk/js/package.json": "@kilocode/sdk",
@@ -238,6 +249,12 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
   if (options.dryRun) {
     info(`[DRY-RUN] Would transform package.json: ${file}`)
     return { file, action: "transformed", changes: [], dryRun: true }
+  }
+
+  // If our version has kilocode_change markers, flag for manual resolution
+  if (await oursHasKilocodeChanges(file)) {
+    warn(`${file} has kilocode_change markers — skipping auto-transform, needs manual resolution`)
+    return { file, action: "flagged", changes: [], dryRun: false }
   }
 
   try {
@@ -326,17 +343,64 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         }
       }
 
-      // 6. Handle workspaces for root package.json
+      // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
+      const ourRepo = ourPkg.repository
+      if (ourRepo && JSON.stringify(pkg.repository) !== JSON.stringify(ourRepo)) {
+        pkg.repository = ourRepo
+        changes.push(`repository: preserved Kilo's repository configuration`)
+      }
+
+      // 7. Handle workspaces for root package.json
       // Kilo has removed hosted platform packages (console/*, slack, etc.)
       // so we need to preserve Kilo's workspace configuration instead of taking upstream's
       const ourWorkspaces = ourPkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
       const theirWorkspaces = pkg.workspaces as { packages?: string[]; catalog?: Record<string, string> } | undefined
 
       if (relativePath === "package.json" && ourWorkspaces?.packages) {
-        // Root package.json - preserve Kilo's workspace packages list
         pkg.workspaces = pkg.workspaces || {}
         pkg.workspaces.packages = ourWorkspaces.packages
         changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
+      }
+
+      const ourScripts = ourPkg.scripts as Record<string, string> | undefined
+      if (relativePath === "package.json" && ourScripts?.extension && pkg.scripts?.extension !== ourScripts.extension) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts.extension = ourScripts.extension
+        changes.push(`scripts.extension: preserved Kilo's extension script`)
+      }
+      if (relativePath === "package.json" && ourScripts?.changeset && pkg.scripts?.changeset !== ourScripts.changeset) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts.changeset = ourScripts.changeset
+        changes.push(`scripts.changeset: preserved Kilo's changeset script`)
+      }
+      if (
+        relativePath === "package.json" &&
+        ourScripts?.["changeset:version"] &&
+        pkg.scripts?.["changeset:version"] !== ourScripts["changeset:version"]
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts["changeset:version"] = ourScripts["changeset:version"]
+        changes.push(`scripts.changeset:version: preserved Kilo's changeset:version script`)
+      }
+
+      // Preserve Kilo's test runner scripts for packages/opencode
+      if (
+        relativePath === "packages/opencode/package.json" &&
+        ourScripts?.test &&
+        pkg.scripts?.test !== ourScripts.test
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts.test = ourScripts.test
+        changes.push(`scripts.test: preserved Kilo's test runner script`)
+      }
+      if (
+        relativePath === "packages/opencode/package.json" &&
+        ourScripts?.["test:ci"] &&
+        pkg.scripts?.["test:ci"] !== ourScripts["test:ci"]
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts["test:ci"] = ourScripts["test:ci"]
+        changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
       }
 
       // Merge catalog with "newest wins" strategy
@@ -384,6 +448,13 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
           changes.push(`injected: ${name}`)
         }
       }
+    }
+
+    // 9. Set Kilo-specific bin entries
+    const kiloBin = KILO_BIN[relativePath]
+    if (kiloBin) {
+      pkg.bin = kiloBin
+      changes.push(`bin: set Kilo bin entries`)
     }
 
     // Write back with proper formatting
@@ -527,7 +598,14 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           }
         }
 
-        // 6. Handle workspaces for root package.json
+        // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
+        const kiloRepo = kiloPkg.repository
+        if (kiloRepo && JSON.stringify(pkg.repository) !== JSON.stringify(kiloRepo)) {
+          pkg.repository = kiloRepo
+          changes.push(`repository: preserved Kilo's repository configuration`)
+        }
+
+        // 7. Handle workspaces for root package.json
         // Kilo has removed hosted platform packages (console/*, slack, etc.)
         // so we need to preserve Kilo's workspace configuration instead of taking upstream's
         const kiloWorkspaces = kiloPkg.workspaces as
@@ -538,10 +616,32 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           | undefined
 
         if (path === "package.json" && kiloWorkspaces?.packages) {
-          // Root package.json - preserve Kilo's workspace packages list
           pkg.workspaces = pkg.workspaces || {}
           pkg.workspaces.packages = kiloWorkspaces.packages
           changes.push(`workspaces.packages: preserved Kilo's workspace configuration`)
+        }
+
+        const kiloScripts = kiloPkg.scripts as Record<string, string> | undefined
+        if (path === "package.json" && kiloScripts?.extension && pkg.scripts?.extension !== kiloScripts.extension) {
+          pkg.scripts = pkg.scripts || {}
+          pkg.scripts.extension = kiloScripts.extension
+          changes.push(`scripts.extension: preserved Kilo's extension script`)
+        }
+
+        // Preserve Kilo's test runner scripts for packages/opencode
+        if (path === "packages/opencode/package.json" && kiloScripts?.test && pkg.scripts?.test !== kiloScripts.test) {
+          pkg.scripts = pkg.scripts || {}
+          pkg.scripts.test = kiloScripts.test
+          changes.push(`scripts.test: preserved Kilo's test runner script`)
+        }
+        if (
+          path === "packages/opencode/package.json" &&
+          kiloScripts?.["test:ci"] &&
+          pkg.scripts?.["test:ci"] !== kiloScripts["test:ci"]
+        ) {
+          pkg.scripts = pkg.scripts || {}
+          pkg.scripts["test:ci"] = kiloScripts["test:ci"]
+          changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
         }
 
         // Merge catalog with "newest wins" strategy
@@ -591,6 +691,13 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
             changes.push(`injected: ${name}`)
           }
         }
+      }
+
+      // 9. Set Kilo-specific bin entries
+      const kiloBin = KILO_BIN[path]
+      if (kiloBin) {
+        pkg.bin = kiloBin
+        changes.push(`bin: set Kilo bin entries`)
       }
 
       if (changes.length > 0) {

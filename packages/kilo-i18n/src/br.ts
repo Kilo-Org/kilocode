@@ -1,4 +1,3 @@
-// kilocode_change - new file
 export const dict = {
   // Kilo Gateway provider translations
   "provider.connect.kiloGateway.line1":
@@ -12,4 +11,72 @@ export const dict = {
   // Provider dialog translations
   "dialog.provider.group.recommended": "Recomendados",
   "dialog.provider.kilo.note": "Acesso a mais de 500 modelos de IA",
+
+  // Reasoning block label
+  "ui.permission.run": "Executar",
+  "ui.reasoning.label": "Raciocínio",
+
+  // Marketplace
+  "marketplace.tab.skills": "Skills",
+  "marketplace.tab.mcpServers": "Servidores MCP",
+  "marketplace.tab.modes": "Modos",
+  "marketplace.category.all": "Todos",
+  "marketplace.placeholder": "A ser implementado",
+  "marketplace.card.installed": "Instalado",
+  "marketplace.card.install": "Instalar",
+  "marketplace.card.remove": "Remover",
+  "marketplace.card.removeScope": "Remover ({{scope}})",
+  "marketplace.card.showMore": "Mostrar mais",
+  "marketplace.card.showLess": "Mostrar menos",
+  "marketplace.install.title": "Instalar {{name}}",
+  "marketplace.install.scope": "Escopo",
+  "marketplace.install.scope.project": "Projeto",
+  "marketplace.install.scope.global": "Global",
+  "marketplace.install.prerequisites": "Pré-requisitos",
+  "marketplace.install.installing": "Instalando...",
+  "marketplace.install.cancel": "Cancelar",
+  "marketplace.install.success": "Instalado com sucesso!",
+  "marketplace.install.failed": "Falha na instalação",
+  "marketplace.install.done": "Concluído",
+  "marketplace.install.close": "Fechar",
+  "marketplace.remove.title": "Remover {{name}}?",
+  "marketplace.remove.confirm":
+    "Tem certeza que deseja remover este {{type}}? Isso o removerá da sua configuração {{scope}}.",
+  "marketplace.remove.cancel": "Cancelar",
+  "marketplace.remove.confirm.button": "Remover",
+  "marketplace.tab.mcp": "MCP",
+  "marketplace.search": "Pesquisar...",
+  "marketplace.filter.all": "Todos os Itens",
+  "marketplace.filter.notInstalled": "Não Instalado",
+  "marketplace.empty": "Nenhum item encontrado",
+  "marketplace.badge.mcpServer": "Servidor MCP",
+  "marketplace.badge.mode": "Modo",
+  "marketplace.card.by": "por {{author}}",
+  "marketplace.install.method": "Método de Instalação",
+  "marketplace.install.parameters": "Parâmetros",
+  "marketplace.install.optional": "(opcional)",
+  "marketplace.install.required": "{{name}} é obrigatório",
+  "marketplace.scope.project": "projeto",
+  "marketplace.scope.global": "global",
+  "marketplace.remove.type.mcp": "servidor MCP",
+  "marketplace.remove.type.skill": "habilidade",
+  "marketplace.remove.type.mode": "modo",
+  "marketplace.remove.failed": "Falha ao remover {{name}}",
+  "marketplace.install": "Instalar",
+  "marketplace.filter.installed": "Instalado",
+  "marketplace.error.dismiss": "Dispensar",
+  "marketplace.warning.busyOne": "Uma sessão está em execução e será interrompida",
+  "marketplace.warning.busyMany": "Várias sessões estão em execução e serão interrompidas",
+  "marketplace.warning.installAnyway": "Instalar mesmo assim",
+  "marketplace.warning.cancel": "Cancelar",
+  "marketplace.contribute.prompt": "Está faltando uma skill, modo ou servidor MCP?",
+  "marketplace.contribute.cta": "Contribuir no GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementar",
+  "plan.followup.question": "Pronto para implementar?",
+  "plan.followup.answer.newSession": "Iniciar nova sessão",
+  "plan.followup.answer.newSession.description": "Implementar em uma nova sessão com contexto limpo",
+  "plan.followup.answer.continue": "Continuar aqui",
+  "plan.followup.answer.continue.description": "Implementar o plano nesta sessão",
 }

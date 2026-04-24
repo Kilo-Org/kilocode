@@ -1,45 +1,7 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
+import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
 
-const kind = (value: string) => ({
-  value,
-  append: (part: string) => kind(`${value}.${part}`),
-})
-
-const mockVscode = {
-  extensions: {
-    getExtension: () => ({
-      packageJSON: { version: "test" },
-    }),
-  },
-  env: {
-    appName: "VS Code",
-    language: "en",
-    machineId: "machine",
-    isTelemetryEnabled: false,
-  },
-  version: "1.0.0",
-  workspace: {
-    workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-    getConfiguration: () => ({
-      get: <T>(_key: string, value?: T) => value,
-    }),
-  },
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix: kind("quickfix"),
-    RefactorRewrite: kind("refactor.rewrite"),
-  },
-}
-
-mock.module("vscode", () => mockVscode)
-
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
 
 type State = "connecting" | "connected" | "disconnected" | "error"
@@ -52,23 +14,52 @@ type ProviderInternals = {
   handleLoadSessions: () => Promise<void>
 }
 
+function createContext(overrides?: Partial<SessionRefreshContext>): SessionRefreshContext & { sent: unknown[] } {
+  const sent: unknown[] = []
+  return {
+    pendingSessionRefresh: false,
+    connectionState: "connecting",
+    listSessions: null,
+    sessionDirectories: new Map(),
+    workspaceDirectory: "/repo",
+    postMessage: (msg: unknown) => sent.push(msg),
+    sent,
+    ...overrides,
+  }
+}
+
+function createListSessions() {
+  const calls: string[] = []
+  const fn = async (dir: string) => {
+    calls.push(dir)
+    return []
+  }
+  return { calls, fn }
+}
+
 function createClient() {
   const calls: string[] = []
   return {
     calls,
-    listSessions: async (dir: string) => {
-      calls.push(dir)
-      return []
+    session: {
+      list: async (params: { directory: string }) => {
+        calls.push(params.directory)
+        return { data: [] }
+      },
     },
-    listProviders: async () => ({
-      all: {},
-      connected: {},
-      default: {},
-    }),
-    listAgents: async () => [],
-    getConfig: async () => ({}),
-    getNotifications: async () => [],
-    getProfile: async () => ({}),
+    provider: {
+      list: async () => ({ data: { all: [], connected: {}, default: {} } }),
+    },
+    app: {
+      agents: async () => ({ data: [] }),
+    },
+    config: {
+      get: async () => ({ data: {} }),
+    },
+    kilo: {
+      notifications: async () => ({ data: [] }),
+      profile: async () => ({ data: {} }),
+    },
   }
 }
 
@@ -78,7 +69,7 @@ function createConnection(client: ReturnType<typeof createClient>) {
     connect: async () => {
       current = client
     },
-    getHttpClient: () => {
+    getClient: () => {
       if (!current) {
         throw new Error("Not connected")
       }
@@ -87,6 +78,12 @@ function createConnection(client: ReturnType<typeof createClient>) {
     onEventFiltered: () => () => undefined,
     onStateChange: (_listener: (state: State) => void) => () => undefined,
     onNotificationDismissed: () => () => undefined,
+    onLanguageChanged: () => () => undefined,
+    onProfileChanged: () => () => undefined,
+    onMigrationComplete: () => () => undefined,
+    onFavoritesChanged: () => () => undefined,
+    onClearPendingPrompts: () => () => undefined,
+    registerDirectoryProvider: () => () => undefined,
     getServerInfo: () => ({ port: 12345 }),
     getConnectionState: () => "connected" as const,
     resolveEventSessionId: () => undefined,
@@ -96,6 +93,167 @@ function createConnection(client: ReturnType<typeof createClient>) {
 }
 
 describe("KiloProvider pending session refresh", () => {
+  it("keeps worktree sessions with legacy project ids", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project-new",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBe("project-new")
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_root", "ses_worktree"])
+  })
+
+  it("does not use legacy worktree sessions as canonical project", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_worktree", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") return [] as never
+        return [
+          {
+            id: "ses_worktree",
+            projectID: "project-old",
+            title: "worktree",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    const project = await loadSessions(ctx)
+
+    expect(project).toBeUndefined()
+    expect(sent).toHaveLength(1)
+    expect((sent[0] as { sessions: { id: string }[] }).sessions.map((s) => s.id)).toEqual(["ses_worktree"])
+  })
+
+  it("preserves session ids when worktree directory listing fails", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([
+        ["ses_wt1", "/worktree1"],
+        ["ses_wt2", "/worktree2"],
+      ]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        if (dir === "/worktree1") throw new Error("backend not ready")
+        return [
+          {
+            id: "ses_wt2",
+            projectID: "project",
+            title: "wt2",
+            directory: "/worktree2",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt2"])
+    expect(msg.preserveSessionIds).toEqual(["ses_wt1"])
+  })
+
+  it("omits preserveSessionIds when all directories succeed", async () => {
+    const sent: unknown[] = []
+    const ctx = createContext({
+      connectionState: "connected",
+      sessionDirectories: new Map([["ses_wt", "/worktree"]]),
+      listSessions: async (dir) => {
+        if (dir === "/repo") {
+          return [
+            {
+              id: "ses_root",
+              projectID: "project",
+              title: "root",
+              directory: "/repo",
+              time: { created: 1, updated: 1 },
+            },
+          ] as never
+        }
+        return [
+          {
+            id: "ses_wt",
+            projectID: "project",
+            title: "wt",
+            directory: "/worktree",
+            time: { created: 2, updated: 2 },
+          },
+        ] as never
+      },
+      postMessage: (msg) => sent.push(msg),
+    })
+
+    await loadSessions(ctx)
+
+    expect(sent).toHaveLength(1)
+    const msg = sent[0] as { sessions: { id: string }[]; preserveSessionIds?: string[] }
+    expect(msg.sessions.map((s) => s.id)).toEqual(["ses_root", "ses_wt"])
+    expect(msg.preserveSessionIds).toBeUndefined()
+  })
+
+  it("flushes deferred refresh via flushPendingSessionRefresh", async () => {
+    const { calls, fn } = createListSessions()
+    const ctx = createContext()
+    ctx.sessionDirectories.set("ses_1", "/worktree")
+
+    await loadSessions(ctx)
+    expect(ctx.pendingSessionRefresh).toBe(true)
+
+    ctx.listSessions = fn
+    ctx.connectionState = "connected"
+
+    await flushPendingSessionRefresh(ctx)
+
+    expect(calls).toEqual(["/repo", "/worktree"])
+    expect(ctx.pendingSessionRefresh).toBe(false)
+  })
+
   it("flushes deferred refresh in initializeConnection without relying on connected event callback", async () => {
     const client = createClient()
     const connection = createConnection(client)

@@ -1,7 +1,6 @@
 # Auto-Purge (Task Storage Cleanup)
 
 **Priority:** P3
-**Status:** ❌ Not started
 
 ## Remaining Work
 

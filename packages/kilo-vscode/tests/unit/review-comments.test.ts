@@ -95,6 +95,13 @@ describe("sanitizeReviewComments", () => {
     expect(result).toEqual([])
   })
 
+  it("preserves comments when diff is summarized", () => {
+    const c = comment({ file: "a.ts", line: 5, side: "additions" })
+    const d = { ...diff("a.ts", "", ""), summarized: true }
+    const result = sanitizeReviewComments([c], [d])
+    expect(result).toEqual([c])
+  })
+
   it("returns all when all comments are valid", () => {
     const comments = [
       comment({ file: "a.ts", line: 1 }),
@@ -120,7 +127,7 @@ describe("sanitizeReviewComments", () => {
 describe("formatReviewCommentsMarkdown", () => {
   it("returns header only for empty array", () => {
     const result = formatReviewCommentsMarkdown([])
-    expect(result).toBe("## Review Comments\n")
+    expect(result).toBe("## Review Comments")
   })
 
   it("formats a single comment without selected text", () => {

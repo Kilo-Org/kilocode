@@ -7,6 +7,51 @@ description: "AI-powered code autocompletion in Kilo Code"
 
 Kilo Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
 
+{% tabs %}
+{% tab label="VSCode" %}
+
+## How Autocomplete Works
+
+The extension uses **Fill-in-the-Middle (FIM)** completion powered by Codestral (`mistralai/codestral-2508`) via the **Kilo Gateway**. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+
+## Triggering Options
+
+### Auto-trigger
+
+Autocomplete is **enabled by default** and automatically shows inline suggestions as you type. Suggestions appear as ghost text that you can accept with `Tab`.
+
+### Trigger on keybinding (Cmd+L)
+
+Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux) to manually request a completion at your cursor position.
+
+{% callout type="note" %}
+This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` to be enabled in VS Code settings. It is **disabled by default**.
+{% /callout %}
+
+## Provider and Model
+
+Autocomplete currently uses **Codestral** (`mistralai/codestral-2508`) routed through the **Kilo Gateway**. Codestral is optimized for Fill-in-the-Middle (FIM) completions, and there is no option to select a different model at this time. Support for additional FIM models is planned for future releases.
+
+Requests are billed through your Kilo account. To use your own Mistral API key instead, see [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
+
+## Status Bar
+
+The extension displays an **autocomplete status indicator** in the VS Code status bar, including:
+
+- Current autocomplete state (active/snoozed)
+- Cumulative cost tracking for autocomplete requests
+
+### Snooze / Unsnooze
+
+You can temporarily disable autocomplete by clicking the status bar item to **snooze** it. Click again to **unsnooze** and re-enable suggestions.
+
+## Copilot Conflict Detection
+
+The extension automatically detects if **GitHub Copilot** inline suggestions are enabled and warns you about potential conflicts. Disable Copilot's inline completions for the best experience with Kilo Code autocomplete.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
 ## How Autocomplete Works
 
 Autocomplete analyzes your code context and provides:
@@ -86,13 +131,29 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 
 {% image src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47" alt="Disable Cursor autocomplete" width="800" caption="Disable Cursor autocomplete" /%}
 
+{% /tab %}
+{% /tabs %}
+
 ## Best Practices
 
-1. **Balance speed and quality**: Faster models provide quicker suggestions but may be less accurate
-2. **Adjust trigger delay**: Find the sweet spot between responsiveness and avoiding too many API calls
-3. **Use Quick Task for complex changes**: It's designed for more substantial code modifications
-4. **Use Manual Autocomplete for precision**: When you need suggestions at specific moments
-5. **Configure providers wisely**: Consider using faster, cheaper models for autocomplete while keeping more powerful models for chat
+1. **Use Manual Autocomplete for precision**: When you need suggestions at specific moments, use the keyboard shortcut rather than relying on auto-trigger
+2. **Use chat for complex changes**: Chat is better suited for multi-file changes and substantial code modifications
+3. **Steer autocomplete with comments**: Write a comment describing what you want before triggering autocomplete, or type a function signature — autocomplete will fill in the implementation
+
+{% tabs %}
+{% tab label="VSCode" %}
+
+4. **Check the status bar tooltip**: Hover the status bar item to see autocomplete state and cost tracking
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+4. **Balance speed and quality**: Faster models provide quicker suggestions but may be less accurate
+5. **Adjust trigger delay**: Find the sweet spot between responsiveness and avoiding too many API calls
+6. **Configure providers wisely**: Consider using faster, cheaper models for autocomplete while keeping more powerful models for chat
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips
 
@@ -101,16 +162,12 @@ If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle 
 {% /callout %}
 
 {% callout type="tip" %}
-**Steer autocomplete with comments:** Write a comment describing what you want before triggering autocomplete, or type a function signature—autocomplete will fill in the implementation.
-{% /callout %}
-
-{% callout type="tip" %}
 **Treat suggestions as drafts:** Accept autocomplete suggestions quickly, then refine. It's often faster to fix a 90% correct suggestion than to craft the perfect prompt.
 {% /callout %}
 
 - Autocomplete works best with clear, well-structured code
 - Comments above functions help autocomplete understand intent
-- Variable and function names matter - descriptive names lead to better suggestions
+- Variable and function names matter — descriptive names lead to better suggestions
 
 ## Related Features
 

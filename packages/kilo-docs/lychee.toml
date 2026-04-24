@@ -4,6 +4,8 @@ remap = ["kilo-docs/docs kilo-docs/pages"]
 
 format = "detailed"
 max_redirects = 2
+max_retries = 3
+retry_wait_time = 5
 exclude_path = ["node_modules"]
 
 accept = [
@@ -19,7 +21,7 @@ exclude = [
   'https://synthetic.new/user-settings/api',
   'https://platform.slack-edge.com/img/add_to_slack.png',
   'https://console.groq.com/pages/models',
-  'https://glama.ai/settings/gateway/api-keys',
+  '^https?://([A-Za-z0-9-]+\.)?glama\.ai(/|$)',
   '^https?://(api|console)\.mistral\.ai',
   '^https?://(app|console)\.requesty\.ai',
   '^https?://(cloud|console)\.google\.ai',
@@ -28,4 +30,13 @@ exclude = [
   'https://tbench.ai/',
   # GitHub URLs cause persistent HTTP/2 protocol errors when checked from GitHub Actions runners
   '^https?://github\.com/',
+  # Redirects to login page, blocked by bots
+  '^https?://vercel\.link/',
+  # API base URL, returns 404 when fetched directly
+  '^https?://api\.apertis\.ai/v1/?$',
+  # Redirects to authenticated Google Cloud console
+  '^https?://console\.cloud\.google\.com',
+  # Consistently times out in CI
+  '^https?://opncd\.ai',
+  '^https?://zod\.dev/v4/changelog',
 ]

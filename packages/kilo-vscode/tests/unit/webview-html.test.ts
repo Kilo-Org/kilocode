@@ -67,6 +67,11 @@ describe("buildCspString", () => {
     expect(result).not.toContain(":*")
   })
 
+  it("includes cspSource in connect-src for source map loading", () => {
+    const result = buildCspString(cspSource, nonce)
+    expect(result).toMatch(new RegExp(`connect-src\\s+${cspSource.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`))
+  })
+
   it("joins directives with semicolons", () => {
     const result = buildCspString(cspSource, nonce)
     const parts = result.split(";")

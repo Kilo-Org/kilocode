@@ -1,31 +1,6 @@
-import { describe, it, expect, mock } from "bun:test"
+import { describe, it, expect } from "bun:test"
 
-const makeAction = (title: string, kind: string) => ({ title, kind })
-const makeKind = (value: string) => ({
-  value,
-  append: (v: string) => makeKind(`${value}.${v}`),
-})
-
-const QuickFix = makeKind("quickfix")
-const RefactorRewrite = makeKind("refactor.rewrite")
-
-const mockVscode = {
-  CodeAction: class {
-    command?: { command: string; title: string }
-    isPreferred?: boolean
-    constructor(
-      public title: string,
-      public kind: { value: string },
-    ) {}
-  },
-  CodeActionKind: {
-    QuickFix,
-    RefactorRewrite,
-  },
-}
-
-mock.module("vscode", () => mockVscode)
-
+// vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloCodeActionProvider } = await import("../../src/services/code-actions/code-action-provider")
 
 const provider = new KiloCodeActionProvider()

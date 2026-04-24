@@ -1,18 +1,39 @@
 import { test, expect } from "bun:test"
-import { parseShareUrl, transformShareData, type ShareData } from "../../src/cli/cmd/import"
+import {
+  parseShareUrl,
+  transformShareData,
+  bootstrapImportedSessionIngest,
+  ingestBootstrapWarning,
+  shouldAttachShareAuthHeaders,
+  type ShareData,
+} from "../../src/cli/cmd/import"
 
 // parseShareUrl tests
-test("parses valid share URLs", () => {
-  expect(parseShareUrl("https://opncd.ai/share/Jsj3hNIW")).toBe("Jsj3hNIW")
-  expect(parseShareUrl("https://custom.example.com/share/abc123")).toBe("abc123")
-  expect(parseShareUrl("http://localhost:3000/share/test_id-123")).toBe("test_id-123")
+test("parses valid Kilo share URLs", () => {
+  expect(parseShareUrl("https://app.kilo.ai/s/7a755b04-b0fe-4e66-8b30-0ab52a181bd4")).toBe(
+    "7a755b04-b0fe-4e66-8b30-0ab52a181bd4",
+  )
+  expect(parseShareUrl("https://app.kilo.ai/s/Jsj3hNIW")).toBe("Jsj3hNIW")
+  expect(parseShareUrl("https://app.kilo.ai/s/test_id-123")).toBe("test_id-123")
 })
 
 test("rejects invalid URLs", () => {
-  expect(parseShareUrl("https://opncd.ai/s/Jsj3hNIW")).toBeNull() // legacy format
-  expect(parseShareUrl("https://opncd.ai/share/")).toBeNull()
-  expect(parseShareUrl("https://opncd.ai/share/id/extra")).toBeNull()
+  expect(parseShareUrl("https://app.kilo.ai/s/")).toBeNull()
+  expect(parseShareUrl("https://app.kilo.ai/s/id/extra")).toBeNull()
+  expect(parseShareUrl("https://opncd.ai/share/Jsj3hNIW")).toBeNull()
+  expect(parseShareUrl("https://other.example.com/s/abc")).toBeNull()
   expect(parseShareUrl("not-a-url")).toBeNull()
+})
+
+test("only attaches share auth headers for same-origin URLs", () => {
+  expect(shouldAttachShareAuthHeaders("https://control.example.com/share/abc", "https://control.example.com")).toBe(
+    true,
+  )
+  expect(shouldAttachShareAuthHeaders("https://other.example.com/share/abc", "https://control.example.com")).toBe(false)
+  expect(shouldAttachShareAuthHeaders("https://control.example.com:443/share/abc", "https://control.example.com")).toBe(
+    true,
+  )
+  expect(shouldAttachShareAuthHeaders("not-a-url", "https://control.example.com")).toBe(false)
 })
 
 // transformShareData tests
@@ -35,4 +56,42 @@ test("returns null for invalid share data", () => {
   expect(transformShareData([])).toBeNull()
   expect(transformShareData([{ type: "message", data: {} as any }])).toBeNull()
   expect(transformShareData([{ type: "session", data: { id: "s" } as any }])).toBeNull() // no messages
+})
+
+test("formats ingest bootstrap warning", () => {
+  expect(ingestBootstrapWarning("session-123", new Error("network failed"))).toContain("session-123")
+  expect(ingestBootstrapWarning("session-123", new Error("network failed"))).toContain("network failed")
+  expect(ingestBootstrapWarning("session-123", "oops")).toContain("oops")
+})
+
+test("bootstrapImportedSessionIngest runs bootstrap and does not warn on success", async () => {
+  const calls: string[] = []
+  const warnings: string[] = []
+
+  await bootstrapImportedSessionIngest("session-success", {
+    bootstrap: async (sessionId) => {
+      calls.push(sessionId)
+    },
+    warn: (message) => warnings.push(message),
+  })
+
+  expect(calls).toEqual(["session-success"])
+  expect(warnings).toHaveLength(0)
+})
+
+test("bootstrapImportedSessionIngest warns and continues on failure", async () => {
+  const warnings: string[] = []
+
+  await expect(
+    bootstrapImportedSessionIngest("session-fail", {
+      bootstrap: async () => {
+        throw new Error("boom")
+      },
+      warn: (message) => warnings.push(message),
+    }),
+  ).resolves.toBeUndefined()
+
+  expect(warnings).toHaveLength(1)
+  expect(warnings[0]).toContain("session-fail")
+  expect(warnings[0]).toContain("boom")
 })

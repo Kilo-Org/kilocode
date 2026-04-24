@@ -21,48 +21,9 @@ Both **GitLab.com** and **self-hosted GitLab instances** are supported.
 
 ### Step 1: Connect GitLab
 
-You can connect using **OAuth** or a **Personal Access Token (PAT)**. Choose the method that matches your GitLab setup:
+Connect your GitLab account via the [Integrations page](/docs/automate/integrations#connecting-gitlab). You can use **OAuth** (GitLab.com or self-hosted) or a **Personal Access Token (PAT)**.
 
-{% tabs %}
-{% tab label="OAuth (GitLab.com)" %}
-
-1. Go to the **Integrations** page:
-   - **Personal**: [app.kilo.ai/integrations/gitlab](https://app.kilo.ai/integrations/gitlab)
-   - **Organization**: Your organization → Integrations → GitLab
-2. Click **Connect GitLab**
-3. Authorize the application on GitLab
-4. You'll be redirected back to Kilo with the connection active
-
-{% /tab %}
-{% tab label="OAuth (Self-Hosted)" %}
-
-For self-hosted GitLab instances using OAuth, you need to register an OAuth application first:
-
-1. In your GitLab instance, go to **Admin Area → Applications** (or **User Settings → Applications**)
-2. Create a new application:
-   - **Name**: `Kilo Code`
-   - **Redirect URI**: `https://app.kilo.ai/api/integrations/gitlab/callback`
-   - **Scopes**: `api`, `read_user`, `read_repository`, `write_repository`
-   - **Confidential**: Yes
-3. Copy the **Application ID** and **Secret**
-4. In Kilo, go to the GitLab integration page
-5. Enter your **Instance URL**, **Client ID**, and **Client Secret**
-6. Click **Connect** and authorize
-
-{% /tab %}
-{% tab label="Personal Access Token" %}
-
-1. In GitLab, go to **User Settings → Access Tokens**
-2. Create a token with the `api` scope
-3. Copy the token
-4. In Kilo, go to the GitLab integration page
-5. Paste the token (and enter your Instance URL for self-hosted)
-6. Click **Connect**
-
-> PAT tokens cannot be refreshed automatically. When your token expires, create a new one in GitLab and reconnect in Kilo.
-
-{% /tab %}
-{% /tabs %}
+Once connected, return here to configure the Review Agent.
 
 ### Step 2: Configure the Review Agent
 

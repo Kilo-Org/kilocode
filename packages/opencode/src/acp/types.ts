@@ -1,5 +1,6 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
-import type { OpencodeClient } from "@kilocode/sdk/v2"
+import type { KiloClient } from "@kilocode/sdk/v2"
+import type { ProviderID, ModelID } from "../provider/schema"
 
 export interface ACPSessionState {
   id: string
@@ -7,17 +8,17 @@ export interface ACPSessionState {
   mcpServers: McpServer[]
   createdAt: Date
   model?: {
-    providerID: string
-    modelID: string
+    providerID: ProviderID
+    modelID: ModelID
   }
   variant?: string
   modeId?: string
 }
 
 export interface ACPConfig {
-  sdk: OpencodeClient
+  sdk: KiloClient
   defaultModel?: {
-    providerID: string
-    modelID: string
+    providerID: ProviderID
+    modelID: ModelID
   }
 }

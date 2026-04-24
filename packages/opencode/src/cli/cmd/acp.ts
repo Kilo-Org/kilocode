@@ -1,10 +1,10 @@
-import { Log } from "@/util/log"
+import { Log } from "@/util"
 import { bootstrap } from "../bootstrap"
 import { cmd } from "./cmd"
 import { AgentSideConnection, ndJsonStream } from "@agentclientprotocol/sdk"
 import { ACP } from "@/acp/agent"
 import { Server } from "@/server/server"
-import { createOpencodeClient } from "@kilocode/sdk/v2"
+import { createKiloClient } from "@kilocode/sdk/v2"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 
 const log = Log.create({ service: "acp-command" })
@@ -23,9 +23,9 @@ export const AcpCommand = cmd({
     process.env.KILO_CLIENT = "acp"
     await bootstrap(process.cwd(), async () => {
       const opts = await resolveNetworkOptions(args)
-      const server = Server.listen(opts)
+      const server = await Server.listen(opts)
 
-      const sdk = createOpencodeClient({
+      const sdk = createKiloClient({
         baseUrl: `http://${server.hostname}:${server.port}`,
       })
 

@@ -1,8 +1,19 @@
-import React from "react"
+import React, { useState, useEffect } from "react"
 import Link from "next/link"
 import Head from "next/head"
 
+const subtitles = [
+  "The page you requested does not exist or has been moved.",
+  "That link is dead, and may have ridden off into the sunset on a pink pony 🦄",
+]
+
 export default function Custom404() {
+  const [subtitle, setSubtitle] = useState("")
+
+  useEffect(() => {
+    setSubtitle(subtitles[Math.floor(Math.random() * subtitles.length)])
+  }, [])
+
   return (
     <>
       <Head>
@@ -39,7 +50,7 @@ export default function Custom404() {
           {/* Message */}
           <div className="message-section">
             <h1 className="message-title">Page not found</h1>
-            <p className="message-subtitle">The page you requested does not exist or has been moved.</p>
+            {subtitle && <p className="message-subtitle">{subtitle}</p>}
           </div>
 
           {/* Actions */}

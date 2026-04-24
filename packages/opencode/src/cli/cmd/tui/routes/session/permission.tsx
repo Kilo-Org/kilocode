@@ -11,10 +11,13 @@ import { useSync } from "../../context/sync"
 import { useTextareaKeybindings } from "../../component/textarea-keybindings"
 import path from "path"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
-import { Keybind } from "@/util/keybind"
-import { Locale } from "@/util/locale"
+import { Keybind } from "@/util"
+import { Locale } from "@/util"
 import { Global } from "@/global"
 import { useDialog } from "../../ui/dialog"
+import { getScrollAcceleration } from "../../util/scroll"
+import { useTuiConfig } from "../../context/tui-config"
+import { ConfigProtection } from "@/kilocode/permission/config-paths" // kilocode_change
 
 type PermissionStage = "permission" | "always" | "reject"
 
@@ -48,25 +51,27 @@ function EditBody(props: { request: PermissionRequest }) {
   const themeState = useTheme()
   const theme = themeState.theme
   const syntax = themeState.syntax
-  const sync = useSync()
+  const config = useTuiConfig()
   const dimensions = useTerminalDimensions()
 
   const filepath = createMemo(() => (props.request.metadata?.filepath as string) ?? "")
   const diff = createMemo(() => (props.request.metadata?.diff as string) ?? "")
 
   const view = createMemo(() => {
-    const diffStyle = sync.data.config.tui?.diff_style
+    const diffStyle = config.diff_style
     if (diffStyle === "stacked") return "unified"
     return dimensions().width > 120 ? "split" : "unified"
   })
 
   const ft = createMemo(() => filetype(filepath()))
+  const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
 
   return (
     <box flexDirection="column" gap={1}>
       <Show when={diff()}>
         <scrollbox
           height="100%"
+          scrollAcceleration={scrollAcceleration()}
           verticalScrollbarOptions={{
             trackOptions: {
               backgroundColor: theme.background,
@@ -147,6 +152,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
   })
 
   const { theme } = useTheme()
+  const keybind = useKeybind() // kilocode_change
 
   return (
     <Switch>
@@ -157,12 +163,12 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
                 {/* kilocode_change */}
-                <TextBody title={"This will allow " + props.request.permission + " until Kilo is restarted."} />
+                <TextBody title={"This will allow " + props.request.permission + " permanently."} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
                   {/* kilocode_change */}
-                  <text fg={theme.textMuted}>This will allow the following patterns until Kilo is restarted</text>
+                  <text fg={theme.textMuted}>This will allow the following patterns permanently</text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
@@ -182,7 +188,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
           onSelect={(option) => {
             setStore("stage", "permission")
             if (option === "cancel") return
-            sdk.client.permission.reply({
+            void sdk.client.permission.reply({
               reply: "always",
               requestID: props.request.id,
             })
@@ -192,7 +198,7 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
       <Match when={store.stage === "reject"}>
         <RejectPrompt
           onConfirm={(message) => {
-            sdk.client.permission.reply({
+            void sdk.client.permission.reply({
               reply: "reject",
               requestID: props.request.id,
               message: message || undefined,
@@ -424,15 +430,28 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                 </text>
                 <text fg={theme.text}>{current.title}</text>
               </box>
+              {/* // kilocode_change start - explain config file edits always require approval */}
+              <Show when={props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]}>
+                <box paddingLeft={4} flexShrink={0}>
+                  <text fg={theme.textMuted}>Config file edits always require approval</text>
+                </box>
+              </Show>
+              {/* // kilocode_change end */}
             </box>
           )
+
+          // kilocode_change start — hide "Always allow" for config file edits
+          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+            ? { once: "Allow once", reject: "Reject" }
+            : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          // kilocode_change end
 
           const body = (
             <Prompt
               title="Permission required"
               header={header()}
               body={current.body}
-              options={{ once: "Allow once", always: "Allow always", reject: "Reject" }}
+              options={options}
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {
@@ -445,13 +464,13 @@ export function PermissionPrompt(props: { request: PermissionRequest }) {
                     setStore("stage", "reject")
                     return
                   }
-                  sdk.client.permission.reply({
+                  void sdk.client.permission.reply({
                     reply: "reject",
                     requestID: props.request.id,
                   })
                   return
                 }
-                sdk.client.permission.reply({
+                void sdk.client.permission.reply({
                   reply: "once",
                   requestID: props.request.id,
                 })
@@ -519,7 +538,10 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
         gap={1}
       >
         <textarea
-          ref={(val: TextareaRenderable) => (input = val)}
+          ref={(val: TextareaRenderable) => {
+            input = val
+            val.traits = { status: "REJECT" }
+          }}
           focused
           textColor={theme.text}
           focusedTextColor={theme.text}
@@ -595,7 +617,7 @@ function Prompt<const T extends Record<string, string>>(props: {
   })
 
   const hint = createMemo(() => (store.expanded ? "minimize" : "fullscreen"))
-  const renderer = useRenderer()
+  useRenderer()
 
   const content = () => (
     <box

@@ -1,27 +1,57 @@
 /**
  * SetupScriptRunner - Executes worktree setup scripts
  *
- * Runs setup scripts in VS Code integrated terminal before agent starts.
- * Uses VS Code shell integration to track execution and exit code.
- * Falls back to sendText + onDidCloseTerminal if shell integration is unavailable.
- * Cross-platform: Unix uses sh, Windows uses cmd.exe.
+ * Builds the platform-specific command for setup scripts and delegates
+ * actual execution to an injected RunTask callback (provided by the caller).
  */
 
-import * as vscode from "vscode"
-import { SetupScriptService } from "./SetupScriptService"
-import { buildSetupCommand } from "./setup-script-command"
+import { SetupScriptService, type SetupScriptInfo } from "./SetupScriptService"
 
-export interface SetupScriptEnvironment {
+interface SetupScriptEnvironment {
   /** Absolute path to the worktree directory */
   worktreePath: string
   /** Absolute path to the main repository */
   repoPath: string
 }
 
+export interface SetupTaskConfig {
+  command: string
+  args: string[]
+  cwd: string
+  env: Record<string, string>
+}
+
+/** Execute a task and return its exit code (undefined if unknown). */
+export type RunTask = (config: SetupTaskConfig) => Promise<number | undefined>
+
+function quoteCmdArg(value: string): string {
+  return `"${value.replaceAll('"', '""')}"`
+}
+
+export function buildSetupTaskCommand(script: SetupScriptInfo): { command: string; args: string[] } {
+  if (script.kind === "powershell") {
+    return {
+      command: "powershell.exe",
+      args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script.path],
+    }
+  }
+  if (script.kind === "cmd") {
+    return {
+      command: "cmd.exe",
+      args: ["/d", "/s", "/c", quoteCmdArg(script.path)],
+    }
+  }
+  return {
+    command: "sh",
+    args: [script.path],
+  }
+}
+
 export class SetupScriptRunner {
   constructor(
-    private readonly output: vscode.OutputChannel,
+    private readonly log: (msg: string) => void,
     private readonly service: SetupScriptService,
+    private readonly run: RunTask,
   ) {}
 
   /**
@@ -31,16 +61,32 @@ export class SetupScriptRunner {
    * @returns true if script was executed, false if skipped (no script configured)
    */
   async runIfConfigured(env: SetupScriptEnvironment): Promise<boolean> {
-    if (!this.service.hasScript()) {
+    const script = this.service.resolveScript()
+    if (!script) {
       this.log("No setup script configured, skipping")
       return false
     }
 
-    const script = this.service.getScriptPath()
-    this.log(`Running setup script: ${script}`)
+    this.log(`Running setup script: ${script.path}`)
 
     try {
-      await this.executeInTerminal(script, env)
+      const cmd = buildSetupTaskCommand(script)
+      const code = await this.run({
+        command: cmd.command,
+        args: cmd.args,
+        cwd: env.worktreePath,
+        env: {
+          WORKTREE_PATH: env.worktreePath,
+          REPO_PATH: env.repoPath,
+        },
+      })
+      if (code === undefined) {
+        this.log("Setup script finished without a valid exit code — assuming success")
+        return true
+      }
+      if (code !== 0) {
+        throw new Error(`Setup script exited with code ${code}`)
+      }
       this.log("Setup script completed")
       return true
     } catch (error) {
@@ -48,105 +94,5 @@ export class SetupScriptRunner {
       this.log(`Setup script execution failed: ${msg}`)
       return true // Script was attempted
     }
-  }
-
-  /** Execute the setup script in a VS Code terminal and wait for it to finish. */
-  private async executeInTerminal(script: string, env: SetupScriptEnvironment): Promise<void> {
-    const terminal = vscode.window.createTerminal({
-      name: "Worktree Setup",
-      cwd: env.worktreePath,
-      env: {
-        WORKTREE_PATH: env.worktreePath,
-        REPO_PATH: env.repoPath,
-      },
-      iconPath: new vscode.ThemeIcon("gear"),
-    })
-
-    terminal.show(true)
-
-    // Try shell integration first — gives us proper exit code tracking
-    const integration = await this.waitForShellIntegration(terminal, 5000)
-    if (integration) {
-      this.log("Using shell integration for setup script execution")
-      await this.runViaShellIntegration(terminal, integration, script, env)
-    } else {
-      this.log("Shell integration unavailable, falling back to sendText")
-      await this.runViaSendText(terminal, script, env)
-    }
-  }
-
-  /** Wait for shell integration to become available on a terminal, with timeout. */
-  private waitForShellIntegration(
-    terminal: vscode.Terminal,
-    timeout: number,
-  ): Promise<vscode.TerminalShellIntegration | undefined> {
-    if (terminal.shellIntegration) return Promise.resolve(terminal.shellIntegration)
-
-    return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        listener.dispose()
-        resolve(undefined)
-      }, timeout)
-
-      const listener = vscode.window.onDidChangeTerminalShellIntegration((e) => {
-        if (e.terminal !== terminal) return
-        clearTimeout(timer)
-        listener.dispose()
-        resolve(e.shellIntegration)
-      })
-    })
-  }
-
-  /** Run script via shell integration — tracks execution and exit code properly. */
-  private runViaShellIntegration(
-    terminal: vscode.Terminal,
-    integration: vscode.TerminalShellIntegration,
-    script: string,
-    env: SetupScriptEnvironment,
-  ): Promise<void> {
-    return new Promise((resolve) => {
-      const command = buildSetupCommand(script, env)
-      const execution = integration.executeCommand(command)
-
-      const cleanup = () => {
-        execListener.dispose()
-        closeListener.dispose()
-      }
-
-      // Primary: shell integration reports execution finished with exit code
-      const execListener = vscode.window.onDidEndTerminalShellExecution((e) => {
-        if (e.execution !== execution) return
-        cleanup()
-        this.log(`Setup script exited with code ${e.exitCode ?? "unknown"}`)
-        resolve()
-      })
-
-      // Fallback: terminal was closed externally (user, VS Code restart, etc.)
-      const closeListener = vscode.window.onDidCloseTerminal((closed) => {
-        if (closed !== terminal) return
-        cleanup()
-        this.log("Setup script terminal closed before execution event fired")
-        resolve()
-      })
-    })
-  }
-
-  /** Fallback: run via sendText and wait for terminal to close. */
-  private runViaSendText(terminal: vscode.Terminal, script: string, env: SetupScriptEnvironment): Promise<void> {
-    return new Promise((resolve) => {
-      const listener = vscode.window.onDidCloseTerminal((closed) => {
-        if (closed !== terminal) return
-        listener.dispose()
-        resolve()
-      })
-
-      const command = buildSetupCommand(script, env) + (process.platform === "win32" ? "& exit" : "; exit")
-      terminal.sendText(command)
-      this.log("Setup script started in terminal, waiting for completion...")
-    })
-  }
-
-  private log(message: string): void {
-    this.output.appendLine(`[SetupScriptRunner] ${message}`)
   }
 }
