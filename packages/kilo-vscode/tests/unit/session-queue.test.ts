@@ -90,15 +90,21 @@ describe("messageTurns", () => {
     ])
   })
 
-  it("surfaces leading assistant output as a partial turn", () => {
-    const messages = [assistant("message_2", "message_1"), assistant("message_3", "message_1"), user("message_4")]
+  it("surfaces leading assistant output as partial turns grouped by parent", () => {
+    const messages = [
+      assistant("message_2", "message_1"),
+      assistant("message_4", "message_3"),
+      assistant("message_5", "message_3"),
+      user("message_6"),
+    ]
     const turns = messageTurns(messages)
 
     expect(
       turns.map((turn) => ({ id: turn.id, partial: turn.partial, assistant: turn.assistant.map((msg) => msg.id) })),
     ).toEqual([
-      { id: "message_1", partial: true, assistant: ["message_2", "message_3"] },
-      { id: "message_4", partial: undefined, assistant: [] },
+      { id: "message_1", partial: true, assistant: ["message_2"] },
+      { id: "message_3", partial: true, assistant: ["message_4", "message_5"] },
+      { id: "message_6", partial: undefined, assistant: [] },
     ])
   })
 })

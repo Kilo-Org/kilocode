@@ -7,9 +7,12 @@ export interface MessageTurn {
   partial?: boolean
 }
 
-function partial(messages: Message[]): MessageTurn | undefined {
-  const first = messages[0]
-  if (!first) return undefined
+function key(msg: Message) {
+  return msg.parentID ?? msg.id
+}
+
+function partial(messages: Message[]): MessageTurn {
+  const first = messages[0]!
   const id = first.parentID ?? `${first.id}:partial`
   return {
     id,
@@ -23,6 +26,20 @@ function partial(messages: Message[]): MessageTurn | undefined {
     assistant: messages,
     partial: true,
   }
+}
+
+function partials(messages: Message[]): MessageTurn[] {
+  return messages
+    .reduce<Message[][]>((groups, msg) => {
+      const prev = groups[groups.length - 1]
+      if (!prev || key(prev[0]!) !== key(msg)) {
+        groups.push([msg])
+        return groups
+      }
+      prev.push(msg)
+      return groups
+    }, [])
+    .map(partial)
 }
 
 export function messageTurns(messages: Message[], boundary?: string): MessageTurn[] {
@@ -53,9 +70,8 @@ export function messageTurns(messages: Message[], boundary?: string): MessageTur
     lead.push(msg)
   }
 
-  const stub = partial(lead)
-  if (!stub) return result
-  return [stub, ...result]
+  if (lead.length === 0) return result
+  return [...partials(lead), ...result]
 }
 
 function sameMessages(a: Message[], b: Message[]) {
