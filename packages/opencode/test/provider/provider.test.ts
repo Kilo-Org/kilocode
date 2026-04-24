@@ -2493,7 +2493,7 @@ test("plugin config providers persist after instance dispose", async () => {
   })
   expect(second[ProviderID.make("demo")]).toBeDefined()
   expect(second[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
-})
+}, 60000) // kilocode_change - increased timeout for plugin installation; two Instance.provide calls each reify @kilocode/plugin into the temp dir (slow on Windows CI)
 
 test("plugin config enabled and disabled providers are honored", async () => {
   await using tmp = await tmpdir({
@@ -2530,7 +2530,7 @@ test("plugin config enabled and disabled providers are honored", async () => {
       expect(providers[ProviderID.openai]).toBeUndefined()
     },
   })
-})
+}, 60000) // kilocode_change - increased timeout for plugin installation; reifying @kilocode/plugin into the temp dir is slow on Windows CI
 
 test("opencode loader keeps paid models when config apiKey is present", async () => {
   await using base = await tmpdir({
