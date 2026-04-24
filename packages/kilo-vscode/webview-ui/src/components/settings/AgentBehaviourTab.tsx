@@ -17,6 +17,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
+import { SkillEditModal } from "./SkillEditModal"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -73,6 +74,9 @@ const AgentBehaviourTab: Component = () => {
 
   // MCP view state
   const [editingMcp, setEditingMcp] = createSignal<string>("")
+
+  // Skill edit state
+  const [editingSkill, setEditingSkill] = createSignal<SkillInfo | null>(null)
 
   // Fetch skills whenever the skills subtab becomes active
   createEffect(() => {
@@ -169,6 +173,36 @@ const AgentBehaviourTab: Component = () => {
     current.splice(index, 1)
     updateConfig({ skills: { ...config().skills, urls: current } })
   }
+
+  const disabledSkills = () => config().skills?.disabled ?? []
+
+  const toggleSkillEnabled = (skillName: string) => {
+    const disabled = [...disabledSkills()]
+    const index = disabled.indexOf(skillName)
+    if (index >= 0) {
+      disabled.splice(index, 1)
+    } else {
+      disabled.push(skillName)
+    }
+    updateConfig({ skills: { ...config().skills, disabled } })
+  }
+
+  const isSkillDisabled = (skillName: string) => disabledSkills().includes(skillName)
+
+  const disabledRulePatterns = () => config().permission?.disabled ?? []
+
+  const toggleRuleEnabled = (pattern: string) => {
+    const disabled = [...disabledRulePatterns()]
+    const index = disabled.indexOf(pattern)
+    if (index >= 0) {
+      disabled.splice(index, 1)
+    } else {
+      disabled.push(pattern)
+    }
+    updateConfig({ permission: { ...config().permission, disabled } })
+  }
+
+  const isRuleDisabled = (pattern: string) => disabledRulePatterns().includes(pattern)
 
   const confirmRemoveSkill = (skill: SkillInfo) => {
     dialog.show(() => (
@@ -821,26 +855,45 @@ const AgentBehaviourTab: Component = () => {
                   "justify-content": "space-between",
                   padding: "8px 0",
                   "border-bottom": index() < session.skills().length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  opacity: isSkillDisabled(skill.name) ? "0.6" : "1",
+                  "text-decoration": isSkillDisabled(skill.name) ? "line-through" : "none",
                 }}
               >
-                <div style={{ flex: 1, "min-width": 0 }}>
-                  <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
-                    {skill.name}
-                  </div>
-                  <div
-                    data-slot="settings-row-label-subtitle"
-                    style={{
-                      "margin-top": "4px",
-                      "font-family": "var(--vscode-editor-font-family, monospace)",
-                    }}
-                  >
-                    <div>{skill.description}</div>
-                    {skill.location !== "builtin" && <div>{skill.location}</div>}
+                <div style={{ flex: 1, "min-width": 0, display: "flex", "align-items": "center", gap: "8px" }}>
+                  <Switch
+                    checked={!isSkillDisabled(skill.name)}
+                    onChange={() => toggleSkillEnabled(skill.name)}
+                    hideLabel
+                  />
+                  <div>
+                    <div data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+                      {skill.name}
+                    </div>
+                    <div
+                      data-slot="settings-row-label-subtitle"
+                      style={{
+                        "margin-top": "4px",
+                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                      }}
+                    >
+                      <div>{skill.description}</div>
+                      {skill.location !== "builtin" && <div>{skill.location}</div>}
+                    </div>
                   </div>
                 </div>
-                {skill.location !== "builtin" && (
-                  <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
-                )}
+                <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                  {skill.location !== "builtin" && (
+                    <IconButton
+                      size="small"
+                      variant="ghost"
+                      icon="pencil-line"
+                      onClick={() => setEditingSkill(skill)}
+                    />
+                  )}
+                  {skill.location !== "builtin" && (
+                    <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
+                  )}
+                </div>
               </div>
             )}
           </For>
@@ -1043,6 +1096,91 @@ const AgentBehaviourTab: Component = () => {
         </For>
       </Card>
 
+      {/* Rules Toggle Section */}
+      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+        {language.t("settings.agentBehaviour.rules.title") || "Permission Rules"}
+      </h4>
+      <Card style={{ "margin-bottom": "16px" }}>
+        <div
+          style={{
+            "padding-bottom": "8px",
+            "border-bottom": "1px solid var(--border-weak-base)",
+          }}
+        >
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              "margin-top": "2px",
+            }}
+          >
+            {language.t("settings.agentBehaviour.rules.toggleDescription") ||
+              "Enable or disable permission rules without deleting them"}
+          </div>
+        </div>
+
+        {/* Display discovered rules */}
+        <Show
+          when={
+            config().permission &&
+            Object.keys(config().permission).length > 0 &&
+            Object.keys(config().permission).some((k) => k !== "disabled" && k !== "__originalKeys")
+          }
+          fallback={
+            <div
+              style={{
+                padding: "8px 0",
+                "font-size": "12px",
+                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              }}
+            >
+              {language.t("settings.agentBehaviour.rules.noRules") || "No permission rules configured"}
+            </div>
+          }
+        >
+          <For
+            each={Object.keys(config().permission ?? {}).filter(
+              (k) => k !== "disabled" && k !== "__originalKeys",
+            )}
+          >
+            {(permission, index) => {
+              const allKeys = Object.keys(config().permission ?? {}).filter(
+                (k) => k !== "disabled" && k !== "__originalKeys",
+              )
+              return (
+                <div
+                  style={{
+                    display: "flex",
+                    "align-items": "center",
+                    "justify-content": "space-between",
+                    padding: "6px 0",
+                    "border-bottom": index() < allKeys.length - 1 ? "1px solid var(--border-weak-base)" : "none",
+                  }}
+                >
+                  <div style={{ display: "flex", "align-items": "center", gap: "8px", flex: 1 }}>
+                    <div
+                      style={{
+                        "font-family": "var(--vscode-editor-font-family, monospace)",
+                        "font-size": "12px",
+                      }}
+                    >
+                      {permission}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                    <Switch
+                      checked={!isRuleDisabled(permission)}
+                      onChange={() => toggleRuleEnabled(permission)}
+                      hideLabel
+                    />
+                  </div>
+                </div>
+              )
+            }}
+          </For>
+        </Show>
+      </Card>
+
       {/* Claude Code compatibility */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
         {language.t("settings.agentBehaviour.claudeCompat.heading")}
@@ -1140,6 +1278,19 @@ const AgentBehaviourTab: Component = () => {
 
       {/* Subtab content */}
       {renderSubtabContent()}
+
+      {/* Skill Edit Modal */}
+      <Show when={editingSkill()}>
+        {(skill) => (
+          <SkillEditModal
+            skill={skill()}
+            onClose={() => setEditingSkill(null)}
+            onSave={(updated) => {
+              session.refreshSkills()
+            }}
+          />
+        )}
+      </Show>
     </div>
   )
 }
