@@ -2313,7 +2313,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const dir = this.getWorkspaceDirectory()
       
       // Get the skill location from the CLI
-      const { data: skills } = await this.client.skill.all(
+      const { data: skills } = await this.client.app.skills(
         { directory: dir },
         { throwOnError: true },
       )
