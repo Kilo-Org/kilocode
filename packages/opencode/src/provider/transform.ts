@@ -186,31 +186,45 @@ function normalizeMessages(
   if (typeof model.capabilities.interleaved === "object" && model.capabilities.interleaved.field) {
     const field = model.capabilities.interleaved.field
     const sdk = sdkKey(model.api.npm) ?? "openaiCompatible"
-    return msgs.map((msg) => {
-      if (msg.role === "assistant" && Array.isArray(msg.content)) {
-        const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
-        const reasoningText = reasoningParts.map((part: any) => part.text).join("")
+    msgs = msgs.map((msg) => {
+      if (msg.role === "assistant") {
+        let reasoningText = ""
 
-        // Filter out reasoning parts from content
-        const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
+        if (Array.isArray(msg.content)) {
+          const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
+          reasoningText = reasoningParts.map((part: any) => part.text).join("")
 
-        // kilocode_change start - cherry-picked from anomalyco/opencode#24146;
-        // will be reverted on the next wholesale upstream merge.
-        // Include reasoning_content | reasoning_details directly on the message for all assistant messages.
-        // Always set the field even when empty — some providers (e.g. DeepSeek) may return empty
-        // reasoning_content which still needs to be sent back in subsequent requests.
-        return {
-          ...msg,
-          content: filteredContent,
-          providerOptions: {
-            ...msg.providerOptions,
-            [sdk]: {
-              ...(msg.providerOptions as any)?.[sdk],
-              [field]: reasoningText,
+          // Filter out reasoning parts from content for interleaved messages
+          const filteredContent = msg.content.filter((part: any) => part.type !== "reasoning")
+
+          return {
+            ...msg,
+            content: filteredContent,
+            providerOptions: {
+              ...msg.providerOptions,
+              [sdk]: {
+                ...(msg.providerOptions as any)?.[sdk],
+                [field]: reasoningText,
+              },
             },
-          },
+          }
+        } else if (typeof msg.content === "string") {
+          // Handle string content messages - inject empty reasoning_content if missing
+          const existing = (msg.providerOptions as any)?.[sdk]?.[field]
+          if (existing === undefined || existing === null) {
+            return {
+              ...msg,
+              providerOptions: {
+                ...msg.providerOptions,
+                [sdk]: {
+                  ...(msg.providerOptions as any)?.[sdk],
+                  [field]: "",
+                },
+              },
+            }
+          }
+          return msg
         }
-        // kilocode_change end
       }
 
       return msg

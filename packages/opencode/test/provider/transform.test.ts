@@ -1077,6 +1077,22 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
     const result = ProviderTransform.message(msgs, model, {})
     expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBeUndefined()
   })
+
+  test("interleaved block handles string content assistant messages", () => {
+    const model = createModel({
+      id: "deepseek/deepseek-reasoner",
+      providerID: "deepseek",
+      api: { id: "deepseek-reasoner", url: "https://api.deepseek.com", npm: "@ai-sdk/openai-compatible" },
+      capabilities: { ...baseCapabilities, reasoning: true, interleaved: { field: "reasoning_content" } },
+    })
+    const msgs = [{
+      role: "assistant",
+      content: "This is a string content message"
+    }] as any[]
+    const result = ProviderTransform.message(msgs, model, {})
+    expect(result[0].content).toBe("This is a string content message")
+    expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBe("")
+  })
 })
 
 describe("ProviderTransform.message - empty image handling", () => {
