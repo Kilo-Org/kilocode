@@ -34,7 +34,6 @@ export const Info = z.object({
   description: z.string(),
   location: z.string(),
   content: z.string(),
-  enabled: z.boolean().default(true),
 })
 export type Info = z.infer<typeof Info>
 
