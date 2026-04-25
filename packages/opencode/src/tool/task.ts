@@ -112,16 +112,22 @@ export const TaskTool = Tool.define(
       const msg = yield* Effect.sync(() => MessageV2.get({ sessionID: ctx.sessionID, messageID: ctx.messageID }))
       if (msg.info.role !== "assistant") return yield* Effect.fail(new Error("Not an assistant message"))
 
-      const model = next.model ?? {
-        modelID: msg.info.modelID,
-        providerID: msg.info.providerID,
-      }
+      // kilocode_change start — prefer user's CLI-saved pick for this subagent
+      const saved = yield* KiloTask.resolveModel(next.name)
+      const model = saved ??
+        next.model ?? {
+          modelID: msg.info.modelID,
+          providerID: msg.info.providerID,
+        }
+      const variant = saved?.variant ?? (saved ? undefined : next.variant)
+      // kilocode_change end
 
       yield* ctx.metadata({
         title: params.description,
         metadata: {
           sessionId: nextSession.id,
           model,
+          variant, // kilocode_change
         },
       })
 
@@ -148,6 +154,7 @@ export const TaskTool = Tool.define(
                 modelID: model.modelID,
                 providerID: model.providerID,
               },
+              variant, // kilocode_change
               agent: next.name,
               tools: {
                 ...(canTodo ? {} : { todowrite: false }),
@@ -162,6 +169,7 @@ export const TaskTool = Tool.define(
               metadata: {
                 sessionId: nextSession.id,
                 model,
+                variant, // kilocode_change
               },
               output: [
                 `task_id: ${nextSession.id} (for resuming to continue this task if needed)`,

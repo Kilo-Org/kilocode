@@ -145,6 +145,6 @@
     "solid-js@1.9.10": "patches/solid-js@1.9.10.patch",
     "stream-chat@9.38.0": "patches/stream-chat@9.38.0.patch"
   },
-  "version": "7.2.22",
+  "version": "7.2.23",
   "peerDependencies": {}
 }
