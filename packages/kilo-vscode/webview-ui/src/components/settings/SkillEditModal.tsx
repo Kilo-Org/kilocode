@@ -12,12 +12,17 @@ interface Props {
   onSave: (updatedSkill: { name: string; content: string }) => void
 }
 
+const getInitialSkillContent = (skill: SkillInfo): string => {
+  const skillWithContent = skill as SkillInfo & { content?: unknown }
+  return typeof skillWithContent.content === "string" ? skillWithContent.content : ""
+}
+
 export const SkillEditModal = (props: Props) => {
   const language = useLanguage()
   const vscode = useVSCode()
 
   const [name, setName] = createSignal(props.skill.name)
-  const [content, setContent] = createSignal(props.skill.content)
+  const [content, setContent] = createSignal(getInitialSkillContent(props.skill))
   const [saving, setSaving] = createSignal(false)
   const [error, setError] = createSignal<string | null>(null)
 
