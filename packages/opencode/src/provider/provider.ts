@@ -1012,7 +1012,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
         video: model.modalities?.output?.includes("video") ?? false,
         pdf: model.modalities?.output?.includes("pdf") ?? false,
       },
-      interleaved: model.interleaved ?? (model.reasoning && (model.api.id.includes("deepseek") || model.id.includes("deepseek")) ? { field: "reasoning_content" } : false), // kilocode_change
+      interleaved: model.interleaved ?? (model.reasoning && model.id.includes("deepseek") ? { field: "reasoning_content" } : false), // kilocode_change
     },
     release_date: model.release_date ?? "",
     variants: {},
@@ -1186,7 +1186,7 @@ const layer: Layer.Layer<
                   pdf: model.modalities?.output?.includes("pdf") ?? existingModel?.capabilities.output.pdf ?? false,
                 },
                 interleaved: model.interleaved ?? existingModel?.capabilities.interleaved ??
-                  (model.reasoning && (model.api.id.includes("deepseek") || model.id.includes("deepseek")) ? { field: "reasoning_content" } : false), // kilocode_change
+                  (model.reasoning && (model.id?.includes("deepseek") || modelID.includes("deepseek")) ? { field: "reasoning_content" } : false), // kilocode_change
               },
               cost: {
                 input: model?.cost?.input ?? existingModel?.cost?.input ?? 0,
