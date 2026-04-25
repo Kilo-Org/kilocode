@@ -78,6 +78,10 @@ export function getErrorMessage(error: unknown): string {
 }
 
 /**
+ * Build a user-facing Enhance Prompt error with actionable guidance for
+ * common provider quota/billing failures that are often wrapped in retry errors.
+ */
+/**
  * Format a full human-readable breakdown of a config save failure, including
  * the file path and every Zod issue. Used as the expandable details next to
  * the short getErrorMessage() summary.
