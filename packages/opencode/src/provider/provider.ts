@@ -1414,6 +1414,10 @@ const layer: Layer.Layer<
           options["includeUsage"] = true
         }
 
+        if (model.capabilities.reasoning && options["extractReasoning"] === undefined) {
+          options["extractReasoning"] = true // kilocode_change
+        }
+
         const baseURL = iife(() => {
           let url =
             typeof options["baseURL"] === "string" && options["baseURL"] !== "" ? options["baseURL"] : model.api.url
