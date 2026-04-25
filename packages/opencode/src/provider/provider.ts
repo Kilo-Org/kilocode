@@ -1012,7 +1012,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
         video: model.modalities?.output?.includes("video") ?? false,
         pdf: model.modalities?.output?.includes("pdf") ?? false,
       },
-      interleaved: model.interleaved ?? false,
+      interleaved: model.interleaved ?? (model.reasoning ? { field: "reasoning_content" } : false), // kilocode_change
     },
     release_date: model.release_date ?? "",
     variants: {},
@@ -1185,7 +1185,8 @@ const layer: Layer.Layer<
                     model.modalities?.output?.includes("video") ?? existingModel?.capabilities.output.video ?? false,
                   pdf: model.modalities?.output?.includes("pdf") ?? existingModel?.capabilities.output.pdf ?? false,
                 },
-                interleaved: model.interleaved ?? false,
+                interleaved: model.interleaved ?? existingModel?.capabilities.interleaved ??
+                  (model.reasoning ? { field: "reasoning_content" } : false), // kilocode_change
               },
               cost: {
                 input: model?.cost?.input ?? existingModel?.cost?.input ?? 0,

@@ -977,6 +977,106 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
     ])
     expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBeUndefined()
   })
+
+  const baseCapabilities = {
+    temperature: true,
+    reasoning: true,
+    attachment: true,
+    toolcall: true,
+    input: { text: true, audio: false, image: true, video: false, pdf: false },
+    output: { text: true, audio: false, image: false, video: false, pdf: false },
+  }
+
+  const createModel = (overrides: Partial<any> = {}) =>
+    ({
+      id: "test/test-model",
+      providerID: "test",
+      api: {
+        id: "test-model",
+        url: "https://api.test.com",
+        npm: "@ai-sdk/openai",
+      },
+      name: "Test Model",
+      capabilities: {
+        ...baseCapabilities,
+        interleaved: false,
+      },
+      cost: {
+        input: 0.001,
+        output: 0.002,
+        cache: { read: 0.0001, write: 0.0002 },
+      },
+      limit: {
+        context: 200_000,
+        output: 64_000,
+      },
+      status: "active",
+      options: {},
+      headers: {},
+      release_date: "2024-01-01",
+      ...overrides,
+    }) as any
+
+  test("OpenRouter DeepSeek uses 'openrouter' key for reasoning_content", () => {
+    const model = createModel({
+      id: "deepseek-ai/DeepSeek-R1-0528",
+      providerID: "openrouter",
+      api: { id: "deepseek-deepseek-r1", url: "https://api.openrouter.ai", npm: "@openrouter/ai-sdk-provider" },
+      capabilities: { ...baseCapabilities, reasoning: true, interleaved: { field: "reasoning_content" } },
+    })
+    const msgs = [{
+      role: "assistant",
+      content: [
+        { type: "reasoning", text: "thinking step" },
+        { type: "tool-call", toolCallId: "t1", toolName: "bash", input: { cmd: "ls" } },
+      ],
+    }] as any[]
+    const result = ProviderTransform.message(msgs, model, {})
+    expect(result[0].providerOptions?.openrouter?.reasoning_content).toBe("thinking step")
+    expect(result[0].providerOptions?.openaiCompatible).toBeUndefined()
+  })
+
+  test("assistant message without reasoning part gets empty reasoning_content", () => {
+    const model = createModel({
+      id: "deepseek/deepseek-reasoner",
+      providerID: "deepseek",
+      api: { id: "deepseek-reasoner", url: "https://api.deepseek.com", npm: "@ai-sdk/openai-compatible" },
+      capabilities: { ...baseCapabilities, reasoning: true, interleaved: false },
+    })
+    const msgs = [{
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }],
+    }] as any[]
+    const result = ProviderTransform.message(msgs, model, {})
+    expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBe("")
+  })
+
+  test("model with reasoning:true and no interleaved gets auto-injected", () => {
+    const model = createModel({
+      id: "openrouter/deepseek-r1",
+      providerID: "openrouter",
+      api: { id: "deepseek-ai/DeepSeek-R1", url: "https://api.openrouter.ai", npm: "@openrouter/ai-sdk-provider" },
+      capabilities: { ...baseCapabilities, reasoning: true, interleaved: false },
+    })
+    const msgs = [{
+      role: "assistant",
+      content: [{ type: "text", text: "No reasoning here" }],
+    }] as any[]
+    const result = ProviderTransform.message(msgs, model, {})
+    expect(result[0].providerOptions?.openrouter?.reasoning_content).toBe("")
+  })
+
+  test("non-reasoning model does not add reasoning_content", () => {
+    const model = createModel({
+      id: "openai/gpt-4",
+      providerID: "openai",
+      api: { id: "gpt-4", url: "https://api.openai.com", npm: "@ai-sdk/openai" },
+      capabilities: { ...baseCapabilities, reasoning: false, interleaved: false },
+    })
+    const msgs = [{ role: "assistant", content: [{ type: "text", text: "Hello" }] }] as any[]
+    const result = ProviderTransform.message(msgs, model, {})
+    expect(result[0].providerOptions?.openaiCompatible?.reasoning_content).toBeUndefined()
+  })
 })
 
 describe("ProviderTransform.message - empty image handling", () => {

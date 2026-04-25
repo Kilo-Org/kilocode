@@ -185,6 +185,7 @@ function normalizeMessages(
 
   if (typeof model.capabilities.interleaved === "object" && model.capabilities.interleaved.field) {
     const field = model.capabilities.interleaved.field
+    const sdk = sdkKey(model.api.npm) ?? "openaiCompatible"
     return msgs.map((msg) => {
       if (msg.role === "assistant" && Array.isArray(msg.content)) {
         const reasoningParts = msg.content.filter((part: any) => part.type === "reasoning")
@@ -203,8 +204,8 @@ function normalizeMessages(
           content: filteredContent,
           providerOptions: {
             ...msg.providerOptions,
-            openaiCompatible: {
-              ...msg.providerOptions?.openaiCompatible,
+            [sdk]: {
+              ...(msg.providerOptions as any)?.[sdk],
               [field]: reasoningText,
             },
           },
@@ -215,6 +216,48 @@ function normalizeMessages(
       return msg
     })
   }
+
+  // kilocode_change start - cherry-picked from anomalyco/opencode#24250;
+  // inject empty reasoning_content for all assistant messages on reasoning models.
+  // This handles historical messages saved before the fix and tool-only responses
+  // where the SDK produced no reasoning part but the API still requires the field.
+  if (model.capabilities.reasoning) {
+    const sdk = sdkKey(model.api.npm) ?? "openaiCompatible"
+    const field =
+      (typeof model.capabilities.interleaved === "object" &&
+        model.capabilities.interleaved.field) ||
+      "reasoning_content"
+
+    msgs = msgs.map((msg) => {
+      if (msg.role !== "assistant") return msg
+
+      // Don't overwrite already-set reasoning content
+      const existing = (msg.providerOptions as any)?.[sdk]?.[field]
+      if (existing !== undefined && existing !== null) return msg
+
+      // Extract reasoning from content parts if present
+      let reasoningText = ""
+      if (Array.isArray(msg.content)) {
+        const parts = msg.content.filter((p: any) => p.type === "reasoning")
+        reasoningText = parts.map((p: any) => p.text).join("")
+      }
+
+      // Don't double-set if already handled by interleaved block (would have stripped reasoning parts)
+      if (reasoningText) return msg
+
+      return {
+        ...msg,
+        providerOptions: {
+          ...msg.providerOptions,
+          [sdk]: {
+            ...(msg.providerOptions as any)?.[sdk],
+            [field]: reasoningText, // empty string for historical/no-reasoning messages
+          },
+        },
+      }
+    })
+  }
+  // kilocode_change end
 
   return msgs
 }
