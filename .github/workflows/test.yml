@@ -63,6 +63,17 @@ jobs:
             turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
             turbo-${{ runner.os }}-
 
+      # DEBUG: put tmpdir on D: drive (same volume as D:\a\kilocode\kilocode)
+      # to avoid the C:\Users -> D:\Users symlink that rg trips on with os error 52
+      - name: Use D:\tmp for temp dir (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          mkdir -p /d/tmp
+          echo "TMPDIR=D:\\tmp" >> "$GITHUB_ENV"
+          echo "TEMP=D:\\tmp"   >> "$GITHUB_ENV"
+          echo "TMP=D:\\tmp"    >> "$GITHUB_ENV"
+
       - name: Run unit tests
         run: bun turbo test:ci
         env:
