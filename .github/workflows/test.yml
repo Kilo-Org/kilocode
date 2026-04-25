@@ -30,7 +30,7 @@ jobs:
           - name: linux
             host: blacksmith-8vcpu-ubuntu-2404
           - name: windows
-            host: windows-2025 # DEBUG: swap Blacksmith for GitHub-hosted to isolate runner env
+            host: windows-2022 # DEBUG
     runs-on: ${{ matrix.settings.host }}
     defaults:
       run:
