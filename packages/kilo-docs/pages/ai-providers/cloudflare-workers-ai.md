@@ -53,7 +53,8 @@ kilo auth cloudflare-workers-ai
 
 ```bash
 export CLOUDFLARE_ACCOUNT_ID="your-account-id"
-export CLOUDFLARE_API_KEY="your-api-token"
+export CLOUDFLARE_API_TOKEN="your-api-token"
+# CLOUDFLARE_API_KEY is also accepted as a legacy alias.
 ```
 
 **Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
@@ -62,7 +63,7 @@ export CLOUDFLARE_API_KEY="your-api-token"
 {
   "provider": {
     "cloudflare-workers-ai": {
-      "env": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_KEY"],
+      "env": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
     },
   },
 }

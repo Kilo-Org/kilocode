@@ -18,7 +18,7 @@ export async function CloudflareWorkersAuthPlugin(_input: PluginInput): Promise<
       methods: [
         {
           type: "api",
-          label: "API key",
+          label: "API token",
           prompts,
         },
       ],

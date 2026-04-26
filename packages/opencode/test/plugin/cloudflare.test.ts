@@ -84,12 +84,12 @@ test("ignores non-cloudflare-ai-gateway providers", async () => {
   expect(out.maxOutputTokens).toBe(32_000)
 })
 
-test("CloudflareWorkersAuthPlugin registers an api-key auth method for cloudflare-workers-ai", async () => {
+test("CloudflareWorkersAuthPlugin registers an api-token auth method for cloudflare-workers-ai", async () => {
   const hooks = await CloudflareWorkersAuthPlugin(pluginInput)
   expect(hooks.auth?.provider).toBe("cloudflare-workers-ai")
   expect(hooks.auth?.methods).toHaveLength(1)
   expect(hooks.auth?.methods[0]?.type).toBe("api")
-  expect(hooks.auth?.methods[0]?.label).toBe("API key")
+  expect(hooks.auth?.methods[0]?.label).toBe("API token")
 })
 
 test("CloudflareWorkersAuthPlugin prompts for account ID when env is missing", async () => {
