@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
+import type { DaveProviderExtensions } from "./KiloProvider.dave"
 import { AgentManagerProvider } from "./agent-manager/AgentManagerProvider"
 import { VscodeHost } from "./agent-manager/vscode-host"
 import { KiloClawProvider } from "./kiloclaw/KiloClawProvider"
@@ -32,6 +33,7 @@ import { WorkstationProfileService } from "./services/workstation"
 import type { KiloClient } from "@kilocode/sdk/v2"
 import { KiloLogger } from "./services/KiloLogger"
 import { HubPanel } from "./panels/HubPanel"
+import { HubServicesService } from "./services/hub-services"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
@@ -142,6 +144,19 @@ export function activate(context: vscode.ExtensionContext) {
   governanceService.registerSubsystem("hermes", "active")
   governanceService.registerSubsystem("speech", "active")
   governanceService.registerSubsystem("onboarding", "active")
+  governanceService.registerSubsystem("hubServices", "active")
+
+  // Hub service lifecycle watchdog — probes /api/services/* on activation and
+  // every poll interval. Auto-starts services that have a registered start_cmd.
+  // Status bar item shows "DaveAI: N/M" with click-to-restart quick-pick.
+  let hubServices: HubServicesService | undefined
+  try {
+    hubServices = new HubServicesService(context)
+    context.subscriptions.push(hubServices)
+    hubServices.start()
+  } catch (err) {
+    extLog.warn("Failed to start HubServicesService", err)
+  }
 
   // Sync the Hermes provider preset into the CLI backend config on toggle.
   // Runs once on toggle and once on each CLI reconnect (in case Hermes was
@@ -224,8 +239,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Create the provider with shared service
   const provider = new KiloProvider(context.extensionUri, connectionService, context)
   provider.setRemoteService(remoteService)
-  provider.setHermesServices(hermesStatus, hermesClient)
-  provider.setV4Services({
+  ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setHermesServices(hermesStatus, hermesClient)
+  ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services({
     ssh: sshService,
     vps: vpsService,
     zeroClaw: zeroClawService,
@@ -244,7 +259,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(discoveryService)
 
     // Wire into all existing providers so tabs can request results
-    provider.setV4Services({
+    const v4WithDiscovery = {
       ssh: sshService,
       vps: vpsService,
       zeroClaw: zeroClawService,
@@ -254,7 +269,9 @@ export function activate(context: vscode.ExtensionContext) {
       governance: governanceService,
       workstation: workstationProfile,
       discovery: discoveryService,
-    })
+    }
+    ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services(v4WithDiscovery)
+    settingsEditorProvider.setV4Services(v4WithDiscovery)
 
     discoveryService.runFullDiscovery().then(async (result) => {
       console.log(
@@ -291,7 +308,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Notify all open webviews that discovery is complete so they can refresh
       // Provider will broadcast to all registered webviews (sidebar + tab panels)
-      provider.broadcastDiscoveryComplete?.(result)
+      ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.broadcastDiscoveryComplete?.(result)
     }).catch((err) => {
       console.warn("[Kilo New] Background discovery failed (non-fatal):", err)
     })
@@ -359,8 +376,8 @@ export function activate(context: vscode.ExtensionContext) {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
         const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
         tabProvider.setRemoteService(remoteService)
-        tabProvider.setHermesServices(hermesStatus, hermesClient)
-        tabProvider.setV4Services({
+        ;(tabProvider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setHermesServices(hermesStatus, hermesClient)
+        ;(tabProvider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services({
           ssh: sshService,
           vps: vpsService,
           zeroClaw: zeroClawService,
@@ -407,6 +424,18 @@ export function activate(context: vscode.ExtensionContext) {
   // Create settings/profile editor provider (opens in editor area, not sidebar)
   const settingsEditorProvider = new SettingsEditorProvider(context.extensionUri, connectionService, context)
   settingsEditorProvider.setRemoteService(remoteService)
+  settingsEditorProvider.setHermesServices(hermesStatus, hermesClient)
+  settingsEditorProvider.setV4Services({
+    ssh: sshService,
+    vps: vpsService,
+    zeroClaw: zeroClawService,
+    routing: routingService,
+    memory: memoryService,
+    training: trainingService,
+    governance: governanceService,
+    workstation: workstationProfile,
+    discovery: discoveryService,
+  })
   context.subscriptions.push(settingsEditorProvider)
 
   // Create sub-agent viewer provider (read-only editor panel for sub-agent sessions)
@@ -659,7 +688,7 @@ async function openKiloInNewTab(
   tabPanels: Map<vscode.WebviewPanel, KiloProvider>,
   diffVirtualProvider: DiffVirtualProvider,
   remoteService: RemoteStatusService,
-  v4Services: Parameters<KiloProvider["setV4Services"]>[0],
+  v4Services: Parameters<DaveProviderExtensions["setV4Services"]>[0],
   hermesStatusArg?: import("./services/hermes").HermesStatusService,
   hermesClientArg?: import("./services/hermes").HermesClient,
 ) {
@@ -685,8 +714,8 @@ async function openKiloInNewTab(
 
   const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
   tabProvider.setRemoteService(remoteService)
-  if (hermesStatusArg && hermesClientArg) tabProvider.setHermesServices(hermesStatusArg, hermesClientArg)
-  tabProvider.setV4Services(v4Services)
+  if (hermesStatusArg && hermesClientArg) (tabProvider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setHermesServices(hermesStatusArg, hermesClientArg)
+  ;(tabProvider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services(v4Services)
   tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
     agentManagerProvider.continueFromSidebar(sessionId, progress),
   )
