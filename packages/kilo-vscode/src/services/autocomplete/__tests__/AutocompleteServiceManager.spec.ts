@@ -64,6 +64,7 @@ vi.mock("vscode", () => {
 vi.mock("../AutocompleteModel", () => {
   class AutocompleteModel {
     public profileName = "test-profile"
+    public refreshConfig = vi.fn().mockResolvedValue(undefined)
 
     public getModelName(): string {
       return "test-model"

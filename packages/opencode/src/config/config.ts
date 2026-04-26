@@ -162,6 +162,18 @@ const InfoSchema = Schema.Struct({
   small_model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
     description: "Small model to use for tasks like title generation in the format of provider/model",
   }),
+  // kilocode_change start
+  autocomplete: Schema.optional(Schema.Struct({
+    provider: Schema.optional(Schema.String).annotate({ description: "Autocomplete provider name, e.g. openai" }),
+    model: Schema.optional(Schema.String).annotate({ description: "Autocomplete model name, e.g. starcoder2" }),
+    api: Schema.optional(Schema.String).annotate({ description: "Autocomplete API base URL, e.g. https://api.openai.com/v1" }),
+    options: Schema.optional(Schema.Struct({
+      apiKey: Schema.optional(Schema.String).annotate({ description: "API key for the autocomplete provider" }),
+      headers: Schema.optional(Schema.Record(Schema.String, Schema.String)).annotate({ description: "Custom headers for the autocomplete provider" }),
+    })),
+  })).annotate({
+    description: "Configuration for inline code completion (FIM). Follows the same key conventions as provider configs.",
+  }),
   // kilocode_change end
   // kilocode_change start - renamed from "build" to "code"
   default_agent: Schema.optional(Schema.String).annotate({

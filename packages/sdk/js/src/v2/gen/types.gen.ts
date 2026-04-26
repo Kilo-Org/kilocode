@@ -1728,6 +1728,35 @@ export type Config = {
    */
   small_model?: string | null
   /**
+   * Configuration for inline code completion (FIM). Follows the same key conventions as provider configs.
+   */
+  autocomplete?: {
+    /**
+     * Autocomplete provider name, e.g. openai
+     */
+    provider?: string
+    /**
+     * Autocomplete model name, e.g. starcoder2
+     */
+    model?: string
+    /**
+     * Autocomplete API base URL, e.g. https://api.openai.com/v1
+     */
+    api?: string
+    options?: {
+      /**
+       * API key for the autocomplete provider
+       */
+      apiKey?: string
+      /**
+       * Custom headers for the autocomplete provider
+       */
+      headers?: {
+        [key: string]: string
+      }
+    }
+  }
+  /**
    * Default agent to use when none is specified. Must be a primary agent. Falls back to 'code' if not set or if the specified agent is invalid.
    */
   default_agent?: string

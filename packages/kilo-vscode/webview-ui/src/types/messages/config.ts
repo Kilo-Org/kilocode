@@ -2,6 +2,16 @@ import type { PermissionConfig } from "./permissions"
 import type { AgentConfig } from "./agents"
 import type { ProviderConfig } from "./providers"
 
+export interface AutocompleteConfig {
+  provider?: string
+  model?: string
+  api?: string
+  options?: {
+    apiKey?: string
+    headers?: Record<string, string>
+  }
+}
+
 export interface McpConfig {
   type?: "local" | "remote"
   command?: string[] | string
@@ -78,4 +88,5 @@ export interface Config {
   tools?: Record<string, boolean>
   layout?: "auto" | "stretch"
   experimental?: ExperimentalConfig
+  autocomplete?: AutocompleteConfig
 }

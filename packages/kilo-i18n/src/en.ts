@@ -83,4 +83,21 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Implement in a fresh session with a clean context",
   "plan.followup.answer.continue": "Continue here",
   "plan.followup.answer.continue.description": "Implement the plan in this session",
+
+  // Autocomplete Custom Provider
+  "settings.autocomplete.customProvider.title": "Custom Provider",
+  "settings.autocomplete.customProvider.description": "Connect an OpenAI-compatible completion endpoint.",
+  "settings.autocomplete.customProvider.providerName.title": "Provider Name",
+  "settings.autocomplete.customProvider.providerName.placeholder": "e.g., ollama, openai",
+  "settings.autocomplete.customProvider.model.title": "Model",
+  "settings.autocomplete.customProvider.model.placeholder": "e.g., starcoder2",
+  "settings.autocomplete.customProvider.apiBase.title": "API Base URL",
+  "settings.autocomplete.customProvider.apiBase.placeholder": "e.g., http://localhost:11434/v1",
+  "settings.autocomplete.customProvider.apiKey.title": "API Key",
+  "settings.autocomplete.customProvider.apiKey.placeholder": "Enter your API key",
+  "settings.autocomplete.customProvider.headers.title": "Custom Headers",
+  "settings.autocomplete.customProvider.headers.description": "Add any required headers for authentication or routing.",
+  "settings.autocomplete.customProvider.headers.key.placeholder": "Header name",
+  "settings.autocomplete.customProvider.headers.value.placeholder": "Header value",
+  "settings.autocomplete.customProvider.headers.add": "Add header",
 }

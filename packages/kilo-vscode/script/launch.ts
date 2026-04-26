@@ -35,7 +35,7 @@ const repo = resolve(root, "..", "..")
 
 // Stable per-repo directory under OS temp — no accumulation
 const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = join(tmpdir(), `kilo-vscode-dev-${hash}`)
+const base = join(tmpdir(), `kilo-vscode-dev-v3-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
 
@@ -114,13 +114,13 @@ function detect(): string {
     const order =
       prefer === "insiders"
         ? [
-            "/Applications/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
-            "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
-          ]
+          "/Applications/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
+          "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
+        ]
         : [
-            "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
-            "/Applications/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
-          ]
+          "/Applications/Visual Studio Code.app/Contents/MacOS/Code",
+          "/Applications/Visual Studio Code - Insiders.app/Contents/MacOS/Code - Insiders",
+        ]
     candidates.push(...order)
   }
 
@@ -164,7 +164,7 @@ function detect(): string {
 
   console.error(
     `Could not find VS Code. Set VSCODE_EXEC_PATH or pass --app-path.\n` +
-      `Searched:\n${candidates.map((c) => `  ${c}`).join("\n")}`,
+    `Searched:\n${candidates.map((c) => `  ${c}`).join("\n")}`,
   )
   process.exit(1)
 }

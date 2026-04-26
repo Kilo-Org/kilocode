@@ -33,6 +33,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "tools",
   "layout",
   "experimental",
+  "autocomplete",
 ]
 
 export type ImportError = "invalidJson" | "invalidConfig" | "tooLarge"

@@ -15,8 +15,6 @@ export interface AutocompleteServiceSettings {
   enableAutoTrigger?: boolean
   enableSmartInlineTaskKeybinding?: boolean
   enableChatAutocomplete?: boolean
-  provider?: string
-  model?: string
   snoozeUntil?: number
 }
 
@@ -117,6 +115,12 @@ export class AutocompleteServiceManager {
 
   public async load() {
     this.settings = readSettings()
+
+    try {
+      await this.model.refreshConfig()
+    } catch (err) {
+      console.warn("[autocomplete] Failed to refresh provider config", err)
+    }
 
     await this.updateGlobalContext()
     this.updateStatusBar()
