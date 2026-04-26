@@ -28,6 +28,10 @@ export const AiProvidersNav: NavSection[] = [
     title: "AI Gateways",
     links: [
       { href: "/ai-providers/openrouter", children: "OpenRouter" },
+      {
+        href: "/ai-providers/cloudflare-ai-gateway",
+        children: "Cloudflare AI Gateway",
+      },
       { href: "/ai-providers/glama", children: "Glama" },
       { href: "/ai-providers/requesty", children: "Requesty" },
       { href: "/ai-providers/unbound", children: "Unbound" },
@@ -42,6 +46,10 @@ export const AiProvidersNav: NavSection[] = [
     links: [
       { href: "/ai-providers/vertex", children: "Google Vertex AI" },
       { href: "/ai-providers/bedrock", children: "AWS Bedrock" },
+      {
+        href: "/ai-providers/cloudflare-workers-ai",
+        children: "Cloudflare Workers AI",
+      },
       { href: "/ai-providers/groq", children: "Groq" },
       { href: "/ai-providers/cerebras", children: "Cerebras" },
       { href: "/ai-providers/fireworks", children: "Fireworks AI" },
