@@ -19,18 +19,23 @@ import { registerCodeActions, registerTerminalActions, KiloCodeActionProvider } 
 import { registerToggleAutoApprove } from "./commands/toggle-auto-approve"
 import { registerHeapSnapshot } from "./commands/heap-snapshot"
 import { RemoteStatusService } from "./services/RemoteStatusService"
+import { AuthMirrorService, getAuthJsonPath } from "./auth/AuthMirrorService"
 
 // Activated via "onStartupFinished" (package.json) so that commands, code actions, keybindings,
 // autocomplete, commit-message generation, and URI deep links all work immediately — without
 // requiring the user to open a Kilo sidebar or panel first. The CLI backend is NOT spawned here;
 // it starts lazily when a webview connects or when ensureBackendForAutocomplete() triggers it.
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   console.log("Kilo Code extension is now active")
 
   const telemetry = TelemetryProxy.getInstance()
+  const authMirror = new AuthMirrorService(context, getAuthJsonPath())
+  await authMirror.migrateFileToSecretIfNeeded()
+  await authMirror.seedFileFromSecretIfNeeded()
+  context.subscriptions.push(authMirror.startFileWatcher())
 
   // Create shared connection service (one server for all webviews)
-  const connectionService = new KiloConnectionService(context)
+  const connectionService = new KiloConnectionService(context, authMirror)
 
   // Create browser automation service (manages Playwright MCP registration)
   const browserAutomationService = new BrowserAutomationService(connectionService)
@@ -80,7 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Create the provider with shared service
-  const provider = new KiloProvider(context.extensionUri, connectionService, context)
+  const provider = new KiloProvider(context.extensionUri, connectionService, context, { authMirror })
   provider.setRemoteService(remoteService)
 
   // Register the webview view provider for the sidebar.
@@ -140,7 +145,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer("kilo-code.new.TabPanel", {
       deserializeWebviewPanel(panel: vscode.WebviewPanel) {
-        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context)
+        const tabProvider = new KiloProvider(context.extensionUri, connectionService, context, { authMirror })
         tabProvider.setRemoteService(remoteService)
         tabProvider.setContinueInWorktreeHandler((sessionId, progress) =>
           agentManagerProvider.continueFromSidebar(sessionId, progress),

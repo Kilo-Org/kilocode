@@ -6,6 +6,7 @@ import * as path from "path"
 import * as vscode from "vscode"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
+import type { AuthMirrorService } from "../../auth/AuthMirrorService"
 
 export interface ServerInstance {
   port: number
@@ -19,7 +20,10 @@ export class ServerManager {
   private instance: ServerInstance | null = null
   private startupPromise: Promise<ServerInstance> | null = null
 
-  constructor(private readonly context: vscode.ExtensionContext) {}
+  constructor(
+    private readonly context: vscode.ExtensionContext,
+    private readonly authMirror?: AuthMirrorService,
+  ) {}
 
   /**
    * Get or start the server instance
@@ -64,6 +68,8 @@ export class ServerManager {
     console.log("[Kilo New] ServerManager: 📄 CLI isFile:", stat.isFile())
     console.log("[Kilo New] ServerManager: 📄 CLI mode (octal):", (stat.mode & 0o777).toString(8))
 
+    const authEnv = (await this.authMirror?.getCliEnvSeed()) ?? {}
+
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
@@ -73,6 +79,7 @@ export class ServerManager {
         cwd: spawnCwd,
         env: {
           ...process.env,
+          ...authEnv,
           // Force mimalloc (the allocator Bun ships with) to return freed pages
           // to the OS immediately instead of retaining them in its arenas.
           // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native

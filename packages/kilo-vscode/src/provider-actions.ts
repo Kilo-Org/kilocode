@@ -51,6 +51,7 @@ export function buildActionContext(
   errFn: (err: unknown) => string,
   dir: string,
   refresh: () => Promise<void>,
+  deleteAuthSecret?: () => Promise<void>,
 ): ActionContext {
   return {
     client,
@@ -66,6 +67,7 @@ export function buildActionContext(
       })
     },
     fetchAndSendProviders: refresh,
+    deleteAuthSecret,
   }
 }
 
@@ -126,6 +128,7 @@ interface ActionContext {
   workspaceDir: string
   disposeGlobal: (reason: string) => Promise<void>
   fetchAndSendProviders: () => Promise<void>
+  deleteAuthSecret?: () => Promise<void>
 }
 
 function postError(
@@ -244,6 +247,7 @@ export async function disconnectProvider(
     }
 
     if (id === "kilo") {
+      await ctx.deleteAuthSecret?.()
       ctx.postMessage({ type: "profileData", data: null })
     }
 

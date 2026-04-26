@@ -15,6 +15,7 @@ export interface AuthContext {
   disposeGlobal(): Promise<void>
   fetchAndSendProviders(): Promise<void>
   fetchAndSendAgents(): Promise<void>
+  deleteSecret(): Promise<void>
 }
 
 /**
@@ -81,6 +82,7 @@ export async function handleLogout(ctx: AuthContext): Promise<void> {
   try {
     console.log("[Kilo New] KiloProvider: 🚪 Logging out...")
     await ctx.client.auth.remove({ providerID: "kilo" }, { throwOnError: true })
+    await ctx.deleteSecret()
     console.log("[Kilo New] KiloProvider: 🚪 Logged out successfully")
     ctx.postMessage({ type: "profileData", data: null })
 

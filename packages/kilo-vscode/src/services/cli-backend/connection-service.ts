@@ -4,6 +4,7 @@ import { createKiloClient, type KiloClient, type Event } from "@kilocode/sdk/v2/
 import { SdkSSEAdapter } from "./sdk-sse-adapter"
 import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
+import type { AuthMirrorService } from "../../auth/AuthMirrorService"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
 type SSEEventListener = (event: Event) => void
@@ -81,8 +82,8 @@ export class KiloConnectionService {
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private unsubRemote: (() => void) | null = null
 
-  constructor(context: vscode.ExtensionContext) {
-    this.serverManager = new ServerManager(context)
+  constructor(context: vscode.ExtensionContext, authMirror?: AuthMirrorService) {
+    this.serverManager = new ServerManager(context, authMirror)
   }
 
   /**

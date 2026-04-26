@@ -48,6 +48,10 @@
   "activationEvents": [
     "onStartupFinished"
   ],
+  "extensionKind": [
+    "ui",
+    "workspace"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "taskDefinitions": [

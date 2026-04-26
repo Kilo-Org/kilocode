@@ -66,6 +66,7 @@ import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
+import type { AuthMirrorService } from "./auth/AuthMirrorService"
 // legacy-migration start
 import {
   checkAndShowMigrationWizard,
@@ -120,6 +121,7 @@ import type { Agent } from "@kilocode/sdk/v2/client"
 type KiloProviderOptions = {
   projectDirectory?: string | null
   slimEditMetadata?: boolean
+  authMirror?: AuthMirrorService
 }
 
 type MessageLoadMode = "replace" | "prepend" | "focus" | "reconcile"
@@ -240,6 +242,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private diffVirtualProvider: import("./DiffVirtualProvider").DiffVirtualProvider | undefined
   private remoteService: RemoteStatusService | null = null
   private unsubscribeRemote: (() => void) | null = null
+  private readonly authMirror?: AuthMirrorService
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -249,6 +252,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   ) {
     this.projectDirectory = options?.projectDirectory
     this.slimEditMetadata = options?.slimEditMetadata ?? true
+    this.authMirror = options?.authMirror
 
     TelemetryProxy.getInstance().setProvider(this)
   }
@@ -1653,6 +1657,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       getErrorMessage,
       this.getWorkspaceDirectory(),
       () => this.fetchAndSendProviders(),
+      () => this.authMirror?.deleteSecret() ?? Promise.resolve(),
     )
     const set = (m: unknown) => {
       this.cachedConfigMessage = m
@@ -2692,6 +2697,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       disposeGlobal: () => this.disposeGlobal(),
       fetchAndSendProviders: () => this.fetchAndSendProviders(),
       fetchAndSendAgents: () => this.fetchAndSendAgents(),
+      deleteSecret: () => this.authMirror?.deleteSecret() ?? Promise.resolve(),
     }
   }
 
