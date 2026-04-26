@@ -711,7 +711,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         options: {
           apiKey,
           headers: {
-            "User-Agent": `opencode/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
+            "User-Agent": `kilo/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
           },
         },
         async getModel(sdk: any, modelID: string) {
@@ -782,7 +782,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         skipCache: input.options?.skipCache,
         collectLog: input.options?.collectLog,
         headers: {
-          "User-Agent": `opencode/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
+          "User-Agent": `kilo/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
         },
       }
 
