@@ -23,3 +23,6 @@ packages/kilo-i18n/src/en.ts linguist-generated=false
 # Auto-generated CLI reference docs
 packages/kilo-docs/markdoc/partials/cli-commands-table.md linguist-generated=true
 packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md linguist-generated=true
+
+# DaveAI: branding-preserving merge for the VSIX manifest
+packages/kilo-vscode/package.json    merge=daveai-package-json-branding
