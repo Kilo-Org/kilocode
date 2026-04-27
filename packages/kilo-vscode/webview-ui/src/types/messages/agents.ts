@@ -27,6 +27,7 @@ export interface AgentInfo {
   color?: string
   permission?: PermissionRuleItem[]
   prompt?: string
+  model?: { providerID: string; modelID: string }
 }
 
 export interface AgentConfig {

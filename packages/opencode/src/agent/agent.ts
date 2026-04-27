@@ -14,7 +14,7 @@ import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
-import PROMPT_ANTHROPIC from "../session/prompt/anthropic.txt" // kilocode_change - display base prompt in agent settings
+import { SystemPrompt } from "@/session/system" // kilocode_change - resolve model-aware display prompt for settings UI
 import { Permission } from "@/permission"
 import { mergeDeep, pipe, sortBy, values } from "remeda"
 import { Global } from "@/global" // kilocode_change
@@ -22,7 +22,7 @@ import { KilocodePaths } from "@/kilocode/paths" // kilocode_change
 import path from "path" // kilocode_change
 import { Plugin } from "@/plugin"
 import { Skill } from "../skill"
-import { Effect, Context, Layer } from "effect"
+import { Effect, Context, Exit, Layer } from "effect"
 import { InstanceState } from "@/effect"
 import * as KiloAgent from "@/kilocode/agent" // kilocode_change
 
@@ -128,7 +128,6 @@ export const layer = Layer.effect(
           build: {
             name: "build",
             description: "The default agent. Executes tools based on configured permissions.",
-            displayPrompt: PROMPT_ANTHROPIC, // kilocode_change - base prompt for display in agent settings UI
             options: {},
             permission: Permission.merge(
               defaults,
@@ -145,7 +144,6 @@ export const layer = Layer.effect(
           plan: {
             name: "plan",
             description: "Plan mode. Disallows all edit tools.",
-            displayPrompt: PROMPT_ANTHROPIC, // kilocode_change - base prompt for display in agent settings UI
             options: {},
             permission: Permission.merge(
               defaults,
@@ -307,6 +305,24 @@ export const layer = Layer.effect(
             Permission.fromConfig({ external_directory: { [Truncate.GLOB]: "allow" } }),
           )
         }
+
+        // kilocode_change start - resolve model-aware displayPrompt for primary agents with no fixed prompt
+        // Mirrors runtime behaviour in session/llm.ts: when agent.prompt is unset, the system prompt is
+        // SystemPrompt.provider(model) where model is the agent's assigned model or the workspace default.
+        const defaultExit = yield* provider.defaultModel().pipe(Effect.exit)
+        const fallbackModel = Exit.isSuccess(defaultExit) ? defaultExit.value : undefined
+        for (const name in agents) {
+          const item = agents[name]
+          if (item.prompt) continue
+          if (item.mode === "subagent") continue
+          if (item.hidden) continue
+          const model = item.model ?? fallbackModel
+          if (!model) continue
+          const modelExit = yield* provider.getModel(model.providerID, model.modelID).pipe(Effect.exit)
+          if (!Exit.isSuccess(modelExit)) continue
+          item.displayPrompt = SystemPrompt.provider(modelExit.value).join("\n")
+        }
+        // kilocode_change end
 
         const get = Effect.fnUntraced(function* (agent: string) {
           return agents[KiloAgent.resolveKey(agent)] // kilocode_change - treat "build" as "code"

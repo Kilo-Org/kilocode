@@ -138,7 +138,7 @@ const ModeEditView: Component<Props> = (props) => {
 
       {/* Default system prompt (read-only, collapsible) */}
       <Show when={native()}>
-        <DefaultPromptSection prompt={agent()?.prompt} />
+        <DefaultPromptSection prompt={agent()?.prompt} model={agent()?.model} />
       </Show>
 
       {/* Sub-agents section */}
@@ -460,7 +460,10 @@ const PermissionRuleset: Component<RulesetProps> = (props) => {
 }
 
 /** Collapsible read-only view of the built-in default system prompt. */
-const DefaultPromptSection: Component<{ prompt: string | undefined }> = (props) => {
+const DefaultPromptSection: Component<{
+  prompt: string | undefined
+  model: { providerID: string; modelID: string } | undefined
+}> = (props) => {
   const language = useLanguage()
   const [expanded, setExpanded] = createSignal(false)
   const [copied, setCopied] = createSignal(false)
@@ -534,6 +537,23 @@ const DefaultPromptSection: Component<{ prompt: string | undefined }> = (props) 
             </div>
           }
         >
+          <Show when={props.model}>
+            {(model) => (
+              <div
+                style={{
+                  "font-size": "11px",
+                  color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                  "margin-top": "8px",
+                  "padding-left": "30px",
+                  "font-style": "italic",
+                }}
+              >
+                {language.t("settings.agentBehaviour.editMode.defaultPrompt.resolvedFrom", {
+                  model: `${model().providerID}/${model().modelID}`,
+                })}
+              </div>
+            )}
+          </Show>
           <pre
             style={{
               "margin-top": "8px",

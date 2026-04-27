@@ -1718,6 +1718,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         color: a.color,
         deprecated: a.deprecated,
         prompt: a.displayPrompt ?? a.prompt,
+        model: a.model,
       })
 
       const message = {
