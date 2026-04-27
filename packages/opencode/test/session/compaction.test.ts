@@ -98,7 +98,7 @@ function createModel(opts: {
 }
 
 const base = createModel({ context: 100_000, output: 32_000 }) // kilocode_change
-const wide = () => ProviderTest.fake({ model: base })
+const wide = () => ProviderTest.fake({ model: base }) // kilocode_change
 
 async function user(sessionID: SessionID, text: string) {
   const msg = await svc.updateMessage({

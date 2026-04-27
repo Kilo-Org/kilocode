@@ -2,7 +2,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import * as Session from "./session"
 import { SessionID, MessageID, PartID } from "./schema"
-import { Provider, ProviderTransform } from "../provider"
+import { Provider, ProviderTransform } from "../provider" // kilocode_change
 import { MessageV2 } from "./message-v2"
 import z from "zod"
 import { Token } from "../util"
@@ -201,7 +201,7 @@ export const layer: Layer.Layer<
               if (part.state.time.compacted) break loop
               const estimate = Token.estimate(part.state.output)
               total += estimate
-              if (total > protect) {
+              if (total > protect) { // kilocode_change
                 pruned += estimate
                 toPrune.push(part)
               }
@@ -210,7 +210,7 @@ export const layer: Layer.Layer<
       }
 
       log.info("found", { pruned, total })
-      if (pruned > minimum) {
+      if (pruned > minimum) { // kilocode_change
         for (const part of toPrune) {
           if (part.state.status === "completed") {
             part.state.time.compacted = Date.now()
