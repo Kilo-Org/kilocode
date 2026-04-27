@@ -1,5 +1,7 @@
 # kilo-code
 
+## 7.2.25
+
 ## 7.2.23
 
 ### Patch Changes

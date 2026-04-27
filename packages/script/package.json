@@ -12,6 +12,6 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "version": "7.2.24",
+  "version": "7.2.25",
   "peerDependencies": {}
 }

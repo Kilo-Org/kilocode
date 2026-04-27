@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.2.25
+
+### Patch Changes
+
+- [#9526](https://github.com/Kilo-Org/kilocode/pull/9526) [`c8113f2`](https://github.com/Kilo-Org/kilocode/commit/c8113f27b190f5c08ce642da57d68646132e1828) - Fix multi-turn DeepSeek reasoning round-tripping on OpenRouter by bumping `@openrouter/ai-sdk-provider` to 2.8.1 in both the CLI and Kilo Gateway packages and letting the SDK handle reasoning details, plus pulling in upstream DeepSeek variant, reasoning-effort, and assistant-reasoning fixes. New DeepSeek conversations are fixed; existing sessions that already stored empty reasoning metadata may still need to be restarted.
+
+- Updated dependencies [[`c8113f2`](https://github.com/Kilo-Org/kilocode/commit/c8113f27b190f5c08ce642da57d68646132e1828)]:
+  - @kilocode/kilo-gateway@7.2.25
+  - @kilocode/kilo-telemetry@7.2.25
+
 ## 7.2.23
 
 ### Minor Changes
