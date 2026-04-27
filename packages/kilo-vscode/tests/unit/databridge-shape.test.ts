@@ -2,6 +2,9 @@ import { describe, it, expect } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 
+const APP_FILE = join(__dirname, "..", "..", "webview-ui", "src", "App.tsx")
+const src = readFileSync(APP_FILE, "utf8")
+
 /**
  * Static guard against the perf regression fixed in this PR.
  *
@@ -28,9 +31,6 @@ import { join } from "node:path"
  * `tests/webview-reactivity/databridge-reactivity.test.ts`.
  */
 describe("DataBridge shape (perf regression guard)", () => {
-  const path = join(__dirname, "..", "..", "webview-ui", "src", "App.tsx")
-  const src = readFileSync(path, "utf8")
-
   it("DataBridge exists in App.tsx", () => {
     expect(src).toMatch(/export const DataBridge/)
   })
@@ -57,5 +57,18 @@ describe("DataBridge shape (perf regression guard)", () => {
     // reactive independently. Require getters for `message` and `part`.
     expect(block).toMatch(/get\s+message\s*\(\s*\)\s*\{/)
     expect(block).toMatch(/get\s+part\s*\(\s*\)\s*\{/)
+  })
+})
+
+describe("DataBridge openDiff wiring (regression guard)", () => {
+  const openDiffBlock = () => {
+    const match = src.match(/const\s+openDiff\s*=\s*\(diff:\s*\{[\s\S]*?\n\s*\}\n\n\s*const\s+openUrl/)
+    expect(match).toBeTruthy()
+    return match![0]
+  }
+
+  it("wires openDiff to the openDiffVirtual webview message", () => {
+    expect(openDiffBlock()).toMatch(/postMessage\(\{\s*type:\s*["']openDiffVirtual["']\s*,\s*diff\s*\}\)/)
+    expect(src).toContain("onOpenDiff={openDiff}")
   })
 })

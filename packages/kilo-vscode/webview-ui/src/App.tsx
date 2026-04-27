@@ -132,6 +132,10 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     vscode.postMessage({ type: "openFile", filePath, line, column })
   }
 
+  const openDiff = (diff: { file: string; before: string; after: string; additions: number; deletions: number }) => {
+    vscode.postMessage({ type: "openDiffVirtual", diff })
+  }
+
   const openUrl = (url: string) => {
     vscode.postMessage({ type: "openExternal", url })
   }
@@ -151,6 +155,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onQuestionReply={reply}
       onQuestionReject={reject}
       onOpenFile={open}
+      onOpenDiff={openDiff}
       onOpenUrl={openUrl}
     >
       {props.children}
