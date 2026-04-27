@@ -59,6 +59,10 @@ const Settings: Component<SettingsProps> = (props) => {
     })
   }
 
+  const open = (scope: "local" | "global") => {
+    vscode.postMessage({ type: "openConfigFile", scope })
+  }
+
   // Sync when the parent changes the tab prop (e.g. via navigate message)
   createEffect(
     on(
@@ -84,10 +88,19 @@ const Settings: Component<SettingsProps> = (props) => {
           "border-bottom": "1px solid var(--border-weak-base)",
           display: "flex",
           "align-items": "center",
+          "flex-wrap": "wrap",
           gap: "8px",
         }}
       >
-        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
+        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0, flex: 1 }}>
+          {language.t("sidebar.settings")}
+        </h2>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("local")}>
+          {language.t("settings.openLocalConfig")}
+        </Button>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
+          {language.t("settings.openGlobalConfig")}
+        </Button>
       </div>
 
       {/* Settings tabs */}

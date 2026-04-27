@@ -163,6 +163,11 @@ export interface OpenVSCodeSettingsRequest {
   query: string
 }
 
+export interface OpenConfigFileRequest {
+  type: "openConfigFile"
+  scope: "local" | "global"
+}
+
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
 }
@@ -901,6 +906,7 @@ export type WebviewMessage =
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenVSCodeSettingsRequest
+  | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenFileRequest
   | CancelLoginRequest
