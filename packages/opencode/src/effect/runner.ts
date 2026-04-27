@@ -19,6 +19,9 @@ interface RunHandle<A, E> {
 interface ShellHandle<A, E> {
   id: number
   fiber: Fiber.Fiber<A, E>
+  // kilocode_change start - shell cancellation can finish with non-interrupt process errors
+  cancelled: boolean
+  // kilocode_change end
 }
 
 interface PendingHandle<A, E> {
@@ -98,7 +101,12 @@ export const make = <A, E = never>(
       }),
     ).pipe(Effect.flatten)
 
-  const stopShell = (shell: ShellHandle<A, E>) => Fiber.interrupt(shell.fiber)
+  // kilocode_change start - wait for shell finalizers so aborted output is persisted before callers resolve
+  const stopShell = (shell: ShellHandle<A, E>) =>
+    Effect.sync(() => {
+      shell.cancelled = true
+    }).pipe(Effect.andThen(Fiber.interrupt(shell.fiber)), Effect.andThen(Fiber.await(shell.fiber)), Effect.asVoid)
+  // kilocode_change end
 
   const ensureRunning = (work: Effect.Effect<A, E>) =>
     SynchronizedRef.modifyEffect(
@@ -146,12 +154,14 @@ export const make = <A, E = never>(
         yield* busy
         const id = next()
         const fiber = yield* work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild)
-        const shell = { id, fiber } satisfies ShellHandle<A, E>
+        const shell = { id, fiber, cancelled: false } satisfies ShellHandle<A, E>
         return [
           Effect.gen(function* () {
             const exit = yield* Fiber.await(fiber)
             if (Exit.isSuccess(exit)) return exit.value
-            if (Cause.hasInterruptsOnly(exit.cause) && onInterrupt) return yield* onInterrupt
+            // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
+            if ((shell.cancelled || Cause.hasInterruptsOnly(exit.cause)) && onInterrupt) return yield* onInterrupt
+            // kilocode_change end
             return yield* Effect.failCause(exit.cause)
           }),
           { _tag: "Shell", shell },
@@ -183,8 +193,10 @@ export const make = <A, E = never>(
       case "ShellThenRun":
         return [
           Effect.gen(function* () {
-            yield* Deferred.fail(st.run.done, new Cancelled()).pipe(Effect.asVoid)
+            // kilocode_change start - let shell cleanup persist before queued loop resolves via onInterrupt
             yield* stopShell(st.shell)
+            yield* Deferred.fail(st.run.done, new Cancelled()).pipe(Effect.asVoid)
+            // kilocode_change end
             yield* idleIfCurrent()
           }),
           { _tag: "Idle" } as const,
