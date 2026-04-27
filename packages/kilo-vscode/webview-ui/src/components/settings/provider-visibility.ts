@@ -14,7 +14,7 @@ export function disabledProviderOptions(providers: Record<string, Provider>, dis
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
-export function providersWithKiloFallback(providers: Record<string, Provider>) {
+export function providersWithKiloFallback(providers: Record<string, Provider>): Record<string, Provider> {
   if (providers[KILO_PROVIDER_ID]) return providers
   return { [KILO_PROVIDER_ID]: createKiloFallbackProvider(), ...providers }
 }
