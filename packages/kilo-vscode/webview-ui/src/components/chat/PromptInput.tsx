@@ -837,6 +837,13 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           onMouseEnter={() => slash.setIndex(idx() + offset)}
                         >
                           <span class="slash-command-name">/{cmd.name}</span>
+                          <Show when={cmd.source === "skill" || cmd.source === "mcp"}>
+                            <span class="slash-command-badge" data-source={cmd.source}>
+                              {cmd.source === "skill"
+                                ? language.t("prompt.slash.badge.skill")
+                                : language.t("prompt.slash.badge.mcp")}
+                            </span>
+                          </Show>
                           <Show when={cmd.description}>
                             <span class="slash-command-desc">{cmd.description}</span>
                           </Show>

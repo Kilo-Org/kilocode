@@ -113,6 +113,29 @@
   font-size: 11px;
 }
 
+.slash-command-badge {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: var(--vscode-badge-background);
+  color: var(--vscode-badge-foreground);
+  opacity: 0.8;
+}
+
+.slash-command-badge[data-source="skill"] {
+  background: var(--vscode-charts-purple, var(--vscode-badge-background));
+  color: var(--vscode-badge-foreground);
+}
+
+.slash-command-badge[data-source="mcp"] {
+  background: var(--vscode-charts-blue, var(--vscode-badge-background));
+  color: var(--vscode-badge-foreground);
+}
+
 .slash-command-empty {
   padding: 8px 10px;
   font-size: 12px;

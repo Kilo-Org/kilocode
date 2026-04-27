@@ -363,9 +363,22 @@ export function Autocomplete(props: {
   const commands = createMemo((): AutocompleteOption[] => {
     const results: AutocompleteOption[] = [...command.slashes()]
 
+    // kilocode_change start - track skill names already shown under a short alias
+    const skillBareNames = new Set<string>()
+    for (const c of sync.data.command) {
+      if (c.source === "skill" && !c.name.startsWith("skill:")) skillBareNames.add(c.name)
+    }
+    // kilocode_change end
     for (const serverCommand of sync.data.command) {
-      if (serverCommand.source === "skill") continue
-      const label = serverCommand.source === "mcp" ? ":mcp" : ""
+      // kilocode_change start - expose skills; hide the /skill:<name> alias when the bare /<name> is already shown
+      if (
+        serverCommand.source === "skill" &&
+        serverCommand.name.startsWith("skill:") &&
+        skillBareNames.has(serverCommand.name.slice("skill:".length))
+      )
+        continue
+      const label = serverCommand.source === "mcp" ? ":mcp" : serverCommand.source === "skill" ? ":skill" : ""
+      // kilocode_change end
       results.push({
         display: "/" + serverCommand.name + label,
         description: serverCommand.description,

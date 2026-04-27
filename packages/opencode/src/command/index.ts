@@ -156,18 +156,31 @@ export const layer = Layer.effect(
         }
       }
 
+      // kilocode_change start - expose skills as slash commands with /skill:<name> alias
       for (const item of yield* skill.all()) {
-        if (commands[item.name]) continue
-        commands[item.name] = {
-          name: item.name,
+        const aliased = `skill:${item.name}`
+        commands[aliased] = {
+          name: aliased,
           description: item.description,
           source: "skill",
           get template() {
             return item.content
           },
-          hints: [],
+          hints: [item.name],
+        }
+        if (!commands[item.name]) {
+          commands[item.name] = {
+            name: item.name,
+            description: item.description,
+            source: "skill",
+            get template() {
+              return item.content
+            },
+            hints: [aliased],
+          }
         }
       }
+      // kilocode_change end
 
       return {
         commands,
