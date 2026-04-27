@@ -209,6 +209,8 @@ export const layer = Layer.effect(
             },
           }),
         )
+        // kilocode_change - wait before plugin initialization can import local dependencies
+        if (loaded.length > 0) yield* Effect.promise(wait)
         for (const load of loaded) {
           if (!load) continue
 
