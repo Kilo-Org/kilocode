@@ -1,13 +1,14 @@
 import { existsSync } from "fs"
 import * as os from "os"
 import * as path from "path"
+import type { Key } from "./config-i18n"
 
 export type Scope = "global" | "local"
 
 export interface Entry {
   file?: string
   name: string
-  source: string
+  source: Key
   exists: boolean
   loaded: boolean
   legacy?: boolean
@@ -22,8 +23,13 @@ const LEGACY = ["opencode.jsonc", "opencode.json"]
 const FILES = [...MODERN, ...LEGACY]
 const GLOBAL = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"]
 const HOME = [".kilo", ".kilocode", ".opencode"]
+const SOURCES: Record<string, Key> = {
+  ".kilo": "sourceHomeKilo",
+  ".kilocode": "sourceHomeKilocode",
+  ".opencode": "sourceHomeOpencode",
+}
 
-function row(file: string, source: string, loaded = true, recommended = false): Entry {
+function row(file: string, source: Key, loaded = true, recommended = false): Entry {
   const name = path.basename(file)
   return {
     file,
@@ -36,34 +42,33 @@ function row(file: string, source: string, loaded = true, recommended = false): 
   }
 }
 
-function ensure(list: Entry[], file: string, source: string) {
+function ensure(list: Entry[], file: string, source: Key) {
   if (list.some((item) => item.file === file)) return list
   return [...list, row(file, source, true, true)]
 }
 
 export function globalFiles() {
   const root = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "kilo")
-  const base = GLOBAL.map((file) => row(path.join(root, file), "XDG global config")).filter((item) => item.exists)
+  const base = GLOBAL.map((file) => row(path.join(root, file), "sourceXdg")).filter((item) => item.exists)
   const dirs = HOME.flatMap((dir) => {
     const base = path.join(os.homedir(), dir)
     if (!existsSync(base)) return []
-    return FILES.map((file) => row(path.join(base, file), `Home ${dir} config`)).filter((item) => item.exists)
+    return FILES.map((file) => row(path.join(base, file), SOURCES[dir])).filter((item) => item.exists)
   })
-  const env = process.env.KILO_CONFIG ? [row(process.env.KILO_CONFIG, "KILO_CONFIG environment file")] : []
-  const dir = process.env.KILO_CONFIG_DIR
+  const env = process.env.KILO_CONFIG ? [row(process.env.KILO_CONFIG, "sourceEnvFile")] : []
+  const extra = process.env.KILO_CONFIG_DIR
+  const dir = extra
     ? ensure(
-        FILES.map((file) => row(path.join(process.env.KILO_CONFIG_DIR!, file), "KILO_CONFIG_DIR")).filter(
-          (item) => item.exists,
-        ),
-        path.join(process.env.KILO_CONFIG_DIR, "kilo.jsonc"),
-        "KILO_CONFIG_DIR",
+        FILES.map((file) => row(path.join(extra, file), "sourceEnvDir")).filter((item) => item.exists),
+        path.join(extra, "kilo.jsonc"),
+        "sourceEnvDir",
       )
     : []
   const virtual: Entry[] = process.env.KILO_CONFIG_CONTENT
     ? [
         {
           name: "KILO_CONFIG_CONTENT",
-          source: "Inline environment config",
+          source: "sourceEnvContent",
           exists: true,
           loaded: true,
           virtual: true,
@@ -71,7 +76,7 @@ export function globalFiles() {
       ]
     : []
 
-  return ensure([...base, ...dirs, ...env, ...dir, ...virtual], path.join(root, "kilo.jsonc"), "XDG global config")
+  return ensure([...base, ...dirs, ...env, ...dir, ...virtual], path.join(root, "kilo.jsonc"), "sourceXdg")
 }
 
 export function localFiles(root: string) {
@@ -81,15 +86,15 @@ export function localFiles(root: string) {
   return ensure(
     list.filter((item) => item.exists),
     path.join(root, ".kilo", "kilo.jsonc"),
-    "Project .kilo config",
+    "sourceProjectKilo",
   ).map((item) => (enabled ? item : { ...item, loaded: false }))
 }
 
 function localSource(root: string, dir: string) {
-  if (dir === root) return "Project root config"
-  if (dir.endsWith(`${path.sep}.kilo`)) return "Project .kilo config"
-  if (dir.endsWith(`${path.sep}.kilocode`)) return "Legacy .kilocode config"
-  return "Legacy .opencode config"
+  if (dir === root) return "sourceProjectRoot"
+  if (dir.endsWith(`${path.sep}.kilo`)) return "sourceProjectKilo"
+  if (dir.endsWith(`${path.sep}.kilocode`)) return "sourceProjectKilocode"
+  return "sourceProjectOpencode"
 }
 
 export function content() {

@@ -825,6 +825,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "http:// 또는 https://로 시작해야 합니다",
   "provider.custom.error.required": "필수",
   "provider.custom.error.duplicate": "중복",
+  "settings.openLocalConfig": "로컬 설정",
+  "settings.openGlobalConfig": "전역 설정",
   "settings.models.title": "모델",
   "settings.models.description": "모델 설정은 여기서 구성할 수 있습니다.",
   "settings.agents.title": "에이전트",

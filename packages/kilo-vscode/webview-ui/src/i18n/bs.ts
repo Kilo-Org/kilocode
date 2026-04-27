@@ -834,6 +834,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Mora početi sa http:// ili https://",
   "provider.custom.error.required": "Obavezno",
   "provider.custom.error.duplicate": "Duplikat",
+  "settings.openLocalConfig": "Lokalna konfig.",
+  "settings.openGlobalConfig": "Globalna konfig.",
   "settings.models.title": "Modeli",
   "settings.models.description": "Postavke modela će se ovdje moći podešavati.",
   "settings.agents.title": "Agenti",

@@ -825,6 +825,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "http:// または https:// で始まる必要があります",
   "provider.custom.error.required": "必須",
   "provider.custom.error.duplicate": "重複",
+  "settings.openLocalConfig": "ローカル設定",
+  "settings.openGlobalConfig": "グローバル設定",
   "settings.models.title": "モデル",
   "settings.models.description": "モデル設定はここで構成できます。",
   "settings.agents.title": "エージェント",

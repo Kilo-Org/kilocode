@@ -830,6 +830,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "http:// veya https:// ile başlamalı",
   "provider.custom.error.required": "Gerekli",
   "provider.custom.error.duplicate": "Tekrar",
+  "settings.openLocalConfig": "Yerel Config",
+  "settings.openGlobalConfig": "Global Config",
   "settings.models.title": "Modeller",
   "settings.models.description": "Model ayarları burada yapılandırılabilecek.",
   "settings.agents.title": "Ajanlar",

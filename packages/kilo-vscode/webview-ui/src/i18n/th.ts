@@ -824,6 +824,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "ต้องขึ้นต้นด้วย http:// หรือ https://",
   "provider.custom.error.required": "จำเป็น",
   "provider.custom.error.duplicate": "ซ้ำ",
+  "settings.openLocalConfig": "คอนฟิก Local",
+  "settings.openGlobalConfig": "คอนฟิก Global",
   "settings.models.title": "โมเดล",
   "settings.models.description": "การตั้งค่าโมเดลจะสามารถกำหนดค่าได้ที่นี่",
   "settings.agents.title": "เอเจนต์",

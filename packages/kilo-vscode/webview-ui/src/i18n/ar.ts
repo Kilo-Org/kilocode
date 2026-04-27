@@ -820,6 +820,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "يجب أن يبدأ بـ http:// أو https://",
   "provider.custom.error.required": "مطلوب",
   "provider.custom.error.duplicate": "مكرر",
+  "settings.openLocalConfig": "تكوين محلي",
+  "settings.openGlobalConfig": "تكوين عام",
   "settings.models.title": "النماذج",
   "settings.models.description": "ستكون إعدادات النموذج قابلة للتكوين هنا.",
   "settings.agents.title": "الوكلاء",

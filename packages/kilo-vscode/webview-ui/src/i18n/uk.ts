@@ -830,6 +830,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Має починатися з http:// або https://",
   "provider.custom.error.required": "Обов'язкове поле",
   "provider.custom.error.duplicate": "Дублікат",
+  "settings.openLocalConfig": "Локальний конфіг",
+  "settings.openGlobalConfig": "Глобальний конфіг",
   "settings.models.title": "Моделі",
   "settings.models.description": "Тут можна буде налаштовувати параметри моделей.",
   "settings.agents.title": "Агенти",

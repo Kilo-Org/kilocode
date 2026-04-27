@@ -831,6 +831,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Må starte med http:// eller https://",
   "provider.custom.error.required": "Påkrevd",
   "provider.custom.error.duplicate": "Duplikat",
+  "settings.openLocalConfig": "Lokal konfig",
+  "settings.openGlobalConfig": "Global konfig",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modellinnstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",

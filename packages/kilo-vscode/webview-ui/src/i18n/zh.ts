@@ -814,6 +814,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "必须以 http:// 或 https:// 开头",
   "provider.custom.error.required": "必填",
   "provider.custom.error.duplicate": "重复",
+  "settings.openLocalConfig": "本地配置",
+  "settings.openGlobalConfig": "全局配置",
   "settings.models.title": "模型",
   "settings.models.description": "模型设置将在此处可配置。",
   "settings.agents.title": "智能体",

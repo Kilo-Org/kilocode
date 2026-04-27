@@ -816,6 +816,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "必須以 http:// 或 https:// 開頭",
   "provider.custom.error.required": "必填",
   "provider.custom.error.duplicate": "重複",
+  "settings.openLocalConfig": "本機設定",
+  "settings.openGlobalConfig": "全域設定",
   "settings.models.title": "模型",
   "settings.models.description": "可在此調整模型設定。",
   "settings.agents.title": "代理程式",

@@ -833,6 +833,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Должен начинаться с http:// или https://",
   "provider.custom.error.required": "Обязательно",
   "provider.custom.error.duplicate": "Дубликат",
+  "settings.openLocalConfig": "Локальный конфиг",
+  "settings.openGlobalConfig": "Глобальный конфиг",
   "settings.models.title": "Модели",
   "settings.models.description": "Настройки моделей будут доступны здесь.",
   "settings.agents.title": "Агенты",

@@ -828,6 +828,8 @@ export const dict = {
   "provider.custom.error.baseURL.format": "Moet beginnen met http:// of https://",
   "provider.custom.error.required": "Vereist",
   "provider.custom.error.duplicate": "Duplicaat",
+  "settings.openLocalConfig": "Lokale config",
+  "settings.openGlobalConfig": "Globale config",
   "settings.models.title": "Modellen",
   "settings.models.description": "Model-instellingen zullen hier configureerbaar zijn.",
   "settings.agents.title": "Agenten",
