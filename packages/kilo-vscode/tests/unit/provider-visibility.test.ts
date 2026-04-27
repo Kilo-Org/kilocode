@@ -26,7 +26,7 @@ describe("visibleConnectedIds", () => {
 })
 
 describe("disabledProviderOptions", () => {
-  it("excludes Kilo and already disabled providers", () => {
+  it("includes Kilo and excludes already disabled providers", () => {
     const options = disabledProviderOptions(
       {
         kilo: { id: "kilo", name: "Kilo Gateway", env: [], models: {} },
@@ -36,7 +36,10 @@ describe("disabledProviderOptions", () => {
       ["openai"],
     )
 
-    expect(options).toEqual([{ value: "anthropic", label: "Anthropic" }])
+    expect(options).toEqual([
+      { value: "anthropic", label: "Anthropic" },
+      { value: "kilo", label: "Kilo Gateway" },
+    ])
   })
 
   it("sorts options by provider name", () => {

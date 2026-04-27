@@ -9,7 +9,7 @@ export function visibleConnectedIds(connected: string[], authStates: Record<stri
 export function disabledProviderOptions(providers: Record<string, Provider>, disabled: string[]) {
   const current = new Set(disabled)
   return Object.values(providers)
-    .filter((item) => item.id !== KILO_PROVIDER_ID && !current.has(item.id))
+    .filter((item) => !current.has(item.id))
     .map((item) => ({ value: item.id, label: item.name }))
     .sort((a, b) => a.label.localeCompare(b.label))
 }
