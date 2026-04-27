@@ -113,18 +113,20 @@ export function useSlashCommand(vscode: VSCodeContext, exclude?: Set<string>): S
 
   const commands = (): SlashCommandEntry[] => {
     const names = new Set(client.map((c) => c.name))
-    // Hide the `/skill:<name>` alias when the bare `/<name>` is already shown as a skill.
-    // Skills always register both forms; showing both would duplicate entries in the dropdown.
-    const bareSkills = new Set(
+    // Hide the `/skill:<name>` alias when the bare `/<name>` is actually shown as a skill.
+    // Skills register both forms server-side; showing both would duplicate entries. But if
+    // a client action shadows the bare name, we must keep the alias so the skill stays
+    // reachable.
+    const bareSkillsShown = new Set(
       server()
-        .filter((c) => c.source === "skill" && !c.name.startsWith("skill:"))
+        .filter((c) => c.source === "skill" && !c.name.startsWith("skill:") && !names.has(c.name))
         .map((c) => c.name),
     )
     const filtered = server().filter((c) => {
       if (names.has(c.name)) return false
       if (c.source === "skill" && c.name.startsWith("skill:")) {
         const bare = c.name.slice("skill:".length)
-        if (bareSkills.has(bare)) return false
+        if (bareSkillsShown.has(bare)) return false
       }
       return true
     })
