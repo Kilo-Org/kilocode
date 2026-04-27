@@ -1,5 +1,13 @@
 # kilo-code
 
+## 7.2.23
+
+### Patch Changes
+
+- [#9423](https://github.com/Kilo-Org/kilocode/pull/9423) [`a87a461`](https://github.com/Kilo-Org/kilocode/commit/a87a461e971864377d2139c35e778cc98d5cca19) - Fix two Agent Manager tab-bar regressions. New session and terminal tabs now consistently open at the right end of the tab bar instead of sometimes slipping in front of existing tabs. Dragging a terminal tab now shows the same floating label preview as dragging a session tab.
+
+- [#9026](https://github.com/Kilo-Org/kilocode/pull/9026) [`61516b4`](https://github.com/Kilo-Org/kilocode/commit/61516b4d3f5a87f623a34b9112b8e1ff3725f93c) - Support attaching Git changes from prompt mentions in the VS Code extension.
+
 ## 7.2.22
 
 ### Patch Changes
