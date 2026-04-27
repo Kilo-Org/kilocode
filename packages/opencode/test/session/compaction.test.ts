@@ -97,7 +97,8 @@ function createModel(opts: {
   } as Provider.Model
 }
 
-const wide = () => ProviderTest.fake({ model: createModel({ context: 100_000, output: 32_000 }) })
+const base = createModel({ context: 100_000, output: 32_000 }) // kilocode_change
+const wide = () => ProviderTest.fake({ model: base })
 
 async function user(sessionID: SessionID, text: string) {
   const msg = await svc.updateMessage({
@@ -167,6 +168,51 @@ function layer(result: "continue" | "compact") {
   )
 }
 
+// kilocode_change start - capture compaction processor input for budget tests
+function captureLayer() {
+  const captured: LLM.StreamInput[] = []
+  const proc = Layer.succeed(
+    SessionProcessorModule.SessionProcessor.Service,
+    SessionProcessorModule.SessionProcessor.Service.of({
+      create: Effect.fn("CaptureSessionProcessor.create")((input) => {
+        const msg = input.assistantMessage
+        return Effect.succeed({
+          get message() {
+            return msg
+          },
+          updateToolCall: Effect.fn("CaptureSessionProcessor.updateToolCall")(() => Effect.succeed(undefined)),
+          completeToolCall: Effect.fn("CaptureSessionProcessor.completeToolCall")(() => Effect.void),
+          process: Effect.fn("CaptureSessionProcessor.process")((input: LLM.StreamInput) => {
+            captured.push(input)
+            return Effect.succeed("continue" as const)
+          }),
+        } satisfies SessionProcessorModule.SessionProcessor.Handle)
+      }),
+    }),
+  )
+  return { captured, proc }
+}
+
+function captureRuntime(
+  proc: Layer.Layer<SessionProcessorModule.SessionProcessor.Service>,
+  plugin = Plugin.defaultLayer,
+  provider = wide(),
+) {
+  const bus = Bus.layer
+  return ManagedRuntime.make(
+    Layer.mergeAll(SessionCompaction.layer, bus).pipe(
+      Layer.provide(provider.layer),
+      Layer.provide(SessionNs.defaultLayer),
+      Layer.provide(proc),
+      Layer.provide(Agent.defaultLayer),
+      Layer.provide(plugin),
+      Layer.provide(bus),
+      Layer.provide(Config.defaultLayer),
+    ),
+  )
+}
+// kilocode_change end
+
 function runtime(result: "continue" | "compact", plugin = Plugin.defaultLayer, provider = ProviderTest.fake()) {
   const bus = Bus.layer
   return ManagedRuntime.make(
@@ -183,7 +229,7 @@ function runtime(result: "continue" | "compact", plugin = Plugin.defaultLayer, p
 }
 
 const deps = Layer.mergeAll(
-  ProviderTest.fake().layer,
+  wide().layer, // kilocode_change
   layer("continue"),
   Agent.defaultLayer,
   Plugin.defaultLayer,
@@ -278,6 +324,22 @@ function autocontinue(enabled: boolean) {
     init: () => Effect.void,
   })
 }
+
+// kilocode_change start - plugin helper for overflow shrinking tests
+function contextPlugin(text: string) {
+  return Layer.mock(Plugin.Service)({
+    trigger: <Name extends string, Input, Output>(name: Name, _input: Input, output: Output) => {
+      if (name !== "experimental.session.compacting") return Effect.succeed(output)
+      return Effect.sync(() => {
+        ;(output as { context: string[] }).context.push(text)
+        return output
+      })
+    },
+    list: () => Effect.succeed([]),
+    init: () => Effect.void,
+  })
+}
+// kilocode_change end
 
 describe("session.compaction.isOverflow", () => {
   it.live(
@@ -585,6 +647,97 @@ describe("session.compaction.prune", () => {
       }),
     ),
   )
+
+  // kilocode_change start - normal pruning should scale with model budget
+  it.live(
+    "prunes old tool output below the old fixed 40k token threshold on smaller models",
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const compact = yield* SessionCompaction.Service
+        const ssn = yield* SessionNs.Service
+        const info = yield* ssn.create({})
+        const a = yield* ssn.updateMessage({
+          id: MessageID.ascending(),
+          role: "user",
+          sessionID: info.id,
+          agent: "build",
+          model: ref,
+          time: { created: Date.now() },
+        })
+        yield* ssn.updatePart({
+          id: PartID.ascending(),
+          messageID: a.id,
+          sessionID: info.id,
+          type: "text",
+          text: "first",
+        })
+        const b: MessageV2.Assistant = {
+          id: MessageID.ascending(),
+          role: "assistant",
+          sessionID: info.id,
+          mode: "build",
+          agent: "build",
+          path: { cwd: dir, root: dir },
+          cost: 0,
+          tokens: {
+            output: 0,
+            input: 0,
+            reasoning: 0,
+            cache: { read: 0, write: 0 },
+          },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          parentID: a.id,
+          time: { created: Date.now() },
+          finish: "end_turn",
+        }
+        yield* ssn.updateMessage(b)
+        yield* ssn.updatePart({
+          id: PartID.ascending(),
+          messageID: b.id,
+          sessionID: info.id,
+          type: "tool",
+          callID: crypto.randomUUID(),
+          tool: "bash",
+          state: {
+            status: "completed",
+            input: {},
+            output: "x".repeat(60_000),
+            title: "done",
+            metadata: {},
+            time: { start: Date.now(), end: Date.now() },
+          },
+        })
+        for (const text of ["second", "third"]) {
+          const msg = yield* ssn.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: info.id,
+            agent: "build",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          yield* ssn.updatePart({
+            id: PartID.ascending(),
+            messageID: msg.id,
+            sessionID: info.id,
+            type: "text",
+            text,
+          })
+        }
+
+        yield* compact.prune({ sessionID: info.id })
+
+        const msgs = yield* ssn.messages({ sessionID: info.id })
+        const part = msgs.flatMap((msg) => msg.parts).find((part) => part.type === "tool")
+        expect(part?.type).toBe("tool")
+        if (part?.type === "tool" && part.state.status === "completed") {
+          expect(part.state.time.compacted).toBeNumber()
+        }
+      }),
+    ),
+  )
+  // kilocode_change end
 
   it.live(
     "skips protected skill tool output",
@@ -1199,6 +1352,119 @@ describe("session.compaction.process", () => {
       },
     })
   })
+
+  // kilocode_change start - overflow compaction gets a stricter model-aware input budget
+  test("shrinks overflow compaction input without mutating stored messages", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await svc.create({})
+        const root = await user(session.id, "root")
+        const reply = await assistant(session.id, root.id, tmp.path)
+        const output = "x".repeat(80_000)
+        await svc.updatePart({
+          id: PartID.ascending(),
+          messageID: reply.id,
+          sessionID: session.id,
+          type: "tool",
+          callID: crypto.randomUUID(),
+          tool: "bash",
+          state: {
+            status: "completed",
+            input: {},
+            output,
+            title: "done",
+            metadata: {},
+            time: { start: Date.now(), end: Date.now() },
+          },
+        })
+        const synthetic = await user(session.id, "synthetic")
+        await svc.updatePart({
+          id: PartID.ascending(),
+          messageID: synthetic.id,
+          sessionID: session.id,
+          type: "text",
+          synthetic: true,
+          text: "y".repeat(20_000),
+        })
+        const msg = await user(session.id, "current")
+        const { captured, proc } = captureLayer()
+        const rt = captureRuntime(proc)
+        try {
+          const msgs = await svc.messages({ sessionID: session.id })
+          const result = await rt.runPromise(
+            SessionCompaction.Service.use((svc) =>
+              svc.process({
+                parentID: msg.id,
+                messages: msgs,
+                sessionID: session.id,
+                auto: true,
+                overflow: true,
+              }),
+            ),
+          )
+
+          expect(result).toBe("continue")
+          expect(captured.length).toBe(1)
+          const text = JSON.stringify(captured[0].messages)
+          expect(text).not.toContain("x".repeat(10_000))
+          expect(text).not.toContain("y".repeat(10_000))
+          expect(text).toContain("truncated")
+
+          const stored = await svc.messages({ sessionID: session.id })
+          const part = stored.flatMap((msg) => msg.parts).find((part) => part.type === "tool")
+          expect(part?.type).toBe("tool")
+          if (part?.type === "tool" && part.state.status === "completed") {
+            expect(part.state.output).toBe(output)
+          }
+        } finally {
+          await rt.dispose()
+        }
+      },
+    })
+  })
+
+  test("shrinks older overflow messages before plugin context is added", async () => {
+    await using tmp = await tmpdir()
+    await Instance.provide({
+      directory: tmp.path,
+      fn: async () => {
+        const session = await svc.create({})
+        for (let i = 0; i < 80; i++) {
+          await user(session.id, `msg-${String(i).padStart(3, "0")}`)
+        }
+        const msg = await user(session.id, "current")
+        const { captured, proc } = captureLayer()
+        const rt = captureRuntime(proc, contextPlugin("mcp-tool-schema-context-" + "z".repeat(20_000)))
+        try {
+          const msgs = await svc.messages({ sessionID: session.id })
+          const result = await rt.runPromise(
+            SessionCompaction.Service.use((svc) =>
+              svc.process({
+                parentID: msg.id,
+                messages: msgs,
+                sessionID: session.id,
+                auto: true,
+                overflow: true,
+              }),
+            ),
+          )
+
+          expect(result).toBe("continue")
+          expect(captured.length).toBe(1)
+          const text = JSON.stringify(captured[0].messages)
+          expect(text).toContain("mcp-tool-schema-context")
+          expect(text).not.toContain("msg-000")
+          expect(text).not.toContain("msg-020")
+          expect(text).toContain("msg-078")
+        } finally {
+          await rt.dispose()
+        }
+      },
+    })
+  })
+  // kilocode_change end
 })
 
 describe("util.token.estimate", () => {

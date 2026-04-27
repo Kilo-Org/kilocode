@@ -2,7 +2,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { Bus } from "@/bus"
 import * as Session from "./session"
 import { SessionID, MessageID, PartID } from "./schema"
-import { Provider } from "../provider"
+import { Provider, ProviderTransform } from "../provider"
 import { MessageV2 } from "./message-v2"
 import z from "zod"
 import { Token } from "../util"
@@ -31,6 +31,85 @@ export const Event = {
 export const PRUNE_MINIMUM = 20_000
 export const PRUNE_PROTECT = 40_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
+// kilocode_change start - model-aware compaction budgets
+const BUDGET_BUFFER = 20_000
+const BUDGET_NORMAL_RATIO = 0.2
+const BUDGET_OVERFLOW_RATIO = 0.05
+const BUDGET_PROMPT_RATIO = 0.1
+const BUDGET_NORMAL_MIN = 8_000
+const BUDGET_NORMAL_MAX = 60_000
+const BUDGET_OVERFLOW_MIN = 2_000
+const BUDGET_OVERFLOW_MAX = 15_000
+const BUDGET_OVERFLOW_TEXT_MIN = 500
+const BUDGET_OVERFLOW_TEXT_MAX = 2_000
+const BUDGET_OVERFLOW_TOOL_MIN = 500
+const BUDGET_OVERFLOW_TOOL_MAX = 4_000
+
+function clamp(input: { value: number; min: number; max: number }) {
+  return Math.max(input.min, Math.min(input.max, input.value))
+}
+
+function budget(input: { cfg: Config.Info; model: Provider.Model }) {
+  const output = ProviderTransform.maxOutputTokens(input.model)
+  const limit = input.model.limit.input || input.model.limit.context
+  const reserved = input.cfg.compaction?.reserved ?? (input.model.limit.input ? Math.min(BUDGET_BUFFER, output) : output)
+  const prompt = Math.floor(limit * BUDGET_PROMPT_RATIO)
+  const usable = Math.max(0, limit - reserved - prompt)
+  const available = usable
+  const normal = clamp({
+    value: Math.floor(available * BUDGET_NORMAL_RATIO),
+    min: BUDGET_NORMAL_MIN,
+    max: BUDGET_NORMAL_MAX,
+  })
+  const overflow = clamp({
+    value: Math.floor(available * BUDGET_OVERFLOW_RATIO),
+    min: BUDGET_OVERFLOW_MIN,
+    max: BUDGET_OVERFLOW_MAX,
+  })
+  return {
+    usable,
+    normal,
+    overflow,
+    tool: clamp({ value: overflow, min: BUDGET_OVERFLOW_TOOL_MIN, max: BUDGET_OVERFLOW_TOOL_MAX }),
+    text: clamp({ value: Math.floor(overflow / 2), min: BUDGET_OVERFLOW_TEXT_MIN, max: BUDGET_OVERFLOW_TEXT_MAX }),
+    messages: usable < 96_000 ? 20 : usable < 224_000 ? 40 : 80,
+  }
+}
+
+function truncate(input: { text: string; chars: number; label: string }) {
+  if (input.text.length <= input.chars) return input.text
+  return `${input.text.slice(0, input.chars)}\n\n[... truncated ${input.text.length - input.chars} chars for ${input.label}]`
+}
+
+function shrink(input: { messages: MessageV2.WithParts[]; budget: ReturnType<typeof budget> }) {
+  const msgs = input.messages.length > input.budget.messages ? input.messages.slice(-input.budget.messages) : input.messages
+  let total = 0
+  return msgs.map((msg) => ({
+    ...msg,
+    parts: msg.parts.map((part) => {
+      if (part.type === "tool" && part.state.status === "completed") {
+        const estimate = Token.estimate(part.state.output)
+        total += estimate
+        if (total <= input.budget.overflow && part.state.output.length <= input.budget.tool) return part
+        return {
+          ...part,
+          state: {
+            ...part.state,
+            output: truncate({ text: part.state.output, chars: input.budget.tool, label: "overflow compaction" }),
+          },
+        }
+      }
+      if (part.type === "text" && part.synthetic) {
+        return {
+          ...part,
+          text: truncate({ text: part.text, chars: input.budget.text, label: "overflow compaction" }),
+        }
+      }
+      return part
+    }),
+  }))
+}
+// kilocode_change end
 
 export interface Interface {
   readonly isOverflow: (input: {
@@ -96,6 +175,14 @@ export const layer: Layer.Layer<
         .pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed(undefined)))
       if (!msgs) return
 
+      // kilocode_change start - scale protected tool-output window with the active model
+      const last = msgs.findLast((msg) => msg.info.role === "user")
+      const model = last?.info.role === "user" ? yield* provider.getModel(last.info.model.providerID, last.info.model.modelID) : undefined
+      const cap = model ? budget({ cfg, model }) : undefined
+      const protect = cap ? cap.normal : PRUNE_PROTECT
+      const minimum = cap ? Math.min(PRUNE_MINIMUM, Math.floor(protect * 0.75)) : PRUNE_MINIMUM
+      // kilocode_change end
+
       let total = 0
       let pruned = 0
       const toPrune: MessageV2.ToolPart[] = []
@@ -114,7 +201,7 @@ export const layer: Layer.Layer<
               if (part.state.time.compacted) break loop
               const estimate = Token.estimate(part.state.output)
               total += estimate
-              if (total > PRUNE_PROTECT) {
+              if (total > protect) {
                 pruned += estimate
                 toPrune.push(part)
               }
@@ -123,7 +210,7 @@ export const layer: Layer.Layer<
       }
 
       log.info("found", { pruned, total })
-      if (pruned > PRUNE_MINIMUM) {
+      if (pruned > minimum) {
         for (const part of toPrune) {
           if (part.state.status === "completed") {
             part.state.time.compacted = Date.now()
@@ -176,6 +263,16 @@ export const layer: Layer.Layer<
       const model = agent.model
         ? yield* provider.getModel(agent.model.providerID, agent.model.modelID)
         : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID)
+      // kilocode_change start - overflow compaction must fit even with MCP/tool schema/plugin prompt overhead
+      if (input.overflow) {
+        const cfg = yield* config.get()
+        const cap = budget({ cfg, model })
+        if (messages.length > cap.messages) {
+          log.info("overflow compaction: trimming old messages", { before: messages.length, after: cap.messages })
+        }
+        messages = shrink({ messages, budget: cap })
+      }
+      // kilocode_change end
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
         "experimental.session.compacting",
