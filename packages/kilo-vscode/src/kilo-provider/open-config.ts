@@ -1,50 +1,59 @@
 import * as path from "path"
 import * as vscode from "vscode"
-import { content, globalFiles, localFiles, type Entry, type Scope } from "./config-file"
-import { text } from "./config-i18n"
+import { content, globalFiles, localFiles, type Entry, type Scope, type Source } from "./config-file"
 
-export async function openConfig(scope: Scope, root?: string): Promise<void> {
-  const lang = vscode.env.language
-  const label = text(lang, scope === "global" ? "scopeGlobal" : "scopeLocal")
+interface Labels extends Record<Source, string> {
+  scope: string
+  statusLoaded: string
+  statusLoadedLegacy: string
+  statusNotLoaded: string
+  statusCreate: string
+  title: string
+  placeholder: string
+  noWorkspace: string
+  openFailed: string
+}
+
+export async function openConfig(scope: Scope, labels: Labels, root?: string): Promise<void> {
   if (scope === "local" && !root) {
-    void vscode.window.showWarningMessage(text(lang, "noWorkspace"))
+    void vscode.window.showWarningMessage(labels.noWorkspace)
     return
   }
 
   const list = scope === "global" ? globalFiles() : localFiles(root!)
-  const picked = await pick(list, label, lang)
+  const picked = await pick(list, labels)
   if (!picked?.file) return
 
-  await open(picked.file, label, lang)
+  await open(picked.file, labels)
 }
 
-async function pick(list: Entry[], scope: string, lang: string) {
+async function pick(list: Entry[], labels: Labels) {
   const editable = list.filter((item) => !item.virtual)
   if (editable.length === 1) return editable[0]
 
   const picked = await vscode.window.showQuickPick(
     editable.map((item) => ({
       label: item.recommended && !item.exists ? `$(add) ${item.name}` : `$(json) ${item.name}`,
-      description: item.exists ? status(item, lang) : text(lang, "statusCreate"),
-      detail: `${text(lang, item.source)} - ${item.file}`,
+      description: item.exists ? status(item, labels) : labels.statusCreate,
+      detail: `${labels[item.source]} - ${item.file}`,
       item,
     })),
     {
-      title: text(lang, "title", { scope }),
-      placeHolder: text(lang, "placeholder"),
+      title: labels.title,
+      placeHolder: labels.placeholder,
     },
   )
 
   return picked?.item
 }
 
-function status(item: Entry, lang: string) {
-  if (!item.loaded) return text(lang, "statusNotLoaded")
-  if (item.legacy) return text(lang, "statusLoadedLegacy")
-  return text(lang, "statusLoaded")
+function status(item: Entry, labels: Labels) {
+  if (!item.loaded) return labels.statusNotLoaded
+  if (item.legacy) return labels.statusLoadedLegacy
+  return labels.statusLoaded
 }
 
-async function open(file: string, scope: string, lang: string) {
+async function open(file: string, labels: Labels) {
   const uri = vscode.Uri.file(file)
   try {
     await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(file)))
@@ -58,6 +67,6 @@ async function open(file: string, scope: string, lang: string) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error("[Kilo New] Failed to open config file:", file, err)
-    void vscode.window.showErrorMessage(text(lang, "openFailed", { scope, message: msg }))
+    void vscode.window.showErrorMessage(labels.openFailed.replace("{{message}}", () => msg))
   }
 }

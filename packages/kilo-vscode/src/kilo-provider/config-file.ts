@@ -1,14 +1,26 @@
 import { existsSync } from "fs"
 import * as os from "os"
 import * as path from "path"
-import type { Key } from "./config-i18n"
 
 export type Scope = "global" | "local"
+
+export type Source =
+  | "sourceXdg"
+  | "sourceHomeKilo"
+  | "sourceHomeKilocode"
+  | "sourceHomeOpencode"
+  | "sourceEnvFile"
+  | "sourceEnvDir"
+  | "sourceEnvContent"
+  | "sourceProjectKilo"
+  | "sourceProjectRoot"
+  | "sourceProjectKilocode"
+  | "sourceProjectOpencode"
 
 export interface Entry {
   file?: string
   name: string
-  source: Key
+  source: Source
   exists: boolean
   loaded: boolean
   legacy?: boolean
@@ -23,13 +35,13 @@ const LEGACY = ["opencode.jsonc", "opencode.json"]
 const FILES = [...MODERN, ...LEGACY]
 const GLOBAL = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"]
 const HOME = [".kilo", ".kilocode", ".opencode"]
-const SOURCES: Record<string, Key> = {
+const SOURCES: Record<string, Source> = {
   ".kilo": "sourceHomeKilo",
   ".kilocode": "sourceHomeKilocode",
   ".opencode": "sourceHomeOpencode",
 }
 
-function row(file: string, source: Key, loaded = true, recommended = false): Entry {
+function row(file: string, source: Source, loaded = true, recommended = false): Entry {
   const name = path.basename(file)
   return {
     file,
@@ -42,7 +54,7 @@ function row(file: string, source: Key, loaded = true, recommended = false): Ent
   }
 }
 
-function ensure(list: Entry[], file: string, source: Key) {
+function ensure(list: Entry[], file: string, source: Source) {
   if (list.some((item) => item.file === file)) return list
   return [...list, row(file, source, true, true)]
 }

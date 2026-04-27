@@ -699,7 +699,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
           break
         case "openConfigFile":
-          await openConfig(message.scope, this.getProjectDirectory(this.currentSession?.id))
+          await openConfig(message.scope, message.labels, this.getProjectDirectory(this.currentSession?.id))
           break
         case "openMarketplacePanel":
           vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)
