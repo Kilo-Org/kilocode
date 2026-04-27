@@ -7,11 +7,9 @@ const registerInlineCompletionItemProvider = spyOn(
   "registerInlineCompletionItemProvider",
 ).mockImplementation(() => ({ dispose: mock() }))
 
-let activeTextEditor: unknown = null
-Object.defineProperty(vscode.window, "activeTextEditor", {
-  configurable: true,
-  get: () => activeTextEditor,
-})
+function setActiveEditor(editor: unknown) {
+  ;(vscode.window as unknown as { activeTextEditor: unknown }).activeTextEditor = editor
+}
 
 mock.module("../../src/services/autocomplete/AutocompleteModel", () => ({
   AutocompleteModel: class {
@@ -71,12 +69,12 @@ function createManager() {
 describe("AutocompleteServiceManager", () => {
   beforeEach(() => {
     registerInlineCompletionItemProvider.mockClear()
-    activeTextEditor = null
+    setActiveEditor(null)
     AutocompleteServiceManager._resetInstance()
   })
 
   afterEach(() => {
-    activeTextEditor = null
+    setActiveEditor(null)
   })
 
   describe("codeSuggestion()", () => {
@@ -87,7 +85,7 @@ describe("AutocompleteServiceManager", () => {
       const position = new vscode.Position(0, 0)
       const inserted: { position?: unknown; text?: string } = {}
 
-      activeTextEditor = {
+      setActiveEditor({
         document,
         selection: { active: position },
         edit: mock(async (cb: (builder: unknown) => void) => {
@@ -99,7 +97,7 @@ describe("AutocompleteServiceManager", () => {
           })
           return true
         }),
-      }
+      })
 
       const provider = manager.inlineCompletionProvider as unknown as {
         provideInlineCompletionItems_Internal: ReturnType<typeof mock>
@@ -124,7 +122,7 @@ describe("AutocompleteServiceManager", () => {
     it("does nothing when there is no active editor", async () => {
       const manager = createManager()
 
-      activeTextEditor = null
+      setActiveEditor(null)
 
       await manager.codeSuggestion()
 
