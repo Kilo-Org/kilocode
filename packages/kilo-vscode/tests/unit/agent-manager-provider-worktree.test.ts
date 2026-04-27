@@ -1,41 +1,34 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, mock } from "bun:test"
 
-vi.mock("../WorktreeManager", () => ({
-  WorktreeManager: class {},
-}))
+const base = "../../src/agent-manager"
 
-vi.mock("../WorktreeStateManager", () => ({
+mock.module(`${base}/WorktreeManager`, () => ({ WorktreeManager: class {} }))
+mock.module(`${base}/WorktreeStateManager`, () => ({
   WorktreeStateManager: class {},
+  remoteRef: (branch: string) => branch,
 }))
-
-vi.mock("../GitStatsPoller", () => ({
+mock.module(`${base}/GitStatsPoller`, () => ({
   GitStatsPoller: class {
     setEnabled() {}
     stop() {}
   },
 }))
-
-vi.mock("../GitOps", () => ({
-  GitOps: class {},
-}))
-
-vi.mock("../SetupScriptService", () => ({
+mock.module(`${base}/GitOps`, () => ({ GitOps: class {} }))
+mock.module(`${base}/SetupScriptService`, () => ({
   SetupScriptService: class {
     hasScript() {
       return false
     }
   },
 }))
-
-vi.mock("../SetupScriptRunner", () => ({
+mock.module(`${base}/SetupScriptRunner`, () => ({
   SetupScriptRunner: class {
     async runIfConfigured() {
       return false
     }
   },
 }))
-
-vi.mock("../SessionTerminalManager", () => ({
+mock.module(`${base}/SessionTerminalManager`, () => ({
   SessionTerminalManager: class {
     showTerminal() {}
     showLocalTerminal() {}
@@ -46,25 +39,24 @@ vi.mock("../SessionTerminalManager", () => ({
     dispose() {}
   },
 }))
-
-vi.mock("../terminal-host", () => ({
-  createTerminalHost: () => ({}),
-}))
-
-vi.mock("../format-keybinding", () => ({
+mock.module(`${base}/terminal-host`, () => ({ createTerminalHost: () => ({}) }))
+mock.module(`${base}/format-keybinding`, () => ({
   formatKeybinding: (value: string) => value,
+  buildKeybindingMap: () => ({}),
 }))
-
-vi.mock("../branch-name", () => ({
-  versionedName: () => ({ branch: "branch", label: "label" }),
-}))
-
-vi.mock("../git-import", () => ({
+mock.module(`${base}/branch-name`, () => ({ versionedName: () => ({ branch: "branch", label: "label" }) }))
+mock.module(`${base}/git-import`, () => ({
   normalizePath: (value: string) => value,
+  classifyWorktreeError: (err: unknown) => ({ kind: "unknown" as const, error: err }),
+  classifyPRError: () => "unknown" as const,
 }))
 
-import { AgentManagerProvider } from "../AgentManagerProvider"
-import type { Host, OutputHandle } from "../host"
+const { AgentManagerProvider } = await import("../../src/agent-manager/AgentManagerProvider")
+type Host = import("../../src/agent-manager/host").Host
+type OutputHandle = import("../../src/agent-manager/host").OutputHandle
+
+// Local shim so the remaining test body reads naturally.
+const vi = { fn: mock }
 
 function createMockHost(): Host {
   return {
