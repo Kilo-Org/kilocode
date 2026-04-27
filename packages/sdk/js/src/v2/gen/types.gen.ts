@@ -6913,6 +6913,28 @@ export type KilocodeSessionImportPartResponses = {
 export type KilocodeSessionImportPartResponse =
   KilocodeSessionImportPartResponses[keyof KilocodeSessionImportPartResponses]
 
+export type KilocodeRulesData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/rules"
+}
+
+export type KilocodeRulesResponses = {
+  /**
+   * Loaded rules
+   */
+  200: Array<{
+    path: string
+    name: string
+  }>
+}
+
+export type KilocodeRulesResponse = KilocodeRulesResponses[keyof KilocodeRulesResponses]
+
 export type KilocodeHeapSnapshotData = {
   body?: never
   path?: never

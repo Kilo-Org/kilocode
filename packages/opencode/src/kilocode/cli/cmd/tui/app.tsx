@@ -19,6 +19,7 @@ import { useTheme } from "@tui/context/theme"
 import { DialogAlert } from "@tui/ui/dialog-alert"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { Link } from "@tui/ui/link"
+import { DialogRules } from "./component/dialog-rules"
 import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
@@ -154,6 +155,17 @@ export function init() {
 
   // Register auto-approve toggle
   command.register(() => [
+    {
+      title: "Rules",
+      value: "rules.list",
+      category: "System",
+      slash: {
+        name: "rules",
+      },
+      onSelect: (dialog) => {
+        dialog.replace(() => <DialogRules />)
+      },
+    },
     {
       get title() {
         return isAllowEverything(sync.data.config.permission) ? "Disable auto-approve mode" : "Enable auto-approve mode"

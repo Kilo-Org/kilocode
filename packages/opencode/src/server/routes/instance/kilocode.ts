@@ -6,14 +6,38 @@ import { describeRoute, validator, resolver } from "hono-openapi"
 import z from "zod"
 import { Skill } from "@/skill"
 import { Agent } from "@/agent/agent"
+import { KiloRules } from "@/kilocode/rules"
 import { lazy } from "@/util/lazy"
 import { errors } from "../../error"
+import { jsonRequest } from "./trace"
 import { SessionImportRoutes } from "@/kilocode/session-import/routes"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
 
 export const KilocodeRoutes = lazy(() =>
   new Hono()
     .route("/session-import", SessionImportRoutes())
+    .get(
+      "/rules",
+      describeRoute({
+        summary: "List loaded rules",
+        description: "List local rule and instruction files currently loaded for this session.",
+        operationId: "kilocode.rules",
+        responses: {
+          200: {
+            description: "Loaded rules",
+            content: {
+              "application/json": {
+                schema: resolver(KiloRules.Info.array()),
+              },
+            },
+          },
+        },
+      }),
+      async (c) =>
+        jsonRequest("KilocodeRoutes.rules", c, function* () {
+          return yield* KiloRules.list()
+        }),
+    )
     .post(
       "/heap/snapshot",
       describeRoute({

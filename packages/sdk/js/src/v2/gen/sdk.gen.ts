@@ -75,6 +75,7 @@ import type {
   KilocodeRemoveAgentResponses,
   KilocodeRemoveSkillErrors,
   KilocodeRemoveSkillResponses,
+  KilocodeRulesResponses,
   KilocodeSessionImportMessageErrors,
   KilocodeSessionImportMessageResponses,
   KilocodeSessionImportPartErrors,
@@ -5537,6 +5538,36 @@ export class Heap extends HeyApiClient {
 }
 
 export class Kilocode extends HeyApiClient {
+  /**
+   * List loaded rules
+   *
+   * List local rule and instruction files currently loaded for this session.
+   */
+  public rules<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KilocodeRulesResponses, unknown, ThrowOnError>({
+      url: "/kilocode/rules",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * Remove a skill
    *
