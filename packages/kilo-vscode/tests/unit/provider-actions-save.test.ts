@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import { disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -190,6 +190,50 @@ describe("saveCustomProvider", () => {
     const models = (calls.config[0].config.provider as Record<string, { models: Record<string, unknown> }>).myprovider
       .models
     expect(Object.values(models).every((v) => v !== null)).toBe(true)
+  })
+
+  it("removes saved custom providers from disabled_providers when reconnecting", async () => {
+    const { ctx, calls, setCachedConfig } = createCtx({ disabled_providers: ["myprovider", "openai"] })
+
+    await saveCustomProvider(ctx, "req", "myprovider", createProvider(), undefined, false, null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config.disabled_providers).toEqual(["openai"])
+  })
+})
+
+describe("disconnectProvider", () => {
+  it("adds configured providers to disabled_providers without deleting their config", async () => {
+    const existing = {
+      disabled_providers: ["openai"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(1)
+    expect(calls.config[0].config).toEqual({ disabled_providers: ["openai", "myprovider"] })
+    expect(calls.remove).toEqual([{ providerID: "myprovider" }])
+    expect(calls.refresh).toBe(1)
+    expect(calls.posts).toContainEqual({ type: "providerDisconnected", requestId: "req", providerID: "myprovider" })
+  })
+
+  it("does not duplicate configured providers already disabled", async () => {
+    const existing = {
+      disabled_providers: ["myprovider"],
+      provider: {
+        myprovider: createProvider(),
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "myprovider", null, setCachedConfig)
+
+    expect(calls.config).toHaveLength(0)
+    expect(calls.refresh).toBe(1)
   })
 })
 

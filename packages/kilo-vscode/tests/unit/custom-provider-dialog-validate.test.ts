@@ -28,6 +28,18 @@ function args(form: FormState) {
 }
 
 describe("validateCustomProvider – variant name validation", () => {
+  it("allows reconnecting a disabled provider id", () => {
+    const form = base()
+    const out = validateCustomProvider({
+      ...args(form),
+      disabledProviders: ["my-provider"],
+      existingProviderIDs: new Set(["my-provider"]),
+    })
+
+    expect(out.result?.providerID).toBe("my-provider")
+    expect(out.errors.providerID).toBeUndefined()
+  })
+
   it("allows submit when reasoning is enabled with no variants", () => {
     const form = base()
     form.models[0].reasoning = true
