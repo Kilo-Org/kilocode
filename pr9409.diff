@@ -1,0 +1,813 @@
+diff --git a/.kilo/package-lock.json b/.kilo/package-lock.json
+index 09c19806c57..dff625bc365 100644
+--- a/.kilo/package-lock.json
++++ b/.kilo/package-lock.json
+@@ -5,16 +5,16 @@
+   "packages": {
+     "": {
+       "dependencies": {
+-        "@kilocode/plugin": "7.2.21"
++        "@kilocode/plugin": "7.2.24"
+       }
+     },
+     "node_modules/@kilocode/plugin": {
+-      "version": "7.2.21",
+-      "resolved": "https://registry.npmjs.org/@kilocode/plugin/-/plugin-7.2.21.tgz",
+-      "integrity": "sha512-PUo1Vc7OmOHZAxOdrFsez01e+JAX7jhyGw0caBOuXwAWuT39tGISjrUQoeW5k2/VqkZv3V8fPyvcuto0iuNeDA==",
++      "version": "7.2.24",
++      "resolved": "https://registry.npmjs.org/@kilocode/plugin/-/plugin-7.2.24.tgz",
++      "integrity": "sha512-b2Xh3N/KaGdYj9hZbzZLKlDHXUsdMey0zL8G+RsnxDQCuhNm46LPyixtlJQhbCyir/zEEvy3uJI9kqKCsOWmQg==",
+       "license": "MIT",
+       "dependencies": {
+-        "@kilocode/sdk": "7.2.21",
++        "@kilocode/sdk": "7.2.24",
+         "effect": "4.0.0-beta.48",
+         "zod": "4.1.8"
+       },
+@@ -32,9 +32,9 @@
+       }
+     },
+     "node_modules/@kilocode/sdk": {
+-      "version": "7.2.21",
+-      "resolved": "https://registry.npmjs.org/@kilocode/sdk/-/sdk-7.2.21.tgz",
+-      "integrity": "sha512-iqhUEAEF4ouqXdlm3CuVCCh07FhMpjVT/QfZqDFAis7PO0JTmR76sCAMtqSzv8nogt/CFuR/vgpK79d+xZcM2g==",
++      "version": "7.2.24",
++      "resolved": "https://registry.npmjs.org/@kilocode/sdk/-/sdk-7.2.24.tgz",
++      "integrity": "sha512-Yos6WeyvMl86OGXLQqQ9YWDm/geAC77xetoptEsS3DLtPVgvz1Nqkvas77fAuAqwkSfGL2mLIiHUTqJUTVflOw==",
+       "license": "MIT",
+       "dependencies": {
+         "cross-spawn": "7.0.6"
+diff --git a/.kilocode/package-lock.json b/.kilocode/package-lock.json
+index 1ec40f69110..20f85087ba2 100644
+--- a/.kilocode/package-lock.json
++++ b/.kilocode/package-lock.json
+@@ -5,16 +5,16 @@
+   "packages": {
+     "": {
+       "dependencies": {
+-        "@kilocode/plugin": "7.2.21"
++        "@kilocode/plugin": "7.2.24"
+       }
+     },
+     "node_modules/@kilocode/plugin": {
+-      "version": "7.2.21",
+-      "resolved": "https://registry.npmjs.org/@kilocode/plugin/-/plugin-7.2.21.tgz",
+-      "integrity": "sha512-PUo1Vc7OmOHZAxOdrFsez01e+JAX7jhyGw0caBOuXwAWuT39tGISjrUQoeW5k2/VqkZv3V8fPyvcuto0iuNeDA==",
++      "version": "7.2.24",
++      "resolved": "https://registry.npmjs.org/@kilocode/plugin/-/plugin-7.2.24.tgz",
++      "integrity": "sha512-b2Xh3N/KaGdYj9hZbzZLKlDHXUsdMey0zL8G+RsnxDQCuhNm46LPyixtlJQhbCyir/zEEvy3uJI9kqKCsOWmQg==",
+       "license": "MIT",
+       "dependencies": {
+-        "@kilocode/sdk": "7.2.21",
++        "@kilocode/sdk": "7.2.24",
+         "effect": "4.0.0-beta.48",
+         "zod": "4.1.8"
+       },
+@@ -32,9 +32,9 @@
+       }
+     },
+     "node_modules/@kilocode/sdk": {
+-      "version": "7.2.21",
+-      "resolved": "https://registry.npmjs.org/@kilocode/sdk/-/sdk-7.2.21.tgz",
+-      "integrity": "sha512-iqhUEAEF4ouqXdlm3CuVCCh07FhMpjVT/QfZqDFAis7PO0JTmR76sCAMtqSzv8nogt/CFuR/vgpK79d+xZcM2g==",
++      "version": "7.2.24",
++      "resolved": "https://registry.npmjs.org/@kilocode/sdk/-/sdk-7.2.24.tgz",
++      "integrity": "sha512-Yos6WeyvMl86OGXLQqQ9YWDm/geAC77xetoptEsS3DLtPVgvz1Nqkvas77fAuAqwkSfGL2mLIiHUTqJUTVflOw==",
+       "license": "MIT",
+       "dependencies": {
+         "cross-spawn": "7.0.6"
+diff --git a/CONTRIBUTING.md b/CONTRIBUTING.md
+index d7950ddfe8f..0fe7cc99c16 100644
+--- a/CONTRIBUTING.md
++++ b/CONTRIBUTING.md
+@@ -48,6 +48,40 @@ To run Kilo CLI in the root of the repo itself:
+ bun dev .
+ ```
+ 
++### Running Kilo CLI from any folder
++
++`bin/kilodev` is a self-locating launcher that runs this checkout from wherever you invoke it. Running it with no arguments launches the TUI pointed at the caller's directory; any arguments are forwarded to the CLI unchanged.
++
++One-shot install (recommended). From the repo root:
++
++```bash
++./bin/kilodev dev-setup
++```
++
++This detects your shell, shows exactly what it will add, asks for confirmation, writes an idempotent block to your rc file, and saves a timestamped backup of the original. Re-running is safe — it only rewrites when the snippet has changed.
++
++Useful flags:
++
++- `--yes` — skip the confirmation prompt (good for CI/containers).
++- `--print` — just print the snippet, don't touch any file (pipe-friendly).
++- `--dry-run` — show what would change without writing.
++- `--shell <zsh|bash|fish|powershell>` — override shell detection.
++- `--rc <path>` — override the rc file.
++
++Manual alternatives (equivalent, no CLI invocation needed):
++
++- Unix: add `alias kilodev='/path/to/kilocode/bin/kilodev'` to `~/.zshrc` / `~/.bashrc`, or `fish_add_path /path/to/kilocode/bin`.
++- Windows: add `C:\path\to\kilocode\bin` to PATH (System Environment Variables), or add `function kilodev { & "C:\path\to\kilocode\bin\kilodev.cmd" @args }` to `$PROFILE`.
++
++Then from anywhere:
++
++```bash
++cd ~/some/project
++kilodev                      # opens TUI with project = ~/some/project
++kilodev dev-setup --print    # prints the alias line (scripting)
++kilodev run --dir "$PWD" "…" # subcommands pass through; use --dir for run/serve
++```
++
+ ### Building a "local" binary
+ 
+ To compile a standalone executable:
+diff --git a/bin/kilodev b/bin/kilodev
+new file mode 100755
+index 00000000000..746f0b64072
+--- /dev/null
++++ b/bin/kilodev
+@@ -0,0 +1,20 @@
++#!/usr/bin/env bash
++set -e
++dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++export KILO_DEV_REPO="$dir"
++# Find the first non-flag arg. If there isn't one, the user is launching the
++# TUI, so point it at the caller's directory via the project positional.
++# Otherwise forward args untouched so subcommands (run, dev-alias, ...) don't
++# collide with --project (only TUI/stats accept --project under yargs strict).
++first=
++for a in "$@"; do
++  case "$a" in
++    --) break ;;
++    -*) ;;
++    *) first="$a"; break ;;
++  esac
++done
++if [[ -z "$first" ]]; then
++  exec bun run --cwd "$dir/packages/opencode" --conditions=browser src/index.ts --project "$PWD" "$@"
++fi
++exec bun run --cwd "$dir/packages/opencode" --conditions=browser src/index.ts "$@"
+diff --git a/bin/kilodev.cmd b/bin/kilodev.cmd
+new file mode 100644
+index 00000000000..a3706d672fd
+--- /dev/null
++++ b/bin/kilodev.cmd
+@@ -0,0 +1,21 @@
++@echo off
++setlocal enabledelayedexpansion
++set "dir=%~dp0.."
++set "KILO_DEV_REPO=%dir%"
++rem Find the first non-flag arg. If there isn't one, the user is launching the
++rem TUI, so point it at the caller's directory via --project. Otherwise
++rem forward untouched so subcommands don't collide with --project.
++set "first="
++for %%a in (%*) do (
++  if not defined first (
++    set "arg=%%~a"
++    if "!arg:~0,1!" neq "-" set "first=%%~a"
++  )
++)
++if not defined first (
++  bun run --cwd "%dir%\packages\opencode" --conditions=browser src/index.ts --project "%CD%" %*
++) else (
++  bun run --cwd "%dir%\packages\opencode" --conditions=browser src/index.ts %*
++)
++set "code=%ERRORLEVEL%"
++endlocal & exit /b %code%
+diff --git a/package.json b/package.json
+index fa52224a3c1..8d1b6296c2b 100644
+--- a/package.json
++++ b/package.json
+@@ -7,6 +7,7 @@
+   "packageManager": "bun@1.3.11",
+   "scripts": {
+     "dev": "bun run --cwd packages/opencode --conditions=browser src/index.ts",
++    "dev-setup": "bin/kilodev dev-setup",
+     "dev:desktop": "bun --cwd packages/desktop tauri dev",
+     "dev:web": "bun --cwd packages/app dev",
+     "dev:console": "ulimit -n 10240 2>/dev/null; bun run --cwd packages/console/app dev",
+diff --git a/packages/kilo-docs/markdoc/partials/cli-commands-table.md b/packages/kilo-docs/markdoc/partials/cli-commands-table.md
+index d8b6b89e33e..b0744d8181b 100644
+--- a/packages/kilo-docs/markdoc/partials/cli-commands-table.md
++++ b/packages/kilo-docs/markdoc/partials/cli-commands-table.md
+@@ -1,27 +1,27 @@
+ <!-- Auto-generated by script/generate-cli-docs.ts — do not edit manually -->
+ 
+-| Command                   | Description                                          |
+-| ------------------------- | ---------------------------------------------------- |
+-| `kilo acp`                | start ACP (Agent Client Protocol) server             |
+-| `kilo mcp`                | manage MCP (Model Context Protocol) servers          |
+-| `kilo [project]`          | start kilo tui                                       |
+-| `kilo attach <url>`       | attach to a running kilo server                      |
+-| `kilo run [message..]`    | run kilo with a message                              |
+-| `kilo debug`              | debugging and troubleshooting tools                  |
+-| `kilo auth`               | manage AI providers and credentials                  |
+-| `kilo agent`              | manage agents                                        |
+-| `kilo upgrade [target]`   | upgrade kilo to the latest or a specific version     |
+-| `kilo uninstall`          | uninstall kilo and remove all related files          |
+-| `kilo serve`              | starts a headless kilo server                        |
+-| `kilo models [provider]`  | list all available models                            |
+-| `kilo stats`              | show token usage and cost statistics                 |
+-| `kilo export [sessionID]` | export session data as JSON                          |
+-| `kilo import <file>`      | import session data from JSON file or URL            |
+-| `kilo pr <number>`        | fetch and checkout a GitHub PR branch, then run kilo |
+-| `kilo session`            | manage sessions                                      |
+-| `kilo remote`             | enable remote connection for real-time session relay |
+-| `kilo db`                 | database tools                                       |
+-| `kilo config`             | configuration tools                                  |
+-| `kilo plugin <module>`    | install plugin and update config                     |
+-| `kilo help [command]`     | show full CLI reference                              |
+-| `kilo completion`         | generate shell completion script                     |
++| Command | Description |
++| --- | --- |
++| `kilo acp` | start ACP (Agent Client Protocol) server |
++| `kilo mcp` | manage MCP (Model Context Protocol) servers |
++| `kilo [project]` | start kilo tui |
++| `kilo attach <url>` | attach to a running kilo server |
++| `kilo run [message..]` | run kilo with a message |
++| `kilo debug` | debugging and troubleshooting tools |
++| `kilo auth` | manage AI providers and credentials |
++| `kilo agent` | manage agents |
++| `kilo upgrade [target]` | upgrade kilo to the latest or a specific version |
++| `kilo uninstall` | uninstall kilo and remove all related files |
++| `kilo serve` | starts a headless kilo server |
++| `kilo models [provider]` | list all available models |
++| `kilo stats` | show token usage and cost statistics |
++| `kilo export [sessionID]` | export session data as JSON |
++| `kilo import <file>` | import session data from JSON file or URL |
++| `kilo pr <number>` | fetch and checkout a GitHub PR branch, then run kilo |
++| `kilo session` | manage sessions |
++| `kilo remote` | enable remote connection for real-time session relay |
++| `kilo db` | database tools |
++| `kilo config` | configuration tools |
++| `kilo plugin <module>` | install plugin and update config |
++| `kilo help [command]` | show full CLI reference |
++| `kilo completion` | generate shell completion script |
+diff --git a/packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md b/packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md
+index a49c0d72daa..6386802f93f 100644
+--- a/packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md
++++ b/packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md
+@@ -587,7 +587,7 @@ Options:
+       --path         directory path to generate the agent file  [string]
+       --description  what the agent should do  [string]
+       --mode         agent mode  [string] [choices: "all", "primary", "subagent"]
+-      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, list, glob, grep, webfetch, task, todowrite"  [string]
++      --tools        comma-separated list of tools to enable (default: all). Available: "bash, read, write, edit, glob, grep, webfetch, task, todowrite"  [string]
+   -m, --model        model to use in the format of provider/model  [string]
+ ```
+ 
+diff --git a/packages/opencode/script/build.ts b/packages/opencode/script/build.ts
+index 3d70edff9fd..64dc4edf37d 100755
+--- a/packages/opencode/script/build.ts
++++ b/packages/opencode/script/build.ts
+@@ -235,6 +235,7 @@ for (const item of targets) {
+       KILO_RIPGREP_WORKER_PATH: rgPath,
+       KILO_CHANNEL: `'${Script.channel}'`,
+       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
++      KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`, // kilocode_change
+     },
+   })
+ 
+diff --git a/packages/opencode/src/index.ts b/packages/opencode/src/index.ts
+index d4b924331b3..6d78f748222 100644
+--- a/packages/opencode/src/index.ts
++++ b/packages/opencode/src/index.ts
+@@ -15,7 +15,7 @@ import { UninstallCommand } from "./cli/cmd/uninstall"
+ import { ModelsCommand } from "./cli/cmd/models"
+ import { UI } from "./cli/ui"
+ import { Installation } from "./installation"
+-import { InstallationVersion } from "./installation/version"
++import { InstallationBuildKind, InstallationVersion } from "./installation/version" // kilocode_change - add InstallationBuildKind
+ import { NamedError } from "@opencode-ai/shared/util/error"
+ import { FormatError } from "./cli/error"
+ import { ServeCommand } from "./cli/cmd/serve"
+@@ -35,6 +35,7 @@ import { EOL } from "os"
+ import { PrCommand } from "./cli/cmd/pr"
+ import { SessionCommand } from "./cli/cmd/session"
+ import { RemoteCommand } from "./cli/cmd/remote" // kilocode_change
++import { DevSetupCommand, DevAliasCommand } from "./kilocode/cli/dev-setup" // kilocode_change
+ // kilocode_change start - Import telemetry, instance disposal, and legacy migration
+ import { Telemetry } from "@kilocode/kilo-telemetry"
+ import { Instance } from "./project/instance" // kilocode_change
+@@ -86,12 +87,13 @@ const args = hideBin(process.argv)
+ 
+ function show(out: string) {
+   const text = out.trimStart()
++  const end = out.endsWith(EOL) ? "" : EOL // kilocode_change - keep shell prompt on the next line
+   if (!text.startsWith("opencode ")) {
+     process.stderr.write(UI.logo() + EOL + EOL)
+-    process.stderr.write(text)
++    process.stderr.write(text + end) // kilocode_change
+     return
+   }
+-  process.stderr.write(out)
++  process.stderr.write(out + end) // kilocode_change
+ }
+ 
+ let cli = yargs(args) // kilocode_change
+@@ -238,6 +240,12 @@ let cli = yargs(args) // kilocode_change
+   .command(PluginCommand)
+   .command(DbCommand)
+ 
++// kilocode_change start - dev-only commands are hidden from release builds
++if (InstallationBuildKind !== "release") {
++  cli = cli.command(DevSetupCommand).command(DevAliasCommand)
++}
++// kilocode_change end
++
+ // kilocode_change start - registered after initial chain to avoid self-referential type error
+ cli = cli.command(createHelpCommand(() => cli))
+ 
+diff --git a/packages/opencode/src/installation/version.ts b/packages/opencode/src/installation/version.ts
+index e2130132215..093ca84058a 100644
+--- a/packages/opencode/src/installation/version.ts
++++ b/packages/opencode/src/installation/version.ts
+@@ -1,8 +1,13 @@
+ declare global {
+   const KILO_VERSION: string
+   const KILO_CHANNEL: string
++  const KILO_BUILD_KIND: string // kilocode_change
+ }
+ 
+ export const InstallationVersion = typeof KILO_VERSION === "string" ? KILO_VERSION : "local"
+ export const InstallationChannel = typeof KILO_CHANNEL === "string" ? KILO_CHANNEL : "local"
+ export const InstallationLocal = InstallationChannel === "local"
++// kilocode_change start - distinguish release builds from source / local builds
++export const InstallationBuildKind: "source" | "release" =
++  typeof KILO_BUILD_KIND === "string" && KILO_BUILD_KIND === "release" ? "release" : "source"
++// kilocode_change end
+diff --git a/packages/opencode/src/kilocode/cli/dev-setup.ts b/packages/opencode/src/kilocode/cli/dev-setup.ts
+new file mode 100644
+index 00000000000..bfdafde7ed9
+--- /dev/null
++++ b/packages/opencode/src/kilocode/cli/dev-setup.ts
+@@ -0,0 +1,317 @@
++import path from "path"
++import os from "os"
++import { existsSync } from "fs"
++import { mkdir } from "fs/promises"
++import { fileURLToPath } from "url"
++import { cmd } from "@/cli/cmd/cmd"
++import { UI } from "@/cli/ui"
++
++type Shell = "zsh" | "bash" | "fish" | "powershell"
++
++const MARKER_START = "# >>> kilodev launcher >>>"
++const MARKER_END = "# <<< kilodev launcher <<<"
++
++export const DevSetupCommand = cmd({
++  command: "dev-setup",
++  describe: "install a `kilodev` shell alias for this checkout",
++  builder: (y) =>
++    y
++      .option("shell", {
++        type: "string",
++        describe: "shell flavor (auto-detected from $SHELL)",
++        choices: ["zsh", "bash", "fish", "powershell"] as const,
++      })
++      .option("rc", {
++        type: "string",
++        describe: "rc file to modify (auto-detected)",
++      })
++      .option("yes", {
++        type: "boolean",
++        alias: "y",
++        describe: "skip confirmation",
++        default: false,
++      })
++      .option("print", {
++        type: "boolean",
++        describe: "just print the snippet, do not modify any file",
++        default: false,
++      })
++      .option("dry-run", {
++        type: "boolean",
++        describe: "show what would change without writing",
++        default: false,
++      }),
++  handler: async (args) => {
++    const repo = await safeDetectRepo()
++    if (!repo) return
++    const shell = args.shell ? parse(args.shell) : detectShell()
++    const snippet = aliasLine(shell, repo)
++
++    if (args.print) {
++      process.stdout.write(snippet + "\n")
++      return
++    }
++
++    const rc = args.rc ? path.resolve(args.rc) : defaultRc(shell)
++
++    // Non-TTY fallback: print instructions so the snippet is pipe-friendly.
++    if (!process.stdin.isTTY && !args.yes && !args["dry-run"]) {
++      const sh = Style.TEXT_HIGHLIGHT
++      const n = Style.TEXT_NORMAL
++      const dim = Style.TEXT_DIM
++      process.stderr.write(
++        [
++          `${dim}# non-interactive shell detected${n}`,
++          `${dim}# add this line to ${sh}${rc}${n}${dim} manually,${n}`,
++          `${dim}# or re-run with ${sh}--yes${n}${dim} to apply automatically:${n}`,
++          "",
++          snippet,
++          "",
++        ].join("\n"),
++      )
++      return
++    }
++
++    UI.empty()
++    UI.println(`  ${B}Kilo CLI dev launcher setup${N}`)
++    UI.empty()
++    UI.println(`  ${D}Repo:${N}    ${repo}`)
++    UI.println(`  ${D}Shell:${N}   ${shell}${args.shell ? "" : `  ${D}(detected from $SHELL)${N}`}`)
++    UI.println(`  ${D}Config:${N}  ${tildify(rc)}`)
++    UI.empty()
++
++    const existing = await readMarkerBlock(rc)
++    if (existing && existing.line === snippet) {
++      UI.println(`  ${S}✓${N} already installed in ${tildify(rc)} — nothing to do`)
++      UI.empty()
++      UI.println(`  ${D}To remove: edit the file and delete the block marked${N}`)
++      UI.println(`  ${D}${MARKER_START} ... ${MARKER_END}${N}`)
++      return
++    }
++
++    const action = existing ? "update" : "install"
++    UI.println(
++      `  ${action === "install" ? "This will add" : "This will replace"} one line so ${H}kilodev${N} runs this checkout from any directory:`,
++    )
++    UI.empty()
++    UI.println(`      ${snippet}`)
++    UI.empty()
++
++    if (args["dry-run"]) {
++      UI.println(`  ${D}(dry run) would ${action} the block above in ${tildify(rc)}${N}`)
++      return
++    }
++
++    if (!args.yes) {
++      const answer = (await UI.input(`  Proceed? [Y/n] `)).toLowerCase()
++      if (answer && !["y", "yes"].includes(answer)) {
++        UI.println(`  ${D}cancelled${N}`)
++        return
++      }
++    }
++
++    const result = await applyBlock(rc, snippet)
++    UI.empty()
++    UI.println(`  ${S}✓${N} ${result.created ? "created" : "updated"} ${tildify(rc)}`)
++    if (result.backup) UI.println(`  ${S}✓${N} backup at ${tildify(result.backup)}`)
++    UI.empty()
++    UI.println(`  ${D}Reload your shell to activate:${N}`)
++    UI.println(`      ${H}${reloadHint(shell, rc)}${N}`)
++  },
++})
++
++// Deprecated: kept so `kilo dev-alias` keeps working for scripts/docs.
++export const DevAliasCommand = cmd({
++  command: "dev-alias [shell]",
++  describe: false as const,
++  builder: (y) =>
++    y.positional("shell", {
++      type: "string",
++      choices: ["zsh", "bash", "fish", "powershell"] as const,
++      default: "zsh",
++    }),
++  handler: async (args) => {
++    const repo = await safeDetectRepo()
++    if (!repo) return
++    process.stdout.write(aliasLine(parse(args.shell), repo) + "\n")
++  },
++})
++
++async function safeDetectRepo(): Promise<string | undefined> {
++  try {
++    return await detectRepo()
++  } catch (err) {
++    UI.error(err instanceof Error ? err.message : String(err))
++    process.exitCode = 1
++    return undefined
++  }
++}
++
++const { TEXT_HIGHLIGHT: H, TEXT_NORMAL: N, TEXT_DIM: D, TEXT_SUCCESS: S, TEXT_NORMAL_BOLD: B } = UI.Style
++const Style = UI.Style
++
++function parse(value: unknown): Shell {
++  if (value === "bash") return value
++  if (value === "fish") return value
++  if (value === "powershell") return value
++  return "zsh"
++}
++
++function detectShell(): Shell {
++  if (process.platform === "win32") return "powershell"
++  const sh = path.basename(process.env.SHELL ?? "")
++  if (sh === "zsh") return "zsh"
++  if (sh === "fish") return "fish"
++  if (sh === "bash") return "bash"
++  return "zsh"
++}
++
++function defaultRc(shell: Shell): string {
++  const home = os.homedir()
++  if (shell === "zsh") return path.join(home, ".zshrc")
++  if (shell === "fish") return path.join(home, ".config", "fish", "config.fish")
++  if (shell === "powershell") {
++    // PowerShell 7+ uses Documents\PowerShell; Windows PowerShell 5.1 uses
++    // Documents\WindowsPowerShell. Prefer whichever profile already exists;
++    // on fresh installs, key off the active host via PSModulePath (each
++    // PowerShell version prepends its own user module dir on startup) and
++    // fall back to WPS when the signal is absent, since WPS ships on every
++    // Windows install. On *nix, pwsh users should pass --rc explicitly.
++    if (process.platform === "win32") {
++      const ps7 = path.join(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
++      const wps = path.join(home, "Documents", "WindowsPowerShell", "Microsoft.PowerShell_profile.ps1")
++      if (existsSync(ps7)) return ps7
++      if (existsSync(wps)) return wps
++      const psmp = process.env.PSMODULEPATH ?? process.env.PSModulePath ?? ""
++      const first = (psmp.split(";")[0] ?? "").toLowerCase()
++      if (first.includes("\\windowspowershell\\")) return wps
++      if (first.includes("\\powershell\\")) return ps7
++      return wps
++    }
++    return path.join(home, "Documents", "PowerShell", "Microsoft.PowerShell_profile.ps1")
++  }
++  // bash: prefer .bashrc, fall back to .bash_profile / .profile
++  return path.join(home, ".bashrc")
++}
++
++function aliasLine(shell: Shell, repo: string): string {
++  const sh = path.join(repo, "bin", "kilodev")
++  const bat = path.join(repo, "bin", "kilodev.cmd")
++  const q = (s: string) => `'${s.replaceAll("'", `'\\''`)}'`
++  if (shell === "fish") return `alias kilodev ${q(sh)}`
++  if (shell === "powershell") return `function kilodev { & '${bat.replaceAll("'", "''")}' @args }`
++  return `alias kilodev=${q(sh)}`
++}
++
++function reloadHint(shell: Shell, rc: string): string {
++  if (shell === "fish") return `source ${tildify(rc)}`
++  if (shell === "powershell") return `. $PROFILE`
++  if (shell === "zsh") return `exec zsh`
++  return `exec bash`
++}
++
++function tildify(p: string): string {
++  const home = os.homedir()
++  if (p.startsWith(home)) return "~" + p.slice(home.length)
++  return p
++}
++
++async function readMarkerBlock(rc: string): Promise<{ line: string } | undefined> {
++  const file = Bun.file(rc)
++  if (!(await file.exists())) return undefined
++  const text = await file.text()
++  const start = text.indexOf(MARKER_START)
++  if (start === -1) return undefined
++  const end = text.indexOf(MARKER_END, start)
++  if (end === -1) return undefined
++  const body = text.slice(start + MARKER_START.length, end).trim()
++  return { line: body }
++}
++
++async function applyBlock(rc: string, snippet: string): Promise<{ created: boolean; backup?: string }> {
++  const file = Bun.file(rc)
++  const exists = await file.exists()
++  const prev = exists ? await file.text() : ""
++  const block = `${MARKER_START}\n${snippet}\n${MARKER_END}\n`
++
++  if (!exists) await mkdir(path.dirname(rc), { recursive: true })
++  await Bun.write(rc, replaceOrAppend(prev, block))
++  if (!exists) return { created: true }
++
++  const backup = `${rc}.kilodev.bak.${stamp()}`
++  await Bun.write(backup, prev)
++  return { created: false, backup }
++}
++
++function replaceOrAppend(prev: string, block: string): string {
++  const start = prev.indexOf(MARKER_START)
++  if (start === -1) {
++    const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n"
++    return `${prev}${sep}${prev.length === 0 ? "" : "\n"}${block}`
++  }
++  const end = prev.indexOf(MARKER_END, start)
++  if (end === -1) return `${prev}\n${block}`
++  const after = end + MARKER_END.length
++  const tail = prev.slice(after).replace(/^\n/, "")
++  return prev.slice(0, start) + block + (tail ? tail : "")
++}
++
++function stamp(): string {
++  const d = new Date()
++  const pad = (n: number) => String(n).padStart(2, "0")
++  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
++}
++
++// Walk up from `start` until we find a directory containing
++// packages/opencode/package.json. Exported for test coverage.
++export async function findRepoFrom(start: string): Promise<string | undefined> {
++  let dir = start
++  while (true) {
++    const candidate = path.join(dir, "packages", "opencode", "package.json")
++    if (await Bun.file(candidate).exists()) return dir
++    const parent = path.dirname(dir)
++    if (parent === dir) return undefined
++    dir = parent
++  }
++}
++
++// bunfs single-file executable virtual roots — `import.meta.url` points here,
++// which is not a real on-disk path and must be skipped.
++function isBunfsPath(p: string): boolean {
++  if (p.startsWith("/$bunfs/")) return true
++  // Windows bunfs root, e.g. `B:/~BUN/root/...`. Drive letter may be any case.
++  if (/^[A-Za-z]:[\\/]~BUN[\\/]/.test(p)) return true
++  return false
++}
++
++// Exported for test coverage.
++export async function detectRepo(): Promise<string> {
++  const hint = process.env.KILO_DEV_REPO
++  if (hint) return hint
++
++  const candidates: string[] = []
++
++  const meta = (() => {
++    try {
++      return fileURLToPath(import.meta.url)
++    } catch {
++      return undefined
++    }
++  })()
++  if (meta && !isBunfsPath(meta)) candidates.push(path.dirname(meta))
++
++  // process.execPath points at the binary itself; walk up from its directory.
++  // For a local build it's <repo>/packages/opencode/dist/<target>/bin/kilo, so
++  // findRepoFrom eventually hits the repo's packages/opencode/package.json.
++  if (process.execPath) candidates.push(path.dirname(process.execPath))
++  candidates.push(process.cwd())
++
++  for (const start of candidates) {
++    const found = await findRepoFrom(start)
++    if (found) return found
++  }
++
++  throw new Error(
++    "cannot locate kilocode source checkout; set KILO_DEV_REPO=/path/to/kilocode or run ./bin/kilodev dev-setup from the repo",
++  )
++}
+diff --git a/packages/opencode/src/kilocode/commands.ts b/packages/opencode/src/kilocode/commands.ts
+index 5b785a0a89f..6ecaf6f6dc4 100644
+--- a/packages/opencode/src/kilocode/commands.ts
++++ b/packages/opencode/src/kilocode/commands.ts
+@@ -23,7 +23,9 @@ import { RemoteCommand } from "../cli/cmd/remote"
+ import { DbCommand } from "../cli/cmd/db"
+ import { ConfigCommand as ConfigCLICommand } from "../cli/cmd/config"
+ import { PluginCommand } from "../cli/cmd/plug"
++import { DevSetupCommand, DevAliasCommand } from "./cli/dev-setup"
+ import { HelpCommand } from "./help-command"
++import { InstallationBuildKind } from "../installation/version"
+ 
+ // Synthetic entry for the yargs built-in .completion() command so that
+ // generateHelp --all and cli-reference.md include it automatically.
+@@ -33,6 +35,12 @@ const CompletionCommand = {
+   handler: () => {},
+ }
+ 
++// Dev-only commands are spread in conditionally so release builds omit them
++// from `kilo help --all` and the docs table. They're also guarded the same way
++// at the yargs registration site in src/index.ts, so the commands-in-sync
++// regex in test/kilocode/help.test.ts sees DevSetup/DevAlias on neither side.
++const dev = InstallationBuildKind === "release" ? [] : [DevSetupCommand, DevAliasCommand]
++
+ export const commands = [
+   AcpCommand,
+   McpCommand,
+@@ -55,6 +63,7 @@ export const commands = [
+   RemoteCommand,
+   DbCommand,
+   ConfigCLICommand,
++  ...dev,
+   PluginCommand,
+   HelpCommand,
+   CompletionCommand,
+diff --git a/packages/opencode/src/kilocode/generate-cli-docs.ts b/packages/opencode/src/kilocode/generate-cli-docs.ts
+index fb60badcdd6..a22d7465d52 100644
+--- a/packages/opencode/src/kilocode/generate-cli-docs.ts
++++ b/packages/opencode/src/kilocode/generate-cli-docs.ts
+@@ -1,4 +1,7 @@
++import type { CommandModule } from "yargs"
+ import { generateHelp, generateCommandTable } from "./help"
++import { commands } from "./commands"
++import { DevAliasCommand, DevSetupCommand } from "./cli/dev-setup"
+ import path from "path"
+ 
+ const root = path.resolve(import.meta.dir, "../../../..") + "/"
+@@ -6,12 +9,22 @@ const root = path.resolve(import.meta.dir, "../../../..") + "/"
+ const TABLE_PATH = root + "packages/kilo-docs/markdoc/partials/cli-commands-table.md"
+ const REFERENCE_PATH = root + "packages/kilo-docs/pages/code-with-ai/platforms/cli-reference.md"
+ 
+-const table = await generateCommandTable()
++// End-user docs describe the release CLI. dev-setup / dev-alias are hidden
++// from release builds (see InstallationBuildKind in commands.ts), so strip
++// them here as well to keep kilo.ai/docs in sync with the shipped binary.
++// Cast mirrors loadCommands() in help.ts — the barrel's union type doesn't
++// collapse cleanly to CommandModule<any, any> on its own.
++const publicCommands = commands.filter((c) => c !== DevSetupCommand && c !== DevAliasCommand) as CommandModule<
++  any,
++  any
++>[]
++
++const table = await generateCommandTable({ commands: publicCommands })
+ await Bun.write(TABLE_PATH, `<!-- Auto-generated by script/generate-cli-docs.ts — do not edit manually -->\n\n${table}`)
+ console.log(`wrote ${TABLE_PATH}`)
+ 
+ const cwd = process.cwd()
+-const reference = (await generateHelp({ all: true, format: "md" })).replaceAll(cwd, ".")
++const reference = (await generateHelp({ all: true, format: "md", commands: publicCommands })).replaceAll(cwd, ".")
+ await Bun.write(
+   REFERENCE_PATH,
+   `---
+diff --git a/packages/opencode/test/kilocode/cli/dev-setup.test.ts b/packages/opencode/test/kilocode/cli/dev-setup.test.ts
+new file mode 100644
+index 00000000000..efa795c5418
+--- /dev/null
++++ b/packages/opencode/test/kilocode/cli/dev-setup.test.ts
+@@ -0,0 +1,74 @@
++import { describe, test, expect } from "bun:test"
++import path from "path"
++import fs from "fs/promises"
++import { tmpdir } from "../../fixture/fixture"
++import { detectRepo, findRepoFrom } from "../../../src/kilocode/cli/dev-setup"
++
++// Simulate a repo root by writing the sentinel file detectRepo looks for.
++async function makeSynthRepo(dir: string) {
++  const pkg = path.join(dir, "packages", "opencode")
++  await fs.mkdir(pkg, { recursive: true })
++  await Bun.write(path.join(pkg, "package.json"), JSON.stringify({ name: "synth" }))
++  return dir
++}
++
++async function withEnv<T>(name: string, value: string | undefined, fn: () => Promise<T>): Promise<T> {
++  const prev = process.env[name]
++  if (value === undefined) delete process.env[name]
++  else process.env[name] = value
++  try {
++    return await fn()
++  } finally {
++    if (prev === undefined) delete process.env[name]
++    else process.env[name] = prev
++  }
++}
++
++describe("findRepoFrom", () => {
++  test("returns the repo root when started from a nested path", async () => {
++    await using tmp = await tmpdir()
++    await makeSynthRepo(tmp.path)
++    const nested = path.join(tmp.path, "packages", "opencode", "src", "kilocode", "cli")
++    await fs.mkdir(nested, { recursive: true })
++
++    const found = await findRepoFrom(nested)
++    expect(found).toBe(tmp.path)
++  })
++
++  test("returns the repo root when started from the root itself", async () => {
++    await using tmp = await tmpdir()
++    await makeSynthRepo(tmp.path)
++
++    const found = await findRepoFrom(tmp.path)
++    expect(found).toBe(tmp.path)
++  })
++
++  test("returns undefined when no sentinel is found up to filesystem root", async () => {
++    await using tmp = await tmpdir()
++    // No packages/opencode/package.json anywhere under tmp, and the filesystem
++    // above tmp does not contain a kilocode repo at its own root.
++    const found = await findRepoFrom(tmp.path)
++    expect(found).toBeUndefined()
++  })
++})
++
++describe("detectRepo", () => {
++  test("honours KILO_DEV_REPO without touching the filesystem", async () => {
++    // Pointing at a path that does not exist — the hint must be returned as-is
++    // (this proves no walk happens when KILO_DEV_REPO is set).
++    const hint = "/definitely/does/not/exist/kilo-repo"
++    const got = await withEnv("KILO_DEV_REPO", hint, () => detectRepo())
++    expect(got).toBe(hint)
++  })
++
++  test("KILO_DEV_REPO wins over the filesystem walk", async () => {
++    // Build a synthetic repo, point KILO_DEV_REPO at it, and run from an
++    // unrelated cwd. Even though the walk from cwd (inside the real kilo
++    // checkout) would succeed, the hint must take priority.
++    await using tmp = await tmpdir()
++    await makeSynthRepo(tmp.path)
++
++    const got = await withEnv("KILO_DEV_REPO", tmp.path, () => detectRepo())
++    expect(got).toBe(tmp.path)
++  })
++})
