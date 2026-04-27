@@ -1,20 +1,24 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import * as vscode from "vscode"
-import { VisibleCodeTracker } from "../VisibleCodeTracker"
+import { describe, it, expect, mock, beforeEach } from "bun:test"
 
-// Mock vscode module
-vi.mock("vscode", () => ({
+// Replace the shared vscode preload with a minimal shape this file drives directly.
+mock.module("vscode", () => ({
   window: {
-    visibleTextEditors: [],
+    visibleTextEditors: [] as unknown[],
     activeTextEditor: null,
+  },
+  workspace: {
+    asRelativePath: (p: string) => p.replace(/^\/workspace\//, ""),
   },
 }))
 
-vi.mock("../../../../services/autocomplete/continuedev/core/indexing/ignore", () => ({
-  isSecurityConcern: vi.fn((filePath: string) => {
-    return filePath.includes(".env") || filePath.includes("credentials")
-  }),
+mock.module("../../src/services/autocomplete/continuedev/core/indexing/ignore", () => ({
+  isSecurityConcern: (filePath: string) => filePath.includes(".env") || filePath.includes("credentials"),
 }))
+
+const vscode = (await import("vscode")) as typeof import("vscode")
+const { VisibleCodeTracker } = await import("../../src/services/autocomplete/context/VisibleCodeTracker")
+// Alias vi to Bun's mock so tests below keep reading naturally.
+const vi = { fn: mock, clearAllMocks: () => mock.clearAllMocks() }
 
 describe("VisibleCodeTracker", () => {
   const mockWorkspacePath = "/workspace"
