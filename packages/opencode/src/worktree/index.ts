@@ -354,9 +354,10 @@ export const layer: Layer.Layer<
     }
 
     function cleanDirectory(target: string) {
+      const retries = process.platform === "win32" ? 30 : 5 // kilocode_change
       return Effect.promise(() =>
         import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
+          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: retries, retryDelay: 100 }))
           .catch((error) => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })

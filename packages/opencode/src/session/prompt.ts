@@ -918,9 +918,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Effect.exit,
       )
 
-      if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
+      // kilocode_change start - cancelled shells can exit by signal during forced cleanup
+      if (Exit.isFailure(exit) && !aborted && !Cause.hasInterruptsOnly(exit.cause)) {
         return yield* Effect.failCause(exit.cause)
       }
+      // kilocode_change end
 
       return { info: msg, parts: [part] }
     })
