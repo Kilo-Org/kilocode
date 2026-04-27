@@ -191,16 +191,6 @@ export async function get() {
     delete providers["kilo"]
   }
 
-  // Surface the canonical CLOUDFLARE_API_TOKEN env var (matching cloudflare-ai-gateway,
-  // wrangler, terraform). The upstream models.dev snapshot still lists the legacy
-  // CLOUDFLARE_API_KEY; the runtime loader in provider.ts accepts both.
-  if (providers["cloudflare-workers-ai"]) {
-    providers["cloudflare-workers-ai"] = {
-      ...providers["cloudflare-workers-ai"],
-      env: ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
-    }
-  }
-
   // Inject kilo provider with dynamic model fetching
   // Skip injection entirely when enabled_providers is set and doesn't include "kilo",
   // or when "kilo" is in disabled_providers. This prevents unnecessary network calls

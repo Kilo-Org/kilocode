@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, expect, test } from "bun:test"
-import { CloudflareAIGatewayAuthPlugin, CloudflareWorkersAuthPlugin } from "@/plugin/cloudflare"
+import { expect, test } from "bun:test"
+import { CloudflareAIGatewayAuthPlugin } from "@/plugin/cloudflare"
 
 const pluginInput = {
   client: {} as never,
@@ -12,23 +12,6 @@ const pluginInput = {
   serverUrl: new URL("https://example.com"),
   $: {} as never,
 }
-
-const ENV_KEYS = ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_GATEWAY_ID"] as const
-const savedEnv: Partial<Record<(typeof ENV_KEYS)[number], string | undefined>> = {}
-
-beforeEach(() => {
-  for (const key of ENV_KEYS) {
-    savedEnv[key] = process.env[key]
-    delete process.env[key]
-  }
-})
-
-afterEach(() => {
-  for (const key of ENV_KEYS) {
-    if (savedEnv[key] === undefined) delete process.env[key]
-    else process.env[key] = savedEnv[key]
-  }
-})
 
 function makeHookInput(overrides: { providerID?: string; apiId?: string; reasoning?: boolean }) {
   return {
@@ -82,45 +65,4 @@ test("ignores non-cloudflare-ai-gateway providers", async () => {
   const out = makeHookOutput()
   await hooks["chat.params"]!(makeHookInput({ providerID: "openai", apiId: "gpt-5.2-codex", reasoning: true }), out)
   expect(out.maxOutputTokens).toBe(32_000)
-})
-
-test("CloudflareWorkersAuthPlugin registers an api-token auth method for cloudflare-workers-ai", async () => {
-  const hooks = await CloudflareWorkersAuthPlugin(pluginInput)
-  expect(hooks.auth?.provider).toBe("cloudflare-workers-ai")
-  expect(hooks.auth?.methods).toHaveLength(1)
-  expect(hooks.auth?.methods[0]?.type).toBe("api")
-  expect(hooks.auth?.methods[0]?.label).toBe("API token")
-})
-
-test("CloudflareWorkersAuthPlugin prompts for account ID when env is missing", async () => {
-  const hooks = await CloudflareWorkersAuthPlugin(pluginInput)
-  const prompts = hooks.auth?.methods[0]?.prompts ?? []
-  expect(prompts).toHaveLength(1)
-  expect(prompts[0]?.key).toBe("accountId")
-})
-
-test("CloudflareWorkersAuthPlugin omits account ID prompt when env is set", async () => {
-  process.env.CLOUDFLARE_ACCOUNT_ID = "1234567890abcdef1234567890abcdef"
-  const hooks = await CloudflareWorkersAuthPlugin(pluginInput)
-  expect(hooks.auth?.methods[0]?.prompts ?? []).toHaveLength(0)
-})
-
-test("CloudflareAIGatewayAuthPlugin prompts for account ID and gateway ID when env is missing", async () => {
-  const hooks = await CloudflareAIGatewayAuthPlugin(pluginInput)
-  const prompts = hooks.auth?.methods[0]?.prompts ?? []
-  expect(prompts.map((p) => p.key)).toEqual(["accountId", "gatewayId"])
-})
-
-test("CloudflareAIGatewayAuthPlugin omits gateway ID prompt when only that env is set", async () => {
-  process.env.CLOUDFLARE_GATEWAY_ID = "my-gateway"
-  const hooks = await CloudflareAIGatewayAuthPlugin(pluginInput)
-  const prompts = hooks.auth?.methods[0]?.prompts ?? []
-  expect(prompts.map((p) => p.key)).toEqual(["accountId"])
-})
-
-test("CloudflareAIGatewayAuthPlugin omits all prompts when both env vars are set", async () => {
-  process.env.CLOUDFLARE_ACCOUNT_ID = "1234567890abcdef1234567890abcdef"
-  process.env.CLOUDFLARE_GATEWAY_ID = "my-gateway"
-  const hooks = await CloudflareAIGatewayAuthPlugin(pluginInput)
-  expect(hooks.auth?.methods[0]?.prompts ?? []).toHaveLength(0)
 })

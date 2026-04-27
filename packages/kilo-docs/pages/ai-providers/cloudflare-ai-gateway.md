@@ -14,13 +14,13 @@ sidebar_label: Cloudflare AI Gateway
 
 # Using Cloudflare AI Gateway With Kilo Code
 
-The [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) is a unified proxy that sits in front of upstream model providers and adds caching, analytics, rate limiting, retries, fallbacks, and spend controls. Kilo Code routes through the [Unified API](https://developers.cloudflare.com/ai-gateway/usage/unified-api/), which lets one provider config in Kilo reach OpenAI, Anthropic, and Cloudflare Workers AI models through the same endpoint.
+The [Cloudflare AI Gateway](https://developers.cloudflare.com/ai-gateway/) is a unified proxy that sits in front of upstream model providers and adds caching, analytics, rate limiting, retries, fallbacks, and spend controls. Kilo Code routes through the [Unified API](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/), which lets one provider config in Kilo reach OpenAI, Anthropic, and Cloudflare Workers AI models through the same endpoint.
 
 Useful links:
 
 - Dashboard: [dash.cloudflare.com → AI → AI Gateway](https://dash.cloudflare.com/?to=/:account/ai/ai-gateway)
 - Docs: [developers.cloudflare.com/ai-gateway](https://developers.cloudflare.com/ai-gateway/)
-- Unified API model list: [developers.cloudflare.com/ai-gateway/usage/unified-api](https://developers.cloudflare.com/ai-gateway/usage/unified-api/)
+- Unified API model list: [developers.cloudflare.com/ai-gateway/usage/chat-completion](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/)
 
 ---
 
@@ -101,13 +101,13 @@ Then set your default model (Unified API format `provider/model`):
 
 ## Supported Models
 
-Kilo Code uses the AI Gateway [Unified API](https://developers.cloudflare.com/ai-gateway/usage/unified-api/), so model IDs follow the format `provider/model`. The gateway exposes models from:
+Kilo Code uses the AI Gateway [Unified API](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/), so model IDs follow the format `provider/model`. The gateway exposes models from:
 
 - **`openai/...`** — e.g. `openai/gpt-5.2-codex`, `openai/gpt-5.2`
 - **`anthropic/...`** — e.g. `anthropic/claude-sonnet-4-5`, `anthropic/claude-opus-4`
 - **`workers-ai/@cf/...`** — Cloudflare Workers AI models routed through your gateway, e.g. `workers-ai/@cf/moonshotai/kimi-k2.6`
 
-The full list is fetched automatically from `models.dev`. For the authoritative supported-models reference, see the [Unified API docs](https://developers.cloudflare.com/ai-gateway/usage/unified-api/).
+The full list is fetched automatically from `models.dev`. For the authoritative supported-models reference, see the [Unified API docs](https://developers.cloudflare.com/ai-gateway/usage/chat-completion/).
 
 ---
 

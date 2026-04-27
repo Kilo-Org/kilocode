@@ -706,23 +706,19 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           },
         }
 
-      // kilocode_change start - accept CLOUDFLARE_API_TOKEN (canonical Cloudflare env var)
-      // in addition to CLOUDFLARE_API_KEY (kept for backward compat) for parity with
-      // cloudflare-ai-gateway and other Cloudflare tooling (wrangler, terraform).
       const apiKey = yield* Effect.gen(function* () {
-        const envToken = env["CLOUDFLARE_API_TOKEN"] || env["CLOUDFLARE_API_KEY"]
+        const envToken = env["CLOUDFLARE_API_KEY"]
         if (envToken) return envToken
         if (auth?.type === "api") return auth.key
         return undefined
       })
-      // kilocode_change end
 
       return {
         autoload: !!apiKey,
         options: {
           apiKey,
           headers: {
-            "User-Agent": `kilo/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
+            "User-Agent": `opencode/${InstallationVersion} cloudflare-workers-ai (${os.platform()} ${os.release()}; ${os.arch()})`,
           },
         },
         async getModel(sdk: any, modelID: string) {
@@ -793,7 +789,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         skipCache: input.options?.skipCache,
         collectLog: input.options?.collectLog,
         headers: {
-          "User-Agent": `kilo/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
+          "User-Agent": `opencode/${InstallationVersion} cloudflare-ai-gateway (${os.platform()} ${os.release()}; ${os.arch()})`,
         },
       }
 
