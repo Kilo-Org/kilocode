@@ -165,12 +165,13 @@ export const layer = Layer.effect(
         if (Flag.KILO_PURE && cfg.plugin_origins?.length) {
           log.info("skipping external plugins in pure mode", { count: cfg.plugin_origins.length })
         }
-        if (plugins.length) yield* config.waitForDependencies()
+        const wait = () => bridge.promise(config.waitForDependencies()) // kilocode_change
 
         const loaded = yield* Effect.promise(() =>
           PluginLoader.loadExternal({
             items: plugins,
             kind: "server",
+            wait,
             report: {
               start(candidate) {
                 log.info("loading plugin", { path: candidate.plan.spec })
