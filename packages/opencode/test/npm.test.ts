@@ -9,6 +9,9 @@ import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { Npm } from "../src/npm"
 import { tmpdir } from "./fixture/fixture"
+// kilocode_change start
+import { Global as KiloGlobal } from "../src/global"
+// kilocode_change end
 
 const win = process.platform === "win32"
 const encoder = new TextEncoder()
@@ -93,6 +96,20 @@ describe("Npm.install", () => {
     await expect(fs.stat(path.join(tmp.path, "node_modules", "dev-pkg"))).rejects.toThrow()
   })
 })
+
+// kilocode_change start - guards that shared.Global stays aligned with Kilo's Global.Path
+describe("Npm.which", () => {
+  test("resolves cached binaries from Kilo XDG cache", async () => {
+    const dir = path.join(KiloGlobal.Path.cache, "packages", "acme", "node_modules", ".bin")
+    await fs.mkdir(dir, { recursive: true })
+    await Bun.write(path.join(dir, "acme"), "#!/usr/bin/env node\n")
+
+    const result = await Npm.which("acme")
+
+    expect(result).toBe(path.join(dir, "acme"))
+  })
+})
+// kilocode_change end
 
 describe("Npm.outdated", () => {
   test("checks latest via npm view", async () => {
