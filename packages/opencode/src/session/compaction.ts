@@ -83,14 +83,14 @@ function truncate(input: { text: string; chars: number; label: string }) {
 
 function shrink(input: { messages: MessageV2.WithParts[]; budget: ReturnType<typeof budget> }) {
   const msgs = input.messages.length > input.budget.messages ? input.messages.slice(-input.budget.messages) : input.messages
-  let total = 0
+  const state = { total: 0 }
   return msgs.map((msg) => ({
     ...msg,
     parts: msg.parts.map((part) => {
       if (part.type === "tool" && part.state.status === "completed") {
         const estimate = Token.estimate(part.state.output)
-        total += estimate
-        if (total <= input.budget.overflow && part.state.output.length <= input.budget.tool) return part
+        state.total += estimate
+        if (state.total <= input.budget.overflow && part.state.output.length <= input.budget.tool) return part
         return {
           ...part,
           state: {
@@ -105,9 +105,29 @@ function shrink(input: { messages: MessageV2.WithParts[]; budget: ReturnType<typ
           text: truncate({ text: part.text, chars: input.budget.text, label: "overflow compaction" }),
         }
       }
+      if (part.type === "text") {
+        return {
+          ...part,
+          text: truncate({ text: part.text, chars: input.budget.tool, label: "overflow compaction" }),
+        }
+      }
       return part
     }),
   }))
+}
+
+function sanitize(input: { part: MessageV2.Part; budget: ReturnType<typeof budget> }) {
+  if (input.part.type === "compaction") return undefined
+  if (input.part.type === "file" && MessageV2.isMedia(input.part.mime)) {
+    return { type: "text" as const, text: `[Attached ${input.part.mime}: ${input.part.filename ?? "file"}]` }
+  }
+  if (input.part.type === "text") {
+    return {
+      ...input.part,
+      text: truncate({ text: input.part.text, chars: input.budget.tool, label: "overflow replay" }),
+    }
+  }
+  return input.part
 }
 // kilocode_change end
 
@@ -264,14 +284,16 @@ export const layer: Layer.Layer<
         ? yield* provider.getModel(agent.model.providerID, agent.model.modelID)
         : yield* provider.getModel(userMessage.model.providerID, userMessage.model.modelID)
       // kilocode_change start - overflow compaction must fit even with MCP/tool schema/plugin prompt overhead
-      if (input.overflow) {
+      const cap = yield* Effect.gen(function* () {
+        if (!input.overflow) return undefined
         const cfg = yield* config.get()
         const cap = budget({ cfg, model })
         if (messages.length > cap.messages) {
           log.info("overflow compaction: trimming old messages", { before: messages.length, after: cap.messages })
         }
         messages = shrink({ messages, budget: cap })
-      }
+        return cap
+      })
       // kilocode_change end
       // Allow plugins to inject context or replace compaction prompt.
       const compacting = yield* plugin.trigger(
@@ -388,17 +410,16 @@ When constructing the summary, try to stick to this template:
             system: original.system,
           })
           for (const part of replay.parts) {
-            if (part.type === "compaction") continue
-            const replayPart =
-              part.type === "file" && MessageV2.isMedia(part.mime)
-                ? { type: "text" as const, text: `[Attached ${part.mime}: ${part.filename ?? "file"}]` }
-                : part
+            // kilocode_change start - shrink replayed overflow content before auto-continuing
+            const cleaned = cap ? sanitize({ part, budget: cap }) : part
+            if (!cleaned) continue
             yield* session.updatePart({
-              ...replayPart,
+              ...cleaned,
               id: PartID.ascending(),
               messageID: replayMsg.id,
               sessionID: input.sessionID,
             })
+            // kilocode_change end
           }
         }
 

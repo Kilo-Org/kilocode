@@ -1040,6 +1040,16 @@ describe("session.compaction.process", () => {
         const session = await svc.create({})
         await user(session.id, "root")
         const replay = await user(session.id, "image")
+        // kilocode_change start - overflow replay should not resend huge text verbatim
+        const huge = "z".repeat(400_000)
+        await svc.updatePart({
+          id: PartID.ascending(),
+          messageID: replay.id,
+          sessionID: session.id,
+          type: "text",
+          text: huge,
+        })
+        // kilocode_change end
         await svc.updatePart({
           id: PartID.ascending(),
           messageID: replay.id,
@@ -1073,6 +1083,14 @@ describe("session.compaction.process", () => {
           expect(
             last?.parts.some((part) => part.type === "text" && part.text.includes("Attached image/png: cat.png")),
           ).toBe(true)
+          // kilocode_change start - replayed text is truncated, original replay parts are not resent verbatim
+          expect(last?.parts.some((part) => part.type === "text" && part.text === huge)).toBe(false)
+          expect(
+            last?.parts.some(
+              (part) => part.type === "text" && part.text.includes("truncated") && !part.text.includes("z".repeat(10_000)),
+            ),
+          ).toBe(true)
+          // kilocode_change end
         } finally {
           await rt.dispose()
         }
@@ -1388,6 +1406,16 @@ describe("session.compaction.process", () => {
           synthetic: true,
           text: "y".repeat(20_000),
         })
+        const normal = await user(session.id, "normal")
+        const huge = "z".repeat(400_000)
+        await svc.updatePart({
+          id: PartID.ascending(),
+          messageID: normal.id,
+          sessionID: session.id,
+          type: "text",
+          text: huge,
+        })
+        await user(session.id, "replay")
         const msg = await user(session.id, "current")
         const { captured, proc } = captureLayer()
         const rt = captureRuntime(proc)
@@ -1407,10 +1435,12 @@ describe("session.compaction.process", () => {
 
           expect(result).toBe("continue")
           expect(captured.length).toBe(1)
-          const text = JSON.stringify(captured[0].messages)
-          expect(text).not.toContain("x".repeat(10_000))
-          expect(text).not.toContain("y".repeat(10_000))
-          expect(text).toContain("truncated")
+          const body = JSON.stringify(captured[0].messages)
+          expect(body).not.toContain("x".repeat(10_000))
+          expect(body).not.toContain("y".repeat(10_000))
+          expect(body).toContain("z".repeat(100))
+          expect(body).not.toContain("z".repeat(10_000))
+          expect(body).toContain("truncated")
 
           const stored = await svc.messages({ sessionID: session.id })
           const part = stored.flatMap((msg) => msg.parts).find((part) => part.type === "tool")
@@ -1418,6 +1448,7 @@ describe("session.compaction.process", () => {
           if (part?.type === "tool" && part.state.status === "completed") {
             expect(part.state.output).toBe(output)
           }
+          expect(stored.flatMap((msg) => msg.parts).some((part) => part.type === "text" && part.text === huge)).toBe(true)
         } finally {
           await rt.dispose()
         }
