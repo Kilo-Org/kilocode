@@ -1,8 +1,8 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect } from "bun:test"
 import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
-import { SetupScriptService } from "../SetupScriptService"
+import { SetupScriptService } from "../../src/agent-manager/SetupScriptService"
 
 function setupRoot(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "kilo-setup-script-"))
