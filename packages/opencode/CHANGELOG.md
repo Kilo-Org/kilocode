@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.2.26
+
+### Patch Changes
+
+- [#9549](https://github.com/Kilo-Org/kilocode/pull/9549) [`a5bca01`](https://github.com/Kilo-Org/kilocode/commit/a5bca011a16077d4394f9b5650a387f235cc77b2) - Prefer ChatGPT OAuth credentials over inherited OpenAI environment variables and make ChatGPT sign-in easier to find.
+
+- [#9448](https://github.com/Kilo-Org/kilocode/pull/9448) [`73ab363`](https://github.com/Kilo-Org/kilocode/commit/73ab363f9a1592721d4ce4b92d1a083b7bc8176b) - Fix session cost display missing subagent costs. The TUI footer, sidebar, web context panel, and ACP usage reports now include the cost of every subagent the session spawned, including nested ones.
+
+- [#9484](https://github.com/Kilo-Org/kilocode/pull/9484) [`dbf1135`](https://github.com/Kilo-Org/kilocode/commit/dbf113524ed27e2aaac9afc5441e70339edaa164) - Prompt before agents access files outside the active directory when a workspace boundary resolves to a filesystem root.
+
 ## 7.2.25
 
 ### Patch Changes

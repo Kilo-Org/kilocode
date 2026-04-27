@@ -25,6 +25,7 @@ import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "e
 import { EffectFlock } from "@opencode-ai/shared/util/effect-flock"
 import { InstanceRef } from "@/effect/instance-ref"
 import { zod, ZodOverride } from "@/util/effect-zod"
+import { withStatics } from "@/util/schema"
 import { ConfigAgent } from "./agent"
 import { ConfigCommand } from "./command"
 import { ConfigFormatter } from "./formatter"
@@ -101,13 +102,20 @@ export type Layout = ConfigLayout.Layout
 // ZodOverride-annotated Schema.Any.  Walker sees the annotation and emits the
 // exact zod directly, preserving component $refs.
 const AgentRef = Schema.Any.annotate({ [ZodOverride]: ConfigAgent.Info })
-const PermissionRef = Schema.Any.annotate({ [ZodOverride]: ConfigPermission.Info })
 const LogLevelRef = Schema.Any.annotate({ [ZodOverride]: Log.Level })
 
 const PositiveInt = Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThan(0))
 const NonNegativeInt = Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))
 
-const InfoSchema = Schema.Struct({
+// The Effect Schema is the canonical source of truth. The `.zod` compatibility
+// surface is derived so existing Hono validators keep working without a parallel
+// Zod definition.
+//
+// The walker emits `z.object({...})` which is non-strict by default. Config
+// historically uses `.strict()` (additionalProperties: false in openapi.json),
+// so layer that on after derivation.  Re-apply the Config ref afterward
+// since `.strict()` strips the walker's meta annotation.
+export const Info = Schema.Struct({
   $schema: Schema.optional(Schema.String).annotate({
     description: "JSON schema reference for configuration validation",
   }),
@@ -220,7 +228,7 @@ const InfoSchema = Schema.Struct({
     description: "Additional instruction files or patterns to include",
   }),
   layout: Schema.optional(ConfigLayout.Layout).annotate({ description: "@deprecated Always uses stretch layout." }),
-  permission: Schema.optional(PermissionRef),
+  permission: Schema.optional(ConfigPermission.Info),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   enterprise: Schema.optional(
     Schema.Struct({
@@ -235,6 +243,13 @@ const InfoSchema = Schema.Struct({
       }),
       prune: Schema.optional(Schema.Boolean).annotate({
         description: "Enable pruning of old tool outputs (default: true)",
+      }),
+      tail_turns: Schema.optional(NonNegativeInt).annotate({
+        description:
+          "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)",
+      }),
+      preserve_recent_tokens: Schema.optional(NonNegativeInt).annotate({
+        description: "Maximum number of tokens from recent turns to preserve verbatim after compaction",
       }),
       reserved: Schema.optional(NonNegativeInt).annotate({
         description: "Token buffer for compaction. Leaves enough window to avoid overflow during compaction.",
@@ -263,6 +278,14 @@ const InfoSchema = Schema.Struct({
     }),
   ),
 })
+  .annotate({ identifier: "Config" })
+  .pipe(
+    withStatics((s) => ({
+      zod: (zod(s) as unknown as z.ZodObject<any>).strict().meta({ ref: "Config" }) as unknown as z.ZodType<
+        DeepMutable<Schema.Schema.Type<typeof s>>
+      >,
+    })),
+  )
 
 // Schema.Struct produces readonly types by default, but the service code
 // below mutates Info objects directly (e.g. `config.mode = ...`). Strip the
@@ -284,15 +307,7 @@ type DeepMutable<T> = T extends readonly [unknown, ...unknown[]]
       ? { -readonly [K in keyof T]: DeepMutable<T[K]> }
       : T
 
-// The walker emits `z.object({...})` which is non-strict by default. Config
-// historically uses `.strict()` (additionalProperties: false in openapi.json),
-// so layer that on after derivation.  Re-apply the Config ref afterward
-// since `.strict()` strips the walker's meta annotation.
-export const Info = (zod(InfoSchema) as unknown as z.ZodObject<any>)
-  .strict()
-  .meta({ ref: "Config" }) as unknown as z.ZodType<DeepMutable<Schema.Schema.Type<typeof InfoSchema>>>
-
-export type Info = z.output<typeof Info> & {
+export type Info = DeepMutable<Schema.Schema.Type<typeof Info>> & {
   // plugin_origins is derived state, not a persisted config field. It keeps each winning plugin spec together
   // with the file and scope it came from so later runtime code can make location-sensitive decisions.
   plugin_origins?: ConfigPlugin.Origin[]
@@ -414,7 +429,7 @@ export const layer = Layer.effect(
         ),
       )
       const parsed = ConfigParse.jsonc(expanded, source)
-      const data = ConfigParse.schema(Info, normalizeLoadedConfig(parsed, source), source)
+      const data = ConfigParse.schema(Info.zod, normalizeLoadedConfig(parsed, source), source)
       if (!("path" in options)) return data
 
       yield* Effect.promise(() => resolveLoadedPlugins(data, options.path))
@@ -666,9 +681,8 @@ export const layer = Layer.effect(
 
         const deps: Fiber.Fiber<void, never>[] = []
 
+        // kilocode_change start
         for (const dir of unique(directories)) {
-          // kilocode_change
-          // kilocode_change start
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
             for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
               const source = path.join(dir, file)
@@ -826,7 +840,7 @@ export const layer = Layer.effect(
           const perms: Record<string, ConfigPermission.Action> = {}
           for (const [tool, enabled] of Object.entries(result.tools)) {
             const action: ConfigPermission.Action = enabled ? "allow" : "deny"
-            if (tool === "write" || tool === "edit" || tool === "patch" || tool === "multiedit") {
+            if (tool === "write" || tool === "edit" || tool === "patch") {
               perms.edit = action
               continue
             }
@@ -932,13 +946,13 @@ export const layer = Layer.effect(
 
       let next: Info
       if (!file.endsWith(".jsonc")) {
-        const existing = ConfigParse.schema(Info, ConfigParse.jsonc(before, file), file)
+        const existing = ConfigParse.schema(Info.zod, ConfigParse.jsonc(before, file), file)
         const merged = KilocodeConfig.mergeConfig(writable(existing), writable(config)) // kilocode_change
         yield* fs.writeFileString(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
         next = merged
       } else {
         const updated = patchJsonc(before, writable(config))
-        next = ConfigParse.schema(Info, ConfigParse.jsonc(updated, file), file)
+        next = ConfigParse.schema(Info.zod, ConfigParse.jsonc(updated, file), file)
         yield* fs.writeFileString(file, updated).pipe(Effect.orDie)
       }
 

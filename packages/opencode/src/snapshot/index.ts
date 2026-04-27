@@ -1,4 +1,4 @@
-import { Cause, Duration, Effect, Layer, Schedule, Semaphore, Context, Stream } from "effect"
+import { Cause, Duration, Effect, Layer, Schedule, Schema, Semaphore, Struct, Context, Stream } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { formatPatch, structuredPatch } from "diff"
 import path from "path"
@@ -13,25 +13,32 @@ import { Global } from "../global"
 import { Log } from "../util"
 import { Flag } from "@/flag/flag" // kilocode_change
 import { DiffFull } from "../kilocode/snapshot/diff-full" // kilocode_change
+import { withStatics } from "@/util/schema"
+import { zod } from "@/util/effect-zod"
 
-export const Patch = z.object({
-  hash: z.string(),
-  files: z.string().array(),
+export const Patch = Schema.Struct({
+  hash: Schema.String,
+  files: Schema.mutable(Schema.Array(Schema.String)),
+}).pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Patch = typeof Patch.Type
+
+export const FileDiff = Schema.Struct({
+  file: Schema.String,
+  patch: Schema.String,
+  additions: Schema.Number,
+  deletions: Schema.Number,
+  status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
 })
-export type Patch = z.infer<typeof Patch>
+  .annotate({ identifier: "SnapshotFileDiff" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type FileDiff = typeof FileDiff.Type
 
-export const FileDiff = z
-  .object({
-    file: z.string(),
-    patch: z.string(),
-    additions: z.number(),
-    deletions: z.number(),
-    status: z.enum(["added", "deleted", "modified"]).optional(),
-  })
-  .meta({
-    ref: "SnapshotFileDiff",
-  })
-export type FileDiff = z.infer<typeof FileDiff>
+// kilocode_change start - lightweight FileDiff without `patch` for session.summary.diffs (keeps DB payload small)
+export const SummaryFileDiff = FileDiff.mapFields(Struct.omit(["patch"]))
+  .annotate({ identifier: "SnapshotSummaryFileDiff" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type SummaryFileDiff = typeof SummaryFileDiff.Type
+// kilocode_change end
 
 const log = Log.create({ service: "snapshot" })
 const prune = "7.days"

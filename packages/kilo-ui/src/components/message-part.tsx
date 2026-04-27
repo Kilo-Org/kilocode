@@ -2022,11 +2022,28 @@ ToolRegistry.register({
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => busy(props.status)
     const reveal = useToolReveal(pending, () => props.reveal !== false)
+    const before = () => props.metadata?.filediff?.before ?? props.input.oldString ?? ""
+    const after = () => props.metadata?.filediff?.after ?? props.input.newString ?? ""
+    const canOpenDiff = () => !!data.openDiff && !!path() && (before() !== "" || after() !== "")
+    const canOpenFile = () => !!data.openFile && !!path()
 
     const handleFileClick = (e: MouseEvent) => {
-      if (!data.openFile || !props.input.filePath) return
       e.stopPropagation()
-      data.openFile(props.input.filePath)
+
+      if (canOpenDiff()) {
+        data.openDiff!({
+          file: path(),
+          before: before(),
+          after: after(),
+          additions: props.metadata?.filediff?.additions ?? 0,
+          deletions: props.metadata?.filediff?.deletions ?? 0,
+        })
+        return
+      }
+
+      if (canOpenFile()) {
+        data.openFile!(path())
+      }
     }
 
     return (
@@ -2049,7 +2066,7 @@ ToolRegistry.register({
                         path={props.input.filePath?.includes("/") ? getDirectory(props.input.filePath!) : undefined}
                         changes={props.metadata.filediff}
                         animate={reveal()}
-                        onClick={data.openFile && props.input.filePath ? handleFileClick : undefined}
+                        onClick={canOpenDiff() || canOpenFile() ? handleFileClick : undefined}
                       />
                     )}
                   </Show>
@@ -2072,12 +2089,12 @@ ToolRegistry.register({
                   component={fileComponent}
                   mode="diff"
                   before={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.before || props.input.oldString,
+                    name: path(),
+                    contents: before(),
                   }}
                   after={{
-                    name: props.metadata?.filediff?.file || props.input.filePath,
-                    contents: props.metadata?.filediff?.after || props.input.newString,
+                    name: path(),
+                    contents: after(),
                   }}
                 />
               </div>

@@ -20,12 +20,13 @@ When you describe a task, the agent uses its tools — `read`, `grep`, `glob`, a
 
 Type `@` in the chat input to get autocomplete suggestions. You can mention:
 
-| Mention      | Description                                 | Example         |
-| ------------ | ------------------------------------------- | --------------- |
-| **File**     | Attach a file's contents to your message    | `@src/utils.ts` |
-| **Terminal** | Include your active VS Code terminal output | `@terminal`     |
+| Mention          | Description                                           | Example         |
+| ---------------- | ----------------------------------------------------- | --------------- |
+| **File**         | Attach a file's contents to your message              | `@src/utils.ts` |
+| **Terminal**     | Include your active VS Code terminal output           | `@terminal`     |
+| **Git Changes**  | Attach uncommitted working-tree diffs and new files   | `@git-changes`  |
 
-Selecting a suggestion inserts the mention and highlights it in the input. File contents and terminal output are attached as context when you send the message.
+Selecting a suggestion inserts the mention and highlights it in the input. File contents, terminal output, and git changes are attached as context when you send the message.
 
 ### Drag and Drop
 

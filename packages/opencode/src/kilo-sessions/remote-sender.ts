@@ -277,7 +277,7 @@ export namespace RemoteSender {
           return
         }
         dispatchLongRunning(msg, directoryFor(input.data.sessionID), async () => {
-          await SessionPrompt.prompt(input.data)
+          await SessionPrompt.prompt(input.data as SessionPrompt.PromptInput)
         })
         return
       }
