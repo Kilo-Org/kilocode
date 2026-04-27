@@ -181,6 +181,15 @@ Changeset descriptions appear directly in release notes and are read by end user
 
 PR descriptions should be 2-3 lines covering **what** changed and **why**. Focus on intent and context a reviewer can't get from the diff — skip file-by-file inventories, test result summaries, and anything obvious from the code itself.
 
+## GitHub Issues
+
+- When creating a GitHub issue for the VS Code extension or JetBrains plugin, use the repo's existing issue templates in `.github/ISSUE_TEMPLATE/`. Pick the matching template (`Bug report`, `Feature Request`, or `Question`) instead of opening a blank issue.
+- Do not add platform-specific title prefixes such as `[JetBrains]`, `[Jetbrains]`, `[JB]`, `[VS Code]`, `[VSCode]`, or similar. Use a plain, descriptive title.
+- Always add VS Code extension issues to the GitHub project `VS Code Extension`: https://github.com/orgs/Kilo-Org/projects/25
+- Always add JetBrains plugin issues to the GitHub project `Jetbrains Plugin`: https://github.com/orgs/Kilo-Org/projects/39
+- When using `gh`, prefer `gh issue create --template "..." --project "..."` with the matching project title.
+- If project assignment fails because `gh` is missing the required scope, run `gh auth refresh -s project` and retry.
+
 ## Fork Merge Process
 
 Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).

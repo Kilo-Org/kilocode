@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 7.2.23
+
+### Minor Changes
+
+- [#9418](https://github.com/Kilo-Org/kilocode/pull/9418) [`12c2d86`](https://github.com/Kilo-Org/kilocode/commit/12c2d86c84ecfce118ffb5b4db7ed4155bbca8fc) - Show the open GitHub PR for the current branch in the session sidebar.
+
+### Patch Changes
+
+- [#9470](https://github.com/Kilo-Org/kilocode/pull/9470) [`7fe4508`](https://github.com/Kilo-Org/kilocode/commit/7fe4508eecf7e7da8336f75c0884d1b310af6c6e) - Fix multi-turn tool calls with DeepSeek thinking mode by preserving empty `reasoning_content` in the interleaved transform.
+
 ## 7.2.22
 
 ### Patch Changes

@@ -2300,6 +2300,53 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilo-desktop"
+version = "0.0.0"
+dependencies = [
+ "chrono",
+ "comrak",
+ "dirs",
+ "futures",
+ "gtk",
+ "listeners",
+ "objc2 0.6.3",
+ "objc2-web-kit",
+ "process-wrap",
+ "reqwest 0.12.24",
+ "semver",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-typescript",
+ "tauri",
+ "tauri-build 2.5.2",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-decorum",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-http",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-os",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tauri-plugin-window-state",
+ "tauri-specta",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+ "uuid",
+ "webkit2gtk",
+ "windows-core 0.62.2",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "kuchikiki"
 version = "0.8.8-speedreader"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3091,53 +3138,6 @@ dependencies = [
  "is-wsl",
  "libc",
  "pathdiff",
-]
-
-[[package]]
-name = "kilo-desktop"
-version = "0.0.0"
-dependencies = [
- "chrono",
- "comrak",
- "dirs",
- "futures",
- "gtk",
- "listeners",
- "objc2 0.6.3",
- "objc2-web-kit",
- "process-wrap",
- "reqwest 0.12.24",
- "semver",
- "serde",
- "serde_json",
- "specta",
- "specta-typescript",
- "tauri",
- "tauri-build 2.5.2",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-decorum",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-http",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-os",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tauri-plugin-window-state",
- "tauri-specta",
- "tokio",
- "tokio-stream",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
- "uuid",
- "webkit2gtk",
- "windows-core 0.62.2",
- "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4163,9 +4163,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.8"
+version = "0.103.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ffdfa2f5286e2247234e03f680868ac2815974dc39e00ea15adc445d0aafe52"
+checksum = "df33b2b81ac578cabaf06b89b0631153a3f416b0a886e8a7a1707fb51abbd1ef"
 dependencies = [
  "ring",
  "rustls-pki-types",

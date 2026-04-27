@@ -76,6 +76,61 @@ Check [our provider docs](/docs/ai-providers) for specific context limits on eac
 **Recover from context limit errors:** If you hit the `input length and max tokens exceed context limit` error, you can recover by deleting a message, rolling back to a previous checkpoint, or switching over to a model with a long context window like Gemini for a message.
 {% /callout %}
 
+## Models During Delegation
+
+When an agent delegates work to a subagent (via the `task` tool), the subagent **inherits the parent agent's model** by default. You can override this per subagent in your config:
+
+{% tabs %}
+{% tab label="CLI" %}
+
+```json
+{
+  "agent": {
+    "explore": {
+      "model": "anthropic/claude-haiku-4-20250514"
+    }
+  }
+}
+```
+
+This sets the `explore` subagent to always use Haiku regardless of the parent's model. Any subagent without a `model` override uses whatever model the invoking agent is running.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+Subagents inherit the model currently active in the primary agent session — the model shown in the selector at the bottom of the chat. To bypass inheritance and pin a specific model for a subagent:
+
+- **Via Settings** — open **Settings → Models → Model per Mode**, find the subagent, and pick its model.
+- **Via config file** — edit `kilo.jsonc`:
+
+```json
+{
+  "agent": {
+    "explore": {
+      "model": "anthropic/claude-haiku-4-5"
+    }
+  }
+}
+```
+
+The Settings UI writes the same `agent.<name>.model` entry, so either method produces the same override. Subagents without an explicit model continue to inherit whatever the invoking agent is running.
+
+{% /tab %}
+{% tab label="VSCode (Legacy)" %}
+
+In the legacy extension, each mode has **Sticky Models** — switching from one mode to another (e.g., Code → Architect) uses whatever model you last selected for that mode, not the model from the mode you came from. This means you can assign different models to different modes:
+
+- **Architect:** a reasoning-heavy model (Gemini Pro, Claude Opus)
+- **Code:** a fast coding model (Claude Sonnet, GPT-4.1)
+- **Debug:** a cost-efficient model (Gemini Flash, DeepSeek)
+
+The model selection is remembered per mode across sessions.
+
+{% /tab %}
+{% /tabs %}
+
+For details on configuring subagent models, see [Custom Subagents](/docs/customize/custom-subagents).
+
 ## Stay Current
 
 The AI model space moves fast. Bookmark [kilo.ai/models](https://kilo.ai/models) and check back when you're evaluating options. What's best today might not be best next month — and that's actually exciting.
