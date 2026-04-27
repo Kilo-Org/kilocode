@@ -1087,8 +1087,17 @@ const layer: Layer.Layer<
       Effect.gen(function* () {
         using _ = log.time("state")
         const bridge = yield* EffectBridge.make()
+
+        // kilocode_change start
+        // Initialize plugins before reading config or fetching models.dev data so plugin
+        // config() hooks can mutate the shared config (provider, enabled_providers,
+        // disabled_providers) before any downstream consumer reads it. ModelsDev.get()
+        // reads enabled_providers/disabled_providers to decide whether to inject the
+        // kilo provider, so plugins must run first for that decision to see their mutations.
+        const plugins = yield* plugin.list()
         const cfg = yield* config.get()
         const modelsDev = yield* Effect.promise(() => ModelsDev.get())
+        // kilocode_change end
         const database = mapValues(modelsDev, fromModelsDevProvider)
 
         const providers: Record<ProviderID, Info> = {} as Record<ProviderID, Info>
@@ -1125,10 +1134,6 @@ const layer: Layer.Layer<
           providers[providerID] = mergeDeep(match, provider)
         }
 
-        // load plugins first so config() hook runs before reading cfg.provider
-        const plugins = yield* plugin.list()
-
-        // now read config providers - includes any modifications from plugin config() hook
         const configProviders = Object.entries(cfg.provider ?? {})
         const disabled = new Set(cfg.disabled_providers ?? [])
         const enabled = cfg.enabled_providers ? new Set(cfg.enabled_providers) : null
