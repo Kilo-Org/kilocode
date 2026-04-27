@@ -106,6 +106,24 @@ export namespace Flock {
     return Math.max(0, ms + d)
   }
 
+  // kilocode_change start - tolerate transient Windows directory removal failures
+  function transient(err: unknown) {
+    const name = code(err)
+    return name === "EBUSY" || name === "EPERM" || name === "ENOTEMPTY"
+  }
+
+  async function remove(dir: string, n = 0): Promise<void> {
+    try {
+      await rm(dir, { recursive: true, force: true })
+      return
+    } catch (err) {
+      if (!transient(err) || n >= 5) throw err
+      await sleep(25 * (n + 1))
+      return remove(dir, n + 1)
+    }
+  }
+  // kilocode_change end
+
   function mono() {
     return performance.now()
   }
@@ -261,7 +279,7 @@ export namespace Flock {
         throw new Error("Refusing to release: lock token mismatch (not the owner).")
       }
 
-      await rm(lockDir, { recursive: true, force: true })
+      await remove(lockDir) // kilocode_change
     }
 
     return {

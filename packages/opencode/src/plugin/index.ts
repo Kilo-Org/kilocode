@@ -209,9 +209,7 @@ export const layer = Layer.effect(
             },
           }),
         )
-        // kilocode_change start - wait before plugin initialization can import local dependencies
-        if (loaded.length > 0) yield* Effect.promise(wait)
-        // kilocode_change end
+        // kilocode_change start - avoid blocking successful local plugins on background dependency installs
         for (const load of loaded) {
           if (!load) continue
 
@@ -236,6 +234,7 @@ export const layer = Layer.effect(
             }),
           )
         }
+        // kilocode_change end
 
         // Notify plugins of current config
         for (const hook of hooks) {
