@@ -30,7 +30,7 @@ You need two values:
 
 1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2. **Select Provider:** Choose "Cloudflare Workers AI" from the "API Provider" dropdown.
-3. **Enter Account ID and API Key:** Paste your Cloudflare Account ID and API token into the corresponding fields.
+3. **Enter Account ID and API Token:** Paste your Cloudflare Account ID and API token into the corresponding fields.
 4. **Select Model:** Choose your desired model from the "Model" dropdown.
 
 {% /tab %}
@@ -109,5 +109,5 @@ To maximize cache hits in your own prompts/modes, follow the [Cloudflare guidanc
 
 - **Kimi K2.6** is a strong default for agentic coding — it has a 262k context window, supports reasoning, tool calls, and vision, and is trained for agent workflows.
 - **OpenAI-compatible endpoint:** Kilo talks to `https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1` via the `@ai-sdk/openai-compatible` package, so streaming, tool calls, and reasoning all work the same as with native OpenAI.
-- **Routing through AI Gateway:** If you want analytics, caching, rate-limiting, or budgeting on top of Workers AI, use the [Cloudflare AI Gateway](/ai-providers/cloudflare-ai-gateway) provider instead — it can route the same Workers AI models through your gateway.
+- **Routing through AI Gateway:** If you want analytics, caching, rate-limiting, or budgeting on top of Workers AI, use the [Cloudflare AI Gateway](/docs/ai-providers/cloudflare-ai-gateway) provider instead — it can route the same Workers AI models through your gateway.
 - **Pricing:** Per-token, billed against your Cloudflare account. See [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/).

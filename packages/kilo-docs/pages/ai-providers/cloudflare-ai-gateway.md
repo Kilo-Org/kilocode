@@ -141,4 +141,4 @@ These are forwarded to the gateway via the corresponding `cf-aig-*` headers. See
 - **OpenAI reasoning models:** Kilo automatically drops the `maxOutputTokens` cap for OpenAI reasoning models (`gpt-5.x`, `o`-series) routed through the gateway, since the Unified API rejects `max_tokens` for those models. No action needed on your side.
 - **Cost & analytics:** The dashboard shows per-model cost, token, and latency stats for every request that flows through the gateway.
 - **Bring your own keys:** If you've configured upstream provider keys directly in the gateway settings, you don't need to set OpenAI/Anthropic/etc. keys in Kilo — the gateway uses its stored keys.
-- **Direct Workers AI access:** If you only need Workers AI models and don't want a gateway in front, use the [Cloudflare Workers AI](/ai-providers/cloudflare-workers-ai) provider directly.
+- **Direct Workers AI access:** If you only need Workers AI models and don't want a gateway in front, use the [Cloudflare Workers AI](/docs/ai-providers/cloudflare-workers-ai) provider directly.
