@@ -1,4 +1,8 @@
-import { isInsideCodeBlock, removeSpuriousNewlinesBeforeCodeBlockClosingFences } from "../markdown"
+import { describe, it, expect } from "bun:test"
+import {
+  isInsideCodeBlock,
+  removeSpuriousNewlinesBeforeCodeBlockClosingFences,
+} from "../../src/services/autocomplete/classic-auto-complete/language-filters/markdown"
 
 describe("isInsideCodeBlock", () => {
   it("returns false for normal markdown", () => {
