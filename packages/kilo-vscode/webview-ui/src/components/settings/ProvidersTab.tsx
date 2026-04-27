@@ -16,7 +16,7 @@ import CustomProviderDialog from "./CustomProviderDialog"
 import ProviderConnectDialog from "./ProviderConnectDialog"
 import ProviderSelectDialog from "./ProviderSelectDialog"
 import { CUSTOM_PROVIDER_ID, isPopularProvider, providerIcon, providerNoteKey, sortProviders } from "./provider-catalog"
-import { disabledProviderOptions, visibleConnectedIds } from "./provider-visibility"
+import { disabledProviderOptions, providersWithKiloFallback, visibleConnectedIds } from "./provider-visibility"
 import { KILO_PROVIDER_ID, CUSTOM_PROVIDER_PACKAGE } from "../../../../src/shared/provider-model"
 import { createProviderAction } from "../../utils/provider-action"
 
@@ -62,7 +62,9 @@ const ProvidersTab: Component = () => {
   })
 
   const disabledProviders = createMemo(() => config().disabled_providers ?? [])
-  const disabledOptions = createMemo(() => disabledProviderOptions(provider.providers(), disabledProviders()))
+  const disabledIds = createMemo(() => new Set(disabledProviders()))
+  const providers = createMemo(() => providersWithKiloFallback(provider.providers()))
+  const disabledOptions = createMemo(() => disabledProviderOptions(providers(), disabledProviders()))
 
   function source(item: Provider): ProviderSource | undefined {
     if (!("source" in item)) return
@@ -131,7 +133,7 @@ const ProvidersTab: Component = () => {
   }
 
   function disabledName(id: string) {
-    const item = provider.providers()[id]
+    const item = providers()[id]
     return item?.name ?? id
   }
 
@@ -145,33 +147,35 @@ const ProvidersTab: Component = () => {
 
   return (
     <div>
-      {/* Kilo Gateway — always at the top, not editable */}
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            "align-items": "center",
-            gap: "12px",
-            "min-height": "56px",
-            padding: "12px 0",
-          }}
-        >
-          <ProviderIcon id="synthetic" width={20} height={20} />
-          <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
-            Kilo Gateway
-          </span>
-          <Show
-            when={kiloLoggedIn()}
-            fallback={
-              <Button size="small" variant="secondary" onClick={() => server.startLogin()}>
-                {language.t("common.signIn")}
-              </Button>
-            }
+      <Show when={!disabledIds().has(KILO_PROVIDER_ID)}>
+        {/* Kilo Gateway — always at the top, not editable */}
+        <Card>
+          <div
+            style={{
+              display: "flex",
+              "align-items": "center",
+              gap: "12px",
+              "min-height": "56px",
+              padding: "12px 0",
+            }}
           >
-            <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
-          </Show>
-        </div>
-      </Card>
+            <ProviderIcon id="synthetic" width={20} height={20} />
+            <span style={{ "font-size": "14px", "font-weight": "500", color: "var(--vscode-foreground)" }}>
+              Kilo Gateway
+            </span>
+            <Show
+              when={kiloLoggedIn()}
+              fallback={
+                <Button size="small" variant="secondary" onClick={() => server.startLogin()}>
+                  {language.t("common.signIn")}
+                </Button>
+              }
+            >
+              <Tag>{language.t("settings.providers.tag.gateway")}</Tag>
+            </Show>
+          </div>
+        </Card>
+      </Show>
 
       {/* Connected providers (excluding Kilo) */}
       <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
