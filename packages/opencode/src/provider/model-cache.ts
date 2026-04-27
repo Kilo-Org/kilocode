@@ -167,6 +167,10 @@ export namespace ModelCache {
     if (providerID === "apertis") {
       return fetchApertisModels(options)
     }
+
+    if (providerID === "lmstudio") {
+      return fetchOpenAICompatibleModels(options)
+    }
     // kilocode_change end
 
     // Other providers not implemented yet
@@ -177,52 +181,59 @@ export namespace ModelCache {
   // kilocode_change start
   const APERTIS_BASE_URL = "https://api.apertis.ai/v1"
 
-  async function fetchApertisModels(options: any): Promise<Record<string, any>> {
-    const baseURL = options.baseURL ?? APERTIS_BASE_URL
+  async function fetchOpenAICompatibleModels(options: { baseURL?: string; apiKey?: string }): Promise<Record<string, any>> {
+    const baseURL = options.baseURL ?? "http://127.0.0.1:1234/v1"
     const apiKey = options.apiKey
 
-    if (!apiKey) {
-      log.debug("no API key for apertis, skipping model fetch")
-      return {}
-    }
-
     const url = `${baseURL.replace(/\/+$/, "")}/models`
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-      signal: AbortSignal.timeout(10_000),
-    })
 
-    if (!response.ok) {
-      log.error("apertis model fetch failed", { status: response.status })
+    try {
+      const response = await Bun.fetch(url, {
+        method: "GET",
+        headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {},
+        signal: AbortSignal.timeout(10_000),
+      })
+
+      if (!response.ok) {
+        log.error("openai-compatible model fetch failed", { url, status: response.status })
+        return {}
+      }
+
+      const json = await response.json() as { data?: Array<{ id: string; owned_by?: string }> }
+
+      const models: Record<string, any> = {}
+      for (const model of json.data ?? []) {
+        models[model.id] = {
+          id: model.id,
+          name: model.id,
+          family: model.owned_by ?? "",
+          release_date: "",
+          attachment: true,
+          reasoning: false,
+          temperature: true,
+          tool_call: true,
+          cost: { input: 0, output: 0 },
+          limit: { context: 128000, output: 4096 },
+          options: {},
+          modalities: {
+            input: ["text", "image"],
+            output: ["text"],
+          },
+        }
+      }
+
+      return models
+    } catch (error) {
+      log.error("openai-compatible model fetch error", { url, error })
       return {}
     }
+  }
 
-    const json = (await response.json()) as { data?: Array<{ id: string; owned_by?: string }> }
-    const models: Record<string, any> = {}
-
-    for (const model of json.data ?? []) {
-      models[model.id] = {
-        id: model.id,
-        name: model.id,
-        family: model.owned_by ?? "",
-        release_date: "",
-        attachment: true,
-        reasoning: false,
-        temperature: true,
-        tool_call: true,
-        cost: { input: 0, output: 0 },
-        limit: { context: 128000, output: 4096 },
-        options: {},
-        modalities: {
-          input: ["text", "image"],
-          output: ["text"],
-        },
-      }
-    }
-
-    return models
+  async function fetchApertisModels(options: any): Promise<Record<string, any>> {
+    return fetchOpenAICompatibleModels({
+      baseURL: options.baseURL ?? APERTIS_BASE_URL,
+      apiKey: options.apiKey,
+    })
   }
   // kilocode_change end
 
@@ -305,6 +316,36 @@ export namespace ModelCache {
       }
 
       log.debug("apertis auth options resolved", {
+        providerID,
+        hasKey: !!options.apiKey,
+        hasBaseURL: !!options.baseURL,
+      })
+    }
+
+    if (providerID === "lmstudio") {
+      const config = await Config.get()
+      const providerConfig = config.provider?.[providerID]
+      if (providerConfig?.options?.apiKey) {
+        options.apiKey = providerConfig.options.apiKey
+      }
+      if (providerConfig?.options?.baseURL) {
+        options.baseURL = providerConfig.options.baseURL
+      }
+
+      const auth = await Auth.get(providerID)
+      if (auth && auth.type === "api") {
+        options.apiKey = auth.key
+      }
+
+      const env = process.env
+      if (env.LMSTUDIO_API_KEY) {
+        options.apiKey = env.LMSTUDIO_API_KEY
+      }
+      if (env.LMSTUDIO_BASE_URL) {
+        options.baseURL = env.LMSTUDIO_BASE_URL
+      }
+
+      log.debug("lmstudio auth options resolved", {
         providerID,
         hasKey: !!options.apiKey,
         hasBaseURL: !!options.baseURL,

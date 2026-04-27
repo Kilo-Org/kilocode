@@ -199,6 +199,9 @@ export async function get() {
   const disabled = new Set(config.disabled_providers ?? [])
   const enabled = config.enabled_providers ? new Set(config.enabled_providers) : null
   const kiloAllowed = (!enabled || enabled.has("kilo")) && !disabled.has("kilo")
+  const lmstudioDisabled = disabled.has("lmstudio")
+  const lmstudioEnabled = enabled ? enabled.has("lmstudio") : true
+  const lmstudioAllowed = lmstudioEnabled && !lmstudioDisabled
 
   if (kiloAllowed && !providers["kilo"]) {
     const kiloOptions = config.provider?.kilo?.options
@@ -254,6 +257,39 @@ export async function get() {
         ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
       }
     }
+
+    // LM Studio dynamic model discovery
+    if (lmstudioAllowed) {
+      const lmstudioConfig = config.provider?.lmstudio?.options
+      const lmstudioBaseURL = lmstudioConfig?.baseURL ?? "http://127.0.0.1:1234/v1"
+      const lmstudioFetchOptions = {
+        ...(lmstudioConfig?.baseURL ? { baseURL: lmstudioConfig.baseURL } : {}),
+        ...(lmstudioConfig?.apiKey ? { apiKey: lmstudioConfig.apiKey } : {}),
+      }
+
+      try {
+        const lmstudioModels = await ModelCache.fetch("lmstudio", lmstudioFetchOptions).catch(() => ({}))
+        if (Object.keys(lmstudioModels).length > 0) {
+          if (!providers["lmstudio"]) {
+            providers["lmstudio"] = {
+              id: "lmstudio",
+              name: "LMStudio",
+              env: ["LMSTUDIO_API_KEY"],
+              api: lmstudioBaseURL,
+              npm: "@ai-sdk/openai-compatible",
+              models: lmstudioModels,
+            }
+          } else {
+            providers["lmstudio"].models = lmstudioModels
+            if (lmstudioConfig?.baseURL) {
+              providers["lmstudio"].api = lmstudioBaseURL
+            }
+          }
+        }
+      } catch (err) {
+        log.debug("lmstudio model fetch failed, using snapshot fallback", { error: err })
+      }
+    }
   } else if (!providers["apertis"]) {
     const apertisConfig = config.provider?.apertis?.options
     const apertisBaseURL = apertisConfig?.baseURL ?? "https://api.apertis.ai/v1"
@@ -271,6 +307,39 @@ export async function get() {
     }
     if (Object.keys(apertisModels).length === 0) {
       ModelCache.refresh("apertis", apertisFetchOptions).catch(() => {})
+    }
+
+    // LM Studio dynamic model discovery (when kilo is not allowed)
+    if (lmstudioAllowed) {
+      const lmstudioConfig = config.provider?.lmstudio?.options
+      const lmstudioBaseURL = lmstudioConfig?.baseURL ?? "http://127.0.0.1:1234/v1"
+      const lmstudioFetchOptions = {
+        ...(lmstudioConfig?.baseURL ? { baseURL: lmstudioConfig.baseURL } : {}),
+        ...(lmstudioConfig?.apiKey ? { apiKey: lmstudioConfig.apiKey } : {}),
+      }
+
+      try {
+        const lmstudioModels = await ModelCache.fetch("lmstudio", lmstudioFetchOptions).catch(() => ({}))
+        if (Object.keys(lmstudioModels).length > 0) {
+          if (!providers["lmstudio"]) {
+            providers["lmstudio"] = {
+              id: "lmstudio",
+              name: "LMStudio",
+              env: ["LMSTUDIO_API_KEY"],
+              api: lmstudioBaseURL,
+              npm: "@ai-sdk/openai-compatible",
+              models: lmstudioModels,
+            }
+          } else {
+            providers["lmstudio"].models = lmstudioModels
+            if (lmstudioConfig?.baseURL) {
+              providers["lmstudio"].api = lmstudioBaseURL
+            }
+          }
+        }
+      } catch (err) {
+        log.debug("lmstudio model fetch failed, using snapshot fallback", { error: err })
+      }
     }
   }
 
