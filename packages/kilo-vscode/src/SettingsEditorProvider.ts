@@ -1,8 +1,32 @@
 import * as vscode from "vscode"
 import { KiloProvider } from "./KiloProvider"
+import type { DaveProviderExtensions } from "./KiloProvider.dave"
 import { resolvePanelProjectDirectory } from "./project-directory"
 import type { KiloConnectionService } from "./services/cli-backend"
 import type { RemoteStatusService } from "./services/RemoteStatusService"
+import type { SSHService } from "./services/ssh"
+import type { VPSService } from "./services/vps"
+import type { ZeroClawService } from "./services/zeroclaw"
+import type { RoutingService } from "./services/routing"
+import type { MemoryService } from "./services/memory"
+import type { TrainingService } from "./services/training"
+import type { GovernanceService } from "./services/governance"
+import type { WorkstationProfileService } from "./services/workstation"
+import type { OnboardingDiscoveryService } from "./services/onboarding"
+import type { HermesStatusService, HermesClient } from "./services/hermes"
+
+/** Services required by V4 custom tabs (Memory, Routing, Training, etc.) */
+export interface V4Services {
+  ssh: SSHService
+  vps: VPSService
+  zeroClaw: ZeroClawService
+  routing: RoutingService
+  memory: MemoryService
+  training: TrainingService
+  governance: GovernanceService
+  workstation: WorkstationProfileService
+  discovery?: OnboardingDiscoveryService
+}
 
 type PanelView = "settings" | "profile" | "marketplace"
 
@@ -28,6 +52,9 @@ export class SettingsEditorProvider implements vscode.Disposable {
   private providers = new Map<PanelView, KiloProvider>()
   private tabs = new Map<PanelView, string>()
   private remoteService: RemoteStatusService | null = null
+  private v4Services: V4Services | null = null
+  private hermesStatusSvc: HermesStatusService | null = null
+  private hermesClientSvc: HermesClient | null = null
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -106,6 +133,12 @@ export class SettingsEditorProvider implements vscode.Disposable {
     if (this.remoteService) {
       provider.setRemoteService(this.remoteService)
     }
+    if (this.hermesStatusSvc && this.hermesClientSvc) {
+      ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setHermesServices(this.hermesStatusSvc, this.hermesClientSvc)
+    }
+    if (this.v4Services) {
+      ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services(this.v4Services)
+    }
     provider.resolveWebviewPanel(panel)
 
     // Listen for closePanel from the webview (back button in panel mode)
@@ -154,6 +187,25 @@ export class SettingsEditorProvider implements vscode.Disposable {
     // Apply to any existing providers
     for (const [, provider] of this.providers) {
       provider.setRemoteService(service)
+    }
+  }
+
+  /** Inject V4 subsystem services so custom settings tabs (Memory, Routing, Training, etc.) work. */
+  setV4Services(services: V4Services): void {
+    this.v4Services = services
+    // Apply to any existing providers
+    for (const [, provider] of this.providers) {
+      ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setV4Services(services)
+    }
+  }
+
+  /** Inject Hermes services so the Hermes settings tab works. */
+  setHermesServices(status: HermesStatusService, client: HermesClient): void {
+    this.hermesStatusSvc = status
+    this.hermesClientSvc = client
+    // Apply to any existing providers
+    for (const [, provider] of this.providers) {
+      ;(provider as unknown as { __daveExtensions?: DaveProviderExtensions }).__daveExtensions?.setHermesServices(status, client)
     }
   }
 
