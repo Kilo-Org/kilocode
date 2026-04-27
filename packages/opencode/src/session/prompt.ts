@@ -76,6 +76,17 @@ export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup
 const log = Log.create({ service: "session.prompt" })
 const elog = EffectLogger.create({ service: "session.prompt" })
 
+// kilocode_change start - identify process signal failures nested in platform errors
+const signal = "Process interrupted due to receipt of signal"
+const killed = (value: unknown): boolean => {
+  if (value instanceof Error && value.message.includes(signal)) return true
+  if (typeof value !== "object" || value === null) return false
+  const data = value as { cause?: unknown; message?: unknown }
+  if (typeof data.message === "string" && data.message.includes(signal)) return true
+  return killed(data.cause)
+}
+// kilocode_change end
+
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
   readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts>
@@ -928,9 +939,15 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           )
 
           if (Exit.isFailure(exit)) {
-            const err = Cause.squash(exit.cause)
-            const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
-            const ok = aborted && (signal || Cause.hasInterruptsOnly(exit.cause))
+            const ok =
+              aborted &&
+              exit.cause.reasons.length > 0 &&
+              exit.cause.reasons.every((reason) => {
+                if (Cause.isInterruptReason(reason)) return true
+                if (Cause.isFailReason(reason)) return killed(reason.error)
+                if (Cause.isDieReason(reason)) return killed(reason.defect)
+                return false
+              })
             if (!ok) return yield* Effect.failCause(exit.cause)
           }
 
@@ -1374,6 +1391,71 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       throw new Error("Impossible")
     })
 
+    // kilocode_change start - create an aborted shell record if cancellation beats setup
+    const shellInterrupt = Effect.fn("SessionPrompt.shellInterrupt")(function* (input: ShellInput) {
+      const existing = yield* lastAssistant(input.sessionID).pipe(Effect.exit)
+      if (Exit.isSuccess(existing)) return existing.value
+      const err = Cause.squash(existing.cause)
+      if (!(err instanceof Error) || err.message !== "Impossible") return yield* Effect.failCause(existing.cause)
+
+      const ctx = yield* InstanceState.context
+      const fallback = { providerID: ProviderID.make("unknown"), modelID: ModelID.make("unknown") }
+      const model = input.model ?? (yield* provider.defaultModel().pipe(Effect.catchCause(() => Effect.succeed(fallback))))
+      const userMsg: MessageV2.User = {
+        id: input.messageID ?? MessageID.ascending(),
+        sessionID: input.sessionID,
+        time: { created: Date.now() },
+        role: "user",
+        agent: input.agent,
+        model: { providerID: model.providerID, modelID: model.modelID },
+      }
+      yield* sessions.updateMessage(userMsg)
+      yield* sessions.updatePart({
+        type: "text",
+        id: PartID.ascending(),
+        messageID: userMsg.id,
+        sessionID: input.sessionID,
+        text: "The following tool was executed by the user",
+        synthetic: true,
+      } satisfies MessageV2.Part)
+
+      const msg: MessageV2.Assistant = {
+        id: MessageID.ascending(),
+        sessionID: input.sessionID,
+        parentID: userMsg.id,
+        mode: input.agent,
+        agent: input.agent,
+        cost: 0,
+        path: { cwd: ctx.directory, root: ctx.worktree },
+        time: { created: Date.now(), completed: Date.now() },
+        role: "assistant",
+        tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        modelID: model.modelID,
+        providerID: model.providerID,
+      }
+      yield* sessions.updateMessage(msg)
+      const output = ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+      const part: MessageV2.ToolPart = {
+        type: "tool",
+        id: PartID.ascending(),
+        messageID: msg.id,
+        sessionID: input.sessionID,
+        tool: "bash",
+        callID: ulid(),
+        state: {
+          status: "completed",
+          time: { start: Date.now(), end: Date.now() },
+          input: { command: input.command },
+          title: "",
+          metadata: { output, description: "" },
+          output,
+        },
+      }
+      yield* sessions.updatePart(part)
+      return { info: msg, parts: [part] }
+    })
+    // kilocode_change end
+
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()
 
@@ -1695,7 +1777,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
       function* (input: ShellInput) {
-        return yield* state.startShell(input.sessionID, lastAssistant(input.sessionID), shellImpl(input))
+        return yield* state.startShell(input.sessionID, shellInterrupt(input), shellImpl(input))
       },
     )
 

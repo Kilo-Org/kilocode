@@ -10,6 +10,17 @@ export interface Runner<A, E = never> {
 
 export class Cancelled extends Schema.TaggedErrorClass<Cancelled>()("RunnerCancelled", {}) {}
 
+// kilocode_change start - identify process signal failures nested in platform errors
+const signal = "Process interrupted due to receipt of signal"
+const killed = (value: unknown): boolean => {
+  if (value instanceof Error && value.message.includes(signal)) return true
+  if (typeof value !== "object" || value === null) return false
+  const data = value as { cause?: unknown; message?: unknown }
+  if (typeof data.message === "string" && data.message.includes(signal)) return true
+  return killed(data.cause)
+}
+// kilocode_change end
+
 interface RunHandle<A, E> {
   id: number
   done: Deferred.Deferred<A, E | Cancelled>
@@ -156,18 +167,26 @@ export const make = <A, E = never>(
         const fiber = yield* work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild)
         const shell = { id, fiber, cancelled: false } satisfies ShellHandle<A, E> // kilocode_change
         return [
-          Effect.gen(function* () {
-            const exit = yield* Fiber.await(fiber)
-            if (Exit.isSuccess(exit)) return exit.value
-            // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
-            const err = Cause.squash(exit.cause)
-            const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
-            if ((Cause.hasInterruptsOnly(exit.cause) || (shell.cancelled && signal)) && onInterrupt) {
-              return yield* onInterrupt
-            }
-            // kilocode_change end
-            return yield* Effect.failCause(exit.cause)
-          }),
+          Effect.uninterruptible(
+            Effect.gen(function* () {
+              const exit = yield* Fiber.await(fiber)
+              if (Exit.isSuccess(exit)) return exit.value
+              // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
+              const ok =
+                exit.cause.reasons.length > 0 &&
+                exit.cause.reasons.every((reason) => {
+                  if (Cause.isInterruptReason(reason)) return true
+                  if (Cause.isFailReason(reason)) return killed(reason.error)
+                  if (Cause.isDieReason(reason)) return killed(reason.defect)
+                  return false
+                })
+              if ((Cause.hasInterruptsOnly(exit.cause) || (shell.cancelled && ok)) && onInterrupt) {
+                return yield* Effect.uninterruptible(onInterrupt)
+              }
+              // kilocode_change end
+              return yield* Effect.failCause(exit.cause)
+            }),
+          ),
           { _tag: "Shell", shell },
         ] as const
       }),
