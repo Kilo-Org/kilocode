@@ -171,7 +171,7 @@ export const layer = Layer.effect(
           PluginLoader.loadExternal({
             items: plugins,
             kind: "server",
-            wait,
+            wait, // kilocode_change
             report: {
               start(candidate) {
                 log.info("loading plugin", { path: candidate.plan.spec })
