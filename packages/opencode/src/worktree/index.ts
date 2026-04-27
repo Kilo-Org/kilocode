@@ -354,17 +354,14 @@ export const layer: Layer.Layer<
     }
 
     function cleanDirectory(target: string) {
-      // kilocode_change start - Windows CI can hold worktree handles briefly after git cleanup
-      const retries = process.platform === "win32" ? 30 : 5
       return Effect.promise(() =>
         import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: retries, retryDelay: 100 }))
+          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }))
           .catch((error) => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })
           }),
       )
-      // kilocode_change end
     }
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {

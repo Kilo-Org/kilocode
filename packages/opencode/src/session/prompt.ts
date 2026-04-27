@@ -918,13 +918,9 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         Effect.exit,
       )
 
-      // kilocode_change start - cancelled shells can exit by signal during forced cleanup
-      const err = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
-      const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
-      if (Exit.isFailure(exit) && !aborted && !signal && !Cause.hasInterruptsOnly(exit.cause)) {
+      if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)) {
         return yield* Effect.failCause(exit.cause)
       }
-      // kilocode_change end
 
       return { info: msg, parts: [part] }
     })
