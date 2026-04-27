@@ -742,25 +742,25 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       } satisfies MessageV2.TextPart)
     })
 
-    // kilocode_change start - complete shell setup before honoring cancellation
+    // kilocode_change start - persist shell messages before honoring cancellation
     const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput) {
       return yield* Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
-          const ctx = yield* InstanceState.context
-          const run = yield* runner()
-          const session = yield* sessions.get(input.sessionID)
+          const ctx = yield* restore(InstanceState.context)
+          const run = yield* restore(runner())
+          const session = yield* restore(sessions.get(input.sessionID))
           if (session.revert) {
-            yield* revert.cleanup(session)
+            yield* restore(revert.cleanup(session))
           }
-          const agent = yield* agents.get(input.agent)
+          const agent = yield* restore(agents.get(input.agent))
           if (!agent) {
-            const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+            const available = (yield* restore(agents.list())).filter((a) => !a.hidden).map((a) => a.name)
             const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
             const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
-            yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+            yield* restore(bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }))
             throw error
           }
-          const model = input.model ?? agent.model ?? (yield* lastModel(input.sessionID))
+          const model = input.model ?? agent.model ?? (yield* restore(lastModel(input.sessionID)))
           const userMsg: MessageV2.User = {
             id: input.messageID ?? MessageID.ascending(),
             sessionID: input.sessionID,
@@ -853,10 +853,8 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           }
 
           const args = (invocations[shellName] ?? invocations[""]).args
-          const shellEnv = yield* plugin.trigger(
-            "shell.env",
-            { cwd, sessionID: input.sessionID, callID: part.callID },
-            { env: {} },
+          const shellEnv = yield* restore(
+            plugin.trigger("shell.env", { cwd, sessionID: input.sessionID, callID: part.callID }, { env: {} }),
           )
 
           const cmd = ChildProcess.make(sh, args, {
