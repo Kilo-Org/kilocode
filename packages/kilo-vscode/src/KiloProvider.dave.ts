@@ -30,6 +30,12 @@
 
 import * as vscode from "vscode"
 import type { KiloProvider } from "./KiloProvider"
+import { handleHermesRealWebviewMessage } from "./kilo-provider/handlers/hermes-webview"
+import { handleMemoryRealWebviewMessage } from "./kilo-provider/handlers/memory-webview"
+import { handleRoutingRealWebviewMessage } from "./kilo-provider/handlers/routing-webview"
+import { handleZeroClawRealWebviewMessage } from "./kilo-provider/handlers/zeroclaw-webview"
+import { handleGovernanceRealWebviewMessage } from "./kilo-provider/handlers/governance-webview"
+import { handleTrainingRealWebviewMessage } from "./kilo-provider/handlers/training-webview"
 
 export class DaveProviderExtensions {
   // V4 subsystem services — set via setV4Services() after construction.
@@ -189,6 +195,25 @@ export class DaveProviderExtensions {
     const type = message?.type
     if (typeof type !== "string") return false
     if (!isV4MessageType(type)) return false
+
+    // Real-backend handlers (Hub-routed) take priority over the legacy
+    // in-process service switch. Each returns true if it consumed the
+    // message; we return immediately to avoid double-processing.
+    const realCtx = {
+      extensionContext: this.provider.context,
+      postMessage: (m: unknown) => this.postMessage(m as never),
+    }
+    try {
+      if (await handleHermesRealWebviewMessage(message, realCtx as never)) return true
+      if (await handleMemoryRealWebviewMessage(message, realCtx as never)) return true
+      if (await handleRoutingRealWebviewMessage(message, realCtx as never)) return true
+      if (await handleZeroClawRealWebviewMessage(message, realCtx as never)) return true
+      if (await handleGovernanceRealWebviewMessage(message, realCtx as never)) return true
+      if (await handleTrainingRealWebviewMessage(message, realCtx as never)) return true
+    } catch (err) {
+      console.warn("[KiloProvider.dave] real-backend handler error (non-fatal):", err)
+      // Fall through to the legacy switch below.
+    }
 
     try {
       switch (type) {
@@ -980,6 +1005,7 @@ function isV4MessageType(type: string): boolean {
     type.startsWith("requestVPS") ||
     type.startsWith("requestVps") ||
     type.startsWith("zeroClaw") ||
+    type.startsWith("zeroclaw") ||
     type.startsWith("requestZeroClaw") ||
     type.startsWith("routing") ||
     type.startsWith("requestRouting") ||

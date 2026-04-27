@@ -1,96 +1,182 @@
 /**
- * zeroclaw-webview.ts
+ * zeroclaw-webview.ts (real-backend wiring, agent-wire-tabs-real)
  *
- * Bridges webview messages from ZeroClawTab.tsx → ZeroClawService.
+ * Bridges webview messages from ZeroClawTab.tsx → ZeroClaw approval service
+ * via the Hub.
  *
- * Message types handled:
- *   zeroClawGetHistory    → getAllTasks(), push zeroClawHistoryLoaded
- *   zeroClawSubmitTask    → service.submit(), push zeroClawTaskSubmitted
- *   zeroClawCancelTask    → service.cancel(), push zeroClawTaskUpdated
- *   zeroClawRetryTask     → service.retry(), push zeroClawTaskRetried
- *   zeroClawApproveTask   → service.approve(), push zeroClawTaskUpdated
- *   zeroClawRejectTask    → service.reject(), push zeroClawTaskUpdated
+ * Backend endpoints (ZeroClaw service shipped in commit e9c9bf5):
+ *     GET  https://hermes.daveai.tech/zeroclaw/queue
+ *     POST https://hermes.daveai.tech/zeroclaw/approve  { task_id, approver }
+ *     POST https://hermes.daveai.tech/zeroclaw/reject   { task_id, reason? }
+ *
+ * Auth: Bearer Hermes API key from SecretStorage (Hub gate).
+ *
+ * Message types handled (NEW prefixed style — `zeroclaw.<action>`):
+ *   zeroclaw.queue   → GET  /zeroclaw/queue
+ *   zeroclaw.approve → POST /zeroclaw/approve
+ *   zeroclaw.reject  → POST /zeroclaw/reject
+ *
+ * Host responds with `{ type: "zeroclaw.update", payload: { kind, ... } }`.
+ *
+ * NOTE: the existing in-process ZeroClawService still drives local task
+ * lifecycle (submit/cancel/retry). This handler ONLY federates the *remote
+ * approval queue* — i.e. tasks running on the Hub-side ZeroClaw worker that
+ * need a human at the IDE to approve/reject before execution. The two
+ * sources are surfaced together in the tab.
  */
 
-import type { ZeroClawService, ZeroClawTask, TaskSubmission } from "../../services/zeroclaw/ZeroClawService"
+import * as vscode from "vscode"
 
-export interface ZeroClawWebviewContext {
-  service: ZeroClawService
+const HUB_BASE = process.env.KILO_HUB_BASE ?? "https://hermes.daveai.tech"
+const HERMES_KEY_ID = "kilo-code.new.hermes.apiKey"
+const FETCH_TIMEOUT_MS = 15_000
+
+export interface ZeroClawRealWebviewContext {
+  extensionContext: vscode.ExtensionContext
   postMessage: (msg: unknown) => void
 }
 
-function pushTask(ctx: ZeroClawWebviewContext, task: ZeroClawTask): void {
-  ctx.postMessage({ type: "zeroClawTaskUpdated", task })
+interface ZeroClawQueueItem {
+  task_id: string
+  description: string
+  risk_level: "low" | "medium" | "high"
+  project_path: string
+  requested_by?: string
+  requested_at: number
+  diff_preview?: string
+  network_policy?: "deny" | "allowlist" | "open"
+  write_policy?: "read_only" | "buffered" | "approved"
 }
 
-// eslint-disable-next-line complexity
-export function handleZeroClawWebviewMessage(
+async function readApiKey(ctx: vscode.ExtensionContext): Promise<string | undefined> {
+  const stored = await ctx.secrets.get(HERMES_KEY_ID)
+  if (stored && stored.length > 0) return stored
+  return process.env.HERMES_API_KEY ?? process.env.MINIMAX_API_KEY
+}
+
+async function zcFetch<T>(
+  ctx: vscode.ExtensionContext,
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
+  try {
+    const apiKey = await readApiKey(ctx)
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...((init.headers as Record<string, string>) ?? {}),
+    }
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`
+    const res = await fetch(`${HUB_BASE}${path}`, { ...init, signal: ctrl.signal, headers })
+    if (!res.ok) {
+      const body = await res.text().catch(() => "")
+      throw new Error(`ZeroClaw ${path} → HTTP ${res.status}: ${body.slice(0, 200)}`)
+    }
+    return (await res.json()) as T
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export async function handleZeroClawRealWebviewMessage(
   msg: Record<string, unknown>,
-  ctx: ZeroClawWebviewContext,
-): boolean {
-  switch (msg.type) {
-    case "zeroClawGetHistory": {
-      const tasks = ctx.service.getHistory(50)
-      ctx.postMessage({ type: "zeroClawHistoryLoaded", tasks })
-      return true
-    }
+  ctx: ZeroClawRealWebviewContext,
+): Promise<boolean> {
+  const type = msg.type
+  if (typeof type !== "string" || !type.startsWith("zeroclaw.")) return false
 
-    case "zeroClawSubmitTask": {
+  switch (type) {
+    case "zeroclaw.queue": {
       try {
-        const submission: TaskSubmission = {
-          description: (msg.description as string) ?? "",
-          projectPath: (msg.projectPath as string) ?? "",
-          riskLevel: (msg.riskLevel as TaskSubmission["riskLevel"]) ?? "low",
-          workspaceScope: (msg.workspaceScope as string) ?? "",
-          networkPolicy: (msg.networkPolicy as TaskSubmission["networkPolicy"]) ?? "deny",
-          writePolicy: (msg.writePolicy as TaskSubmission["writePolicy"]) ?? "read_only",
-          limits: {
-            timeoutSec: (msg.timeoutSec as number) ?? 300,
-            memoryMb: (msg.memoryMb as number) ?? 512,
-            cpu: (msg.cpu as number) ?? 1,
-          },
-        }
-        const task = ctx.service.submit(submission)
-        ctx.postMessage({ type: "zeroClawTaskSubmitted", task })
+        const data = await zcFetch<{ queue: ZeroClawQueueItem[] }>(
+          ctx.extensionContext,
+          "/zeroclaw/queue",
+        )
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "queue", queue: data.queue ?? [], loadedAt: Date.now() },
+        })
       } catch (e) {
-        ctx.postMessage({ type: "zeroClawError", error: e instanceof Error ? e.message : String(e) })
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "queue", queue: [], error: e instanceof Error ? e.message : String(e) },
+        })
       }
       return true
     }
 
-    case "zeroClawCancelTask": {
-      const taskId = msg.taskId as string
-      ctx.service.cancel(taskId)
-      const task = ctx.service.getTask(taskId)
-      if (task) pushTask(ctx, task)
-      return true
-    }
-
-    case "zeroClawRetryTask": {
-      const taskId = msg.taskId as string
-      const newTask = ctx.service.retry(taskId)
-      if (newTask) {
-        ctx.postMessage({ type: "zeroClawTaskRetried", newTask })
-      } else {
-        ctx.postMessage({ type: "zeroClawError", error: "Retry budget exhausted or task not found" })
+    case "zeroclaw.approve": {
+      const task_id = (msg.task_id as string | undefined) ?? (msg.taskId as string | undefined)
+      if (!task_id) {
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "approve", error: "task_id is required" },
+        })
+        return true
+      }
+      const approver = (msg.approver as string | undefined) ?? "kilo-user"
+      try {
+        const data = await zcFetch<{ ok: boolean; task_id: string; status: string }>(
+          ctx.extensionContext,
+          "/zeroclaw/approve",
+          {
+            method: "POST",
+            body: JSON.stringify({ task_id, approver }),
+          },
+        )
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "approve", task_id, approver, response: data, ts: Date.now() },
+        })
+      } catch (e) {
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: {
+            kind: "approve",
+            task_id,
+            approver,
+            error: e instanceof Error ? e.message : String(e),
+          },
+        })
       }
       return true
     }
 
-    case "zeroClawApproveTask": {
-      const taskId = msg.taskId as string
-      const approver = (msg.approver as string) ?? "local-user"
-      ctx.service.approve(taskId, approver)
-      const task = ctx.service.getTask(taskId)
-      if (task) pushTask(ctx, task)
-      return true
-    }
-
-    case "zeroClawRejectTask": {
-      const taskId = msg.taskId as string
-      ctx.service.reject(taskId)
-      const task = ctx.service.getTask(taskId)
-      if (task) pushTask(ctx, task)
+    case "zeroclaw.reject": {
+      const task_id = (msg.task_id as string | undefined) ?? (msg.taskId as string | undefined)
+      if (!task_id) {
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "reject", error: "task_id is required" },
+        })
+        return true
+      }
+      const reason = (msg.reason as string | undefined) ?? ""
+      try {
+        const data = await zcFetch<{ ok: boolean; task_id: string; status: string }>(
+          ctx.extensionContext,
+          "/zeroclaw/reject",
+          {
+            method: "POST",
+            body: JSON.stringify({ task_id, reason }),
+          },
+        )
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: { kind: "reject", task_id, reason, response: data, ts: Date.now() },
+        })
+      } catch (e) {
+        ctx.postMessage({
+          type: "zeroclaw.update",
+          payload: {
+            kind: "reject",
+            task_id,
+            reason,
+            error: e instanceof Error ? e.message : String(e),
+          },
+        })
+      }
       return true
     }
 
@@ -98,3 +184,6 @@ export function handleZeroClawWebviewMessage(
       return false
   }
 }
+
+// Exported for tests
+export const __test = { HUB_BASE, HERMES_KEY_ID, zcFetch }
