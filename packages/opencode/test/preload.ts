@@ -89,3 +89,16 @@ void Log.init({
 })
 
 initProjectors()
+
+// Warm up Bun's dynamic import pipeline by loading a representative plugin
+// .ts fixture once during preload. Bun keeps its module cache across tests, so
+// later plugin tests that reference this same file URL hit the cache instead
+// of paying the cold TS-transpile cost (which is the main source of timeouts
+// in plugin tests on Windows CI).
+const warm = path.join(import.meta.dir, "fixture", "plugins", "config-mutator.ts")
+const { pathToFileURL } = await import("url")
+await import(pathToFileURL(warm).href).catch((err) => {
+  // Best-effort. If warm-up fails, tests can still run -- they will just pay
+  // the cold-import cost on their first plugin load.
+  console.warn("preload: plugin warm-up failed", err)
+})

@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test"
-import { mkdir, unlink } from "fs/promises"
+import { unlink } from "fs/promises"
 import path from "path"
+import { pathToFileURL } from "url"
 import { Global } from "../../src/global"
 import { Filesystem } from "../../src/util"
 
@@ -15,6 +16,11 @@ import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
 import { Auth } from "../../src/auth" // kilocode_change
+
+// Shared plugin fixture. Tests reference this same file so Bun's module cache
+// short-circuits after the first import; individual test files no longer pay
+// the cold TS-transpile cost.
+const configMutator = pathToFileURL(path.join(import.meta.dir, "..", "fixture", "plugins", "config-mutator.ts")).href
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -2484,33 +2490,32 @@ test("cloudflare-ai-gateway forwards config metadata options", async () => {
 test("plugin config providers persist after instance dispose", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const root = path.join(dir, ".opencode", "plugin")
-      await mkdir(root, { recursive: true })
       await Bun.write(
-        path.join(root, "demo-provider.ts"),
-        [
-          "export default {",
-          '  id: "demo.plugin-provider",',
-          "  server: async () => ({",
-          "    async config(cfg) {",
-          "      cfg.provider ??= {}",
-          "      cfg.provider.demo = {",
-          '        name: "Demo Provider",',
-          '        npm: "@ai-sdk/openai-compatible",',
-          '        api: "https://example.com/v1",',
-          "        models: {",
-          "          chat: {",
-          '            name: "Demo Chat",',
-          "            tool_call: true,",
-          "            limit: { context: 128000, output: 4096 },",
-          "          },",
-          "        },",
-          "      }",
-          "    },",
-          "  }),",
-          "}",
-          "",
-        ].join("\n"),
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          plugin: [
+            [
+              configMutator,
+              {
+                provider: {
+                  demo: {
+                    name: "Demo Provider",
+                    npm: "@ai-sdk/openai-compatible",
+                    api: "https://example.com/v1",
+                    models: {
+                      chat: {
+                        name: "Demo Chat",
+                        tool_call: true,
+                        limit: { context: 128000, output: 4096 },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+          ],
+        }),
       )
     },
   })
@@ -2543,22 +2548,20 @@ test("plugin config providers persist after instance dispose", async () => {
 test("plugin config enabled and disabled providers are honored", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
-      const root = path.join(dir, ".opencode", "plugin")
-      await mkdir(root, { recursive: true })
       await Bun.write(
-        path.join(root, "provider-filter.ts"),
-        [
-          "export default {",
-          '  id: "demo.provider-filter",',
-          "  server: async () => ({",
-          "    async config(cfg) {",
-          '      cfg.enabled_providers = ["anthropic", "openai"]',
-          '      cfg.disabled_providers = ["openai"]',
-          "    },",
-          "  }),",
-          "}",
-          "",
-        ].join("\n"),
+        path.join(dir, "opencode.json"),
+        JSON.stringify({
+          $schema: "https://app.kilo.ai/config.json",
+          plugin: [
+            [
+              configMutator,
+              {
+                enabled_providers: ["anthropic", "openai"],
+                disabled_providers: ["openai"],
+              },
+            ],
+          ],
+        }),
       )
     },
   })
