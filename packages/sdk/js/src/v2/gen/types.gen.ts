@@ -1044,6 +1044,7 @@ export type CompactionPart = {
   type: "compaction"
   auto: boolean
   overflow?: boolean
+  tail_start_id?: string
 }
 
 export type Part =
@@ -1078,6 +1079,13 @@ export type EventMessagePartRemoved = {
   }
 }
 
+export type SnapshotSummaryFileDiff = {
+  file: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 export type PermissionAction = "allow" | "deny" | "ask"
 
 export type PermissionRule = {
@@ -1099,12 +1107,7 @@ export type Session = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string
@@ -1231,12 +1234,7 @@ export type SyncEventSessionUpdated = {
         additions: number
         deletions: number
         files: number
-        diffs?: Array<{
-          file: string
-          additions: number
-          deletions: number
-          status?: "added" | "deleted" | "modified"
-        }>
+        diffs?: Array<SnapshotSummaryFileDiff>
       } | null
       share?: {
         url: string | null
@@ -1384,8 +1382,8 @@ export type PermissionObjectConfig = {
 export type PermissionRuleConfig = PermissionActionConfig | PermissionObjectConfig
 
 export type PermissionConfig =
+  | PermissionActionConfig
   | {
-      __originalKeys?: Array<string>
       read?: PermissionRuleConfig
       edit?: PermissionRuleConfig
       glob?: PermissionRuleConfig
@@ -1402,9 +1400,8 @@ export type PermissionConfig =
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
-      [key: string]: PermissionRuleConfig | Array<string> | PermissionActionConfig | undefined
+      [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
-  | PermissionActionConfig
 
 export type AgentConfig = {
   model?: string | null
@@ -1841,6 +1838,14 @@ export type Config = {
      */
     prune?: boolean
     /**
+     * Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)
+     */
+    tail_turns?: number
+    /**
+     * Maximum number of tokens from recent turns to preserve verbatim after compaction
+     */
+    preserve_recent_tokens?: number
+    /**
      * Token buffer for compaction. Leaves enough window to avoid overflow during compaction.
      */
     reserved?: number
@@ -2082,12 +2087,7 @@ export type GlobalSession = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string

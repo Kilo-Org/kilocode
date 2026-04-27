@@ -1,5 +1,19 @@
 # kilo-code
 
+## 7.2.26
+
+### Minor Changes
+
+- [#9310](https://github.com/Kilo-Org/kilocode/pull/9310) [`f067a90`](https://github.com/Kilo-Org/kilocode/commit/f067a908a9fe161cfb87298b593b73e7e9bdb0b6) - Support selecting Mercury Edit by Inception for autocomplete.
+
+- [#9548](https://github.com/Kilo-Org/kilocode/pull/9548) [`c5614cc`](https://github.com/Kilo-Org/kilocode/commit/c5614cc54ed16e90151cbe1ceed5213b472383ff) - Add Settings header buttons to open the project and global Kilo config files directly in VS Code.
+
+### Patch Changes
+
+- [#9552](https://github.com/Kilo-Org/kilocode/pull/9552) [`3f0bf32`](https://github.com/Kilo-Org/kilocode/commit/3f0bf322c1e2397cffaf22739df8d41e1957f5ba) - Fix clearing an agent's Model Override in Agent Behaviour settings. Previously, clearing the field and saving would repopulate the old value because the empty input was sent as `undefined` and dropped by `JSON.stringify`, so the backend never received a delete instruction. The field now reverts to the global default model as expected.
+
+- [#9551](https://github.com/Kilo-Org/kilocode/pull/9551) [`b344ac9`](https://github.com/Kilo-Org/kilocode/commit/b344ac97c6a2d7caecf85b43b8c6a07ccb352b6b) - Restore disabled provider management in the VS Code extension provider settings.
+
 ## 7.2.25
 
 ## 7.2.23

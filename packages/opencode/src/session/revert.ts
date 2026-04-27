@@ -83,8 +83,8 @@ export const layer = Layer.effect(
       if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot as string)
       yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
       yield* bus.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
-      // kilocode_change start - strip full file contents before persisting to DB
-      const summaryDiffs = diffs.map((d) => ({
+      // kilocode_change start
+      const summaryDiffs: Snapshot.SummaryFileDiff[] = diffs.map((d) => ({
         file: d.file,
         additions: d.additions,
         deletions: d.deletions,

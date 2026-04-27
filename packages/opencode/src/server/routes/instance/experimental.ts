@@ -342,7 +342,7 @@ export const ExperimentalRoutes = lazy(() =>
             description: "File diffs",
             content: {
               "application/json": {
-                schema: resolver(z.array(Snapshot.FileDiff)),
+                schema: resolver(z.array(Snapshot.FileDiff.zod)),
               },
             },
           },
@@ -387,7 +387,7 @@ export const ExperimentalRoutes = lazy(() =>
             description: "Diff summary items",
             content: {
               "application/json": {
-                schema: resolver(z.array(WorktreeDiff.Item)),
+                schema: resolver(z.array(WorktreeDiff.Item.zod)),
               },
             },
           },
@@ -420,7 +420,7 @@ export const ExperimentalRoutes = lazy(() =>
             description: "Diff detail item",
             content: {
               "application/json": {
-                schema: resolver(WorktreeDiff.Item.nullable()),
+                schema: resolver(WorktreeDiff.Item.zod.nullable()),
               },
             },
           },

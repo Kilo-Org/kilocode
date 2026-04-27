@@ -126,12 +126,10 @@ const allTargets: {
     arch: "x64",
     avx2: false,
   },
-  // kilocode_change start - Windows ARM64 target
   {
     os: "win32",
     arch: "arm64",
   },
-  // kilocode_change end
   {
     os: "win32",
     arch: "x64",
@@ -141,12 +139,6 @@ const allTargets: {
     arch: "x64",
     avx2: false,
   },
-  // kilocode_change start - added Windows ARM64 target
-  {
-    os: "win32",
-    arch: "arm64",
-  },
-  // kilocode_change end
 ]
 
 const targets = singleFlag
@@ -195,7 +187,6 @@ for (const item of targets) {
   const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
   const parserWorker = fs.realpathSync(fs.existsSync(localPath) ? localPath : rootPath)
   const workerPath = "./src/cli/cmd/tui/worker.ts"
-  const rgPath = "./src/file/ripgrep.worker.ts"
 
   // Use platform-specific bunfs root path based on target OS
   const bunfsRoot = item.os === "win32" ? "B:/~BUN/root/" : "/$bunfs/root/"
@@ -220,19 +211,12 @@ for (const item of targets) {
       windows: {},
     },
     files: embeddedFileMap ? { "opencode-web-ui.gen.ts": embeddedFileMap } : {},
-    entrypoints: [
-      "./src/index.ts",
-      parserWorker,
-      workerPath,
-      rgPath,
-      ...(embeddedFileMap ? ["opencode-web-ui.gen.ts"] : []),
-    ],
+    entrypoints: ["./src/index.ts", parserWorker, workerPath, ...(embeddedFileMap ? ["opencode-web-ui.gen.ts"] : [])],
     define: {
       KILO_VERSION: `'${Script.version}'`,
       KILO_MIGRATIONS: JSON.stringify(migrations),
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
       KILO_WORKER_PATH: workerPath,
-      KILO_RIPGREP_WORKER_PATH: rgPath,
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
     },
