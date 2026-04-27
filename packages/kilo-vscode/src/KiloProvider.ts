@@ -64,6 +64,7 @@ import {
 } from "./services/autocomplete/settings"
 import * as ModelState from "./kilo-provider/model-state"
 import { handleForkSession } from "./kilo-provider/fork-session"
+import { openConfig } from "./kilo-provider/open-config"
 import { retryable, backoff, MAX_RETRIES } from "./util/retry"
 import { hasGit } from "./kilo-provider/git-status"
 // legacy-migration start
@@ -696,6 +697,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "openVSCodeSettings":
           vscode.commands.executeCommand("workbench.action.openSettings", message.query)
+          break
+        case "openConfigFile":
+          await openConfig(message.scope, message.labels, this.getProjectDirectory(this.currentSession?.id))
           break
         case "openMarketplacePanel":
           vscode.commands.executeCommand("kilo-code.new.marketplaceButtonClicked", this.projectDirectory)

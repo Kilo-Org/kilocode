@@ -183,6 +183,77 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
+  it.live("ignores deleted session during cost reconciliation", () =>
+    provideTmpdirInstance(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+
+          yield* test.reply(
+            { type: "start" },
+            { type: "start-step" } as LLM.Event,
+            {
+              type: "finish-step",
+              finishReason: "stop",
+              usage: usage(),
+              providerMetadata: undefined,
+            } as LLM.Event,
+            { type: "finish" } as LLM.Event,
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: ref.modelID,
+            providerID: ref.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model()
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+          yield* session.remove(chat.id)
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          const result = yield* handle.process(input)
+          expect(result).toBe("continue")
+          expect(handle.message.error).toBeUndefined()
+        }),
+      { git: true },
+    ),
+  )
+
   it.live("preserves tool-calls finish when tool parts exist", () =>
     provideTmpdirInstance(
       (dir) =>

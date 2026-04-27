@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
+import { AUTOCOMPLETE_MODELS, DEFAULT_AUTOCOMPLETE_MODEL } from "../../shared/autocomplete-models"
 
-const keys = new Set(["enableAutoTrigger", "enableSmartInlineTaskKeybinding", "enableChatAutocomplete"])
+const keys = new Set(["enableAutoTrigger", "enableSmartInlineTaskKeybinding", "enableChatAutocomplete", "model"])
 
 type Message = {
   type: string
@@ -34,6 +35,7 @@ export function buildAutocompleteSettingsMessage() {
       enableAutoTrigger: config.get<boolean>("enableAutoTrigger", true),
       enableSmartInlineTaskKeybinding: config.get<boolean>("enableSmartInlineTaskKeybinding", false),
       enableChatAutocomplete: config.get<boolean>("enableChatAutocomplete", false),
+      model: config.get<string>("model", DEFAULT_AUTOCOMPLETE_MODEL.id),
     },
   }
 }
@@ -50,10 +52,20 @@ export function watchAutocompleteConfig(post: Post): vscode.Disposable {
 async function update(key: unknown, value: unknown) {
   if (typeof key !== "string") return false
   if (!keys.has(key)) return false
+  if (!valid(key, value)) return false
 
   await vscode.workspace
     .getConfiguration("kilo-code.new.autocomplete")
     .update(key, value, vscode.ConfigurationTarget.Global)
 
   return true
+}
+
+function valid(key: string, value: unknown) {
+  if (key === "model") {
+    if (typeof value !== "string") return false
+    return AUTOCOMPLETE_MODELS.some((m) => m.id === value)
+  }
+
+  return typeof value === "boolean"
 }

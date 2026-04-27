@@ -812,6 +812,65 @@ it.live(
   30_000,
 )
 
+// kilocode_change start - handleSubtask propagates child session cost to wrapper (#6321)
+it.live(
+  "handleSubtask propagates subagent cost to wrapper message",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ llm }) {
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const registry = yield* ToolRegistry.Service
+        const { task } = yield* registry.named()
+        const original = task.execute
+        // Simulate task tool: create a child session, persist an assistant with cost, return metadata.
+        task.execute = (_args, ctx) =>
+          Effect.gen(function* () {
+            const child = yield* sessions.create({ parentID: ctx.sessionID, title: "subagent" })
+            const childAssistant: MessageV2.Assistant = {
+              id: MessageID.ascending(),
+              role: "assistant",
+              parentID: ctx.messageID,
+              sessionID: child.id,
+              mode: "general",
+              agent: "general",
+              cost: 0.42,
+              path: { cwd: "/tmp", root: "/tmp" },
+              tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+              modelID: ref.modelID,
+              providerID: ref.providerID,
+              time: { created: Date.now(), completed: Date.now() },
+              finish: "stop",
+            }
+            yield* sessions.updateMessage(childAssistant)
+            yield* ctx.metadata({
+              title: "done",
+              metadata: { sessionId: child.id, model: ref, variant: undefined },
+            })
+            return { title: "done", metadata: { sessionId: child.id, model: ref, variant: undefined }, output: "done" }
+          })
+        yield* Effect.addFinalizer(() => Effect.sync(() => void (task.execute = original)))
+
+        const chat = yield* sessions.create({ title: "Pinned" })
+        const msg = yield* user(chat.id, "hello")
+        yield* addSubtask(chat.id, msg.id)
+        // The loop continues past handleSubtask into a normal LLM step; provide one response to exit.
+        yield* llm.text("wrapped")
+
+        yield* prompt.loop({ sessionID: chat.id })
+
+        const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
+        const wrapper = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
+        expect(wrapper?.info.role).toBe("assistant")
+        if (!wrapper || wrapper.info.role !== "assistant") return
+        expect(wrapper.info.cost).toBeCloseTo(0.42, 6)
+      }),
+      { git: true, config: providerCfg },
+    ),
+  30_000,
+)
+// kilocode_change end
+
 it.live(
   "cancel with queued callers resolves all cleanly",
   () =>
@@ -885,7 +944,13 @@ it.live(
   10_000, // kilocode_change
 )
 
-// kilocode_change start - skip flaky test, tracked in #8990
+// kilocode_change start - #9492: the upstream fork-based shape of this test
+// loses Instance AsyncLocalStorage context in the second forked prompt, which
+// surfaces as a "No context found for instance" die before the queue behavior
+// can be exercised. The Kilo queue semantics (in-flight stream drains, second
+// LLM request ends with the queued user message) are covered end-to-end in
+// packages/opencode/test/kilocode/session-prompt-queue.test.ts — keep this
+// upstream scaffold skipped so future OpenCode merges remain friction-free.
 it.live.skip(
   "prompt submitted during an active run is included in the next LLM input",
   // kilocode_change end
@@ -1079,6 +1144,32 @@ unix("shell completes a fast command on the preferred shell", () =>
     { git: true, config: cfg },
   ),
 )
+
+// kilocode_change start - port anomalyco/opencode#24215 cover shell cwd changes (agent "build" → "code" for our fork)
+unix("shell commands can change directory after startup", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        const { prompt, run, chat } = yield* boot()
+        const parent = path.dirname(dir)
+        const result = yield* prompt.shell({
+          sessionID: chat.id,
+          agent: "code",
+          command: "cd .. && pwd",
+        })
+
+        expect(result.info.role).toBe("assistant")
+        const tool = completedTool(result.parts)
+        if (!tool) return
+
+        expect(tool.state.output).toContain(parent)
+        expect(tool.state.metadata.output).toContain(parent)
+        yield* run.assertNotBusy(chat.id)
+      }),
+    { git: true, config: cfg },
+  ),
+)
+// kilocode_change end
 
 unix("shell lists files from the project directory", () =>
   provideTmpdirInstance(

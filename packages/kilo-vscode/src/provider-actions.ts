@@ -17,6 +17,10 @@ import { KILO_AUTO, parseModelString } from "./shared/provider-model"
  */
 type AuthState = "api" | "oauth" | "wellknown"
 
+function disabledWithout(list: string[] | undefined, id: string) {
+  return (list ?? []).filter((item) => item !== id)
+}
+
 /** Fetch auth methods alongside the provider list. Auth states default to empty (endpoint not yet available). */
 export async function fetchProviderData(client: KiloClient, dir: string) {
   const authRequest =
@@ -232,6 +236,9 @@ export async function disconnectProvider(
   try {
     const globalConfig = (await ctx.client.global.config.get({ throwOnError: true })).data ?? {}
     const configured = !!globalConfig.provider?.[id]
+    const { response } = await fetchProviderData(ctx.client, ctx.workspaceDir)
+    const active = response.all.find((item) => item.id === id)
+    const oauth = active?.source === "custom" && configured
 
     // Remove auth store entry. Config-sourced providers may not have an auth
     // store entry (credentials come from config or env), so failure is non-fatal.
@@ -251,7 +258,7 @@ export async function disconnectProvider(
     // server rebuilds state from config. Add to disabled_providers so the server
     // excludes them. The config entry is preserved (user may re-enable later).
     // This matches the desktop app's disableProvider() pattern.
-    if (configured) {
+    if (configured && !oauth) {
       const disabled = globalConfig.disabled_providers ?? []
       if (!disabled.includes(id)) {
         const merged = (
@@ -259,6 +266,19 @@ export async function disconnectProvider(
             { config: { disabled_providers: [...disabled, id] } },
             { throwOnError: true },
           )
+        ).data
+        if (merged) {
+          setCachedConfig({ type: "configLoaded", config: merged })
+          ctx.postMessage({ type: "configUpdated", config: merged })
+        }
+      }
+    }
+
+    if (oauth) {
+      const disabled = disabledWithout(globalConfig.disabled_providers, id)
+      if (disabled.length !== (globalConfig.disabled_providers ?? []).length) {
+        const merged = (
+          await ctx.client.global.config.update({ config: { disabled_providers: disabled } }, { throwOnError: true })
         ).data
         if (merged) {
           setCachedConfig({ type: "configLoaded", config: merged })
