@@ -33,7 +33,7 @@
     "@ai-sdk/anthropic": "3.0.71",
     "@ai-sdk/openai": "3.0.48",
     "@ai-sdk/openai-compatible": "2.0.37",
-    "@openrouter/ai-sdk-provider": "2.5.1",
+    "@openrouter/ai-sdk-provider": "2.8.1",
     "@clack/prompts": "1.0.0-alpha.1",
     "ai": "catalog:",
     "open": "10.1.2",
