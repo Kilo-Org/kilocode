@@ -75,6 +75,7 @@ const ProvidersTab: Component = () => {
       if (cfg?.npm === "@ai-sdk/openai-compatible") return language.t("settings.providers.tag.custom")
       return language.t("settings.providers.tag.config")
     }
+    if (item.id === "openai" && current === "custom") return language.t("settings.providers.tag.chatgpt")
     if (current === "custom") return language.t("settings.providers.tag.custom")
     return language.t("settings.providers.tag.other")
   }
@@ -119,6 +120,16 @@ const ProvidersTab: Component = () => {
       return
     }
     dialog.show(() => <ProviderConnectDialog providerID={item.id} />)
+  }
+
+  function connectChatGPT(item: Provider) {
+    dialog.show(() => <ProviderConnectDialog providerID={item.id} oauthOnly />)
+  }
+
+  function chatgpt(item: Provider) {
+    if (item.id !== "openai") return false
+    if (source(item) === "custom") return false
+    return (provider.authMethods()[item.id] ?? []).some((method) => method.type === "oauth")
   }
 
   return (
@@ -200,9 +211,8 @@ const ProvidersTab: Component = () => {
                   </span>
                   <Tag>{sourceTag(item)}</Tag>
                 </div>
-                <Show
-                  when={canDisconnect(item)}
-                  fallback={
+                <div style={{ display: "flex", "align-items": "center", gap: "4px" }}>
+                  <Show when={!canDisconnect(item)}>
                     <span
                       style={{
                         "font-size": "14px",
@@ -212,9 +222,13 @@ const ProvidersTab: Component = () => {
                     >
                       {language.t("settings.providers.connected.environmentDescription")}
                     </span>
-                  }
-                >
-                  <div style={{ display: "flex", gap: "4px" }}>
+                  </Show>
+                  <Show when={chatgpt(item)}>
+                    <Button size="large" variant="ghost" onClick={() => connectChatGPT(item)}>
+                      {language.t("settings.providers.action.signInChatGPT")}
+                    </Button>
+                  </Show>
+                  <Show when={canDisconnect(item)}>
                     <Show when={isCustom(item)}>
                       <Button size="large" variant="ghost" onClick={() => editProvider(item)}>
                         {language.t("provider.custom.edit.title")}
@@ -223,8 +237,8 @@ const ProvidersTab: Component = () => {
                     <Button size="large" variant="ghost" onClick={() => disconnect(item.id, item.name)}>
                       {language.t("common.disconnect")}
                     </Button>
-                  </div>
-                </Show>
+                  </Show>
+                </div>
               </div>
             )}
           </For>

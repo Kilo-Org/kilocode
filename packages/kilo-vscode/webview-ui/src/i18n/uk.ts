@@ -745,10 +745,12 @@ export const dict = {
   "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Середовище",
   "settings.providers.tag.config": "Конфігурація",
+  "settings.providers.tag.chatgpt": "ChatGPT",
   "settings.providers.tag.custom": "Власний",
   "settings.providers.tag.customProvider": "Власний провайдер",
   "settings.providers.tag.other": "Інші",
   "settings.providers.connected.environmentDescription": "Підключено зі змінних середовища",
+  "settings.providers.action.signInChatGPT": "Увійти через ChatGPT",
   "settings.providers.custom.description": "Додати OpenAI-сумісного провайдера через базовий URL.",
 
   "provider.custom.title": "Власний провайдер",

@@ -744,10 +744,12 @@ export const dict = {
   "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Ortam",
   "settings.providers.tag.config": "Yapılandırma",
+  "settings.providers.tag.chatgpt": "ChatGPT",
   "settings.providers.tag.custom": "Özel",
   "settings.providers.tag.customProvider": "Özel sağlayıcı",
   "settings.providers.tag.other": "Diğer",
   "settings.providers.connected.environmentDescription": "Ortam değişkenlerinizden bağlandı",
+  "settings.providers.action.signInChatGPT": "ChatGPT ile oturum aç",
   "settings.providers.custom.description": "Temel URL üzerinden OpenAI uyumlu bir sağlayıcı ekleyin.",
 
   "provider.custom.title": "Özel sağlayıcı",

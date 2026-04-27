@@ -743,10 +743,12 @@ export const dict = {
   "settings.providers.tag.gateway": "Gateway",
   "settings.providers.tag.environment": "Omgeving",
   "settings.providers.tag.config": "Config",
+  "settings.providers.tag.chatgpt": "ChatGPT",
   "settings.providers.tag.custom": "Aangepast",
   "settings.providers.tag.customProvider": "Aangepaste provider",
   "settings.providers.tag.other": "Overige",
   "settings.providers.connected.environmentDescription": "Gekoppeld via je omgevingsvariabelen",
+  "settings.providers.action.signInChatGPT": "Inloggen met ChatGPT",
   "settings.providers.custom.description": "Voeg een OpenAI-compatibele provider toe via basis-URL.",
 
   "provider.custom.title": "Aangepaste provider",
