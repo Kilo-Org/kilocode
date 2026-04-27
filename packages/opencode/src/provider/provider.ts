@@ -1217,12 +1217,22 @@ const layer: Layer.Layer<
           database[providerID] = parsed
         }
 
+        // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
+        const auths = yield* auth.all().pipe(Effect.orDie)
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
           const providerID = ProviderID.make(id)
           if (disabled.has(providerID)) continue
+          // kilocode_change start - prefer explicit OAuth auth over inherited env credentials
+          if (
+            auths[providerID]?.type === "oauth" &&
+            plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
+          ) {
+            continue
+          }
           const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
+          // kilocode_change end
           if (!apiKey) continue
           mergeProvider(providerID, {
             source: "env",
@@ -1231,7 +1241,6 @@ const layer: Layer.Layer<
         }
 
         // load apikeys
-        const auths = yield* auth.all().pipe(Effect.orDie)
         for (const [id, provider] of Object.entries(auths)) {
           const providerID = ProviderID.make(id)
           if (disabled.has(providerID)) continue
@@ -1291,8 +1300,13 @@ const layer: Layer.Layer<
         // load config - re-apply with updated data
         for (const [id, provider] of configProviders) {
           const providerID = ProviderID.make(id)
-          const partial: Partial<Info> = { source: "config" }
+          // kilocode_change start - keep OAuth plugin source when config and Codex auth coexist
+          const oauth =
+            auths[providerID]?.type === "oauth" &&
+            plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
+          const partial: Partial<Info> = oauth ? {} : { source: "config" }
           if (provider.env) partial.env = provider.env
+          // kilocode_change end
           if (provider.name) partial.name = provider.name
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)

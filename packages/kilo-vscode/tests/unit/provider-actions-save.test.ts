@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
+import { disconnectProvider, fetchProviderData, saveCustomProvider } from "../../src/provider-actions"
 
 type ExistingGlobal = { disabled_providers?: string[]; provider?: Record<string, unknown> }
 
@@ -25,6 +25,24 @@ function createCtx(existing: ExistingGlobal = { disabled_providers: [] }) {
           calls.remove.push(input)
           return { data: true }
         },
+      },
+      provider: {
+        list: async () => ({
+          data: {
+            all: [
+              {
+                id: "openai",
+                name: "OpenAI",
+                source: "custom",
+                env: [],
+                models: {},
+              },
+            ],
+            connected: ["openai"],
+            default: {},
+          },
+        }),
+        auth: async () => ({ data: {} }),
       },
       global: {
         config: {
@@ -63,6 +81,26 @@ function createProvider() {
     },
   }
 }
+
+describe("disconnectProvider", () => {
+  it("keeps configured provider enabled after disconnecting oauth override", async () => {
+    const existing = {
+      disabled_providers: ["openai", "groq"],
+      provider: {
+        openai: {
+          options: { apiKey: "sk-test" },
+        },
+      },
+    }
+    const { ctx, calls, setCachedConfig } = createCtx(existing)
+
+    await disconnectProvider(ctx, "req", "openai", null, setCachedConfig)
+
+    expect(calls.remove).toEqual([{ providerID: "openai" }])
+    expect(calls.config).toEqual([{ config: { disabled_providers: ["groq"] } }])
+    expect(calls.refresh).toBe(1)
+  })
+})
 
 describe("saveCustomProvider", () => {
   it("preserves auth when the api key field is unchanged", async () => {

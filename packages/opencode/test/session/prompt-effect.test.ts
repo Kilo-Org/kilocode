@@ -885,7 +885,13 @@ it.live(
   10_000, // kilocode_change
 )
 
-// kilocode_change start - skip flaky test, tracked in #8990
+// kilocode_change start - #9492: the upstream fork-based shape of this test
+// loses Instance AsyncLocalStorage context in the second forked prompt, which
+// surfaces as a "No context found for instance" die before the queue behavior
+// can be exercised. The Kilo queue semantics (in-flight stream drains, second
+// LLM request ends with the queued user message) are covered end-to-end in
+// packages/opencode/test/kilocode/session-prompt-queue.test.ts — keep this
+// upstream scaffold skipped so future OpenCode merges remain friction-free.
 it.live.skip(
   "prompt submitted during an active run is included in the next LLM input",
   // kilocode_change end
@@ -1079,6 +1085,32 @@ unix("shell completes a fast command on the preferred shell", () =>
     { git: true, config: cfg },
   ),
 )
+
+// kilocode_change start - port anomalyco/opencode#24215 cover shell cwd changes (agent "build" → "code" for our fork)
+unix("shell commands can change directory after startup", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        const { prompt, run, chat } = yield* boot()
+        const parent = path.dirname(dir)
+        const result = yield* prompt.shell({
+          sessionID: chat.id,
+          agent: "code",
+          command: "cd .. && pwd",
+        })
+
+        expect(result.info.role).toBe("assistant")
+        const tool = completedTool(result.parts)
+        if (!tool) return
+
+        expect(tool.state.output).toContain(parent)
+        expect(tool.state.metadata.output).toContain(parent)
+        yield* run.assertNotBusy(chat.id)
+      }),
+    { git: true, config: cfg },
+  ),
+)
+// kilocode_change end
 
 unix("shell lists files from the project directory", () =>
   provideTmpdirInstance(

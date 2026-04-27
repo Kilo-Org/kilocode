@@ -14,6 +14,7 @@ import { Env } from "../../src/env"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
+import { Auth } from "../../src/auth" // kilocode_change
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -87,6 +88,50 @@ test("provider loaded from env variable", async () => {
     },
   })
 })
+
+// kilocode_change start
+test("provider OAuth auth overrides inherited env variable", async () => {
+  await Auth.remove("openai")
+  await Auth.set("openai", {
+    type: "oauth",
+    refresh: "test-refresh-token",
+    access: "test-access-token",
+    expires: Date.now() + 60_000,
+  })
+
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      init: async () => {
+        set("OPENAI_API_KEY", "test-openai-key")
+      },
+      fn: async () => {
+        const providers = await list()
+        const provider = providers[ProviderID.openai]
+        expect(provider).toBeDefined()
+        if (!provider) throw new Error("Expected OpenAI provider")
+        expect(provider.source).toBe("custom")
+        expect(provider.key).toBeUndefined()
+        expect(Object.values(provider.models).every((model) => model.cost.input === 0 && model.cost.output === 0)).toBe(
+          true,
+        )
+      },
+    })
+  } finally {
+    await Auth.remove("openai")
+  }
+})
+// kilocode_change end
 
 test("provider loaded from config with apiKey option", async () => {
   await using tmp = await tmpdir({
