@@ -1,56 +1,11 @@
 import { describe, it, expect, mock } from "bun:test"
 
-const base = "../../src/agent-manager"
-
-mock.module(`${base}/WorktreeManager`, () => ({ WorktreeManager: class {} }))
-mock.module(`${base}/WorktreeStateManager`, () => ({
-  WorktreeStateManager: class {},
-  remoteRef: (branch: string) => branch,
-}))
-mock.module(`${base}/GitStatsPoller`, () => ({
-  GitStatsPoller: class {
-    setEnabled() {}
-    stop() {}
-  },
-}))
-mock.module(`${base}/GitOps`, () => ({ GitOps: class {} }))
-mock.module(`${base}/SetupScriptService`, () => ({
-  SetupScriptService: class {
-    hasScript() {
-      return false
-    }
-  },
-}))
-mock.module(`${base}/SetupScriptRunner`, () => ({
-  SetupScriptRunner: class {
-    async runIfConfigured() {
-      return false
-    }
-  },
-}))
-mock.module(`${base}/SessionTerminalManager`, () => ({
-  SessionTerminalManager: class {
-    showTerminal() {}
-    showLocalTerminal() {}
-    syncLocalOnSessionSwitch() {}
-    syncOnSessionSwitch() {
-      return false
-    }
-    dispose() {}
-  },
-}))
-mock.module(`${base}/terminal-host`, () => ({ createTerminalHost: () => ({}) }))
-mock.module(`${base}/format-keybinding`, () => ({
-  formatKeybinding: (value: string) => value,
-  buildKeybindingMap: () => ({}),
-}))
-mock.module(`${base}/branch-name`, () => ({ versionedName: () => ({ branch: "branch", label: "label" }) }))
-mock.module(`${base}/git-import`, () => ({
-  normalizePath: (value: string) => value,
-  classifyWorktreeError: (err: unknown) => ({ kind: "unknown" as const, error: err }),
-  classifyPRError: () => "unknown" as const,
-}))
-
+// The tests build an AgentManagerProvider harness via Object.create, so the
+// constructor never runs and none of its collaborators are instantiated. The
+// real modules import cleanly under the shared vscode preload, so we skip the
+// sprawling per-dep mock.module() dance the original vitest spec used — those
+// mocks would collide with sibling test files that exercise the same modules
+// for real (e.g. tests/unit/setup-script-service.test.ts).
 const { AgentManagerProvider } = await import("../../src/agent-manager/AgentManagerProvider")
 type Host = import("../../src/agent-manager/host").Host
 type OutputHandle = import("../../src/agent-manager/host").OutputHandle

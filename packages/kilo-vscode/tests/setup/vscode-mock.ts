@@ -70,6 +70,10 @@ const mockVscode = {
     tabGroups: { all: [] },
     showTextDocument: async () => {},
     showWarningMessage: async () => undefined,
+    showErrorMessage: async () => undefined,
+    showInformationMessage: async () => undefined,
+    withProgress: async (_options: unknown, task: (...args: unknown[]) => unknown) =>
+      task({}, { onCancellationRequested: noop }),
     createTerminal: () => ({ show: noop, sendText: noop, dispose: noop }),
     createStatusBarItem: () => ({
       text: "",
@@ -84,6 +88,21 @@ const mockVscode = {
   commands: {
     registerCommand: () => ({ dispose: noop }),
     executeCommand: async () => {},
+  },
+  languages: {
+    registerInlineCompletionItemProvider: () => ({ dispose: noop }),
+    registerCodeActionsProvider: () => ({ dispose: noop }),
+  },
+  ProgressLocation: {
+    SourceControl: 1,
+    Window: 10,
+    Notification: 15,
+  },
+  InlineCompletionTriggerKind: { Invoke: 0, Automatic: 1 },
+  CancellationTokenSource: class {
+    token = { isCancellationRequested: false, onCancellationRequested: noop }
+    cancel = noop
+    dispose = noop
   },
   CodeAction: class {
     command?: { command: string; title: string }

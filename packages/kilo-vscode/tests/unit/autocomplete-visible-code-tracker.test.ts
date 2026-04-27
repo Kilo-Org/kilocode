@@ -1,21 +1,19 @@
-import { describe, it, expect, mock, beforeEach } from "bun:test"
+import { describe, it, expect, mock, beforeEach, spyOn } from "bun:test"
+import * as vscode from "vscode"
 
-// Replace the shared vscode preload with a minimal shape this file drives directly.
-mock.module("vscode", () => ({
-  window: {
-    visibleTextEditors: [] as unknown[],
-    activeTextEditor: null,
-  },
-  workspace: {
-    asRelativePath: (p: string) => p.replace(/^\/workspace\//, ""),
-  },
-}))
+// Piggy-back on the shared vscode preload rather than replacing the module —
+// mock.module("vscode") would leak into other test files' expectations.
+spyOn(vscode.workspace, "asRelativePath").mockImplementation((p: string | vscode.Uri) => {
+  const path = typeof p === "string" ? p : p.fsPath
+  return path.replace(/^\/workspace\//, "")
+})
+;(vscode.window as unknown as { visibleTextEditors: unknown[] }).visibleTextEditors = []
+;(vscode.window as unknown as { activeTextEditor: unknown }).activeTextEditor = null
 
 mock.module("../../src/services/autocomplete/continuedev/core/indexing/ignore", () => ({
   isSecurityConcern: (filePath: string) => filePath.includes(".env") || filePath.includes("credentials"),
 }))
 
-const vscode = (await import("vscode")) as typeof import("vscode")
 const { VisibleCodeTracker } = await import("../../src/services/autocomplete/context/VisibleCodeTracker")
 // Alias vi to Bun's mock so tests below keep reading naturally.
 const vi = { fn: mock, clearAllMocks: () => mock.clearAllMocks() }

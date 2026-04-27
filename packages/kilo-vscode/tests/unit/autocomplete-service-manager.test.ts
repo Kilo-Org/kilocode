@@ -1,58 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
+import * as vscode from "vscode"
 
-const registerInlineCompletionItemProvider = mock(() => ({ dispose: mock() }))
+// Keep the shared vscode preload in place; just instrument the bits we observe.
+const registerInlineCompletionItemProvider = spyOn(
+  vscode.languages,
+  "registerInlineCompletionItemProvider",
+).mockImplementation(() => ({ dispose: mock() }))
 
 let activeTextEditor: unknown = null
-
-mock.module("vscode", () => {
-  class Position {
-    constructor(
-      public line: number,
-      public character: number,
-    ) {}
-  }
-  class Range {
-    constructor(
-      public start: unknown,
-      public end: unknown,
-    ) {}
-  }
-  class CancellationTokenSource {
-    token = { isCancellationRequested: false, onCancellationRequested: mock() }
-    dispose = mock()
-  }
-
-  return {
-    Uri: {
-      parse: (uri: string) => ({
-        toString: () => uri,
-        fsPath: uri.replace("file://", ""),
-        scheme: "file",
-        path: uri.replace("file://", ""),
-      }),
-    },
-    Position,
-    Range,
-    CancellationTokenSource,
-    InlineCompletionTriggerKind: { Invoke: 1 },
-    ConfigurationTarget: { Global: 1 },
-    window: {
-      get activeTextEditor() {
-        return activeTextEditor
-      },
-      showWarningMessage: mock(() => Promise.resolve(undefined)),
-    },
-    workspace: {
-      workspaceFolders: [{ uri: { fsPath: "/repo" } }],
-      getConfiguration: () => ({
-        get: (_key: string, fallback?: unknown) => fallback,
-        update: mock(() => Promise.resolve()),
-      }),
-    },
-    languages: { registerInlineCompletionItemProvider },
-    commands: { executeCommand: mock(() => Promise.resolve()) },
-    env: { openExternal: mock() },
-  }
+Object.defineProperty(vscode.window, "activeTextEditor", {
+  configurable: true,
+  get: () => activeTextEditor,
 })
 
 mock.module("../../src/services/autocomplete/AutocompleteModel", () => ({
@@ -99,7 +57,6 @@ mock.module("../../src/services/telemetry", () => ({
   TelemetryEventName: { INLINE_ASSIST_AUTO_TASK: "inline_assist_auto_task", GHOST_SERVICE_DISABLED: "disabled" },
 }))
 
-const vscode = (await import("vscode")) as typeof import("vscode")
 const { AutocompleteServiceManager } = await import("../../src/services/autocomplete/AutocompleteServiceManager")
 
 function createManager() {

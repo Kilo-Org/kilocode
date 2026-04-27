@@ -1,29 +1,25 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test"
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test"
+import * as vscode from "vscode"
 
-// Hand-rolled vscode shim so we can observe interactions without pulling in
-// the shared preload's generic stub (it omits ProgressLocation etc.).
-const registerCommand = mock((_command: string, cb: (...args: unknown[]) => unknown) => {
-  lastRegistration = { command: _command, cb }
+// Augment the shared vscode preload with the bits the service uses. Using spyOn
+// keeps the override local — a whole mock.module("vscode", ...) would leak into
+// every other test file.
+let lastRegistration: { command: string; cb: (...args: unknown[]) => unknown } | null = null
+const registerCommand = spyOn(vscode.commands, "registerCommand").mockImplementation((command: string, cb: unknown) => {
+  lastRegistration = { command, cb: cb as (...args: unknown[]) => unknown }
   return { dispose: mock() }
 })
-const showErrorMessage = mock(() => Promise.resolve(undefined))
-const withProgress = mock(async (_options: unknown, task: (...args: unknown[]) => unknown) => {
-  await task({}, { onCancellationRequested: mock() })
-})
-const getExtension = mock(() => undefined)
+const showErrorMessage = spyOn(vscode.window, "showErrorMessage").mockImplementation(
+  () => Promise.resolve(undefined) as ReturnType<typeof vscode.window.showErrorMessage>,
+)
+const withProgress = spyOn(vscode.window, "withProgress").mockImplementation(
+  async (_options: unknown, task: (...args: unknown[]) => unknown) => {
+    await task({}, { onCancellationRequested: mock() })
+    return undefined as never
+  },
+)
+const getExtension = spyOn(vscode.extensions, "getExtension").mockImplementation(() => undefined)
 
-let lastRegistration: { command: string; cb: (...args: unknown[]) => unknown } | null = null
-
-mock.module("vscode", () => ({
-  commands: { registerCommand },
-  window: { showErrorMessage, withProgress },
-  workspace: { workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }] },
-  extensions: { getExtension },
-  ProgressLocation: { SourceControl: 1 },
-  Uri: { parse: (s: string) => ({ fsPath: s }) },
-}))
-
-const vscode = (await import("vscode")) as typeof import("vscode")
 const { registerCommitMessageService } = await import("../../src/services/commit-message")
 
 type KiloConnectionService = import("../../src/services/cli-backend/connection-service").KiloConnectionService
@@ -47,7 +43,7 @@ describe("commit-message service", () => {
     registerCommand.mockClear()
     showErrorMessage.mockClear()
     withProgress.mockClear()
-    getExtension.mockReset()
+    getExtension.mockReset().mockImplementation(() => undefined)
     lastRegistration = null
 
     context = { subscriptions: [] } as unknown as import("vscode").ExtensionContext
@@ -74,10 +70,7 @@ describe("commit-message service", () => {
     it("registers the kilo-code.new.generateCommitMessage command", () => {
       registerCommitMessageService(context, connection)
 
-      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-        "kilo-code.new.generateCommitMessage",
-        expect.any(Function),
-      )
+      expect(registerCommand).toHaveBeenCalledWith("kilo-code.new.generateCommitMessage", expect.any(Function))
     })
 
     it("pushes the command disposable to context.subscriptions", () => {
@@ -95,7 +88,7 @@ describe("commit-message service", () => {
     }
 
     it("shows error when git extension is not found", async () => {
-      getExtension.mockReturnValue(undefined)
+      getExtension.mockImplementation(() => undefined)
 
       await invoke()
 
@@ -103,7 +96,7 @@ describe("commit-message service", () => {
     })
 
     it("shows error when no git repository is found", async () => {
-      getExtension.mockReturnValue(makeExtension([]) as unknown as undefined)
+      getExtension.mockImplementation(() => makeExtension([]) as never)
 
       await invoke()
 
@@ -111,8 +104,8 @@ describe("commit-message service", () => {
     })
 
     it("shows error when backend fails to connect", async () => {
-      getExtension.mockReturnValue(
-        makeExtension([{ inputBox: { value: "" }, rootUri: { fsPath: "/repo" } }]) as unknown as undefined,
+      getExtension.mockImplementation(
+        () => makeExtension([{ inputBox: { value: "" }, rootUri: { fsPath: "/repo" } }]) as never,
       )
       connection.getClientAsync = mock(() => Promise.reject(new Error("Connect failed")))
 
@@ -123,8 +116,8 @@ describe("commit-message service", () => {
 
     it("auto-connects backend and generates message when client not yet ready", async () => {
       const inputBox = { value: "" }
-      getExtension.mockReturnValue(
-        makeExtension([{ inputBox, rootUri: { fsPath: "/auto-connect-repo" } }]) as unknown as undefined,
+      getExtension.mockImplementation(
+        () => makeExtension([{ inputBox, rootUri: { fsPath: "/auto-connect-repo" } }]) as never,
       )
 
       await invoke()
@@ -135,7 +128,7 @@ describe("commit-message service", () => {
 
     it("calls commitMessage.generate on the SDK client with repository root path", async () => {
       const inputBox = { value: "" }
-      getExtension.mockReturnValue(makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as unknown as undefined)
+      getExtension.mockImplementation(() => makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as never)
 
       await invoke()
 
@@ -147,7 +140,7 @@ describe("commit-message service", () => {
 
     it("sets the generated message on the repository inputBox", async () => {
       const inputBox = { value: "" }
-      getExtension.mockReturnValue(makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as unknown as undefined)
+      getExtension.mockImplementation(() => makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as never)
 
       await invoke()
 
@@ -156,7 +149,7 @@ describe("commit-message service", () => {
 
     it("shows cancellable progress in SourceControl location", async () => {
       const inputBox = { value: "" }
-      getExtension.mockReturnValue(makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as unknown as undefined)
+      getExtension.mockImplementation(() => makeExtension([{ inputBox, rootUri: { fsPath: "/repo" } }]) as never)
 
       await invoke()
 
@@ -173,11 +166,12 @@ describe("commit-message service", () => {
     it("uses the matching repository when SourceControl arg is provided", async () => {
       const main = { value: "" }
       const worktree = { value: "" }
-      getExtension.mockReturnValue(
-        makeExtension([
-          { inputBox: main, rootUri: { fsPath: "/main-repo" } },
-          { inputBox: worktree, rootUri: { fsPath: "/worktree-repo" } },
-        ]) as unknown as undefined,
+      getExtension.mockImplementation(
+        () =>
+          makeExtension([
+            { inputBox: main, rootUri: { fsPath: "/main-repo" } },
+            { inputBox: worktree, rootUri: { fsPath: "/worktree-repo" } },
+          ]) as never,
       )
 
       await invoke({ rootUri: { fsPath: "/worktree-repo" } })
@@ -188,8 +182,8 @@ describe("commit-message service", () => {
 
     it("falls back to first repository when SourceControl arg has no match", async () => {
       const main = { value: "" }
-      getExtension.mockReturnValue(
-        makeExtension([{ inputBox: main, rootUri: { fsPath: "/main-repo" } }]) as unknown as undefined,
+      getExtension.mockImplementation(
+        () => makeExtension([{ inputBox: main, rootUri: { fsPath: "/main-repo" } }]) as never,
       )
 
       await invoke({ rootUri: { fsPath: "/nonexistent-repo" } })
