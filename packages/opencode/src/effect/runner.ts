@@ -160,7 +160,11 @@ export const make = <A, E = never>(
             const exit = yield* Fiber.await(fiber)
             if (Exit.isSuccess(exit)) return exit.value
             // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
-            if ((shell.cancelled || Cause.hasInterruptsOnly(exit.cause)) && onInterrupt) return yield* onInterrupt
+            const err = Cause.squash(exit.cause)
+            const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
+            if ((Cause.hasInterruptsOnly(exit.cause) || (shell.cancelled && signal)) && onInterrupt) {
+              return yield* onInterrupt
+            }
             // kilocode_change end
             return yield* Effect.failCause(exit.cause)
           }),
