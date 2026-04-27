@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { expect, test } from "bun:test"
-import { cliCommand } from "../../src/cli/cmd/pr"
+import { cliCommand } from "../../src/kilocode/cli/cmd/pr-cli"
 
 test("cliCommand uses the current script when argv[1] is a file path", () => {
   const result = cliCommand({

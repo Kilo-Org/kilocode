@@ -4,27 +4,7 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { Git } from "@/git"
 import { Instance } from "@/project/instance"
 import { Process } from "@/util"
-import { existsSync } from "node:fs" // kilocode_change
-
-const subcommand = "pr" // kilocode_change
-
-// kilocode_change start - resolve the currently running CLI instead of hardcoding opencode
-export function cliCommand(
-  input = {
-    execPath: process.execPath,
-    argv: process.argv,
-    exists: existsSync,
-  },
-) {
-  const script = input.argv[1]
-  if (!script) return [input.execPath]
-  if (script === subcommand) return [input.execPath] // kilocode_change
-  if (script.startsWith("/$bunfs/root/")) return [input.execPath]
-  if (script.startsWith("B:/~BUN/root/")) return [input.execPath]
-  if (input.exists(script)) return [input.execPath, script]
-  return [input.execPath]
-}
-// kilocode_change end
+import { cliCommand, subcommand } from "@/kilocode/cli/cmd/pr-cli" // kilocode_change
 
 export const PrCommand = cmd({
   command: `${subcommand} <number>`, // kilocode_change
