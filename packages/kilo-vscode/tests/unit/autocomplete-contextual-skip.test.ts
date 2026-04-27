@@ -1,4 +1,8 @@
-import { getTerminatorsForLanguage, shouldSkipAutocomplete } from "../contextualSkip"
+import { describe, it, expect } from "bun:test"
+import {
+  getTerminatorsForLanguage,
+  shouldSkipAutocomplete,
+} from "../../src/services/autocomplete/classic-auto-complete/contextualSkip"
 
 /**
  * Tests for shouldSkipAutocomplete behavior.
