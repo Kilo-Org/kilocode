@@ -1217,9 +1217,8 @@ const layer: Layer.Layer<
           database[providerID] = parsed
         }
 
-        // kilocode_change - load auths before env so OAuth plugins can override inherited credentials
+        // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
         const auths = yield* auth.all().pipe(Effect.orDie)
-
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
@@ -1232,8 +1231,8 @@ const layer: Layer.Layer<
           ) {
             continue
           }
-          // kilocode_change end
           const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
+          // kilocode_change end
           if (!apiKey) continue
           mergeProvider(providerID, {
             source: "env",
@@ -1306,8 +1305,8 @@ const layer: Layer.Layer<
             auths[providerID]?.type === "oauth" &&
             plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
           const partial: Partial<Info> = oauth ? {} : { source: "config" }
-          // kilocode_change end
           if (provider.env) partial.env = provider.env
+          // kilocode_change end
           if (provider.name) partial.name = provider.name
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)

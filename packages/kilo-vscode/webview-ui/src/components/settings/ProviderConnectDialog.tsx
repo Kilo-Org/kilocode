@@ -50,7 +50,8 @@ const ProviderConnectDialog: Component<ProviderConnectDialogProps> = (props) => 
   const item = createMemo(() => provider.providers()[props.providerID])
   const name = () => item()?.name ?? props.providerID
   const methods = createMemo<ProviderAuthMethod[]>(() => {
-    const list = provider.authMethods()[props.providerID] ?? fallbackMethods(language.t("provider.connect.method.apiKey"))
+    const list =
+      provider.authMethods()[props.providerID] ?? fallbackMethods(language.t("provider.connect.method.apiKey"))
     if (props.oauthOnly) return list.filter((item) => item.type === "oauth")
     return list
   })

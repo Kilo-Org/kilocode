@@ -14,7 +14,7 @@ import { Env } from "../../src/env"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
-import { Auth } from "../../src/auth"
+import { Auth } from "../../src/auth" // kilocode_change
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -89,6 +89,7 @@ test("provider loaded from env variable", async () => {
   })
 })
 
+// kilocode_change start
 test("provider OAuth auth overrides inherited env variable", async () => {
   await Auth.remove("openai")
   await Auth.set("openai", {
@@ -130,6 +131,7 @@ test("provider OAuth auth overrides inherited env variable", async () => {
     await Auth.remove("openai")
   }
 })
+// kilocode_change end
 
 test("provider loaded from config with apiKey option", async () => {
   await using tmp = await tmpdir({

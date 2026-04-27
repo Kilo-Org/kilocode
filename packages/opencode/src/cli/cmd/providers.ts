@@ -391,7 +391,7 @@ export const ProvidersLoginCommand = cmd({
               hint: {
                 kilo: "recommended", // kilocode_change
                 opencode: "recommended",
-                openai: "ChatGPT login or API key",
+                openai: "ChatGPT login or API key", // kilocode_change
               }[x.id],
             })),
           ),
@@ -409,8 +409,8 @@ export const ProvidersLoginCommand = cmd({
           const byName = options.find((x) => x.label.toLowerCase() === input.toLowerCase())
           // kilocode_change start - accept codex as an alias for OpenAI ChatGPT auth
           const alias = input.toLowerCase() === "codex" ? options.find((x) => x.value === "openai") : undefined
-          // kilocode_change end
           const match = byID ?? byName ?? alias
+          // kilocode_change end
           if (!match) {
             prompts.log.error(`Unknown provider "${input}"`)
             process.exit(1)
