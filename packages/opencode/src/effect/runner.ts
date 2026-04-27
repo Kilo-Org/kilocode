@@ -154,7 +154,7 @@ export const make = <A, E = never>(
         yield* busy
         const id = next()
         const fiber = yield* work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild)
-        const shell = { id, fiber, cancelled: false } satisfies ShellHandle<A, E>
+        const shell = { id, fiber, cancelled: false } satisfies ShellHandle<A, E> // kilocode_change
         return [
           Effect.gen(function* () {
             const exit = yield* Fiber.await(fiber)
