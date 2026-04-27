@@ -167,11 +167,11 @@ export const make = <A, E = never>(
         const fiber = yield* work.pipe(Effect.ensuring(finishShell(id)), Effect.forkChild)
         const shell = { id, fiber, cancelled: false } satisfies ShellHandle<A, E> // kilocode_change
         return [
+          // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
           Effect.uninterruptible(
             Effect.gen(function* () {
               const exit = yield* Fiber.await(fiber)
               if (Exit.isSuccess(exit)) return exit.value
-              // kilocode_change start - cancelled shells may fail with process-signal errors after cleanup
               const ok =
                 exit.cause.reasons.length > 0 &&
                 exit.cause.reasons.every((reason) => {
@@ -183,10 +183,10 @@ export const make = <A, E = never>(
               if ((Cause.hasInterruptsOnly(exit.cause) || (shell.cancelled && ok)) && onInterrupt) {
                 return yield* Effect.uninterruptible(onInterrupt)
               }
-              // kilocode_change end
               return yield* Effect.failCause(exit.cause)
             }),
           ),
+          // kilocode_change end
           { _tag: "Shell", shell },
         ] as const
       }),

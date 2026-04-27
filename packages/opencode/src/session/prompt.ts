@@ -1777,7 +1777,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
       function* (input: ShellInput) {
-        return yield* state.startShell(input.sessionID, shellInterrupt(input), shellImpl(input))
+        return yield* state.startShell(input.sessionID, shellInterrupt(input), shellImpl(input)) // kilocode_change
       },
     )
 
