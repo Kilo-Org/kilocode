@@ -560,143 +560,52 @@ const DefaultPromptSection: Component<{ prompt: string | undefined }> = (props) 
   )
 }
 
-/** Shows the list of available sub-agents that primary modes can delegate to. */
+/** Shows a compact list of sub-agent names that this primary mode can delegate to. */
 const SubagentsSection: Component<{ agents: AgentInfo[] }> = (props) => {
   const language = useLanguage()
-  const [expanded, setExpanded] = createSignal(false)
 
   return (
     <Card style={{ "margin-bottom": "12px" }}>
-      <div
-        style={{
-          display: "flex",
-          "align-items": "center",
-          cursor: "pointer",
-          gap: "6px",
-        }}
-        onClick={() => setExpanded((v) => !v)}
-      >
-        <IconButton
-          size="small"
-          variant="ghost"
-          icon={expanded() ? "chevron-down" : "chevron-right"}
-          onClick={(e: MouseEvent) => {
-            e.stopPropagation()
-            setExpanded((v) => !v)
-          }}
-        />
-        <span data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
-          {language.t("settings.agentBehaviour.editMode.subagents")}
-        </span>
-      </div>
+      <span data-slot="settings-row-label-title" style={{ "margin-bottom": "0" }}>
+        {language.t("settings.agentBehaviour.editMode.subagents")}
+      </span>
       <div
         style={{
           "font-size": "11px",
           color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
           "margin-top": "4px",
-          "padding-left": "30px",
         }}
       >
         {language.t("settings.agentBehaviour.editMode.subagents.description")}
       </div>
-      <Show when={expanded()}>
-        <Show
-          when={props.agents.length > 0}
-          fallback={
-            <div
-              style={{
-                "font-size": "12px",
-                color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-                "margin-top": "8px",
-                "padding-left": "30px",
-                "font-style": "italic",
-              }}
-            >
-              {language.t("settings.agentBehaviour.editMode.subagents.none")}
-            </div>
-          }
-        >
-          <div style={{ "margin-top": "8px" }}>
-            <For each={props.agents}>
-              {(agent, index) => <SubagentCard agent={agent} last={index() === props.agents.length - 1} />}
-            </For>
+      <Show
+        when={props.agents.length > 0}
+        fallback={
+          <div
+            style={{
+              "font-size": "12px",
+              color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+              "margin-top": "8px",
+              "font-style": "italic",
+            }}
+          >
+            {language.t("settings.agentBehaviour.editMode.subagents.none")}
           </div>
-        </Show>
+        }
+      >
+        <ul
+          style={{
+            "margin-top": "8px",
+            "margin-bottom": "0",
+            "padding-left": "18px",
+            "font-size": "13px",
+            "line-height": "1.6",
+          }}
+        >
+          <For each={props.agents}>{(agent) => <li>{agent.name}</li>}</For>
+        </ul>
       </Show>
     </Card>
-  )
-}
-
-/** A single sub-agent card with its name, description, and collapsible prompt. */
-const SubagentCard: Component<{ agent: AgentInfo; last: boolean }> = (props) => {
-  const [open, setOpen] = createSignal(false)
-
-  return (
-    <div
-      style={{
-        padding: "8px 0 8px 30px",
-        "border-bottom": props.last ? "none" : "1px solid var(--border-weak-base)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          "align-items": "center",
-          gap: "6px",
-          cursor: props.agent.prompt ? "pointer" : "default",
-        }}
-        onClick={() => {
-          if (props.agent.prompt) setOpen((v) => !v)
-        }}
-      >
-        <Show when={props.agent.prompt}>
-          <IconButton
-            size="small"
-            variant="ghost"
-            icon={open() ? "chevron-down" : "chevron-right"}
-            onClick={(e: MouseEvent) => {
-              e.stopPropagation()
-              setOpen((v) => !v)
-            }}
-          />
-        </Show>
-        <div style={{ "font-weight": "500", "font-size": "13px" }}>{props.agent.name}</div>
-      </div>
-      <Show when={props.agent.description}>
-        <div
-          style={{
-            "font-size": "11px",
-            color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
-            "margin-top": "2px",
-            "padding-left": props.agent.prompt ? "30px" : "0",
-          }}
-        >
-          {props.agent.description}
-        </div>
-      </Show>
-      <Show when={open() && props.agent.prompt}>
-        <pre
-          style={{
-            "margin-top": "6px",
-            "margin-bottom": "0",
-            padding: "8px 12px",
-            "background-color": "var(--bg-inset-base, var(--vscode-editor-background))",
-            border: "1px solid var(--border-weak-base, var(--vscode-panel-border))",
-            "border-radius": "4px",
-            "font-family": "var(--vscode-editor-font-family, monospace)",
-            "font-size": "12px",
-            "line-height": "1.5",
-            "white-space": "pre-wrap",
-            "word-break": "break-word",
-            "max-height": "300px",
-            "overflow-y": "auto",
-            color: "var(--vscode-editor-foreground)",
-          }}
-        >
-          {props.agent.prompt}
-        </pre>
-      </Show>
-    </div>
   )
 }
 

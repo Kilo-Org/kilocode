@@ -418,9 +418,9 @@ export const ModeEditNativePromptExpanded: Story = {
   render: () => <ExpandedPromptWrapper />,
 }
 
-/** Renders ModeEditView with subagents section visible and collapsed. */
+/** Renders ModeEditView with the sub-agents section visible as a simple name list. */
 export const ModeEditWithSubagents: Story = {
-  name: "ModeEditView — with sub-agents section (collapsed)",
+  name: "ModeEditView — with sub-agents section",
   render: () => {
     const session = {
       ...mockSessionValue({ id: "subagents-story", status: "idle" }),
@@ -451,56 +451,6 @@ export const ModeEditWithSubagents: Story = {
       </StoryProviders>
     )
   },
-}
-
-/** Renders ModeEditView with the sub-agents section expanded to show each sub-agent. */
-function ExpandedSubagentsWrapper() {
-  let ref: HTMLDivElement | undefined
-  onMount(() => {
-    requestAnimationFrame(() => {
-      if (!ref) return
-      // Find all cursor:pointer divs (collapsible section headers) and click the
-      // last one which corresponds to the SubagentsSection.
-      const headers = Array.from(ref.querySelectorAll<HTMLDivElement>("[style*='cursor: pointer']"))
-      const last = headers[headers.length - 1]
-      if (last) {
-        last.click()
-      }
-    })
-  })
-  const session = {
-    ...mockSessionValue({ id: "subagents-expanded", status: "idle" }),
-    agents: () => [
-      {
-        name: "code",
-        displayName: "Code",
-        description: "General-purpose coding agent",
-        mode: "primary" as const,
-        native: true,
-        prompt: MOCK_SYSTEM_PROMPT,
-      },
-    ],
-    subagents: () => MOCK_SUBAGENTS,
-    removeMode: noop,
-    removeMcp: noop,
-    skills: () => [],
-    refreshSkills: noop,
-    removeSkill: noop,
-  }
-  return (
-    <StoryProviders sessionID="subagents-expanded" status="idle">
-      <SessionContext.Provider value={session as any}>
-        <div ref={ref} style={{ "max-height": "700px", overflow: "auto" }}>
-          <ModeEditView name="code" onBack={noop} onRemove={noop} />
-        </div>
-      </SessionContext.Provider>
-    </StoryProviders>
-  )
-}
-
-export const ModeEditSubagentsExpanded: Story = {
-  name: "ModeEditView — with sub-agents section (expanded)",
-  render: () => <ExpandedSubagentsWrapper />,
 }
 
 export const ModeEditExport: Story = {
