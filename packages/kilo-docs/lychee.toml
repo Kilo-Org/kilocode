@@ -9,8 +9,8 @@ retry_wait_time = 5
 exclude_path = ["node_modules"]
 
 accept = [
-  "200", 
-  "403", 
+  "200",
+  "403",
   "429",
   "301",
   "307",
@@ -25,6 +25,10 @@ exclude = [
   '^https?://(api|console)\.mistral\.ai',
   '^https?://(app|console)\.requesty\.ai',
   '^https?://(cloud|console)\.google\.ai',
+  # API endpoint prefixes are valid but return 4xx to plain GET link checks.
+  '^https?://ai-gateway\.vercel\.sh/v1/?$',
+  '^https?://api\.voyageai\.com/v1/embeddings/?$',
+  '^https?://generativelanguage\.googleapis\.com/v1beta/openai/?$',
   'https://opencode.ai/pages/config',
   '^localhost:3000/',
   'https://tbench.ai/',

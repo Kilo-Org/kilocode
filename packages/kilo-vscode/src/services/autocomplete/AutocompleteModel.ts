@@ -1,11 +1,10 @@
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
-
-const DEFAULT_MODEL = "mistralai/codestral-2508"
-const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
+  private currentModel: string = DEFAULT_AUTOCOMPLETE_MODEL.id
   public profileName: string | null = null
   public profileType: string | null = null
 
@@ -13,6 +12,10 @@ export class AutocompleteModel {
     if (connectionService) {
       this.connectionService = connectionService
     }
+  }
+
+  public setModel(model: string): void {
+    this.currentModel = model
   }
 
   /**
@@ -48,13 +51,16 @@ export class AutocompleteModel {
     // client catches HTTP errors (402, 401, 429, 5xx) internally and silently
     // ends the stream. Without this, errors never reach ErrorBackoff.
     let sseError: Error | undefined
+
+    const temp = getAutocompleteModel(this.currentModel).temperature
+
     const { stream } = await client.kilo.fim(
       {
         prefix,
         suffix,
-        model: DEFAULT_MODEL,
+        model: this.currentModel,
         maxTokens: 256,
-        temperature: 0.2,
+        temperature: temp,
       },
       {
         signal,
@@ -66,7 +72,8 @@ export class AutocompleteModel {
     )
 
     for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content
+      const choice = chunk.choices?.[0]
+      const content = choice?.delta?.content ?? choice?.text
       if (content) onChunk(content)
       if (chunk.usage) {
         inputTokens = chunk.usage.prompt_tokens ?? 0
@@ -87,11 +94,11 @@ export class AutocompleteModel {
   }
 
   public getModelName(): string {
-    return DEFAULT_MODEL
+    return this.currentModel
   }
 
   public getProviderDisplayName(): string {
-    return PROVIDER_DISPLAY_NAME
+    return getAutocompleteModel(this.currentModel).provider
   }
 
   /**

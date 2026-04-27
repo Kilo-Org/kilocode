@@ -77,10 +77,10 @@ const image = "ghcr.io/kilo-org/kilo" // kilocode_change
 const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
-await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
 
 // registries
 if (!Script.preview) {
+  await $`docker buildx build --platform ${platforms} ${tagFlags} --push .`
   // Calculate SHA values
   // kilocode_change start
   const arm64Sha = await $`sha256sum ./dist/kilo-linux-arm64.tar.gz | cut -d' ' -f1`.text().then((x) => x.trim())

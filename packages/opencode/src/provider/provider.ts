@@ -20,6 +20,7 @@ import { zod } from "@/util/effect-zod"
 import { iife } from "@/util/iife"
 import { Global } from "../global"
 import path from "path"
+import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Schema, Types } from "effect"
 import { EffectBridge } from "@/effect"
 import { InstanceState } from "@/effect"
@@ -416,6 +417,16 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         },
       }),
     openrouter: () =>
+      Effect.succeed({
+        autoload: false,
+        options: {
+          headers: {
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
+          },
+        },
+      }),
+    nvidia: () =>
       Effect.succeed({
         autoload: false,
         options: {
@@ -1221,12 +1232,22 @@ const layer: Layer.Layer<
           database[providerID] = parsed
         }
 
+        // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
+        const auths = yield* auth.all().pipe(Effect.orDie)
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
           const providerID = ProviderID.make(id)
           if (disabled.has(providerID)) continue
+          // kilocode_change start - prefer explicit OAuth auth over inherited env credentials
+          if (
+            auths[providerID]?.type === "oauth" &&
+            plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
+          ) {
+            continue
+          }
           const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
+          // kilocode_change end
           if (!apiKey) continue
           mergeProvider(providerID, {
             source: "env",
@@ -1235,7 +1256,6 @@ const layer: Layer.Layer<
         }
 
         // load apikeys
-        const auths = yield* auth.all().pipe(Effect.orDie)
         for (const [id, provider] of Object.entries(auths)) {
           const providerID = ProviderID.make(id)
           if (disabled.has(providerID)) continue
@@ -1295,8 +1315,13 @@ const layer: Layer.Layer<
         // load config - re-apply with updated data
         for (const [id, provider] of configProviders) {
           const providerID = ProviderID.make(id)
-          const partial: Partial<Info> = { source: "config" }
+          // kilocode_change start - keep OAuth plugin source when config and Codex auth coexist
+          const oauth =
+            auths[providerID]?.type === "oauth" &&
+            plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
+          const partial: Partial<Info> = oauth ? {} : { source: "config" }
           if (provider.env) partial.env = provider.env
+          // kilocode_change end
           if (provider.name) partial.name = provider.name
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)
@@ -1533,7 +1558,10 @@ const layer: Layer.Layer<
           installedPath = model.api.npm
         }
 
-        const mod = await import(installedPath)
+        // `installedPath` is a local entry path or an existing `file://` URL. Normalize
+        // only path inputs so Node on Windows accepts the dynamic import.
+        const importSpec = installedPath.startsWith("file://") ? installedPath : pathToFileURL(installedPath).href
+        const mod = await import(importSpec)
 
         const fn = mod[Object.keys(mod).find((key) => key.startsWith("create"))!]
         const loaded = fn({

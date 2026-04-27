@@ -200,7 +200,10 @@ export namespace IgnoreMigrator {
    * Load .kilocodeignore and return permission config.
    * Handles all logging internally.
    */
-  export async function loadIgnoreConfig(projectDir: string, skipGlobalPaths?: boolean): Promise<ConfigPermission.Info> {
+  export async function loadIgnoreConfig(
+    projectDir: string,
+    skipGlobalPaths?: boolean,
+  ): Promise<ConfigPermission.Info> {
     try {
       const result = await migrate({ projectDir, skipGlobalPaths })
 

@@ -1,6 +1,6 @@
 import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
 import { prettifyError } from "zod/v4"
-import type { CloudSessionMessage } from "./services/cli-backend/types"
+import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
@@ -334,6 +334,10 @@ export type WebviewMessage =
   | PartUpdate
   | PartBatch
   | {
+      type: "indexingStatusLoaded"
+      status: IndexingStatus
+    }
+  | {
       type: "messageCreated"
       message: Record<string, unknown>
     }
@@ -517,6 +521,11 @@ export function mapSSEEventToWebviewMessage(event: Event, sessionID: string | un
       return {
         type: "sessionUpdated",
         session: sessionToWebview(event.properties.info),
+      }
+    case "indexing.status":
+      return {
+        type: "indexingStatusLoaded",
+        status: event.properties.status,
       }
     default:
       return null

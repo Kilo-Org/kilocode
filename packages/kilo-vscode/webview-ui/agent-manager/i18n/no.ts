@@ -72,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Neste element",
   "agentManager.shortcuts.newWorktree": "Nytt Worktree",
   "agentManager.shortcuts.openWorktree": "Åpne Worktree",
-  "agentManager.shortcuts.advancedWorktree": "Avansert Worktree",
+  "agentManager.shortcuts.advancedWorktree": "Konfigurer nytt worktree",
   "agentManager.shortcuts.deleteWorktree": "Slett Worktree",
   "agentManager.shortcuts.previousTab": "Forrige fane",
   "agentManager.shortcuts.nextTab": "Neste fane",
@@ -94,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Fjern utdatert Worktree",
 
   "agentManager.dialog.openWorktree": "Ny worktree",
+  "agentManager.dialog.configureWorktree": "Konfigurer Nytt Worktree...",
   "agentManager.dialog.tab.new": "Ny",
   "agentManager.dialog.tab.import": "Importer",
   "agentManager.dialog.namePlaceholder": "Worktree-navn (valgfritt)",

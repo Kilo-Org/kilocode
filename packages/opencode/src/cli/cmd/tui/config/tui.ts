@@ -19,6 +19,7 @@ import { makeRuntime } from "@/effect/runtime"
 import { Filesystem, Log } from "@/util"
 import { ConfigVariable } from "@/config/variable"
 import { Npm } from "@/npm"
+import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // kilocode_change
 
 const log = Log.create({ service: "tui.config" })
 
@@ -145,6 +146,10 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
     ]).join(",")
   }
   acc.result.keybinds = ConfigKeybinds.Keybinds.parse(keybinds)
+
+  // kilocode_change start — inject Kilo default plugins to keep TUI aligned with server config
+  KilocodeDefaultPlugins.apply(acc.result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+  // kilocode_change end
 
   return {
     config: acc.result,

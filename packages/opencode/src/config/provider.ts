@@ -60,7 +60,8 @@ export const Model = Schema.Struct({
   variants: Schema.optional(
     Schema.Record(
       Schema.String,
-      Schema.NullOr( // kilocode_change - allow null values so removed variants can be deleted via stripNulls on save
+      Schema.NullOr(
+        // kilocode_change - allow null values so removed variants can be deleted via stripNulls on save
         Schema.StructWithRest(
           Schema.Struct({
             disabled: Schema.optional(Schema.Boolean).annotate({ description: "Disable this variant for the model" }),
@@ -72,7 +73,7 @@ export const Model = Schema.Struct({
   ),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
 
-export class Info extends Schema.Class<Info>("ProviderConfig")({
+export const Info = Schema.Struct({
   api: Schema.optional(Schema.String),
   name: Schema.optional(Schema.String),
   env: Schema.optional(Schema.mutable(Schema.Array(Schema.String))),
@@ -109,8 +110,9 @@ export class Info extends Schema.Class<Info>("ProviderConfig")({
     ),
   ),
   models: Schema.optional(Schema.Record(Schema.String, Schema.NullOr(Model))), // kilocode_change - allow null values so removed models can be deleted via stripNulls on save
-}) {
-  static readonly zod = zod(this)
-}
+})
+  .annotate({ identifier: "ProviderConfig" })
+  .pipe(withStatics((s) => ({ zod: zod(s) })))
+export type Info = Schema.Schema.Type<typeof Info>
 
 export * as ConfigProvider from "./provider"

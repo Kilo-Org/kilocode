@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import z from "zod"
@@ -598,6 +599,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       let error: Error | undefined
       const taskAbort = new AbortController()
+      // kilocode_change start - shared reader for the child session id written by task.ts ctx.metadata (#6321)
+      const childID = () => {
+        const meta = part.state.status !== "pending" ? part.state.metadata : undefined
+        return (meta as { sessionId?: string } | undefined)?.sessionId
+      }
+      // kilocode_change end
       const result = yield* taskTool
         .execute(taskArgs, {
           agent: task.agent,
@@ -636,6 +643,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               taskAbort.abort()
               assistantMessage.finish = "tool-calls"
               assistantMessage.time.completed = Date.now()
+              // kilocode_change start - propagate partial subagent cost on cancel (#6321)
+              const cid = childID()
+              if (cid) {
+                assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+              }
+              // kilocode_change end
               yield* sessions.updateMessage(assistantMessage)
               if (part.state.status === "running") {
                 yield* sessions.updatePart({
@@ -668,6 +681,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       assistantMessage.finish = "tool-calls"
       assistantMessage.time.completed = Date.now()
+      // kilocode_change start - include subagent total cost on the wrapper message (#6321)
+      const cid = result?.metadata?.sessionId ?? childID()
+      if (cid) {
+        assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+      }
+      // kilocode_change end
       yield* sessions.updateMessage(assistantMessage)
 
       if (result && part.state.status === "running") {
@@ -792,6 +811,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       const shellName = (
         process.platform === "win32" ? path.win32.basename(sh, ".exe") : path.basename(sh)
       ).toLowerCase()
+      const cwd = ctx.directory
       const invocations: Record<string, { args: string[] }> = {
         nu: { args: ["-c", input.command] },
         fish: { args: ["-c", input.command] },
@@ -800,12 +820,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             "-l",
             "-c",
             `
-              __oc_cwd=$PWD
               [[ -f ~/.zshenv ]] && source ~/.zshenv >/dev/null 2>&1 || true
               [[ -f "\${ZDOTDIR:-$HOME}/.zshrc" ]] && source "\${ZDOTDIR:-$HOME}/.zshrc" >/dev/null 2>&1 || true
-              cd "$__oc_cwd"
+              cd -- "$1"
               eval ${JSON.stringify(input.command)}
             `,
+            "opencode",
+            cwd,
           ],
         },
         bash: {
@@ -813,12 +834,13 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             "-l",
             "-c",
             `
-              __oc_cwd=$PWD
               shopt -s expand_aliases
               [[ -f ~/.bashrc ]] && source ~/.bashrc >/dev/null 2>&1 || true
-              cd "$__oc_cwd"
+              cd -- "$1"
               eval ${JSON.stringify(input.command)}
             `,
+            "opencode",
+            cwd,
           ],
         },
         cmd: { args: ["/c", input.command] },
@@ -828,7 +850,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
       }
 
       const args = (invocations[shellName] ?? invocations[""]).args
-      const cwd = ctx.directory
       const shellEnv = yield* plugin.trigger(
         "shell.env",
         { cwd, sessionID: input.sessionID, callID: part.callID },
@@ -1252,7 +1273,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         { message: info, parts },
       )
 
-      const parsed = MessageV2.Info.safeParse(info)
+      const parsed = MessageV2.Info.zod.safeParse(info)
       if (!parsed.success) {
         log.error("invalid user message before save", {
           sessionID: input.sessionID,
@@ -1263,7 +1284,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         })
       }
       parts.forEach((part, index) => {
-        const p = MessageV2.Part.safeParse(part)
+        const p = MessageV2.Part.zod.safeParse(part)
         if (p.success) return
         log.error("invalid user part before save", {
           sessionID: input.sessionID,
@@ -1831,7 +1852,7 @@ export const PromptInput = z.object({
     .record(z.string(), z.boolean())
     .optional()
     .describe("@deprecated tools and permissions have been merged, you can set permissions on the session itself now"),
-  format: MessageV2.Format.optional(),
+  format: MessageV2.Format.zod.optional(),
   system: z.string().optional(),
   variant: z.string().optional(),
   // kilocode_change start
@@ -1846,50 +1867,25 @@ export const PromptInput = z.object({
   // kilocode_change end
   parts: z.array(
     z.discriminatedUnion("type", [
-      MessageV2.TextPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "TextPartInput",
-        }),
-      MessageV2.FilePart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "FilePartInput",
-        }),
-      MessageV2.AgentPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "AgentPartInput",
-        }),
-      MessageV2.SubtaskPart.omit({
-        messageID: true,
-        sessionID: true,
-      })
-        .partial({
-          id: true,
-        })
-        .meta({
-          ref: "SubtaskPartInput",
-        }),
+      MessageV2.TextPartInput.zod as unknown as z.ZodObject<any>,
+      MessageV2.FilePartInput.zod as unknown as z.ZodObject<any>,
+      MessageV2.AgentPartInput.zod as unknown as z.ZodObject<any>,
+      MessageV2.SubtaskPartInput.zod as unknown as z.ZodObject<any>,
     ]),
   ),
 })
-export type PromptInput = z.infer<typeof PromptInput>
+// `z.discriminatedUnion` erases the discriminated members' shapes back to
+// `{}` because the derived `.zod` on each input is typed as an opaque
+// `z.ZodType`. Restore the precise `parts` type from the exported Schema
+// input types so callers see a proper tagged union.
+type PartInputUnion =
+  | MessageV2.TextPartInput
+  | MessageV2.FilePartInput
+  | MessageV2.AgentPartInput
+  | MessageV2.SubtaskPartInput
+export type PromptInput = Omit<z.infer<typeof PromptInput>, "parts"> & {
+  parts: PartInputUnion[]
+}
 
 export const LoopInput = z.object({
   sessionID: SessionID.zod,
@@ -1917,14 +1913,19 @@ export const CommandInput = z.object({
   arguments: z.string(),
   command: z.string(),
   variant: z.string().optional(),
+  // Inlined (no `.meta({ ref })`) to keep the original SDK output — the
+  // PromptInput call site below references FilePartInput by ref via the
+  // Schema export in message-v2.ts.
   parts: z
     .array(
       z.discriminatedUnion("type", [
-        MessageV2.FilePart.omit({
-          messageID: true,
-          sessionID: true,
-        }).partial({
-          id: true,
+        z.object({
+          id: PartID.zod.optional(),
+          type: z.literal("file"),
+          mime: z.string(),
+          filename: z.string().optional(),
+          url: z.string(),
+          source: MessageV2.FilePartSource.zod.optional(),
         }),
       ]),
     )

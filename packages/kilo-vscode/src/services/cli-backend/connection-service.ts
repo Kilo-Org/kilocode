@@ -6,9 +6,9 @@ import type { ServerConfig } from "./types"
 import { resolveEventSessionId as resolveEventSessionIdPure } from "./connection-utils"
 
 export type ConnectionState = "connecting" | "connected" | "disconnected" | "error"
-type SSEEventListener = (event: Event) => void
+type SSEEventListener = (event: Event, directory?: string) => void
 type StateListener = (state: ConnectionState) => void
-type SSEEventFilter = (event: Event) => boolean
+type SSEEventFilter = (event: Event, directory?: string) => boolean
 type NotificationDismissListener = (notificationId: string) => void
 type LanguageChangeListener = (locale: string) => void
 type ProfileChangeListener = (data: unknown) => void
@@ -192,11 +192,11 @@ export class KiloConnectionService {
    * Subscribe to SSE events with a filter. The filter runs for every incoming SSE event.
    */
   onEventFiltered(filter: SSEEventFilter, listener: SSEEventListener): () => void {
-    const wrapped: SSEEventListener = (event) => {
-      if (!filter(event)) {
+    const wrapped: SSEEventListener = (event, directory) => {
+      if (!filter(event, directory)) {
         return
       }
-      listener(event)
+      listener(event, directory)
     }
     return this.onEvent(wrapped)
   }
@@ -355,10 +355,7 @@ export class KiloConnectionService {
 
   /**
    * Reject all pending permission requests and questions across every
-   * directory known to any KiloProvider **and** every project the CLI
-   * backend has ever opened. The project list covers worktree sessions
-   * whose provider was disposed (panel/sidebar closed) while the CLI
-   * backend kept running.
+   * directory known to any currently-mounted KiloProvider.
    *
    * Must be called before operations that trigger Instance.disposeAll()
    * (e.g. config save) to prevent orphaned Promises from freezing
@@ -370,21 +367,15 @@ export class KiloConnectionService {
   async drainPendingPrompts(): Promise<void> {
     if (!this.client) return
 
-    // Collect directories from all mounted providers (root + worktree dirs).
+    // Only drain directories from currently-mounted providers (root + worktree dirs).
+    // Previously this also called project.list() to include every historically-opened
+    // directory, but each permission/question list call goes through Instance.provide()
+    // which bootstraps fresh instances (including indexing) for directories without
+    // cached instances. Disposed worktree sessions can't have pending prompts anyway.
     const dirs = new Set<string>()
     for (const provider of this.directoryProviders) {
       for (const dir of provider()) {
         dirs.add(dir)
-      }
-    }
-
-    // Also include every project directory the CLI backend knows about.
-    // This covers worktree sessions whose KiloProvider was already disposed.
-    const { data: projects, error: projectsErr } = await this.client.project.list()
-    if (projectsErr) throw new Error(`Failed to list projects: ${String(projectsErr)}`)
-    if (projects) {
-      for (const p of projects) {
-        dirs.add(p.worktree)
       }
     }
 
@@ -594,9 +585,9 @@ export class KiloConnectionService {
     let didConnect = false
 
     // Wire SSE events → broadcast to all registered listeners
-    this.sseClient.onEvent((event) => {
+    this.sseClient.onEvent((event, directory) => {
       for (const listener of this.eventListeners) {
-        listener(event)
+        listener(event, directory)
       }
     })
 

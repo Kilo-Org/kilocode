@@ -162,9 +162,9 @@ export const layer: Layer.Layer<
         if (matches.length) yield* config.waitForDependencies()
         for (const match of matches) {
           const namespace = path.basename(match, path.extname(match))
-          const mod = yield* Effect.promise(
-            () => import(process.platform === "win32" ? match : pathToFileURL(match).href),
-          )
+          // `match` is an absolute filesystem path from `Glob.scanSync(..., { absolute: true })`.
+          // Import it as `file://` so Node on Windows accepts the dynamic import.
+          const mod = yield* Effect.promise(() => import(pathToFileURL(match).href))
           for (const [id, def] of Object.entries<ToolDefinition>(mod)) {
             custom.push(fromPlugin(id === "default" ? namespace : `${namespace}_${id}`, def))
           }
@@ -180,6 +180,7 @@ export const layer: Layer.Layer<
         const cfg = yield* config.get()
         const questionEnabled = KiloToolRegistry.question() // kilocode_change
 
+        // kilocode_change start
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
           bash: Tool.init(bash),
@@ -200,9 +201,11 @@ export const layer: Layer.Layer<
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool), // kilocode_change
         })
+        // kilocode_change end
 
         const kilo = yield* KiloToolRegistry.build(kiloToolInfos) // kilocode_change
 
+        // kilocode_change start
         return {
           custom,
           builtin: [
@@ -229,6 +232,7 @@ export const layer: Layer.Layer<
           task: tool.task,
           read: tool.read,
         }
+        // kilocode_change end
       }),
     )
 

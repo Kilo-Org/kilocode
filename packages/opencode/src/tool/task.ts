@@ -9,6 +9,7 @@ import type { SessionPrompt } from "../session/prompt"
 import { Config } from "../config"
 import { Effect } from "effect"
 import { KiloTask } from "../kilocode/tool/task" // kilocode_change
+import { KiloCostPropagation } from "../kilocode/session/cost-propagation" // kilocode_change
 
 export interface TaskPromptOps {
   cancel(sessionID: SessionID): void
@@ -141,9 +142,12 @@ export const TaskTool = Tool.define(
       }
 
       return yield* Effect.acquireUseRelease(
-        Effect.sync(() => {
+        // kilocode_change start - snapshot child cost so we propagate only the delta on resume (#6321)
+        Effect.gen(function* () {
           ctx.abort.addEventListener("abort", cancel)
+          return yield* KiloCostPropagation.childCost(sessions, nextSession.id)
         }),
+        // kilocode_change end
         () =>
           Effect.gen(function* () {
             const parts = yield* ops.resolvePromptParts(params.prompt)
@@ -180,10 +184,14 @@ export const TaskTool = Tool.define(
               ].join("\n"),
             }
           }),
-        () =>
-          Effect.sync(() => {
+        // kilocode_change start - propagate subagent cost delta to parent on every exit path (#6321)
+        (costBefore) =>
+          Effect.gen(function* () {
             ctx.abort.removeEventListener("abort", cancel)
+            const costAfter = yield* KiloCostPropagation.childCost(sessions, nextSession.id)
+            yield* KiloCostPropagation.propagate(sessions, ctx.sessionID, ctx.messageID, costAfter - costBefore)
           }),
+        // kilocode_change end
       )
     })
 

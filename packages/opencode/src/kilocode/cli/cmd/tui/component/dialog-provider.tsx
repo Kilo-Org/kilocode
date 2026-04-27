@@ -30,7 +30,11 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
 export const PROVIDER_DESCRIPTIONS: Record<string, string> = {
   kilo: "(Recommended)",
   anthropic: "(Claude Max or API key)",
-  openai: "(ChatGPT Plus/Pro or API key)",
+  openai: "(ChatGPT login or API key)",
+}
+
+export const PROVIDER_TITLES: Record<string, string> = {
+  openai: "OpenAI / Codex",
 }
 
 // ---------------------------------------------------------------------------

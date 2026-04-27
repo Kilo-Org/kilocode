@@ -808,6 +808,12 @@ module.exports = [
     permanent: true,
   },
   {
+    source: "/docs/automate/tools/codebase-search",
+    destination: "/docs/automate/tools/semantic-search",
+    basePath: false,
+    permanent: true,
+  },
+  {
     source: "/docs/automate/kiloclaw/:path*",
     destination: "/docs/kiloclaw/:path*",
     basePath: false,

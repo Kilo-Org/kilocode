@@ -63,6 +63,21 @@ function hasText(msg: Awaited<ReturnType<typeof SessionPrompt.prompt>>, text: st
   return msg.parts.some((part) => part.type === "text" && part.text.includes(text))
 }
 
+// Find the last non-system message in an OpenAI-compatible request body. Kept
+// tolerant: we only care about role invariants, not the exact content shape,
+// because providers may serialize `content` as a string or as a parts array.
+function lastConversational(body: Record<string, unknown>): { role: string; content: unknown } | undefined {
+  const msgs = Array.isArray(body.messages) ? (body.messages as Array<Record<string, unknown>>) : []
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const msg = msgs[i]
+    if (!msg || typeof msg !== "object") continue
+    const role = typeof msg.role === "string" ? msg.role : undefined
+    if (!role || role === "system") continue
+    return { role, content: msg.content }
+  }
+  return undefined
+}
+
 function user(sessionID: SessionID, id: MessageID): MessageV2.WithParts {
   return {
     info: {
@@ -303,18 +318,21 @@ describe("session prompt queue", () => {
     const ready = Promise.withResolvers<void>()
     const injected = Promise.withResolvers<void>()
     const calls: number[] = []
+    const bodies: Array<Record<string, unknown>> = []
     const server = Bun.serve({
       port: 0,
-      fetch(req) {
+      async fetch(req) {
         const url = new URL(req.url)
         if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
 
+        const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+        bodies.push(body)
         calls.push(Date.now())
-        const body =
+        const stream =
           calls.length === 1
             ? reply({ text: "first reply", ready: ready.resolve })
             : reply({ text: "second reply", ready: injected.resolve })
-        return new Response(body, {
+        return new Response(stream, {
           status: 200,
           headers: { "Content-Type": "text/event-stream" },
         })
@@ -408,6 +426,18 @@ describe("session prompt queue", () => {
           }
           expect(firstReply.info.parentID).toBe(firstUser.info.id)
           expect(secondReply.info.parentID).toBe(secondUser.info.id)
+
+          // Regression for #9492: the second LLM request must end with the
+          // queued user prompt, not an assistant tail from the prior turn.
+          // Anthropic's API rejects requests whose final message is assistant
+          // (prefill), and scope() is supposed to partition the queued target
+          // turn to the end before the model request is built.
+          expect(bodies).toHaveLength(2)
+          const second2 = bodies[1]
+          expect(JSON.stringify(second2)).toContain("second prompt")
+          const tail = lastConversational(second2)
+          expect(tail?.role).toBe("user")
+          expect(JSON.stringify(tail?.content)).toContain("second prompt")
         },
       })
     } finally {

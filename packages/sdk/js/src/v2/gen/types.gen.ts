@@ -583,6 +583,23 @@ export type EventTodoUpdated = {
   }
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type EventIndexingStatus = {
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
@@ -1044,6 +1061,7 @@ export type CompactionPart = {
   type: "compaction"
   auto: boolean
   overflow?: boolean
+  tail_start_id?: string
 }
 
 export type Part =
@@ -1078,6 +1096,13 @@ export type EventMessagePartRemoved = {
   }
 }
 
+export type SnapshotSummaryFileDiff = {
+  file: string
+  additions: number
+  deletions: number
+  status?: "added" | "deleted" | "modified"
+}
+
 export type PermissionAction = "allow" | "deny" | "ask"
 
 export type PermissionRule = {
@@ -1099,12 +1124,7 @@ export type Session = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string
@@ -1231,12 +1251,7 @@ export type SyncEventSessionUpdated = {
         additions: number
         deletions: number
         files: number
-        diffs?: Array<{
-          file: string
-          additions: number
-          deletions: number
-          status?: "added" | "deleted" | "modified"
-        }>
+        diffs?: Array<SnapshotSummaryFileDiff>
       } | null
       share?: {
         url: string | null
@@ -1315,6 +1330,7 @@ export type GlobalEvent = {
     | EventSessionStatus
     | EventSessionIdle
     | EventTodoUpdated
+    | EventIndexingStatus
     | EventVcsBranchUpdated
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
@@ -1375,6 +1391,127 @@ export type ServerConfig = {
   cors?: Array<string>
 }
 
+/**
+ * Codebase indexing configuration
+ */
+export type IndexingConfig = {
+  /**
+   * Enable codebase indexing
+   */
+  enabled?: boolean
+  /**
+   * Embedding provider to use for codebase indexing
+   */
+  provider?:
+    | "openai"
+    | "ollama"
+    | "openai-compatible"
+    | "gemini"
+    | "mistral"
+    | "vercel-ai-gateway"
+    | "bedrock"
+    | "openrouter"
+    | "voyage"
+  /**
+   * Embedding model ID (uses provider default if omitted)
+   */
+  model?: string
+  /**
+   * Override embedding vector dimension (auto-detected from model if omitted)
+   */
+  dimension?: number
+  /**
+   * Vector store backend (default: qdrant)
+   */
+  vectorStore?: "lancedb" | "qdrant"
+  /**
+   * OpenAI embedding provider options
+   */
+  openai?: {
+    apiKey?: string
+  }
+  /**
+   * Ollama embedding provider options
+   */
+  ollama?: {
+    baseUrl?: string
+  }
+  /**
+   * OpenAI-compatible embedding provider options
+   */
+  "openai-compatible"?: {
+    baseUrl?: string
+    apiKey?: string
+  }
+  /**
+   * Gemini embedding provider options
+   */
+  gemini?: {
+    apiKey?: string
+  }
+  /**
+   * Mistral embedding provider options
+   */
+  mistral?: {
+    apiKey?: string
+  }
+  /**
+   * Vercel AI Gateway embedding provider options
+   */
+  "vercel-ai-gateway"?: {
+    apiKey?: string
+  }
+  /**
+   * AWS Bedrock embedding provider options
+   */
+  bedrock?: {
+    region?: string
+    profile?: string
+  }
+  /**
+   * OpenRouter embedding provider options
+   */
+  openrouter?: {
+    apiKey?: string
+    specificProvider?: string
+  }
+  /**
+   * Voyage embedding provider options
+   */
+  voyage?: {
+    apiKey?: string
+  }
+  /**
+   * Qdrant vector store connection options
+   */
+  qdrant?: {
+    url?: string
+    apiKey?: string
+  }
+  /**
+   * LanceDB vector store options
+   */
+  lancedb?: {
+    directory?: string
+  }
+  /**
+   * Minimum similarity score for search results (default: 0.4)
+   */
+  searchMinScore?: number
+  /**
+   * Maximum number of search results (default: 50)
+   */
+  searchMaxResults?: number
+  /**
+   * Number of code segments per embedding batch (default: 60)
+   */
+  embeddingBatchSize?: number
+  /**
+   * Maximum retry attempts for failed embedding batches (default: 3)
+   */
+  scannerMaxBatchRetries?: number
+}
+
 export type PermissionActionConfig = "ask" | "allow" | "deny" | null
 
 export type PermissionObjectConfig = {
@@ -1384,8 +1521,8 @@ export type PermissionObjectConfig = {
 export type PermissionRuleConfig = PermissionActionConfig | PermissionObjectConfig
 
 export type PermissionConfig =
+  | PermissionActionConfig
   | {
-      __originalKeys?: Array<string>
       read?: PermissionRuleConfig
       edit?: PermissionRuleConfig
       glob?: PermissionRuleConfig
@@ -1402,9 +1539,8 @@ export type PermissionConfig =
       lsp?: PermissionRuleConfig
       doom_loop?: PermissionActionConfig
       skill?: PermissionRuleConfig
-      [key: string]: PermissionRuleConfig | Array<string> | PermissionActionConfig | undefined
+      [key: string]: PermissionRuleConfig | PermissionActionConfig | undefined
     }
-  | PermissionActionConfig
 
 export type AgentConfig = {
   model?: string | null
@@ -1719,6 +1855,7 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  indexing?: IndexingConfig
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
@@ -1841,6 +1978,14 @@ export type Config = {
      */
     prune?: boolean
     /**
+     * Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)
+     */
+    tail_turns?: number
+    /**
+     * Maximum number of tokens from recent turns to preserve verbatim after compaction
+     */
+    preserve_recent_tokens?: number
+    /**
      * Token buffer for compaction. Leaves enough window to avoid overflow during compaction.
      */
     reserved?: number
@@ -1855,6 +2000,10 @@ export type Config = {
      * Enable AI-powered codebase search
      */
     codebase_search?: boolean
+    /**
+     * Enable semantic codebase indexing and the semantic_search tool
+     */
+    semantic_indexing?: boolean
     /**
      * Enable telemetry. Set to false to opt-out.
      */
@@ -2082,12 +2231,7 @@ export type GlobalSession = {
     additions: number
     deletions: number
     files: number
-    diffs?: Array<{
-      file: string
-      additions: number
-      deletions: number
-      status?: "added" | "deleted" | "modified"
-    }>
+    diffs?: Array<SnapshotSummaryFileDiff>
   }
   share?: {
     url: string
@@ -2291,6 +2435,7 @@ export type Event =
   | EventSessionStatus
   | EventSessionIdle
   | EventTodoUpdated
+  | EventIndexingStatus
   | EventVcsBranchUpdated
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged
@@ -6884,6 +7029,7 @@ export type KiloFimResponses = {
       delta?: {
         content?: string
       }
+      text?: string
     }>
     usage?: {
       prompt_tokens?: number

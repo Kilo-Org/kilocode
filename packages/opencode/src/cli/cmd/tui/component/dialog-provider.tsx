@@ -33,7 +33,7 @@ export function createDialogProviderOptions() {
         const connected = sync.data.provider_next.connected.includes(provider.id)
 
         return {
-          title: provider.name,
+          title: KiloProvider.PROVIDER_TITLES[provider.id] ?? provider.name, // kilocode_change
           value: provider.id,
           description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
           footer: consoleManaged ? sync.data.console_state.activeOrgName : undefined,
