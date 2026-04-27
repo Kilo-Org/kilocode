@@ -163,6 +163,33 @@ export interface OpenVSCodeSettingsRequest {
   query: string
 }
 
+export interface OpenConfigFileRequest {
+  type: "openConfigFile"
+  scope: "local" | "global"
+  labels: {
+    scope: string
+    statusLoaded: string
+    statusLoadedLegacy: string
+    statusNotLoaded: string
+    statusCreate: string
+    title: string
+    placeholder: string
+    noWorkspace: string
+    openFailed: string
+    sourceXdg: string
+    sourceHomeKilo: string
+    sourceHomeKilocode: string
+    sourceHomeOpencode: string
+    sourceEnvFile: string
+    sourceEnvDir: string
+    sourceEnvContent: string
+    sourceProjectKilo: string
+    sourceProjectRoot: string
+    sourceProjectKilocode: string
+    sourceProjectOpencode: string
+  }
+}
+
 export interface OpenMarketplacePanelRequest {
   type: "openMarketplacePanel"
 }
@@ -270,8 +297,8 @@ export interface RequestAutocompleteSettingsMessage {
 
 export interface UpdateAutocompleteSettingMessage {
   type: "updateAutocompleteSetting"
-  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete"
-  value: boolean
+  key: "enableAutoTrigger" | "enableSmartInlineTaskKeybinding" | "enableChatAutocomplete" | "model"
+  value: boolean | string
 }
 
 export interface RequestChatCompletionMessage {
@@ -901,6 +928,7 @@ export type WebviewMessage =
   | OpenExternalRequest
   | OpenSettingsPanelRequest
   | OpenVSCodeSettingsRequest
+  | OpenConfigFileRequest
   | OpenMarketplacePanelRequest
   | OpenFileRequest
   | CancelLoginRequest

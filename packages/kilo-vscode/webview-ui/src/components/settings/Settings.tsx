@@ -59,6 +59,37 @@ const Settings: Component<SettingsProps> = (props) => {
     })
   }
 
+  const open = (scope: "local" | "global") => {
+    const label =
+      scope === "global" ? language.t("settings.config.scope.global") : language.t("settings.config.scope.local")
+    vscode.postMessage({
+      type: "openConfigFile",
+      scope,
+      labels: {
+        scope: label,
+        statusLoaded: language.t("settings.config.status.loaded"),
+        statusLoadedLegacy: language.t("settings.config.status.loadedLegacy"),
+        statusNotLoaded: language.t("settings.config.status.notLoaded"),
+        statusCreate: language.t("settings.config.status.create"),
+        title: language.t("settings.config.title", { scope: label }),
+        placeholder: language.t("settings.config.placeholder"),
+        noWorkspace: language.t("settings.config.noWorkspace"),
+        openFailed: language.t("settings.config.openFailed", { scope: label, message: "{{message}}" }),
+        sourceXdg: language.t("settings.config.source.xdg"),
+        sourceHomeKilo: language.t("settings.config.source.homeKilo"),
+        sourceHomeKilocode: language.t("settings.config.source.homeKilocode"),
+        sourceHomeOpencode: language.t("settings.config.source.homeOpencode"),
+        sourceEnvFile: language.t("settings.config.source.envFile"),
+        sourceEnvDir: language.t("settings.config.source.envDir"),
+        sourceEnvContent: language.t("settings.config.source.envContent"),
+        sourceProjectKilo: language.t("settings.config.source.projectKilo"),
+        sourceProjectRoot: language.t("settings.config.source.projectRoot"),
+        sourceProjectKilocode: language.t("settings.config.source.projectKilocode"),
+        sourceProjectOpencode: language.t("settings.config.source.projectOpencode"),
+      },
+    })
+  }
+
   // Sync when the parent changes the tab prop (e.g. via navigate message)
   createEffect(
     on(
@@ -84,10 +115,19 @@ const Settings: Component<SettingsProps> = (props) => {
           "border-bottom": "1px solid var(--border-weak-base)",
           display: "flex",
           "align-items": "center",
+          "flex-wrap": "wrap",
           gap: "8px",
         }}
       >
-        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0 }}>{language.t("sidebar.settings")}</h2>
+        <h2 style={{ "font-size": "16px", "font-weight": "600", margin: 0, flex: 1 }}>
+          {language.t("sidebar.settings")}
+        </h2>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("local")}>
+          {language.t("settings.openLocalConfig")}
+        </Button>
+        <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
+          {language.t("settings.openGlobalConfig")}
+        </Button>
       </div>
 
       {/* Settings tabs */}

@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import z from "zod"
@@ -598,6 +599,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       let error: Error | undefined
       const taskAbort = new AbortController()
+      // kilocode_change start - shared reader for the child session id written by task.ts ctx.metadata (#6321)
+      const childID = () => {
+        const meta = part.state.status !== "pending" ? part.state.metadata : undefined
+        return (meta as { sessionId?: string } | undefined)?.sessionId
+      }
+      // kilocode_change end
       const result = yield* taskTool
         .execute(taskArgs, {
           agent: task.agent,
@@ -636,6 +643,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               taskAbort.abort()
               assistantMessage.finish = "tool-calls"
               assistantMessage.time.completed = Date.now()
+              // kilocode_change start - propagate partial subagent cost on cancel (#6321)
+              const cid = childID()
+              if (cid) {
+                assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+              }
+              // kilocode_change end
               yield* sessions.updateMessage(assistantMessage)
               if (part.state.status === "running") {
                 yield* sessions.updatePart({
@@ -668,6 +681,12 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
       assistantMessage.finish = "tool-calls"
       assistantMessage.time.completed = Date.now()
+      // kilocode_change start - include subagent total cost on the wrapper message (#6321)
+      const cid = result?.metadata?.sessionId ?? childID()
+      if (cid) {
+        assistantMessage.cost = yield* KiloCostPropagation.childCost(sessions, SessionID.make(cid))
+      }
+      // kilocode_change end
       yield* sessions.updateMessage(assistantMessage)
 
       if (result && part.state.status === "running") {

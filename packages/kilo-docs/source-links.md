@@ -16,6 +16,7 @@
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-upgrade.tsx -->
 - <https://app.kilo.ai/config.json>
+  <!-- packages/kilo-vscode/src/kilo-provider/config-file.ts -->
   <!-- packages/opencode/src/config/config.ts -->
 - <https://app.kilo.ai/credits>
   <!-- packages/kilo-vscode/src/services/autocomplete/AutocompleteServiceManager.ts -->
