@@ -927,10 +927,11 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               }),
           )
 
-          const err = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
-          const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
-          if (Exit.isFailure(exit) && !aborted && !signal && !Cause.hasInterruptsOnly(exit.cause)) {
-            return yield* Effect.failCause(exit.cause)
+          if (Exit.isFailure(exit)) {
+            const err = Cause.squash(exit.cause)
+            const signal = err instanceof Error && err.message.includes("Process interrupted due to receipt of signal")
+            const ok = aborted && (signal || Cause.hasInterruptsOnly(exit.cause))
+            if (!ok) return yield* Effect.failCause(exit.cause)
           }
 
           return { info: msg, parts: [part] }
