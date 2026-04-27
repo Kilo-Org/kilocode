@@ -1393,16 +1393,52 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     // kilocode_change start - create an aborted shell record if cancellation beats setup
     const shellInterrupt = Effect.fn("SessionPrompt.shellInterrupt")(function* (input: ShellInput) {
-      const existing = yield* lastAssistant(input.sessionID).pipe(Effect.exit)
-      if (Exit.isSuccess(existing)) return existing.value
-      const err = Cause.squash(existing.cause)
-      if (!(err instanceof Error) || err.message !== "Impossible") return yield* Effect.failCause(existing.cause)
+      const id = input.messageID ?? MessageID.ascending()
+      const current = yield* sessions.findMessage(
+        input.sessionID,
+        (msg) =>
+          msg.info.role === "assistant" &&
+          msg.info.parentID === id &&
+          msg.parts.some(
+            (part) => part.type === "tool" && part.tool === "bash" && part.state.input.command === input.command,
+          ),
+      )
+      if (Option.isSome(current)) {
+        const msg = current.value.info
+        const part = current.value.parts.find(
+          (part) => part.type === "tool" && part.tool === "bash" && part.state.input.command === input.command,
+        )
+        if (msg.role === "assistant" && !msg.time.completed) {
+          msg.time.completed = Date.now()
+          yield* sessions.updateMessage(msg)
+        }
+        if (part?.type === "tool" && (part.state.status === "pending" || part.state.status === "running")) {
+          const meta = ["<metadata>", "User aborted the command", "</metadata>"].join("\n")
+          const prior =
+            part.state.status === "running" && typeof part.state.metadata?.output === "string"
+              ? part.state.metadata.output
+              : ""
+          const output = prior ? `${prior}\n\n${meta}` : meta
+          const start = part.state.status === "running" ? part.state.time.start : Date.now()
+          const input = part.state.input
+          part.state = {
+            status: "completed",
+            time: { start, end: Date.now() },
+            input,
+            title: "",
+            metadata: { output, description: "" },
+            output,
+          }
+          yield* sessions.updatePart(part)
+        }
+        return current.value
+      }
 
       const ctx = yield* InstanceState.context
       const fallback = { providerID: ProviderID.make("unknown"), modelID: ModelID.make("unknown") }
       const model = input.model ?? (yield* provider.defaultModel().pipe(Effect.catchCause(() => Effect.succeed(fallback))))
       const userMsg: MessageV2.User = {
-        id: input.messageID ?? MessageID.ascending(),
+        id,
         sessionID: input.sessionID,
         time: { created: Date.now() },
         role: "user",
@@ -1777,7 +1813,10 @@ NOTE: At any point in time through this workflow you should feel free to ask the
 
     const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.shell")(
       function* (input: ShellInput) {
-        return yield* state.startShell(input.sessionID, shellInterrupt(input), shellImpl(input)) // kilocode_change
+        // kilocode_change start - share shell message id with cancellation fallback
+        const next = { ...input, messageID: input.messageID ?? MessageID.ascending() }
+        return yield* state.startShell(next.sessionID, shellInterrupt(next), shellImpl(next))
+        // kilocode_change end
       },
     )
 
