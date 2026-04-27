@@ -13,6 +13,7 @@ import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { useData } from "@kilocode/kilo-ui/context/data"
+import { useLanguage } from "../../context/language"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
@@ -39,6 +40,7 @@ function getSessionToolParts(store: ReturnType<typeof useData>["store"], session
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const data = useData()
   const i18n = useI18n()
+  const language = useLanguage()
   const session = useSession()
   const vscode = useVSCode()
 
@@ -117,6 +119,11 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
       <BasicTool icon="task" status={props.status} trigger={trigger()} defaultOpen>
         <div ref={autoScroll.scrollRef} onScroll={autoScroll.handleScroll} data-component="tool-output" data-scrollable>
           <div ref={autoScroll.contentRef} data-component="task-tools">
+            <Show when={running() && childToolParts().length === 0}>
+              <div data-slot="task-tool-item" data-state="starting">
+                <span data-slot="task-tool-title">{language.t("session.messages.taskStarting")}</span>
+              </div>
+            </Show>
             <For each={childToolParts()}>
               {(item) => {
                 const info = createMemo(() => getToolInfo(item.tool, item.state?.input))

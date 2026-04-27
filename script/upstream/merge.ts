@@ -269,6 +269,11 @@ async function main() {
 
   const author = options.author || (await getAuthor())
   const kiloVersion = await version.getCurrentKiloVersion()
+  const dirs = ["packages/ui/src/assets/icons/provider", "packages/ui/src/components/provider-icons"]
+
+  logger.info("Resetting generated provider icons before checkout...")
+  await git.restoreDirectories(dirs)
+  await git.cleanDirectories(dirs)
 
   // Create backup branch
   await git.checkout(config.baseBranch)

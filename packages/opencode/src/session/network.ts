@@ -1,9 +1,11 @@
 // kilocode_change - new file
+import { Context, Effect, Layer } from "effect"
 import { Bus } from "../bus"
 import { BusEvent } from "../bus/bus-event"
 import { Identifier } from "../id/id"
-import { Instance } from "../project/instance"
-import { Log } from "../util/log"
+import { InstanceState } from "@/effect"
+import { makeRuntime } from "@/effect/run-service"
+import { Log } from "../util"
 import { fn } from "../util/fn"
 import { MCP } from "../mcp"
 import z from "zod"
@@ -77,17 +79,37 @@ export namespace SessionNetwork {
     ),
   }
 
-  const state = Instance.state(async () => {
-    const pending: Record<
+  interface StateShape {
+    pending: Record<
       string,
       {
         info: Wait
         resolve: () => void
         reject: (e: unknown) => void
       }
-    > = {}
-    return { pending }
-  })
+    >
+  }
+
+  class StateService extends Context.Service<StateService, { readonly get: () => Effect.Effect<StateShape> }>()(
+    "@kilocode/SessionNetwork.State",
+  ) {}
+
+  const stateLayer = Layer.effect(
+    StateService,
+    Effect.gen(function* () {
+      const is = yield* InstanceState.make(
+        Effect.fn("SessionNetwork.state")(function* () {
+          return { pending: {} } as StateShape
+        }),
+      )
+      return StateService.of({
+        get: () => InstanceState.get(is),
+      })
+    }),
+  )
+
+  const stateRuntime = makeRuntime(StateService, stateLayer)
+  const state = (): Promise<StateShape> => stateRuntime.runPromise((svc) => svc.get())
 
   export function code(err: unknown) {
     for (const item of chain(err)) {
@@ -231,9 +253,21 @@ export namespace SessionNetwork {
         return
       }
       delete s.pending[input.requestID]
-      void MCP.reconnectRemote().catch((err) => {
-        log.error("remote reconnect failed", { err })
-      })
+      // kilocode_change start — reconnect failed remote MCP servers after network recovery
+      void MCP.status()
+        .then((statuses) => {
+          for (const [name, s] of Object.entries(statuses)) {
+            if (s.status === "failed") {
+              MCP.connect(name).catch((err) => {
+                log.error("remote reconnect failed", { name, err })
+              })
+            }
+          }
+        })
+        .catch((err) => {
+          log.error("failed to get MCP status for reconnect", { err })
+        })
+      // kilocode_change end
       Bus.publish(Event.Replied, {
         sessionID: req.info.sessionID,
         requestID: req.info.id,

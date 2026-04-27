@@ -47,12 +47,12 @@ Cron expressions use the standard five-field format:
 
 **Examples:**
 
-| Expression | Meaning |
-| --- | --- |
-| `*/15 * * * *` | Every 15 minutes |
-| `0 9 * * 1-5` | 9:00 AM on weekdays |
-| `0 0 1 * *` | Midnight on the first of each month |
-| `30 14 * * 3` | 2:30 PM every Wednesday |
+| Expression     | Meaning                             |
+| -------------- | ----------------------------------- |
+| `*/15 * * * *` | Every 15 minutes                    |
+| `0 9 * * 1-5`  | 9:00 AM on weekdays                 |
+| `0 0 1 * *`    | Midnight on the first of each month |
+| `30 14 * * 3`  | 2:30 PM every Wednesday             |
 
 {% callout type="note" title="Minimum interval" %}
 The minimum interval between scheduled trigger runs is 10 minutes. Schedules more frequent than that are rejected.
@@ -74,10 +74,10 @@ Run your scheduled task. Triggered at {{scheduledTime}}.
 
 **Available variables:**
 
-| Variable | Description |
-| --- | --- |
+| Variable            | Description                              |
+| ------------------- | ---------------------------------------- |
 | `{{scheduledTime}}` | The time the schedule fired (ISO string) |
-| `{{timestamp}}` | Capture timestamp (ISO string) |
+| `{{timestamp}}`     | Capture timestamp (ISO string)           |
 
 {% callout type="note" title="Webhook variables are not available" %}
 Since scheduled triggers do not receive an HTTP request, variables like `{{body}}`, `{{bodyJson}}`, `{{headers}}`, `{{method}}`, `{{path}}`, and `{{query}}` are not populated. Use `{{scheduledTime}}` and `{{timestamp}}` instead.

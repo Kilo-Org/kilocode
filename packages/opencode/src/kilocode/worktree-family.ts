@@ -1,8 +1,8 @@
 // kilocode_change - new file
 import { Instance } from "../project/instance"
-import { Project } from "../project/project"
-import { Filesystem } from "../util/filesystem"
-import { git } from "../util/git"
+import { Project } from "../project"
+import { Filesystem } from "../util"
+import { Git } from "../git"
 
 export namespace WorktreeFamily {
   export async function list() {
@@ -10,7 +10,7 @@ export namespace WorktreeFamily {
       return [Filesystem.resolve(Instance.directory)]
     }
 
-    const listed = await git(["worktree", "list", "--porcelain"], {
+    const listed = await Git.run(["worktree", "list", "--porcelain"], {
       cwd: Instance.worktree,
     })
 

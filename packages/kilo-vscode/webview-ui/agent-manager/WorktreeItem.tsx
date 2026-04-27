@@ -10,7 +10,7 @@ import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { HoverCard } from "@kilocode/kilo-ui/hover-card"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Button } from "@kilocode/kilo-ui/button"
-import type { WorktreeState, WorktreeGitStats, PRStatus, SectionState } from "../src/types/messages"
+import type { WorktreeState, WorktreeGitStats, PRStatus, SectionState, RunStatus } from "../src/types/messages"
 import { colorCss } from "./section-colors"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -56,6 +56,7 @@ interface WorktreeItemProps {
   openKeybind: string
   /** PR status for this worktree's branch, or null if no PR. */
   pr?: PRStatus | null
+  runStatus?: RunStatus
   /** Callback when the PR badge is clicked. */
   onOpenPR?: () => void
   /** Available sections for the "Move to Section" submenu. */
@@ -105,6 +106,28 @@ function reviewLabel(review: string): string {
   if (review === "approved") return "Approved"
   if (review === "changes_requested") return "Changes Requested"
   return "Pending"
+}
+
+function runAccent(status: RunStatus | undefined): "running" | "stopping" | "success" | "error" | undefined {
+  if (status?.state === "running") return "running"
+  if (status?.state === "stopping") return "stopping"
+  if (status?.exitCode === undefined && !status?.error) return undefined
+  if (status.exitCode === 0 && !status.error) return "success"
+  return "error"
+}
+
+function RunBadge(props: { status?: RunStatus }) {
+  const kind = () => runAccent(props.status)
+  return (
+    <Show when={kind()}>
+      <span class="am-run-badge" data-run-state={kind()}>
+        <Icon name={kind() === "success" ? "check-small" : kind() === "error" ? "warning" : "play"} size="small" />
+        <Show when={props.status?.state === "running" || props.status?.state === "stopping"}>
+          <span class="am-run-badge-label">{props.status?.state === "stopping" ? "Stopping" : "Running"}</span>
+        </Show>
+      </span>
+    </Show>
+  )
 }
 
 export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
@@ -280,6 +303,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                     <Show when={props.subtitle}>
                       <span class="am-worktree-subtitle">{props.subtitle}</span>
                     </Show>
+                    <RunBadge status={props.runStatus} />
                     <Show
                       when={props.pr}
                       fallback={

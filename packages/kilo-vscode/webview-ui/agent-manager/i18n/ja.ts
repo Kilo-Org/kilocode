@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.terminal": "ターミナル",
   "agentManager.tab.openTerminal": "ターミナルを開く",
+  "agentManager.tab.newOptions": "新しいタブのその他のオプション",
+
+  "agentManager.terminal.new": "新しいターミナルタブ",
+  "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
+  "agentManager.terminal.connectionError": "ターミナル接続エラー",
+  "agentManager.terminal.errorTitle": "ターミナルエラー",
   "agentManager.setup.failed": "ワークスペースのセットアップに失敗しました",
   "agentManager.setup.settingUp": "ワークスペースをセットアップ中",
   "agentManager.setup.error.git_not_found":
@@ -73,6 +79,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "新しいタブ",
   "agentManager.shortcuts.closeTab": "タブを閉じる",
   "agentManager.shortcuts.toggleTerminal": "ターミナルの切り替え",
+  "agentManager.shortcuts.runScript": "スクリプトを実行",
+  "agentManager.run.options": "実行オプション",
+  "agentManager.run.configure": "実行スクリプトを設定",
   "agentManager.shortcuts.openAgentManager": "Agent Managerを開く",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

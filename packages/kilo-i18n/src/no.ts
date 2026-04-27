@@ -69,4 +69,14 @@ export const dict = {
   "marketplace.warning.busyMany": "Flere økter kjører og vil bli avbrutt",
   "marketplace.warning.installAnyway": "Installer uansett",
   "marketplace.warning.cancel": "Avbryt",
+  "marketplace.contribute.prompt": "Mangler du en skill, modus eller MCP-server?",
+  "marketplace.contribute.cta": "Bidra på GitHub",
+
+  // Plan follow-up question shown after plan_exit
+  "plan.followup.header": "Implementer",
+  "plan.followup.question": "Klar til å implementere?",
+  "plan.followup.answer.newSession": "Start ny økt",
+  "plan.followup.answer.newSession.description": "Implementer i en ny økt med ren kontekst",
+  "plan.followup.answer.continue": "Fortsett her",
+  "plan.followup.answer.continue.description": "Implementer planen i denne økten",
 }

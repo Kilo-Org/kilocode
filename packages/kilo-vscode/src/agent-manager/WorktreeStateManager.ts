@@ -352,6 +352,15 @@ export class WorktreeStateManager {
     return this.sections.get(id)
   }
 
+  /** Return IDs of worktrees assigned to the given section. */
+  getWorktreesInSection(id: string): string[] {
+    const result: string[] = []
+    for (const wt of this.worktrees.values()) {
+      if (wt.sectionId === id) result.push(wt.id)
+    }
+    return result
+  }
+
   addSection(name: string, color: string | null, worktreeIds?: string[]): Section {
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     const id = generateId("sec")
@@ -524,8 +533,13 @@ export class WorktreeStateManager {
       }
       let pruned = 0
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
-        // Skip orphaned sessions (null worktreeId or referencing a deleted worktree)
-        if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+        const ref = s.worktreeId
+        if (ref === null) {
+          this.sessions.set(id, { id, ...s })
+          continue
+        }
+        // Skip orphaned sessions referencing a deleted worktree.
+        if (!ref || !this.worktrees.has(ref)) {
           pruned++
           continue
         }
@@ -571,9 +585,11 @@ export class WorktreeStateManager {
         changed = true
       }
     }
-    // Prune orphaned sessions (worktreeId is null or references a deleted worktree)
+    // Preserve local sessions; prune only sessions that reference missing worktrees.
     for (const s of [...this.sessions.values()]) {
-      if (!s.worktreeId || !this.worktrees.has(s.worktreeId)) {
+      const ref = s.worktreeId
+      if (ref === null) continue
+      if (!ref || !this.worktrees.has(ref)) {
         this.sessions.delete(s.id)
         changed = true
       }

@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Oturumu Fork'la",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminali Aç",
+  "agentManager.tab.newOptions": "Daha fazla yeni sekme seçeneği",
+
+  "agentManager.terminal.new": "Yeni Terminal Sekmesi",
+  "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
+  "agentManager.terminal.connectionError": "terminal bağlantı hatası",
+  "agentManager.terminal.errorTitle": "Terminal hatası",
 
   "agentManager.setup.failed": "Worktree kurulumu başarısız",
   "agentManager.setup.settingUp": "Worktree kuruluyor",
@@ -78,6 +84,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Yeni sekme",
   "agentManager.shortcuts.closeTab": "Sekmeyi kapat",
   "agentManager.shortcuts.toggleTerminal": "Terminali aç/kapat",
+  "agentManager.shortcuts.runScript": "Betiği çalıştır",
+  "agentManager.run.options": "Çalıştırma seçenekleri",
+  "agentManager.run.configure": "Çalıştırma betiğini yapılandır",
   "agentManager.shortcuts.openAgentManager": "Agent Manager'ı Aç",
   "agentManager.shortcuts.cycleAgentMode": "Sonraki agent modu",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Önceki agent modu",

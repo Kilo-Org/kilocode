@@ -1,4 +1,5 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { createAlibaba } from "@ai-sdk/alibaba"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
@@ -76,6 +77,7 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
   }
 
   const openrouter = createOpenRouter(sdkOptions)
+  const alibaba = createAlibaba(sdkOptions)
   const anthropic = createAnthropic(sdkOptions)
   const openai = createOpenAI(sdkOptions)
   const openaiCompatible = createOpenAICompatible({ ...sdkOptions, name: "openaiCompatible" })
@@ -84,11 +86,17 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
     languageModel(modelId) {
       return openrouter(modelId)
     },
-    textEmbeddingModel(modelId) {
+    embeddingModel(modelId: string) {
       return openrouter.textEmbeddingModel(modelId)
+    },
+    rerankingModel(modelId: string): never {
+      throw new Error(`Reranking model not supported: ${modelId}`)
     },
     imageModel(modelId) {
       return openrouter.imageModel(modelId)
+    },
+    alibaba(modelId) {
+      return alibaba(modelId)
     },
     anthropic(modelId) {
       return anthropic(modelId)

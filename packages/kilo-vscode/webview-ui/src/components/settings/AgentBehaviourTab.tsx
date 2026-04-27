@@ -835,10 +835,12 @@ const AgentBehaviourTab: Component = () => {
                     }}
                   >
                     <div>{skill.description}</div>
-                    <div>{skill.location}</div>
+                    {skill.location !== "builtin" && <div>{skill.location}</div>}
                   </div>
                 </div>
-                <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
+                {skill.location !== "builtin" && (
+                  <IconButton size="small" variant="ghost" icon="close" onClick={() => confirmRemoveSkill(skill)} />
+                )}
               </div>
             )}
           </For>

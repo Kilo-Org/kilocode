@@ -3,6 +3,7 @@ import { Diff } from "@kilocode/kilo-ui/diff"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
+import { normalize, text } from "@kilocode/kilo-ui/session-diff"
 import type { PermissionFileDiff } from "../../types/messages"
 import { useVSCode } from "../../context/vscode"
 
@@ -23,10 +24,21 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
     return parts.slice(0, -1).join("/")
   })
 
+  const resolved = createMemo(() => {
+    const fd = props.filediff
+    if (fd.before !== undefined || fd.after !== undefined) return { before: fd.before ?? "", after: fd.after ?? "" }
+    if (fd.patch) {
+      const view = normalize(fd)
+      return { before: text(view, "deletions"), after: text(view, "additions") }
+    }
+    return { before: "", after: "" }
+  })
+
   const openInTab = () => {
+    const { before, after } = resolved()
     vscode.postMessage({
       type: "openDiffVirtual",
-      diff: props.filediff,
+      diff: { ...props.filediff, before, after },
     })
   }
 
@@ -52,7 +64,7 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
             </svg>
           </div>
           <div data-slot="permission-diff-filename">
-            {directory() && <span data-slot="permission-diff-directory">{directory()}/</span>}
+            {directory() && <span data-slot="permission-diff-directory">{`\u2066${directory()}/\u2069`}</span>}
             <span data-slot="permission-diff-name">{filename()}</span>
           </div>
         </div>
@@ -65,8 +77,8 @@ export const PermissionDiff: Component<PermissionDiffProps> = (props) => {
       </div>
       <div data-slot="permission-diff-content">
         <Diff
-          before={{ name: props.filediff.file, contents: props.filediff.before ?? "" }}
-          after={{ name: props.filediff.file, contents: props.filediff.after ?? "" }}
+          before={{ name: props.filediff.file, contents: resolved().before }}
+          after={{ name: props.filediff.file, contents: resolved().after }}
           diffStyle="unified"
         />
       </div>

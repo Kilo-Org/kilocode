@@ -1,6 +1,6 @@
 import yargs from "yargs"
 import type { CommandModule } from "yargs"
-import { Log } from "../util/log"
+import { Log } from "../util"
 
 type Cmd = CommandModule<any, any>
 

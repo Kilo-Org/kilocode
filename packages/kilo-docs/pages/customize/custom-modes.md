@@ -161,6 +161,8 @@ Pin a specific model using the `provider/model` format:
 model: anthropic/claude-sonnet-4-20250514
 ```
 
+The model selector also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the **reset button** in the model selector (visible when your active model differs from what the config specifies).
+
 ### `steps`
 
 Limits the number of agentic iterations (tool call rounds) before the agent is forced to respond with text only. Useful for preventing runaway agents:
@@ -230,10 +232,26 @@ If you have existing `.kilocodemodes` or `custom_modes.yaml` files from the VSCo
 
 Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orchestrator`) are skipped during migration since they map to built-in agents (`build` → `code`, `architect` → `plan`).
 
+### Legacy File Locations
+
+The current VSCode extension reads the legacy `custom_modes.yaml` file from its own global storage directory. Helpful for inspecting or fixing the file before the one-time migration runs:
+
+| OS      | Path                                                                                                  |
+| ------- | ----------------------------------------------------------------------------------------------------- |
+| macOS   | `~/Library/Application Support/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml` |
+| Linux   | `~/.config/Code/User/globalStorage/kilocode.kilo-code/settings/custom_modes.yaml`                     |
+| Windows | `%APPDATA%\Code\User\globalStorage\kilocode.kilo-code\settings\custom_modes.yaml`                     |
+
+Project-level `.kilocodemodes` and workspace-scoped files are handled by the CLI backend that the extension delegates to — see the [CLI tab](#cli) for the full load-order table. After the extension migrates on startup, the legacy file is no longer consulted; remove new modes through the extension UI instead of editing `custom_modes.yaml` directly.
+
 {% /tab %}
 {% tab label="CLI" %}
 
 In the CLI, custom behavioral profiles are called **agents** instead of modes. Agents are defined as Markdown files with YAML frontmatter or as entries in the `agent` key of your config file.
+
+{% callout type="warning" %}
+**Legacy `custom_modes.yaml` is not loaded from `~/.config/kilo/`.** If you're migrating from the legacy VSCode extension, global custom modes are read from `~/.kilocode/cli/global/settings/custom_modes.yaml` (not from the CLI's XDG config directory). The recommended approach is to convert legacy modes to agent `.md` files and place them in `~/.config/kilo/agent/` instead — see [Markdown files](#3-markdown-files-with-yaml-frontmatter) and [Migration](#migration-from-vscode-extension-modes) below.
+{% /callout %}
 
 ## What's Included in a Custom Agent?
 
@@ -379,6 +397,8 @@ Pin a specific model using the `provider/model` format:
 model: anthropic/claude-sonnet-4-20250514
 ```
 
+The TUI also **remembers the last model you picked for each agent** across sessions. A config-pinned `model` acts as the default when no manual pick exists. To reset a pick and let the config take over, use the model picker (`Ctrl+X m`) and select a different model, or remove the saved pick from `~/.local/state/kilo/model.json`.
+
 ### `steps`
 
 Limits the number of agentic iterations (tool call rounds) before the agent is forced to respond with text only. Useful for preventing runaway agents:
@@ -447,6 +467,21 @@ If you have existing `.kilocodemodes` or `custom_modes.yaml` files from the VSCo
 - Mode is set to `primary`
 
 Default legacy mode slugs (`code`, `build`, `architect`, `ask`, `debug`, `orchestrator`) are skipped during migration since they map to built-in agents (`build` → `code`, `architect` → `plan`).
+
+### Legacy File Lookup Paths
+
+The CLI reads legacy mode files from the following locations (in load order). When the same slug appears in multiple sources, the **last loaded source wins**:
+
+| Load Order | Path | Format | Scope |
+|------------|------|--------|-------|
+| 1 | VSCode extension global storage `/settings/custom_modes.yaml` | YAML | Global |
+| 2 | `~/.kilocode/cli/global/settings/custom_modes.yaml` | YAML | Global |
+| 3 | `~/.kilocodemodes` | YAML | Global |
+| 4 | `<project>/.kilocodemodes` | YAML | Project (wins on conflict) |
+
+{% callout type="info" %}
+`~/.config/kilo/` is the XDG config directory for the new agent format — legacy `custom_modes.yaml` placed there will **not** be loaded. Use `~/.config/kilo/agent/*.md` or `~/.config/kilo/kilo.jsonc` for new agent definitions instead.
+{% /callout %}
 
 {% /tab %}
 {% tab label="VSCode (Legacy)" %}

@@ -55,7 +55,7 @@ export async function hasUpstreamRemote(): Promise<boolean> {
 }
 
 export async function fetchUpstream(): Promise<void> {
-  const result = await $`git fetch upstream`.quiet().nothrow()
+  const result = await $`git fetch upstream --tags --force`.quiet().nothrow()
   if (result.exitCode !== 0) {
     throw new Error(`Failed to fetch upstream: ${result.stderr.toString()}`)
   }
@@ -144,6 +144,12 @@ export async function getConflictedFiles(): Promise<string[]> {
 export async function hasUncommittedChanges(): Promise<boolean> {
   const result = await $`git status --porcelain`.text()
   return result.trim().length > 0
+}
+
+export async function restoreDirectories(dirs: string[]): Promise<void> {
+  for (const dir of dirs) {
+    await $`git restore ${dir}`.quiet().nothrow()
+  }
 }
 
 export async function stageAll(): Promise<void> {

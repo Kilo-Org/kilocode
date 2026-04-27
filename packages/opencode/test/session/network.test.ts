@@ -44,7 +44,7 @@ describe("session.network", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const ask = SessionNetwork.ask({
+        const { promise } = await SessionNetwork.ask({
           sessionID: "ses_test",
           message: "Connection refused",
           abort: new AbortController().signal,
@@ -53,7 +53,7 @@ describe("session.network", () => {
         expect(pending).toHaveLength(1)
         const req = pending[0]!
         await SessionNetwork.reply({ requestID: req.id })
-        await expect(ask).resolves.toBeUndefined()
+        await expect(promise).resolves.toBeUndefined()
       },
     })
   })
@@ -63,7 +63,7 @@ describe("session.network", () => {
     await Instance.provide({
       directory: tmp.path,
       fn: async () => {
-        const ask = SessionNetwork.ask({
+        const { promise } = await SessionNetwork.ask({
           sessionID: "ses_test",
           message: "Connection timed out",
           abort: new AbortController().signal,
@@ -72,7 +72,7 @@ describe("session.network", () => {
         expect(pending).toHaveLength(1)
         const req = pending[0]!
         await SessionNetwork.reject({ requestID: req.id })
-        await expect(ask).rejects.toBeInstanceOf(SessionNetwork.RejectedError)
+        await expect(promise).rejects.toBeInstanceOf(SessionNetwork.RejectedError)
       },
     })
   })
@@ -89,11 +89,12 @@ describe("session.network", () => {
         abort.abort()
 
         try {
-          const err = await SessionNetwork.ask({
+          const { promise } = await SessionNetwork.ask({
             sessionID: "ses_test",
             message: "Connection timed out",
             abort: abort.signal,
-          }).catch((err) => err)
+          })
+          const err = await promise.catch((err) => err)
 
           expect(err).toBeInstanceOf(DOMException)
           expect(err.name).toBe("AbortError")
@@ -113,7 +114,7 @@ describe("session.network", () => {
       directory: tmp.path,
       fn: async () => {
         const abort = new AbortController()
-        const pending = SessionNetwork.ask({
+        const { promise } = await SessionNetwork.ask({
           sessionID: "ses_test",
           message: "Connection refused",
           abort: abort.signal,
@@ -124,7 +125,7 @@ describe("session.network", () => {
 
         // abort while waiting
         abort.abort()
-        const err = await pending.catch((e: unknown) => e)
+        const err = await promise.catch((e: unknown) => e)
         expect(err).toBeInstanceOf(DOMException)
         expect((err as DOMException).name).toBe("AbortError")
 

@@ -63,6 +63,9 @@ export const WorkingIndicator: Component = () => {
       const retryMsg = info.message || language.t("session.status.retry")
       return countdown > 0 ? `${retryMsg} (${countdown}s)` : retryMsg
     }
+    if (info.type === "offline") {
+      return info.message || language.t("session.status.offline")
+    }
     return session.statusText() ?? language.t("ui.sessionTurn.status.thinking")
   }
 
@@ -80,7 +83,8 @@ export const WorkingIndicator: Component = () => {
       .permissions()
       .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
     const questions = session.questions().filter((q) => q.sessionID === id)
-    return perms.length > 0 || questions.length > 0
+    const suggestions = session.suggestions().filter((s) => s.sessionID === id)
+    return perms.length > 0 || questions.length > 0 || suggestions.length > 0
   }
 
   const isRetrying = () => session.statusInfo().type === "retry"

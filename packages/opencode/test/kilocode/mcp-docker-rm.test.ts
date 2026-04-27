@@ -7,9 +7,10 @@ describe("ensureDockerRm", () => {
     expect(result).toEqual(["run", "--rm", "-i", "my-image"])
   })
 
-  test("keeps existing --rm and adds another (Docker treats duplicates as no-op)", () => {
-    const result = MCP.ensureDockerRm("docker", ["run", "--rm", "-i", "my-image"])
-    expect(result).toEqual(["run", "--rm", "--rm", "-i", "my-image"])
+  test("skips adding --rm when already present (idempotent)", () => {
+    const args = ["run", "--rm", "-i", "my-image"]
+    const result = MCP.ensureDockerRm("docker", args)
+    expect(result).toBe(args)
   })
 
   test("does not modify non-docker commands", () => {

@@ -3,14 +3,16 @@ import { fileURLToPath } from "bun"
 import { useTheme } from "../context/theme"
 import { useDialog } from "@tui/ui/dialog"
 import { useSync } from "@tui/context/sync"
+import { useProject } from "@tui/context/project"
 import { For, Match, Switch, Show, createMemo } from "solid-js"
-import { Installation } from "../../../../installation"
+import { InstallationVersion } from "../../../../installation/version"
 import { Global } from "@/global" // kilocode_change
 
 export type DialogStatusProps = {}
 
 export function DialogStatus() {
   const sync = useSync()
+  const project = useProject()
   const { theme } = useTheme()
   const dialog = useDialog()
 
@@ -18,7 +20,8 @@ export function DialogStatus() {
 
   const plugins = createMemo(() => {
     const list = sync.data.config.plugin ?? []
-    const result = list.map((value) => {
+    const result = list.map((item) => {
+      const value = typeof item === "string" ? item : item[0]
       if (value.startsWith("file://")) {
         const path = fileURLToPath(value)
         const parts = path.split(/[/\\]/) // kilocode_change: fix Windows backslash paths
@@ -52,7 +55,7 @@ export function DialogStatus() {
         </text>
       </box>
       {/* kilocode_change start */}
-      <text fg={theme.textMuted}>Kilo v{Installation.VERSION}</text>
+      <text fg={theme.textMuted}>Kilo v{InstallationVersion}</text>
       {/* kilocode_change end */}
       {/* kilocode_change start */}
       <box>
@@ -61,10 +64,10 @@ export function DialogStatus() {
           Global config {"  "}
           {Global.Path.config.replace(Global.Path.home, "~")}
         </text>
-        <Show when={sync.data.path.directory}>
+        <Show when={project.instance.path().directory}>
           <text fg={theme.textMuted}>
             Project {"       "}
-            {sync.data.path.directory.replace(Global.Path.home, "~")}
+            {project.instance.path().directory.replace(Global.Path.home, "~")}
           </text>
         </Show>
       </box>

@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Rozgałęź sesję",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otwórz Terminal",
+  "agentManager.tab.newOptions": "Więcej opcji nowej karty",
+
+  "agentManager.terminal.new": "Nowa karta terminala",
+  "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
+  "agentManager.terminal.connectionError": "błąd połączenia terminala",
+  "agentManager.terminal.errorTitle": "Błąd terminala",
   "agentManager.setup.failed": "Konfiguracja worktree nie powiodła się",
   "agentManager.setup.settingUp": "Konfigurowanie worktree",
   "agentManager.setup.error.git_not_found":
@@ -73,6 +79,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nowa karta",
   "agentManager.shortcuts.closeTab": "Zamknij kartę",
   "agentManager.shortcuts.toggleTerminal": "Przełącz terminal",
+  "agentManager.shortcuts.runScript": "Uruchom skrypt",
+  "agentManager.run.options": "Opcje uruchamiania",
+  "agentManager.run.configure": "Konfiguruj skrypt uruchamiania",
   "agentManager.shortcuts.openAgentManager": "Otwórz Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

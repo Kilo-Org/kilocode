@@ -1,9 +1,11 @@
 import { test, expect, describe } from "bun:test"
-import { PermissionNext } from "../../src/permission/next"
+import { Permission } from "../../src/permission"
 
-// Reconstruct the Ask agent's readOnlyBash allowlist (mirrors agent.ts)
+// Reconstruct the Ask agent's readOnlyBash allowlist (mirrors kilocode/agent/index.ts)
+// Uses an allow-list approach for git: deny by default, allow specific read-only subcommands.
 const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "*": "deny",
+  // read-only / informational
   "cat *": "allow",
   "head *": "allow",
   "tail *": "allow",
@@ -24,6 +26,7 @@ const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "whoami *": "allow",
   "printenv *": "allow",
   "man *": "allow",
+  // text processing (stdout only, no file modification)
   "grep *": "allow",
   "rg *": "allow",
   "ag *": "allow",
@@ -32,43 +35,35 @@ const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "cut *": "allow",
   "tr *": "allow",
   "jq *": "allow",
-  "git *": "allow",
-  "git add *": "deny",
-  "git commit *": "deny",
-  "git push *": "deny",
-  "git merge *": "deny",
-  "git rebase *": "deny",
-  "git cherry-pick *": "deny",
-  "git reset *": "deny",
-  "git checkout *": "deny",
-  "git switch *": "deny",
-  "git stash *": "deny",
-  "git tag *": "deny",
-  "git am *": "deny",
-  "git apply *": "deny",
-  "git remote set-url *": "deny",
-  "git remote add *": "deny",
-  "git remote remove *": "deny",
-  "git clean *": "deny",
-  "git mv *": "deny",
-  "git rm *": "deny",
-  "git config *": "deny",
-  "git clone *": "deny",
-  "git pull *": "deny",
-  "git init *": "deny",
-  "git worktree *": "deny",
-  "git submodule *": "deny",
-  "git revert *": "deny",
-  "git bisect *": "deny",
-  "git filter-branch *": "deny",
-  "git fetch *": "deny",
-  "git restore *": "deny",
+  // git — allowlist of read-only subcommands, deny everything else
+  "git *": "deny",
+  "git log *": "allow",
+  "git show *": "allow",
+  "git diff *": "allow",
+  "git status *": "allow",
+  "git blame *": "allow",
+  "git rev-parse *": "allow",
+  "git rev-list *": "allow",
+  "git ls-files *": "allow",
+  "git ls-tree *": "allow",
+  "git ls-remote *": "allow",
+  "git shortlog *": "allow",
+  "git describe *": "allow",
+  "git cat-file *": "allow",
+  "git name-rev *": "allow",
+  "git stash list *": "allow",
+  "git tag -l *": "allow",
+  "git branch --list *": "allow",
+  "git branch -a *": "allow",
+  "git branch -r *": "allow",
+  "git remote -v *": "allow",
+  // gh — require user approval since commands vary widely
   "gh *": "ask",
 }
 
 /** Build the Ask agent ruleset without MCP servers */
 function askRuleset() {
-  return PermissionNext.fromConfig({
+  return Permission.fromConfig({
     "*": "deny",
     bash: readOnlyBash,
     read: {
@@ -89,16 +84,16 @@ function askRuleset() {
 }
 
 /** Build the Ask agent ruleset WITH MCP servers and optional user config */
-function askRulesetWithMcp(servers: string[], user: PermissionNext.Ruleset = []) {
+function askRulesetWithMcp(servers: string[], user: Permission.Ruleset = []) {
   const mcpRules: Record<string, "allow" | "ask" | "deny"> = {}
   for (const key of servers) {
     const sanitized = key.replace(/[^a-zA-Z0-9_-]/g, "_")
     mcpRules[sanitized + "_*"] = "ask"
   }
   // Mirrors agent.ts merge order: user, ask-specific (with mcpRules), user denies last
-  return PermissionNext.merge(
+  return Permission.merge(
     user,
-    PermissionNext.fromConfig({
+    Permission.fromConfig({
       "*": "deny",
       bash: readOnlyBash,
       read: {
@@ -145,7 +140,7 @@ describe("Ask agent bash permissions", () => {
 
     for (const [name, cmd] of allowed) {
       test(`${name}: "${cmd}" → allow`, () => {
-        const result = PermissionNext.evaluate("bash", cmd, ruleset)
+        const result = Permission.evaluate("bash", cmd, ruleset)
         expect(result.action).toBe("allow")
       })
     }
@@ -165,7 +160,7 @@ describe("Ask agent bash permissions", () => {
 
     for (const cmd of allowed) {
       test(`"${cmd}" → allow`, () => {
-        const result = PermissionNext.evaluate("bash", cmd, ruleset)
+        const result = Permission.evaluate("bash", cmd, ruleset)
         expect(result.action).toBe("allow")
       })
     }
@@ -207,7 +202,7 @@ describe("Ask agent bash permissions", () => {
 
     for (const cmd of denied) {
       test(`"${cmd}" → deny`, () => {
-        const result = PermissionNext.evaluate("bash", cmd, ruleset)
+        const result = Permission.evaluate("bash", cmd, ruleset)
         expect(result.action).toBe("deny")
       })
     }
@@ -232,16 +227,16 @@ describe("Ask agent bash permissions", () => {
 
     for (const cmd of denied) {
       test(`"${cmd}" → deny`, () => {
-        const result = PermissionNext.evaluate("bash", cmd, ruleset)
+        const result = Permission.evaluate("bash", cmd, ruleset)
         expect(result.action).toBe("deny")
       })
     }
   })
 
   test("gh commands → ask", () => {
-    expect(PermissionNext.evaluate("bash", "gh pr view 123", ruleset).action).toBe("ask")
-    expect(PermissionNext.evaluate("bash", "gh issue list", ruleset).action).toBe("ask")
-    expect(PermissionNext.evaluate("bash", "gh api repos/org/repo", ruleset).action).toBe("ask")
+    expect(Permission.evaluate("bash", "gh pr view 123", ruleset).action).toBe("ask")
+    expect(Permission.evaluate("bash", "gh issue list", ruleset).action).toBe("ask")
+    expect(Permission.evaluate("bash", "gh api repos/org/repo", ruleset).action).toBe("ask")
   })
 })
 
@@ -249,13 +244,13 @@ describe("Ask agent tool disabled checks", () => {
   const ruleset = askRuleset()
 
   test("bash tool is NOT disabled (has specific allow rules after deny)", () => {
-    const result = PermissionNext.disabled(["bash"], ruleset)
+    const result = Permission.disabled(["bash"], ruleset)
     expect(result.has("bash")).toBe(false)
   })
 
   test("allowed tools are not disabled", () => {
     const tools = ["read", "grep", "glob", "list", "question", "webfetch", "websearch", "codesearch", "codebase_search"]
-    const result = PermissionNext.disabled(tools, ruleset)
+    const result = Permission.disabled(tools, ruleset)
     for (const tool of tools) {
       expect(result.has(tool)).toBe(false)
     }
@@ -263,19 +258,19 @@ describe("Ask agent tool disabled checks", () => {
 
   test("edit tools are disabled", () => {
     const tools = ["edit", "write", "patch", "multiedit"]
-    const result = PermissionNext.disabled(tools, ruleset)
+    const result = Permission.disabled(tools, ruleset)
     for (const tool of tools) {
       expect(result.has(tool)).toBe(true)
     }
   })
 
   test("task tool is disabled", () => {
-    const result = PermissionNext.disabled(["task"], ruleset)
+    const result = Permission.disabled(["task"], ruleset)
     expect(result.has("task")).toBe(true)
   })
 
   test("todowrite and todoread are disabled", () => {
-    const result = PermissionNext.disabled(["todowrite", "todoread"], ruleset)
+    const result = Permission.disabled(["todowrite", "todoread"], ruleset)
     expect(result.has("todowrite")).toBe(true)
     expect(result.has("todoread")).toBe(true)
   })
@@ -284,51 +279,51 @@ describe("Ask agent tool disabled checks", () => {
 describe("Ask agent MCP permissions", () => {
   test("MCP tools not disabled when servers configured", () => {
     const ruleset = askRulesetWithMcp(["my-server", "another_server"])
-    const result = PermissionNext.disabled(["my-server_sometool", "another_server_listthing"], ruleset)
+    const result = Permission.disabled(["my-server_sometool", "another_server_listthing"], ruleset)
     expect(result.has("my-server_sometool")).toBe(false)
     expect(result.has("another_server_listthing")).toBe(false)
   })
 
   test("MCP tools evaluate to ask", () => {
     const ruleset = askRulesetWithMcp(["my-server"])
-    const result = PermissionNext.evaluate("my-server_read_file", "*", ruleset)
+    const result = Permission.evaluate("my-server_read_file", "*", ruleset)
     expect(result.action).toBe("ask")
   })
 
   test("MCP tools disabled without server config", () => {
     const ruleset = askRuleset()
-    const result = PermissionNext.disabled(["my-server_sometool"], ruleset)
+    const result = Permission.disabled(["my-server_sometool"], ruleset)
     expect(result.has("my-server_sometool")).toBe(true)
   })
 
   test("server names with special characters are sanitized", () => {
     const ruleset = askRulesetWithMcp(["my.special server!"])
     // "my.special server!" → "my_special_server_"
-    const result = PermissionNext.disabled(["my_special_server__sometool"], ruleset)
+    const result = Permission.disabled(["my_special_server__sometool"], ruleset)
     expect(result.has("my_special_server__sometool")).toBe(false)
 
-    const eval_ = PermissionNext.evaluate("my_special_server__sometool", "*", ruleset)
+    const eval_ = Permission.evaluate("my_special_server__sometool", "*", ruleset)
     expect(eval_.action).toBe("ask")
   })
 
   test("MCP rules don't interfere with built-in tool permissions", () => {
     const ruleset = askRulesetWithMcp(["server1"])
     // Built-in tools should still work normally
-    expect(PermissionNext.evaluate("read", "src/index.ts", ruleset).action).toBe("allow")
-    expect(PermissionNext.evaluate("bash", "ls -la", ruleset).action).toBe("allow")
-    expect(PermissionNext.evaluate("bash", "git commit -m test", ruleset).action).toBe("deny")
+    expect(Permission.evaluate("read", "src/index.ts", ruleset).action).toBe("allow")
+    expect(Permission.evaluate("bash", "ls -la", ruleset).action).toBe("allow")
+    expect(Permission.evaluate("bash", "git commit -m test", ruleset).action).toBe("deny")
 
     // Edit tools should still be disabled
-    const disabled = PermissionNext.disabled(["edit", "write"], ruleset)
+    const disabled = Permission.disabled(["edit", "write"], ruleset)
     expect(disabled.has("edit")).toBe(true)
     expect(disabled.has("write")).toBe(true)
   })
 
   test("user config deny overrides MCP ask rules", () => {
-    const deny = PermissionNext.fromConfig({ "my-server_*": "deny" })
+    const deny = Permission.fromConfig({ "my-server_*": "deny" })
     const ruleset = askRulesetWithMcp(["my-server"], deny)
     // User explicitly denied this server — should stay denied
-    const result = PermissionNext.disabled(["my-server_sometool"], ruleset)
+    const result = Permission.disabled(["my-server_sometool"], ruleset)
     expect(result.has("my-server_sometool")).toBe(true)
   })
 })

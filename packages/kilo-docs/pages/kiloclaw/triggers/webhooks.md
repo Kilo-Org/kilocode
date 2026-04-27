@@ -41,14 +41,14 @@ You received a webhook event. Here is the payload:
 
 **Available variables:**
 
-| Variable | Description |
-| --- | --- |
-| `{{body}}` | Raw request body |
-| `{{bodyJson}}` | Pretty-printed JSON body |
-| `{{method}}` | HTTP method (e.g., `POST`) |
-| `{{headers}}` | Request headers |
-| `{{path}}` | Request path |
-| `{{query}}` | Query string parameters |
+| Variable        | Description                   |
+| --------------- | ----------------------------- |
+| `{{body}}`      | Raw request body              |
+| `{{bodyJson}}`  | Pretty-printed JSON body      |
+| `{{method}}`    | HTTP method (e.g., `POST`)    |
+| `{{headers}}`   | Request headers               |
+| `{{path}}`      | Request path                  |
+| `{{query}}`     | Query string parameters       |
 | `{{timestamp}}` | Time the webhook was received |
 
 You can tailor the template to give your agent more context. For example:

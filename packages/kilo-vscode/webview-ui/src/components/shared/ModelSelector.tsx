@@ -78,6 +78,8 @@ export interface ModelSelectorBaseProps {
   value: ModelSelection | null
   /** Called when the user picks a model */
   onSelect: (providerID: string, modelID: string) => void
+  /** Called after a pick closes the popover */
+  onPick?: () => void
   /** Popover placement — defaults to "top-start" */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Allow clearing the selection (shows a "Not set" option) */
@@ -364,6 +366,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   function pick(model: EnrichedModel) {
     props.onSelect(model.providerID, model.id)
     setOpen(false)
+    props.onPick?.()
   }
 
   function pickClear() {
@@ -372,6 +375,7 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
     setPreviewKey(CLEAR_KEY)
     props.onSelect("", "")
     setOpen(false)
+    props.onPick?.()
   }
 
   function setRow(key: string) {
@@ -715,7 +719,9 @@ export const ModelSelector: Component = () => {
       value={session.selected()}
       onSelect={(providerID, modelID) => {
         session.selectModel(providerID, modelID)
-        requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
+      }}
+      onPick={() => {
+        requestAnimationFrame(() => window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } })))
       }}
     />
   )

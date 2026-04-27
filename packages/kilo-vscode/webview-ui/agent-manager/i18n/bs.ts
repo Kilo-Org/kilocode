@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Razdvoji sesiju",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Otvori Terminal",
+  "agentManager.tab.newOptions": "Više opcija nove kartice",
+
+  "agentManager.terminal.new": "Nova kartica terminala",
+  "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
+  "agentManager.terminal.connectionError": "greška u vezi terminala",
+  "agentManager.terminal.errorTitle": "Greška terminala",
   "agentManager.setup.failed": "Postavljanje radnog prostora neuspješno",
   "agentManager.setup.settingUp": "Postavljanje radnog prostora",
   "agentManager.setup.error.git_not_found":
@@ -74,6 +80,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nova kartica",
   "agentManager.shortcuts.closeTab": "Zatvori karticu",
   "agentManager.shortcuts.toggleTerminal": "Prebaci terminal",
+  "agentManager.shortcuts.runScript": "Pokreni skriptu",
+  "agentManager.run.options": "Opcije pokretanja",
+  "agentManager.run.configure": "Konfiguriši skriptu za pokretanje",
   "agentManager.shortcuts.openAgentManager": "Otvori Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

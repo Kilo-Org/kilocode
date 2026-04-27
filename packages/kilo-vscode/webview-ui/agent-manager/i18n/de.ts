@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sitzung verzweigen",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal öffnen",
+  "agentManager.tab.newOptions": "Weitere Tab-Optionen",
+
+  "agentManager.terminal.new": "Neuer Terminal-Tab",
+  "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
+  "agentManager.terminal.connectionError": "Verbindungsfehler im Terminal",
+  "agentManager.terminal.errorTitle": "Terminal-Fehler",
   "agentManager.setup.failed": "Einrichtung des Arbeitsbereichs fehlgeschlagen",
   "agentManager.setup.settingUp": "Arbeitsbereich wird eingerichtet",
   "agentManager.setup.error.git_not_found":
@@ -74,6 +80,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Neuer Tab",
   "agentManager.shortcuts.closeTab": "Tab schließen",
   "agentManager.shortcuts.toggleTerminal": "Terminal umschalten",
+  "agentManager.shortcuts.runScript": "Skript ausführen",
+  "agentManager.run.options": "Ausführungsoptionen",
+  "agentManager.run.configure": "Ausführungsskript konfigurieren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager öffnen",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

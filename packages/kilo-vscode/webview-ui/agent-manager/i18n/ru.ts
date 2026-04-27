@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Ответвить сессию",
   "agentManager.tab.terminal": "Терминал",
   "agentManager.tab.openTerminal": "Открыть терминал",
+  "agentManager.tab.newOptions": "Другие параметры новой вкладки",
+
+  "agentManager.terminal.new": "Новая вкладка терминала",
+  "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
+  "agentManager.terminal.connectionError": "ошибка подключения к терминалу",
+  "agentManager.terminal.errorTitle": "Ошибка терминала",
   "agentManager.setup.failed": "Не удалось настроить рабочее пространство",
   "agentManager.setup.settingUp": "Настройка рабочего пространства",
   "agentManager.setup.error.git_not_found":
@@ -73,6 +79,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Новая вкладка",
   "agentManager.shortcuts.closeTab": "Закрыть вкладку",
   "agentManager.shortcuts.toggleTerminal": "Переключить терминал",
+  "agentManager.shortcuts.runScript": "Запустить скрипт",
+  "agentManager.run.options": "Параметры запуска",
+  "agentManager.run.configure": "Настроить скрипт запуска",
   "agentManager.shortcuts.openAgentManager": "Открыть Agent Manager",
   "agentManager.shortcuts.cycleAgentMode": "Next agent mode",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Previous agent mode",

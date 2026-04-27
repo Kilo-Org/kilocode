@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sessie forken",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
+  "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+
+  "agentManager.terminal.new": "Nieuw terminaltabblad",
+  "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.connectionError": "terminalverbindingsfout",
+  "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",
   "agentManager.setup.settingUp": "Worktree instellen",
@@ -78,6 +84,9 @@ export const dict = {
   "agentManager.shortcuts.newTab": "Nieuw tabblad",
   "agentManager.shortcuts.closeTab": "Tabblad sluiten",
   "agentManager.shortcuts.toggleTerminal": "Terminal in-/uitschakelen",
+  "agentManager.shortcuts.runScript": "Script uitvoeren",
+  "agentManager.run.options": "Uitvoeropties",
+  "agentManager.run.configure": "Uitvoerscript configureren",
   "agentManager.shortcuts.openAgentManager": "Agent Manager openen",
   "agentManager.shortcuts.cycleAgentMode": "Volgende agent modus",
   "agentManager.shortcuts.cyclePreviousAgentMode": "Vorige agent modus",

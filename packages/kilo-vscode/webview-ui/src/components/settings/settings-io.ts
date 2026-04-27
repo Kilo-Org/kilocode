@@ -29,6 +29,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "formatter",
   "lsp",
   "compaction",
+  "commit_message",
   "tools",
   "layout",
   "experimental",

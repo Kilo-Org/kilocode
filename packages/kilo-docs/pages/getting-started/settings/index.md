@@ -7,6 +7,24 @@ description: "Configure Kilo Code settings and preferences"
 
 The VS Code extension can be configured through the Settings window, opened by pressing the gear icon. Both the CLI and the extension can also be configured through interactions with the agent. The current VS Code extension and CLI share the same underlying settings, so changes in one are reflected in the other.
 
+## Configuring with the Agent
+
+The fastest way to change your Kilo configuration is to ask the agent to do it for you. The agent has a built-in skill that understands the full `kilo.jsonc` schema and can read, create, and update your config files directly.
+
+**Examples of things you can ask:**
+
+- "Switch my default model to Claude Sonnet"
+- "Disable the OpenAI and Groq providers"
+- "Set up an MCP server for Figma"
+- "Auto-approve all read and glob operations"
+- "Create a custom agent for code review"
+
+The agent will edit the appropriate config file (global or project-level) and explain what it changed. This works in both the CLI and VS Code extension.
+
+{% callout type="tip" %}
+This is especially useful for complex configuration like custom model definitions, MCP server setup, or permission patterns — the agent knows the correct syntax and will validate the config for you.
+{% /callout %}
+
 ## Managing Settings
 
 {% tabs %}
@@ -29,7 +47,12 @@ If you check config files into version control, make sure they do not contain AP
 
 ### Export and Import
 
-Config files are plain-text and portable — copy them between machines and you're done.
+You can export and import settings from the **About Kilo Code** tab in the Settings UI:
+
+- **Export**: Saves your global config as a `kilo-settings.json` file. Review it before sharing, because config values are exported as-is.
+- **Import**: Loads a previously exported JSON file into the settings draft. Changes are not applied immediately — you can review them and click Save or Discard, just like any manual edit.
+
+Config files are also plain-text and portable — you can copy `~/.config/kilo/kilo.jsonc` between machines directly.
 
 {% /tab %}
 {% tab label="CLI" %}

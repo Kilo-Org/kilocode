@@ -12,6 +12,7 @@ import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import type { DiffLineAnnotation, AnnotationSide, SelectedLineRange } from "@pierre/diffs"
 import type { WorktreeFileDiff } from "../src/types/messages"
+import { KILO_FILE_PATH_MIME } from "../src/utils/path-mentions"
 import { useLanguage } from "../src/context/language"
 import { getDirectory, getFilename, lineCount, sanitizeReviewComments, type ReviewComment } from "./review-comments"
 import {
@@ -40,7 +41,7 @@ interface DiffPanelProps {
   onClose: () => void
   onExpand?: () => void
   onRequestDiff?: (file: string) => void
-  onOpenFile?: (relativePath: string) => void
+  onOpenFile?: (relativePath: string, line?: number) => void
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
 }
@@ -427,11 +428,19 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                     <StickyAccordionHeader>
                       <Accordion.Trigger>
                         <div data-slot="session-review-trigger-content">
-                          <div data-slot="session-review-file-info">
+                          <div
+                            data-slot="session-review-file-info"
+                            draggable={true}
+                            onDragStart={(e: DragEvent) => {
+                              e.dataTransfer?.setData(KILO_FILE_PATH_MIME, diff.file)
+                              e.dataTransfer?.setData("text/plain", diff.file)
+                              e.stopPropagation()
+                            }}
+                          >
                             <FileIcon node={{ path: diff.file, type: "file" }} />
                             <div data-slot="session-review-file-name-container">
                               <Show when={diff.file.includes("/")}>
-                                <span data-slot="session-review-directory">{getDirectory(diff.file)}</span>
+                                <span data-slot="session-review-directory">{`\u2066${getDirectory(diff.file)}\u2069`}</span>
                               </Show>
                               <span data-slot="session-review-filename">{getFilename(diff.file)}</span>
                               <Show when={fileCommentCount() > 0}>
@@ -520,6 +529,10 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                             renderAnnotation={buildAnnotation}
                             enableGutterUtility={true}
                             onGutterUtilityClick={(result) => handleGutterClick(diff.file, result)}
+                            onLineNumberClick={(event) => {
+                              if (event.annotationSide === "deletions") return
+                              props.onOpenFile?.(diff.file, event.lineNumber)
+                            }}
                           />
                         </Show>
                       </Show>
