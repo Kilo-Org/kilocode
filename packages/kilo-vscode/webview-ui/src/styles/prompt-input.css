@@ -515,6 +515,30 @@
   }
 }
 
+.prompt-indexing-button {
+  position: relative;
+
+  [data-slot="icon-svg"] {
+    color: currentColor;
+  }
+}
+
+.prompt-indexing-button--muted {
+  color: var(--vscode-descriptionForeground);
+}
+
+.prompt-indexing-button--warning {
+  color: var(--vscode-charts-yellow, #cca700);
+}
+
+.prompt-indexing-button--success {
+  color: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.prompt-indexing-button--error {
+  color: var(--vscode-errorForeground, #f48771);
+}
+
 /* ============================================
    Enhance Prompt Spinner
    ============================================ */

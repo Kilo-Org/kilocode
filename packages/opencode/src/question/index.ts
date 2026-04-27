@@ -8,6 +8,7 @@ import { Log } from "@/util"
 import { withStatics } from "@/util/schema"
 import { QuestionID } from "./schema"
 import { makeRuntime } from "@/effect/run-service" // kilocode_change
+import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 
 const log = Log.create({ service: "question" })
 
@@ -148,6 +149,7 @@ export interface Interface {
   readonly reply: (input: { requestID: QuestionID; answers: ReadonlyArray<Answer> }) => Effect.Effect<void>
   readonly reject: (requestID: QuestionID) => Effect.Effect<void>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
+  readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Question") {}
@@ -193,6 +195,11 @@ export const layer = Layer.effect(
         blocking: input.blocking, // kilocode_change
         tool: input.tool,
       })
+
+      // kilocode_change start
+      yield* KiloQuestion.guardFollowup(input.sessionID, () => new RejectedError())
+      // kilocode_change end
+
       pending.set(id, { info, deferred })
       yield* bus.publish(Event.Asked, info)
 
@@ -245,7 +252,16 @@ export const layer = Layer.effect(
       return Array.from(pending.values(), (x) => x.info)
     })
 
-    return Service.of({ ask, reply, reject, list })
+    // kilocode_change start - body lives in @/kilocode/question/KiloQuestion.makeDismissAll
+    const dismissAll = KiloQuestion.makeDismissAll({
+      state,
+      publishRejected: (entry) =>
+        bus.publish(Event.Rejected, { sessionID: entry.info.sessionID, requestID: entry.info.id }),
+      makeError: () => new RejectedError(),
+    })
+    // kilocode_change end
+
+    return Service.of({ ask, reply, reject, list, dismissAll }) // kilocode_change
   }),
 )
 
@@ -257,6 +273,7 @@ export const list = () => runPromise((svc) => svc.list())
 export const ask = (input: Parameters<Interface["ask"]>[0]) => runPromise((svc) => svc.ask(input))
 export const reply = (input: Parameters<Interface["reply"]>[0]) => runPromise((svc) => svc.reply(input))
 export const reject = (requestID: QuestionID) => runPromise((svc) => svc.reject(requestID))
+export const dismissAll = (sessionID: string) => runPromise((svc) => svc.dismissAll(SessionID.make(sessionID)))
 // kilocode_change end
 
 export * as Question from "."

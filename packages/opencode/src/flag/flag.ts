@@ -19,7 +19,8 @@ function number(key: string) {
 
 const KILO_EXPERIMENTAL = truthy("KILO_EXPERIMENTAL")
 const KILO_DISABLE_CLAUDE_CODE = truthy("KILO_DISABLE_CLAUDE_CODE")
-const KILO_DISABLE_CLAUDE_CODE_SKILLS = KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_SKILLS")
+const KILO_DISABLE_CLAUDE_CODE_SKILLS =
+  KILO_DISABLE_CLAUDE_CODE || truthy("KILO_DISABLE_CLAUDE_CODE_SKILLS")
 const copy = process.env["KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT"]
 
 export const Flag = {
@@ -54,7 +55,9 @@ export const Flag = {
 
   // Experimental
   KILO_EXPERIMENTAL,
-  KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(Config.withDefault(false)),
+  KILO_EXPERIMENTAL_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_FILEWATCHER").pipe(
+    Config.withDefault(false),
+  ),
   KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: Config.boolean("KILO_EXPERIMENTAL_DISABLE_FILEWATCHER").pipe(
     Config.withDefault(false),
   ),

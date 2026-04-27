@@ -19,6 +19,7 @@ import type { Provider } from "@/provider"
 import { Question } from "@/question"
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+import { NotFoundError } from "@/storage" // kilocode_change
 import { errorMessage } from "@/util/error"
 import { Log } from "@/util"
 import { isRecord } from "@/util/record"
@@ -128,7 +129,7 @@ export const layer: Layer.Layer<
       }
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
-      const slog = log.clone().tag("sessionID", input.sessionID).tag("messageID", input.assistantMessage.id)
+      const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
 
       const parse = (e: unknown) =>
         MessageV2.fromError(e, {
@@ -156,6 +157,22 @@ export const layer: Layer.Layer<
         }
         return { call, part }
       })
+
+      // kilocode_change start - tolerate deleted sessions during subagent cost reconciliation (#6321)
+      const reconcile = Effect.fn("SessionProcessor.reconcileCost")(function* () {
+        const fresh = yield* Effect.sync(() => {
+          try {
+            return MessageV2.get({ sessionID: ctx.assistantMessage.sessionID, messageID: ctx.assistantMessage.id })
+          } catch (err) {
+            if (NotFoundError.isInstance(err)) return
+            throw err
+          }
+        })
+        if (fresh?.info.role !== "assistant") return
+        if (fresh.info.cost <= ctx.assistantMessage.cost) return
+        ctx.assistantMessage.cost = fresh.info.cost
+      })
+      // kilocode_change end
 
       const updateToolCall = Effect.fn("SessionProcessor.updateToolCall")(function* (
         toolCallID: string,
@@ -224,7 +241,7 @@ export const layer: Layer.Layer<
         return true
       })
 
-      const handleEvent = Effect.fn("SessionProcessor.handleEvent")(function* (value: StreamEvent) {
+      const handleEvent = Effect.fnUntraced(function* (value: StreamEvent) {
         switch (value.type) {
           case "start":
             yield* status.set(ctx.sessionID, { type: "busy" })
@@ -410,6 +427,9 @@ export const layer: Layer.Layer<
             })
             // kilocode_change end
             ctx.assistantMessage.finish = value.finishReason
+            // kilocode_change start - capture any subagent cost propagated by tool calls during this step (#6321)
+            yield* reconcile()
+            // kilocode_change end
             ctx.assistantMessage.cost += usage.cost
             ctx.assistantMessage.tokens = usage.tokens
             yield* session.updatePart({
@@ -567,6 +587,9 @@ export const layer: Layer.Layer<
         ctx.toolcalls = {}
         KiloSessionProcessor.guardEmptyToolCalls(ctx.assistantMessage, MessageV2.parts(ctx.assistantMessage.id)) // kilocode_change
         ctx.assistantMessage.time.completed = Date.now()
+        // kilocode_change start - reconcile cost with any subagent propagation written during tool calls (#6321)
+        yield* reconcile()
+        // kilocode_change end
         yield* session.updateMessage(ctx.assistantMessage)
       })
 

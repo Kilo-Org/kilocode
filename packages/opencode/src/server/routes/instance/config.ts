@@ -5,7 +5,6 @@ import { Config } from "@/config"
 import { Provider } from "@/provider"
 import { errors } from "../../error"
 import { lazy } from "@/util/lazy"
-import { AppRuntime } from "@/effect/app-runtime"
 import { jsonRequest } from "./trace"
 // kilocode_change start
 import { fetchDefaultModel } from "@kilocode/kilo-gateway"
@@ -27,7 +26,7 @@ export const ConfigRoutes = lazy(() =>
             description: "Get config info",
             content: {
               "application/json": {
-                schema: resolver(Config.Info),
+                schema: resolver(Config.Info.zod),
               },
             },
           },
@@ -50,19 +49,21 @@ export const ConfigRoutes = lazy(() =>
             description: "Successfully updated config",
             content: {
               "application/json": {
-                schema: resolver(Config.Info),
+                schema: resolver(Config.Info.zod),
               },
             },
           },
           ...errors(400),
         },
       }),
-      validator("json", Config.Info),
-      async (c) => {
-        const config = c.req.valid("json")
-        await AppRuntime.runPromise(Config.Service.use((cfg) => cfg.update(config)))
-        return c.json(config)
-      },
+      validator("json", Config.Info.zod),
+      async (c) =>
+        jsonRequest("ConfigRoutes.update", c, function* () {
+          const config = c.req.valid("json")
+          const cfg = yield* Config.Service
+          yield* cfg.update(config)
+          return config
+        }),
     )
     // kilocode_change start
     .get(

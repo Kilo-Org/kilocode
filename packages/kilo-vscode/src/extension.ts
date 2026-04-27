@@ -256,6 +256,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.settingsButtonClicked", (tab?: string) => {
       settingsEditorProvider.openPanel("settings", tab)
     }),
+    vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
+      settingsEditorProvider.openPanel("settings", "indexing")
+    }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
       provider.postMessage({ type: "migrationState", needed: true })

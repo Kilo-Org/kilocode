@@ -3,7 +3,7 @@
  * Stories for Settings and ProvidersTab components.
  */
 
-import { onMount } from "solid-js"
+import { onMount, createSignal } from "solid-js"
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import { StoryProviders, mockSessionValue } from "./StoryProviders"
 import { SessionContext } from "../context/session"
@@ -12,7 +12,8 @@ import ProvidersTab from "../components/settings/ProvidersTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
-import type { AgentConfig, AgentInfo, CommandConfig } from "../types/messages"
+import type { AgentConfig, AgentInfo, CommandConfig, Config } from "../types/messages"
+import IndexingTab from "../components/settings/IndexingTab"
 
 const meta: Meta = {
   title: "Settings",
@@ -338,8 +339,9 @@ function ExpandedPromptWrapper() {
           // Find the DefaultPromptSection toggle — it's the card that follows
           // the prompt-override textarea. We look for the card header div.
           const headerDivs = Array.from(ref.querySelectorAll<HTMLDivElement>("[style*='cursor: pointer']"))
-          if (headerDivs.length > 0) {
-            headerDivs[0].click()
+          const first = headerDivs[0]
+          if (first) {
+            first.click()
             return
           }
         }
@@ -460,8 +462,9 @@ function ExpandedSubagentsWrapper() {
       // Find all cursor:pointer divs (collapsible section headers) and click the
       // last one which corresponds to the SubagentsSection.
       const headers = Array.from(ref.querySelectorAll<HTMLDivElement>("[style*='cursor: pointer']"))
-      if (headers.length > 0) {
-        headers[headers.length - 1].click()
+      const last = headers[headers.length - 1]
+      if (last) {
+        last.click()
       }
     })
   })
@@ -530,6 +533,36 @@ export const ModeEditExport: Story = {
           </div>
         </SessionContext.Provider>
       </StoryProviders>
+    )
+  },
+}
+
+export const IndexingProviderBlurRace: Story = {
+  name: "IndexingTab",
+  render: () => {
+    const [saved, setSaved] = createSignal<Record<string, unknown>>({})
+    const cfg: Config = {
+      experimental: {
+        semantic_indexing: true,
+      },
+      indexing: {
+        provider: "openai",
+        openai: { apiKey: "" },
+        gemini: { apiKey: "" },
+      },
+    }
+    return (
+      <>
+        <StoryProviders
+          config={cfg}
+          onConfigChange={(next: Config) => setSaved((next.indexing ?? {}) as Record<string, unknown>)}
+        >
+          <div style={{ width: "420px", "max-height": "700px", overflow: "auto" }}>
+            <IndexingTab />
+          </div>
+        </StoryProviders>
+        <pre data-testid="indexing-provider-save">{JSON.stringify(saved(), null, 2)}</pre>
+      </>
     )
   },
 }

@@ -46,7 +46,6 @@ import {
 import { Identifier } from "../utils/id"
 import { resolveModelSelection } from "./model-selection"
 import { resolveSessionAgent } from "./session-agent"
-import { queuedUserMessageIDs } from "./session-queue"
 import { PartStash } from "./part-stash"
 import { KILO_AUTO, parseModelString } from "../../../src/shared/provider-model"
 
@@ -1751,12 +1750,9 @@ export const SessionProvider: ParentComponent = (props) => {
       return
     }
 
-    const queuedMessageIDs = queuedUserMessageIDs(messages(), statusInfo())
-
     vscode.postMessage({
       type: "abort",
       sessionID,
-      queuedMessageIDs,
     })
   }
 

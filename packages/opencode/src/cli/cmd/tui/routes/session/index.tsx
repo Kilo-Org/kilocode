@@ -43,6 +43,7 @@ import type { WebSearchTool } from "@/tool/websearch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search" // kilocode_change
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -63,6 +64,7 @@ import { Flag } from "@/flag/flag"
 import { LANGUAGE_EXTENSIONS } from "@/lsp/language"
 import parsers from "../../../../../../parsers-config.ts"
 import * as Clipboard from "../../util/clipboard"
+import { errorMessage } from "@/util/error"
 import { Toast, useToast } from "../../ui/toast"
 import { useKV } from "../../context/kv.tsx"
 import * as Editor from "../../util/editor"
@@ -83,6 +85,7 @@ import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 import { bell } from "@/kilocode/bell" // kilocode_change
+import { SessionIndexing } from "@/kilocode/components/session-indexing" // kilocode_change
 import { getScrollAcceleration } from "../../util/scroll"
 import { TuiPluginRuntime } from "../../plugin"
 import { DialogGoUpsell } from "../../component/dialog-go-upsell"
@@ -261,31 +264,43 @@ export function Session() {
   const toast = useToast()
   const sdk = useSDK()
 
-  createEffect(async () => {
-    const previousWorkspace = project.workspace.current()
-    const result = await sdk.client.session.get({ sessionID: route.sessionID }, { throwOnError: true })
-    if (!result.data) {
+  createEffect(() => {
+    const sessionID = route.sessionID
+    void (async () => {
+      const previousWorkspace = project.workspace.current()
+      const result = await sdk.client.session.get({ sessionID }, { throwOnError: true })
+      if (!result.data) {
+        toast.show({
+          message: `Session not found: ${sessionID}`,
+          variant: "error",
+          duration: 5000,
+        })
+        navigate({ type: "home" })
+        return
+      }
+
+      if (result.data.workspaceID !== previousWorkspace) {
+        project.workspace.set(result.data.workspaceID)
+
+        // Sync all the data for this workspace. Note that this
+        // workspace may not exist anymore which is why this is not
+        // fatal. If it doesn't we still want to show the session
+        // (which will be non-interactive)
+        try {
+          await sync.bootstrap({ fatal: false })
+        } catch {}
+      }
+      await sync.session.sync(sessionID)
+      if (route.sessionID === sessionID && scroll) scroll.scrollBy(100_000)
+    })().catch((error) => {
+      if (route.sessionID !== sessionID) return
       toast.show({
-        message: `Session not found: ${route.sessionID}`,
+        message: errorMessage(error),
         variant: "error",
+        duration: 5000,
       })
       navigate({ type: "home" })
-      return
-    }
-
-    if (result.data.workspaceID !== previousWorkspace) {
-      project.workspace.set(result.data.workspaceID)
-
-      // Sync all the data for this workspace. Note that this
-      // workspace may not exist anymore which is why this is not
-      // fatal. If it doesn't we still want to show the session
-      // (which will be non-interactive)
-      try {
-        await sync.bootstrap({ fatal: false })
-      } catch (e) {}
-    }
-    await sync.session.sync(route.sessionID)
-    if (scroll) scroll.scrollBy(100_000)
+    })
   })
 
   let lastSwitch: string | undefined = undefined
@@ -535,7 +550,7 @@ export function Session() {
       },
     },
     {
-      title: "Fork from message",
+      title: "Fork session",
       value: "session.fork",
       keybind: "session_fork",
       category: "Session",
@@ -546,6 +561,7 @@ export function Session() {
         dialog.replace(() => (
           <DialogForkFromTimeline
             onMove={(messageID) => {
+              if (!messageID) return
               const child = scroll.getChildren().find((child) => {
                 return child.id === messageID
               })
@@ -1277,7 +1293,8 @@ export function Session() {
                 <NetworkPrompt request={network()[0]} />
               </Show>
               {/* kilocode_change end */}
-              <Show when={visible()}>
+              {/* kilocode_change start */}
+              <Show when={!session()?.parentID}>
                 <TuiPluginRuntime.Slot
                   name="session_prompt"
                   mode="replace"
@@ -1299,8 +1316,12 @@ export function Session() {
                   />
                 </TuiPluginRuntime.Slot>
               </Show>
+              {/* kilocode_change end */}
             </box>
           </Show>
+          {/* kilocode_change start */}
+          <SessionIndexing />
+          {/* kilocode_change end */}
           <Toast />
         </box>
         <Show when={sidebarVisible()}>
@@ -1659,6 +1680,11 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "grep"}>
           <Grep {...toolprops} />
         </Match>
+        {/* kilocode_change start */}
+        <Match when={props.part.tool === "semantic_search"}>
+          <SemanticSearch {...toolprops} />
+        </Match>
+        {/* kilocode_change end */}
         <Match when={props.part.tool === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2078,6 +2104,23 @@ function WebSearch(props: ToolProps<typeof WebSearchTool>) {
     </InlineTool>
   )
 }
+
+// kilocode_change start
+function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
+  const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
+  const args = createMemo(() => props.input as { query?: string; path?: string })
+  const count = createMemo(() => meta().results?.length ?? 0)
+
+  return (
+    <InlineTool icon="✱" pending="Searching codebase..." complete={args().query} part={props.part}>
+      Codebase Search "{args().query}" <Show when={args().path}>in {normalizePath(args().path!)} </Show>
+      <Show when={count() > 0}>
+        ({count()} {count() === 1 ? "result" : "results"})
+      </Show>
+    </InlineTool>
+  )
+}
+// kilocode_change end
 
 function Task(props: ToolProps<typeof TaskTool>) {
   const { navigate } = useRoute()

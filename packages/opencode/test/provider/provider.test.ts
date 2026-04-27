@@ -14,6 +14,7 @@ import { Env } from "../../src/env"
 import { Effect } from "effect"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { makeRuntime } from "../../src/effect/run-service"
+import { Auth } from "../../src/auth" // kilocode_change
 
 const env = makeRuntime(Env.Service, Env.defaultLayer)
 const set = (k: string, v: string) => env.runSync((svc) => svc.set(k, v))
@@ -87,6 +88,50 @@ test("provider loaded from env variable", async () => {
     },
   })
 })
+
+// kilocode_change start
+test("provider OAuth auth overrides inherited env variable", async () => {
+  await Auth.remove("openai")
+  await Auth.set("openai", {
+    type: "oauth",
+    refresh: "test-refresh-token",
+    access: "test-access-token",
+    expires: Date.now() + 60_000,
+  })
+
+  try {
+    await using tmp = await tmpdir({
+      init: async (dir) => {
+        await Bun.write(
+          path.join(dir, "opencode.json"),
+          JSON.stringify({
+            $schema: "https://app.kilo.ai/config.json",
+          }),
+        )
+      },
+    })
+    await Instance.provide({
+      directory: tmp.path,
+      init: async () => {
+        set("OPENAI_API_KEY", "test-openai-key")
+      },
+      fn: async () => {
+        const providers = await list()
+        const provider = providers[ProviderID.openai]
+        expect(provider).toBeDefined()
+        if (!provider) throw new Error("Expected OpenAI provider")
+        expect(provider.source).toBe("custom")
+        expect(provider.key).toBeUndefined()
+        expect(Object.values(provider.models).every((model) => model.cost.input === 0 && model.cost.output === 0)).toBe(
+          true,
+        )
+      },
+    })
+  } finally {
+    await Auth.remove("openai")
+  }
+})
+// kilocode_change end
 
 test("provider loaded from config with apiKey option", async () => {
   await using tmp = await tmpdir({
@@ -1916,7 +1961,7 @@ test("mode cost preserves over-200k pricing from base model", () => {
         },
       },
     },
-  } as ModelsDev.Provider
+  } as unknown as ModelsDev.Provider
 
   const model = Provider.fromModelsDevProvider(provider).models["gpt-5.4-fast"]
   expect(model.cost.input).toEqual(5)
@@ -1932,6 +1977,38 @@ test("mode cost preserves over-200k pricing from base model", () => {
       write: 0,
     },
   })
+})
+
+test("models.dev normalization fills required response fields", () => {
+  const provider = {
+    id: "gateway",
+    name: "Gateway",
+    env: [],
+    models: {
+      "gpt-5.4": {
+        id: "gpt-5.4",
+        name: "GPT-5.4",
+        family: "gpt",
+        cost: {
+          input: 2.5,
+          output: 15,
+        },
+        limit: {
+          context: 1_050_000,
+          input: 922_000,
+          output: 128_000,
+        },
+      },
+    },
+  } as unknown as ModelsDev.Provider
+
+  const model = Provider.fromModelsDevProvider(provider).models["gpt-5.4"]
+  expect(model.api.url).toBe("")
+  expect(model.capabilities.temperature).toBe(false)
+  expect(model.capabilities.reasoning).toBe(false)
+  expect(model.capabilities.attachment).toBe(false)
+  expect(model.capabilities.toolcall).toBe(true)
+  expect(model.release_date).toBe("")
 })
 
 test("model variants are generated for reasoning models", async () => {
@@ -2453,7 +2530,12 @@ test("plugin config providers persist after instance dispose", async () => {
   expect(first[ProviderID.make("demo")]).toBeDefined()
   expect(first[ProviderID.make("demo")].models[ModelID.make("chat")]).toBeDefined()
 
-  await Instance.disposeAll()
+  // kilocode_change start
+  await Instance.provide({
+    directory: tmp.path,
+    fn: () => Instance.dispose(),
+  })
+  // kilocode_change end
 
   const second = await Instance.provide({
     directory: tmp.path,

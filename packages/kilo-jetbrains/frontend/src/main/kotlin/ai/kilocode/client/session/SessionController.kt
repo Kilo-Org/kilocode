@@ -55,6 +55,9 @@ class SessionController(
     private val workspace: Workspace,
     private val app: KiloAppService,
     private val cs: CoroutineScope,
+    comp: java.awt.Component? = null,
+    private val flushMs: Long = EVENT_FLUSH_MS,
+    private val condense: Boolean = true,
 ) : Disposable {
 
     companion object {
@@ -70,6 +73,7 @@ class SessionController(
     private val listeners = mutableListOf<SessionControllerListener>()
     private var sessionId: String? = id
     private val directory: String get() = workspace.directory
+    private val updates = SessionUpdateQueue(parent, comp, flushMs, ::handle, condense, id != null) { sessionId ?: "pending" }
 
     private var partType: String? = null
     private var tool: String? = null
@@ -81,6 +85,8 @@ class SessionController(
         listeners.add(listener)
         Disposer.register(parent) { listeners.remove(listener) }
     }
+
+    internal fun flushEvents() = updates.requestFlush(true)
 
     fun prompt(text: String) {
         val sid = sessionId ?: "pending"
@@ -247,13 +253,16 @@ class SessionController(
             try {
                 val history = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(history)}" }
-                edt {
+                runEdt {
                     this@SessionController.model.loadHistory(history)
                     if (!model.isEmpty()) showMessages()
                 }
                 recoverPending(id)
             } catch (e: Exception) {
                 LOG.warn("${ChatLogSummary.sid(id)} kind=history dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+            } finally {
+                updates.holdFlush(false)
+                updates.requestFlush(true)
             }
         }
     }
@@ -270,7 +279,7 @@ class SessionController(
                         return@collect
                     }
                     LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
-                    edt { handle(event) }
+                    updates.enqueue(event)
                 }
             } finally {
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=false" }
@@ -293,7 +302,7 @@ class SessionController(
             LOG.debug {
                 "${ChatLogSummary.sid(id)} kind=recovery permissions=${permissions.size} questions=${questions.size} status=${status?.type ?: "none"} branch=$branch"
             }
-            edt {
+            runEdt {
                 if (permissions.isNotEmpty()) {
                     model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
                 } else if (questions.isNotEmpty()) {
@@ -459,6 +468,10 @@ class SessionController(
         }
     }
 
+    private fun handle(events: List<ChatEventDto>) {
+        for (event in events) handle(event)
+    }
+
     private fun showMessages() {
         if (!model.showMessages) {
             model.showMessages = true
@@ -498,6 +511,15 @@ class SessionController(
 
     private fun edt(block: () -> Unit) {
         ApplicationManager.getApplication().invokeLater(block)
+    }
+
+    private fun runEdt(block: () -> Unit) {
+        val application = ApplicationManager.getApplication()
+        if (application.isDispatchThread) {
+            block()
+            return
+        }
+        application.invokeAndWait(block)
     }
 
     override fun dispose() {

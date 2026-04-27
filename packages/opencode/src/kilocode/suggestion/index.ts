@@ -1,8 +1,10 @@
 import { Bus } from "../../bus"
 import { BusEvent } from "../../bus/bus-event"
 import { Identifier } from "../../id/id"
+import { SessionID } from "../../session/schema"
 import { Log } from "../../util"
 import z from "zod"
+import { KiloSessionPromptQueue } from "../session/prompt-queue"
 
 export namespace Suggestion {
   const log = Log.create({ service: "suggestion" })
@@ -95,6 +97,14 @@ export namespace Suggestion {
     blocking?: boolean
     tool?: { messageID: string; callID: string }
   }): Promise<Action> {
+    // Auto-dismiss if a newer prompt is already queued on this session.
+    // Synchronous check immediately before the pending set, so there's no
+    // interleaving with dismissAll called from SessionPrompt.prompt.
+    if (KiloSessionPromptQueue.hasFollowup(SessionID.make(input.sessionID))) {
+      log.info("auto-dismissed — followup queued", { sessionID: input.sessionID })
+      throw new DismissedError()
+    }
+
     const s = { pending }
     const id = Identifier.ascending("suggestion")
 

@@ -8,11 +8,14 @@ import { LSPServer } from "../../src/lsp"
 import { TsClient } from "../../src/kilocode/ts-client"
 import { TsCheck } from "../../src/kilocode/ts-check"
 import { Flag } from "../../src/flag/flag"
-import { Instance } from "../../src/project/instance"
+import { Instance, type InstanceContext } from "../../src/project/instance"
 
 afterEach(async () => {
   await Instance.disposeAll()
 })
+
+// Typescript.spawn doesn't use ctx, so a cast-through is fine for these tests.
+const fakeCtx = {} as InstanceContext
 
 describe("typescript lightweight mode", () => {
   describe("spawn gate", () => {
@@ -20,7 +23,7 @@ describe("typescript lightweight mode", () => {
       const saved = Flag.KILO_EXPERIMENTAL_LSP_TOOL
       Flag.KILO_EXPERIMENTAL_LSP_TOOL = false
       try {
-        const result = await LSPServer.Typescript.spawn("/tmp/any")
+        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
         expect(result).toBeUndefined()
       } finally {
         Flag.KILO_EXPERIMENTAL_LSP_TOOL = saved
@@ -33,7 +36,7 @@ describe("typescript lightweight mode", () => {
       const spy = spyOn(TsCheck, "native_tsgo").mockResolvedValue(undefined)
 
       try {
-        const result = await LSPServer.Typescript.spawn("/tmp/any")
+        const result = await LSPServer.Typescript.spawn("/tmp/any", fakeCtx)
         expect(spy).toHaveBeenCalled()
         expect(result).toBeUndefined() // undefined because mock returns no binary
       } finally {

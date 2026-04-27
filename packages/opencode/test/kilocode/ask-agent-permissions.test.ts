@@ -257,7 +257,7 @@ describe("Ask agent tool disabled checks", () => {
   })
 
   test("edit tools are disabled", () => {
-    const tools = ["edit", "write", "patch", "multiedit"]
+    const tools = ["edit", "write", "patch"]
     const result = Permission.disabled(tools, ruleset)
     for (const tool of tools) {
       expect(result.has(tool)).toBe(true)

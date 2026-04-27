@@ -13,6 +13,7 @@ import ai.kilocode.client.session.ui.SessionPanel
 import ai.kilocode.client.session.ui.StatusPanel
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.registry.Registry
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.ui.components.JBScrollPane
@@ -52,7 +53,16 @@ class SessionUi(
         private val LOG = KiloLog.create(SessionUi::class.java)
     }
 
-    private val controller = SessionController(this, null, sessions, workspace, app, cs)
+    private val flushMs = Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
+        .takeIf { it > 0 }
+        ?.toLong()
+        ?: EVENT_FLUSH_MS
+
+    private val controller = SessionController(
+        this, null, sessions, workspace, app, cs, this,
+        flushMs = flushMs,
+        condense = Registry.`is`("kilo.session.condense", true),
+    )
 
     // ------ card switch ------
 

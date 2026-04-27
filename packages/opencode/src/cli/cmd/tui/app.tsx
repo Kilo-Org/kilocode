@@ -126,8 +126,8 @@ export function tui(input: {
 
     const mode = await Terminal.getTerminalBackgroundColor()
 
-    // Re-clear after getTerminalBackgroundColor() — setRawMode(false) restores
-    // the original console mode which re-enables ENABLE_PROCESSED_INPUT.
+    // Re-clear after getTerminalBackgroundColor() because setRawMode(false)
+    // restores the original console mode, including processed input on Windows.
     win32DisableProcessedInput()
 
     const onExit = async () => {
@@ -624,7 +624,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
       category: "System",
     },
     {
-      title: "Toggle theme mode",
+      title: mode() === "dark" ? "Switch to light mode" : "Switch to dark mode",
       value: "theme.switch_mode",
       onSelect: (dialog) => {
         setMode(mode() === "dark" ? "light" : "dark")

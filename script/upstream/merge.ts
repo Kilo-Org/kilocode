@@ -148,8 +148,12 @@ async function main() {
 
     // Train rerere from past upstream merge commits so the cache is populated
     // even on a fresh clone. This replays past merges to learn their resolutions.
+    // The grep covers both the current convention ("merge: upstream vX.Y.Z") and the
+    // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
+    // Without the lowercase alternative, ~70 past merges are dropped from training on
+    // this repo, since most older resolution commits use a lowercase "resolve".
     logger.info("Training rerere cache from past merge history...")
-    const learned = await git.trainRerere("merge: upstream\\|Resolve merge conflict")
+    const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
     if (learned > 0) {
       logger.success(`Learned ${learned} conflict resolution(s) from history`)
     } else {

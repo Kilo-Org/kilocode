@@ -217,6 +217,7 @@ import type {
   SyncHistoryListResponses,
   SyncReplayErrors,
   SyncReplayResponses,
+  SyncStartResponses,
   TelemetryCaptureErrors,
   TelemetryCaptureResponses,
   TextPartInput,
@@ -3377,7 +3378,7 @@ export class History extends HeyApiClient {
         },
       ],
     )
-    return (options?.client ?? this.client).get<SyncHistoryListResponses, SyncHistoryListErrors, ThrowOnError>({
+    return (options?.client ?? this.client).post<SyncHistoryListResponses, SyncHistoryListErrors, ThrowOnError>({
       url: "/sync/history",
       ...options,
       ...params,
@@ -3391,6 +3392,36 @@ export class History extends HeyApiClient {
 }
 
 export class Sync extends HeyApiClient {
+  /**
+   * Start workspace sync
+   *
+   * Start sync loops for workspaces in the current project that have active sessions.
+   */
+  public start<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<SyncStartResponses, unknown, ThrowOnError>({
+      url: "/sync/start",
+      ...options,
+      ...params,
+    })
+  }
+
   /**
    * Replay sync events
    *
