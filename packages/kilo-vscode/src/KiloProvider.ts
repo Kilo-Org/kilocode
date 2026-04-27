@@ -711,7 +711,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           vscode.commands.executeCommand("kilo-code.new.showChanges")
           break
         case "openDiffVirtual":
-          this.openDiffVirtual(message.diff)
+          this.openDiffVirtual(message.diff, message.initialDiffStyle)
           break
         case "continueInWorktree":
           handleContinueInWorktree({
@@ -1062,9 +1062,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     void vscode.env.openExternal(vscode.Uri.parse(url))
   }
 
-  private openDiffVirtual(diff: unknown): void {
+  private openDiffVirtual(diff: unknown, initialDiffStyle?: unknown): void {
     if (!this.diffVirtualProvider || !diff) return
-    this.diffVirtualProvider.open(diff as import("./DiffVirtualProvider").DiffVirtualFile)
+    const d = diff as import("./DiffVirtualProvider").DiffVirtualFile
+    d.initialDiffStyle = initialDiffStyle === "split" ? "split" : "unified"
+    this.diffVirtualProvider.open(d)
   }
 
   /**
