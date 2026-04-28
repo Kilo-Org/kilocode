@@ -106,24 +106,27 @@ function links(file: string, text: string) {
   return [...text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1] ?? "")
 }
 
-function local(file: string, target: string) {
+function local(file: string, target: string): string | null | undefined {
   if (!target || target.startsWith("#")) return undefined
+  if (target.startsWith("//")) return undefined
   if (/^[a-z]+:/i.test(target)) return undefined
-  const clean = target.split("#")[0] ?? ""
+  const clean = target.split(/[?#]/)[0] ?? ""
   if (!clean) return undefined
-  if (clean.startsWith("/")) {
-    const resolved = unix(path.normalize(clean.slice(1)))
-    if (resolved.startsWith("..")) return undefined
-    return resolved
-  }
-  const resolved = unix(path.normalize(path.join(path.dirname(file), clean)))
-  if (resolved.startsWith("..")) return undefined
+  const full = clean.startsWith("/")
+    ? path.resolve(root, `.${clean}`)
+    : path.resolve(root, path.dirname(file), clean)
+  const resolved = unix(path.relative(root, full))
+  if (resolved.startsWith("..") || path.isAbsolute(resolved)) return null
   return resolved
 }
 
 function checkLinks(file: string, text: string) {
   for (const target of links(file, text)) {
     const dest = local(file, target)
+    if (dest === null) {
+      add("error", `Local link escapes repository root: ${target}`, file)
+      continue
+    }
     if (!dest) continue
     if (!existsSync(abs(dest))) add("error", `Broken local link: ${target}`, file)
   }
@@ -134,9 +137,15 @@ function checkDocs() {
   for (const doc of docs) textByDoc.set(doc, load(doc))
 
   const map = textByDoc.get("docs/engineering/index.md") ?? ""
+  const indexLinks = new Set(
+    links("docs/engineering/index.md", map)
+      .map((target) => local("docs/engineering/index.md", target))
+      .filter((dest): dest is string => !!dest)
+      .map((dest) => path.basename(dest)),
+  )
   for (const doc of docs.filter((item) => item !== "docs/engineering/index.md" && item !== ".planning/README.md")) {
     const name = path.basename(doc)
-    if (!map.includes(name)) add("error", `Engineering index does not link ${name}.`, "docs/engineering/index.md")
+    if (!indexLinks.has(name)) add("error", `Engineering index does not link ${name}.`, "docs/engineering/index.md")
   }
 
   for (const doc of docs) checkLinks(doc, textByDoc.get(doc) ?? "")
