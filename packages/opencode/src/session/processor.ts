@@ -626,6 +626,7 @@ export const layer: Layer.Layer<
               Stream.runDrain,
             )
 
+            // kilocode_change start
             if (ctx.assistantMessage.finish === "unknown") {
               const parts = MessageV2.parts(ctx.assistantMessage.id)
               if (!parts.some((p) => p.type === "tool")) {
@@ -637,6 +638,7 @@ export const layer: Layer.Layer<
                 )
               }
             }
+            // kilocode_change end
           }).pipe(
             Effect.onInterrupt(() =>
               Effect.gen(function* () {

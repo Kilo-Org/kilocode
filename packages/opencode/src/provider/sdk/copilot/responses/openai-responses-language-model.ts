@@ -803,7 +803,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
       unified: "other",
       raw: undefined,
     }
-    let receivedFinishChunk = false
+    let receivedFinishChunk = false // kilocode_change
     const usage: {
       inputTokens: number | undefined
       outputTokens: number | undefined
@@ -1260,7 +1260,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
                 })
               }
             } else if (isResponseFinishedChunk(value)) {
-              receivedFinishChunk = true
+              receivedFinishChunk = true // kilocode_change
               finishReason = {
                 unified: mapOpenAIResponseFinishReason({
                   finishReason: value.response.incomplete_details?.reason,
@@ -1307,9 +1307,11 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
               currentTextId = null
             }
 
+            // kilocode_change start
             if (!receivedFinishChunk && responseId !== null) {
               finishReason = { unified: "unknown", raw: undefined }
             }
+            // kilocode_change end
 
             const providerMetadata: SharedV3ProviderMetadata = {
               openai: {
