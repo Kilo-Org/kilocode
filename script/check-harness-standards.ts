@@ -112,7 +112,9 @@ function local(file: string, target: string) {
   const clean = target.split("#")[0] ?? ""
   if (!clean) return undefined
   if (clean.startsWith("/")) return clean.slice(1)
-  return unix(path.normalize(path.join(path.dirname(file), clean)))
+  const resolved = unix(path.normalize(path.join(path.dirname(file), clean)))
+  if (resolved.startsWith("..")) return undefined
+  return resolved
 }
 
 function checkLinks(file: string, text: string) {
