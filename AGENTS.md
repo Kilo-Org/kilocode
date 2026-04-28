@@ -29,7 +29,8 @@ Devil is an open-source AI coding agent platform. This repository is optimized f
 - Dev CLI with args: `bun dev -- help`
 - VS Code extension: `bun run extension`
 - Typecheck: `bun turbo typecheck`
-- Root tests: `bun test` from `packages/opencode/` only
+- Root test pipeline: `bun turbo test`
+- CLI-only tests: `bun test` from `packages/opencode/`
 - Single CLI test: `bun test test/tool/tool.test.ts` from `packages/opencode/`
 - Standards warnings: `bun run standards:check`
 - Standards enforcement: `bun run standards:enforce`

@@ -111,7 +111,11 @@ function local(file: string, target: string) {
   if (/^[a-z]+:/i.test(target)) return undefined
   const clean = target.split("#")[0] ?? ""
   if (!clean) return undefined
-  if (clean.startsWith("/")) return clean.slice(1)
+  if (clean.startsWith("/")) {
+    const resolved = unix(path.normalize(clean.slice(1)))
+    if (resolved.startsWith("..")) return undefined
+    return resolved
+  }
   const resolved = unix(path.normalize(path.join(path.dirname(file), clean)))
   if (resolved.startsWith("..")) return undefined
   return resolved

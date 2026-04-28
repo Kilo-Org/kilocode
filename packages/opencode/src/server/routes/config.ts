@@ -334,7 +334,11 @@ export const ConfigRoutes = lazy(() =>
           const kiloAuth = await Auth.get("kilo")
           const token = kiloAuth?.type === "oauth" ? kiloAuth.access : kiloAuth?.key
           const organizationId = kiloAuth?.type === "oauth" ? kiloAuth.accountId : undefined
-          kiloApiDefault = await fetchDefaultModel(token, organizationId)
+          try {
+            kiloApiDefault = await fetchDefaultModel(token, organizationId)
+          } catch {
+            kiloApiDefault = undefined
+          }
         }
         // devilcode_change end
 
