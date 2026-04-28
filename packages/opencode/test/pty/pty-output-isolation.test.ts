@@ -133,7 +133,12 @@ describe("pty", () => {
               ctx.connId = 2
 
               yield* pty.write(a.id, "AAA\n")
-              yield* Effect.promise(() => sleep(100))
+              yield* Effect.promise(async () => {
+                for (const _ of Array.from({ length: 20 })) {
+                  if (out.join("").includes("AAA")) return
+                  await sleep(50)
+                }
+              })
 
               expect(out.join("")).toContain("AAA")
             } finally {

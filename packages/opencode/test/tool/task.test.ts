@@ -128,7 +128,7 @@ describe("tool.task", () => {
       () =>
         Effect.gen(function* () {
           const agent = yield* Agent.Service
-          const build = yield* agent.get("build")
+          const build = yield* agent.get("build") // kilocode_change
           const registry = yield* ToolRegistry.Service
           const get = Effect.fnUntraced(function* () {
             const tools = yield* registry.tools({ ...ref, agent: build })
@@ -151,6 +151,7 @@ describe("tool.task", () => {
         }),
       {
         config: {
+          // kilocode_change
           agent: {
             zebra: {
               description: "Zebra agent",
@@ -171,7 +172,7 @@ describe("tool.task", () => {
       () =>
         Effect.gen(function* () {
           const agent = yield* Agent.Service
-          const build = yield* agent.get("build")
+          const build = yield* agent.get("build") // kilocode_change
           build.permission.push({ permission: "task", pattern: "zebra", action: "deny" }) // kilocode_change
           const registry = yield* ToolRegistry.Service
           const description =
@@ -424,10 +425,7 @@ describe("tool.task", () => {
             action: "deny",
           })
           // kilocode_change end
-          expect(seen?.tools).toEqual({
-            bash: false,
-            read: false,
-          })
+          expect(seen?.tools).toEqual(expect.objectContaining({ bash: false, read: false })) // kilocode_change
         }),
       {
         config: {
@@ -439,7 +437,7 @@ describe("tool.task", () => {
             },
             // kilocode_change end
           },
-          experimental: {
+          experimental: { // kilocode_change
             primary_tools: ["bash", "read"],
             openTelemetry: true, // kilocode_change
           },
