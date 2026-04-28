@@ -2201,10 +2201,11 @@ function Task(props: ToolProps<typeof TaskTool>) {
     }
     // kilocode_change end
 
-    // kilocode_change - suppress completed summary while a background child is still busy
+    // kilocode_change start - suppress completed summary while a background child is still busy
     if (props.part.state.status === "completed" && !isRunning()) {
       content.push(`└ ${tools().length} toolcalls · ${Locale.duration(duration())}`)
     }
+    // kilocode_change end
 
     return content.join("\n")
   })
