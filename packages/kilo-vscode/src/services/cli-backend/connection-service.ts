@@ -17,6 +17,17 @@ type FavoritesChangeListener = (favorites: Array<{ providerID: string; modelID: 
 type ClearPendingPromptsListener = () => void
 type DirectoryProvider = () => string[]
 
+function isNotFound(err: unknown) {
+  if (!err || typeof err !== "object") return false
+  const obj = err as Record<string, unknown>
+  if (obj.name === "NotFoundError") return true
+  if (obj.status === 404) return true
+  if (obj.data && typeof obj.data === "object") {
+    return (obj.data as Record<string, unknown>).name === "NotFoundError"
+  }
+  return false
+}
+
 // Poll /global/health at the same interval as packages/app/src/context/server.tsx.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
@@ -385,7 +396,7 @@ export class KiloConnectionService {
       if (perms) {
         for (const perm of perms) {
           const { error } = await this.client.permission.reply({ requestID: perm.id, reply: "reject", directory: dir })
-          if (error) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
+          if (error && !isNotFound(error)) throw new Error(`Failed to reject permission ${perm.id}: ${String(error)}`)
         }
       }
       const { data: qs, error: qsErr } = await this.client.question.list({ directory: dir })

@@ -375,7 +375,7 @@ export type WebviewMessage =
   | { type: "suggestionResolved"; requestID: string }
   | { type: "suggestionError"; requestID: string }
   | { type: "permissionResolved"; permissionID: string }
-  | { type: "permissionError"; permissionID: string }
+  | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "messageRemoved"; sessionID: string; messageID: string }

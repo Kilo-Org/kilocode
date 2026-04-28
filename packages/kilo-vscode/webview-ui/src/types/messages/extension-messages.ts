@@ -123,6 +123,7 @@ export interface PermissionResolvedMessage {
 export interface PermissionErrorMessage {
   type: "permissionError"
   permissionID: string
+  stale?: boolean
 }
 
 export interface TodoUpdatedMessage {

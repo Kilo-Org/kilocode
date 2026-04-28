@@ -153,13 +153,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private isWebviewReady = false
   private readonly extensionVersion =
     vscode.extensions.getExtension("kilocode.kilo-code")?.packageJSON?.version ?? "unknown"
-  /** Cached providersLoaded payload so requestProviders can be served before client is ready */
   private cachedProvidersMessage: unknown = null
   /** Coalesce provider refreshes — at most one follow-up rerun when a request lands mid-flight. */
   private providersRefresh: Promise<void> | null = null
   private providersQueued = false
   private providersGeneration = 0
-  /** Cached agentsLoaded payload so requestAgents can be served before client is ready */
   private cachedAgentsMessage: unknown = null
   /** Cached skillsLoaded payload so requestSkills can be served before client is ready */
   private cachedSkillsMessage: unknown = null
@@ -186,6 +184,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private sessionStatusMap = new Map<string, SessionStatus["type"]>()
   /** Per-session directory overrides (e.g., worktree paths registered by AgentManagerProvider). */
   private sessionDirectories = new Map<string, string>()
+  private permissionDirectories = new Map<string, string>()
   /** Project ID for the current workspace, used to filter out sessions from other repositories. */
   private projectID: string | undefined
   /** Abort controller for the current loadMessages request; aborted when a new session is selected. */
@@ -1140,8 +1139,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
           return this.trackedSessionIds.has(sessionId)
         },
-        (event) => {
-          this.handleEvent(event)
+        (event, directory) => {
+          this.handleEvent(event, directory)
         },
       )
 
@@ -2716,6 +2715,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       sessionDirectories: this.sessionDirectories,
       postMessage: (msg) => this.postMessage(msg),
       getWorkspaceDirectory: (sid) => this.getWorkspaceDirectory(sid),
+      recordPermissionDirectory: (id, dir) => this.permissionDirectories.set(id, dir),
+      getPermissionDirectory: (id) => this.permissionDirectories.get(id),
+      clearPermissionDirectory: (id) => this.permissionDirectories.delete(id),
+      prunePermissionDirectories: (active) => {
+        for (const key of this.permissionDirectories.keys()) {
+          if (!active.has(key)) this.permissionDirectories.delete(key)
+        }
+      },
     }
   }
 
@@ -2963,6 +2970,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     // This must come first: the trackedSessionIds guard below would otherwise
     // let a foreign session through if it was accidentally tracked.
     if (isEventFromForeignProject(event, this.projectID)) return
+
+    if (event.type === "permission.asked" && directory) {
+      this.permissionDirectories.set(event.properties.id, directory)
+    }
+    if (event.type === "permission.replied") {
+      this.permissionDirectories.delete(event.properties.requestID)
+    }
 
     if (event.type === "message.updated") {
       this.confirmations.confirm(event.properties.info.id)
@@ -3397,6 +3411,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.trackedSessionIds.clear()
     this.syncedChildSessions.clear()
     this.sessionDirectories.clear()
+    this.permissionDirectories.clear()
     this.sessionStatusMap.clear()
     this.ignoreController?.dispose()
     this.chatAutocomplete?.dispose()

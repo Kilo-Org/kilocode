@@ -1061,6 +1061,7 @@ it.live("permission requests stay isolated by directory", () =>
     const onePending = yield* waitForPending(1).pipe(runOne)
     const twoPending = yield* waitForPending(1).pipe(runTwo)
 
+    // kilocode_change start
     expect(onePending).toHaveLength(1)
     expect(twoPending).toHaveLength(1)
     expect(onePending[0].id).toBe(PermissionID.make("per_dir_a"))
@@ -1071,6 +1072,7 @@ it.live("permission requests stay isolated by directory", () =>
 
     yield* Fiber.await(a)
     yield* Fiber.await(b)
+    // kilocode_change end
   }),
 )
 
@@ -1120,14 +1122,17 @@ it.live("pending permission rejects on instance reload", () =>
   }),
 )
 
-it.live("reply - does nothing for unknown requestID", () =>
+// kilocode_change start
+it.live("reply - returns false for unknown requestID", () =>
   withDir({ git: true }, () =>
     Effect.gen(function* () {
-      yield* reply({ requestID: PermissionID.make("per_unknown"), reply: "once" })
+      const accepted = yield* reply({ requestID: PermissionID.make("per_unknown"), reply: "once" })
+      expect(accepted).toBe(false)
       expect(yield* list()).toHaveLength(0)
     }),
   ),
 )
+// kilocode_change end
 
 it.live("ask - checks all patterns and stops on first deny", () =>
   withDir({ git: true }, () =>

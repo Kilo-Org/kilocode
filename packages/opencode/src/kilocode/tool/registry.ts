@@ -4,8 +4,12 @@ import { RecallTool } from "../../tool/recall"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@/flag/flag"
 import { Effect } from "effect"
-import { KiloIndexing } from "@/kilocode/indexing"
-import { SemanticSearchTool } from "@/kilocode/tool/semantic-search"
+import { Log } from "@/util"
+import { Agent } from "@/agent/agent"
+import * as Truncate from "@/tool/truncate"
+
+const log = Log.create({ service: "kilocode-tool-registry" })
+type Deps = { agent: Agent.Interface; truncate: Truncate.Interface }
 
 export namespace KiloToolRegistry {
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
@@ -13,19 +17,52 @@ export namespace KiloToolRegistry {
   export function infos() {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
-      const semantic = yield* SemanticSearchTool
       const recall = yield* RecallTool
-      return { codebase, semantic, recall }
+      return { codebase, recall }
     })
   }
 
   /** Finalize Kilo-specific tools into Tool.Defs. Call this inside the InstanceState state Effect —
    * it has no Service deps beyond what Tool.init itself needs. */
-  export function build(tools: { codebase: Tool.Info; semantic: Tool.Info; recall: Tool.Info }) {
-    return Effect.all({
-      codebase: Tool.init(tools.codebase),
-      semantic: Tool.init(tools.semantic),
-      recall: Tool.init(tools.recall),
+  export function build(tools: { codebase: Tool.Info; recall: Tool.Info }, deps: Deps) {
+    return Effect.gen(function* () {
+      const base = yield* Effect.all({
+        codebase: Tool.init(tools.codebase),
+        recall: Tool.init(tools.recall),
+      })
+      const semantic = yield* semanticTool(deps)
+      return { ...base, semantic }
+    })
+  }
+
+  function semanticTool(deps: Deps) {
+    return Effect.gen(function* () {
+      const ready = yield* Effect.tryPromise(() => import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.ready())).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("semantic search unavailable", { err })
+            return false
+          }),
+        ),
+      )
+      if (!ready) return undefined
+
+      const mod = yield* Effect.tryPromise(() => import("@/kilocode/tool/semantic-search")).pipe(
+        Effect.catch((err) =>
+          Effect.sync(() => {
+            log.warn("semantic search tool unavailable", { err })
+            return undefined
+          }),
+        ),
+      )
+      if (!mod) return undefined
+
+      const info = yield* mod.SemanticSearchTool.pipe(
+        Effect.provideService(Agent.Service, deps.agent),
+        Effect.provideService(Truncate.Service, deps.truncate),
+      )
+      if (!info) return undefined
+      return yield* Tool.init(info)
     })
   }
 
@@ -46,13 +83,12 @@ export namespace KiloToolRegistry {
 
   /** Kilo-specific tools to append to the builtin list */
   export function extra(
-    tools: { codebase: Tool.Def; semantic: Tool.Def; recall: Tool.Def },
+    tools: { codebase: Tool.Def; semantic?: Tool.Def; recall: Tool.Def },
     cfg: { experimental?: { codebase_search?: boolean } },
   ): Tool.Def[] {
-    const ready = KiloIndexing.ready()
     return [
       ...(cfg.experimental?.codebase_search === true ? [tools.codebase] : []),
-      ...(ready ? [tools.semantic] : []),
+      ...(tools.semantic ? [tools.semantic] : []),
       tools.recall,
     ]
   }

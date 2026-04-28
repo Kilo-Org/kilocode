@@ -122,7 +122,12 @@ export async function commit(message: string): Promise<void> {
 }
 
 export async function merge(branch: string): Promise<{ success: boolean; conflicts: string[] }> {
-  const result = await $`git merge ${branch}`.nothrow()
+  // Use zdiff3 markers so conflicts carry the base version (|||||||) alongside
+  // ours/theirs. This gives mergiraf the base it needs for structural heuristics
+  // and makes any remaining manual resolution dramatically easier (you can see
+  // what both sides changed relative to the common ancestor instead of
+  // reverse-engineering it from a 2-way marker).
+  const result = await $`git -c merge.conflictStyle=zdiff3 merge ${branch}`.nothrow()
 
   if (result.exitCode === 0) {
     return { success: true, conflicts: [] }
