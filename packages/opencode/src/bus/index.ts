@@ -1,4 +1,4 @@
-import { Effect, Exit, Layer, PubSub, Scope, Context, Stream, Schema, Schedule, Duration, pipe } from "effect"
+import { Effect, Exit, Layer, PubSub, Scope, Context, Stream, Schema, Schedule, Duration, pipe } from "effect" // kilocode_change
 import { EffectBridge } from "@/effect"
 import { Log } from "../util"
 import { BusEvent } from "./bus-event"
@@ -128,6 +128,7 @@ export const layer = Layer.effect(
         const scope = yield* Scope.make()
         const subscription = yield* Scope.provide(scope)(PubSub.subscribe(pubsub))
 
+        // kilocode_change start
         yield* Scope.provide(scope)(
           pipe(
             Stream.fromSubscription(subscription),
@@ -140,9 +141,7 @@ export const layer = Layer.effect(
                 },
               }),
             ),
-            // kilocode_change start
             Effect.retry(Schedule.exponential(Duration.seconds(1))),
-            // kilocode_change end
             Effect.forkScoped,
           ),
         )
@@ -151,6 +150,7 @@ export const layer = Layer.effect(
           log.info("unsubscribing", { type })
           bridge.fork(Scope.close(scope, Exit.void))
         }) as () => void
+        // kilocode_change end
       })
     }
 
@@ -160,12 +160,12 @@ export const layer = Layer.effect(
     ) {
       const s = yield* InstanceState.get(state)
       const ps = yield* getOrCreate(s, def)
-      return (yield* on(ps, def.type, callback)) as () => void
+      return (yield* on(ps, def.type, callback)) as () => void // kilocode_change
     })
 
     const subscribeAllCallback = Effect.fn("Bus.subscribeAllCallback")(function* (callback: (event: any) => unknown) {
       const s = yield* InstanceState.get(state)
-      return (yield* on(s.wildcard, "*", callback)) as () => void
+      return (yield* on(s.wildcard, "*", callback)) as () => void // kilocode_change
     })
 
     return Service.of({ publish, subscribe, subscribeAll, subscribeCallback, subscribeAllCallback })

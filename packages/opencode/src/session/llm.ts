@@ -355,13 +355,15 @@ const live: Layer.Layer<
         : undefined
 
       let error: unknown // kilocode_change
+      // kilocode_change start
       const result = streamText({
         onError(e) {
-          error = e // kilocode_change
+          error = e
           l.error("stream error", {
             error: e,
           })
         },
+      // kilocode_change end
         async experimental_repairToolCall(failed) {
           const lower = failed.toolCall.toolName.toLowerCase()
           if (lower !== failed.toolCall.toolName && tools[lower]) {
@@ -456,10 +458,10 @@ const live: Layer.Layer<
             const result = yield* run({ ...input, abort: ctrl.signal })
             const error = result.error // kilocode_change
 
+            // kilocode_change start
             return Stream.fromAsyncIterable(result.fullStream, (e) =>
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
-              // kilocode_change start
               Stream.concat(
                 Stream.fromEffect(
                   Effect.sync(() => {
@@ -468,8 +470,8 @@ const live: Layer.Layer<
                   }),
                 ).pipe(Stream.drain),
               ),
-              // kilocode_change end
             )
+            // kilocode_change end
           }),
         ),
       )

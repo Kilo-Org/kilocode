@@ -315,10 +315,12 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
 
     const metadataExtractor = this.config.metadataExtractor?.createStreamExtractor()
 
+    // kilocode_change start
     const url = this.config.url({
       path: "/chat/completions",
       modelId: this.modelId,
     })
+    // kilocode_change end
 
     const { responseHeaders, value: response } = await postJsonToApi({
       url,
