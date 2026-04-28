@@ -201,4 +201,4 @@ if (issues.length === 0) console.log("Harness standards check passed.")
 else console.log(`Harness standards check found ${groups.error.length} errors and ${groups.warn.length} warnings.`)
 
 if (strict && groups.error.length > 0) process.exit(1)
-process.exit(0)
+process.exit(groups.warn.length > 0 ? 2 : 0)
