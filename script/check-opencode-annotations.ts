@@ -9,10 +9,11 @@
  *   bun run script/check-opencode-annotations.ts --base <ref>     # diff against <ref>
  *
  * A line is "covered" if it:
- *   - contains a devilcode_change marker comment          (inline annotation)
- *   - falls inside a devilcode_change start/end block     (block annotation)
+ *   - contains a Devil marker comment                     (inline annotation)
+ *   - falls inside a Devil marker start/end block          (block annotation)
  *   - is in a file whose first non-empty line is          (whole-file annotation)
  *     // devilcode_change - new file
+ *   - uses a legacy Kilo marker during migration          (compatibility)
  *   - is empty / whitespace-only                          (skipped)
  *   - is itself a marker line                             (auto-covered)
  *
@@ -73,8 +74,12 @@ function addedLines(file: string): Set<number> {
   return out
 }
 
-// Matches the start of a devilcode_change marker in both JS (//) and JSX ({/* */}) comments
-const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*)\s*devilcode_change\b/
+const legacy = "kilo" + "code_change"
+const marker = `(?:devilcode_change|${legacy})`
+const MARKER_PREFIX = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\b`)
+const NEW_FILE = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s*-\\s*new\\s*file\\b`)
+const BLOCK_START = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+start\\b`)
+const BLOCK_END = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+end\\b`)
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
@@ -86,7 +91,7 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
 
   // Whole-file annotation: first non-empty line is "// devilcode_change - new file"
   const first = lines.find((x) => x.trim() !== "")
-  if (first?.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s*-\s*new\s*file\b/)) {
+  if (first?.match(NEW_FILE)) {
     for (let i = 1; i <= lines.length; i++) covered.add(i)
     return { lines, covered }
   }
@@ -96,13 +101,13 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
     const n = i + 1
     const line = lines[i] ?? ""
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s+start\b/)) {
+    if (line.match(BLOCK_START)) {
       block = true
       covered.add(n)
       continue
     }
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*devilcode_change\s+end\b/)) {
+    if (line.match(BLOCK_END)) {
       covered.add(n)
       block = false
       continue

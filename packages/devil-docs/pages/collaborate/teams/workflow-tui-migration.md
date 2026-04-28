@@ -53,16 +53,16 @@ The old workflow TUI shipped five built-in presets. Each maps to a quickstart te
 
 | Old preset | New quickstart ID | Notes |
 | --- | --- | --- |
-| `solo` | `lean` | Single-model, minimal overhead |
-| `duo` | `balanced` | Two positions: planner + builder |
-| `trio` | `balanced` | Three positions: planner + builder + reviewer |
-| `squad` | `specialist` | Specialist models per stage |
-| `enterprise` | `enterprise` | Full pipeline with concurrency controls |
+| `solo` | `solo-enhanced` | Single-model with enhanced prompts |
+| `duo` | `code-review-pair` | Two positions: developer + reviewer |
+| `trio` | `full-stack-team` | Frontend, backend, and reviewer positions |
+| `squad` | `ci-cd-pipeline` | Specialist models per stage with CI gates |
+| `enterprise` | `full-stack-team` | Use full-stack-team and add roles manually |
 
 To initialize from a quickstart:
 
 ```
-team init balanced
+team init solo-enhanced
 ```
 
 ## Breaking Changes
@@ -85,10 +85,11 @@ team init balanced
 # If you have a legacy team JSON, convert it:
 # Run from the opencode package
 bun -e "
-  const { fromLegacyTeamConfig } = await import('./src/devilcode/team/migration.ts')
+  const { migrateLegacyTeamConfig } = await import('./src/devilcode/team/migration.ts')
   const legacy = JSON.parse(await Bun.file('./old-team.json').text())
-  const result = fromLegacyTeamConfig(legacy)
-  await Bun.write('./new-team.json', JSON.stringify(result.config, null, 2))
+  const result = migrateLegacyTeamConfig(legacy)
+  if (!result.ok) { console.error('Migration failed:', result.errors); process.exit(1) }
+  await Bun.write('./new-team.json', JSON.stringify(result.value, null, 2))
   console.log('warnings:', result.warnings)
 "
 ```

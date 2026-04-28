@@ -11,16 +11,17 @@ Devil is an open source AI coding agent platform. This repository is optimized f
 
 ## First Stops
 
-| Need | Source |
-| --- | --- |
-| Architecture and package map | [docs/engineering/architecture.md](docs/engineering/architecture.md) |
-| Build, test, and validation commands | [docs/engineering/reliability.md](docs/engineering/reliability.md) |
-| Coding style and review taste | [docs/engineering/standards.md](docs/engineering/standards.md) |
-| Fork hygiene and `devilcode_change` markers | [docs/engineering/fork-hygiene.md](docs/engineering/fork-hygiene.md) |
-| Plans and historical execution context | [docs/engineering/plans.md](docs/engineering/plans.md) |
-| Quality score and known risks | [docs/engineering/quality.md](docs/engineering/quality.md) |
-| Security expectations | [docs/engineering/security.md](docs/engineering/security.md) |
-| Cleanup backlog | [docs/engineering/technical-debt.md](docs/engineering/technical-debt.md) |
+|Need|Source|
+|---|---|
+|Architecture and package map|[docs/engineering/architecture.md](docs/engineering/architecture.md)|
+|Build, test, and validation commands|[docs/engineering/reliability.md](docs/engineering/reliability.md)|
+|Coding style and review taste|[docs/engineering/standards.md](docs/engineering/standards.md)|
+|Fork hygiene and `devilcode_change` markers|[docs/engineering/fork-hygiene.md](docs/engineering/fork-hygiene.md)|
+|Plans and historical execution context|[docs/engineering/plans.md](docs/engineering/plans.md)|
+|Planning corpus index|[.planning/README.md](.planning/README.md)|
+|Quality score and known risks|[docs/engineering/quality.md](docs/engineering/quality.md)|
+|Security expectations|[docs/engineering/security.md](docs/engineering/security.md)|
+|Cleanup backlog|[docs/engineering/technical-debt.md](docs/engineering/technical-debt.md)|
 
 ## Common Commands
 
@@ -39,12 +40,12 @@ Devil is an open source AI coding agent platform. This repository is optimized f
 
 All products are clients of the CLI in `packages/opencode/`, which owns the agent runtime, HTTP server, and session management.
 
-| Product | Package | Notes |
-| --- | --- | --- |
-| Devil CLI | `packages/opencode/` | Core engine: TUI, `devil run`, `devil serve`, `devil web`. Forked from upstream OpenCode. |
-| Devil VS Code Extension | `packages/devil-vscode/` | Bundles the CLI and includes Agent Manager. Some compatibility IDs still use `kilo-code.*`. |
-| OpenCode Desktop | `packages/desktop/` | Tauri native app, synced from upstream and not actively maintained. |
-| OpenCode Web | `packages/app/` | Shared SolidJS frontend for desktop and `devil web`, not actively maintained. |
+|Product|Package|Notes|
+|---|---|---|
+|Devil CLI|`packages/opencode/`|Core engine: TUI, `devil run`, `devil serve`, `devil web`. Forked from upstream OpenCode.|
+|Devil VS Code Extension|`packages/devil-vscode/`|Bundles the CLI and includes Agent Manager. Some compatibility IDs still use `kilo-code.*`.|
+|OpenCode Desktop|`packages/desktop/`|Tauri native app, synced from upstream and not actively maintained.|
+|OpenCode Web|`packages/app/`|Shared SolidJS frontend for desktop and `devil web`, not actively maintained.|
 
 ## Non-Negotiables
 

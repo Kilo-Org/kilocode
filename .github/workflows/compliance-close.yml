@@ -1,9 +1,6 @@
 name: compliance-close
 
 on:
-  schedule:
-    # Run every 30 minutes to check for expired compliance windows
-    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -13,7 +10,7 @@ permissions:
 
 jobs:
   close-non-compliant:
-    if: github.repository == 'Devil-Org/devilcode' && false # devilcode_change - disabled: not needed in devilcode repo
+    if: (github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode') && vars.ENABLE_COMPLIANCE_CLOSE == 'true' # devilcode_change - feature-flagged
     runs-on: ubuntu-latest
     steps:
       - name: Close non-compliant issues and PRs after 2 hours

@@ -4,15 +4,15 @@ Plans are first-class repo artifacts. Agents should preserve the existing planni
 
 ## Canonical Locations
 
-| Path | Purpose |
-| --- | --- |
-| `.planning/PROJECT.md` | Product vision and constraints for the Team Orchestrator work. |
-| `.planning/ROADMAP.md` | Phase roadmap and completion state. |
-| `.planning/STATE.md` | Current state and handoff context. |
-| `.planning/specs/` | Phase-level specs and decisions. |
-| `.planning/phases/` | Execution plans, summaries, reviews, and context files. |
-| `docs/superpowers/plans/` | Older superpowers execution plans. |
-| `docs/superpowers/specs/` | Older superpowers specs. |
+|Path|Purpose|
+|---|---|
+|`.planning/PROJECT.md`|Product vision and constraints for the Team Orchestrator work.|
+|`.planning/ROADMAP.md`|Phase roadmap and completion state.|
+|`.planning/STATE.md`|Current state and handoff context.|
+|`.planning/specs/`|Phase-level specs and decisions.|
+|`.planning/phases/`|Execution plans, summaries, reviews, and context files.|
+|`docs/superpowers/plans/`|Older superpowers execution plans.|
+|`docs/superpowers/specs/`|Older superpowers specs.|
 
 ## Plan Rules
 

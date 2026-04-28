@@ -142,6 +142,7 @@ export const ConfigRoutes = lazy(() =>
                       name: z.string(),
                       path: z.string(),
                       updatedAt: z.string(),
+                      isQuickstart: z.boolean(), // devilcode_change
                     }),
                   ),
                 ),
@@ -215,6 +216,7 @@ export const ConfigRoutes = lazy(() =>
                     name: z.string(),
                     path: z.string(),
                     updatedAt: z.string(),
+                    isQuickstart: z.boolean(), // devilcode_change
                   }),
                 ),
               },

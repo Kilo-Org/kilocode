@@ -329,7 +329,7 @@ export const WorkflowRoutes = lazy(() =>
         operationId: "devilcode.workflow.team.swap",
         responses: {
           200: {
-            description: "Swap result (success or failure with error code)",
+            description: "Swap succeeded",
             content: {
               "application/json": {
                 schema: resolver(PositionSwapResult),
@@ -341,6 +341,14 @@ export const WorkflowRoutes = lazy(() =>
             content: {
               "application/json": {
                 schema: resolver(z.object({ error: z.string() })),
+              },
+            },
+          },
+          422: {
+            description: "Business rule failure (POSITION_NOT_FOUND, DELEGATION_VIOLATION, WORKFLOW_NOT_ACTIVE)",
+            content: {
+              "application/json": {
+                schema: resolver(PositionSwapResult),
               },
             },
           },
@@ -378,7 +386,7 @@ export const WorkflowRoutes = lazy(() =>
         }
 
         if (!current.team) {
-          return c.json({ success: false as const, error: "Team config not found", code: "WORKFLOW_NOT_ACTIVE" as const })
+          return c.json({ success: false as const, error: "Team config not found", code: "WORKFLOW_NOT_ACTIVE" as const }, 422)
         }
 
         // Emit validating event
@@ -395,10 +403,12 @@ export const WorkflowRoutes = lazy(() =>
 
         if (!result.success) {
           await Bus.publish(PositionSwapFailed, result)
-          return c.json(result)
+          return c.json(result, 422)
         }
 
-        // Rebalance concurrency if the role has maxConcurrent defined
+        // Rebalance concurrency if the role has maxConcurrent defined.
+        // Note: Current swap only changes provider/model, not maxConcurrent, so oldMax === newMax.
+        // The rebalance call is a no-op but is left in place for future maxConcurrent swaps.
         const role = teamConfig.roles[request.position]
         const concurrencyManager = getConcurrencyManager()
         const oldMax = role.maxConcurrent

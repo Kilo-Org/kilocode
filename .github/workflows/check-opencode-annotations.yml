@@ -11,7 +11,7 @@ on:
 jobs:
   check-annotations:
     name: Check devilcode_change annotations
-    if: github.repository == 'Devil-Org/devilcode'
+    if: github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

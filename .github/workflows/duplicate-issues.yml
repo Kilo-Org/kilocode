@@ -6,7 +6,7 @@ on:
 
 jobs:
   check-duplicates:
-    if: false # devilcode_change - disabled: not needed in devilcode repo
+    if: (github.repository == '9thLevelSoftware/devilcode' || github.repository == 'Devil-Org/devilcode') && vars.ENABLE_DUPLICATE_ISSUES == 'true' # devilcode_change - feature-flagged
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read

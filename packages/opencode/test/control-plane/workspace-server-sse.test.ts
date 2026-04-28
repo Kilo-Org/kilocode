@@ -72,6 +72,9 @@ describe("control-plane/workspace-server SSE", () => {
       // devilcode_change start
       stop.abort()
       await stream?.catch(() => undefined)
+      // stop.abort() resolves the client stream before Hono has always run
+      // server-side abort cleanup, so Bun.sleep gives the SSE handler a brief
+      // window to remove its GlobalBus listener before the temp dir is gone.
       await Bun.sleep(100)
       // devilcode_change end
     }

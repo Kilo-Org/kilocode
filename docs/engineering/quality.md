@@ -4,14 +4,14 @@ This file tracks current quality posture and standards adoption. Update it when 
 
 ## Scorecard
 
-| Area | Score | Notes |
-| --- | --- | --- |
-| Agent legibility | B | Root map and engineering docs exist; deeper docs need ongoing gardening. |
-| Mechanical enforcement | C | Source links, fork markers, typecheck, and tests exist; Harness standards start in warn mode. |
-| Fork hygiene | B- | Dedicated `devilcode` paths exist; marker terminology and workflow guards had drift. |
-| Local validation | B- | Commands are documented; worktree boot and UI evidence loops need more automation. |
-| CI reliability | C+ | Core workflows exist, but disabled jobs and stale repository guards need cleanup. |
-| Entropy control | C | Placeholder scripts and stale naming were present; standards check now reports this class of issue. |
+|Area|Score|Notes|
+|---|---|---|
+|Agent legibility|B|Root map and engineering docs exist; deeper docs need ongoing gardening.|
+|Mechanical enforcement|C|Source links, fork markers, typecheck, and tests exist; Harness standards start in warn mode.|
+|Fork hygiene|B-|Dedicated `devilcode` paths exist; marker terminology and workflow guards had drift.|
+|Local validation|B-|Commands are documented; worktree boot and UI evidence loops need more automation.|
+|CI reliability|C+|Core workflows exist, but disabled jobs and stale repository guards need cleanup.|
+|Entropy control|C|Placeholder scripts and stale naming were present; standards check now reports this class of issue.|
 
 ## Known Risks
 

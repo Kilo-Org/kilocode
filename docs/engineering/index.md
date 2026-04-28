@@ -4,16 +4,16 @@ This directory is the repo-local system of record for agent-legible engineering 
 
 ## Map
 
-| Topic | File |
-| --- | --- |
-| Architecture and package boundaries | [architecture.md](architecture.md) |
-| Planning corpus and execution plans | [plans.md](plans.md) |
-| Quality score and risk register | [quality.md](quality.md) |
-| Reliability, local validation, and CI | [reliability.md](reliability.md) |
-| Security expectations | [security.md](security.md) |
-| Fork hygiene and markers | [fork-hygiene.md](fork-hygiene.md) |
-| Coding standards and taste rules | [standards.md](standards.md) |
-| Technical debt and cleanup loop | [technical-debt.md](technical-debt.md) |
+|Topic|File|
+|---|---|
+|Architecture and package boundaries|[architecture.md](architecture.md)|
+|Planning corpus and execution plans|[plans.md](plans.md)|
+|Quality score and risk register|[quality.md](quality.md)|
+|Reliability, local validation, and CI|[reliability.md](reliability.md)|
+|Security expectations|[security.md](security.md)|
+|Fork hygiene and markers|[fork-hygiene.md](fork-hygiene.md)|
+|Coding standards and taste rules|[standards.md](standards.md)|
+|Technical debt and cleanup loop|[technical-debt.md](technical-debt.md)|
 
 ## Operating Principles
 

@@ -13,11 +13,11 @@ The Team Orchestrator lets you run structured multi-agent workflows where differ
 | --- | --- |
 | `plan` | Generate a phased task breakdown from your requirements |
 | `challenge` | Stress-test the plan for gaps and risks |
+| `contract` | Generate task contracts with acceptance criteria |
 | `build` | Execute tasks in parallel across team positions |
 | `review` | Validate output against the original requirements |
-| `integrate` | Merge build artifacts and resolve conflicts |
 | `ship` | Run final checks and prepare the release |
-| `learn` | Capture lessons and update the team knowledge base |
+| `retro` | Capture lessons and update the team knowledge base |
 
 You move through stages by typing commands in the workflow prompt (TUI) or clicking buttons in the VS Code Agent Manager panel.
 
@@ -28,10 +28,10 @@ You move through stages by typing commands in the workflow prompt (TUI) or click
 Load a quickstart template to get started immediately:
 
 ```
-team init balanced
+team init solo-enhanced
 ```
 
-Available quickstart IDs: `balanced`, `specialist`, `lean`, `research`, `enterprise`.
+Available quickstart IDs: `solo-enhanced`, `code-review-pair`, `full-stack-team`, `ci-cd-pipeline`, `research-team`.
 
 To export your active team config to a file:
 

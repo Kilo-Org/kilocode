@@ -77,6 +77,18 @@ function load(file: string) {
   return read(file)
 }
 
+function parseJson<T>(file: string, fallback: T): T {
+  const text = load(file)
+  if (!text.trim()) return fallback
+  try {
+    return JSON.parse(text) as T
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    add("error", `Invalid JSON: ${msg}`, file)
+    return fallback
+  }
+}
+
 function links(file: string, text: string) {
   return [...text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1] ?? "")
 }
@@ -114,13 +126,13 @@ function checkAgents() {
   const text = load("AGENTS.md")
   const lines = text.trimEnd().split(/\r?\n/).length
   if (lines > 120) add("error", `Root AGENTS.md has ${lines} lines; keep it at or below 120.`, "AGENTS.md")
-  for (const doc of docs.filter((item) => item.startsWith("docs/engineering/"))) {
+  for (const doc of docs) {
     if (!text.includes(doc)) add("error", `Root AGENTS.md should link ${doc}.`, "AGENTS.md")
   }
 }
 
 function checkPackages() {
-  const rootpkg = JSON.parse(load("package.json")) as { scripts?: Record<string, string> }
+  const rootpkg = parseJson("package.json", {} as { scripts?: Record<string, string> })
   const scripts = rootpkg.scripts ?? {}
   for (const name of ["random", "hello"]) {
     if (scripts[name]) add("error", `Remove placeholder root script "${name}".`, "package.json")
@@ -129,10 +141,10 @@ function checkPackages() {
     if (!scripts[name]) add("error", `Missing root script "${name}".`, "package.json")
   }
 
-  const cli = JSON.parse(load("packages/opencode/package.json")) as {
+  const cli = parseJson("packages/opencode/package.json", {} as {
     scripts?: Record<string, string>
     randomField?: string
-  }
+  })
   const cmds = cli.scripts ?? {}
   if (cli.randomField) add("error", "Remove placeholder randomField.", "packages/opencode/package.json")
   for (const name of ["random", "clean", "lint", "format", "docs", "deploy"]) {
@@ -142,7 +154,11 @@ function checkPackages() {
 }
 
 function checkMarkers() {
-  for (const file of ["script/check-opencode-annotations.ts", ".github/workflows/check-opencode-annotations.yml"]) {
+  const files = [
+    "script/check-opencode-annotations.ts",
+    ...list(".github/workflows").filter((item) => item.match(/\.ya?ml$/)),
+  ]
+  for (const file of files) {
     const text = load(file)
     if (text.includes("kilocode_change")) {
       add("error", "Use canonical devilcode_change marker terminology.", label(file, String(line(text, "kilocode_change"))))

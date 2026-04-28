@@ -106,6 +106,8 @@ export class TeamBuilderHandler {
         previousModel: result.previousModel,
         newProvider: result.newProvider,
         newModel: result.newModel,
+        slotsRebalanced: result.slotsRebalanced,
+        errorCode: result.code,
         error: result.error,
       })
     } catch (err) {

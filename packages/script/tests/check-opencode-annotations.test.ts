@@ -12,7 +12,12 @@ function isSource(file: string) {
   return SOURCE_EXTS.has(path.extname(file))
 }
 
-const MARKER_PREFIX = /(?:\/\/|\{?\s*\/\*)\s*kilocode_change\b/
+const legacy = "kilo" + "code_change"
+const marker = `(?:devilcode_change|${legacy})`
+const MARKER_PREFIX = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\b`)
+const NEW_FILE = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s*-\\s*new\\s*file\\b`)
+const BLOCK_START = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+start\\b`)
+const BLOCK_END = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+end\\b`)
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
@@ -23,7 +28,7 @@ function coveredLines(text: string): Set<number> {
   const covered = new Set<number>()
 
   const first = lines.find((x) => x.trim() !== "")
-  if (first?.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s*-\s*new\s*file\b/)) {
+  if (first?.match(NEW_FILE)) {
     for (let i = 1; i <= lines.length; i++) covered.add(i)
     return covered
   }
@@ -33,13 +38,13 @@ function coveredLines(text: string): Set<number> {
     const n = i + 1
     const line = lines[i] ?? ""
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+start\b/)) {
+    if (line.match(BLOCK_START)) {
       block = true
       covered.add(n)
       continue
     }
 
-    if (line.match(/(?:\/\/|\{?\s*\/\*)\s*kilocode_change\s+end\b/)) {
+    if (line.match(BLOCK_END)) {
       covered.add(n)
       block = false
       continue
@@ -68,30 +73,35 @@ function checkLine(line: string, covered: Set<number>, n: number): boolean {
 describe("hasMarker", () => {
   const cases: Array<[string, boolean]> = [
     // JS-style inline
-    ["// kilocode_change", true],
-    ["  // kilocode_change", true],
-    ["const x = 1 // kilocode_change", true],
-    ["// kilocode_change start", true],
-    ["// kilocode_change end", true],
-    ["// kilocode_change - new file", true],
-    ["//   kilocode_change", true],
-    ["// kilocode_change  ", true],
+    ["// devilcode_change", true],
+    ["  // devilcode_change", true],
+    ["const x = 1 // devilcode_change", true],
+    ["// devilcode_change start", true],
+    ["// devilcode_change end", true],
+    ["// devilcode_change - new file", true],
+    ["//   devilcode_change", true],
+    ["// devilcode_change  ", true],
 
     // JSX-style inline
-    ["{/* kilocode_change */}", true],
-    ["  {/* kilocode_change */}", true],
-    ["{/* kilocode_change start */}", true],
-    ["{/* kilocode_change end */}", true],
-    ["{/* kilocode_change - new file */}", true],
-    ["{/* kilocode_change - KiloNews added */}", true],
-    ["{/*   kilocode_change */}", true],
-    ["{/* kilocode_change  */}", true],
+    ["{/* devilcode_change */}", true],
+    ["  {/* devilcode_change */}", true],
+    ["{/* devilcode_change start */}", true],
+    ["{/* devilcode_change end */}", true],
+    ["{/* devilcode_change - new file */}", true],
+    ["{/* devilcode_change - KiloNews added */}", true],
+    ["{/*   devilcode_change */}", true],
+    ["{/* devilcode_change  */}", true],
 
     // bare /* */ style
-    ["/* kilocode_change */", true],
-    ["  /* kilocode_change */", true],
-    ["/* kilocode_change start */", true],
-    ["/* kilocode_change end */", true],
+    ["/* devilcode_change */", true],
+    ["  /* devilcode_change */", true],
+    ["/* devilcode_change start */", true],
+    ["/* devilcode_change end */", true],
+
+    // legacy migration markers
+    [`// ${legacy}`, true],
+    [`{/* ${legacy} start */}`, true],
+    [`/* ${legacy} - new file */`, true],
 
     // Non-markers
     ["const x = 1", false],
@@ -100,11 +110,11 @@ describe("hasMarker", () => {
     ["{/* just a comment */}", false],
     ["/* something else */", false],
     // typo variants — should NOT match (missing word boundary)
-    ["// kilocode_changes", false],
-    ["// kilocode_changelog", false],
-    ["/* kilocode_change_log */", false],
-    ["{/* kilocode_changes */}", false],
-    ["// kilocode_changeable", false],
+    ["// devilcode_changes", false],
+    ["// devilcode_changelog", false],
+    ["/* devilcode_change_log */", false],
+    ["{/* devilcode_changes */}", false],
+    ["// devilcode_changeable", false],
     ["", false],
     ["  ", false],
   ]
@@ -141,7 +151,7 @@ describe("isExempt", () => {
     ["packages/opencode/src/tool/registry.ts", false],
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
-    // kilocode_change is not the same as kilocode
+    // devilcode_change is not the same as kilocode
     ["packages/opencode/src/check-opencode-annotations.ts", false],
   ]
 
@@ -186,22 +196,22 @@ describe("coveredLines", () => {
   })
 
   test("whole-file JS annotation", () => {
-    const covered = coveredLines("// kilocode_change - new file\nexport const x = 1\nexport const y = 2")
+    const covered = coveredLines("// devilcode_change - new file\nexport const x = 1\nexport const y = 2")
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
   test("whole-file JSX annotation", () => {
-    const covered = coveredLines("{/* kilocode_change - new file */}\nexport const x = 1\nexport const y = 2")
+    const covered = coveredLines("{/* devilcode_change - new file */}\nexport const x = 1\nexport const y = 2")
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
   test("JS block markers", () => {
     const text = [
       "const a = 1",
-      "// kilocode_change start",
+      "// devilcode_change start",
       "const b = 2",
       "const c = 3",
-      "// kilocode_change end",
+      "// devilcode_change end",
       "const d = 4",
     ].join("\n")
     const covered = coveredLines(text)
@@ -211,10 +221,10 @@ describe("coveredLines", () => {
   test("JSX block markers", () => {
     const text = [
       "const a = 1",
-      "{/* kilocode_change start */}",
+      "{/* devilcode_change start */}",
       "const b = 2",
       "const c = 3",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
       "const d = 4",
     ].join("\n")
     const covered = coveredLines(text)
@@ -223,45 +233,45 @@ describe("coveredLines", () => {
 
   test("mixed JS and JSX block markers (nested)", () => {
     const text = [
-      "// kilocode_change start",
-      "{/* kilocode_change start */}",
+      "// devilcode_change start",
+      "{/* devilcode_change start */}",
       "const b = 2",
-      "{/* kilocode_change end */}",
-      "// kilocode_change end",
+      "{/* devilcode_change end */}",
+      "// devilcode_change end",
     ].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3, 4, 5]))
   })
 
   test("bare /* */ block markers", () => {
-    const text = ["/* kilocode_change start */", "const b = 2", "/* kilocode_change end */"].join("\n")
+    const text = ["/* devilcode_change start */", "const b = 2", "/* devilcode_change end */"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
   test("inline JS marker covers only that line", () => {
-    const text = ["const a = 1", "const b = 2 // kilocode_change", "const c = 3"].join("\n")
+    const text = ["const a = 1", "const b = 2 // devilcode_change", "const c = 3"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([2]))
   })
 
   test("inline JSX marker covers only that line", () => {
-    const text = ["const a = 1", "{/* kilocode_change */}", "const c = 3"].join("\n")
+    const text = ["const a = 1", "{/* devilcode_change */}", "const c = 3"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([2]))
   })
 
   test("inline JS marker with code on same line", () => {
-    const text = "const url = Flag.KILO_MODELS_URL || 'https://models.dev' // kilocode_change\n"
+    const text = "const url = Flag.KILO_MODELS_URL || 'https://models.dev' // devilcode_change\n"
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1]))
   })
 
   test("JSX block marker with descriptive suffix", () => {
     const text = [
-      "{/* kilocode_change start - Kilo-specific error display */}",
+      "{/* devilcode_change start - Kilo-specific error display */}",
       "<ErrorDisplay />",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
     ].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
@@ -269,13 +279,13 @@ describe("coveredLines", () => {
 
   test("multiple independent blocks", () => {
     const text = [
-      "// kilocode_change start",
+      "// devilcode_change start",
       "const a = 1",
-      "// kilocode_change end",
+      "// devilcode_change end",
       "const b = 2",
-      "{/* kilocode_change start */}",
+      "{/* devilcode_change start */}",
       "const c = 3",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
       "const d = 4",
     ].join("\n")
     const covered = coveredLines(text)
@@ -285,9 +295,9 @@ describe("coveredLines", () => {
   test("marker line with extra text after marker is still covered", () => {
     const text = [
       "const a = 1",
-      "// kilocode_change start - this is kilo specific",
+      "// devilcode_change start - this is kilo specific",
       "const b = 2",
-      "// kilocode_change end",
+      "// devilcode_change end",
     ].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([2, 3, 4]))
@@ -295,12 +305,12 @@ describe("coveredLines", () => {
 
   test("nested block — inner block ends, outer continues", () => {
     const text = [
-      "// kilocode_change start",
-      "{/* kilocode_change start */}",
+      "// devilcode_change start",
+      "{/* devilcode_change start */}",
       "const b = 2",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
       "const c = 3",
-      "// kilocode_change end",
+      "// devilcode_change end",
     ].join("\n")
     const covered = coveredLines(text)
     // Line 1: start, block=true
@@ -313,7 +323,7 @@ describe("coveredLines", () => {
   })
 
   test("whitespace before marker is handled", () => {
-    const text = ["  {/* kilocode_change start */}", "    const b = 2", "  {/* kilocode_change end */}"].join("\n")
+    const text = ["  {/* devilcode_change start */}", "    const b = 2", "  {/* devilcode_change end */}"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
@@ -338,7 +348,7 @@ describe("checkLine (main loop simulation)", () => {
   }
 
   test("covered line reports no violation", () => {
-    const text = ["// kilocode_change start", "const kilo = 1", "// kilocode_change end"].join("\n")
+    const text = ["// devilcode_change start", "const kilo = 1", "// devilcode_change end"].join("\n")
     expect(check(text, [2])).toEqual([])
   })
 
@@ -354,18 +364,18 @@ describe("checkLine (main loop simulation)", () => {
 
   test("marker lines are skipped even if uncovered", () => {
     // This shouldn't normally happen, but the loop should skip it
-    const text = ["{/* kilocode_change */}", "{/* kilocode_change start */}"].join("\n")
+    const text = ["{/* devilcode_change */}", "{/* devilcode_change start */}"].join("\n")
     expect(check(text, [1, 2])).toEqual([])
   })
 
   test("real-world TSX home.tsx pattern", () => {
     const text = [
       '<box width="100%" maxWidth={75}>',
-      "  {/* kilocode_change start */}",
+      "  {/* devilcode_change start */}",
       "  <Show when={indexingOn()}>",
       "    <text fg={indexingColor()}>{indexingLabel()}</text>",
       "  </Show>",
-      "  {/* kilocode_change end */}",
+      "  {/* devilcode_change end */}",
       "</box>",
     ].join("\n")
     // Only the first and last lines (opening/closing box) should be uncovered
@@ -377,11 +387,11 @@ describe("checkLine (main loop simulation)", () => {
   test("real-world TSX session index.tsx pattern", () => {
     const text = [
       "const foo = 1",
-      "{/* kilocode_change start */}",
+      "{/* devilcode_change start */}",
       '<Match when={props.part.tool === "semantic_search"}>',
       "<SemanticSearch {...toolprops} />",
       "</Match>",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
       "const bar = 2",
     ].join("\n")
     // Lines 1 and 7 are uncovered (not in any block)
@@ -393,13 +403,13 @@ describe("checkLine (main loop simulation)", () => {
   test("real-world TSX sidebar.tsx pattern", () => {
     const text = [
       "<box>",
-      "                {/* kilocode_change start */}",
+      "                {/* devilcode_change start */}",
       "                <SessionTree />",
-      "                {/* kilocode_change end */}",
+      "                {/* devilcode_change end */}",
       "</box>",
-      "          {/* kilocode_change start */}",
+      "          {/* devilcode_change start */}",
       "          <div>other content</div>",
-      "          {/* kilocode_change end */}",
+      "          {/* devilcode_change end */}",
     ].join("\n")
     expect(check(text, [1, 5])).toEqual(["line 1: <box>", "line 5: </box>"])
     expect(check(text, [2, 3, 4, 6, 7, 8])).toEqual([])
@@ -407,9 +417,9 @@ describe("checkLine (main loop simulation)", () => {
 
   test("real-world TSX permission.tsx inline pattern", () => {
     const text = [
-      "{/* kilocode_change */}",
+      "{/* devilcode_change */}",
       "<PermissionDeniedCard />",
-      "{/* kilocode_change */}",
+      "{/* devilcode_change */}",
       "<AnotherKiloComponent />",
     ].join("\n")
     expect(check(text, [2, 4])).toEqual(["line 2: <PermissionDeniedCard />", "line 4: <AnotherKiloComponent />"])
@@ -417,7 +427,7 @@ describe("checkLine (main loop simulation)", () => {
   })
 
   test("JS-style session/index.tsx pattern (from existing codebase)", () => {
-    const text = ["const foo = 1", "<Toast />", "{/* kilocode_change */}", "<Footer />", "</box>"].join("\n")
+    const text = ["const foo = 1", "<Toast />", "{/* devilcode_change */}", "<Footer />", "</box>"].join("\n")
     // Line 2 (<Toast />) is NOT covered — it's between <Toast /> and the marker
     expect(check(text, [2, 4])).toEqual(["line 2: <Toast />", "line 4: <Footer />"])
     expect(check(text, [3])).toEqual([])
@@ -425,7 +435,7 @@ describe("checkLine (main loop simulation)", () => {
 
   test("whole-file annotated file — no violations even for unmarked lines", () => {
     const text = [
-      "// kilocode_change - new file",
+      "// devilcode_change - new file",
       "export const kiloFeature = true",
       "export const alsoKilo = 123",
       "export const notMarked = 'oops'",
@@ -438,38 +448,38 @@ describe("checkLine (main loop simulation)", () => {
 
 describe("MARKER_PREFIX regex edge cases", () => {
   test("handles { followed immediately by /*", () => {
-    expect(hasMarker("{/* kilocode_change */}")).toBe(true)
+    expect(hasMarker("{/* devilcode_change */}")).toBe(true)
   })
 
   test("handles { followed by whitespace then /*", () => {
-    expect(hasMarker("{ /* kilocode_change */}")).toBe(true)
+    expect(hasMarker("{ /* devilcode_change */}")).toBe(true)
   })
 
   test("handles just /* with no brace", () => {
-    expect(hasMarker("/* kilocode_change */")).toBe(true)
+    expect(hasMarker("/* devilcode_change */")).toBe(true)
   })
 
   test("handles // with no spaces", () => {
-    expect(hasMarker("//kilocode_change")).toBe(true)
+    expect(hasMarker("//devilcode_change")).toBe(true)
   })
 
   test("handles // with lots of spaces", () => {
-    expect(hasMarker("//    kilocode_change")).toBe(true)
+    expect(hasMarker("//    devilcode_change")).toBe(true)
   })
 
-  test("does not match {/* without kilocode_change", () => {
+  test("does not match {/* without devilcode_change", () => {
     expect(hasMarker("{/* some other comment */}")).toBe(false)
   })
 
-  test("does not match /* without kilocode_change", () => {
+  test("does not match /* without devilcode_change", () => {
     expect(hasMarker("/* just a comment */")).toBe(false)
   })
 
-  test("does not match kilocode_changes (word boundary)", () => {
-    expect(hasMarker("// kilocode_changes")).toBe(false)
-    expect(hasMarker("// kilocode_changelog")).toBe(false)
-    expect(hasMarker("{/* kilocode_changes */}")).toBe(false)
-    expect(hasMarker("// kilocode_changeable")).toBe(false)
+  test("does not match devilcode_changes (word boundary)", () => {
+    expect(hasMarker("// devilcode_changes")).toBe(false)
+    expect(hasMarker("// devilcode_changelog")).toBe(false)
+    expect(hasMarker("{/* devilcode_changes */}")).toBe(false)
+    expect(hasMarker("// devilcode_changeable")).toBe(false)
   })
 })
 
@@ -488,24 +498,24 @@ describe("isExempt — Windows backslash paths", () => {
 describe("coveredLines — additional patterns", () => {
   test("block with descriptive suffix is still recognized", () => {
     const text = [
-      "{/* kilocode_change start - Kilo-specific indexing display */}",
+      "{/* devilcode_change start - Kilo-specific indexing display */}",
       "<IndexingStatus />",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
     ].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
   test("empty file content", () => {
-    const covered = coveredLines("// kilocode_change start\n  \n// kilocode_change end")
+    const covered = coveredLines("// devilcode_change start\n  \n// devilcode_change end")
     expect(covered).toEqual(new Set([1, 2, 3]))
   })
 
   test("multiple separate JS inline markers", () => {
     const text = [
-      "const a = 1 // kilocode_change",
+      "const a = 1 // devilcode_change",
       "const b = 2",
-      "const c = 3 // kilocode_change",
+      "const c = 3 // devilcode_change",
       "const d = 4",
     ].join("\n")
     const covered = coveredLines(text)
@@ -513,26 +523,26 @@ describe("coveredLines — additional patterns", () => {
   })
 
   test("consecutive block markers (no content)", () => {
-    const text = ["// kilocode_change start", "// kilocode_change end"].join("\n")
+    const text = ["// devilcode_change start", "// devilcode_change end"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2]))
   })
 
   test("block immediately followed by another start", () => {
     const text = [
-      "// kilocode_change start",
+      "// devilcode_change start",
       "const a = 1",
-      "// kilocode_change end",
-      "{/* kilocode_change start */}",
+      "// devilcode_change end",
+      "{/* devilcode_change start */}",
       "const b = 2",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
     ].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3, 4, 5, 6]))
   })
 
   test("trailing empty line after block end is not covered", () => {
-    const text = "// kilocode_change start\nconst a = 1\n// kilocode_change end\n\n"
+    const text = "// devilcode_change start\nconst a = 1\n// devilcode_change end\n\n"
     const covered = coveredLines(text)
     // Block ends at line 3; trailing empty line 4 is outside the block
     expect(covered).toEqual(new Set([1, 2, 3]))
@@ -559,13 +569,13 @@ describe("checkLine — additional patterns", () => {
   test("real-world dialog-status.tsx pattern — multiple inline blocks", () => {
     // Based on actual file: packages/opencode/src/cli/cmd/tui/component/dialog-status.tsx
     const text = [
-      "{/* kilocode_change start */}",
+      "{/* devilcode_change start */}",
       "<KiloDialog>",
-      "{/* kilocode_change end */}",
+      "{/* devilcode_change end */}",
       "const normal = 1",
-      "  {/* kilocode_change start */}",
+      "  {/* devilcode_change start */}",
       "  <KiloDialog />",
-      "  {/* kilocode_change end */}",
+      "  {/* devilcode_change end */}",
     ].join("\n")
     // Lines 4 is uncovered
     expect(check(text, [4])).toEqual(["line 4: const normal = 1"])
@@ -575,7 +585,7 @@ describe("checkLine — additional patterns", () => {
 
   test("real-world TUI routes — line between marker and code should be uncovered", () => {
     // A common mistake: putting code on a different line from the marker
-    const text = ["{/* kilocode_change start */}", "", "<KiloIndexing />", "", "{/* kilocode_change end */}"].join("\n")
+    const text = ["{/* devilcode_change start */}", "", "<KiloIndexing />", "", "{/* devilcode_change end */}"].join("\n")
     // Empty lines (2, 4) are skipped
     expect(check(text, [3])).toEqual([])
     // All non-empty lines (1, 3, 5) are covered
@@ -583,16 +593,16 @@ describe("checkLine — additional patterns", () => {
   })
 
   test("end marker on same line as content is covered", () => {
-    const text = "const a = 1\n{/* kilocode_change end */} // block already closed, still covered\n"
+    const text = "const a = 1\n{/* devilcode_change end */} // block already closed, still covered\n"
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([2]))
   })
 
   test("end marker closes block correctly", () => {
     const text = [
-      "// kilocode_change start",
+      "// devilcode_change start",
       "const a = 1",
-      "// kilocode_change end",
+      "// devilcode_change end",
       "const b = 2", // uncovered
     ].join("\n")
     expect(check(text, [1, 2, 3, 4])).toEqual(["line 4: const b = 2"])

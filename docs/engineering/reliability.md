@@ -4,17 +4,17 @@ Reliability means agents can validate their own work with local commands, CI, lo
 
 ## Required Commands
 
-| Scenario | Command |
-| --- | --- |
-| Repo typecheck | `bun turbo typecheck` |
-| Root test pipeline | `bun turbo test` |
-| CLI tests | `bun test` from `packages/opencode/` |
-| Single CLI test | `bun test test/tool/tool.test.ts` from `packages/opencode/` |
-| Standards warnings | `bun run standards:check` |
-| Standards enforcement | `bun run standards:enforce` |
-| VS Code unused exports | `bun run knip` from `packages/devil-vscode/` |
-| Source link refresh | `bun run script/extract-source-links.ts` from root |
-| OpenCode marker check | `bun run script/check-opencode-annotations.ts` from root |
+|Scenario|Command|
+|---|---|
+|Repo typecheck|`bun turbo typecheck`|
+|Root test pipeline|`bun turbo test`|
+|CLI tests|`bun test` from `packages/opencode/`|
+|Single CLI test|`bun test test/tool/tool.test.ts` from `packages/opencode/`|
+|Standards warnings|`bun run standards:check`|
+|Standards enforcement|`bun run standards:enforce`|
+|VS Code unused exports|`bun run knip` from `packages/devil-vscode/`|
+|Source link refresh|`bun run script/extract-source-links.ts` from root|
+|OpenCode marker check|`bun run script/check-opencode-annotations.ts` from root|
 
 ## Local Boot Paths
 

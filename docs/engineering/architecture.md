@@ -4,16 +4,16 @@ Devil is a Bun and TypeScript monorepo. The CLI in `packages/opencode/` is the c
 
 ## Product Boundaries
 
-| Product | Package | Responsibility |
-| --- | --- | --- |
-| Devil CLI | `packages/opencode/` | Agent runtime, tools, sessions, TUI, HTTP server, SSE, provider integration. |
-| Devil VS Code Extension | `packages/devil-vscode/` | VS Code sidebar, Agent Manager, bundled CLI process, extension webviews. |
-| Devil Docs | `packages/devil-docs/` | Next.js documentation site. |
-| Devil Gateway | `packages/devil-gateway/` | Auth, provider routing, Kilo/Devil API integration. |
-| Devil Telemetry | `packages/devil-telemetry/` | PostHog and OpenTelemetry integration. |
-| Devil UI | `packages/devil-ui/` | Shared SolidJS component library. |
-| SDK | `packages/sdk/js/` | Generated TypeScript client for the CLI server API. |
-| OpenCode Web/Desktop | `packages/app/`, `packages/desktop/` | Upstream-synced clients, not actively maintained. |
+|Product|Package|Responsibility|
+|---|---|---|
+|Devil CLI|`packages/opencode/`|Agent runtime, tools, sessions, TUI, HTTP server, SSE, provider integration.|
+|Devil VS Code Extension|`packages/devil-vscode/`|VS Code sidebar, Agent Manager, bundled CLI process, extension webviews.|
+|Devil Docs|`packages/devil-docs/`|Next.js documentation site.|
+|Devil Gateway|`packages/devil-gateway/`|Auth, provider routing, Kilo/Devil API integration.|
+|Devil Telemetry|`packages/devil-telemetry/`|PostHog and OpenTelemetry integration.|
+|Devil UI|`packages/devil-ui/`|Shared SolidJS component library.|
+|SDK|`packages/sdk/js/`|Generated TypeScript client for the CLI server API.|
+|OpenCode Web/Desktop|`packages/app/`, `packages/desktop/`|Upstream-synced clients, not actively maintained.|
 
 ## Dependency Direction
 

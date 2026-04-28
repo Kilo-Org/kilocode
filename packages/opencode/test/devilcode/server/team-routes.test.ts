@@ -120,7 +120,7 @@ describe("GET /config/team", () => {
     expect(ids).toContain("my-user-team")
   })
 
-  it("each handle has id, name, path, updatedAt fields", async () => {
+  it("each handle has id, name, path, updatedAt, isQuickstart fields", async () => {
     const res = await app.request("/config/team")
     const body = await res.json() as Array<Record<string, unknown>>
     for (const handle of body) {
@@ -128,6 +128,7 @@ describe("GET /config/team", () => {
       expect(typeof handle.name).toBe("string")
       expect(typeof handle.path).toBe("string")
       expect(typeof handle.updatedAt).toBe("string")
+      expect(typeof handle.isQuickstart).toBe("boolean")
     }
   })
 })
