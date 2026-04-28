@@ -1164,6 +1164,15 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("focus", onWindowFocus)
 
+    const newTaskHandler = (e: Event) => {
+      const sel = selection()
+      if (!sel || sel === LOCAL) return
+      e.stopImmediatePropagation()
+      terms.setActiveId(undefined)
+      vscode.postMessage({ type: "agentManager.addSessionToWorktree", worktreeId: sel })
+    }
+    window.addEventListener("newTaskRequest", newTaskHandler, true)
+
     // Add created sessions as local tabs (both direct from the prompt and
     // backend follow-ups). Dedups HTTP + SSE firing together.
     const unsubCreate = vscode.onMessage((msg) => {
@@ -1502,6 +1511,7 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("focus", onWindowFocus)
+      window.removeEventListener("newTaskRequest", newTaskHandler, true)
       unsubCreate()
       unsubSessions()
       unsubRun()
