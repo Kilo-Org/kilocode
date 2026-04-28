@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
 import * as McpExa from "./mcp-exa"
+import * as ExaProxy from "../kilocode/tool/exa-proxy" // kilocode_change
 import DESCRIPTION from "./codesearch.txt"
 
 export const CodeSearchTool = Tool.define(
@@ -39,16 +40,18 @@ export const CodeSearchTool = Tool.define(
             },
           })
 
-          const result = yield* McpExa.call(
-            http,
-            "get_code_context_exa",
-            McpExa.CodeArgs,
-            {
-              query: params.query,
-              tokensNum: params.tokensNum || 5000,
-            },
-            "30 seconds",
-          )
+          const args = {
+            query: params.query,
+            tokensNum: params.tokensNum || 5000,
+          }
+
+          // kilocode_change start - use proxied Exa endpoint for Kilo provider
+          const provider = (ctx.extra?.model as any)?.providerID as string | undefined
+          const result =
+            provider === "kilo"
+              ? yield* ExaProxy.context(http, args, "30 seconds")
+              : yield* McpExa.call(http, "get_code_context_exa", McpExa.CodeArgs, args, "30 seconds")
+          // kilocode_change end
 
           return {
             output:

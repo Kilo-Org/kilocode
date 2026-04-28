@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
 import * as McpExa from "./mcp-exa"
+import * as ExaProxy from "../kilocode/tool/exa-proxy" // kilocode_change
 import DESCRIPTION from "./websearch.txt"
 
 const Parameters = z.object({
@@ -49,19 +50,21 @@ export const WebSearchTool = Tool.define(
             },
           })
 
-          const result = yield* McpExa.call(
-            http,
-            "web_search_exa",
-            McpExa.SearchArgs,
-            {
-              query: params.query,
-              type: params.type || "auto",
-              numResults: params.numResults || 8,
-              livecrawl: params.livecrawl || "fallback",
-              contextMaxCharacters: params.contextMaxCharacters,
-            },
-            "25 seconds",
-          )
+          const args = {
+            query: params.query,
+            type: params.type || "auto",
+            numResults: params.numResults || 8,
+            livecrawl: params.livecrawl || "fallback",
+            contextMaxCharacters: params.contextMaxCharacters,
+          }
+
+          // kilocode_change start - use proxied Exa endpoint for Kilo provider
+          const provider = (ctx.extra?.model as any)?.providerID as string | undefined
+          const result =
+            provider === "kilo"
+              ? yield* ExaProxy.search(http, args, "25 seconds")
+              : yield* McpExa.call(http, "web_search_exa", McpExa.SearchArgs, args, "25 seconds")
+          // kilocode_change end
 
           return {
             output: result ?? "No search results found. Please try a different query.",

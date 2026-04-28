@@ -740,4 +740,62 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
         }
       },
     )
+    .post(
+      "/exa/:path",
+      describeRoute({
+        summary: "Proxy Exa API request",
+        description: "Proxy an Exa API request through api.kilo.ai/api/exa with Kilo auth",
+        operationId: "kilo.exa",
+        responses: {
+          200: {
+            description: "Exa API response",
+            content: {
+              "application/json": {
+                schema: resolver(z.unknown()),
+              },
+            },
+          },
+          ...errors(400, 401, 502),
+        },
+      }),
+      async (c: any) => {
+        const ALLOWED_PATHS = new Set(["search", "contents", "findSimilar", "answer", "context"])
+        const exaPath = c.req.param("path")
+        if (!ALLOWED_PATHS.has(exaPath)) {
+          return c.json({ error: `Invalid Exa path. Allowed: ${[...ALLOWED_PATHS].join(", ")}` }, 400)
+        }
+
+        try {
+          const auth = await Auth.get("kilo")
+          if (!auth) return c.json({ error: "Not authenticated with Kilo Gateway" }, 401)
+          const token = auth.type === "api" ? auth.key : auth.type === "oauth" ? auth.access : undefined
+          if (!token) return c.json({ error: "No valid token found" }, 401)
+
+          const organizationId = auth.type === "oauth" ? auth.accountId : undefined
+          const headers: Record<string, string> = {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            ...buildKiloHeaders(undefined, { kilocodeOrganizationId: organizationId }),
+          }
+
+          const body = await c.req.json()
+          const response = await fetch(`${KILO_API_BASE}/api/exa/${exaPath}`, {
+            method: "POST",
+            headers,
+            body: JSON.stringify(body),
+            signal: c.req.raw.signal,
+          })
+
+          if (!response.ok) {
+            const text = await response.text()
+            return c.json({ error: `Exa proxy request failed: ${response.status} ${text}` }, response.status as any)
+          }
+
+          return c.json(await response.json())
+        } catch (err: any) {
+          console.error("[Kilo Gateway] exa: error", err?.message ?? err)
+          return c.json({ error: "Failed to reach Exa proxy" }, 502)
+        }
+      },
+    )
 }
