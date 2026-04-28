@@ -137,7 +137,6 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       const filePath = path.join(Global.Path.state, "model.json")
       const state = {
         pending: false,
-        saving: Promise.resolve(), // kilocode_change - serialize model.json writes
       }
 
       function save() {
@@ -146,19 +145,12 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return
         }
         state.pending = false
-        // kilocode_change start - avoid overlapping writes corrupting model.json
-        const data = {
+        Filesystem.writeJson(filePath, {
           model: modelStore.model, // kilocode_change
           recent: modelStore.recent,
           favorite: modelStore.favorite,
           variant: modelStore.variant,
-        }
-        state.saving = state.saving.then(() =>
-          Filesystem.writeJson(filePath, data).catch((err) => {
-            console.error("Failed to save model selection", err)
-          }),
-        )
-        // kilocode_change end
+        })
       }
 
       Filesystem.readJson(filePath)
