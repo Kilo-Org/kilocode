@@ -158,13 +158,13 @@ The `skills.paths` key accepts absolute paths, `~/` home-relative paths, or path
 
 ### Global Skills (User-Level)
 
-Global skills are located in the `.kilocode` directory within your Home directory.
+Global skills are located in the `.kilo` directory within your Home directory.
 
-- Mac and Linux: `~/.kilocode/skills/`
-- Windows: `\Users\<yourUser>\.kilocode\`
+- Mac and Linux: `~/.kilo/skills/`
+- Windows: `\Users\<yourUser>\.kilo\`
 
 ```
-~/.kilocode/
+~/.kilo/
 ├── skills/                    # Generic skills (all modes)
 │   ├── my-skill/
 │   │   └── SKILL.md
@@ -180,11 +180,11 @@ Global skills are located in the `.kilocode` directory within your Home director
 
 ### Project Skills (Workspace-Level)
 
-Located in `.kilocode/skills/` within your project:
+Located in `.kilo/skills/` within your project:
 
 ```
 your-project/
-└── .kilocode/
+└── .kilo/
     ├── skills/               # Generic skills for this project
     │   └── project-conventions/
     │       └── SKILL.md
@@ -219,10 +219,10 @@ To create a skill that only appears in a specific mode, place it in a `skills-{m
 
 ```bash
 # For Code mode only
-mkdir -p ~/.kilocode/skills-code/typescript-patterns
+mkdir -p ~/.kilo/skills-code/typescript-patterns
 
 # For Architect mode only
-mkdir -p ~/.kilocode/skills-architect/microservices
+mkdir -p ~/.kilo/skills-architect/microservices
 ```
 
 The directory naming pattern is `skills-{mode-slug}` where `{mode-slug}` matches the mode's identifier (e.g., `code`, `architect`, `ask`, `debug`).
@@ -419,7 +419,7 @@ These additional files can be referenced from your skill's instructions, allowin
 1. Create the skill directory:
 
    ```bash
-   mkdir -p ~/.kilocode/skills/api-design
+   mkdir -p ~/.kilo/skills/api-design
    ```
 
 2. Create `SKILL.md` (see content below)

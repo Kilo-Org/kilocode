@@ -25,8 +25,8 @@ This happens seamlessly in the background, requiring no manual intervention.
 
 ### Basic Setup
 
-1. Create a `.kilocode` directory in your workspace root (if it doesn't exist)
-2. Create a `launchConfig.json` file inside the `.kilocode` directory
+1. Create a `.kilo` directory in your workspace root (if it doesn't exist)
+2. Create a `launchConfig.json` file inside the `.kilo` directory
 3. Configure your launch settings using the JSON format below
 
 ### Configuration Format
@@ -120,7 +120,7 @@ The configuration file must be located at:
 
 ```
 your-workspace/
-└── .kilocode/
+└── .kilo/
     └── launchConfig.json
 ```
 
@@ -138,7 +138,7 @@ This file should be at the root of your workspace (the same level as your main p
 
 ### Configuration Not Loading
 
-1. Verify file location: `.kilocode/launchConfig.json` in workspace root
+1. Verify file location: `.kilo/launchConfig.json` in workspace root
 2. Check JSON syntax with a JSON validator
 3. Ensure `prompt` field is present and not empty
 4. Check VS Code Developer Console for error messages

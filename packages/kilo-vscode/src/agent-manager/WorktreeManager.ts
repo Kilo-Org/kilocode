@@ -81,7 +81,7 @@ function stripRemotePrefix(ref: string): { branch: string; remote?: string } {
   return { branch: ref }
 }
 
-import { KILO_DIR, LEGACY_DIR, migrateAgentManagerData } from "./constants"
+import { KILO_DIR } from "./constants"
 
 const SESSION_ID_FILE = "session-id"
 const METADATA_FILE = "metadata.json"
@@ -92,7 +92,6 @@ export class WorktreeManager {
   private readonly git: SimpleGit
   private readonly ops: GitOps | undefined
   private readonly log: (msg: string) => void
-  private migrated = false
 
   constructor(root: string, log: (msg: string) => void, ops?: GitOps) {
     this.root = root
@@ -100,13 +99,6 @@ export class WorktreeManager {
     this.git = simpleGit(root)
     this.ops = ops
     this.log = log
-  }
-
-  /** Run once before first read/write to migrate Agent Manager data from .kilocode → .kilo. */
-  private async ensureMigrated(): Promise<void> {
-    if (this.migrated) return
-    this.migrated = true
-    await migrateAgentManagerData(this.root, this.log)
   }
 
   // ---------------------------------------------------------------------------
@@ -147,7 +139,6 @@ export class WorktreeManager {
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
-    await this.ensureMigrated()
     return this.withGitLock(() => this.createWorktreeImpl(params))
   }
 
@@ -422,7 +413,6 @@ export class WorktreeManager {
   }
 
   async discoverWorktrees(): Promise<WorktreeInfo[]> {
-    await this.ensureMigrated()
     if (!fs.existsSync(this.dir)) return []
 
     const entries = await fs.promises.readdir(this.dir, { withFileTypes: true })
@@ -454,12 +444,7 @@ export class WorktreeManager {
   async readMetadata(
     worktreePath: string,
   ): Promise<{ sessionId: string; parentBranch?: string; remote?: string } | undefined> {
-    // Check .kilo/ first, then legacy .kilocode/
-    for (const dirName of [KILO_DIR, LEGACY_DIR]) {
-      const result = await this.readMetadataFrom(worktreePath, dirName)
-      if (result) return result
-    }
-    return undefined
+    return this.readMetadataFrom(worktreePath, KILO_DIR)
   }
 
   private async readMetadataFrom(
@@ -510,13 +495,6 @@ export class WorktreeManager {
       [".kilo/setup-script.ps1", "Kilo Code worktree setup script"],
       [".kilo/setup-script.cmd", "Kilo Code worktree setup script"],
       [".kilo/setup-script.bat", "Kilo Code worktree setup script"],
-      [".kilocode/worktrees/", "Kilo Code legacy agent worktrees"],
-      [".kilocode/agent-manager.json", "Kilo Agent Manager legacy state"],
-      [".kilocode/setup-script", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.sh", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.ps1", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.cmd", "Kilo Code legacy worktree setup script"],
-      [".kilocode/setup-script.bat", "Kilo Code legacy worktree setup script"],
     ] as const
 
     for (const [entry, comment] of items) {

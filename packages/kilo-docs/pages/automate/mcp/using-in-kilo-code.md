@@ -89,7 +89,7 @@ MCP server configurations can be managed at two levels: **global** (applies acro
 | Scope       | Path                 | Description                                                     |
 | ----------- | -------------------- | --------------------------------------------------------------- |
 | **Global**  | `mcp_settings.json`  | Accessible via VS Code settings. Applies across all workspaces. |
-| **Project** | `.kilocode/mcp.json` | In your project root. Auto-detected by Kilo Code.               |
+| **Project** | `.kilo/mcp.json` | In your project root. Auto-detected by Kilo Code.               |
 
 Project-level configs can be committed to version control to share with your team.
 
@@ -397,7 +397,7 @@ You can edit both global and project-level MCP configuration files directly from
 3. Select the `MCP Servers` sub-tab
 4. Click the appropriate button:
    - **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
-   - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
+   - **`Edit Project MCP`**: Opens the project-specific `.kilo/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
 
 {% image src="/docs/img/using-mcp-in-kilo-code/mcp-installed-config.png" alt="Edit Global MCP and Edit Project MCP buttons" width="600" caption="Edit Global MCP and Edit Project MCP buttons" /%}
 
@@ -692,7 +692,7 @@ Example: "Analyze the performance of my API" might use an MCP tool that tests AP
 {% tab label="VSCode (Legacy)" %}
 
 - **Server Not Responding:** Check if the server process is running and verify network connectivity
-- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilocode/mcp.json` (for project settings).
+- **Permission Errors:** Ensure proper API keys and credentials are configured in your `mcp_settings.json` (for global settings) or `.kilo/mcp.json` (for project settings).
 - **Tool Not Available:** Confirm the server is properly implementing the tool and it's not disabled in settings
 - **Slow Performance:** Try adjusting the network timeout value for the specific MCP server
 

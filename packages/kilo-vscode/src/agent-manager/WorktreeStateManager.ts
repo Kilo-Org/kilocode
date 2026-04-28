@@ -75,7 +75,7 @@ interface StateFile {
   defaultBaseBranch?: string
 }
 
-import { KILO_DIR, migrateAgentManagerData, type MigrationResult } from "./constants"
+import { KILO_DIR } from "./constants"
 
 const STATE_FILE = "agent-manager.json"
 
@@ -100,8 +100,6 @@ export class WorktreeStateManager {
   private pendingSave = false
 
   private readonly root: string
-  private migrated = false
-
   constructor(root: string, log: (msg: string) => void) {
     this.root = root
     this.file = path.join(root, KILO_DIR, STATE_FILE)
@@ -506,13 +504,7 @@ export class WorktreeStateManager {
   // Persistence
   // ---------------------------------------------------------------------------
 
-  async load(): Promise<MigrationResult> {
-    // Migrate Agent Manager data from .kilocode → .kilo before first read
-    let migration: MigrationResult = { refsFixed: 0 }
-    if (!this.migrated) {
-      this.migrated = true
-      migration = await migrateAgentManagerData(this.root, this.log)
-    }
+  async load(): Promise<void> {
     try {
       const content = await fs.promises.readFile(this.file, "utf-8")
       const data = JSON.parse(content) as StateFile
@@ -524,12 +516,7 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "unified"
 
       for (const [id, wt] of Object.entries(data.worktrees ?? {})) {
-        // Rewrite stale .kilocode paths while preserving the separator style already stored.
-        const fixed =
-          wt.path?.replace(/([/\\])\.kilocode([/\\])/g, (_match, leadingSep, trailingSep) => {
-            return `${leadingSep}.kilo${trailingSep}`
-          }) ?? wt.path
-        this.worktrees.set(id, { id, ...wt, path: fixed })
+        this.worktrees.set(id, { id, ...wt })
       }
       let pruned = 0
       for (const [id, s] of Object.entries(data.sessions ?? {})) {
@@ -571,7 +558,6 @@ export class WorktreeStateManager {
         this.log(`Failed to load state: ${error}`)
       }
     }
-    return migration
   }
 
   /** Remove worktrees whose directories no longer exist on disk and prune orphaned sessions. */
