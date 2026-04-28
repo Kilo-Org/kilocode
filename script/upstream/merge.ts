@@ -115,6 +115,12 @@ async function createBackupBranch(baseBranch: string): Promise<string> {
 }
 
 async function main() {
+  // Ensure all relative paths resolve against the repo root, not whichever
+  // directory the user invoked the script from. Transforms feed git-reported
+  // paths (repo-relative) straight into Bun.file() and Glob.scan(), so running
+  // from script/upstream/ would silently break every file lookup.
+  process.chdir((await $`git rev-parse --show-toplevel`.text()).trim())
+
   const options = parseArgs()
   const config = loadConfig(options.baseBranch ? { baseBranch: options.baseBranch } : undefined)
 

@@ -213,7 +213,7 @@ export const layer: Layer.Layer<
         })
         // kilocode_change end
 
-        const kilo = yield* KiloToolRegistry.build(kiloToolInfos) // kilocode_change
+        const kilo = yield* KiloToolRegistry.build(kiloToolInfos, { agent: agents, truncate }) // kilocode_change
 
         // kilocode_change start
         return {

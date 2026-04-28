@@ -20,6 +20,7 @@ import { AppFileSystem } from "@opencode-ai/shared/filesystem"
 import { BootstrapRuntime } from "@/effect/bootstrap-runtime"
 import * as CrossSpawnSpawner from "@/effect/cross-spawn-spawner"
 import { InstanceState } from "@/effect"
+import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 
 const log = Log.create({ service: "worktree" })
 
@@ -353,18 +354,18 @@ export const layer: Layer.Layer<
       )
     }
 
+    // kilocode_change start - use Kilo cleanup helper for slow Windows handle release
     function cleanDirectory(target: string) {
-      const retries = process.platform === "win32" ? 30 : 5 // kilocode_change - Windows may release git worktree handles slowly
-      const delay = process.platform === "win32" ? 250 : 100 // kilocode_change
-      return Effect.promise(() =>
-        import("fs/promises")
-          .then((fsp) => fsp.rm(target, { recursive: true, force: true, maxRetries: retries, retryDelay: delay })) // kilocode_change
-          .catch((error) => {
+      return Effect.promise(() => WorktreeCleanup.removeDirectory(target)).pipe(
+        Effect.catch((error) =>
+          Effect.sync(() => {
             const message = errorMessage(error)
             throw new RemoveFailedError({ message: message || "Failed to remove git worktree directory" })
           }),
+        ),
       )
     }
+    // kilocode_change end
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
       const ctx = yield* InstanceState.context
@@ -391,8 +392,7 @@ export const layer: Layer.Layer<
         return true
       }
 
-      yield* stopFsmonitor(entry.path)
-      const removed = yield* git(["worktree", "remove", "--force", entry.path], { cwd: ctx.worktree })
+      const removed = yield* WorktreeCleanup.remove({ root: ctx.worktree, target: entry.path, git, stop: stopFsmonitor }) // kilocode_change
       if (removed.code !== 0) {
         const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {
