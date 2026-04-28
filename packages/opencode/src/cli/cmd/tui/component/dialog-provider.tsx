@@ -11,7 +11,7 @@ import { TextAttributes } from "@opentui/core"
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2"
 import { DialogModel } from "./dialog-model"
 import { useKeyboard } from "@opentui/solid"
-import { Clipboard } from "@tui/util/clipboard"
+import * as Clipboard from "@tui/util/clipboard"
 import { useToast } from "../ui/toast"
 import { isConsoleManagedProvider } from "@tui/util/provider-origin"
 import * as KiloProvider from "@/kilocode/cli/cmd/tui/component/dialog-provider" // kilocode_change
@@ -33,7 +33,7 @@ export function createDialogProviderOptions() {
         const connected = sync.data.provider_next.connected.includes(provider.id)
 
         return {
-          title: provider.name,
+          title: KiloProvider.PROVIDER_TITLES[provider.id] ?? provider.name, // kilocode_change
           value: provider.id,
           description: KiloProvider.PROVIDER_DESCRIPTIONS[provider.id], // kilocode_change
           footer: consoleManaged ? sync.data.console_state.activeOrgName : undefined,

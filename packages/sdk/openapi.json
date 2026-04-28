@@ -66,31 +66,6 @@
         ]
       }
     },
-    "/global/sync-event": {
-      "get": {
-        "operationId": "global.sync-event.subscribe",
-        "summary": "Subscribe to global sync events",
-        "description": "Get global sync events",
-        "responses": {
-          "200": {
-            "description": "Event stream",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "$ref": "#/components/schemas/SyncEvent"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.global.sync-event.subscribe({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/global/config": {
       "get": {
         "operationId": "global.config.get",
@@ -436,6 +411,391 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.app.log({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace/adaptor": {
+      "get": {
+        "operationId": "experimental.workspace.adaptor.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List workspace adaptors",
+        "description": "List all available workspace adaptors for the current project.",
+        "responses": {
+          "200": {
+            "description": "Workspace adaptors",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["type", "name", "description"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.adaptor.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace": {
+      "post": {
+        "operationId": "experimental.workspace.create",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Create workspace",
+        "description": "Create a workspace for the current project.",
+        "responses": {
+          "200": {
+            "description": "Workspace created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^wrk.*"
+                  },
+                  "type": {
+                    "type": "string"
+                  },
+                  "branch": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "extra": {
+                    "anyOf": [
+                      {},
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": ["type", "branch", "extra"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
+          }
+        ]
+      },
+      "get": {
+        "operationId": "experimental.workspace.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List workspaces",
+        "description": "List all workspaces.",
+        "responses": {
+          "200": {
+            "description": "Workspaces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Workspace"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace/status": {
+      "get": {
+        "operationId": "experimental.workspace.status",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Workspace status",
+        "description": "Get connection status for workspaces in the current project.",
+        "responses": {
+          "200": {
+            "description": "Workspace status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "workspaceID": {
+                        "type": "string",
+                        "pattern": "^wrk.*"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": ["connected", "connecting", "disconnected", "error"]
+                      }
+                    },
+                    "required": ["workspaceID", "status"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.status({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace/{id}": {
+      "delete": {
+        "operationId": "experimental.workspace.remove",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "pattern": "^wrk.*"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Remove workspace",
+        "description": "Remove an existing workspace.",
+        "responses": {
+          "200": {
+            "description": "Workspace removed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Workspace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/experimental/workspace/{id}/session-restore": {
+      "post": {
+        "operationId": "experimental.workspace.sessionRestore",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "type": "string",
+              "pattern": "^wrk.*"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Restore session into workspace",
+        "description": "Replay a session's sync events into the target workspace in batches.",
+        "responses": {
+          "200": {
+            "description": "Session replay started",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": ["total"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sessionID": {
+                    "type": "string",
+                    "pattern": "^ses.*"
+                  }
+                },
+                "required": ["sessionID"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.sessionRestore({\n  ...\n})"
           }
         ]
       }
@@ -1582,196 +1942,6 @@
         ]
       }
     },
-    "/experimental/workspace": {
-      "post": {
-        "operationId": "experimental.workspace.create",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "summary": "Create workspace",
-        "description": "Create a workspace for the current project.",
-        "responses": {
-          "200": {
-            "description": "Workspace created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Workspace"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "pattern": "^wrk.*"
-                  },
-                  "type": {
-                    "type": "string"
-                  },
-                  "branch": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "extra": {
-                    "anyOf": [
-                      {},
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  }
-                },
-                "required": ["type", "branch", "extra"]
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.create({\n  ...\n})"
-          }
-        ]
-      },
-      "get": {
-        "operationId": "experimental.workspace.list",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "summary": "List workspaces",
-        "description": "List all workspaces.",
-        "responses": {
-          "200": {
-            "description": "Workspaces",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Workspace"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.list({\n  ...\n})"
-          }
-        ]
-      }
-    },
-    "/experimental/workspace/{id}": {
-      "delete": {
-        "operationId": "experimental.workspace.remove",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "directory",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "workspace",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "in": "path",
-            "name": "id",
-            "schema": {
-              "type": "string",
-              "pattern": "^wrk.*"
-            },
-            "required": true
-          }
-        ],
-        "summary": "Remove workspace",
-        "description": "Remove an existing workspace.",
-        "responses": {
-          "200": {
-            "description": "Workspace removed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Workspace"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BadRequestError"
-                }
-              }
-            }
-          }
-        },
-        "x-codeSamples": [
-          {
-            "lang": "js",
-            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.experimental.workspace.remove({\n  ...\n})"
-          }
-        ]
-      }
-    },
     "/experimental/worktree": {
       "post": {
         "operationId": "worktree.create",
@@ -2765,6 +2935,9 @@
                 "properties": {
                   "title": {
                     "type": "string"
+                  },
+                  "permission": {
+                    "$ref": "#/components/schemas/PermissionRuleset"
                   },
                   "time": {
                     "type": "object",
@@ -5528,6 +5701,202 @@
         ]
       }
     },
+    "/sync/replay": {
+      "post": {
+        "operationId": "sync.replay",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Replay sync events",
+        "description": "Validate and replay a complete sync event history.",
+        "responses": {
+          "200": {
+            "description": "Replayed sync events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sessionID": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["sessionID"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "directory": {
+                    "type": "string"
+                  },
+                  "events": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "aggregateID": {
+                          "type": "string"
+                        },
+                        "seq": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "data": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
+                        }
+                      },
+                      "required": ["id", "aggregateID", "seq", "type", "data"]
+                    }
+                  }
+                },
+                "required": ["directory", "events"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.replay({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/sync/history": {
+      "get": {
+        "operationId": "sync.history.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List sync events",
+        "description": "List sync events for all aggregates. Keys are aggregate IDs the client already knows about, values are the last known sequence ID. Events with seq > value are returned for those aggregates. Aggregates not listed in the input get their full history.",
+        "responses": {
+          "200": {
+            "description": "Sync events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "aggregate_id": {
+                        "type": "string"
+                      },
+                      "seq": {
+                        "type": "number"
+                      },
+                      "type": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": ["id", "aggregate_id", "seq", "type", "data"]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.sync.history.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/find": {
       "get": {
         "operationId": "find.text",
@@ -7831,6 +8200,206 @@
         ]
       }
     },
+    "/suggestion": {
+      "get": {
+        "operationId": "suggestion.list",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "List pending suggestions",
+        "description": "Get all pending suggestion requests across all sessions.",
+        "responses": {
+          "200": {
+            "description": "List of pending suggestions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SuggestionRequest"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.list({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/accept": {
+      "post": {
+        "operationId": "suggestion.accept",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Accept suggestion request",
+        "description": "Accept a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "description": "Zero-based action index to accept",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["index"]
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.accept({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/suggestion/{requestID}/dismiss": {
+      "post": {
+        "operationId": "suggestion.dismiss",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "requestID",
+            "schema": {
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "summary": "Dismiss suggestion request",
+        "description": "Dismiss a suggestion request from the AI assistant.",
+        "responses": {
+          "200": {
+            "description": "Suggestion dismissed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFoundError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.suggestion.dismiss({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/telemetry/capture": {
       "post": {
         "operationId": "telemetry.capture",
@@ -9059,6 +9628,57 @@
         ]
       }
     },
+    "/kilocode/heap/snapshot": {
+      "post": {
+        "operationId": "kilocode.heap.snapshot",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "directory",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "workspace",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Write heap snapshot",
+        "description": "Write a heap snapshot for the CLI process to the log directory.",
+        "responses": {
+          "200": {
+            "description": "Heap snapshot file path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\n\nconst client = createKiloClient()\nawait client.kilocode.heap.snapshot({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/skill/remove": {
       "post": {
         "operationId": "kilocode.removeSkill",
@@ -10220,44 +10840,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.installation.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "installation.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string"
-              }
-            },
-            "required": ["version"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.installation.update-available": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "installation.update-available"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "version": {
-                "type": "string"
-              }
-            },
-            "required": ["version"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "Event.server.connected": {
         "type": "object",
         "properties": {
@@ -10300,6 +10882,60 @@
         },
         "required": ["type", "properties"]
       },
+      "Event.file.edited": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.edited"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              }
+            },
+            "required": ["file"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.file.watcher.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "file.watcher.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "file": {
+                "type": "string"
+              },
+              "event": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "add"
+                  },
+                  {
+                    "type": "string",
+                    "const": "change"
+                  },
+                  {
+                    "type": "string",
+                    "const": "unlink"
+                  }
+                ]
+              }
+            },
+            "required": ["file", "event"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.lsp.client.diagnostics": {
         "type": "object",
         "properties": {
@@ -10332,6 +10968,44 @@
           "properties": {
             "type": "object",
             "properties": {}
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.installation.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "installation.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": ["version"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.installation.update-available": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "installation.update-available"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "string"
+              }
+            },
+            "required": ["version"]
           }
         },
         "required": ["type", "properties"]
@@ -10634,48 +11308,6 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.session.turn.open": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.turn.open"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              }
-            },
-            "required": ["sessionID"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.session.turn.close": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "session.turn.close"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string"
-              },
-              "reason": {
-                "type": "string",
-                "enum": ["completed", "error", "interrupted"]
-              }
-            },
-            "required": ["sessionID", "reason"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
       "PermissionRequest": {
         "type": "object",
         "properties": {
@@ -10762,6 +11394,48 @@
               }
             },
             "required": ["sessionID", "requestID", "reply"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.turn.open": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.turn.open"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              }
+            },
+            "required": ["sessionID"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.session.turn.close": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "session.turn.close"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "enum": ["completed", "error", "interrupted"]
+              }
+            },
+            "required": ["sessionID", "reason"]
           }
         },
         "required": ["type", "properties"]
@@ -11022,74 +11696,181 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.file.edited": {
+      "QuestionOption": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string",
-            "const": "file.edited"
+          "label": {
+            "description": "Display text (1-5 words, concise)",
+            "type": "string"
           },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              }
-            },
-            "required": ["file"]
+          "description": {
+            "description": "Explanation of choice",
+            "type": "string"
+          },
+          "labelKey": {
+            "description": "Optional i18n key for the label; clients translate and still reply with `label`",
+            "type": "string"
+          },
+          "descriptionKey": {
+            "description": "Optional i18n key for the description",
+            "type": "string"
           }
         },
-        "required": ["type", "properties"]
+        "required": ["label", "description"]
       },
-      "Event.file.watcher.updated": {
+      "QuestionInfo": {
         "type": "object",
         "properties": {
-          "type": {
-            "type": "string",
-            "const": "file.watcher.updated"
+          "question": {
+            "description": "Complete question",
+            "type": "string"
           },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              },
-              "event": {
-                "anyOf": [
-                  {
-                    "type": "string",
-                    "const": "add"
-                  },
-                  {
-                    "type": "string",
-                    "const": "change"
-                  },
-                  {
-                    "type": "string",
-                    "const": "unlink"
-                  }
-                ]
-              }
-            },
-            "required": ["file", "event"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Event.vcs.branch.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "vcs.branch.updated"
+          "header": {
+            "description": "Very short label (max 30 chars)",
+            "type": "string"
           },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "branch": {
-                "type": "string"
-              }
+          "options": {
+            "description": "Available choices",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionOption"
             }
+          },
+          "multiple": {
+            "description": "Allow selecting multiple choices",
+            "type": "boolean"
+          },
+          "questionKey": {
+            "description": "Optional i18n key for the question text; clients fall back to `question` when missing",
+            "type": "string"
+          },
+          "headerKey": {
+            "description": "Optional i18n key for the header; clients fall back to `header` when missing",
+            "type": "string"
+          },
+          "custom": {
+            "description": "Allow typing a custom answer (default: true)",
+            "type": "boolean"
+          }
+        },
+        "required": ["question", "header", "options"]
+      },
+      "QuestionTool": {
+        "type": "object",
+        "properties": {
+          "messageID": {
+            "type": "string",
+            "pattern": "^msg.*"
+          },
+          "callID": {
+            "type": "string"
+          }
+        },
+        "required": ["messageID", "callID"]
+      },
+      "QuestionRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^que.*"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "questions": {
+            "description": "Questions to ask",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionInfo"
+            }
+          },
+          "blocking": {
+            "description": "Whether this question blocks prompt input (default: true)",
+            "type": "boolean"
+          },
+          "tool": {
+            "$ref": "#/components/schemas/QuestionTool"
+          }
+        },
+        "required": ["id", "sessionID", "questions"]
+      },
+      "Event.question.asked": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "question.asked"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/QuestionRequest"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "QuestionAnswer": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "QuestionReplied": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que.*"
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuestionAnswer"
+            }
+          }
+        },
+        "required": ["sessionID", "requestID", "answers"]
+      },
+      "Event.question.replied": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "question.replied"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/QuestionReplied"
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "QuestionRejected": {
+        "type": "object",
+        "properties": {
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses.*"
+          },
+          "requestID": {
+            "type": "string",
+            "pattern": "^que.*"
+          }
+        },
+        "required": ["sessionID", "requestID"]
+      },
+      "Event.question.rejected": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "question.rejected"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/QuestionRejected"
           }
         },
         "required": ["type", "properties"]
@@ -11124,73 +11905,57 @@
         },
         "required": ["type", "properties"]
       },
-      "QuestionOption": {
+      "SuggestionAction": {
         "type": "object",
         "properties": {
           "label": {
-            "description": "Display text (1-5 words, concise)",
+            "description": "Button or option label (1-5 words)",
             "type": "string"
           },
           "description": {
-            "description": "Explanation of choice",
+            "description": "Brief explanation of what this action does",
+            "type": "string"
+          },
+          "prompt": {
+            "description": "Synthetic user prompt to inject when this action is accepted",
             "type": "string"
           }
         },
-        "required": ["label", "description"]
+        "required": ["label", "prompt"]
       },
-      "QuestionInfo": {
-        "type": "object",
-        "properties": {
-          "question": {
-            "description": "Complete question",
-            "type": "string"
-          },
-          "header": {
-            "description": "Very short label (max 30 chars)",
-            "type": "string"
-          },
-          "options": {
-            "description": "Available choices",
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/QuestionOption"
-            }
-          },
-          "multiple": {
-            "description": "Allow selecting multiple choices",
-            "type": "boolean"
-          },
-          "custom": {
-            "description": "Allow typing a custom answer (default: true)",
-            "type": "boolean"
-          }
-        },
-        "required": ["question", "header", "options"]
-      },
-      "QuestionRequest": {
+      "SuggestionRequest": {
         "type": "object",
         "properties": {
           "id": {
             "type": "string",
-            "pattern": "^que.*"
+            "pattern": "^sug.*"
           },
           "sessionID": {
             "type": "string",
             "pattern": "^ses.*"
           },
-          "questions": {
-            "description": "Questions to ask",
+          "text": {
+            "description": "Suggestion text shown to the user",
+            "type": "string"
+          },
+          "actions": {
+            "description": "Available actions the user can take",
+            "minItems": 1,
+            "maxItems": 2,
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/QuestionInfo"
+              "$ref": "#/components/schemas/SuggestionAction"
             }
+          },
+          "blocking": {
+            "description": "Whether this suggestion blocks prompt input. When unset, the TUI treats the suggestion as blocking for backwards compatibility; the built-in suggest tool always sets this to false.",
+            "type": "boolean"
           },
           "tool": {
             "type": "object",
             "properties": {
               "messageID": {
-                "type": "string",
-                "pattern": "^msg.*"
+                "type": "string"
               },
               "callID": {
                 "type": "string"
@@ -11199,121 +11964,69 @@
             "required": ["messageID", "callID"]
           }
         },
-        "required": ["id", "sessionID", "questions"]
+        "required": ["id", "sessionID", "text", "actions"]
       },
-      "Event.question.asked": {
+      "Event.suggestion.shown": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "question.asked"
+            "const": "suggestion.shown"
           },
           "properties": {
-            "$ref": "#/components/schemas/QuestionRequest"
+            "$ref": "#/components/schemas/SuggestionRequest"
           }
         },
         "required": ["type", "properties"]
       },
-      "QuestionAnswer": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "Event.question.replied": {
+      "Event.suggestion.accepted": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "question.replied"
+            "const": "suggestion.accepted"
           },
           "properties": {
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
+                "type": "string"
               },
               "requestID": {
-                "type": "string",
-                "pattern": "^que.*"
+                "type": "string"
               },
-              "answers": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/QuestionAnswer"
-                }
+              "index": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "action": {
+                "$ref": "#/components/schemas/SuggestionAction"
               }
             },
-            "required": ["sessionID", "requestID", "answers"]
+            "required": ["sessionID", "requestID", "index", "action"]
           }
         },
         "required": ["type", "properties"]
       },
-      "Event.question.rejected": {
+      "Event.suggestion.dismissed": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "question.rejected"
+            "const": "suggestion.dismissed"
           },
           "properties": {
             "type": "object",
             "properties": {
               "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
+                "type": "string"
               },
               "requestID": {
-                "type": "string",
-                "pattern": "^que.*"
+                "type": "string"
               }
             },
             "required": ["sessionID", "requestID"]
-          }
-        },
-        "required": ["type", "properties"]
-      },
-      "Todo": {
-        "type": "object",
-        "properties": {
-          "content": {
-            "description": "Brief description of the task",
-            "type": "string"
-          },
-          "status": {
-            "description": "Current status of the task: pending, in_progress, completed, cancelled",
-            "type": "string"
-          },
-          "priority": {
-            "description": "Priority level of the task: high, medium, low",
-            "type": "string"
-          }
-        },
-        "required": ["content", "status", "priority"]
-      },
-      "Event.todo.updated": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "const": "todo.updated"
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses.*"
-              },
-              "todos": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/Todo"
-                }
-              }
-            },
-            "required": ["sessionID", "todos"]
           }
         },
         "required": ["type", "properties"]
@@ -11420,6 +12133,118 @@
         },
         "required": ["type", "properties"]
       },
+      "Todo": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "description": "Brief description of the task",
+            "type": "string"
+          },
+          "status": {
+            "description": "Current status of the task: pending, in_progress, completed, cancelled",
+            "type": "string"
+          },
+          "priority": {
+            "description": "Priority level of the task: high, medium, low",
+            "type": "string"
+          }
+        },
+        "required": ["content", "status", "priority"]
+      },
+      "Event.todo.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "todo.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "todos": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Todo"
+                }
+              }
+            },
+            "required": ["sessionID", "todos"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "IndexingStatusState": {
+        "type": "string",
+        "enum": ["Disabled", "In Progress", "Complete", "Error", "Standby"]
+      },
+      "IndexingStatus": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/IndexingStatusState"
+          },
+          "message": {
+            "type": "string"
+          },
+          "processedFiles": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "totalFiles": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "percent": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
+          }
+        },
+        "required": ["state", "message", "processedFiles", "totalFiles", "percent"]
+      },
+      "Event.indexing.status": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "indexing.status"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "$ref": "#/components/schemas/IndexingStatus"
+              }
+            },
+            "required": ["status"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.vcs.branch.updated": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "vcs.branch.updated"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "branch": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": ["type", "properties"]
+      },
       "Event.session.compacted": {
         "type": "object",
         "properties": {
@@ -11462,31 +12287,34 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.workspace.ready": {
+      "Event.worktree.ready": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "workspace.ready"
+            "const": "worktree.ready"
           },
           "properties": {
             "type": "object",
             "properties": {
               "name": {
                 "type": "string"
+              },
+              "branch": {
+                "type": "string"
               }
             },
-            "required": ["name"]
+            "required": ["name", "branch"]
           }
         },
         "required": ["type", "properties"]
       },
-      "Event.workspace.failed": {
+      "Event.worktree.failed": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "workspace.failed"
+            "const": "worktree.failed"
           },
           "properties": {
             "type": "object",
@@ -11613,34 +12441,31 @@
         },
         "required": ["type", "properties"]
       },
-      "Event.worktree.ready": {
+      "Event.workspace.ready": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "worktree.ready"
+            "const": "workspace.ready"
           },
           "properties": {
             "type": "object",
             "properties": {
               "name": {
                 "type": "string"
-              },
-              "branch": {
-                "type": "string"
               }
             },
-            "required": ["name", "branch"]
+            "required": ["name"]
           }
         },
         "required": ["type", "properties"]
       },
-      "Event.worktree.failed": {
+      "Event.workspace.failed": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
-            "const": "worktree.failed"
+            "const": "workspace.failed"
           },
           "properties": {
             "type": "object",
@@ -11650,6 +12475,64 @@
               }
             },
             "required": ["message"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.workspace.restore": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.restore"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "workspaceID": {
+                "type": "string",
+                "pattern": "^wrk.*"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses.*"
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "step": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["workspaceID", "sessionID", "total", "step"]
+          }
+        },
+        "required": ["type", "properties"]
+      },
+      "Event.workspace.status": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "workspace.status"
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "workspaceID": {
+                "type": "string",
+                "pattern": "^wrk.*"
+              },
+              "status": {
+                "type": "string",
+                "enum": ["connected", "connecting", "disconnected", "error"]
+              }
+            },
+            "required": ["workspaceID", "status"]
           }
         },
         "required": ["type", "properties"]
@@ -12742,6 +13625,10 @@
           },
           "overflow": {
             "type": "boolean"
+          },
+          "tail_start_id": {
+            "type": "string",
+            "pattern": "^msg.*"
           }
         },
         "required": ["id", "sessionID", "messageID", "type", "auto"]
@@ -13054,189 +13941,24 @@
         },
         "required": ["type", "properties"]
       },
-      "Event": {
-        "anyOf": [
-          {
-            "$ref": "#/components/schemas/Event.project.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.server.instance.disposed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.installation.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.installation.update-available"
-          },
-          {
-            "$ref": "#/components/schemas/Event.server.connected"
-          },
-          {
-            "$ref": "#/components/schemas/Event.global.disposed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.global.config.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.lsp.client.diagnostics"
-          },
-          {
-            "$ref": "#/components/schemas/Event.lsp.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.prompt.append"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.command.execute"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.toast.show"
-          },
-          {
-            "$ref": "#/components/schemas/Event.tui.session.select"
-          },
-          {
-            "$ref": "#/components/schemas/Event.mcp.tools.changed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.mcp.browser.open.failed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.network.asked"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.network.replied"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.network.rejected"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.network.restored"
-          },
-          {
-            "$ref": "#/components/schemas/Event.message.part.delta"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.turn.open"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.turn.close"
-          },
-          {
-            "$ref": "#/components/schemas/Event.permission.asked"
-          },
-          {
-            "$ref": "#/components/schemas/Event.permission.replied"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.diff"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.error"
-          },
-          {
-            "$ref": "#/components/schemas/Event.file.edited"
-          },
-          {
-            "$ref": "#/components/schemas/Event.file.watcher.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.vcs.branch.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.command.executed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.question.asked"
-          },
-          {
-            "$ref": "#/components/schemas/Event.question.replied"
-          },
-          {
-            "$ref": "#/components/schemas/Event.question.rejected"
-          },
-          {
-            "$ref": "#/components/schemas/Event.todo.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.status"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.idle"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.compacted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.ready"
-          },
-          {
-            "$ref": "#/components/schemas/Event.workspace.failed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.pty.created"
-          },
-          {
-            "$ref": "#/components/schemas/Event.pty.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.pty.exited"
-          },
-          {
-            "$ref": "#/components/schemas/Event.pty.deleted"
-          },
-          {
-            "$ref": "#/components/schemas/Event.worktree.ready"
-          },
-          {
-            "$ref": "#/components/schemas/Event.worktree.failed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.message.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.message.removed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.message.part.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.message.part.removed"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.created"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.updated"
-          },
-          {
-            "$ref": "#/components/schemas/Event.session.deleted"
-          }
-        ]
-      },
-      "GlobalEvent": {
-        "type": "object",
-        "properties": {
-          "directory": {
-            "type": "string"
-          },
-          "payload": {
-            "$ref": "#/components/schemas/Event"
-          }
-        },
-        "required": ["directory", "payload"]
-      },
       "SyncEvent.message.updated": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "message.updated.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13254,16 +13976,26 @@
             "required": ["sessionID", "info"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.message.removed": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "message.removed.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13282,16 +14014,26 @@
             "required": ["sessionID", "messageID"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.message.part.updated": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "message.part.updated.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13312,16 +14054,26 @@
             "required": ["sessionID", "part", "time"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.message.part.removed": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "message.part.removed.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13344,16 +14096,26 @@
             "required": ["sessionID", "messageID", "partID"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.session.created": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "session.created.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13371,16 +14133,26 @@
             "required": ["sessionID", "info"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.session.updated": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "session.updated.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13639,16 +14411,26 @@
             "required": ["sessionID", "info"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
       "SyncEvent.session.deleted": {
         "type": "object",
         "properties": {
           "type": {
             "type": "string",
+            "const": "sync"
+          },
+          "name": {
+            "type": "string",
             "const": "session.deleted.1"
           },
-          "aggregate": {
+          "id": {
+            "type": "string"
+          },
+          "seq": {
+            "type": "number"
+          },
+          "aggregateID": {
             "type": "string",
             "const": "sessionID"
           },
@@ -13666,16 +14448,224 @@
             "required": ["sessionID", "info"]
           }
         },
-        "required": ["type", "aggregate", "data"]
+        "required": ["type", "name", "id", "seq", "aggregateID", "data"]
       },
-      "SyncEvent": {
+      "GlobalEvent": {
         "type": "object",
         "properties": {
+          "directory": {
+            "type": "string"
+          },
+          "project": {
+            "type": "string"
+          },
+          "workspace": {
+            "type": "string"
+          },
           "payload": {
-            "$ref": "#/components/schemas/SyncEvent"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Event.project.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.server.instance.disposed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.server.connected"
+              },
+              {
+                "$ref": "#/components/schemas/Event.global.disposed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.global.config.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.file.edited"
+              },
+              {
+                "$ref": "#/components/schemas/Event.file.watcher.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.lsp.client.diagnostics"
+              },
+              {
+                "$ref": "#/components/schemas/Event.lsp.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.installation.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.installation.update-available"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.prompt.append"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.command.execute"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.toast.show"
+              },
+              {
+                "$ref": "#/components/schemas/Event.tui.session.select"
+              },
+              {
+                "$ref": "#/components/schemas/Event.mcp.tools.changed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.mcp.browser.open.failed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.network.asked"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.network.replied"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.network.rejected"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.network.restored"
+              },
+              {
+                "$ref": "#/components/schemas/Event.message.part.delta"
+              },
+              {
+                "$ref": "#/components/schemas/Event.permission.asked"
+              },
+              {
+                "$ref": "#/components/schemas/Event.permission.replied"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.turn.open"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.turn.close"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.diff"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.error"
+              },
+              {
+                "$ref": "#/components/schemas/Event.question.asked"
+              },
+              {
+                "$ref": "#/components/schemas/Event.question.replied"
+              },
+              {
+                "$ref": "#/components/schemas/Event.question.rejected"
+              },
+              {
+                "$ref": "#/components/schemas/Event.command.executed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.suggestion.shown"
+              },
+              {
+                "$ref": "#/components/schemas/Event.suggestion.accepted"
+              },
+              {
+                "$ref": "#/components/schemas/Event.suggestion.dismissed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.status"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.idle"
+              },
+              {
+                "$ref": "#/components/schemas/Event.todo.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.indexing.status"
+              },
+              {
+                "$ref": "#/components/schemas/Event.vcs.branch.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.compacted"
+              },
+              {
+                "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.worktree.ready"
+              },
+              {
+                "$ref": "#/components/schemas/Event.worktree.failed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.pty.created"
+              },
+              {
+                "$ref": "#/components/schemas/Event.pty.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.pty.exited"
+              },
+              {
+                "$ref": "#/components/schemas/Event.pty.deleted"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.ready"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.failed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.restore"
+              },
+              {
+                "$ref": "#/components/schemas/Event.workspace.status"
+              },
+              {
+                "$ref": "#/components/schemas/Event.message.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.message.removed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.message.part.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.message.part.removed"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.created"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.updated"
+              },
+              {
+                "$ref": "#/components/schemas/Event.session.deleted"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.message.updated"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.message.removed"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.message.part.updated"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.message.part.removed"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.session.created"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.session.updated"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEvent.session.deleted"
+              }
+            ]
           }
         },
-        "required": ["payload"]
+        "required": ["directory", "payload"]
       },
       "LogLevel": {
         "description": "Log level",
@@ -13714,6 +14704,193 @@
         },
         "additionalProperties": false
       },
+      "IndexingConfig": {
+        "description": "Codebase indexing configuration",
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "description": "Enable codebase indexing",
+            "type": "boolean"
+          },
+          "provider": {
+            "description": "Embedding provider to use for codebase indexing",
+            "type": "string",
+            "enum": [
+              "openai",
+              "ollama",
+              "openai-compatible",
+              "gemini",
+              "mistral",
+              "vercel-ai-gateway",
+              "bedrock",
+              "openrouter",
+              "voyage"
+            ]
+          },
+          "model": {
+            "description": "Embedding model ID (uses provider default if omitted)",
+            "type": "string"
+          },
+          "dimension": {
+            "description": "Override embedding vector dimension (auto-detected from model if omitted)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "vectorStore": {
+            "description": "Vector store backend (default: qdrant)",
+            "type": "string",
+            "enum": ["lancedb", "qdrant"]
+          },
+          "openai": {
+            "description": "OpenAI embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "ollama": {
+            "description": "Ollama embedding provider options",
+            "type": "object",
+            "properties": {
+              "baseUrl": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "openai-compatible": {
+            "description": "OpenAI-compatible embedding provider options",
+            "type": "object",
+            "properties": {
+              "baseUrl": {
+                "type": "string"
+              },
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "gemini": {
+            "description": "Gemini embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "mistral": {
+            "description": "Mistral embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "vercel-ai-gateway": {
+            "description": "Vercel AI Gateway embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "bedrock": {
+            "description": "AWS Bedrock embedding provider options",
+            "type": "object",
+            "properties": {
+              "region": {
+                "type": "string"
+              },
+              "profile": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "openrouter": {
+            "description": "OpenRouter embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              },
+              "specificProvider": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "voyage": {
+            "description": "Voyage embedding provider options",
+            "type": "object",
+            "properties": {
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "qdrant": {
+            "description": "Qdrant vector store connection options",
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "apiKey": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "lancedb": {
+            "description": "LanceDB vector store options",
+            "type": "object",
+            "properties": {
+              "directory": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "searchMinScore": {
+            "description": "Minimum similarity score for search results (default: 0.4)",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "searchMaxResults": {
+            "description": "Maximum number of search results (default: 50)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "embeddingBatchSize": {
+            "description": "Number of code segments per embedding batch (default: 60)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "scannerMaxBatchRetries": {
+            "description": "Maximum retry attempts for failed embedding batches (default: 3)",
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false
+      },
       "PermissionActionConfig": {
         "anyOf": [
           {
@@ -13747,14 +14924,11 @@
       "PermissionConfig": {
         "anyOf": [
           {
+            "$ref": "#/components/schemas/PermissionActionConfig"
+          },
+          {
             "type": "object",
             "properties": {
-              "__originalKeys": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
               "read": {
                 "$ref": "#/components/schemas/PermissionRuleConfig"
               },
@@ -13807,9 +14981,6 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/PermissionRuleConfig"
             }
-          },
-          {
-            "$ref": "#/components/schemas/PermissionActionConfig"
           }
         ]
       },
@@ -13953,10 +15124,10 @@
                 "type": "boolean"
               },
               "timeout": {
-                "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
+                "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.",
                 "anyOf": [
                   {
-                    "description": "Timeout in milliseconds for requests to this provider. Default is 120000 (2 minutes). Set to false to disable timeout.",
+                    "description": "Timeout in milliseconds for requests to this provider. Default is 300000 (5 minutes). Set to false to disable timeout.",
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
@@ -13983,67 +15154,54 @@
               "type": "string"
             },
             "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string"
-                },
-                "family": {
-                  "type": "string"
-                },
-                "release_date": {
-                  "type": "string"
-                },
-                "attachment": {
-                  "type": "boolean"
-                },
-                "reasoning": {
-                  "type": "boolean"
-                },
-                "temperature": {
-                  "type": "boolean"
-                },
-                "tool_call": {
-                  "type": "boolean"
-                },
-                "interleaved": {
-                  "anyOf": [
-                    {
-                      "type": "boolean",
-                      "const": true
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "field": {
-                          "type": "string",
-                          "enum": ["reasoning_content", "reasoning_details"]
-                        }
-                      },
-                      "required": ["field"],
-                      "additionalProperties": false
-                    }
-                  ]
-                },
-                "cost": {
+              "anyOf": [
+                {
                   "type": "object",
                   "properties": {
-                    "input": {
-                      "type": "number"
+                    "id": {
+                      "type": "string"
                     },
-                    "output": {
-                      "type": "number"
+                    "name": {
+                      "type": "string"
                     },
-                    "cache_read": {
-                      "type": "number"
+                    "family": {
+                      "type": "string"
                     },
-                    "cache_write": {
-                      "type": "number"
+                    "release_date": {
+                      "type": "string"
                     },
-                    "context_over_200k": {
+                    "attachment": {
+                      "type": "boolean"
+                    },
+                    "reasoning": {
+                      "type": "boolean"
+                    },
+                    "temperature": {
+                      "type": "boolean"
+                    },
+                    "tool_call": {
+                      "type": "boolean"
+                    },
+                    "interleaved": {
+                      "anyOf": [
+                        {
+                          "type": "boolean",
+                          "const": true
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "field": {
+                              "type": "string",
+                              "enum": ["reasoning_content", "reasoning_details"]
+                            }
+                          },
+                          "required": ["field"],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    "cost": {
                       "type": "object",
                       "properties": {
                         "input": {
@@ -14057,100 +15215,127 @@
                         },
                         "cache_write": {
                           "type": "number"
+                        },
+                        "context_over_200k": {
+                          "type": "object",
+                          "properties": {
+                            "input": {
+                              "type": "number"
+                            },
+                            "output": {
+                              "type": "number"
+                            },
+                            "cache_read": {
+                              "type": "number"
+                            },
+                            "cache_write": {
+                              "type": "number"
+                            }
+                          },
+                          "required": ["input", "output"]
                         }
                       },
                       "required": ["input", "output"]
-                    }
-                  },
-                  "required": ["input", "output"]
-                },
-                "limit": {
-                  "type": "object",
-                  "properties": {
-                    "context": {
-                      "type": "number"
                     },
-                    "input": {
-                      "type": "number"
+                    "limit": {
+                      "type": "object",
+                      "properties": {
+                        "context": {
+                          "type": "number"
+                        },
+                        "input": {
+                          "type": "number"
+                        },
+                        "output": {
+                          "type": "number"
+                        }
+                      },
+                      "required": ["context", "output"]
                     },
-                    "output": {
-                      "type": "number"
-                    }
-                  },
-                  "required": ["context", "output"]
-                },
-                "modalities": {
-                  "type": "object",
-                  "properties": {
-                    "input": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["text", "audio", "image", "video", "pdf"]
+                    "modalities": {
+                      "type": "object",
+                      "properties": {
+                        "input": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["text", "audio", "image", "video", "pdf"]
+                          }
+                        },
+                        "output": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": ["text", "audio", "image", "video", "pdf"]
+                          }
+                        }
+                      },
+                      "required": ["input", "output"]
+                    },
+                    "experimental": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": ["alpha", "beta", "deprecated"]
+                    },
+                    "provider": {
+                      "type": "object",
+                      "properties": {
+                        "npm": {
+                          "type": "string"
+                        },
+                        "api": {
+                          "type": "string"
+                        }
                       }
                     },
-                    "output": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["text", "audio", "image", "video", "pdf"]
-                      }
-                    }
-                  },
-                  "required": ["input", "output"]
-                },
-                "experimental": {
-                  "type": "boolean"
-                },
-                "status": {
-                  "type": "string",
-                  "enum": ["alpha", "beta", "deprecated"]
-                },
-                "provider": {
-                  "type": "object",
-                  "properties": {
-                    "npm": {
-                      "type": "string"
+                    "options": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
                     },
-                    "api": {
-                      "type": "string"
+                    "headers": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
+                    "variants": {
+                      "description": "Variant-specific configuration",
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "disabled": {
+                                "description": "Disable this variant for the model",
+                                "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": {}
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
                     }
                   }
                 },
-                "options": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {}
-                },
-                "headers": {
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                },
-                "variants": {
-                  "description": "Variant-specific configuration",
-                  "type": "object",
-                  "propertyNames": {
-                    "type": "string"
-                  },
-                  "additionalProperties": {
-                    "type": "object",
-                    "properties": {
-                      "disabled": {
-                        "description": "Disable this variant for the model",
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": {}
-                  }
+                {
+                  "type": "null"
                 }
-              }
+              ]
             }
           }
         },
@@ -14384,6 +15569,9 @@
             "description": "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
             "type": "boolean"
           },
+          "indexing": {
+            "$ref": "#/components/schemas/IndexingConfig"
+          },
           "autoupdate": {
             "description": "Automatically update to the latest version. Set to true to auto-update, false to disable, or 'notify' to show update notifications",
             "anyOf": [
@@ -14538,8 +15726,7 @@
           "formatter": {
             "anyOf": [
               {
-                "type": "boolean",
-                "const": false
+                "type": "boolean"
               },
               {
                 "type": "object",
@@ -14581,8 +15768,7 @@
           "lsp": {
             "anyOf": [
               {
-                "type": "boolean",
-                "const": false
+                "type": "boolean"
               },
               {
                 "type": "object",
@@ -14674,6 +15860,16 @@
               }
             }
           },
+          "commit_message": {
+            "description": "Configuration for AI-generated commit messages",
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "description": "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+                "type": "string"
+              }
+            }
+          },
           "compaction": {
             "type": "object",
             "properties": {
@@ -14684,6 +15880,18 @@
               "prune": {
                 "description": "Enable pruning of old tool outputs (default: true)",
                 "type": "boolean"
+              },
+              "tail_turns": {
+                "description": "Number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction (default: 2)",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "preserve_recent_tokens": {
+                "description": "Maximum number of tokens from recent turns to preserve verbatim after compaction",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
               },
               "reserved": {
                 "description": "Token buffer for compaction. Leaves enough window to avoid overflow during compaction.",
@@ -14830,6 +16038,53 @@
             "$ref": "#/components/schemas/WellKnownAuth"
           }
         ]
+      },
+      "Workspace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^wrk.*"
+          },
+          "type": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "directory": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "extra": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projectID": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "type", "name", "branch", "directory", "extra", "projectID"]
       },
       "NotFoundError": {
         "type": "object",
@@ -15061,14 +16316,14 @@
           },
           "prompt": {
             "type": "string",
-            "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo"]
+            "enum": ["codex", "gemini", "beast", "anthropic", "trinity", "anthropic_without_todo", "ling"]
           },
           "isFree": {
             "type": "boolean"
           },
           "ai_sdk_provider": {
             "type": "string",
-            "enum": ["anthropic", "openai", "openai-compatible", "openrouter"]
+            "enum": ["alibaba", "anthropic", "openai", "openai-compatible", "openrouter"]
           }
         },
         "required": [
@@ -15150,60 +16405,6 @@
         "items": {
           "$ref": "#/components/schemas/ToolListItem"
         }
-      },
-      "Workspace": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "pattern": "^wrk.*"
-          },
-          "type": {
-            "type": "string"
-          },
-          "branch": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "directory": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "extra": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "projectID": {
-            "type": "string"
-          }
-        },
-        "required": ["id", "type", "branch", "name", "directory", "extra", "projectID"]
       },
       "Worktree": {
         "type": "object",
@@ -15616,16 +16817,8 @@
         "type": "object",
         "properties": {
           "type": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "oauth"
-              },
-              {
-                "type": "string",
-                "const": "api"
-              }
-            ]
+            "type": "string",
+            "enum": ["oauth", "api"]
           },
           "label": {
             "type": "string"
@@ -15657,16 +16850,8 @@
                           "type": "string"
                         },
                         "op": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "eq"
-                            },
-                            {
-                              "type": "string",
-                              "const": "neq"
-                            }
-                          ]
+                          "type": "string",
+                          "enum": ["eq", "neq"]
                         },
                         "value": {
                           "type": "string"
@@ -15715,16 +16900,8 @@
                           "type": "string"
                         },
                         "op": {
-                          "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "eq"
-                            },
-                            {
-                              "type": "string",
-                              "const": "neq"
-                            }
-                          ]
+                          "type": "string",
+                          "enum": ["eq", "neq"]
                         },
                         "value": {
                           "type": "string"
@@ -15748,16 +16925,8 @@
             "type": "string"
           },
           "method": {
-            "anyOf": [
-              {
-                "type": "string",
-                "const": "auto"
-              },
-              {
-                "type": "string",
-                "const": "code"
-              }
-            ]
+            "type": "string",
+            "enum": ["auto", "code"]
           },
           "instructions": {
             "type": "string"
@@ -15904,6 +17073,187 @@
           }
         },
         "required": ["path", "added", "removed", "status"]
+      },
+      "Event": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/Event.project.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.server.instance.disposed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.server.connected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.global.disposed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.global.config.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.edited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.file.watcher.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.lsp.client.diagnostics"
+          },
+          {
+            "$ref": "#/components/schemas/Event.lsp.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.installation.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.installation.update-available"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.command.execute"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.toast.show"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.session.select"
+          },
+          {
+            "$ref": "#/components/schemas/Event.mcp.tools.changed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.mcp.browser.open.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.asked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.replied"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.rejected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.network.restored"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.part.delta"
+          },
+          {
+            "$ref": "#/components/schemas/Event.permission.asked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.permission.replied"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.turn.open"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.turn.close"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.diff"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.error"
+          },
+          {
+            "$ref": "#/components/schemas/Event.question.asked"
+          },
+          {
+            "$ref": "#/components/schemas/Event.question.replied"
+          },
+          {
+            "$ref": "#/components/schemas/Event.question.rejected"
+          },
+          {
+            "$ref": "#/components/schemas/Event.command.executed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.shown"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.accepted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.suggestion.dismissed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.status"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.idle"
+          },
+          {
+            "$ref": "#/components/schemas/Event.todo.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.indexing.status"
+          },
+          {
+            "$ref": "#/components/schemas/Event.vcs.branch.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.compacted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.kilo-sessions.remote-status-changed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.ready"
+          },
+          {
+            "$ref": "#/components/schemas/Event.worktree.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.pty.created"
+          },
+          {
+            "$ref": "#/components/schemas/Event.pty.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.pty.exited"
+          },
+          {
+            "$ref": "#/components/schemas/Event.pty.deleted"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.ready"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.failed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.restore"
+          },
+          {
+            "$ref": "#/components/schemas/Event.workspace.status"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.removed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.part.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.message.part.removed"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.created"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.updated"
+          },
+          {
+            "$ref": "#/components/schemas/Event.session.deleted"
+          }
+        ]
       },
       "MCPStatusConnected": {
         "type": "object",

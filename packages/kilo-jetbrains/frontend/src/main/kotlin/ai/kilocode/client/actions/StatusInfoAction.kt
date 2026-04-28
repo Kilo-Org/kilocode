@@ -1,6 +1,6 @@
 package ai.kilocode.client.actions
 
-import ai.kilocode.client.KiloAppService
+import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.actionSystem.AnAction

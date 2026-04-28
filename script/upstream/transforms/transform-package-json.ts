@@ -383,6 +383,26 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         changes.push(`scripts.changeset:version: preserved Kilo's changeset:version script`)
       }
 
+      // Preserve Kilo's test runner scripts for packages/opencode
+      if (
+        relativePath === "packages/opencode/package.json" &&
+        ourScripts?.test &&
+        pkg.scripts?.test !== ourScripts.test
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts.test = ourScripts.test
+        changes.push(`scripts.test: preserved Kilo's test runner script`)
+      }
+      if (
+        relativePath === "packages/opencode/package.json" &&
+        ourScripts?.["test:ci"] &&
+        pkg.scripts?.["test:ci"] !== ourScripts["test:ci"]
+      ) {
+        pkg.scripts = pkg.scripts || {}
+        pkg.scripts["test:ci"] = ourScripts["test:ci"]
+        changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
+      }
+
       // Merge catalog with "newest wins" strategy
       if (ourWorkspaces?.catalog || theirWorkspaces?.catalog) {
         pkg.workspaces = pkg.workspaces || {}
@@ -606,6 +626,22 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
           pkg.scripts = pkg.scripts || {}
           pkg.scripts.extension = kiloScripts.extension
           changes.push(`scripts.extension: preserved Kilo's extension script`)
+        }
+
+        // Preserve Kilo's test runner scripts for packages/opencode
+        if (path === "packages/opencode/package.json" && kiloScripts?.test && pkg.scripts?.test !== kiloScripts.test) {
+          pkg.scripts = pkg.scripts || {}
+          pkg.scripts.test = kiloScripts.test
+          changes.push(`scripts.test: preserved Kilo's test runner script`)
+        }
+        if (
+          path === "packages/opencode/package.json" &&
+          kiloScripts?.["test:ci"] &&
+          pkg.scripts?.["test:ci"] !== kiloScripts["test:ci"]
+        ) {
+          pkg.scripts = pkg.scripts || {}
+          pkg.scripts["test:ci"] = kiloScripts["test:ci"]
+          changes.push(`scripts.test:ci: preserved Kilo's CI test runner script`)
         }
 
         // Merge catalog with "newest wins" strategy

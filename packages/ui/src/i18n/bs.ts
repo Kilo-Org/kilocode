@@ -80,6 +80,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Greška",
+  "ui.messagePart.mcp.input": "Ulaz",
+  "ui.messagePart.mcp.output": "Izlaz",
   "ui.messagePart.title.edit": "Uredi",
   "ui.messagePart.title.write": "Napiši",
   "ui.messagePart.option.typeOwnAnswer": "Unesi svoj odgovor",

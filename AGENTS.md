@@ -15,11 +15,13 @@ Kilo CLI is an open source AI coding agent that generates code from natural lang
 - **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
 - **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
 - **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
+- **CLI build artifact size check**: after `bun run script/build.ts --single --skip-install` in `packages/opencode/`, use `du -h dist/*/*/bin/kilo` (scoped package output lives under `dist/@kilocode/`)
 - **SDK regen**: After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
 - **Knip** (unused exports): `bun run knip` from `packages/kilo-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
 - **Source links**: After adding or changing URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/kilo-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
 - **kilocode_change check**: `bun run check-kilocode-change` from `packages/kilo-vscode/`. CI runs this — `kilocode_change` is a marker for upstream merge conflicts and must not appear in `packages/kilo-vscode/` or `packages/kilo-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
 - **opencode annotation check**: `bun run script/check-opencode-annotations.ts` from repo root. CI runs this on PRs touching `packages/opencode/` — every Kilo-specific change in shared opencode files must be annotated with `kilocode_change` markers. Exempt paths (no markers needed): `packages/opencode/src/kilocode/`, `packages/opencode/test/kilocode/`, and any path containing `kilocode` in the name.
+- **Backend/SDK programmatic testing**: see [TESTING.md](./TESTING.md) for spawning the local main-branch backend (`bun dev serve`) and driving it via `curl` — use this instead of `kilo serve` (prod binary) when testing backend fixes.
 
 ## Products
 
@@ -181,6 +183,15 @@ Changeset descriptions appear directly in release notes and are read by end user
 
 PR descriptions should be 2-3 lines covering **what** changed and **why**. Focus on intent and context a reviewer can't get from the diff — skip file-by-file inventories, test result summaries, and anything obvious from the code itself.
 
+## GitHub Issues
+
+- When creating a GitHub issue for the VS Code extension or JetBrains plugin, use the repo's existing issue templates in `.github/ISSUE_TEMPLATE/`. Pick the matching template (`Bug report`, `Feature Request`, or `Question`) instead of opening a blank issue.
+- Do not add platform-specific title prefixes such as `[JetBrains]`, `[Jetbrains]`, `[JB]`, `[VS Code]`, `[VSCode]`, or similar. Use a plain, descriptive title.
+- Always add VS Code extension issues to the GitHub project `VS Code Extension`: https://github.com/orgs/Kilo-Org/projects/25
+- Always add JetBrains plugin issues to the GitHub project `Jetbrains Plugin`: https://github.com/orgs/Kilo-Org/projects/39
+- When using `gh`, prefer `gh issue create --template "..." --project "..."` with the matching project title.
+- If project assignment fails because `gh` is missing the required scope, run `gh auth refresh -s project` and retry.
+
 ## Fork Merge Process
 
 Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).
@@ -202,6 +213,8 @@ We regularly merge upstream changes from opencode. To minimize merge conflicts a
    Do not use these markers in files within directories with kilo in the name
 
 4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from opencode unless absolutely necessary.
+
+5. **Mirror new config keys to the cloud schema** - When adding a `kilocode_change` key to `Config.Info` in `packages/opencode/src/config/config.ts`, also add the matching JSON Schema entry in `apps/web/src/app/config.json/extras.ts` in the [cloud repo](https://github.com/Kilo-Org/cloud). See [CLI Config Schema](packages/kilo-docs/pages/contributing/architecture/config-schema.md) for the step-by-step.
 
 The goal is to keep our diff from upstream as small as possible, making regular merges straightforward and reducing the risk of conflicts.
 

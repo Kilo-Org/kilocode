@@ -52,6 +52,12 @@ export const dict = {
   "agentManager.tab.forkSession": "Sessie forken",
   "agentManager.tab.terminal": "Terminal",
   "agentManager.tab.openTerminal": "Terminal openen",
+  "agentManager.tab.newOptions": "Meer opties voor nieuwe tabblad",
+
+  "agentManager.terminal.new": "Nieuw terminaltabblad",
+  "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
+  "agentManager.terminal.connectionError": "terminalverbindingsfout",
+  "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",
   "agentManager.setup.settingUp": "Worktree instellen",
@@ -71,7 +77,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "Volgend item",
   "agentManager.shortcuts.newWorktree": "Nieuwe worktree",
   "agentManager.shortcuts.openWorktree": "Worktree openen",
-  "agentManager.shortcuts.advancedWorktree": "Geavanceerde worktree",
+  "agentManager.shortcuts.advancedWorktree": "Nieuwe worktree configureren",
   "agentManager.shortcuts.deleteWorktree": "Worktree verwijderen",
   "agentManager.shortcuts.previousTab": "Vorig tabblad",
   "agentManager.shortcuts.nextTab": "Volgend tabblad",
@@ -94,6 +100,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "Verouderde worktree verwijderen",
 
   "agentManager.dialog.openWorktree": "Nieuwe worktree",
+  "agentManager.dialog.configureWorktree": "Nieuwe Worktree Configureren...",
   "agentManager.dialog.tab.new": "Nieuw",
   "agentManager.dialog.tab.import": "Importeren",
   "agentManager.dialog.namePlaceholder": "Worktree naam (optioneel)",

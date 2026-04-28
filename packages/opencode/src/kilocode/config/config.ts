@@ -3,16 +3,18 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import z from "zod"
+import { Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 import { mergeDeep } from "remeda"
-import { Log } from "../../util/log"
+import { Log } from "../../util"
 import { Global } from "../../global"
-import { NamedError } from "@opencode-ai/util/error"
+import { NamedError } from "@opencode-ai/shared/util/error"
 import { Bus } from "@/bus"
 import { isRecord } from "@/util/record"
-import { ConfigPaths } from "../../config/paths"
-import { Filesystem } from "@/util/filesystem"
-import type { Config } from "../../config/config"
+import { ConfigError } from "../../config/error"
+import { Filesystem } from "@/util"
+import type { Config } from "../../config"
+import type { ConfigAgent } from "../../config"
 import { ModesMigrator } from "../modes-migrator"
 import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
@@ -22,6 +24,18 @@ import { IgnoreMigrator } from "../ignore-migrator"
 
 export namespace KilocodeConfig {
   const log = Log.create({ service: "kilocode.config" })
+
+  // ── Config schema extensions ─────────────────────────────────────────
+
+  /** Schema for AI-generated commit message configuration. */
+  export const CommitMessageSchema = Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.String).annotate({
+        description:
+          "Custom system prompt for AI commit message generation. When set, replaces the default conventional commits prompt entirely.",
+      }),
+    }),
+  ).annotate({ description: "Configuration for AI-generated commit messages" })
 
   // ── Config file constants ────────────────────────────────────────────
 
@@ -49,13 +63,13 @@ export namespace KilocodeConfig {
 
   /** Convert known config-loading error types into a Warning.  Returns undefined for unknown errors. */
   export function toWarning(err: unknown): Config.Warning | undefined {
-    if (ConfigPaths.JsonError.isInstance(err))
+    if (ConfigError.JsonError.isInstance(err))
       return {
         path: err.data.path,
         message: `Config file at ${err.data.path} is not valid JSON(C)`,
         detail: err.data.message || undefined,
       }
-    if (ConfigPaths.InvalidError.isInstance(err)) {
+    if (ConfigError.InvalidError.isInstance(err)) {
       const text = err.data.issues ? formatIssues(err.data.issues) : err.data.message
       return {
         path: err.data.path,
@@ -88,7 +102,7 @@ export namespace KilocodeConfig {
   ) {
     const text = formatIssues(issues)
     const message = text ? `Config file at ${item} is invalid: ${text}` : `Config file at ${item} is invalid`
-    const err = new ConfigPaths.InvalidError({ path: item, issues }, { cause })
+    const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
       const { Session } = await import("@/session")
@@ -212,7 +226,7 @@ export namespace KilocodeConfig {
    */
   export async function loadOrganizationModes(
     auth: Record<string, any>,
-  ): Promise<{ agents: Record<string, Config.Agent>; warnings: Config.Warning[] }> {
+  ): Promise<{ agents: Record<string, ConfigAgent.Info>; warnings: Config.Warning[] }> {
     const warnings: Config.Warning[] = []
     try {
       const kilo = auth["kilo"]
@@ -292,13 +306,14 @@ export namespace KilocodeConfig {
 
   // ── Config merge utilities ───────────────────────────────────────────
 
-  /** Recursively remove keys whose value is null (used after mergeDeep to honor delete sentinels). */
+  /** Recursively remove null values and drop objects left empty after removal. */
   export function stripNulls(obj: Record<string, unknown>): Record<string, unknown> {
     const result: Record<string, unknown> = {}
     for (const [key, value] of Object.entries(obj)) {
       if (value === null) continue
       if (isRecord(value)) {
-        result[key] = stripNulls(value)
+        const stripped = stripNulls(value)
+        if (Object.keys(stripped).length > 0) result[key] = stripped
       } else {
         result[key] = value
       }

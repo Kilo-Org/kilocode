@@ -67,9 +67,19 @@ export class ServerManager {
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const claudeCompat = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+      // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
+      const spawnCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? process.env.HOME ?? require("os").homedir()
       const serverProcess = spawn(cliPath, ["serve", "--port", "0"], {
+        cwd: spawnCwd,
         env: {
           ...process.env,
+          // Force mimalloc (the allocator Bun ships with) to return freed pages
+          // to the OS immediately instead of retaining them in its arenas.
+          // Without this, Bun.spawn's piped stdio accumulates ~2 MB of native
+          // RSS per call on Windows, causing the Agent Manager (which polls git
+          // once per second per worktree) to reach multi-GB RSS in minutes.
+          // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
+          MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",

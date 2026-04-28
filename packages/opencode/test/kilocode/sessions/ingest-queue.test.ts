@@ -335,6 +335,44 @@ describe("share ingest queue", () => {
     expect((close?.data as { reason: string }).reason).toBe("error")
   })
 
+  test("session_status uses stable key and coalesces", async () => {
+    const sent: unknown[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s10", [{ type: "session_status", data: { status: "busy" } }])
+    clock.now = 100
+    await q.sync("s10", [{ type: "session_status", data: { status: "question" } }])
+    clock.now = 200
+    await q.sync("s10", [{ type: "session_status", data: { status: "idle" } }])
+
+    clock.now = 1000
+    sched.run()
+    await Bun.sleep(0)
+    expect(sent.length).toBe(1)
+
+    const payload = sent[0] as { data: { type: string; data: unknown }[] }
+    const statuses = payload.data.filter((d) => d.type === "session_status")
+    // Only one session_status due to stable key
+    expect(statuses.length).toBe(1)
+    // Should have the latest status
+    expect((statuses[0]!.data as { status: string }).status).toBe("idle")
+  })
+
   test("flush sends request with ?v=1 query parameter", async () => {
     const urls: string[] = []
     const sched = scheduler(() => clock.now)

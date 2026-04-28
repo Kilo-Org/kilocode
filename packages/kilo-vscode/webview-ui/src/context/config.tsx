@@ -11,13 +11,21 @@
 import { createContext, useContext, createSignal, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ExtensionMessage } from "../types/messages"
+import type { Config, ExtensionMessage, FeatureFlags } from "../types/messages"
 import { deepMerge, stripNulls, resolveConfig } from "../utils/config-utils"
+
+export interface SaveError {
+  message: string
+  details?: string
+}
 
 interface ConfigContextValue {
   config: Accessor<Config>
+  features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
+  saving: Accessor<boolean>
+  saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
   saveConfig: () => void
   discardConfig: () => void
@@ -29,6 +37,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
 
   const [config, setConfig] = createSignal<Config>({})
+  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [isDirty, setIsDirty] = createSignal(false)
@@ -36,7 +45,10 @@ export const ConfigProvider: ParentComponent = (props) => {
   const [saved, setSaved] = createSignal<Config>({})
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
-  let saving = false
+  const [saving, setSaving] = createSignal(false)
+  // Error from the most recent saveConfig() attempt, or null if no error.
+  // Cleared when the user edits the draft again or starts a new save.
+  const [saveError, setSaveError] = createSignal<SaveError | null>(null)
 
   // Register handler immediately (not in onMount) so we never miss
   // a configLoaded message that arrives before the DOM mount.
@@ -44,28 +56,39 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
-      if (saving) return
+      if (saving()) return
       // Re-apply the draft on top so pending changes (e.g. a toggled switch the
       // user hasn't saved yet) stay visible instead of snapping back.
       setConfig(resolveConfig(message.config, draft(), isDirty()))
+      setFeatures(message.features)
       setSaved(message.config)
       setLoading(false)
       return
     }
     if (message.type === "configUpdated") {
-      if (saving) {
+      if (saving()) {
         // This configUpdated is the confirmation of our saveConfig() write.
         // Clear the draft now that the server has confirmed the write.
-        saving = false
+        setSaving(false)
         setDraft({})
         setIsDirty(false)
+        setSaveError(null)
         setConfig(message.config)
+        setFeatures(message.features)
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
         // Re-apply the draft on top so pending settings changes are preserved.
         setConfig(resolveConfig(message.config, draft(), isDirty()))
+        setFeatures(message.features)
       }
       setSaved(message.config)
+      return
+    }
+    if (message.type === "configUpdateFailed") {
+      // The write was rejected (e.g. schema validation) — surface the error
+      // and keep the draft + isDirty so the user can correct and retry.
+      setSaving(false)
+      setSaveError({ message: message.message, details: message.details })
       return
     }
   })
@@ -102,6 +125,9 @@ export const ConfigProvider: ParentComponent = (props) => {
     // Accumulate in draft — will be sent on saveConfig()
     setDraft((prev) => deepMerge(prev as Config, partial))
     setIsDirty(true)
+    // Clear any stale error from a previous failed save — the user is editing
+    // again, so the old error message no longer reflects the current draft.
+    setSaveError(null)
   }
 
   function saveConfig() {
@@ -109,7 +135,8 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (Object.keys(changes).length === 0) return
     // Don't clear draft/isDirty yet — wait for configUpdated confirmation.
     // If the write fails, the save bar stays visible so the user can retry.
-    saving = true
+    setSaving(true)
+    setSaveError(null)
     vscode.postMessage({ type: "updateConfig", config: changes })
   }
 
@@ -117,12 +144,16 @@ export const ConfigProvider: ParentComponent = (props) => {
     setConfig(saved())
     setDraft({})
     setIsDirty(false)
+    setSaveError(null)
   }
 
   const value: ConfigContextValue = {
     config,
+    features,
     loading,
     isDirty,
+    saving,
+    saveError,
     updateConfig,
     saveConfig,
     discardConfig,

@@ -75,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 件のリスト",
   "ui.messagePart.context.list.other": "{{count}} 件のリスト",
   "ui.messagePart.diagnostic.error": "エラー",
+  "ui.messagePart.mcp.input": "入力",
+  "ui.messagePart.mcp.output": "出力",
   "ui.messagePart.title.edit": "編集",
   "ui.messagePart.title.write": "作成",
   "ui.messagePart.option.typeOwnAnswer": "自分の回答を入力",

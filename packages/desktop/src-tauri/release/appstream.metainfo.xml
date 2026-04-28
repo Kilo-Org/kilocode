@@ -33,6 +33,9 @@
   </screenshots>
 
   <releases>
+    <release version="1.4.0" date="2026-04-08">
+      <url type="details">https://github.com/anomalyco/opencode/releases/tag/v1.4.0</url>
+    </release>
     <release version="1.0.223" date="2026-01-01">
       <url type="details">https://github.com/Kilo-Org/kilocode/releases/tag/v1.0.223</url>
     </release>

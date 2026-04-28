@@ -1,6 +1,6 @@
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
 import java.io.File
 
@@ -20,15 +20,19 @@ import java.io.File
  *     `JsonElement` for dynamic JSON values.
  *  7. Empty anyOf wrappers — `anyOf` unions that generate empty classes.
  *     Replaced with `kotlinx.serialization.json.JsonElement`.
+ *  9. AnyOf union wrappers — `anyOf` unions like `boolean | object` that
+ *     generate paired `Foo` + `FooAnyOf` classes the generator can't flatten.
+ *     Replaced with `kotlinx.serialization.json.JsonElement`.
  */
 abstract class FixGeneratedApiTask : DefaultTask() {
-    @get:InputDirectory
+    @get:OutputDirectory
     abstract val generated: DirectoryProperty
 
     @TaskAction
     fun run() {
         val root = generated.get().asFile
         fixEmptyWrappers(root)
+        fixAnyOfUnionWrappers(root)
         root.walkTopDown().filter { it.extension == "kt" }.forEach { fix(it) }
     }
 
@@ -42,6 +46,56 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             ?.filter { f -> val t = f.readText(); empty.containsMatchIn(t) && !t.contains("val ") }
             ?.map { it.nameWithoutExtension }
             ?: return
+
+        for (name in wrappers) File(models, "$name.kt").delete()
+
+        root.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
+            var text = file.readText()
+            var changed = false
+            for (name in wrappers) {
+                if (!text.contains(name)) continue
+                text = text.replace(Regex("""import [^\n]*\.$name\n"""), "")
+                text = text.replace(Regex("""\b$name\b"""), "kotlinx.serialization.json.JsonElement")
+                changed = true
+            }
+            if (changed) file.writeText(text)
+        }
+    }
+
+    /**
+     * Fix 9: anyOf union wrappers — the generator creates paired `Foo` and
+     * `FooAnyOf` data classes for `anyOf` unions like `boolean | object`.
+     * When both classes have identical fields it means the generator couldn't
+     * flatten the union; neither class can represent all JSON forms, so replace
+     * them with `kotlinx.serialization.json.JsonElement`.
+     */
+    private fun fixAnyOfUnionWrappers(root: File) {
+        val models = File(root, "ai/kilocode/jetbrains/api/model")
+        if (!models.isDirectory) return
+
+        val files = models.listFiles()?.filter { it.extension == "kt" } ?: return
+        val byName = files.associateBy { it.nameWithoutExtension }
+
+        val field = Regex("""\bval\s+`?(\w+)`?\s*:""")
+        fun fields(file: File): Set<String> =
+            field.findAll(file.readText()).map { it.groupValues[1] }.toSet()
+
+        // Collect wrapper pairs where Foo and FooAnyOf have identical fields —
+        // a sign the generator duplicated one anyOf variant as a wrapper.
+        val wrappers = mutableListOf<String>()
+        for ((name, file) in byName) {
+            if (!name.endsWith("AnyOf")) continue
+            val parent = name.removeSuffix("AnyOf")
+            val parentFile = byName[parent] ?: continue
+            if (fields(file) == fields(parentFile)) {
+                wrappers.add(name)
+                wrappers.add(parent)
+            }
+        }
+        if (wrappers.isEmpty()) return
+
+        // Sort longest-first so replacements don't collide (e.g. FooAnyOf before Foo).
+        wrappers.sortByDescending { it.length }
 
         for (name in wrappers) File(models, "$name.kt").delete()
 
@@ -120,7 +174,51 @@ abstract class FixGeneratedApiTask : DefaultTask() {
             }
         }
 
-        // Fix 6: AnySerializer in Serializer.kt
+        // Fix 6: Lenient JSON — tolerate missing fields and absent nulls so the
+        // generated models survive API responses with optional fields the spec
+        // marks as required. `coerceInputValues` maps type mismatches to
+        // defaults; `explicitNulls = false` allows omitted nullable fields.
+        if (file.name == "Serializer.kt") {
+            if (!text.contains("coerceInputValues")) {
+                text = text.replace(
+                    "ignoreUnknownKeys = true",
+                    "ignoreUnknownKeys = true\n            coerceInputValues = true\n            explicitNulls = false"
+                )
+                changed = true
+            }
+        }
+
+        // Fix 7: Default values for non-nullable primitives in model data classes.
+        // The CLI API may omit fields that the OpenAPI spec marks as required
+        // (e.g. `attachment`, `reasoning` on dynamically added models).
+        // Add Kotlin defaults so kotlinx.serialization doesn't throw
+        // MissingFieldException.
+        if (text.contains("data class") && text.contains("@Serializable")) {
+            // Pattern: `val foo: kotlin.Boolean,` or `val foo: kotlin.Boolean\n`
+            // (without ` = ` before the comma/newline, which would mean a default exists)
+            val primitiveDefaults = listOf(
+                Regex("""(val \w+:\s*kotlin\.Boolean)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = false${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.Int)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.Double)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = 0.0${m.groupValues[2]}"
+                },
+                Regex("""(val \w+:\s*kotlin\.String)(,|\n)""") to { m: MatchResult ->
+                    "${m.groupValues[1]} = \"\"${m.groupValues[2]}"
+                },
+            )
+            for ((pattern, transform) in primitiveDefaults) {
+                if (pattern.containsMatchIn(text)) {
+                    text = pattern.replace(text, transform)
+                    changed = true
+                }
+            }
+        }
+
+        // Fix 8: AnySerializer in Serializer.kt
         if (file.name == "Serializer.kt" && !text.contains("AnySerializer")) {
             text = text.replace(
                 "import kotlinx.serialization.modules.SerializersModuleBuilder",

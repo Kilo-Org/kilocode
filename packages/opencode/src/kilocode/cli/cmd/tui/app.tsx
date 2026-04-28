@@ -9,7 +9,7 @@
 import { createEffect, on } from "solid-js"
 import { useKeyboard } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
-import { Clipboard } from "@tui/util/clipboard"
+import * as Clipboard from "@tui/util/clipboard"
 import { useCommandDialog } from "@tui/component/dialog-command"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"

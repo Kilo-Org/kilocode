@@ -4,14 +4,15 @@ import { Session } from "../../session"
 import { MessageV2 } from "../../session/message-v2"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
-import { Database } from "../../storage/db"
+import { Database } from "../../storage"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { Instance } from "../../project/instance"
 import { EOL } from "os"
-import { Filesystem } from "../../util/filesystem"
-import { Log } from "../../util/log"
+import { Filesystem } from "../../util"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Log } from "../../util"
 
-const log = Log.create({ service: "import-command" })
+const log = Log.create({ service: "import" })
 
 /** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =
@@ -196,7 +197,7 @@ export const ImportCommand = cmd({
       )
 
       for (const msg of exportData.messages) {
-        const msgInfo = MessageV2.Info.parse(msg.info)
+        const msgInfo = MessageV2.Info.zod.parse(msg.info)
         const { id, sessionID: _, ...msgData } = msgInfo
         Database.use((db) =>
           db
@@ -212,7 +213,7 @@ export const ImportCommand = cmd({
         )
 
         for (const part of msg.parts) {
-          const partInfo = MessageV2.Part.parse(part)
+          const partInfo = MessageV2.Part.zod.parse(part)
           const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
           Database.use((db) =>
             db

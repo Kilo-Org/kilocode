@@ -1,4 +1,9 @@
 import { type Component, createSignal, createMemo, createEffect, on, onCleanup, For, Show } from "solid-js"
+// Styles are co-located with the component so every consumer (sidebar diff viewer,
+// agent manager, storybook) picks them up automatically. Do not move these out —
+// see tests/unit/diff-viewer-css-arch.test.ts for the invariant.
+import "./agent-manager.css"
+import "./agent-manager-review.css"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
 import { StickyAccordionHeader } from "@kilocode/kilo-ui/sticky-accordion-header"

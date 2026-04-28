@@ -75,6 +75,8 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} listy",
   "ui.messagePart.diagnostic.error": "Błąd",
+  "ui.messagePart.mcp.input": "Wejście",
+  "ui.messagePart.mcp.output": "Wyjście",
   "ui.messagePart.title.edit": "Edycja",
   "ui.messagePart.title.write": "Pisanie",
   "ui.messagePart.option.typeOwnAnswer": "Wpisz własną odpowiedź",

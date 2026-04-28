@@ -42,7 +42,11 @@ export interface FileMention {
   addPaths: (paths: string[], cwd: string) => void
 }
 
-export function useFileMention(vscode: VSCodeContext): FileMention {
+export function useFileMention(
+  vscode: VSCodeContext,
+  sessionID?: Accessor<string | undefined>,
+  git?: Accessor<boolean>,
+): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
@@ -60,10 +64,10 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
 
   const unsubscribe = vscode.onMessage((message) => {
     if (message.type !== "fileSearchResult") return
-    const result = message as { type: "fileSearchResult"; paths: string[]; dir: string; requestId: string }
-    if (result.requestId === `file-search-${fileSearchCounter}`) {
-      workspaceDir = result.dir
-      setMentionResults(buildMentionResults(mentionQuery() ?? "", result.paths))
+    if (message.requestId === `file-search-${fileSearchCounter}`) {
+      const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
+      workspaceDir = message.dir
+      setMentionResults(buildMentionResults(mentionQuery() ?? "", items, git?.() ?? true))
       setMentionIndex(0)
     }
   })
@@ -77,7 +81,13 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
     fileSearchTimer = setTimeout(() => {
       fileSearchCounter++
-      vscode.postMessage({ type: "requestFileSearch", query, requestId: `file-search-${fileSearchCounter}` })
+      const id = sessionID?.()
+      vscode.postMessage({
+        type: "requestFileSearch",
+        query,
+        requestId: `file-search-${fileSearchCounter}`,
+        ...(id ? { sessionID: id } : {}),
+      })
     }, FILE_SEARCH_DEBOUNCE_MS)
   }
 
@@ -110,7 +120,8 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     textarea.setSelectionRange(pos, pos)
     textarea.focus()
 
-    if (result.type === "file") setMentionedPaths((prev) => new Set([...prev, result.value]))
+    if (result.type === "file" || result.type === "folder")
+      setMentionedPaths((prev) => new Set([...prev, result.value]))
     closeMention()
     onSelect?.()
   }
@@ -122,7 +133,7 @@ export function useFileMention(vscode: VSCodeContext): FileMention {
     if (match) {
       const query = match[1] ?? ""
       setMentionQuery(query)
-      setMentionResults(buildMentionResults(query, []))
+      setMentionResults(buildMentionResults(query, [], git?.() ?? true))
       requestFileSearch(query)
     } else {
       closeMention()

@@ -1,6 +1,6 @@
 import type { KiloClient, GlobalEvent, Event } from "@kilocode/sdk/v2/client"
 
-export type SSEEventHandler = (event: Event) => void
+export type SSEEventHandler = (event: Event, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
 
@@ -21,10 +21,8 @@ export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected
  *
  * NOTE on event coalescing:
  * The app batches rapid events into 16 ms windows before flushing to the UI.
- * We don't do that here because `postMessage()` to the webview already acts as
- * an implicit async buffer. If profiling shows the webview is overwhelmed by
- * high-frequency events, adding a similar coalescing queue here would be a
- * straightforward improvement.
+ * This adapter preserves raw SSE order for all subscribers; webview providers
+ * coalesce high-frequency part updates before calling `postMessage()`.
  */
 export class SdkSSEAdapter {
   private readonly handlers = new Set<SSEEventHandler>()
@@ -179,7 +177,7 @@ export class SdkSSEAdapter {
           if (type !== "server.heartbeat") {
             console.log("[Kilo New] SSE: 📨 Event:", type)
           }
-          this.notifyEvent(globalEvent.payload)
+          this.notifyEvent(globalEvent.payload as Event, globalEvent.directory)
         }
 
         console.log("[Kilo New] SSE: 📭 Stream ended normally")
@@ -231,10 +229,10 @@ export class SdkSSEAdapter {
 
   // ── Notify helpers ─────────────────────────────────────────────────
 
-  private notifyEvent(event: Event): void {
+  private notifyEvent(event: Event, directory?: string): void {
     for (const handler of this.handlers) {
       try {
-        handler(event)
+        handler(event, directory)
       } catch (error) {
         console.error("[Kilo New] SSE: Error in event handler:", error)
       }

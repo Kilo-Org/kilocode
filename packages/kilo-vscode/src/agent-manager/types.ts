@@ -24,6 +24,8 @@ type SessionMode = "worktree" | "local"
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
 export type WorktreeDiffEntry = SnapshotFileDiff & {
+  before?: string
+  after?: string
   tracked?: boolean
   generatedLike?: boolean
   summarized?: boolean
@@ -130,6 +132,30 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+}
+
+// ---------------------------------------------------------------------------
+// Terminal messages
+// ---------------------------------------------------------------------------
+
+interface TerminalCreatedMessage {
+  type: "agentManager.terminal.created"
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+  terminalId: string
+  title: string
+  wsUrl: string
+}
+
+interface TerminalClosedMessage {
+  type: "agentManager.terminal.closed"
+  terminalId: string
+}
+
+interface TerminalErrorMessage {
+  type: "agentManager.terminal.error"
+  terminalId?: string
+  message: string
 }
 
 interface ErrorOutMessage {
@@ -283,6 +309,9 @@ export type AgentManagerOutMessage =
   | PRStatusOutMessage
   | ActionOutMessage
   | RunStatusMessage
+  | TerminalCreatedMessage
+  | TerminalClosedMessage
+  | TerminalErrorMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -532,6 +561,9 @@ interface PreviewImageIn {
 interface LoadMessagesIn {
   type: "loadMessages"
   sessionID: string
+  mode?: "replace" | "prepend" | "focus"
+  before?: string
+  limit?: number
 }
 
 interface FileSourceIn {
@@ -585,6 +617,7 @@ interface ForkSessionIn {
   type: "agentManager.forkSession"
   sessionId: string
   worktreeId?: string
+  messageId?: string
 }
 
 interface AbortIn {
@@ -636,6 +669,28 @@ interface MoveSectionIn {
   type: "agentManager.moveSection"
   sectionId: string
   dir: -1 | 1
+}
+
+// ---------------------------------------------------------------------------
+// Terminal inbound messages
+// ---------------------------------------------------------------------------
+
+interface TerminalCreateIn {
+  type: "agentManager.terminal.create"
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+}
+
+interface TerminalCloseIn {
+  type: "agentManager.terminal.close"
+  terminalId: string
+}
+
+interface TerminalResizeIn {
+  type: "agentManager.terminal.resize"
+  terminalId: string
+  cols: number
+  rows: number
 }
 
 /** All messages the Agent Manager expects from the webview (onMessage input). */
@@ -700,3 +755,6 @@ export type AgentManagerInMessage =
   | ToggleSectionCollapsedIn
   | MoveToSectionIn
   | MoveSectionIn
+  | TerminalCreateIn
+  | TerminalCloseIn
+  | TerminalResizeIn

@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import type { KiloConnectionService } from "./services/cli-backend"
 import { buildWebviewHtml } from "./utils"
 import { GitOps } from "./agent-manager/GitOps"
+import { WorktreeDiffClient, type DiffTarget } from "./worktree-diff-client"
 import {
   appendOutput,
   getWorkspaceRoot,
@@ -20,7 +21,7 @@ export class DiffViewerProvider implements vscode.Disposable {
   private panel: vscode.WebviewPanel | undefined
   private diffInterval: ReturnType<typeof setInterval> | undefined
   private lastDiffHash: string | undefined
-  private cachedDiffTarget: { directory: string; baseBranch: string } | undefined
+  private cachedDiffTarget: DiffTarget | undefined
   private gitOps: GitOps
   private outputChannel: vscode.OutputChannel
   private onSendComments: ((comments: unknown[], autoSend: boolean) => void) | undefined
@@ -107,12 +108,48 @@ export class DiffViewerProvider implements vscode.Disposable {
       return
     }
 
+    if (type === "diffViewer.revertFile" && typeof msg.file === "string") {
+      void this.revertFile(msg.file)
+      return
+    }
+
     if (type === "openFile" && typeof msg.filePath === "string") {
       openWorkspaceRelativeFile(msg.filePath, typeof msg.line === "number" ? msg.line : undefined)
     }
   }
 
-  private async resolveLocalDiffTarget(): Promise<{ directory: string; baseBranch: string } | undefined> {
+  private async revertFile(file: string): Promise<void> {
+    const target = this.cachedDiffTarget ?? (await this.resolveLocalDiffTarget())
+    if (!target) {
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: "error",
+        message: "Could not resolve diff target",
+      })
+      return
+    }
+
+    try {
+      const diff = new WorktreeDiffClient(this.connectionService.getClient(), this.gitOps, (...args) =>
+        this.log(...args),
+      )
+      const result = await diff.revertFile(target, file)
+      this.post({
+        type: "diffViewer.revertFileResult",
+        file,
+        status: result.ok ? "success" : "error",
+        message: result.message,
+      })
+      if (result.ok) void this.pollDiff()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      this.log("Failed to revert file:", message)
+      this.post({ type: "diffViewer.revertFileResult", file, status: "error", message })
+    }
+  }
+
+  private async resolveLocalDiffTarget(): Promise<DiffTarget | undefined> {
     return await resolveLocalDiffTarget(this.gitOps, (...args) => this.log(...args), getWorkspaceRoot())
   }
 

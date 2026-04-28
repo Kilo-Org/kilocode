@@ -1,15 +1,17 @@
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
-import { Config } from "../../src/config/config"
+import { Config } from "../../src/config"
 import * as CrossSpawnSpawner from "../../src/effect/cross-spawn-spawner"
 import { Instance } from "../../src/project/instance"
 import { Session } from "../../src/session"
 import { MessageV2 } from "../../src/session/message-v2"
-import { SessionPrompt } from "../../src/session/prompt"
-import { MessageID, PartID } from "../../src/session/schema"
+import type { SessionPrompt } from "../../src/session/prompt"
+import { MessageID, PartID, SessionID } from "../../src/session/schema" // kilocode_change - SessionID used by cost propagation tests
 import { ModelID, ProviderID } from "../../src/provider/schema"
-import { TaskDescription, TaskTool } from "../../src/tool/task"
+import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
+import { Truncate } from "../../src/tool"
+import { ToolRegistry } from "../../src/tool"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -23,7 +25,14 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(Agent.defaultLayer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer, Session.defaultLayer),
+  Layer.mergeAll(
+    Agent.defaultLayer,
+    Config.defaultLayer,
+    CrossSpawnSpawner.defaultLayer,
+    Session.defaultLayer,
+    Truncate.defaultLayer,
+    ToolRegistry.defaultLayer,
+  ),
 )
 
 const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
@@ -55,7 +64,30 @@ const seed = Effect.fn("TaskToolTest.seed")(function* (title = "Pinned") {
   return { chat, assistant }
 })
 
-function reply(input: Parameters<typeof SessionPrompt.prompt>[0], text: string): MessageV2.WithParts {
+// kilocode_change start - stub signature + prompt body extended to persist assistant cost for propagation tests
+function stubOps(opts?: {
+  onPrompt?: (input: SessionPrompt.PromptInput) => void
+  text?: string
+  sessions?: Session.Interface
+  childCost?: number
+}): TaskPromptOps {
+  return {
+    cancel() {},
+    resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
+    prompt: (input) =>
+      Effect.gen(function* () {
+        opts?.onPrompt?.(input)
+        const rep = reply(input, opts?.text ?? "done")
+        if (opts?.sessions && opts?.childCost != null) {
+          yield* opts.sessions.updateMessage({ ...rep.info, cost: opts.childCost })
+        }
+        return rep
+      }),
+  }
+}
+// kilocode_change end
+
+function reply(input: SessionPrompt.PromptInput, text: string): MessageV2.WithParts {
   const id = MessageID.ascending()
   return {
     info: {
@@ -92,8 +124,13 @@ describe("tool.task", () => {
         Effect.gen(function* () {
           const agent = yield* Agent.Service
           const build = yield* agent.get("build")
-          const first = yield* TaskDescription(build)
-          const second = yield* TaskDescription(build)
+          const registry = yield* ToolRegistry.Service
+          const get = Effect.fnUntraced(function* () {
+            const tools = yield* registry.tools({ ...ref, agent: build })
+            return tools.find((tool) => tool.id === TaskTool.id)?.description ?? ""
+          })
+          const first = yield* get()
+          const second = yield* get()
 
           expect(first).toBe(second)
 
@@ -130,7 +167,9 @@ describe("tool.task", () => {
         Effect.gen(function* () {
           const agent = yield* Agent.Service
           const build = yield* agent.get("build")
-          const description = yield* TaskDescription(build)
+          const registry = yield* ToolRegistry.Service
+          const description =
+            (yield* registry.tools({ ...ref, agent: build })).find((tool) => tool.id === TaskTool.id)?.description ?? ""
 
           expect(description).toContain("- alpha: Alpha agent")
           expect(description).not.toContain("- zebra: Zebra agent")
@@ -165,41 +204,27 @@ describe("tool.task", () => {
         const { chat, assistant } = yield* seed()
         const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
         const tool = yield* TaskTool
-        const def = yield* Effect.promise(() => tool.init())
-        const resolve = SessionPrompt.resolvePromptParts
-        const prompt = SessionPrompt.prompt
-        let seen: Parameters<typeof SessionPrompt.prompt>[0] | undefined
+        const def = yield* tool.init()
+        let seen: SessionPrompt.PromptInput | undefined
+        const promptOps = stubOps({ text: "resumed", onPrompt: (input) => (seen = input) })
 
-        SessionPrompt.resolvePromptParts = async (template) => [{ type: "text", text: template }]
-        SessionPrompt.prompt = async (input) => {
-          seen = input
-          return reply(input, "resumed")
-        }
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            SessionPrompt.resolvePromptParts = resolve
-            SessionPrompt.prompt = prompt
-          }),
-        )
-
-        const result = yield* Effect.promise(() =>
-          def.execute(
-            {
-              description: "inspect bug",
-              prompt: "look into the cache key path",
-              subagent_type: "general",
-              task_id: child.id,
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              messages: [],
-              metadata() {},
-              ask: async () => {},
-            },
-          ),
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+            task_id: child.id,
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
         )
 
         const kids = yield* sessions.children(chat.id)
@@ -217,41 +242,30 @@ describe("tool.task", () => {
       Effect.gen(function* () {
         const { chat, assistant } = yield* seed()
         const tool = yield* TaskTool
-        const def = yield* Effect.promise(() => tool.init())
-        const resolve = SessionPrompt.resolvePromptParts
-        const prompt = SessionPrompt.prompt
+        const def = yield* tool.init()
         const calls: unknown[] = []
+        const promptOps = stubOps()
 
-        SessionPrompt.resolvePromptParts = async (template) => [{ type: "text", text: template }]
-        SessionPrompt.prompt = async (input) => reply(input, "done")
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            SessionPrompt.resolvePromptParts = resolve
-            SessionPrompt.prompt = prompt
-          }),
-        )
-
-        const exec = (extra?: { bypassAgentCheck?: boolean }) =>
-          Effect.promise(() =>
-            def.execute(
-              {
-                description: "inspect bug",
-                prompt: "look into the cache key path",
-                subagent_type: "general",
-              },
-              {
-                sessionID: chat.id,
-                messageID: assistant.id,
-                agent: "build",
-                abort: new AbortController().signal,
-                extra,
-                messages: [],
-                metadata() {},
-                ask: async (input) => {
+        const exec = (extra?: Record<string, any>) =>
+          def.execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "general",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps, ...extra },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: (input) =>
+                Effect.sync(() => {
                   calls.push(input)
-                },
-              },
-            ),
+                }),
+            },
           )
 
         yield* exec()
@@ -277,41 +291,27 @@ describe("tool.task", () => {
         const sessions = yield* Session.Service
         const { chat, assistant } = yield* seed()
         const tool = yield* TaskTool
-        const def = yield* Effect.promise(() => tool.init())
-        const resolve = SessionPrompt.resolvePromptParts
-        const prompt = SessionPrompt.prompt
-        let seen: Parameters<typeof SessionPrompt.prompt>[0] | undefined
+        const def = yield* tool.init()
+        let seen: SessionPrompt.PromptInput | undefined
+        const promptOps = stubOps({ text: "created", onPrompt: (input) => (seen = input) })
 
-        SessionPrompt.resolvePromptParts = async (template) => [{ type: "text", text: template }]
-        SessionPrompt.prompt = async (input) => {
-          seen = input
-          return reply(input, "created")
-        }
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            SessionPrompt.resolvePromptParts = resolve
-            SessionPrompt.prompt = prompt
-          }),
-        )
-
-        const result = yield* Effect.promise(() =>
-          def.execute(
-            {
-              description: "inspect bug",
-              prompt: "look into the cache key path",
-              subagent_type: "general",
-              task_id: "ses_missing",
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              messages: [],
-              metadata() {},
-              ask: async () => {},
-            },
-          ),
+        const result = yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+            task_id: "ses_missing",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
         )
 
         const kids = yield* sessions.children(chat.id)
@@ -331,40 +331,26 @@ describe("tool.task", () => {
           const sessions = yield* Session.Service
           const { chat, assistant } = yield* seed()
           const tool = yield* TaskTool
-          const def = yield* Effect.promise(() => tool.init())
-          const resolve = SessionPrompt.resolvePromptParts
-          const prompt = SessionPrompt.prompt
-          let seen: Parameters<typeof SessionPrompt.prompt>[0] | undefined
+          const def = yield* tool.init()
+          let seen: SessionPrompt.PromptInput | undefined
+          const promptOps = stubOps({ onPrompt: (input) => (seen = input) })
 
-          SessionPrompt.resolvePromptParts = async (template) => [{ type: "text", text: template }]
-          SessionPrompt.prompt = async (input) => {
-            seen = input
-            return reply(input, "done")
-          }
-          yield* Effect.addFinalizer(() =>
-            Effect.sync(() => {
-              SessionPrompt.resolvePromptParts = resolve
-              SessionPrompt.prompt = prompt
-            }),
-          )
-
-          const result = yield* Effect.promise(() =>
-            def.execute(
-              {
-                description: "inspect bug",
-                prompt: "look into the cache key path",
-                subagent_type: "reviewer",
-              },
-              {
-                sessionID: chat.id,
-                messageID: assistant.id,
-                agent: "build",
-                abort: new AbortController().signal,
-                messages: [],
-                metadata() {},
-                ask: async () => {},
-              },
-            ),
+          const result = yield* def.execute(
+            {
+              description: "inspect bug",
+              prompt: "look into the cache key path",
+              subagent_type: "reviewer",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: new AbortController().signal,
+              extra: { promptOps },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
           )
 
           const child = yield* sessions.get(result.metadata.sessionId)
@@ -420,3 +406,214 @@ describe("tool.task", () => {
     ),
   )
 })
+
+// kilocode_change start - subagent cost propagation coverage (#6321)
+const assistantCost = Effect.fn("TaskToolTest.assistantCost")(function* (sessionID: string) {
+  const sessions = yield* Session.Service
+  const msgs = yield* sessions.messages({ sessionID: SessionID.make(sessionID) })
+  return msgs.reduce((sum, m) => sum + (m.info.role === "assistant" ? m.info.cost : 0), 0)
+})
+
+describe("tool.task cost propagation", () => {
+  it.live("propagates subagent cost to parent assistant message", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        const promptOps = stubOps({ sessions, childCost: 0.25 })
+
+        yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        expect(parent.info.role).toBe("assistant")
+        if (parent.info.role !== "assistant") return
+        expect(parent.info.cost).toBeCloseTo(0.25, 6)
+      }),
+    ),
+  )
+
+  it.live("propagates recursively through nested subagent costs", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        // Pre-create a child with its own assistant already bearing a grandchild cost.
+        const child = yield* sessions.create({ parentID: chat.id, title: "grandchild-accumulated" })
+        yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: assistant.id,
+          sessionID: child.id,
+          mode: "build",
+          agent: "general",
+          cost: 0.4,
+          path: { cwd: "/tmp", root: "/tmp" },
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+        })
+
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        // Resuming into the same child via task_id and the stub tacks on another 0.15.
+        const promptOps = stubOps({ sessions, childCost: 0.15 })
+
+        yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "look into the cache key path",
+            subagent_type: "general",
+            task_id: child.id,
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        if (parent.info.role !== "assistant") return
+        // Only the delta since the start of this invocation propagates.
+        expect(parent.info.cost).toBeCloseTo(0.15, 6)
+        // Child session keeps the full cumulative total (0.4 pre-existing + 0.15 this run).
+        expect(yield* assistantCost(child.id)).toBeCloseTo(0.55, 6)
+      }),
+    ),
+  )
+
+  it.live("resumed task_id only propagates the delta", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const child = yield* sessions.create({ parentID: chat.id, title: "resume target" })
+        yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: assistant.id,
+          sessionID: child.id,
+          mode: "build",
+          agent: "general",
+          cost: 0.1,
+          path: { cwd: "/tmp", root: "/tmp" },
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: ref.modelID,
+          providerID: ref.providerID,
+          time: { created: Date.now() },
+        })
+
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        const promptOps = stubOps({ sessions, childCost: 0.05 })
+
+        yield* def.execute(
+          {
+            description: "inspect bug",
+            prompt: "continue investigation",
+            subagent_type: "general",
+            task_id: child.id,
+          },
+          {
+            sessionID: chat.id,
+            messageID: assistant.id,
+            agent: "build",
+            abort: new AbortController().signal,
+            extra: { promptOps },
+            messages: [],
+            metadata: () => Effect.void,
+            ask: () => Effect.void,
+          },
+        )
+        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        if (parent.info.role !== "assistant") return
+        // Delta-only: only the 0.05 from this run, not 0.15 including the pre-existing 0.10.
+        expect(parent.info.cost).toBeCloseTo(0.05, 6)
+      }),
+    ),
+  )
+
+  it.live("propagates partial cost on abort", () =>
+    provideTmpdirInstance(() =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const { chat, assistant } = yield* seed()
+        const tool = yield* TaskTool
+        const def = yield* tool.init()
+        const abort = new AbortController()
+        // Stub that persists a partial cost, then aborts — mimics interrupted run after tokens billed.
+        const ops: TaskPromptOps = {
+          cancel() {},
+          resolvePromptParts: (template) => Effect.succeed([{ type: "text" as const, text: template }]),
+          prompt: (input) =>
+            Effect.gen(function* () {
+              const info: MessageV2.Assistant = {
+                id: MessageID.ascending(),
+                role: "assistant",
+                parentID: input.messageID ?? MessageID.ascending(),
+                sessionID: input.sessionID,
+                mode: "general",
+                agent: "general",
+                cost: 0.07,
+                path: { cwd: "/tmp", root: "/tmp" },
+                tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+                modelID: ref.modelID,
+                providerID: ref.providerID,
+                time: { created: Date.now() },
+              }
+              yield* sessions.updateMessage(info)
+              abort.abort()
+              return yield* Effect.interrupt
+            }),
+        }
+
+        yield* def
+          .execute(
+            {
+              description: "partial",
+              prompt: "will abort",
+              subagent_type: "general",
+            },
+            {
+              sessionID: chat.id,
+              messageID: assistant.id,
+              agent: "build",
+              abort: abort.signal,
+              extra: { promptOps: ops },
+              messages: [],
+              metadata: () => Effect.void,
+              ask: () => Effect.void,
+            },
+          )
+          .pipe(Effect.exit)
+
+        const parent = yield* Effect.sync(() => MessageV2.get({ sessionID: chat.id, messageID: assistant.id }))
+        if (parent.info.role !== "assistant") return
+        expect(parent.info.cost).toBeCloseTo(0.07, 6)
+      }),
+    ),
+  )
+})
+// kilocode_change end

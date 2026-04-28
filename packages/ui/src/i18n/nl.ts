@@ -69,6 +69,8 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Volgende stappen overwegen",
 
   "ui.messagePart.diagnostic.error": "Fout",
+  "ui.messagePart.mcp.input": "Invoer",
+  "ui.messagePart.mcp.output": "Uitvoer",
   "ui.messagePart.title.edit": "Bewerken",
   "ui.messagePart.title.write": "Schrijven",
   "ui.messagePart.option.typeOwnAnswer": "Typ je eigen antwoord",
@@ -150,7 +152,7 @@ export const dict: Record<string, string> = {
   "ui.message.copyResponse": "Antwoord kopiëren",
   "ui.message.copied": "Gekopieerd",
   "ui.message.forkMessage": "Fork to new session",
-  "ui.message.revertMessage": "Revert message",
+  "ui.message.revertMessage": "Hiernaar terugzetten",
   "ui.message.revert": "Hiernaar terugdraaien",
   "ui.message.interrupted": "Onderbroken",
   "ui.message.queued": "In wachtrij",

@@ -299,7 +299,7 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
-    this.debouncedPendingRequest = null
+    this.settleDebouncedPendingRequest()
     this.pendingRequests.length = 0
     this.fimAbortController?.abort()
     this.fimAbortController = null
@@ -484,6 +484,15 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
   }
 
+  private settleDebouncedPendingRequest(): void {
+    const pending = this.debouncedPendingRequest
+    if (!pending) return
+
+    this.removePendingRequest(pending)
+    pending.resolve?.()
+    this.debouncedPendingRequest = null
+  }
+
   /**
    * Debounced fetch with leading edge execution and pending request reuse.
    * - First call executes immediately (leading edge)
@@ -519,10 +528,8 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     // otherwise linger with a never-resolving promise.
     if (this.debounceTimer !== null) {
       clearTimeout(this.debounceTimer)
-      if (this.debouncedPendingRequest) {
-        this.removePendingRequest(this.debouncedPendingRequest)
-        this.debouncedPendingRequest = null
-      }
+      this.debounceTimer = null
+      this.settleDebouncedPendingRequest()
     }
 
     // Create the pending request object first so we can reference it in the cleanup
@@ -533,14 +540,17 @@ export class AutocompleteInlineCompletionProvider implements vscode.InlineComple
     }
 
     const requestPromise = new Promise<void>((resolve) => {
+      pendingRequest.resolve = resolve
       this.debounceTimer = setTimeout(async () => {
         this.debounceTimer = null
         this.debouncedPendingRequest = null
         this.isFirstCall = true // Reset for next sequence
-        await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
-        // Remove this request from pending when done
-        this.removePendingRequest(pendingRequest)
-        resolve()
+        try {
+          await this.fetchAndCacheSuggestion(prompt, prefix, suffix, languageId)
+        } finally {
+          this.removePendingRequest(pendingRequest)
+          resolve()
+        }
       }, this.debounceDelayMs)
     })
 

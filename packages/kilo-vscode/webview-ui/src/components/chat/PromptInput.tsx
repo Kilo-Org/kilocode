@@ -14,22 +14,26 @@ import { showToast } from "@kilocode/kilo-ui/toast"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
+import { useIndexing } from "../../context/indexing"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useConfig } from "../../context/config"
 import { ModelSelector } from "../shared/ModelSelector"
 import { ModeSwitcher } from "../shared/ModeSwitcher"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
+import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
+import { hasGitChangesMention } from "../../hooks/git-changes-context-utils"
 import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
-import { fileName, dirName, buildHighlightSegments, atEnd } from "./prompt-input-utils"
+import { fileName, dirName, buildHighlightSegments, atEnd, isPromptBusy } from "./prompt-input-utils"
 import type { ReviewComment, TextPart } from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import { pendingDraftKey, scopeDraftKey, sessionDraftKey } from "../../utils/prompt-drafts"
@@ -50,6 +54,10 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
 
 interface PromptInputProps {
   blocked?: () => boolean
+  /** When true, session is busy only because a suggestion is pending — treat as idle for input */
+  suggesting?: () => boolean
+  /** When true, session is busy only because a question is pending — treat as idle for input */
+  questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
 }
@@ -57,14 +65,24 @@ interface PromptInputProps {
 export const PromptInput: Component<PromptInputProps> = (props) => {
   const session = useSession()
   const server = useServer()
+  const indexing = useIndexing()
+  const { features } = useConfig()
   const language = useLanguage()
   const vscode = useVSCode()
   const worktree = useWorktreeMode()
   const dialog = useDialog()
-  const mention = useFileMention(vscode)
+  const sid = () => session.currentSessionID() ?? props.pendingSessionID ?? session.draftSessionID() ?? undefined
+  const ctx = () => {
+    const id = props.boxId
+    if (!id || !id.startsWith("agent-manager:")) return undefined
+    const rest = id.slice("agent-manager:".length)
+    return rest === "unassigned" ? undefined : rest
+  }
+  const hasGit = () => server.gitInstalled()
+  const mention = useFileMention(vscode, sid, hasGit)
   const terminal = useTerminalContext(vscode)
-  const excluded = worktree ? new Set(["sessions"]) : undefined
-  const slash = useSlashCommand(vscode, excluded)
+  const git = useGitChangesContext(vscode, ctx, hasGit)
+  const slash = useSlashCommand(vscode)
   const imageAttach = useImageAttachments()
   imageAttach.setFilePathDropHandler((paths) => {
     const cwd = server.workspaceDirectory()
@@ -268,16 +286,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("compactSession", onCompact)
   onCleanup(() => window.removeEventListener("compactSession", onCompact))
 
-  const isBusy = () => session.status() !== "idle"
+  const isBusy = () => isPromptBusy(session.status(), !!props.suggesting?.(), !!props.questioning?.())
   const isDisabled = () => !server.isConnected()
   const hasInput = () => text().trim().length > 0 || imageAttach.images().length > 0 || reviewComments().length > 0
-  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !props.blocked?.()
+  const canSend = () => hasInput() && !isDisabled() && !terminal.pending() && !git.pending() && !props.blocked?.()
   const showStop = () => isBusy() && !hasInput()
   const isAtEnd = () =>
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
     if (hasTerminalMention(text())) paths.add("terminal")
+    if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
   }
   const placeholder = () => {
@@ -558,6 +577,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
   const canEnhance = () => !isBusy() && !isDisabled() && !enhancing()
 
+  const handleOpenIndexingSettings = () => {
+    vscode.postMessage({ type: "openSettingsTab", tab: "indexing" })
+  }
+
   const handleEnhance = () => {
     if (isDisabled() || enhancing() || isBusy()) return
     const draft = text().trim()
@@ -608,21 +631,33 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     const pending = reviewComments()
     const review = pending.length > 0 ? formatReviewCommentsMarkdown(pending) : ""
     const message = draft && review ? `${review}\n\n${draft}` : draft || review
-    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || props.blocked?.()) return
+    if ((!message && imgs.length === 0) || isDisabled() || terminal.pending() || git.pending() || props.blocked?.())
+      return
 
     const mentionFiles = mention.parseFileAttachments(draft)
     const imgFiles = imgs.map((img) => ({ mime: img.mime, url: img.dataUrl, filename: img.filename }))
     const sel = session.selected()
     const pendingId = props.pendingSessionID ?? session.draftSessionID()
-    const sid = session.currentSessionID()
+    const id = sid()
 
-    const terminalFile = await terminal.resolveAttachment(message, sid).catch((err: Error) => {
+    const terminalFile = await terminal.resolveAttachment(message, id).catch((err: Error) => {
       showToast({ variant: "error", title: "Terminal context unavailable", description: err.message })
       return undefined
     })
     if (hasTerminalMention(message) && !terminalFile) return
 
-    const allFiles = [...mentionFiles, ...imgFiles, ...(terminalFile ? [terminalFile] : [])]
+    const gitFile = await git.resolveAttachment(message, id).catch((err: Error) => {
+      showToast({ variant: "error", title: "Git changes unavailable", description: err.message })
+      return undefined
+    })
+    if (hasGit() && hasGitChangesMention(message) && !gitFile) return
+
+    const allFiles = [
+      ...mentionFiles,
+      ...imgFiles,
+      ...(terminalFile ? [terminalFile] : []),
+      ...(gitFile ? [gitFile] : []),
+    ]
     const attachments = allFiles.length > 0 ? allFiles : undefined
 
     const key = draftKey()
@@ -711,7 +746,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
             when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files found</div>}
+            fallback={<div class="file-mention-empty">No files or folders found</div>}
           >
             <For each={mention.mentionResults()}>
               {(item, index) => (
@@ -730,10 +765,21 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                       <span class="file-mention-name">{item.label}</span>
                       <span class="file-mention-dir">{item.description}</span>
                     </>
+                  ) : item.type === "git-changes" ? (
+                    <>
+                      <Icon name="branch" class="file-mention-icon" />
+                      <span class="file-mention-name">{item.label}</span>
+                      <span class="file-mention-dir">{item.description}</span>
+                    </>
                   ) : (
                     <>
-                      <FileIcon node={{ path: item.value, type: "file" }} class="file-mention-icon" />
-                      <span class="file-mention-name">{fileName(item.value)}</span>
+                      <FileIcon
+                        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+                        class="file-mention-icon"
+                      />
+                      <span class="file-mention-name">
+                        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+                      </span>
                       <span class="file-mention-dir">{dirName(item.value)}</span>
                     </>
                   )}
@@ -885,6 +931,32 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <Show when={features().indexing}>
+            <Tooltip value={indexing.status().message || indexing.label()} placement="top">
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={handleOpenIndexingSettings}
+                aria-label={language.t("prompt.action.indexing")}
+                class={`prompt-indexing-button prompt-indexing-button--${indexing.tone()}`}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <ellipse cx="8" cy="3.5" rx="4.5" ry="2" stroke="currentColor" stroke-width="1.2" />
+                  <path
+                    d="M3.5 3.5V12.5C3.5 13.6046 5.51472 14.5 8 14.5C10.4853 14.5 12.5 13.6046 12.5 12.5V3.5"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <path
+                    d="M3.5 8C3.5 9.10457 5.51472 10 8 10C10.4853 10 12.5 9.10457 12.5 8"
+                    stroke="currentColor"
+                    stroke-width="1.2"
+                  />
+                  <circle cx="13" cy="3" r="2.5" fill="currentColor" />
+                </svg>
+              </Button>
+            </Tooltip>
+          </Show>
           <Tooltip value={language.t("prompt.action.enhance")} placement="top">
             <Button
               variant="ghost"
@@ -907,7 +979,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                   variant="ghost"
                   size="small"
                   onClick={() => void handleSend()}
-                  disabled={!canSend()}
+                  aria-disabled={!canSend()}
                   aria-label={language.t("prompt.action.send")}
                 >
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">

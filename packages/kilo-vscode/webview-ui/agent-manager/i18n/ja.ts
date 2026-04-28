@@ -48,6 +48,12 @@ export const dict = {
   "agentManager.tab.forkSession": "セッションをフォーク",
   "agentManager.tab.terminal": "ターミナル",
   "agentManager.tab.openTerminal": "ターミナルを開く",
+  "agentManager.tab.newOptions": "新しいタブのその他のオプション",
+
+  "agentManager.terminal.new": "新しいターミナルタブ",
+  "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
+  "agentManager.terminal.connectionError": "ターミナル接続エラー",
+  "agentManager.terminal.errorTitle": "ターミナルエラー",
   "agentManager.setup.failed": "ワークスペースのセットアップに失敗しました",
   "agentManager.setup.settingUp": "ワークスペースをセットアップ中",
   "agentManager.setup.error.git_not_found":
@@ -66,7 +72,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "次の項目",
   "agentManager.shortcuts.newWorktree": "新しいWorktree",
   "agentManager.shortcuts.openWorktree": "Worktreeを開く",
-  "agentManager.shortcuts.advancedWorktree": "詳細Worktree",
+  "agentManager.shortcuts.advancedWorktree": "新規 worktree の構成",
   "agentManager.shortcuts.deleteWorktree": "Worktreeを削除",
   "agentManager.shortcuts.previousTab": "前のタブ",
   "agentManager.shortcuts.nextTab": "次のタブ",
@@ -88,6 +94,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "無効な Worktree を削除",
 
   "agentManager.dialog.openWorktree": "新規ワークツリー",
+  "agentManager.dialog.configureWorktree": "新規 Worktree の構成...",
   "agentManager.dialog.tab.new": "新規",
   "agentManager.dialog.tab.import": "インポート",
   "agentManager.dialog.namePlaceholder": "Worktree名（任意）",

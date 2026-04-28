@@ -1,23 +1,10 @@
 import { ResponseMetaData } from "./types"
 import type { KiloConnectionService } from "../cli-backend"
-
-const DEFAULT_MODEL = "mistralai/codestral-2508"
-const PROVIDER_DISPLAY_NAME = "Kilo Gateway"
-
-/** Chunk from an LLM streaming response */
-export type ApiStreamChunk =
-  | { type: "text"; text: string }
-  | {
-      type: "usage"
-      totalCost?: number
-      inputTokens?: number
-      outputTokens?: number
-      cacheReadTokens?: number
-      cacheWriteTokens?: number
-    }
+import { DEFAULT_AUTOCOMPLETE_MODEL, getAutocompleteModel } from "../../shared/autocomplete-models"
 
 export class AutocompleteModel {
   private connectionService: KiloConnectionService | null = null
+  private currentModel: string = DEFAULT_AUTOCOMPLETE_MODEL.id
   public profileName: string | null = null
   public profileType: string | null = null
 
@@ -27,15 +14,15 @@ export class AutocompleteModel {
     }
   }
 
+  public setModel(model: string): void {
+    this.currentModel = model
+  }
+
   /**
    * Set the connection service (can be called after construction when service becomes available)
    */
   public setConnectionService(service: KiloConnectionService): void {
     this.connectionService = service
-  }
-
-  public supportsFim(): boolean {
-    return true
   }
 
   /**
@@ -64,13 +51,16 @@ export class AutocompleteModel {
     // client catches HTTP errors (402, 401, 429, 5xx) internally and silently
     // ends the stream. Without this, errors never reach ErrorBackoff.
     let sseError: Error | undefined
+
+    const temp = getAutocompleteModel(this.currentModel).temperature
+
     const { stream } = await client.kilo.fim(
       {
         prefix,
         suffix,
-        model: DEFAULT_MODEL,
+        model: this.currentModel,
         maxTokens: 256,
-        temperature: 0.2,
+        temperature: temp,
       },
       {
         signal,
@@ -82,7 +72,8 @@ export class AutocompleteModel {
     )
 
     for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content
+      const choice = chunk.choices?.[0]
+      const content = choice?.delta?.content ?? choice?.text
       if (content) onChunk(content)
       if (chunk.usage) {
         inputTokens = chunk.usage.prompt_tokens ?? 0
@@ -102,26 +93,12 @@ export class AutocompleteModel {
     }
   }
 
-  /**
-   * Generate response via chat completions (holefiller fallback).
-   * Not used when FIM is supported, but kept for compatibility.
-   */
-  public async generateResponse(
-    systemPrompt: string,
-    userPrompt: string,
-    onChunk: (chunk: ApiStreamChunk) => void,
-  ): Promise<ResponseMetaData> {
-    // FIM is the primary strategy; this method is a fallback.
-    // For now, throw — callers should use generateFimResponse via supportsFim().
-    throw new Error("Chat-based completions are not supported via CLI backend. Use FIM (supportsFim() returns true).")
-  }
-
   public getModelName(): string {
-    return DEFAULT_MODEL
+    return this.currentModel
   }
 
   public getProviderDisplayName(): string {
-    return PROVIDER_DISPLAY_NAME
+    return getAutocompleteModel(this.currentModel).provider
   }
 
   /**
