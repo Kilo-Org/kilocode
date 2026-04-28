@@ -1,10 +1,10 @@
-# codebase_search
+# semantic_search
 
 {% callout type="info" title="Setup Required" %}
-The `codebase_search` tool is part of the [Codebase Indexing](/docs/customize/context/codebase-indexing) feature. It requires additional setup including an embedding provider and vector database.
+The `semantic_search` tool is part of the [Codebase Indexing](/docs/customize/context/codebase-indexing) feature. It requires additional setup including an embedding provider and vector database.
 {% /callout %}
 
-The `codebase_search` tool performs semantic searches across your entire codebase using AI embeddings. Unlike traditional text-based search, it understands the meaning of your queries and finds relevant code even when exact keywords don't match.
+The `semantic_search` tool performs semantic searches across your entire codebase using AI embeddings. Unlike traditional text-based search, it understands the meaning of your queries and finds relevant code even when exact keywords don't match.
 
 ---
 
@@ -70,7 +70,7 @@ This tool is only available when the Codebase Indexing feature is properly confi
 
 ## How It Works
 
-When the `codebase_search` tool is invoked, it follows this process:
+When the `semantic_search` tool is invoked, it follows this process:
 
 1. **Availability Validation**:
    - Verifies that the CodeIndexManager is available and initialized
@@ -112,33 +112,33 @@ When the `codebase_search` tool is invoked, it follows this process:
 **Good: Conceptual and specific**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>user authentication and password validation</query>
-</codebase_search>
+</semantic_search>
 ```
 
 **Good: Feature-focused**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>database connection pool setup</query>
-</codebase_search>
+</semantic_search>
 ```
 
 **Good: Problem-oriented**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>error handling for API requests</query>
-</codebase_search>
+</semantic_search>
 ```
 
 **Less effective: Too generic**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>function</query>
-</codebase_search>
+</semantic_search>
 ```
 
 ### Query Types That Work Well
@@ -157,28 +157,28 @@ Use the optional `path` parameter to focus searches on specific parts of your co
 **Search within API modules:**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>endpoint validation middleware</query>
 <path>src/api</path>
-</codebase_search>
+</semantic_search>
 ```
 
 **Search in test files:**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>mock data setup patterns</query>
 <path>tests</path>
-</codebase_search>
+</semantic_search>
 ```
 
 **Search specific feature directories:**
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>component state management</query>
 <path>src/components/auth</path>
-</codebase_search>
+</semantic_search>
 ```
 
 ---
@@ -217,42 +217,42 @@ Each search result includes:
 Searching for authentication-related code across the entire project:
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>user login and authentication logic</query>
-</codebase_search>
+</semantic_search>
 ```
 
 Finding database-related code in a specific directory:
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>database connection and query execution</query>
 <path>src/data</path>
-</codebase_search>
+</semantic_search>
 ```
 
 Looking for error handling patterns in API code:
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>HTTP error responses and exception handling</query>
 <path>src/api</path>
-</codebase_search>
+</semantic_search>
 ```
 
 Searching for testing utilities and mock setups:
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>test setup and mock data creation</query>
 <path>tests</path>
-</codebase_search>
+</semantic_search>
 ```
 
 Finding configuration and environment setup code:
 
 ```xml
-<codebase_search>
+<semantic_search>
 <query>environment variables and application configuration</query>
-</codebase_search>
+</semantic_search>
 ```

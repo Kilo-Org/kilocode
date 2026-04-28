@@ -45,6 +45,8 @@ import { ConfigVariable } from "./variable"
 import { Npm } from "@/npm"
 // kilocode_change start
 import { KilocodeConfig } from "../kilocode/config/config"
+import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // kilocode_change
+import { IndexingConfig as KiloIndexingConfig } from "@kilocode/kilo-indexing/config" // kilocode_change
 import { makeRuntime } from "@/effect/run-service"
 import { unique } from "remeda"
 // kilocode_change end
@@ -97,12 +99,18 @@ export const Server = ConfigServer.Server.zod
 export const Layout = ConfigLayout.Layout.zod
 export type Layout = ConfigLayout.Layout
 
+// kilocode_change start - indexing configuration
+export const Indexing = KiloIndexingConfig
+export type Indexing = z.infer<typeof Indexing>
+// kilocode_change end
+
 // Schemas that still live at the zod layer (have .transform / .preprocess /
 // .meta not expressible in current Effect Schema) get referenced via a
 // ZodOverride-annotated Schema.Any.  Walker sees the annotation and emits the
 // exact zod directly, preserving component $refs.
 const AgentRef = Schema.Any.annotate({ [ZodOverride]: ConfigAgent.Info })
 const LogLevelRef = Schema.Any.annotate({ [ZodOverride]: Log.Level })
+const IndexingRef = Schema.Any.annotate({ [ZodOverride]: KiloIndexingConfig }) // kilocode_change
 
 const PositiveInt = Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThan(0))
 const NonNegativeInt = Schema.Number.check(Schema.isInt()).check(Schema.isGreaterThanOrEqualTo(0))
@@ -162,6 +170,7 @@ export const Info = Schema.Struct({
   remote_control: Schema.optional(Schema.Boolean).annotate({
     description: "Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.",
   }),
+  indexing: Schema.optional(IndexingRef).annotate({ description: "Codebase indexing configuration" }), // kilocode_change
   // kilocode_change end
   // kilocode_change start - nullable for delete sentinel
   model: Schema.optional(Schema.NullOr(ConfigModelID)).annotate({
@@ -261,6 +270,11 @@ export const Info = Schema.Struct({
       disable_paste_summary: Schema.optional(Schema.Boolean),
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }), // kilocode_change
+      // kilocode_change start
+      semantic_indexing: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable semantic codebase indexing and the semantic_search tool",
+      }),
+      // kilocode_change end
       // kilocode_change start - enable telemetry by default
       openTelemetry: Schema.Boolean.pipe(Schema.optional, Schema.withDecodingDefault(Effect.succeed(true))).annotate({
         description: "Enable telemetry. Set to false to opt-out.",
@@ -861,6 +875,9 @@ export const layer = Layer.effect(
         if (Flag.KILO_DISABLE_PRUNE) {
           result.compaction = { ...result.compaction, prune: false }
         }
+        // kilocode_change start — inject Kilo default plugins into both plugin list and origins
+        KilocodeDefaultPlugins.apply(result, { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS, log })
+        // kilocode_change end
 
         return {
           config: result,

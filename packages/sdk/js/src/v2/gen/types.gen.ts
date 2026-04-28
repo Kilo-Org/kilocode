@@ -583,6 +583,23 @@ export type EventTodoUpdated = {
   }
 }
 
+export type IndexingStatusState = "Disabled" | "In Progress" | "Complete" | "Error" | "Standby"
+
+export type IndexingStatus = {
+  state: IndexingStatusState
+  message: string
+  processedFiles: number
+  totalFiles: number
+  percent: number
+}
+
+export type EventIndexingStatus = {
+  type: "indexing.status"
+  properties: {
+    status: IndexingStatus
+  }
+}
+
 export type EventVcsBranchUpdated = {
   type: "vcs.branch.updated"
   properties: {
@@ -1313,6 +1330,7 @@ export type GlobalEvent = {
     | EventSessionStatus
     | EventSessionIdle
     | EventTodoUpdated
+    | EventIndexingStatus
     | EventVcsBranchUpdated
     | EventSessionCompacted
     | EventKiloSessionsRemoteStatusChanged
@@ -1371,6 +1389,127 @@ export type ServerConfig = {
    * Additional domains to allow for CORS
    */
   cors?: Array<string>
+}
+
+/**
+ * Codebase indexing configuration
+ */
+export type IndexingConfig = {
+  /**
+   * Enable codebase indexing
+   */
+  enabled?: boolean
+  /**
+   * Embedding provider to use for codebase indexing
+   */
+  provider?:
+    | "openai"
+    | "ollama"
+    | "openai-compatible"
+    | "gemini"
+    | "mistral"
+    | "vercel-ai-gateway"
+    | "bedrock"
+    | "openrouter"
+    | "voyage"
+  /**
+   * Embedding model ID (uses provider default if omitted)
+   */
+  model?: string
+  /**
+   * Override embedding vector dimension (auto-detected from model if omitted)
+   */
+  dimension?: number
+  /**
+   * Vector store backend (default: qdrant)
+   */
+  vectorStore?: "lancedb" | "qdrant"
+  /**
+   * OpenAI embedding provider options
+   */
+  openai?: {
+    apiKey?: string
+  }
+  /**
+   * Ollama embedding provider options
+   */
+  ollama?: {
+    baseUrl?: string
+  }
+  /**
+   * OpenAI-compatible embedding provider options
+   */
+  "openai-compatible"?: {
+    baseUrl?: string
+    apiKey?: string
+  }
+  /**
+   * Gemini embedding provider options
+   */
+  gemini?: {
+    apiKey?: string
+  }
+  /**
+   * Mistral embedding provider options
+   */
+  mistral?: {
+    apiKey?: string
+  }
+  /**
+   * Vercel AI Gateway embedding provider options
+   */
+  "vercel-ai-gateway"?: {
+    apiKey?: string
+  }
+  /**
+   * AWS Bedrock embedding provider options
+   */
+  bedrock?: {
+    region?: string
+    profile?: string
+  }
+  /**
+   * OpenRouter embedding provider options
+   */
+  openrouter?: {
+    apiKey?: string
+    specificProvider?: string
+  }
+  /**
+   * Voyage embedding provider options
+   */
+  voyage?: {
+    apiKey?: string
+  }
+  /**
+   * Qdrant vector store connection options
+   */
+  qdrant?: {
+    url?: string
+    apiKey?: string
+  }
+  /**
+   * LanceDB vector store options
+   */
+  lancedb?: {
+    directory?: string
+  }
+  /**
+   * Minimum similarity score for search results (default: 0.4)
+   */
+  searchMinScore?: number
+  /**
+   * Maximum number of search results (default: 50)
+   */
+  searchMaxResults?: number
+  /**
+   * Number of code segments per embedding batch (default: 60)
+   */
+  embeddingBatchSize?: number
+  /**
+   * Maximum retry attempts for failed embedding batches (default: 3)
+   */
+  scannerMaxBatchRetries?: number
 }
 
 export type PermissionActionConfig = "ask" | "allow" | "deny" | null
@@ -1716,6 +1855,7 @@ export type Config = {
    * Enable remote control of sessions via Kilo Cloud. Equivalent to running /remote on startup.
    */
   remote_control?: boolean
+  indexing?: IndexingConfig
   /**
    * Model to use in the format of provider/model, eg anthropic/claude-2
    */
@@ -1860,6 +2000,10 @@ export type Config = {
      * Enable AI-powered codebase search
      */
     codebase_search?: boolean
+    /**
+     * Enable semantic codebase indexing and the semantic_search tool
+     */
+    semantic_indexing?: boolean
     /**
      * Enable telemetry. Set to false to opt-out.
      */
@@ -2291,6 +2435,7 @@ export type Event =
   | EventSessionStatus
   | EventSessionIdle
   | EventTodoUpdated
+  | EventIndexingStatus
   | EventVcsBranchUpdated
   | EventSessionCompacted
   | EventKiloSessionsRemoteStatusChanged

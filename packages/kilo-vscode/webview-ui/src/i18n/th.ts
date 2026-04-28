@@ -264,6 +264,7 @@ export const dict = {
   "prompt.action.resetModel": "รีเซ็ตโมเดลเป็นค่าเริ่มต้น",
   "prompt.action.enhanceDescription":
     "ปุ่ม 'ปรับปรุงพรอมต์' ช่วยปรับปรุงพรอมต์ของคุณโดยให้บริบทเพิ่มเติม ชี้แจง หรือเขียนใหม่ ลองพิมพ์พรอมต์ที่นี่และคลิกปุ่มอีกครั้งเพื่อดูว่ามันทำงานอย่างไร",
+  "prompt.action.indexing": "การตั้งค่าการสร้างดัชนี",
 
   "prompt.toast.pasteUnsupported.title": "การวางไม่รองรับ",
   "prompt.toast.pasteUnsupported.description": "สามารถวางรูปภาพหรือ PDF เท่านั้น",
@@ -536,7 +537,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "สาขาหลัก ({{branch}})",
   "session.new.worktree.create": "สร้าง worktree ใหม่",
   "session.new.lastModified": "แก้ไขล่าสุด",
-
+  "sidebar.session.newSession": "เซสชันใหม่",
+  "sidebar.session.newSession.tooltip": "เริ่มการสนทนาใหม่โดยที่ยังคงเซสชันปัจจุบันไว้",
+  "sidebar.session.newSession.disabled": "เซสชันนี้เป็นเซสชันใหม่อยู่แล้ว เริ่มแชทหรือสร้าง worktree แทน",
+  "sidebar.session.newWorktree": "Worktree ใหม่",
+  "sidebar.session.newWorktree.tooltip":
+    "สร้าง git worktree ที่แยกออกมาต่างหากเพื่อทดลองอย่างปลอดภัย แยกการเปลี่ยนแปลงออกจากกัน และรันเซสชันคู่ขนานโดยไม่รบกวน branch ปัจจุบันของคุณ",
+  "sidebar.session.configureWorktree.tooltip":
+    "เปิดกล่องโต้ตอบ worktree ของ Agent Manager เพื่อกำหนดค่า worktree ใหม่ก่อนที่จะสร้าง",
+  "sidebar.session.newWorktree.from": "Worktree ใหม่จาก",
+  "sidebar.session.currentBranch": "branch ปัจจุบัน",
+  "sidebar.session.moveToWorktree": "ย้ายไปยัง Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "ย้ายบทสนทนานี้และการเปลี่ยนแปลงในเครื่องปัจจุบันของคุณไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "ย้ายบทสนทนานี้และ 1 ไฟล์ที่ถูกแก้ไขไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "ย้ายบทสนทนานี้และ {{files}} ไฟล์ที่ถูกแก้ไขไปยัง worktree เฉพาะสำหรับการทำงานต่อเนื่องแบบแยกส่วน",
+  "sidebar.session.showChanges.tooltip.empty": "เปิดมุมมองการเปลี่ยนแปลงเพื่อตรวจสอบ working tree ปัจจุบัน",
+  "sidebar.session.showChanges.tooltip.one":
+    "เปลี่ยนแปลง 1 ไฟล์ · +{{additions}} -{{deletions}} เปิดมุมมองการเปลี่ยนแปลง",
+  "sidebar.session.showChanges.tooltip.other":
+    "เปลี่ยนแปลง {{files}} ไฟล์ · +{{additions}} -{{deletions}} เปิดมุมมองการเปลี่ยนแปลง",
+  "sidebar.session.agentManager.tooltip":
+    "เปิด Agent Manager เพื่อดูภาพรวมของเซสชันและ worktree คู่ขนาน เพื่อให้คุณสามารถประสานงานงานที่ใช้เวลานานได้ในที่เดียว",
+  "sidebar.session.openAgentManager": "เปิด Agent Manager",
+  "sidebar.session.progress.capturing": "กำลังบันทึกการเปลี่ยนแปลง...",
+  "sidebar.session.progress.creating": "กำลังสร้าง worktree...",
+  "sidebar.session.progress.setup": "กำลังรันการตั้งค่า...",
+  "sidebar.session.progress.transferring": "กำลังถ่ายโอนการเปลี่ยนแปลง...",
+  "sidebar.session.progress.forking": "กำลังเริ่มเซสชัน...",
+  "sidebar.session.progress.failed": "ดำเนินการต่อใน worktree ไม่สำเร็จ",
   "session.header.search.placeholder": "ค้นหา {{project}}",
   "session.header.searchFiles": "ค้นหาไฟล์",
   "session.header.openIn": "เปิดใน",
@@ -706,6 +737,30 @@ export const dict = {
   "settings.general.sounds.permissions.description": "เล่นเสียงเมื่อต้องการสิทธิ์",
   "settings.general.sounds.errors.title": "ข้อผิดพลาด",
   "settings.general.sounds.errors.description": "เล่นเสียงเมื่อเกิดข้อผิดพลาด",
+
+  "settings.indexing.title": "การสร้างดัชนี",
+  "settings.indexing.enable.title": "เปิดใช้งานการสร้างดัชนี",
+  "settings.indexing.enable.description": "เปิดหรือปิดการสร้างดัชนีโค้ดเบสเชิงความหมายสำหรับพื้นที่ทำงานนี้",
+  "settings.indexing.provider.title": "ผู้ให้บริการการฝัง",
+  "settings.indexing.provider.description": "เลือกผู้ให้บริการที่ใช้สร้างการฝังสำหรับการค้นหาเชิงความหมาย",
+  "settings.indexing.model.title": "โมเดลการฝัง",
+  "settings.indexing.model.description": "แทนที่โมเดลการฝังเริ่มต้นสำหรับผู้ให้บริการที่เลือก",
+  "settings.indexing.dimension.title": "ขนาดเวกเตอร์",
+  "settings.indexing.dimension.description": "ปล่อยว่างเพื่อตรวจจับขนาดการฝังอัตโนมัติจากโมเดล",
+  "settings.indexing.dimension.placeholder": "อัตโนมัติ",
+  "settings.indexing.vectorStore.title": "ที่เก็บเวกเตอร์",
+  "settings.indexing.vectorStore.description": "เลือกที่เก็บการฝังที่สร้างดัชนี",
+  "settings.indexing.lancedbDirectory.title": "ไดเรกทอรี LanceDB",
+  "settings.indexing.lancedbDirectory.description": "ไดเรกทอรีเสริมสำหรับที่เก็บ LanceDB ในเครื่อง",
+  "settings.indexing.lancedbDirectory.placeholder": "ปล่อยว่างสำหรับค่าเริ่มต้น",
+  "settings.indexing.qdrantUrl.title": "URL Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL เซิร์ฟเวอร์สำหรับอินสแตนซ์ Qdrant",
+  "settings.indexing.qdrantApiKey.title": "คีย์ API Qdrant",
+  "settings.indexing.qdrantApiKey.description": "คีย์ API เสริมสำหรับอินสแตนซ์ Qdrant",
+  "settings.indexing.qdrantApiKey.placeholder": "คีย์ API เสริม",
+  "settings.indexing.providerField.description": "การตั้งค่าการเชื่อมต่อเฉพาะผู้ให้บริการ",
+  "settings.indexing.status.title": "สถานะ",
+  "settings.indexing.tuning.description": "พารามิเตอร์การค้นหาขั้นสูงและการประมวลผลแบทช์",
 
   "settings.shortcuts.title": "ทางลัดแป้นพิมพ์",
   "settings.shortcuts.reset.button": "รีเซ็ตเป็นค่าเริ่มต้น",
@@ -1127,6 +1182,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "ไม่สรุปเนื้อหาที่วางขนาดใหญ่",
   "settings.experimental.batch.title": "เครื่องมือแบทช์",
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
   "settings.experimental.continueOnDeny.title": "ดำเนินต่อเมื่อถูกปฏิเสธ",

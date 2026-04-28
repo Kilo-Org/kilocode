@@ -264,6 +264,7 @@ export const dict = {
   "prompt.action.resetModel": "Zresetuj model do domyślnego",
   "prompt.action.enhanceDescription":
     "Przycisk 'Ulepsz podpowiedź' pomaga ulepszyć Twoją prośbę, dostarczając dodatkowy kontekst, wyjaśnienia lub przeformułowania. Spróbuj wpisać prośbę tutaj i kliknij przycisk ponownie, aby zobaczyć, jak to działa.",
+  "prompt.action.indexing": "Ustawienia indeksowania",
 
   "prompt.toast.pasteUnsupported.title": "Nieobsługiwane wklejanie",
   "prompt.toast.pasteUnsupported.description": "Tylko obrazy lub pliki PDF mogą być tutaj wklejane.",
@@ -537,7 +538,36 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Główna gałąź ({{branch}})",
   "session.new.worktree.create": "Utwórz nowe drzewo robocze",
   "session.new.lastModified": "Ostatnio zmodyfikowano",
-
+  "sidebar.session.newSession": "Nowa Sesja",
+  "sidebar.session.newSession.tooltip": "Rozpocznij nową konwersację, zachowując obecną sesję bez zmian.",
+  "sidebar.session.newSession.disabled": "Ta sesja jest już nowa. Rozpocznij czat lub zamiast tego utwórz worktree.",
+  "sidebar.session.newWorktree": "Nowe Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Utwórz odizolowane git worktree, aby bezpiecznie eksperymentować, oddzielać zmiany i uruchamiać równoległe sesje bez zakłócania obecnej gałęzi.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Otwórz okno dialogowe worktree w Agent Manager, aby skonfigurować nowe worktree przed jego utworzeniem.",
+  "sidebar.session.newWorktree.from": "Nowe Worktree z",
+  "sidebar.session.currentBranch": "obecna gałąź",
+  "sidebar.session.moveToWorktree": "Przenieś do Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Przenieś tę konwersację i obecne lokalne zmiany do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Przenieś tę rozmowę i 1 zmieniony plik do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Przenieś tę rozmowę i {{files}} zmienionych plików do dedykowanego worktree w celu izolowanej dalszej pracy.",
+  "sidebar.session.showChanges.tooltip.empty": "Otwórz widok zmian, aby sprawdzić obecne drzewo robocze.",
+  "sidebar.session.showChanges.tooltip.one": "1 plik zmieniony · +{{additions}} -{{deletions}}. Otwórz widok zmian.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} zmienionych plików · +{{additions}} -{{deletions}}. Otwórz widok zmian.",
+  "sidebar.session.agentManager.tooltip":
+    "Otwórz Agent Manager, aby uzyskać pełny przegląd równoległych sesji i worktree, ułatwiając koordynację długotrwałych zadań w jednym miejscu.",
+  "sidebar.session.openAgentManager": "Otwórz Agent Manager",
+  "sidebar.session.progress.capturing": "Przechwytywanie zmian...",
+  "sidebar.session.progress.creating": "Tworzenie worktree...",
+  "sidebar.session.progress.setup": "Uruchamianie konfiguracji...",
+  "sidebar.session.progress.transferring": "Przesyłanie zmian...",
+  "sidebar.session.progress.forking": "Uruchamianie sesji...",
+  "sidebar.session.progress.failed": "Nie udało się kontynuować w worktree",
   "session.header.search.placeholder": "Szukaj {{project}}",
   "session.header.searchFiles": "Szukaj plików",
   "session.header.openIn": "Otwórz w",
@@ -1139,6 +1169,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Nie podsumowuj dużego wklejonego tekstu",
   "settings.experimental.batch.title": "Narzędzie wsadowe",
   "settings.experimental.batch.description": "Włącz przetwarzanie wsadowe wywołań narzędzi",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Wyszukiwanie kodu",
   "settings.experimental.codebaseSearch.description": "Włącz wyszukiwanie w języku naturalnym z AI w całej bazie kodu",
   "settings.experimental.continueOnDeny.title": "Kontynuuj przy odmowie",
@@ -1154,6 +1187,31 @@ export const dict = {
   "settings.experimental.remote.inactive": "Nieaktywny",
   "settings.experimental.remote.hint": "Użyj /remote na czacie, aby przełączyć",
   "settings.experimental.toolToggles": "Przełączniki narzędzi",
+  "settings.indexing.title": "Indeksowanie",
+  "settings.indexing.dimension.description": "Pozostaw puste, aby automatycznie wykryć wymiar osadzania z modelu.",
+  "settings.indexing.dimension.placeholder": "Automatycznie",
+  "settings.indexing.dimension.title": "Wymiar wektora",
+  "settings.indexing.enable.description":
+    "Włącz lub wyłącz semantyczne indeksowanie bazy kodu dla tego obszaru roboczego.",
+  "settings.indexing.enable.title": "Włącz indeksowanie",
+  "settings.indexing.lancedbDirectory.description": "Opcjonalny katalog dla lokalnego magazynu LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Pozostaw puste dla domyślnego",
+  "settings.indexing.lancedbDirectory.title": "Katalog LanceDB",
+  "settings.indexing.model.description": "Zastąp domyślny model osadzania dla wybranego dostawcy.",
+  "settings.indexing.model.title": "Model osadzania",
+  "settings.indexing.provider.description":
+    "Wybierz dostawcę używanego do generowania osadzeń dla wyszukiwania semantycznego.",
+  "settings.indexing.provider.title": "Dostawca osadzania",
+  "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
+  "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Opcjonalny klucz API",
+  "settings.indexing.qdrantApiKey.title": "Klucz API Qdranta",
+  "settings.indexing.qdrantUrl.description": "Adres URL serwera dla instancji Qdrant.",
+  "settings.indexing.qdrantUrl.title": "Adres URL Qdranta",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.tuning.description": "Zaawansowane parametry wyszukiwania i batchowania.",
+  "settings.indexing.vectorStore.description": "Wybierz, gdzie są przechowywane zaindeksowane osadzenia.",
+  "settings.indexing.vectorStore.title": "Magazyn wektorów",
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
   "settings.agentBehaviour.availableAgents": "Dostępni agenci",

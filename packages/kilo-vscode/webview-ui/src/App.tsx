@@ -16,6 +16,7 @@ import { VSCodeProvider, useVSCode } from "./context/vscode"
 import { ServerProvider, useServer } from "./context/server"
 import { ProviderProvider, useProvider } from "./context/provider"
 import { ConfigProvider } from "./context/config"
+import { IndexingProvider } from "./context/indexing"
 import { SessionProvider, useSession } from "./context/session"
 import { LanguageProvider } from "./context/language"
 import { ChatView } from "./components/chat"
@@ -133,7 +134,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   }
 
   const openDiff = (diff: { file: string; before: string; after: string; additions: number; deletions: number }) => {
-    vscode.postMessage({ type: "openDiffVirtual", diff })
+    vscode.postMessage({ type: "openDiffVirtual", diff, initialDiffStyle: "split" })
   }
 
   const openUrl = (url: string) => {
@@ -242,6 +243,7 @@ const AppContent: Component = () => {
         console.log("[Kilo New] App: 🧭 navigate:", message.view, message.tab ? `tab=${message.tab}` : "")
         if (message.tab) setSettingsTab(message.tab)
         setCurrentView(message.view as ViewType)
+        vscode.postMessage({ type: "settingsTabChanged", tab: message.tab })
       }
       if (message?.type === "openCloudSession" && message.sessionId) {
         console.log("[Kilo New] App: ☁️ openCloudSession:", message.sessionId)
@@ -347,13 +349,15 @@ const App: Component = () => {
                     <FileComponentProvider component={File}>
                       <ProviderProvider>
                         <ConfigProvider>
-                          <NotificationsProvider>
-                            <SessionProvider>
-                              <DataBridge>
-                                <AppContent />
-                              </DataBridge>
-                            </SessionProvider>
-                          </NotificationsProvider>
+                          <IndexingProvider>
+                            <NotificationsProvider>
+                              <SessionProvider>
+                                <DataBridge>
+                                  <AppContent />
+                                </DataBridge>
+                              </SessionProvider>
+                            </NotificationsProvider>
+                          </IndexingProvider>
                         </ConfigProvider>
                       </ProviderProvider>
                     </FileComponentProvider>

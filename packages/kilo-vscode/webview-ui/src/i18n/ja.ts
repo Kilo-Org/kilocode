@@ -263,6 +263,7 @@ export const dict = {
   "prompt.action.resetModel": "モデルをデフォルトにリセット",
   "prompt.action.enhanceDescription":
     "「プロンプトを強化」ボタンは、追加コンテキスト、説明、または言い換えを提供することで、リクエストを改善します。ここにリクエストを入力し、ボタンを再度クリックして動作を確認してください。",
+  "prompt.action.indexing": "インデックス設定",
 
   "prompt.toast.pasteUnsupported.title": "サポートされていない貼り付け",
   "prompt.toast.pasteUnsupported.description": "ここでは画像またはPDFのみ貼り付け可能です。",
@@ -534,7 +535,38 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "メインブランチ ({{branch}})",
   "session.new.worktree.create": "新しいワークツリーを作成",
   "session.new.lastModified": "最終更新",
-
+  "sidebar.session.newSession": "新規セッション",
+  "sidebar.session.newSession.tooltip": "現在のセッションを維持したまま、新しい会話を開始します。",
+  "sidebar.session.newSession.disabled":
+    "このセッションは既に新規です。チャットを開始するか、代わりに worktree を作成してください。",
+  "sidebar.session.newWorktree": "新規 Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "隔離された git worktree を作成して、安全に実験し、変更を分離し、現在のブランチを中断することなく並行セッションを実行します。",
+  "sidebar.session.configureWorktree.tooltip":
+    "Agent Manager の worktree ダイアログを開き、作成する前に新しい worktree を構成します。",
+  "sidebar.session.newWorktree.from": "新規 Worktree の作成元",
+  "sidebar.session.currentBranch": "現在のブランチ",
+  "sidebar.session.moveToWorktree": "Worktree に移動",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "この会話と現在のローカルの変更を専用の worktree に移動して、隔離された環境で作業を続行します。",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "この会話と1つの変更されたファイルを、分離されたフォローアップ作業用の専用 worktree に移動します。",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "この会話と{{files}}個の変更されたファイルを、分離されたフォローアップ作業用の専用 worktree に移動します。",
+  "sidebar.session.showChanges.tooltip.empty": "変更ビューを開いて、現在の作業ツリーを検査します。",
+  "sidebar.session.showChanges.tooltip.one":
+    "1つのファイルが変更されました · +{{additions}} -{{deletions}}。変更ビューを開きます。",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}}個のファイルが変更されました · +{{additions}} -{{deletions}}。変更ビューを開きます。",
+  "sidebar.session.agentManager.tooltip":
+    "Agent Manager を開いて、並行セッションと worktree の全体像を把握し、時間のかかるタスクを 1 か所で調整できます。",
+  "sidebar.session.openAgentManager": "Agent Manager を開く",
+  "sidebar.session.progress.capturing": "変更をキャプチャ中...",
+  "sidebar.session.progress.creating": "worktree を作成中...",
+  "sidebar.session.progress.setup": "セットアップを実行中...",
+  "sidebar.session.progress.transferring": "変更を転送中...",
+  "sidebar.session.progress.forking": "セッションを開始中...",
+  "sidebar.session.progress.failed": "worktree での再開に失敗しました",
   "session.header.search.placeholder": "{{project}}を検索",
   "session.header.searchFiles": "ファイルを検索",
   "session.header.openIn": "で開く",
@@ -708,6 +740,31 @@ export const dict = {
   "settings.general.sounds.permissions.description": "権限が必要な場合に音を再生します",
   "settings.general.sounds.errors.title": "エラー",
   "settings.general.sounds.errors.description": "エラーが発生した場合に音を再生します",
+
+  "settings.indexing.dimension.description": "空のままにすると、モデルから埋め込み次元を自動検出します。",
+  "settings.indexing.dimension.placeholder": "自動",
+  "settings.indexing.dimension.title": "ベクトル次元",
+  "settings.indexing.enable.description":
+    "このワークスペースのセマンティックコードベースインデックスをオンまたはオフにします。",
+  "settings.indexing.enable.title": "インデックスを有効にする",
+  "settings.indexing.lancedbDirectory.description": "ローカルLanceDBストアのオプションのディレクトリ。",
+  "settings.indexing.lancedbDirectory.placeholder": "デフォルトの場合は空のままにする",
+  "settings.indexing.lancedbDirectory.title": "LanceDBディレクトリ",
+  "settings.indexing.model.description": "選択したプロバイダーのデフォルト埋め込みモデルを上書きします。",
+  "settings.indexing.model.title": "埋め込みモデル",
+  "settings.indexing.provider.description": "セマンティック検索用の埋め込みを生成するプロバイダーを選択します。",
+  "settings.indexing.provider.title": "埋め込みプロバイダー",
+  "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
+  "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
+  "settings.indexing.qdrantApiKey.placeholder": "オプションのAPIキー",
+  "settings.indexing.qdrantApiKey.title": "Qdrant APIキー",
+  "settings.indexing.qdrantUrl.description": "QdrantインスタンスのサーバーURL。",
+  "settings.indexing.qdrantUrl.title": "Qdrant URL",
+  "settings.indexing.status.title": "ステータス",
+  "settings.indexing.title": "インデックス",
+  "settings.indexing.tuning.description": "高度な検索とバッチ処理パラメータ。",
+  "settings.indexing.vectorStore.description": "インデックスされた埋め込みを保存する場所を選択します。",
+  "settings.indexing.vectorStore.title": "ベクトルストア",
 
   "settings.shortcuts.title": "キーボードショートカット",
   "settings.shortcuts.reset.button": "デフォルトにリセット",
@@ -1134,6 +1191,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "大量のペーストコンテンツを要約しない",
   "settings.experimental.batch.title": "バッチツール",
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
   "settings.experimental.continueOnDeny.title": "拒否時に続行",

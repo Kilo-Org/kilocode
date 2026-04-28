@@ -43,6 +43,7 @@ import type { WebSearchTool } from "@/tool/websearch"
 import type { TaskTool } from "@/tool/task"
 import type { QuestionTool } from "@/tool/question"
 import type { SkillTool } from "@/tool/skill"
+import type { SemanticSearchTool } from "@/kilocode/tool/semantic-search" // kilocode_change
 import { useKeyboard, useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import { useSDK } from "@tui/context/sdk"
 import { useCommandDialog } from "@tui/component/dialog-command"
@@ -84,6 +85,7 @@ import { UI } from "@/cli/ui.ts"
 import { useTuiConfig } from "../../context/tui-config"
 import { formatMarkdownTables } from "../../util/markdown" // kilocode_change
 import { bell } from "@/kilocode/bell" // kilocode_change
+import { SessionIndexing } from "@/kilocode/components/session-indexing" // kilocode_change
 import { getScrollAcceleration } from "../../util/scroll"
 import { TuiPluginRuntime } from "../../plugin"
 import { DialogGoUpsell } from "../../component/dialog-go-upsell"
@@ -1317,6 +1319,9 @@ export function Session() {
               {/* kilocode_change end */}
             </box>
           </Show>
+          {/* kilocode_change start */}
+          <SessionIndexing />
+          {/* kilocode_change end */}
           <Toast />
         </box>
         <Show when={sidebarVisible()}>
@@ -1675,6 +1680,11 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={props.part.tool === "grep"}>
           <Grep {...toolprops} />
         </Match>
+        {/* kilocode_change start */}
+        <Match when={props.part.tool === "semantic_search"}>
+          <SemanticSearch {...toolprops} />
+        </Match>
+        {/* kilocode_change end */}
         <Match when={props.part.tool === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2094,6 +2104,23 @@ function WebSearch(props: ToolProps<typeof WebSearchTool>) {
     </InlineTool>
   )
 }
+
+// kilocode_change start
+function SemanticSearch(props: ToolProps<typeof SemanticSearchTool>) {
+  const meta = createMemo(() => props.metadata as { results?: { length: number }[] })
+  const args = createMemo(() => props.input as { query?: string; path?: string })
+  const count = createMemo(() => meta().results?.length ?? 0)
+
+  return (
+    <InlineTool icon="✱" pending="Searching codebase..." complete={args().query} part={props.part}>
+      Codebase Search "{args().query}" <Show when={args().path}>in {normalizePath(args().path!)} </Show>
+      <Show when={count() > 0}>
+        ({count()} {count() === 1 ? "result" : "results"})
+      </Show>
+    </InlineTool>
+  )
+}
+// kilocode_change end
 
 function Task(props: ToolProps<typeof TaskTool>) {
   const { navigate } = useRoute()

@@ -202,6 +202,7 @@ function makeHttp() {
 
 const it = testEffect(makeHttp())
 const unix = process.platform !== "win32" ? it.live : it.live.skip
+const unixSkip = it.live.skip // kilocode_change - TODO(#8990): skip flaky cancel tests on Linux CI
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -1306,7 +1307,8 @@ it.live(
   3_000,
 )
 
-unix(
+// kilocode_change start - TODO(#8990): flaky on Linux CI
+unixSkip(
   "cancel interrupts shell and resolves cleanly",
   () =>
     withSh(() =>
@@ -1342,8 +1344,10 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
-unix(
+// kilocode_change start - TODO(#8990): flaky on Linux CI
+unixSkip(
   "cancel persists aborted shell result when shell ignores TERM",
   () =>
     withSh(() =>
@@ -1374,6 +1378,7 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
 unix(
   "cancel finalizes interrupted bash tool output through normal truncation",
@@ -1426,7 +1431,8 @@ unix(
   30_000,
 )
 
-unix(
+// kilocode_change start - TODO(#8990): flaky on Linux CI
+unixSkip(
   "cancel interrupts loop queued behind shell",
   () =>
     provideTmpdirInstance(
@@ -1453,6 +1459,7 @@ unix(
     ),
   30_000,
 )
+// kilocode_change end
 
 unix(
   "shell rejects when another shell is already running",

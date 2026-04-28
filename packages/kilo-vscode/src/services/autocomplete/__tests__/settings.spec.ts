@@ -31,6 +31,19 @@ describe("autocomplete settings", () => {
     expect(buildAutocompleteSettingsMessage().settings.model).toBe("inception/mercury-edit")
   })
 
+  it("defaults to codestral when no model is set", async () => {
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
+
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
+  })
+
+  it("defaults to codestral when stored model is no longer supported", async () => {
+    state.set("model", "some/removed-model")
+    const { buildAutocompleteSettingsMessage } = await import("../settings")
+
+    expect(buildAutocompleteSettingsMessage().settings.model).toBe("mistralai/codestral-2508")
+  })
+
   it("persists supported model updates", async () => {
     const post = vi.fn()
     const { routeAutocompleteMessage } = await import("../settings")

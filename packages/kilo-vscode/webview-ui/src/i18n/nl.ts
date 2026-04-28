@@ -262,6 +262,7 @@ export const dict = {
   "prompt.action.send.blocked": "Beantwoord of negeer eerst de openstaande vraag",
   "prompt.action.stop": "Stop",
   "prompt.action.enhance": "Prompt verbeteren",
+  "prompt.action.indexing": "Indexeringsinstellingen",
   "prompt.action.resetModel": "Model terugzetten naar standaard",
   "prompt.action.enhanceDescription":
     "De knop 'Prompt verbeteren' helpt je prompt te verbeteren door extra context, verduidelijking of herformulering te bieden. Typ hier een prompt en klik nogmaals op de knop om te zien hoe het werkt.",
@@ -540,7 +541,39 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Main-branch ({{branch}})",
   "session.new.worktree.create": "Nieuwe worktree aanmaken",
   "session.new.lastModified": "Laatst gewijzigd",
-
+  "sidebar.session.newSession": "Nieuwe Sessie",
+  "sidebar.session.newSession.tooltip": "Start een nieuw gesprek terwijl je de huidige sessie intact houdt.",
+  "sidebar.session.newSession.disabled":
+    "Deze sessie is al nieuw. Begin met chatten of maak in plaats daarvan een worktree aan.",
+  "sidebar.session.newWorktree": "Nieuwe Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Maak een geïsoleerde git worktree aan om veilig te experimenteren, wijzigingen gescheiden te houden en parallelle sessies uit te voeren zonder je huidige branch te verstoren.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Open het Agent Manager worktree-dialoogvenster om een nieuwe worktree te configureren voordat je deze aanmaakt.",
+  "sidebar.session.newWorktree.from": "Nieuwe Worktree van",
+  "sidebar.session.currentBranch": "huidige branch",
+  "sidebar.session.moveToWorktree": "Verplaats naar Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Verplaats dit gesprek en je huidige lokale wijzigingen naar een toegewijde worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Verplaats deze conversatie en 1 gewijzigd bestand naar een specifieke worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Verplaats deze conversatie en {{files}} gewijzigde bestanden naar een specifieke worktree voor geïsoleerd vervolgwerk.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Open de weergave met wijzigingen om de huidige worktree te inspecteren.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 bestand gewijzigd · +{{additions}} -{{deletions}}. Open de wijzigingenweergave.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} bestanden gewijzigd · +{{additions}} -{{deletions}}. Open de wijzigingenweergave.",
+  "sidebar.session.agentManager.tooltip":
+    "Open Agent Manager voor een compleet overzicht van parallelle sessies en worktrees, zodat je langlopende taken op één plek kunt coördineren.",
+  "sidebar.session.openAgentManager": "Open Agent Manager",
+  "sidebar.session.progress.capturing": "Wijzigingen vastleggen...",
+  "sidebar.session.progress.creating": "Worktree aanmaken...",
+  "sidebar.session.progress.setup": "Setup uitvoeren...",
+  "sidebar.session.progress.transferring": "Wijzigingen overzetten...",
+  "sidebar.session.progress.forking": "Sessie starten...",
+  "sidebar.session.progress.failed": "Kan niet doorgaan in worktree",
   "session.header.search.placeholder": "Zoek in {{project}}",
   "session.header.searchFiles": "Bestanden zoeken",
   "session.header.openIn": "Open in",
@@ -999,6 +1032,31 @@ export const dict = {
   "settings.autocomplete.model.description": "Selecteer het model dat wordt gebruikt voor inline code-aanvullingen",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
+  "settings.indexing.title": "Indexering",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.enable.title": "Indexering inschakelen",
+  "settings.indexing.enable.description": "Schakel semantische codebase-indexering in of uit voor deze werkruimte.",
+  "settings.indexing.provider.title": "Embedding-provider",
+  "settings.indexing.provider.description":
+    "Kies de provider die wordt gebruikt om embeddings te genereren voor semantisch zoeken.",
+  "settings.indexing.model.title": "Embedding-model",
+  "settings.indexing.model.description": "Overschrijf het standaard embedding-model voor de geselecteerde provider.",
+  "settings.indexing.dimension.title": "Vectordimensie",
+  "settings.indexing.dimension.description":
+    "Laat leeg om de embedding-dimensie automatisch te detecteren vanuit het model.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.providerField.description": "Provider-specifieke verbindingsinstelling.",
+  "settings.indexing.vectorStore.title": "Vectoropslag",
+  "settings.indexing.vectorStore.description": "Kies waar geïndexeerde embeddings worden opgeslagen.",
+  "settings.indexing.lancedbDirectory.title": "LanceDB-directory",
+  "settings.indexing.lancedbDirectory.description": "Optionele directory voor de lokale LanceDB-opslag.",
+  "settings.indexing.lancedbDirectory.placeholder": "Laat leeg voor standaard",
+  "settings.indexing.qdrantUrl.title": "Qdrant-URL",
+  "settings.indexing.qdrantUrl.description": "Server-URL voor de Qdrant-instantie.",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
+  "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
+  "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.tuning.description": "Geavanceerde parameter voor zoeken en batching.",
 
   "settings.experimental.title": "Experimenteel",
   "settings.language.title": "Taal",
@@ -1143,6 +1201,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Vat grote geplakte inhoud niet samen",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Schakel batching van meerdere tool calls in",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",

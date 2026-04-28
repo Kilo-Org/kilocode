@@ -9,7 +9,7 @@ import type { PermissionRequest } from "./permissions"
 import type { QuestionRequest, SuggestionRequest, TodoItem } from "./questions"
 import type { ModelSelection, Provider, ProviderAuthState } from "./providers"
 import type { AgentInfo, SkillInfo, SlashCommandInfo } from "./agents"
-import type { BrowserSettings, Config } from "./config"
+import type { BrowserSettings, Config, FeatureFlags, IndexingStatus } from "./config"
 import type { KilocodeNotification, ProfileData } from "./profile"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
@@ -270,6 +270,11 @@ export interface NavigateMessage {
   tab?: string
 }
 
+export interface IndexingStatusLoadedMessage {
+  type: "indexingStatusLoaded"
+  status: IndexingStatus
+}
+
 export interface ProvidersLoadedMessage {
   type: "providersLoaded"
   providers: Record<string, Provider>
@@ -395,11 +400,13 @@ export interface ClaudeCompatSettingLoadedMessage {
 export interface ConfigLoadedMessage {
   type: "configLoaded"
   config: Config
+  features: FeatureFlags
 }
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
   config: Config
+  features: FeatureFlags
 }
 
 export interface ConfigUpdateFailedMessage {
@@ -828,6 +835,7 @@ export type ExtensionMessage =
   | DeviceAuthFailedMessage
   | DeviceAuthCancelledMessage
   | NavigateMessage
+  | IndexingStatusLoadedMessage
   | ProvidersLoadedMessage
   | AgentsLoadedMessage
   | SkillsLoadedMessage

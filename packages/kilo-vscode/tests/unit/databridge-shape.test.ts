@@ -68,7 +68,9 @@ describe("DataBridge openDiff wiring (regression guard)", () => {
   }
 
   it("wires openDiff to the openDiffVirtual webview message", () => {
-    expect(openDiffBlock()).toMatch(/postMessage\(\{\s*type:\s*["']openDiffVirtual["']\s*,\s*diff\s*\}\)/)
+    expect(openDiffBlock()).toMatch(
+      /postMessage\(\{\s*type:\s*["']openDiffVirtual["']\s*,\s*diff\s*,\s*initialDiffStyle:\s*["']split["']\s*\}\)/,
+    )
     expect(src).toContain("onOpenDiff={openDiff}")
   })
 })

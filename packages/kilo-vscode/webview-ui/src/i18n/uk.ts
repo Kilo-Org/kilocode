@@ -262,6 +262,7 @@ export const dict = {
   "prompt.action.send.blocked": "Спочатку дайте відповідь або закрийте очікуюче питання",
   "prompt.action.stop": "Зупинити",
   "prompt.action.enhance": "Покращити запит",
+  "prompt.action.indexing": "Налаштування індексування",
   "prompt.action.resetModel": "Скинути модель до стандартної",
   "prompt.action.enhanceDescription":
     "Кнопка 'Покращити запит' допомагає вдосконалити ваш запит, надаючи додатковий контекст, уточнення або перефразування. Введіть запит тут і натисніть кнопку ще раз, щоб побачити, як це працює.",
@@ -542,7 +543,36 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Основна гілка ({{branch}})",
   "session.new.worktree.create": "Створити нове робоче дерево",
   "session.new.lastModified": "Останнє змінення",
-
+  "sidebar.session.newSession": "Нова сесія",
+  "sidebar.session.newSession.tooltip": "Почати нову розмову, зберігши поточну сесію незмінною.",
+  "sidebar.session.newSession.disabled": "Ця сесія вже нова. Почніть спілкуватися або створіть worktree.",
+  "sidebar.session.newWorktree": "Нове Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Створіть ізольоване git worktree для безпечних експериментів, розділення змін та запуску паралельних сесій без переривання поточної гілки.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Відкрийте діалогове вікно worktree в Agent Manager, щоб налаштувати нове worktree перед створенням.",
+  "sidebar.session.newWorktree.from": "Нове Worktree з",
+  "sidebar.session.currentBranch": "поточна гілка",
+  "sidebar.session.moveToWorktree": "Перенести у Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Перенесіть цю розмову та ваші поточні локальні зміни до виділеного worktree для ізольованої подальшої роботи.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Перемістити цю розмову та 1 змінений файл у виділений worktree для ізольованої подальшої роботи.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Перемістити цю розмову та {{files}} змінених файлів у виділений worktree для ізольованої подальшої роботи.",
+  "sidebar.session.showChanges.tooltip.empty": "Відкрийте перегляд змін, щоб оглянути поточне робоче дерево.",
+  "sidebar.session.showChanges.tooltip.one": "1 файл змінено · +{{additions}} -{{deletions}}. Відкрити перегляд змін.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} файлів змінено · +{{additions}} -{{deletions}}. Відкрити перегляд змін.",
+  "sidebar.session.agentManager.tooltip":
+    "Відкрийте Agent Manager для повного огляду паралельних сесій та worktree, щоб координивати тривалі завдання в одному місці.",
+  "sidebar.session.openAgentManager": "Відкрити Agent Manager",
+  "sidebar.session.progress.capturing": "Захоплення змін...",
+  "sidebar.session.progress.creating": "Створення worktree...",
+  "sidebar.session.progress.setup": "Виконання налаштування...",
+  "sidebar.session.progress.transferring": "Перенесення змін...",
+  "sidebar.session.progress.forking": "Запуск сесії...",
+  "sidebar.session.progress.failed": "Не вдалося продовжити у worktree",
   "session.header.search.placeholder": "Пошук {{project}}",
   "session.header.searchFiles": "Пошук файлів",
   "session.header.openIn": "Відкрити в",
@@ -1002,6 +1032,31 @@ export const dict = {
   "settings.autocomplete.model.description": "Виберіть модель для вбудованого (inline) автодоповнення коду",
   "settings.notifications.title": "Сповіщення",
   "settings.context.title": "Контекст",
+  "settings.indexing.title": "Індексування",
+  "settings.indexing.status.title": "Статус",
+  "settings.indexing.enable.title": "Увімкнути індексування",
+  "settings.indexing.enable.description":
+    "Увімкніть або вимкніть семантичне індексування кодової бази для цього робочого простору.",
+  "settings.indexing.provider.title": "Провайдер ембедингів",
+  "settings.indexing.provider.description": "Виберіть провайдера для генерації ембедингів для семантичного пошуку.",
+  "settings.indexing.model.title": "Модель ембедингів",
+  "settings.indexing.model.description": "Перевизначити типову модель ембедингів для вибраного провайдера.",
+  "settings.indexing.dimension.title": "Розмірність вектора",
+  "settings.indexing.dimension.description":
+    "Залиште порожнім, щоб автоматично визначити розмірність ембедингу з моделі.",
+  "settings.indexing.dimension.placeholder": "Авто",
+  "settings.indexing.providerField.description": "Налаштування підключення, специфічне для провайдера.",
+  "settings.indexing.vectorStore.title": "Векторне сховище",
+  "settings.indexing.vectorStore.description": "Виберіть, де зберігаються проіндексовані ембединги.",
+  "settings.indexing.lancedbDirectory.title": "Директорія LanceDB",
+  "settings.indexing.lancedbDirectory.description": "Необов'язкова директорія для локального сховища LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Залиште порожнім для типового значення",
+  "settings.indexing.qdrantUrl.title": "URL-адреса Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL-адреса сервера для екземпляра Qdrant.",
+  "settings.indexing.qdrantApiKey.title": "Ключ API Qdrant",
+  "settings.indexing.qdrantApiKey.description": "Необов'язковий ключ API для екземпляра Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Необов'язковий ключ API",
+  "settings.indexing.tuning.description": "Розширений параметр пошуку та пакетної обробки.",
 
   "settings.experimental.title": "Експериментальне",
   "settings.language.title": "Мова",
@@ -1143,6 +1198,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Підсумовувати великий вставлений вміст",
   "settings.experimental.batch.title": "Пакетний інструмент",
   "settings.experimental.batch.description": "Увімкнути пакетну обробку кількох викликів інструментів",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Пошук по кодовій базі",
   "settings.experimental.codebaseSearch.description":
     "Увімкнути пошук природною мовою на основі ШІ по всій кодовій базі",

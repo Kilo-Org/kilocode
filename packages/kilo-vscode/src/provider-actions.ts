@@ -10,6 +10,7 @@ import {
   withCustomProviderDeletions,
 } from "./shared/custom-provider"
 import { KILO_AUTO, parseModelString } from "./shared/provider-model"
+import { configFeatures } from "./features"
 
 /**
  * Compute the default model selection from CLI config, VS Code settings, or hardcoded fallback.
@@ -268,8 +269,8 @@ export async function disconnectProvider(
           )
         ).data
         if (merged) {
-          setCachedConfig({ type: "configLoaded", config: merged })
-          ctx.postMessage({ type: "configUpdated", config: merged })
+          setCachedConfig({ type: "configLoaded", config: merged, features: configFeatures(merged) })
+          ctx.postMessage({ type: "configUpdated", config: merged, features: configFeatures(merged) })
         }
       }
     }
@@ -335,9 +336,9 @@ export async function saveCustomProvider(
       { throwOnError: true },
     )
 
-    const msg = { type: "configLoaded", config: updated }
+    const msg = { type: "configLoaded", config: updated, features: configFeatures(updated) }
     setCachedConfig(msg)
-    ctx.postMessage({ type: "configUpdated", config: updated })
+    ctx.postMessage({ type: "configUpdated", config: updated, features: configFeatures(updated) })
 
     const auth = resolveCustomProviderAuth(apiKey, apiKeyChanged)
 

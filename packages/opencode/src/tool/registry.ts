@@ -180,6 +180,7 @@ export const layer: Layer.Layer<
         const cfg = yield* config.get()
         const questionEnabled = KiloToolRegistry.question() // kilocode_change
 
+        // kilocode_change start
         const tool = yield* Effect.all({
           invalid: Tool.init(invalid),
           bash: Tool.init(bash),
@@ -200,9 +201,11 @@ export const layer: Layer.Layer<
           plan: Tool.init(plan),
           suggest: Tool.init(suggesttool), // kilocode_change
         })
+        // kilocode_change end
 
         const kilo = yield* KiloToolRegistry.build(kiloToolInfos) // kilocode_change
 
+        // kilocode_change start
         return {
           custom,
           builtin: [
@@ -229,6 +232,7 @@ export const layer: Layer.Layer<
           task: tool.task,
           read: tool.read,
         }
+        // kilocode_change end
       }),
     )
 

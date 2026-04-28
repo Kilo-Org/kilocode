@@ -543,7 +543,39 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Haupt-Branch ({{branch}})",
   "session.new.worktree.create": "Neuen Worktree erstellen",
   "session.new.lastModified": "Zuletzt geändert",
-
+  "sidebar.session.newSession": "Neue Sitzung",
+  "sidebar.session.newSession.tooltip": "Starte eine neue Unterhaltung, während die aktuelle Sitzung intakt bleibt.",
+  "sidebar.session.newSession.disabled":
+    "Diese Sitzung ist bereits neu. Beginne zu chatten oder erstelle stattdessen einen Worktree.",
+  "sidebar.session.newWorktree": "Neuer Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Erstelle einen isolierten Git-Worktree, um sicher zu experimentieren, Änderungen getrennt zu halten und parallele Sitzungen auszuführen, ohne deinen aktuellen Branch zu stören.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Öffne den Agent Manager Worktree-Dialog, um einen neuen Worktree vor der Erstellung zu konfigurieren.",
+  "sidebar.session.newWorktree.from": "Neuer Worktree von",
+  "sidebar.session.currentBranch": "aktueller Branch",
+  "sidebar.session.moveToWorktree": "In Worktree verschieben",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Verschiebe diese Unterhaltung und deine aktuellen lokalen Änderungen in einen dedizierten Worktree für isolierte Folgearbeiten.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Diese Unterhaltung und 1 geänderte Datei in einen dedizierten Worktree für isolierte Folgearbeiten verschieben.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Diese Unterhaltung und {{files}} geänderte Dateien in einen dedizierten Worktree für isolierte Folgearbeiten verschieben.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Öffne die Änderungsansicht, um den aktuellen Working Tree zu überprüfen.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 Datei geändert · +{{additions}} -{{deletions}}. Änderungsansicht öffnen.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} Dateien geändert · +{{additions}} -{{deletions}}. Änderungsansicht öffnen.",
+  "sidebar.session.agentManager.tooltip":
+    "Öffne den Agent Manager für einen vollständigen Überblick über parallele Sitzungen und Worktrees, damit du langlaufende Aufgaben an einem Ort koordinieren kannst.",
+  "sidebar.session.openAgentManager": "Agent Manager öffnen",
+  "sidebar.session.progress.capturing": "Änderungen werden erfasst...",
+  "sidebar.session.progress.creating": "Worktree wird erstellt...",
+  "sidebar.session.progress.setup": "Setup wird ausgeführt...",
+  "sidebar.session.progress.transferring": "Änderungen werden übertragen...",
+  "sidebar.session.progress.forking": "Sitzung wird gestartet...",
+  "sidebar.session.progress.failed": "Fortsetzen im Worktree fehlgeschlagen",
   "session.header.search.placeholder": "{{project}} durchsuchen",
   "session.header.searchFiles": "Dateien suchen",
   "session.header.openIn": "Öffnen in",
@@ -719,6 +751,34 @@ export const dict = {
   "settings.general.sounds.permissions.description": "Ton abspielen, wenn eine Berechtigung erforderlich ist",
   "settings.general.sounds.errors.title": "Fehler",
   "settings.general.sounds.errors.description": "Ton abspielen, wenn ein Fehler auftritt",
+
+  "prompt.action.indexing": "Indizierungseinstellungen",
+  "settings.indexing.dimension.description":
+    "Leer lassen, um die Embedding-Dimension automatisch aus dem Modell zu erkennen.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.dimension.title": "Vektordimension",
+  "settings.indexing.enable.description":
+    "Semantische Codebasis-Indizierung für diesen Arbeitsbereich ein- oder ausschalten.",
+  "settings.indexing.enable.title": "Indizierung aktivieren",
+  "settings.indexing.lancedbDirectory.description": "Optionaler Ordner für den lokalen LanceDB-Speicher.",
+  "settings.indexing.lancedbDirectory.placeholder": "Leer lassen für Standard",
+  "settings.indexing.lancedbDirectory.title": "LanceDB-Ordner",
+  "settings.indexing.model.description": "Das Standard-Embedding-Modell für den ausgewählten Anbieter überschreiben.",
+  "settings.indexing.model.title": "Embedding-Modell",
+  "settings.indexing.provider.description":
+    "Wählen Sie den Anbieter, der für die Generierung von Embeddings für die semantische Suche verwendet wird.",
+  "settings.indexing.provider.title": "Embedding-Anbieter",
+  "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
+  "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
+  "settings.indexing.qdrantApiKey.placeholder": "Optionaler API-Schlüssel",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API-Schlüssel",
+  "settings.indexing.qdrantUrl.description": "Server-URL für die Qdrant-Instanz.",
+  "settings.indexing.qdrantUrl.title": "Qdrant URL",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.title": "Indizierung",
+  "settings.indexing.tuning.description": "Erweiterter Such- und Batch-Parameter.",
+  "settings.indexing.vectorStore.description": "Wählen Sie, wo indizierte Embeddings gespeichert werden.",
+  "settings.indexing.vectorStore.title": "Vektorspeicher",
 
   "settings.shortcuts.title": "Tastenkombinationen",
   "settings.shortcuts.reset.button": "Auf Standard zurücksetzen",
@@ -1154,6 +1214,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Große eingefügte Inhalte nicht zusammenfassen",
   "settings.experimental.batch.title": "Batch-Werkzeug",
   "settings.experimental.batch.description": "Bündelung mehrerer Werkzeugaufrufe aktivieren",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",

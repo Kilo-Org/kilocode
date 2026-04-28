@@ -261,6 +261,7 @@ export const dict = {
   "prompt.action.stop": "Остановить",
   "prompt.action.enhance": "Улучшить промпт",
   "prompt.action.resetModel": "Сбросить модель на значение по умолчанию",
+  "prompt.action.indexing": "Настройки индексации",
   "prompt.action.enhanceDescription":
     "Кнопка 'Улучшить запрос' помогает сделать ваш запрос лучше, предоставляя дополнительный контекст, уточнения или переформулировку. Попробуйте ввести запрос и снова нажать кнопку, чтобы увидеть, как это работает.",
 
@@ -538,7 +539,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Основная ветка ({{branch}})",
   "session.new.worktree.create": "Создать новый worktree",
   "session.new.lastModified": "Последнее изменение",
-
+  "sidebar.session.newSession": "Новая сессия",
+  "sidebar.session.newSession.tooltip": "Начать новую беседу, сохранив текущую сессию нетронутой.",
+  "sidebar.session.newSession.disabled": "Эта сессия уже новая. Начните чат или создайте worktree.",
+  "sidebar.session.newWorktree": "Новое Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Создайте изолированное git worktree для безопасных экспериментов, разделения изменений и запуска параллельных сессий без прерывания вашей текущей ветки.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Откройте диалоговое окно worktree в Agent Manager, чтобы настроить новое worktree перед созданием.",
+  "sidebar.session.newWorktree.from": "Новое Worktree из",
+  "sidebar.session.currentBranch": "текущей ветки",
+  "sidebar.session.moveToWorktree": "Перенести в Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Перенесите эту беседу и ваши текущие локальные изменения в выделенное worktree для изолированной последующей работы.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Переместить этот разговор и 1 измененный файл в выделенный worktree для изолированной дальнейшей работы.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Переместить этот разговор и {{files}} измененных файлов в выделенный worktree для изолированной дальнейшей работы.",
+  "sidebar.session.showChanges.tooltip.empty": "Откройте просмотр изменений, чтобы изучить текущее рабочее дерево.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 файл изменен · +{{additions}} -{{deletions}}. Открыть просмотр изменений.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} файлов изменено · +{{additions}} -{{deletions}}. Открыть просмотр изменений.",
+  "sidebar.session.agentManager.tooltip":
+    "Откройте Agent Manager для полного обзора параллельных сессий и worktree, чтобы координировать длительные задачи в одном месте.",
+  "sidebar.session.openAgentManager": "Открыть Agent Manager",
+  "sidebar.session.progress.capturing": "Захват изменений...",
+  "sidebar.session.progress.creating": "Создание worktree...",
+  "sidebar.session.progress.setup": "Выполнение настройки...",
+  "sidebar.session.progress.transferring": "Перенос изменений...",
+  "sidebar.session.progress.forking": "Запуск сессии...",
+  "sidebar.session.progress.failed": "Не удалось продолжить в worktree",
   "session.header.search.placeholder": "Поиск {{project}}",
   "session.header.searchFiles": "Поиск файлов",
   "session.header.openIn": "Открыть в",
@@ -714,6 +745,32 @@ export const dict = {
   "settings.general.sounds.permissions.description": "Воспроизводить звук когда требуется разрешение",
   "settings.general.sounds.errors.title": "Ошибки",
   "settings.general.sounds.errors.description": "Воспроизводить звук когда происходит ошибка",
+
+  "settings.indexing.title": "Индексация",
+  "settings.indexing.enable.title": "Включить индексацию",
+  "settings.indexing.enable.description":
+    "Включить или отключить семантическую индексацию кодовой базы для этого рабочего пространства.",
+  "settings.indexing.status.title": "Статус",
+  "settings.indexing.provider.title": "Провайдер эмбеддингов",
+  "settings.indexing.provider.description": "Выберите провайдера для генерации эмбеддингов при семантическом поиске.",
+  "settings.indexing.model.title": "Модель эмбеддингов",
+  "settings.indexing.model.description": "Переопределить модель эмбеддингов по умолчанию для выбранного провайдера.",
+  "settings.indexing.dimension.title": "Размерность вектора",
+  "settings.indexing.dimension.description":
+    "Оставьте пустым для автоматического определения размерности эмбеддингов из модели.",
+  "settings.indexing.dimension.placeholder": "Авто",
+  "settings.indexing.vectorStore.title": "Векторное хранилище",
+  "settings.indexing.vectorStore.description": "Выберите, где хранить проиндексированные эмбеддинги.",
+  "settings.indexing.lancedbDirectory.title": "Директория LanceDB",
+  "settings.indexing.lancedbDirectory.description": "Необязательная директория для локального хранилища LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Оставьте пустым для значения по умолчанию",
+  "settings.indexing.qdrantUrl.title": "URL Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL сервера для экземпляра Qdrant.",
+  "settings.indexing.qdrantApiKey.title": "API-ключ Qdrant",
+  "settings.indexing.qdrantApiKey.description": "Необязательный API-ключ для экземпляра Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Необязательный API-ключ",
+  "settings.indexing.providerField.description": "Настройка подключения, специфичная для провайдера.",
+  "settings.indexing.tuning.description": "Параметры расширенного поиска и пакетной обработки.",
 
   "settings.shortcuts.title": "Горячие клавиши",
   "settings.shortcuts.reset.button": "Сбросить к умолчаниям",
@@ -1141,6 +1198,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Не суммировать большой вставленный контент",
   "settings.experimental.batch.title": "Пакетный инструмент",
   "settings.experimental.batch.description": "Включить пакетную обработку вызовов инструментов",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Поиск по коду",
   "settings.experimental.codebaseSearch.description": "Включить поиск на естественном языке с ИИ по всей кодовой базе",
   "settings.experimental.continueOnDeny.title": "Продолжить при отказе",

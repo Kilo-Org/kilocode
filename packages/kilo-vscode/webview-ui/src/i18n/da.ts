@@ -536,7 +536,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
   "session.new.worktree.create": "Opret nyt worktree",
   "session.new.lastModified": "Sidst ændret",
-
+  "sidebar.session.newSession": "Ny Session",
+  "sidebar.session.newSession.tooltip": "Start en frisk samtale, mens den nuværende session holdes intakt.",
+  "sidebar.session.newSession.disabled":
+    "Denne session er allerede ny. Start med at chatte eller opret et worktree i stedet.",
+  "sidebar.session.newWorktree": "Nyt Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Opret et isoleret git worktree for at eksperimentere sikkert, holde ændringer adskilt og køre parallelle sessioner uden at forstyrre din nuværende branch.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Åbn Agent Manager worktree-dialogen for at konfigurere et nyt worktree før oprettelse.",
+  "sidebar.session.newWorktree.from": "Nyt Worktree fra",
+  "sidebar.session.currentBranch": "nuværende branch",
+  "sidebar.session.moveToWorktree": "Flyt til Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Flyt denne samtale og dine nuværende lokale ændringer til et dedikeret worktree for isoleret opfølgningsarbejde.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Flyt denne samtale og 1 ændret fil til et dedikeret worktree for isoleret opfølgende arbejde.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Flyt denne samtale og {{files}} ændrede filer til et dedikeret worktree for isoleret opfølgende arbejde.",
+  "sidebar.session.showChanges.tooltip.empty": "Åbn ændringsvisningen for at inspicere det nuværende worktree.",
+  "sidebar.session.showChanges.tooltip.one": "1 fil ændret · +{{additions}} -{{deletions}}. Åbn ændringsvisningen.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} filer ændret · +{{additions}} -{{deletions}}. Åbn ændringsvisningen.",
+  "sidebar.session.agentManager.tooltip":
+    "Åbn Agent Manager for et komplet overblik over parallelle sessioner og worktrees, så du kan koordinere langvarige opgaver ét sted.",
+  "sidebar.session.openAgentManager": "Åbn Agent Manager",
+  "sidebar.session.progress.capturing": "Fanger ændringer...",
+  "sidebar.session.progress.creating": "Opretter worktree...",
+  "sidebar.session.progress.setup": "Kører opsætning...",
+  "sidebar.session.progress.transferring": "Overfører ændringer...",
+  "sidebar.session.progress.forking": "Starter session...",
+  "sidebar.session.progress.failed": "Kunne ikke fortsætte i worktree",
   "session.header.search.placeholder": "Søg {{project}}",
   "session.header.searchFiles": "Søg efter filer",
   "session.header.openIn": "Åbn i",
@@ -720,13 +750,40 @@ export const dict = {
   "settings.shortcuts.pressKeys": "Tryk på taster",
   "settings.shortcuts.search.placeholder": "Søg genveje",
   "settings.shortcuts.search.empty": "Ingen genveje fundet",
-
   "settings.shortcuts.group.general": "Generelt",
-  "settings.shortcuts.group.session": "Session",
-  "settings.shortcuts.group.navigation": "Navigation",
   "settings.shortcuts.group.modelAndAgent": "Model og agent",
-  "settings.shortcuts.group.terminal": "Terminal",
+  "settings.shortcuts.group.navigation": "Navigation",
   "settings.shortcuts.group.prompt": "Prompt",
+  "settings.shortcuts.group.session": "Session",
+  "settings.shortcuts.group.terminal": "Terminal",
+
+  "prompt.action.indexing": "Indekseringsindstillinger",
+
+  "settings.indexing.title": "Indeksering",
+  "settings.indexing.enable.title": "Aktivér indeksering",
+  "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra for dette arbejdsområde.",
+  "settings.indexing.provider.title": "Embedding-udbyder",
+  "settings.indexing.provider.description":
+    "Vælg udbyderen, der bruges til at generere embeddings til semantisk søgning.",
+  "settings.indexing.model.title": "Embedding-model",
+  "settings.indexing.model.description": "Overskriv standard embedding-modellen for den valgte udbyder.",
+  "settings.indexing.providerField.description": "Udbyderspecifik forbindelsesindstilling.",
+  "settings.indexing.vectorStore.title": "Vektorlager",
+  "settings.indexing.vectorStore.description": "Vælg hvor indekserede embeddings gemmes.",
+  "settings.indexing.qdrantUrl.title": "Qdrant URL",
+  "settings.indexing.qdrantUrl.description": "Server-URL til Qdrant-instansen.",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API-nøgle",
+  "settings.indexing.qdrantApiKey.description": "Valgfri API-nøgle til Qdrant-instansen.",
+  "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøgle",
+  "settings.indexing.lancedbDirectory.title": "LanceDB-mappe",
+  "settings.indexing.lancedbDirectory.description": "Valgfri mappe til det lokale LanceDB-lager.",
+  "settings.indexing.lancedbDirectory.placeholder": "Lad være tom for standard",
+  "settings.indexing.dimension.title": "Vektordimension",
+  "settings.indexing.dimension.description":
+    "Lad være tom for automatisk at registrere embedding-dimensionen fra modellen.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.tuning.description": "Avanceret søge- og batchparameter.",
 
   "settings.providers.title": "Udbydere",
   "settings.providers.description": "Udbyderindstillinger vil kunne konfigureres her.",
@@ -1135,6 +1192,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Resumér ikke stort indsat indhold",
   "settings.experimental.batch.title": "Batchværktøj",
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",

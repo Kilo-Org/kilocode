@@ -261,6 +261,7 @@ export const dict = {
   "prompt.action.send.blocked": "Bekleyen soruyu önce yanıtlayın veya kapatın",
   "prompt.action.stop": "Durdur",
   "prompt.action.enhance": "Komutu geliştir",
+  "prompt.action.indexing": "İndeksleme ayarları",
   "prompt.action.resetModel": "Modeli varsayılana sıfırla",
   "prompt.action.enhanceDescription":
     "'Komutu Geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifadelendirme sağlayarak komutunuzu iyileştirmeye yardımcı olur. Buraya bir komut yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
@@ -541,7 +542,38 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Ana dal ({{branch}})",
   "session.new.worktree.create": "Yeni çalışma ağacı oluştur",
   "session.new.lastModified": "Son değişiklik",
-
+  "sidebar.session.newSession": "Yeni Oturum",
+  "sidebar.session.newSession.tooltip": "Mevcut oturumu koruyarak yeni bir konuşma başlatın.",
+  "sidebar.session.newSession.disabled":
+    "Bu oturum zaten yeni. Sohbet etmeye başlayın veya bunun yerine bir worktree oluşturun.",
+  "sidebar.session.newWorktree": "Yeni Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Güvenli bir şekilde deneme yapmak, değişiklikleri ayrı tutmak ve mevcut dalınızı kesintiye uğratmadan paralel oturumlar çalıştırmak için izole bir git worktree oluşturun.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Oluşturmadan önce yeni bir worktree yapılandırmak için Agent Manager worktree iletişim kutusunu açın.",
+  "sidebar.session.newWorktree.from": "Şuradan Yeni Worktree:",
+  "sidebar.session.currentBranch": "mevcut dal",
+  "sidebar.session.moveToWorktree": "Worktree'ye Taşı",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "İzole bir takip çalışması için bu konuşmayı ve mevcut yerel değişikliklerinizi özel bir worktree'ye taşıyın.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Bu konuşmayı ve değiştirilen 1 dosyayı, izole edilmiş takip çalışmaları için özel bir worktree'ye taşıyın.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Bu konuşmayı ve değiştirilen {{files}} dosyayı, izole edilmiş takip çalışmaları için özel bir worktree'ye taşıyın.",
+  "sidebar.session.showChanges.tooltip.empty": "Mevcut çalışma ağacını incelemek için değişiklikler görünümünü açın.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 dosya değiştirildi · +{{additions}} -{{deletions}}. Değişiklikler görünümünü aç.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} dosya değiştirildi · +{{additions}} -{{deletions}}. Değişiklikler görünümünü aç.",
+  "sidebar.session.agentManager.tooltip":
+    "Paralel oturumların ve worktree'lerin tam bir genel görünümü için Agent Manager'ı açın, böylece uzun süren görevleri tek bir yerden koordine edebilirsiniz.",
+  "sidebar.session.openAgentManager": "Agent Manager'ı Aç",
+  "sidebar.session.progress.capturing": "Değişiklikler yakalanıyor...",
+  "sidebar.session.progress.creating": "Worktree oluşturuluyor...",
+  "sidebar.session.progress.setup": "Kurulum çalıştırılıyor...",
+  "sidebar.session.progress.transferring": "Değişiklikler aktarılıyor...",
+  "sidebar.session.progress.forking": "Oturum başlatılıyor...",
+  "sidebar.session.progress.failed": "Worktree'de devam edilemedi",
   "session.header.search.placeholder": "{{project}} ara",
   "session.header.searchFiles": "Dosya ara",
   "session.header.openIn": "Aç",
@@ -1001,6 +1033,30 @@ export const dict = {
   "settings.autocomplete.model.description": "Satır içi (inline) kod tamamlamaları için kullanılacak modeli seçin",
   "settings.notifications.title": "Bildirimler",
   "settings.context.title": "Bağlam",
+  "settings.indexing.title": "İndeksleme",
+  "settings.indexing.status.title": "Durum",
+  "settings.indexing.enable.title": "İndekslemeyi etkinleştir",
+  "settings.indexing.enable.description": "Bu çalışma alanı için anlamsal kod tabanı indekslemeyi açın veya kapatın.",
+  "settings.indexing.provider.title": "Yerleştirme sağlayıcısı",
+  "settings.indexing.provider.description":
+    "Anlamsal arama için yerleştirmeleri oluşturmak amacıyla kullanılacak sağlayıcıyı seçin.",
+  "settings.indexing.model.title": "Yerleştirme modeli",
+  "settings.indexing.model.description": "Seçili sağlayıcı için varsayılan yerleştirme modelini geçersiz kılın.",
+  "settings.indexing.dimension.title": "Vektör boyutu",
+  "settings.indexing.dimension.description": "Modelden yerleştirme boyutunu otomatik algılamak için boş bırakın.",
+  "settings.indexing.dimension.placeholder": "Otomatik",
+  "settings.indexing.providerField.description": "Sağlayıcıya özel bağlantı ayarı.",
+  "settings.indexing.vectorStore.title": "Vektör deposu",
+  "settings.indexing.vectorStore.description": "İndekslenen yerleştirmelerin nerede saklanacağını seçin.",
+  "settings.indexing.lancedbDirectory.title": "LanceDB dizini",
+  "settings.indexing.lancedbDirectory.description": "Yerel LanceDB deposu için isteğe bağlı dizin.",
+  "settings.indexing.lancedbDirectory.placeholder": "Varsayılan için boş bırakın",
+  "settings.indexing.qdrantUrl.title": "Qdrant URL",
+  "settings.indexing.qdrantUrl.description": "Qdrant örneği için sunucu URL'si.",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API anahtarı",
+  "settings.indexing.qdrantApiKey.description": "Qdrant örneği için isteğe bağlı API anahtarı.",
+  "settings.indexing.qdrantApiKey.placeholder": "İsteğe bağlı API anahtarı",
+  "settings.indexing.tuning.description": "Gelişmiş arama ve toplu işlem parametresi.",
 
   "settings.experimental.title": "Deneysel",
   "settings.language.title": "Dil",
@@ -1140,6 +1196,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Büyük yapıştırılan içeriği özetleme",
   "settings.experimental.batch.title": "Toplu Araç",
   "settings.experimental.batch.description": "Birden fazla araç çağrısının toplu işlenmesini etkinleştir",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Kod Tabanı Araması",
   "settings.experimental.codebaseSearch.description":
     "Kod tabanınız genelinde yapay zeka destekli doğal dil aramasını etkinleştir",

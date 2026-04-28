@@ -530,7 +530,35 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "主分支 ({{branch}})",
   "session.new.worktree.create": "建立新的 worktree",
   "session.new.lastModified": "最後修改",
-
+  "sidebar.session.newSession": "新會話",
+  "sidebar.session.newSession.tooltip": "在保持當前會話完整的同時開始全新的對話。",
+  "sidebar.session.newSession.disabled": "此會話已經是新的。請開始聊天或建立一個 worktree。",
+  "sidebar.session.newWorktree": "新 Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "建立一個隔離的 git worktree 以安全地進行實驗、保持變更分離並在不中斷當前分支的情況下執行平行會話。",
+  "sidebar.session.configureWorktree.tooltip":
+    "打開 Agent Manager 的 worktree 對話框，以便在建立之前配置新的 worktree。",
+  "sidebar.session.newWorktree.from": "新 Worktree 來源：",
+  "sidebar.session.currentBranch": "當前分支",
+  "sidebar.session.moveToWorktree": "移動到 Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "將此對話和您當前的本地變更移動到專用的 worktree 中，以便進行隔離的後續工作。",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "將此對話和 1 個變更的檔案移動到專用的 worktree 中，以便進行隔離的後續工作。",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "將此對話和 {{files}} 個變更的檔案移動到專用的 worktree 中，以便進行隔離的後續工作。",
+  "sidebar.session.showChanges.tooltip.empty": "打開變更檢視以檢查當前工作樹。",
+  "sidebar.session.showChanges.tooltip.one": "1 個檔案已變更 · +{{additions}} -{{deletions}}。開啟變更檢視。",
+  "sidebar.session.showChanges.tooltip.other": "{{files}} 個檔案已變更 · +{{additions}} -{{deletions}}。開啟變更檢視。",
+  "sidebar.session.agentManager.tooltip":
+    "打開 Agent Manager 以全面了解平行會話和 worktree，讓您可以在一個地方協調長期執行的任務。",
+  "sidebar.session.openAgentManager": "打開 Agent Manager",
+  "sidebar.session.progress.capturing": "正在捕獲變更...",
+  "sidebar.session.progress.creating": "正在建立 worktree...",
+  "sidebar.session.progress.setup": "正在執行設定...",
+  "sidebar.session.progress.transferring": "正在傳輸變更...",
+  "sidebar.session.progress.forking": "正在啟動會話...",
+  "sidebar.session.progress.failed": "在 worktree 中繼續失敗",
   "session.header.search.placeholder": "搜尋 {{project}}",
   "session.header.searchFiles": "搜尋檔案",
   "session.header.openIn": "開啟方式",
@@ -1116,6 +1144,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "不對大量貼上內容進行摘要",
   "settings.experimental.batch.title": "批次工具",
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
   "settings.experimental.continueOnDeny.title": "拒絕後繼續",
@@ -1304,6 +1335,33 @@ export const dict = {
   "dialog.model.notSet": "未設定",
   "profile.personalAccount": "個人帳戶",
   "profile.switchingAccount": "正在切換帳戶…",
+
+  "prompt.action.indexing": "索引設定",
+
+  "settings.indexing.dimension.description": "留空以自動從模型偵測嵌入維度。",
+  "settings.indexing.dimension.placeholder": "自動",
+  "settings.indexing.dimension.title": "向量維度",
+  "settings.indexing.enable.description": "為此工作區開啟或關閉語意程式碼庫索引。",
+  "settings.indexing.enable.title": "啟用索引",
+  "settings.indexing.lancedbDirectory.description": "本機 LanceDB 儲存的可選目錄。",
+  "settings.indexing.lancedbDirectory.placeholder": "留空使用預設值",
+  "settings.indexing.lancedbDirectory.title": "LanceDB 目錄",
+  "settings.indexing.model.description": "覆寫所選供應商的預設嵌入模型。",
+  "settings.indexing.model.title": "嵌入模型",
+  "settings.indexing.provider.description": "選擇用於生成語意搜尋嵌入的供應商。",
+  "settings.indexing.provider.title": "嵌入供應商",
+  "settings.indexing.providerField.description": "供應商特定的連線設定。",
+  "settings.indexing.qdrantApiKey.description": "Qdrant 執行個體的可選 API 金鑰。",
+  "settings.indexing.qdrantApiKey.placeholder": "可選 API 金鑰",
+  "settings.indexing.qdrantApiKey.title": "Qdrant API 金鑰",
+  "settings.indexing.qdrantUrl.description": "Qdrant 執行個體的伺服器 URL。",
+  "settings.indexing.qdrantUrl.title": "Qdrant URL",
+  "settings.indexing.status.title": "狀態",
+  "settings.indexing.title": "索引",
+  "settings.indexing.tuning.description": "進階搜尋和批次處理參數。",
+  "settings.indexing.vectorStore.description": "選擇索引嵌入的儲存位置。",
+  "settings.indexing.vectorStore.title": "向量儲存",
+
   // Agent Manager strings live in webview-ui/agent-manager/i18n/zht.ts
 
   "question.summary": "第 {{n}} / {{total}} 個問題",

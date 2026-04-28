@@ -11,7 +11,7 @@
 import { createContext, useContext, createSignal, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
-import type { Config, ExtensionMessage } from "../types/messages"
+import type { Config, ExtensionMessage, FeatureFlags } from "../types/messages"
 import { deepMerge, stripNulls, resolveConfig } from "../utils/config-utils"
 
 export interface SaveError {
@@ -21,6 +21,7 @@ export interface SaveError {
 
 interface ConfigContextValue {
   config: Accessor<Config>
+  features: Accessor<FeatureFlags>
   loading: Accessor<boolean>
   isDirty: Accessor<boolean>
   saving: Accessor<boolean>
@@ -36,6 +37,7 @@ export const ConfigProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
 
   const [config, setConfig] = createSignal<Config>({})
+  const [features, setFeatures] = createSignal<FeatureFlags>({ indexing: false })
   const [loading, setLoading] = createSignal(true)
   const [draft, setDraft] = createSignal<Partial<Config>>({})
   const [isDirty, setIsDirty] = createSignal(false)
@@ -58,6 +60,7 @@ export const ConfigProvider: ParentComponent = (props) => {
       // Re-apply the draft on top so pending changes (e.g. a toggled switch the
       // user hasn't saved yet) stay visible instead of snapping back.
       setConfig(resolveConfig(message.config, draft(), isDirty()))
+      setFeatures(message.features)
       setSaved(message.config)
       setLoading(false)
       return
@@ -71,10 +74,12 @@ export const ConfigProvider: ParentComponent = (props) => {
         setIsDirty(false)
         setSaveError(null)
         setConfig(message.config)
+        setFeatures(message.features)
       } else {
         // configUpdated from a different source (e.g. PermissionDock save).
         // Re-apply the draft on top so pending settings changes are preserved.
         setConfig(resolveConfig(message.config, draft(), isDirty()))
+        setFeatures(message.features)
       }
       setSaved(message.config)
       return
@@ -144,6 +149,7 @@ export const ConfigProvider: ParentComponent = (props) => {
 
   const value: ConfigContextValue = {
     config,
+    features,
     loading,
     isDirty,
     saving,

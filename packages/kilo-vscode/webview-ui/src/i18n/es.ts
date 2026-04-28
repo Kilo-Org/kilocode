@@ -264,6 +264,7 @@ export const dict = {
   "prompt.action.resetModel": "Restablecer modelo al predeterminado",
   "prompt.action.enhanceDescription":
     "El botón 'Mejorar el mensaje' ayuda a mejorar tu petición proporcionando contexto adicional, aclaraciones o reformulaciones. Intenta escribir una petición aquí y haz clic en el botón nuevamente para ver cómo funciona.",
+  "prompt.action.indexing": "Configuración de indexación",
 
   "prompt.toast.pasteUnsupported.title": "Pegado no soportado",
   "prompt.toast.pasteUnsupported.description": "Solo se pueden pegar imágenes o PDFs aquí.",
@@ -538,7 +539,37 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Rama principal ({{branch}})",
   "session.new.worktree.create": "Crear nuevo árbol de trabajo",
   "session.new.lastModified": "Última modificación",
-
+  "sidebar.session.newSession": "Nueva Sesión",
+  "sidebar.session.newSession.tooltip": "Inicia una nueva conversación manteniendo intacta la sesión actual.",
+  "sidebar.session.newSession.disabled": "Esta sesión ya es nueva. Empieza a chatear o crea un worktree en su lugar.",
+  "sidebar.session.newWorktree": "Nuevo Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Crea un git worktree aislado para experimentar de forma segura, mantener los cambios separados y ejecutar sesiones paralelas sin interrumpir tu rama actual.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Abre el diálogo de worktree en el Agent Manager para configurar un nuevo worktree antes de crearlo.",
+  "sidebar.session.newWorktree.from": "Nuevo Worktree desde",
+  "sidebar.session.currentBranch": "rama actual",
+  "sidebar.session.moveToWorktree": "Mover a Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Mueve esta conversación y tus cambios locales actuales a un worktree dedicado para un trabajo de seguimiento aislado.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Mover esta conversación y 1 archivo modificado a un worktree dedicado para trabajo de seguimiento aislado.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Mover esta conversación y {{files}} archivos modificados a un worktree dedicado para trabajo de seguimiento aislado.",
+  "sidebar.session.showChanges.tooltip.empty": "Abre la vista de cambios para inspeccionar el árbol de trabajo actual.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 archivo modificado · +{{additions}} -{{deletions}}. Abrir la vista de cambios.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} archivos modificados · +{{additions}} -{{deletions}}. Abrir la vista de cambios.",
+  "sidebar.session.agentManager.tooltip":
+    "Abre el Agent Manager para obtener una vista general completa de las sesiones paralelas y los worktrees, para que puedas coordinar tareas de larga duración en un solo lugar.",
+  "sidebar.session.openAgentManager": "Abrir Agent Manager",
+  "sidebar.session.progress.capturing": "Capturando cambios...",
+  "sidebar.session.progress.creating": "Creando worktree...",
+  "sidebar.session.progress.setup": "Ejecutando configuración...",
+  "sidebar.session.progress.transferring": "Transfiriendo cambios...",
+  "sidebar.session.progress.forking": "Iniciando sesión...",
+  "sidebar.session.progress.failed": "No se pudo continuar en el worktree",
   "session.header.search.placeholder": "Buscar {{project}}",
   "session.header.searchFiles": "Buscar archivos",
   "session.header.openIn": "Abrir en",
@@ -714,6 +745,34 @@ export const dict = {
   "settings.general.sounds.permissions.description": "Reproducir sonido cuando se requiera un permiso",
   "settings.general.sounds.errors.title": "Errores",
   "settings.general.sounds.errors.description": "Reproducir sonido cuando ocurra un error",
+
+  "settings.indexing.title": "Indexación",
+  "settings.indexing.enable.title": "Habilitar indexación",
+  "settings.indexing.enable.description":
+    "Activar o desactivar la indexación semántica de la base de código para este espacio de trabajo.",
+  "settings.indexing.provider.title": "Proveedor de embeddings",
+  "settings.indexing.provider.description":
+    "Elige el proveedor utilizado para generar embeddings para búsqueda semántica.",
+  "settings.indexing.model.title": "Modelo de embeddings",
+  "settings.indexing.model.description":
+    "Anular el modelo de embeddings predeterminado para el proveedor seleccionado.",
+  "settings.indexing.dimension.title": "Dimensión vectorial",
+  "settings.indexing.dimension.description":
+    "Dejar vacío para detectar automáticamente la dimensión de embeddings del modelo.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.vectorStore.title": "Almacén de vectores",
+  "settings.indexing.vectorStore.description": "Elige dónde se almacenan los embeddings indexados.",
+  "settings.indexing.lancedbDirectory.title": "Directorio de LanceDB",
+  "settings.indexing.lancedbDirectory.description": "Directorio opcional para el almacenamiento local de LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Dejar vacío para el valor predeterminado",
+  "settings.indexing.qdrantUrl.title": "URL de Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL del servidor para la instancia de Qdrant.",
+  "settings.indexing.qdrantApiKey.title": "Clave API de Qdrant",
+  "settings.indexing.qdrantApiKey.description": "Clave API opcional para la instancia de Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Clave API opcional",
+  "settings.indexing.providerField.description": "Configuración de conexión específica del proveedor.",
+  "settings.indexing.status.title": "Estado",
+  "settings.indexing.tuning.description": "Parámetro avanzado de búsqueda y procesamiento por lotes.",
 
   "settings.shortcuts.title": "Atajos de teclado",
   "settings.shortcuts.reset.button": "Restablecer a valores predeterminados",
@@ -1146,6 +1205,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "No resumir contenido pegado grande",
   "settings.experimental.batch.title": "Herramienta por lotes",
   "settings.experimental.batch.description": "Habilitar procesamiento por lotes de llamadas a herramientas",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Búsqueda de código",
   "settings.experimental.codebaseSearch.description":
     "Habilitar búsqueda por lenguaje natural con IA en toda la base de código",

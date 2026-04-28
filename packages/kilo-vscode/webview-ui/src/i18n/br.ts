@@ -264,6 +264,7 @@ export const dict = {
   "prompt.action.resetModel": "Redefinir modelo para o padrão",
   "prompt.action.enhanceDescription":
     "O botão 'Aprimorar prompt' ajuda a melhorar seu pedido fornecendo contexto adicional, esclarecimentos ou reformulações. Tente digitar um pedido aqui e clique no botão novamente para ver como funciona.",
+  "prompt.action.indexing": "Configurações de indexação",
 
   "prompt.toast.pasteUnsupported.title": "Colagem não suportada",
   "prompt.toast.pasteUnsupported.description": "Somente imagens ou PDFs podem ser colados aqui.",
@@ -535,7 +536,38 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Branch principal ({{branch}})",
   "session.new.worktree.create": "Criar novo worktree",
   "session.new.lastModified": "Última modificação",
-
+  "sidebar.session.newSession": "Nova Sessão",
+  "sidebar.session.newSession.tooltip": "Inicie uma nova conversa mantendo a sessão atual intacta.",
+  "sidebar.session.newSession.disabled": "Esta sessão já é nova. Comece a conversar ou crie um worktree em vez disso.",
+  "sidebar.session.newWorktree": "Novo Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Crie um git worktree isolado para experimentar com segurança, manter as alterações separadas e executar sessões paralelas sem interromper sua branch atual.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Abra a caixa de diálogo de worktree do Agent Manager para configurar um novo worktree antes de criá-lo.",
+  "sidebar.session.newWorktree.from": "Novo Worktree de",
+  "sidebar.session.currentBranch": "branch atual",
+  "sidebar.session.moveToWorktree": "Mover para Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Mova esta conversa e suas alterações locais atuais para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Mover esta conversa e 1 arquivo alterado para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Mover esta conversa e {{files}} arquivos alterados para um worktree dedicado para trabalho de acompanhamento isolado.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Abra a visualização de alterações para inspecionar a árvore de trabalho atual.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 arquivo alterado · +{{additions}} -{{deletions}}. Abrir a visualização de alterações.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} arquivos alterados · +{{additions}} -{{deletions}}. Abrir a visualização de alterações.",
+  "sidebar.session.agentManager.tooltip":
+    "Abra o Agent Manager para uma visão geral completa de sessões paralelas e worktrees, para que você possa coordenar tarefas longas em um só lugar.",
+  "sidebar.session.openAgentManager": "Abrir Agent Manager",
+  "sidebar.session.progress.capturing": "Capturando alterações...",
+  "sidebar.session.progress.creating": "Criando worktree...",
+  "sidebar.session.progress.setup": "Executando configuração...",
+  "sidebar.session.progress.transferring": "Transferindo alterações...",
+  "sidebar.session.progress.forking": "Iniciando sessão...",
+  "sidebar.session.progress.failed": "Falha ao continuar no worktree",
   "session.header.search.placeholder": "Buscar {{project}}",
   "session.header.searchFiles": "Buscar arquivos",
   "session.header.openIn": "Abrir em",
@@ -1004,6 +1036,31 @@ export const dict = {
 
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Idioma",
+  "settings.indexing.title": "Indexação",
+  "settings.indexing.enable.title": "Ativar indexação",
+  "settings.indexing.enable.description":
+    "Ativar ou desativar a indexação semântica da base de código para este espaço de trabalho.",
+  "settings.indexing.provider.title": "Provedor de embedding",
+  "settings.indexing.provider.description": "Escolha o provedor usado para gerar embeddings para busca semântica.",
+  "settings.indexing.model.title": "Modelo de embedding",
+  "settings.indexing.model.description": "Substituir o modelo de embedding padrão para o provedor selecionado.",
+  "settings.indexing.vectorStore.title": "Armazenamento de vetores",
+  "settings.indexing.vectorStore.description": "Escolha onde os embeddings indexados são armazenados.",
+  "settings.indexing.lancedbDirectory.title": "Diretório do LanceDB",
+  "settings.indexing.lancedbDirectory.description": "Diretório opcional para o armazenamento local do LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Deixe vazio para o padrão",
+  "settings.indexing.qdrantUrl.title": "URL do Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL do servidor para a instância do Qdrant.",
+  "settings.indexing.qdrantApiKey.title": "Chave de API do Qdrant",
+  "settings.indexing.qdrantApiKey.description": "Chave de API opcional para a instância do Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Chave de API opcional",
+  "settings.indexing.dimension.title": "Dimensão do vetor",
+  "settings.indexing.dimension.description":
+    "Deixe vazio para detectar automaticamente a dimensão de embedding do modelo.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.status.title": "Status",
+  "settings.indexing.tuning.description": "Parâmetro avançado de busca e lote.",
+  "settings.indexing.providerField.description": "Configuração de conexão específica do provedor.",
   "settings.aboutKiloCode.title": "Sobre o Kilo Code",
 
   "session.messages.empty": "Inicie uma conversa digitando uma mensagem abaixo.",
@@ -1142,6 +1199,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Não resumir conteúdo colado grande",
   "settings.experimental.batch.title": "Ferramenta em lote",
   "settings.experimental.batch.description": "Ativar processamento em lote de chamadas de ferramentas",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",

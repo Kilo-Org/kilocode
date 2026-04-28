@@ -265,6 +265,7 @@ export const dict = {
   "prompt.action.resetModel": "Réinitialiser le modèle par défaut",
   "prompt.action.enhanceDescription":
     "Le bouton 'Améliorer la requête' aide à améliorer votre demande en fournissant un contexte supplémentaire, des clarifications ou des reformulations. Essayez de taper une demande ici et cliquez à nouveau sur le bouton pour voir comment cela fonctionne.",
+  "prompt.action.indexing": "Paramètres d'indexation",
 
   "prompt.toast.pasteUnsupported.title": "Collage non supporté",
   "prompt.toast.pasteUnsupported.description": "Seules les images ou les PDF peuvent être collés ici.",
@@ -543,7 +544,40 @@ export const dict = {
   "session.new.worktree.mainWithBranch": "Branche principale ({{branch}})",
   "session.new.worktree.create": "Créer un nouvel arbre de travail",
   "session.new.lastModified": "Dernière modification",
-
+  "sidebar.session.newSession": "Nouvelle Session",
+  "sidebar.session.newSession.tooltip":
+    "Démarrer une nouvelle conversation tout en gardant la session actuelle intacte.",
+  "sidebar.session.newSession.disabled":
+    "Cette session est déjà nouvelle. Commencez à discuter ou créez plutôt un worktree.",
+  "sidebar.session.newWorktree": "Nouveau Worktree",
+  "sidebar.session.newWorktree.tooltip":
+    "Créer un git worktree isolé pour expérimenter en toute sécurité, séparer les modifications et exécuter des sessions parallèles sans perturber votre branche actuelle.",
+  "sidebar.session.configureWorktree.tooltip":
+    "Ouvrez la boîte de dialogue worktree du Agent Manager pour configurer un nouveau worktree avant de le créer.",
+  "sidebar.session.newWorktree.from": "Nouveau Worktree depuis",
+  "sidebar.session.currentBranch": "branche actuelle",
+  "sidebar.session.moveToWorktree": "Déplacer vers un Worktree",
+  "sidebar.session.moveToWorktree.tooltip.empty":
+    "Déplacez cette conversation et vos modifications locales actuelles dans un worktree dédié pour un travail de suivi isolé.",
+  "sidebar.session.moveToWorktree.tooltip.one":
+    "Déplacer cette conversation et 1 fichier modifié vers un worktree dédié pour un travail de suivi isolé.",
+  "sidebar.session.moveToWorktree.tooltip.other":
+    "Déplacer cette conversation et {{files}} fichiers modifiés vers un worktree dédié pour un travail de suivi isolé.",
+  "sidebar.session.showChanges.tooltip.empty":
+    "Ouvrez la vue des modifications pour inspecter l'arborescence de travail actuelle.",
+  "sidebar.session.showChanges.tooltip.one":
+    "1 fichier modifié · +{{additions}} -{{deletions}}. Ouvrir la vue des modifications.",
+  "sidebar.session.showChanges.tooltip.other":
+    "{{files}} fichiers modifiés · +{{additions}} -{{deletions}}. Ouvrir la vue des modifications.",
+  "sidebar.session.agentManager.tooltip":
+    "Ouvrez Agent Manager pour une vue d'ensemble complète des sessions parallèles et des worktrees, afin de coordonner les tâches longues en un seul endroit.",
+  "sidebar.session.openAgentManager": "Ouvrir Agent Manager",
+  "sidebar.session.progress.capturing": "Capture des modifications...",
+  "sidebar.session.progress.creating": "Création du worktree...",
+  "sidebar.session.progress.setup": "Exécution de la configuration...",
+  "sidebar.session.progress.transferring": "Transfert des modifications...",
+  "sidebar.session.progress.forking": "Démarrage de la session...",
+  "sidebar.session.progress.failed": "Échec de la poursuite dans le worktree",
   "session.header.search.placeholder": "Rechercher {{project}}",
   "session.header.searchFiles": "Rechercher des fichiers",
   "session.header.openIn": "Ouvrir dans",
@@ -637,6 +671,33 @@ export const dict = {
 
   "settings.general.row.releaseNotes.title": "Notes de version",
   "settings.general.row.releaseNotes.description": 'Afficher des pop-ups "Quoi de neuf" après les mises à jour',
+
+  "settings.indexing.dimension.description":
+    "Laissez vide pour détecter automatiquement la dimension d'embedding à partir du modèle.",
+  "settings.indexing.dimension.placeholder": "Auto",
+  "settings.indexing.dimension.title": "Dimension vectorielle",
+  "settings.indexing.enable.description":
+    "Activer ou désactiver l'indexation sémantique de la base de code pour cet espace de travail.",
+  "settings.indexing.enable.title": "Activer l'indexation",
+  "settings.indexing.lancedbDirectory.description": "Répertoire optionnel pour le stockage local LanceDB.",
+  "settings.indexing.lancedbDirectory.placeholder": "Laissez vide pour la valeur par défaut",
+  "settings.indexing.lancedbDirectory.title": "Répertoire LanceDB",
+  "settings.indexing.model.description": "Remplacer le modèle d'embedding par défaut pour le fournisseur sélectionné.",
+  "settings.indexing.model.title": "Modèle d'embedding",
+  "settings.indexing.provider.description":
+    "Choisissez le fournisseur utilisé pour générer les embeddings pour la recherche sémantique.",
+  "settings.indexing.provider.title": "Fournisseur d'embedding",
+  "settings.indexing.providerField.description": "Paramètre de connexion spécifique au fournisseur.",
+  "settings.indexing.qdrantApiKey.description": "Clé API optionnelle pour l'instance Qdrant.",
+  "settings.indexing.qdrantApiKey.placeholder": "Clé API optionnelle",
+  "settings.indexing.qdrantApiKey.title": "Clé API Qdrant",
+  "settings.indexing.qdrantUrl.description": "URL du serveur pour l'instance Qdrant.",
+  "settings.indexing.qdrantUrl.title": "URL Qdrant",
+  "settings.indexing.status.title": "Statut",
+  "settings.indexing.title": "Indexation",
+  "settings.indexing.tuning.description": "Paramètre avancé de recherche et de traitement par lots.",
+  "settings.indexing.vectorStore.description": "Choisissez où les embeddings indexés sont stockés.",
+  "settings.indexing.vectorStore.title": "Stockage vectoriel",
 
   "settings.updates.row.startup.title": "Vérifier les mises à jour au démarrage",
   "settings.updates.row.startup.description": "Vérifier automatiquement les mises à jour au lancement d'Kilo",
@@ -1156,6 +1217,9 @@ export const dict = {
   "settings.experimental.pasteSummary.description": "Ne pas résumer le contenu collé volumineux",
   "settings.experimental.batch.title": "Outil par lot",
   "settings.experimental.batch.description": "Activer le traitement par lot d'appels d'outils",
+  "settings.experimental.semanticIndexing.title": "Semantic Indexing",
+  "settings.experimental.semanticIndexing.description":
+    "Enable semantic codebase indexing and the semantic_search tool. Requires indexing configuration.",
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",

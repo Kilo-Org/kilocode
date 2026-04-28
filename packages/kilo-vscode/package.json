@@ -98,7 +98,7 @@
       {
         "command": "kilo-code.new.agentManagerOpen",
         "title": "Agent Manager",
-        "icon": "$(circuit-board)"
+        "icon": "$(organization)"
       },
       {
         "command": "kilo-code.new.kiloClawOpen",
@@ -751,7 +751,6 @@
         },
         "kilo-code.new.autocomplete.model": {
           "type": "string",
-          "default": "mistralai/codestral-2508",
           "enum": [
             "mistralai/codestral-2508",
             "inception/mercury-edit"
@@ -907,6 +906,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
     "@kilocode/kilo-i18n": "workspace:*",
+    "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@opencode-ai/ui": "workspace:*",

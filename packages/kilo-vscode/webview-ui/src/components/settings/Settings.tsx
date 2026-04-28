@@ -22,6 +22,7 @@ import CommitMessageTab from "./CommitMessageTab"
 import ExperimentalTab from "./ExperimentalTab"
 import LanguageTab from "./LanguageTab"
 import AboutKiloCodeTab from "./AboutKiloCodeTab"
+import IndexingTab from "./IndexingTab"
 import { useServer } from "../../context/server"
 
 export interface SettingsProps {
@@ -34,7 +35,7 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { isDirty, saving, saveError, saveConfig, discardConfig } = useConfig()
+  const { isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
@@ -99,6 +100,11 @@ const Settings: Component<SettingsProps> = (props) => {
       },
     ),
   )
+
+  createEffect(() => {
+    if (features().indexing || active() !== "indexing") return
+    onTabChange("providers")
+  })
 
   const onTabChange = (tab: string) => {
     setActive(tab)
@@ -184,6 +190,12 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="edit" />
             <span class="label">{language.t("settings.commitMessage.title")}</span>
           </Tabs.Trigger>
+          <Show when={features().indexing}>
+            <Tabs.Trigger value="indexing">
+              <Icon name="server" />
+              <span class="label">{language.t("settings.indexing.title")}</span>
+            </Tabs.Trigger>
+          </Show>
           <Tabs.Trigger value="experimental">
             <Icon name="settings-gear" />
             <span class="label">{language.t("settings.experimental.title")}</span>
@@ -243,6 +255,12 @@ const Settings: Component<SettingsProps> = (props) => {
           <h3>{language.t("settings.commitMessage.title")}</h3>
           <CommitMessageTab />
         </Tabs.Content>
+        <Show when={features().indexing}>
+          <Tabs.Content value="indexing">
+            <h3>{language.t("settings.indexing.title")}</h3>
+            <IndexingTab />
+          </Tabs.Content>
+        </Show>
         <Tabs.Content value="experimental">
           <h3>{language.t("settings.experimental.title")}</h3>
           <ExperimentalTab />

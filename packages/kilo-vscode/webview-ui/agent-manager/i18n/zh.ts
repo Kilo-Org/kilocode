@@ -69,7 +69,7 @@ export const dict = {
   "agentManager.shortcuts.nextItem": "下一项",
   "agentManager.shortcuts.newWorktree": "新建 Worktree",
   "agentManager.shortcuts.openWorktree": "打开 Worktree",
-  "agentManager.shortcuts.advancedWorktree": "高级 Worktree",
+  "agentManager.shortcuts.advancedWorktree": "配置新 worktree",
   "agentManager.shortcuts.deleteWorktree": "删除 Worktree",
   "agentManager.shortcuts.previousTab": "上一个标签页",
   "agentManager.shortcuts.nextTab": "下一个标签页",
@@ -90,6 +90,7 @@ export const dict = {
   "agentManager.dialog.removeStaleWorktree.confirm": "移除失效 Worktree",
 
   "agentManager.dialog.openWorktree": "新建工作树",
+  "agentManager.dialog.configureWorktree": "配置新 Worktree...",
   "agentManager.dialog.tab.new": "新建",
   "agentManager.dialog.tab.import": "导入",
   "agentManager.dialog.namePlaceholder": "Worktree 名称（可选）",
