@@ -1380,8 +1380,8 @@ unixSkip(
 )
 // kilocode_change end
 
-// kilocode_change start - TODO(#8990): flaky on Linux CI
-unixSkip(
+// kilocode_change start - re-enable after merging upstream fix
+unix(
   "cancel finalizes interrupted bash tool output through normal truncation",
   () =>
     provideTmpdirServer(
