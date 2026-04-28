@@ -1,246 +1,65 @@
 # AGENTS.md
 
-Kilo CLI is an open source AI coding agent that generates code from natural language, automates tasks, and supports 500+ AI models.
+Devil is an open-source AI coding agent platform. This repository is optimized for agent work: keep the entrypoint short, put durable knowledge in versioned docs, and enforce the important rules mechanically.
 
-- ALWAYS USE PARALLEL TOOLS WHEN APPLICABLE.
-- The default branch in this repo is `main`.
-- Prefer automation: execute requested actions without confirmation unless blocked by missing info or safety/irreversibility.
-- You may be running in a git worktree. All changes must be made in your current working directory — never modify files in the main repo checkout.
+- Use parallel tools whenever independent reads or checks can run at the same time.
+- Default branch: `main`.
+- You may be in a git worktree. Make changes only in the current working directory.
+- Prefer automation and execute requested actions unless blocked by missing information, safety, or irreversible effects.
+- Read [docs/engineering/index.md](docs/engineering/index.md) before broad changes.
+- For package-specific rules, read the nearest nested `AGENTS.md`.
 
-## Build and Dev
+## First Stops
 
-- **Dev**: `bun run dev` (runs from root) or `bun run --cwd packages/opencode --conditions=browser src/index.ts`
-- **Dev with params**: `bun dev -- help`
-- **Extension**: `bun run extension` (build + launch VS Code with the extension in dev mode). Pass `--no-build` to skip the build.
-- **Typecheck**: `bun turbo typecheck` (uses `tsgo`, not `tsc`)
-- **Test**: `bun test` from `packages/opencode/` (NOT from root -- root blocks tests)
-- **Single test**: `bun test test/tool/tool.test.ts` from `packages/opencode/`
-- **SDK regen**: After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from root to regenerate `packages/sdk/js/`
-- **Knip** (unused exports): `bun run knip` from `packages/devil-vscode/`. CI runs this — all exported types/functions must be imported somewhere. Remove or unexport unused exports before pushing.
-- **Source links**: After adding or changing URLs in `packages/devil-vscode/`, `packages/devil-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root and commit the updated `packages/devil-docs/source-links.md`. CI runs this check — the build fails if the file is stale.
-- **devilcode_change check**: `bun run check-kilocode-change` from `packages/devil-vscode/`. CI runs this — `devilcode_change` is a marker for upstream merge conflicts and must not appear in `packages/devil-vscode/` or `packages/devil-ui/` (these are entirely Kilo Code additions). Remove the markers before pushing.
-- **opencode annotation check**: `bun run script/check-opencode-annotations.ts` from repo root. CI runs this on PRs touching `packages/opencode/` — every Kilo-specific change in shared opencode files must be annotated with `devilcode_change` markers. Exempt paths (no markers needed): `packages/opencode/src/devilcode/`, `packages/opencode/test/kilocode/`, and any path containing `kilocode` or `devilcode` in the name.
+|Need|Source|
+|---|---|
+|Architecture and package map|[docs/engineering/architecture.md](docs/engineering/architecture.md)|
+|Build, test, and validation commands|[docs/engineering/reliability.md](docs/engineering/reliability.md)|
+|Coding style and review taste|[docs/engineering/standards.md](docs/engineering/standards.md)|
+|Fork hygiene and `devilcode_change` markers|[docs/engineering/fork-hygiene.md](docs/engineering/fork-hygiene.md)|
+|Plans and historical execution context|[docs/engineering/plans.md](docs/engineering/plans.md)|
+|Planning corpus index|[.planning/README.md](.planning/README.md)|
+|Quality score and known risks|[docs/engineering/quality.md](docs/engineering/quality.md)|
+|Security expectations|[docs/engineering/security.md](docs/engineering/security.md)|
+|Cleanup backlog|[docs/engineering/technical-debt.md](docs/engineering/technical-debt.md)|
+
+## Common Commands
+
+- Dev CLI: `bun run dev`
+- Dev CLI with args: `bun dev -- help`
+- VS Code extension: `bun run extension`
+- Typecheck: `bun turbo typecheck`
+- Root test pipeline: `bun turbo test`
+- CLI-only tests: `bun test` from `packages/opencode/`
+- Single CLI test: `bun test test/tool/tool.test.ts` from `packages/opencode/`
+- Standards warnings: `bun run standards:check`
+- Standards enforcement: `bun run standards:enforce`
+- SDK regen after server endpoint changes: `./script/generate.ts` from root
+- Source link refresh after URL changes in checked packages: `bun run script/extract-source-links.ts`
 
 ## Products
 
-All products are clients of the **CLI** (`packages/opencode/`), which contains the AI agent runtime, HTTP server, and session management. Each client spawns or connects to a `kilo serve` process and communicates via HTTP + SSE using `@devilcode/sdk`.
-
-| Product                | Package                  | Description                                                                                                                                                                          |
-| ---------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Kilo CLI               | `packages/opencode/`     | Core engine. TUI, `kilo run`, `kilo serve`, `kilo web`. Fork of upstream OpenCode.                                                                                                   |
-| Kilo VS Code Extension | `packages/devil-vscode/` | VS Code extension. Bundles the CLI binary, spawns `kilo serve` as a child process. Includes the **Agent Manager** — a multi-session orchestration panel with git worktree isolation. |
-| OpenCode Desktop       | `packages/desktop/`      | Standalone Tauri native app. Bundles CLI as sidecar. Single-session UI. Unrelated to the VS Code extension. Not actively maintained — synced from upstream fork.                     |
-| OpenCode Web           | `packages/app/`          | Shared SolidJS frontend used by both the desktop app and `kilo web` CLI command. Not actively maintained — synced from upstream fork.                                                |
-
-**Agent Manager** refers to a feature inside `packages/devil-vscode/` (extension code in `src/agent-manager/`, webview in `webview-ui/agent-manager/`). It is not a standalone product. See the extension's `AGENTS.md` for details.
-
-## Monorepo Structure
-
-Turborepo + Bun workspaces. The packages you'll work with most:
-
-| Package                     | Name                       | Purpose                                                                                    |
-| --------------------------- | -------------------------- | ------------------------------------------------------------------------------------------ |
-| `packages/opencode/`        | `@devilcode/cli`            | Core CLI -- agents, tools, sessions, server, TUI. This is where most work happens.         |
-| `packages/sdk/js/`          | `@devilcode/sdk`            | Auto-generated TypeScript SDK (client for the server API). Do not edit `src/gen/` by hand. |
-| `packages/devil-vscode/`    | `kilo-code`                | VS Code extension with sidebar chat + Agent Manager. See its own `AGENTS.md` for details.  |
-| `packages/devil-gateway/`   | `@devilcode/kilo-gateway`   | Kilo auth, provider routing, API integration                                               |
-| `packages/devil-telemetry/` | `@devilcode/kilo-telemetry` | PostHog analytics + OpenTelemetry                                                          |
-| `packages/devil-i18n/`      | `@devilcode/kilo-i18n`      | Internationalization / translations                                                        |
-| `packages/devil-ui/`        | `@devilcode/kilo-ui`        | SolidJS component library shared by the extension webview and `packages/app/`              |
-| `packages/app/`             | `@opencode-ai/app`         | Shared SolidJS web UI for desktop app and `kilo web`                                       |
-| `packages/desktop/`         | `@opencode-ai/desktop`     | Tauri desktop app shell                                                                    |
-| `packages/util/`            | `@opencode-ai/util`        | Shared utilities (error, path, retry, slug, etc.)                                          |
-| `packages/plugin/`          | `@devilcode/plugin`         | Plugin/tool interface definitions                                                          |
-
-## Style Guide
-
-- Keep things in one function unless composable or reusable
-- Avoid unnecessary destructuring. Instead of `const { a, b } = obj`, use `obj.a` and `obj.b` to preserve context
-- Avoid `try`/`catch` where possible
-- Avoid using the `any` type
-- Prefer single word variable names where possible
-- Use Bun APIs when possible, like `Bun.file()`
-- Rely on type inference when possible; avoid explicit type annotations or interfaces unless necessary for exports or clarity
-
-### Avoid let statements
-
-We don't like `let` statements, especially combined with if/else statements.
-Prefer `const`.
-
-Good:
-
-### Naming Enforcement (Read This)
-
-THIS RULE IS MANDATORY FOR AGENT WRITTEN CODE.
-
-- Use single word names by default for new locals, params, and helper functions.
-- Multi-word names are allowed only when a single word would be unclear or ambiguous.
-- Do not introduce new camelCase compounds when a short single-word alternative is clear.
-- Before finishing edits, review touched lines and shorten newly introduced identifiers where possible.
-- Good short names to prefer: `pid`, `cfg`, `err`, `opts`, `dir`, `root`, `child`, `state`, `timeout`.
-- Examples to avoid unless truly required: `inputPID`, `existingClient`, `connectTimeout`, `workerPath`.
-
-```ts
-const foo = condition ? 1 : 2
-```
-
-Bad:
-
-```ts
-let foo
-
-if (condition) foo = 1
-else foo = 2
-```
-
-### Avoid else statements
-
-Prefer early returns or using an `iife` to avoid else statements.
-
-Good:
-
-```ts
-function foo() {
-  if (condition) return 1
-  return 2
-}
-```
-
-Bad:
-
-```ts
-function foo() {
-  if (condition) return 1
-  else return 2
-}
-```
-
-### No empty catch blocks
-
-Never leave a `catch` block empty. An empty `catch` silently swallows errors and hides bugs. If you're tempted to write one, ask yourself:
-
-1. Is the `try`/`catch` even needed? (prefer removing it)
-2. Should the error be handled explicitly? (recover, retry, rethrow)
-3. At minimum, log it so failures are visible
-
-Good:
-
-```ts
-try {
-  await save(data)
-} catch (err) {
-  log.error("save failed", { err })
-}
-```
-
-Bad:
-
-```ts
-try {
-  await save(data)
-} catch {}
-```
-
-### Prefer single word naming
-
-Try your best to find a single word name for your variables, functions, etc.
-Only use multiple words if you cannot.
-
-Good:
-
-```ts
-const foo = 1
-const bar = 2
-const baz = 3
-```
-
-Bad:
-
-```ts
-const fooBar = 1
-const barBaz = 2
-const bazFoo = 3
-```
-
-## Testing
-
-You MUST avoid using `mocks` as much as possible.
-Tests MUST test actual implementation, do not duplicate logic into a test.
-
-## Commit Conventions
-
-[Conventional Commits](https://www.conventionalcommits.org/) with scopes matching packages: `vscode`, `cli`, `agent-manager`, `sdk`, `ui`, `i18n`, `kilo-docs`, `gateway`, `telemetry`, `desktop`. Omit scope when spanning multiple packages.
-
-## Fork Merge Process
-
-Kilo CLI is a fork of [opencode](https://github.com/anomalyco/opencode).
-
-**Very important**: when planning or coding, update shared files with OpenCode as last resort! Everything is shared code from OpenCode, except folders that contain `kilo` in the name or have a parent directory that contains `kilo` in the name. Example of kilo specific folders: `packages/opencode/src/devilcode/` and `packages/kilo-docs/`. Always look for ways to implement your feature or fix in a way that minimizes changes to shared code.
-
-### Minimizing Merge Conflicts
-
-We regularly merge upstream changes from opencode. To minimize merge conflicts and keep the sync process smooth:
-
-1. **Prefer dedicated directories** - Place Kilo-specific code in dedicated directories whenever possible:
-   - `packages/opencode/src/devilcode/` - Kilo-specific source code
-   - `packages/opencode/test/kilocode/` - Kilo-specific tests
-   - `packages/devil-gateway/` - The Kilo Gateway package
-
-2. **Minimize changes to shared files** - When you must modify files that exist in upstream opencode, keep changes as small and isolated as possible.
-
-3. **Use `devilcode_change` markers** - When modifying shared code, mark your changes with `devilcode_change` comments so they can be easily identified during merges.
-   Do not use these markers in files within directories with kilo in the name
-
-4. **Avoid restructuring upstream code** - Don't refactor or reorganize code that comes from opencode unless absolutely necessary.
-
-The goal is to keep our diff from upstream as small as possible, making regular merges straightforward and reducing the risk of conflicts.
-
-### Kilocode Change Markers
-
-To minimize merge conflicts when syncing with upstream, mark Kilo Code-specific changes in shared code with `devilcode_change` comments.
-
-**Single line:**
-
-```typescript
-const value = 42 // devilcode_change
-```
-
-**Multi-line:**
-
-```typescript
-// devilcode_change start
-const foo = 1
-const bar = 2
-// devilcode_change end
-```
-
-**New files:**
-
-```typescript
-// devilcode_change - new file
-```
-
-<!-- prettier-ignore -->
-**JSX/TSX (inside JSX templates):**
-
-<!-- prettier-ignore -->
-```tsx
-{/* kilocode_change */}
-```
-
-<!-- prettier-ignore -->
-```tsx
-{/* kilocode_change start */}
-<MyComponent />
-{/* kilocode_change end */}
-```
-
-#### When markers are NOT needed
-
-Code in these paths is Kilo Code-specific and does NOT need `devilcode_change` markers:
-
-- `packages/opencode/src/devilcode/` - All files in this directory
-- `packages/opencode/test/kilocode/` - All test files for kilocode
-- Any other path containing `kilocode` or `devilcode` in filename or directory name
-
-These paths are entirely Kilo Code additions and won't conflict with upstream.
+All products are clients of the CLI in `packages/opencode/`, which owns the agent runtime, HTTP server, and session management.
+
+|Product|Package|Notes|
+|---|---|---|
+|Devil CLI|`packages/opencode/`|Core engine: TUI, `devil run`, `devil serve`, `devil web`. Forked from upstream OpenCode.|
+|Devil VS Code Extension|`packages/devil-vscode/`|Bundles the CLI and includes Agent Manager. Some compatibility IDs still use `kilo-code.*`.|
+|OpenCode Desktop|`packages/desktop/`|Tauri native app, synced from upstream and not actively maintained.|
+|OpenCode Web|`packages/app/`|Shared SolidJS frontend for desktop and `devil web`, not actively maintained.|
+
+## Non-Negotiables
+
+- Prefer new Devil-specific code in `packages/opencode/src/devilcode/`, `packages/opencode/test/devilcode/`, or `packages/devil-*`.
+- Shared upstream OpenCode changes in `packages/opencode/` need `devilcode_change` markers unless the path contains `devilcode` or `kilocode`.
+- Do not edit generated SDK files by hand.
+- Do not use empty `catch` blocks.
+- Prefer `const`, early returns, and short names when clear.
+- Avoid `any`; rely on inference unless exported types or clarity need annotations.
+- Use Bun APIs where they fit.
+- On Windows, subprocesses must not flash visible consoles. In `packages/opencode/`, use `Process.spawn`; in `packages/devil-vscode/`, use the local process wrappers.
+- Always run relevant tests after code changes and report any pre-existing failures.
+
+## Naming
+
+Devil is the canonical public identity for this repo. Kilo names remain only where they are compatibility surfaces, such as extension IDs, command prefixes, package names, persisted settings, or legacy migration paths. New docs, workflows, and checks should use Devil naming unless an exception is documented.

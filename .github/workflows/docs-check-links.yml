@@ -14,7 +14,7 @@ on:
 
 jobs:
   link-checker:
-    if: github.repository == 'Kilo-Org/kilocode'
+    if: github.repository == 'Devil-Org/devilcode'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

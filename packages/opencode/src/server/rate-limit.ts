@@ -50,6 +50,7 @@ type BunServerLike = {
 }
 
 const DEFAULT_KEY = (c: Context) => {
+  // devilcode_change start
   // getBunServer throws when request dispatched without a bound Bun server
   // (e.g. Server.App().fetch(req) from the TUI worker). Degrade to local key.
   const server = (() => {
@@ -59,6 +60,7 @@ const DEFAULT_KEY = (c: Context) => {
       return undefined
     }
   })()
+  // devilcode_change end
   const info = server?.requestIP?.(c.req.raw)
   if (!info?.address) return localKey(c)
   if (loopback(info.address)) return localKey(c, info.address, info.port)

@@ -19,5 +19,6 @@
       "@tui/*": ["../opencode/src/cli/cmd/tui/*"]
     }
   },
-  "include": ["src/**/*", ".storybook/**/*", "../opencode/src/md.d.ts"]
+  "include": ["src/**/*", ".storybook/**/*", "../opencode/src/md.d.ts"],
+  "exclude": ["src/**/__tests__/**", "src/**/*.test.ts", "src/**/*.test.tsx"]
 }
