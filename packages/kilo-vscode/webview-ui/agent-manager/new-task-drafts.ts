@@ -21,7 +21,10 @@ export function createNewTaskDrafts(timeout = 30_000) {
   const create = (worktreeId: string) => {
     const task = { id: `task:${++seq}`, worktreeId }
     tasks.set(worktreeId, [...(tasks.get(worktreeId) ?? []), task.id])
-    timers.set(task.id, setTimeout(() => remove(task), timeout))
+    timers.set(
+      task.id,
+      setTimeout(() => remove(task), timeout),
+    )
     return task
   }
 
