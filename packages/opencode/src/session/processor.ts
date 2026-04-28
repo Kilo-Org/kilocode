@@ -629,12 +629,12 @@ export const layer: Layer.Layer<
             // kilocode_change start
             if (ctx.assistantMessage.finish === "unknown") {
               const parts = MessageV2.parts(ctx.assistantMessage.id)
-              if (!parts.some((p) => p.type === "tool")) {
+              if (!parts.some((p) => p.type === "tool" && p.state.status === "completed")) {
                 yield* Effect.fail(
                   new MessageV2.APIError({
                     message: "Stream terminated prematurely without a finish reason",
                     isRetryable: true,
-                  }).toObject()
+                  })
                 )
               }
             }

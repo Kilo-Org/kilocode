@@ -1164,6 +1164,10 @@ export function fromError(
       ).toObject()
     case OutputLengthError.isInstance(e):
       return e
+    // kilocode_change start
+    case APIError.isInstance(e):
+      return e.toObject()
+    // kilocode_change end
     case LoadAPIKeyError.isInstance(e):
       return new AuthError(
         {
