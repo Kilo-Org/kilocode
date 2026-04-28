@@ -36,24 +36,24 @@ function coveredLines(text: string): Set<number> {
     return covered
   }
 
-  let block = false
+  let depth = 0
   for (let i = 0; i < lines.length; i++) {
     const n = i + 1
     const line = lines[i] ?? ""
 
     if (line.match(BLOCK_START)) {
-      block = true
+      depth += 1
       covered.add(n)
       continue
     }
 
     if (line.match(BLOCK_END)) {
       covered.add(n)
-      block = false
+      depth = Math.max(0, depth - 1)
       continue
     }
 
-    if (block) {
+    if (depth > 0) {
       covered.add(n)
       continue
     }
@@ -157,7 +157,7 @@ describe("isExempt", () => {
     ["packages/opencode/src/tool/registry.ts", false],
     ["packages/opencode/src/config/config.ts", false],
     ["packages/opencode/src/indexing/search-service.ts", false],
-    // devilcode_change is not the same as kilocode
+    // path has no "devilcode" or "kilocode" segment — marker text in content doesn't exempt the path
     ["packages/opencode/src/check-opencode-annotations.ts", false],
   ]
 
@@ -309,7 +309,7 @@ describe("coveredLines", () => {
     expect(covered).toEqual(new Set([2, 3, 4]))
   })
 
-  test("nested block — inner block ends, outer continues", () => {
+  test("nested block — inner end decrements depth, outer block continues", () => {
     const text = [
       "// devilcode_change start",
       "{/* devilcode_change start */}",
@@ -319,13 +319,13 @@ describe("coveredLines", () => {
       "// devilcode_change end",
     ].join("\n")
     const covered = coveredLines(text)
-    // Line 1: start, block=true
-    // Line 2: inner start, block=true (covered by block)
-    // Line 3: covered by block
-    // Line 4: inner end, block=false, covered by end marker
-    // Line 5: NOT covered (block is false, no inline marker)
-    // Line 6: outer end, block already false, covered by end marker
-    expect(covered).toEqual(new Set([1, 2, 3, 4, 6]))
+    // Line 1: depth 0→1, covered
+    // Line 2: depth 1→2, covered
+    // Line 3: depth=2, covered
+    // Line 4: inner end, depth 2→1, covered
+    // Line 5: depth=1 (outer still open), covered
+    // Line 6: outer end, depth 1→0, covered
+    expect(covered).toEqual(new Set([1, 2, 3, 4, 5, 6]))
   })
 
   test("whitespace before marker is handled", () => {

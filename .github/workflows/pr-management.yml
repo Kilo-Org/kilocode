@@ -50,6 +50,7 @@ jobs:
 
       # devilcode_change start
       - name: Setup Kilo
+        if: steps.team-check.outputs.is_team != 'true'
         uses: ./.github/actions/setup-kilo
       # devilcode_change end
 

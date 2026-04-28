@@ -213,8 +213,7 @@ function DomBranch(props: {
                 aria-controls={panelId}
                 data-tab-id={tab.id}
                 onClick={(e: MouseEvent) => {
-                  const target = e.target
-                  if (target instanceof HTMLElement && target.dataset.close === "true") {
+                  if ((e.target as Element).closest('[data-close="true"]')) {
                     e.stopPropagation()
                     props.onClose?.(tab.id)
                     return

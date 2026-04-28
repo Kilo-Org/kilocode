@@ -99,24 +99,24 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
     return { lines, covered }
   }
 
-  let block = false
+  let depth = 0
   for (let i = 0; i < lines.length; i++) {
     const n = i + 1
     const line = lines[i] ?? ""
 
     if (line.match(BLOCK_START)) {
-      block = true
+      depth += 1
       covered.add(n)
       continue
     }
 
     if (line.match(BLOCK_END)) {
       covered.add(n)
-      block = false
+      depth = Math.max(0, depth - 1)
       continue
     }
 
-    if (block) {
+    if (depth > 0) {
       covered.add(n)
       continue
     }

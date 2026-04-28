@@ -402,7 +402,10 @@ export namespace File {
         log.warn("file index failed", { err })
       })
     }
-    scan(cache)
+    scan({
+      files: [],
+      dirs: [],
+    })
     // devilcode_change end
 
     return {

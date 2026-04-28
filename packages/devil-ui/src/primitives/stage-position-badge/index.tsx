@@ -36,7 +36,7 @@ function TerminalBranch(props: { info: StagePositionInfo }): JSX.Element {
     // Compact ASCII — no emoji
     return `[${stage.toUpperCase()}:${label}]`
   }
-  return <text>{text()}</text>
+  return <span>{text()}</span>
 }
 
 // ---------------------------------------------------------------------------

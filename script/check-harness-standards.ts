@@ -52,12 +52,18 @@ function add(level: Level, message: string, file?: string) {
 function list(dir: string): string[] {
   const base = abs(dir)
   if (!existsSync(base)) return []
-  return readdirSync(base, { withFileTypes: true }).flatMap((entry) => {
-    const file = path.join(base, entry.name)
-    if (entry.isDirectory()) return list(rel(file))
-    if (entry.isFile()) return [rel(file)]
+  try {
+    return readdirSync(base, { withFileTypes: true }).flatMap((entry) => {
+      const file = path.join(base, entry.name)
+      if (entry.isDirectory()) return list(rel(file))
+      if (entry.isFile()) return [rel(file)]
+      return []
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    add("error", `Unable to list directory: ${msg}`, rel(base))
     return []
-  })
+  }
 }
 
 function line(text: string, value: string) {
@@ -70,11 +76,18 @@ function label(file: string, suffix = "") {
 }
 
 function load(file: string) {
-  if (!existsSync(abs(file))) {
+  const full = abs(file)
+  if (!existsSync(full)) {
     add("error", "Required file is missing.", file)
     return ""
   }
-  return read(file)
+  try {
+    return readFileSync(full, "utf8")
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    add("error", `Unable to read file: ${msg}`, file)
+    return ""
+  }
 }
 
 function parseJson<T>(file: string, fallback: T): T {
@@ -93,33 +106,49 @@ function links(file: string, text: string) {
   return [...text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1] ?? "")
 }
 
-function local(file: string, target: string) {
+function local(file: string, target: string): string | null | undefined {
   if (!target || target.startsWith("#")) return undefined
+  if (target.startsWith("//")) return undefined
   if (/^[a-z]+:/i.test(target)) return undefined
-  const clean = target.split("#")[0] ?? ""
+  const clean = target.split(/[?#]/)[0] ?? ""
   if (!clean) return undefined
-  if (clean.startsWith("/")) return clean.slice(1)
-  return unix(path.normalize(path.join(path.dirname(file), clean)))
+  const full = clean.startsWith("/")
+    ? path.resolve(root, `.${clean}`)
+    : path.resolve(root, path.dirname(file), clean)
+  const resolved = unix(path.relative(root, full))
+  if (resolved.startsWith("..") || path.isAbsolute(resolved)) return null
+  return resolved
 }
 
 function checkLinks(file: string, text: string) {
   for (const target of links(file, text)) {
     const dest = local(file, target)
+    if (dest === null) {
+      add("error", `Local link escapes repository root: ${target}`, file)
+      continue
+    }
     if (!dest) continue
     if (!existsSync(abs(dest))) add("error", `Broken local link: ${target}`, file)
   }
 }
 
 function checkDocs() {
-  for (const doc of docs) load(doc)
+  const textByDoc = new Map<string, string>()
+  for (const doc of docs) textByDoc.set(doc, load(doc))
 
-  const map = load("docs/engineering/index.md")
+  const map = textByDoc.get("docs/engineering/index.md") ?? ""
+  const indexLinks = new Set(
+    links("docs/engineering/index.md", map)
+      .map((target) => local("docs/engineering/index.md", target))
+      .filter((dest): dest is string => !!dest)
+      .map((dest) => path.basename(dest)),
+  )
   for (const doc of docs.filter((item) => item !== "docs/engineering/index.md" && item !== ".planning/README.md")) {
     const name = path.basename(doc)
-    if (!map.includes(name)) add("error", `Engineering index does not link ${name}.`, "docs/engineering/index.md")
+    if (!indexLinks.has(name)) add("error", `Engineering index does not link ${name}.`, "docs/engineering/index.md")
   }
 
-  for (const doc of docs) checkLinks(doc, load(doc))
+  for (const doc of docs) checkLinks(doc, textByDoc.get(doc) ?? "")
 }
 
 function checkAgents() {
@@ -168,7 +197,7 @@ function checkMarkers() {
 
 function checkWorkflows() {
   for (const file of list(".github/workflows").filter((item) => item.match(/\.ya?ml$/))) {
-    const text = read(file)
+    const text = load(file)
     if (text.match(/github\.repository\s*==\s*['"]Kilo-Org\/kilocode['"]/)) {
       add("error", "Active workflow repository guard should target Devil-Org/devilcode.", file)
     }
@@ -200,5 +229,6 @@ for (const issue of issues) {
 if (issues.length === 0) console.log("Harness standards check passed.")
 else console.log(`Harness standards check found ${groups.error.length} errors and ${groups.warn.length} warnings.`)
 
-if (strict && groups.error.length > 0) process.exit(1)
+if (groups.error.length > 0) process.exit(1)
+if (strict && groups.warn.length > 0) process.exit(1)
 process.exit(groups.warn.length > 0 ? 2 : 0)

@@ -225,7 +225,11 @@ export namespace Project {
 
     // devilcode_change start
     if (Flag.DEVIL_EXPERIMENTAL_ICON_DISCOVERY) {
-      void discover(existing).catch((err) => {
+      void discover({
+        ...existing,
+        worktree: data.worktree,
+        vcs: data.vcs as Info["vcs"],
+      }).catch((err) => {
         log.warn("icon discovery failed", { err })
       })
     }
