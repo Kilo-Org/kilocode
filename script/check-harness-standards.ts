@@ -70,11 +70,18 @@ function label(file: string, suffix = "") {
 }
 
 function load(file: string) {
-  if (!existsSync(abs(file))) {
+  const full = abs(file)
+  if (!existsSync(full)) {
     add("error", "Required file is missing.", file)
     return ""
   }
-  return read(file)
+  try {
+    return readFileSync(full, "utf8")
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    add("error", `Unable to read file: ${msg}`, file)
+    return ""
+  }
 }
 
 function parseJson<T>(file: string, fallback: T): T {
@@ -111,15 +118,16 @@ function checkLinks(file: string, text: string) {
 }
 
 function checkDocs() {
-  for (const doc of docs) load(doc)
+  const textByDoc = new Map<string, string>()
+  for (const doc of docs) textByDoc.set(doc, load(doc))
 
-  const map = load("docs/engineering/index.md")
+  const map = textByDoc.get("docs/engineering/index.md") ?? ""
   for (const doc of docs.filter((item) => item !== "docs/engineering/index.md" && item !== ".planning/README.md")) {
     const name = path.basename(doc)
     if (!map.includes(name)) add("error", `Engineering index does not link ${name}.`, "docs/engineering/index.md")
   }
 
-  for (const doc of docs) checkLinks(doc, load(doc))
+  for (const doc of docs) checkLinks(doc, textByDoc.get(doc) ?? "")
 }
 
 function checkAgents() {
@@ -200,5 +208,6 @@ for (const issue of issues) {
 if (issues.length === 0) console.log("Harness standards check passed.")
 else console.log(`Harness standards check found ${groups.error.length} errors and ${groups.warn.length} warnings.`)
 
-if (strict && groups.error.length > 0) process.exit(1)
+if (groups.error.length > 0) process.exit(1)
+if (strict && groups.warn.length > 0) process.exit(1)
 process.exit(groups.warn.length > 0 ? 2 : 0)
