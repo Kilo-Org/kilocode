@@ -4,14 +4,17 @@
  * Matches the v1.0.25 working indicator UX.
  */
 
-import { Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
+import { type Component, Show, createSignal, createEffect, onCleanup } from "solid-js"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
+import { Button } from "@kilocode/kilo-ui/button"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 
 export const WorkingIndicator: Component = () => {
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
 
   const [elapsed, setElapsed] = createSignal(0)
   const [retryCountdown, setRetryCountdown] = createSignal(0)
@@ -60,6 +63,9 @@ export const WorkingIndicator: Component = () => {
       const retryMsg = info.message || language.t("session.status.retry")
       return countdown > 0 ? `${retryMsg} (${countdown}s)` : retryMsg
     }
+    if (info.type === "offline") {
+      return info.message || language.t("session.status.offline")
+    }
     return session.statusText() ?? language.t("ui.sessionTurn.status.thinking")
   }
 
@@ -71,13 +77,43 @@ export const WorkingIndicator: Component = () => {
     return `${m}m ${rem}s`
   }
 
+  const blocked = () => {
+    const id = session.currentSessionID()
+    const perms = session
+      .permissions()
+      .filter((p) => p.sessionID === id && !(p.tool && ["todowrite", "todoread"].includes(p.toolName)))
+    const questions = session.questions().filter((q) => q.sessionID === id)
+    const suggestions = session.suggestions().filter((s) => s.sessionID === id)
+    return perms.length > 0 || questions.length > 0 || suggestions.length > 0
+  }
+
+  const isRetrying = () => session.statusInfo().type === "retry"
+
+  const handleCancelRetry = () => {
+    const sid = session.currentSessionID()
+    if (sid) {
+      vscode.postMessage({ type: "abort", sessionID: sid })
+    }
+  }
+
   return (
-    <Show when={session.status() !== "idle"}>
+    <Show when={session.status() !== "idle" && !blocked()}>
       <div class="working-indicator">
         <Spinner />
         <span class="working-text">{statusText()}</span>
         <Show when={elapsed() > 0}>
           <span class="working-elapsed">{formatElapsed()}</span>
+        </Show>
+        <Show when={isRetrying()}>
+          <Button
+            variant="secondary"
+            size="small"
+            onClick={handleCancelRetry}
+            class="working-cancel"
+            style={{ "font-weight": "600", color: "var(--vscode-errorForeground, #f85149)" }}
+          >
+            {language.t("ui.sessionTurn.cancel") || "Cancel"}
+          </Button>
         </Show>
       </div>
     </Show>

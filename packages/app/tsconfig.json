@@ -17,11 +17,11 @@
     "emitDeclarationOnly": true,
     "outDir": "node_modules/.ts-dist",
     "isolatedModules": true,
+    "types": ["bun", "node"],
     "paths": {
       "@/*": ["./src/*"]
     }
   },
   "include": ["src", "package.json"],
-  "exclude": ["dist", "ts-dist"],
-  "references": [{ "path": "../sdk/js" }]
+  "exclude": ["dist", "ts-dist"]
 }

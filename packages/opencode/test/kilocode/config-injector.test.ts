@@ -109,7 +109,6 @@ describe("KilocodeConfigInjector", () => {
       expect(config.command["deploy"]).toBeDefined()
     })
 
-    // kilocode_change start - Rules migration tests
     test("includes rules in config", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -197,9 +196,7 @@ describe("KilocodeConfigInjector", () => {
 
       expect(result.warnings.some((w) => w.includes("Legacy"))).toBe(true)
     })
-    // kilocode_change end
 
-    // kilocode_change start - Ignore migration tests
     test("includes ignore patterns in config", async () => {
       await using tmp = await tmpdir({
         init: async (dir) => {
@@ -283,7 +280,6 @@ describe("KilocodeConfigInjector", () => {
       expect(config.permission.read["*.env"]).toBe("deny")
       expect(config.permission.read[".env.example"]).toBe("allow")
     })
-    // kilocode_change end
   })
 
   describe("getEnvVars", () => {

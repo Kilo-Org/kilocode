@@ -9,7 +9,7 @@ export { KiloAuthPlugin, default } from "./plugin.js"
 export { createKilo } from "./provider.js"
 export { createKiloDebug } from "./provider-debug.js"
 export { kiloCustomLoader } from "./loader.js"
-export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, DEFAULT_HEADERS } from "./headers.js" // kilocode_change - added getFeatureHeader
+export { buildKiloHeaders, getEditorNameHeader, getFeatureHeader, getDefaultHeaders, getUserAgent } from "./headers.js"
 
 // ============================================================================
 // Auth
@@ -34,6 +34,12 @@ export {
   promptOrganizationSelection,
 } from "./api/profile.js"
 export { fetchKiloModels } from "./api/models.js"
+export {
+  fetchOrganizationModes,
+  clearModesCache,
+  type OrganizationMode,
+  type OrganizationModeConfig,
+} from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
 
 // ============================================================================
@@ -60,11 +66,12 @@ export type {
   PollOptions,
   PollResult,
   // Provider types
+  KiloProvider,
   KiloProviderOptions,
   KiloMetadata,
   CustomLoaderResult,
   ProviderInfo,
-  LanguageModelV2,
+  LanguageModelV3,
 } from "./types.js"
 
 // ============================================================================
@@ -79,7 +86,7 @@ export {
   DEFAULT_MODEL,
   DEFAULT_FREE_MODEL,
   TOKEN_EXPIRATION_MS,
-  USER_AGENT,
+  USER_AGENT_BASE,
   CONTENT_TYPE,
   DEFAULT_PROVIDER_NAME,
   ANONYMOUS_API_KEY,
@@ -93,6 +100,9 @@ export {
   HEADER_FEATURE,
   DEFAULT_EDITOR_NAME,
   ENV_EDITOR_NAME,
+  ENV_VERSION,
   TESTER_SUPPRESS_VALUE,
   ENV_FEATURE,
+  PROMPTS,
+  AI_SDK_PROVIDERS,
 } from "./api/constants.js"

@@ -34,10 +34,59 @@ The specific models available depend on your Claude subscription and plan. See [
 
 ## Configuration in Kilo Code
 
+{% tabs %}
+{% tab label="VSCode (Legacy)" %}
+
 1. **Open Kilo Code Settings:** Click the gear icon ({% codicon name="gear" /%}) in the Kilo Code panel.
 2. **Select Provider:** Choose "Claude Code" from the "API Provider" dropdown.
 3. **Select Model:** Choose your desired Claude model from the "Model" dropdown.
 4. **(Optional) Custom CLI Path:** If you installed Claude Code to a location other than the default `claude` command, enter the full path to your Claude executable in the "Claude Code Path" field. Most users won't need to change this.
+
+{% /tab %}
+{% tab label="VSCode" %}
+
+{% callout type="warning" %}
+Claude Code credentials no longer work in Kilo Code. Please use the [Anthropic provider](/docs/ai-providers/anthropic) with an API key instead.
+{% /callout %}
+
+{% /tab %}
+{% tab label="CLI" %}
+
+Claude Code uses your existing Anthropic credentials (from the `claude` CLI). Make sure the Claude Code CLI is installed and authenticated:
+
+```bash
+claude --version
+claude auth login
+```
+
+If you have an `ANTHROPIC_API_KEY` environment variable set, the Claude CLI will use it automatically:
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key"
+```
+
+**Config file** (`~/.config/kilo/kilo.json` or `./kilo.json`):
+
+```jsonc
+{
+  "provider": {
+    "anthropic": {
+      "env": ["ANTHROPIC_API_KEY"],
+    },
+  },
+}
+```
+
+Then set your default model:
+
+```jsonc
+{
+  "model": "anthropic/claude-sonnet-4-20250514",
+}
+```
+
+{% /tab %}
+{% /tabs %}
 
 ## Tips and Notes
 

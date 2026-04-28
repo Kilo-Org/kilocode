@@ -46,32 +46,59 @@ async function disableAnimations(page: Page) {
 }
 
 // Stories to skip from visual regression (add IDs here if needed)
-const SKIP = new Set<string>([])
+// Spinner animation captures at an indeterminate frame, causing flaky diffs.
+// Permission dock config-preloaded has non-deterministic toggle rendering.
+const SKIP = new Set<string>([
+  "agentmanager--worktree-item-busy",
+  "agentmanager--pr-badge-checks-pending",
+  "composite-webview--permission-dock-config-preloaded",
+])
 
-// Use test.describe + beforeAll to avoid top-level await which breaks
-// on Node.js versions with strict ESM/CJS boundaries.
-test.describe("Visual Regression", () => {
-  let stories: Story[] = []
+const DOCS = new Map<string, string[]>([
+  [
+    "chat--task-header-with-todos",
+    [
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/chat/task-header-with-todos-chromium-linux.png",
+    ],
+  ],
+  [
+    "composite-webview--todo-write-docs-overview",
+    [
+      "packages/kilo-docs/pages/code-with-ai/features/task-todo-list.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/composite-webview/todo-write-docs-overview-chromium-linux.png",
+    ],
+  ],
+  [
+    "settings--agent-behaviour-workflows",
+    [
+      "packages/kilo-docs/pages/customize/workflows.md:/docs/img/screenshot-tests/kilo-vscode/visual-regression/settings/agent-behaviour-workflows-chromium-linux.png",
+    ],
+  ],
+])
 
-  test.beforeAll(async () => {
-    if (IS_DARWIN) return
-    stories = (await fetchStories()).filter((s) => !SKIP.has(s.id))
-  })
+// Generate one test() per story so Playwright's scheduler can distribute
+// them freely across workers — no manual sharding needed.
+// Skip fetching stories on macOS since test.skip() above already marks the file skipped.
+const stories = IS_DARWIN ? [] : (await fetchStories()).filter((s) => !SKIP.has(s.id))
 
-  test("all stories", async ({ page }) => {
-    if (IS_DARWIN) return
-    for (const story of stories) {
-      // Use kilo-vscode theme by default (matched to the preview initialGlobals)
-      await page.goto(
-        `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern`,
-        { waitUntil: "load" },
-      )
-      await disableAnimations(page)
-      await page.waitForSelector("#storybook-root *", { state: "attached" })
-
-      const [component, variant] = story.id.split("--")
-      const root = page.locator("#storybook-root")
-      await expect(root).toHaveScreenshot([component!, `${variant}.png`])
+for (const story of stories) {
+  test(`${story.title} / ${story.name}`, async ({ page }) => {
+    for (const ref of DOCS.get(story.id) ?? []) {
+      test.info().annotations.push({ type: "docs", description: ref })
     }
+
+    // Narrow stories (IDs ending in "-200") use a 200px viewport
+    const narrow = story.id.endsWith("-200")
+    await page.setViewportSize({ width: narrow ? 200 : 420, height: 720 })
+
+    await page.goto(
+      `/iframe.html?id=${story.id}&viewMode=story&globals=colorScheme:dark;theme:kilo-vscode;vscodeTheme:dark-modern`,
+      { waitUntil: "load" },
+    )
+    await disableAnimations(page)
+    await page.waitForSelector("#storybook-root *", { state: "attached" })
+
+    const [component, variant] = story.id.split("--")
+    const root = page.locator("#storybook-root")
+    await expect(root).toHaveScreenshot(["visual-regression", component!, `${variant!}-chromium-linux.png`])
   })
-})
+}

@@ -6,6 +6,7 @@ on:
 
 jobs:
   triage:
+    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read

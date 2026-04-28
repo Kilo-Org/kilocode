@@ -1,9 +1,27 @@
-/* kilocode_change - new file */
 /* Kilo Tabs overrides – sized to match @vscode/webview-ui-toolkit panels */
 
 [data-component="tabs"] {
   font-size: 13px;
   line-height: normal;
+
+  [data-slot="tabs-list"] {
+    padding: 8px;
+  }
+
+  [data-slot="tabs-trigger-wrapper"] {
+    padding: 8px;
+    border-radius: 2px;
+
+    &:has([data-selected]) {
+      background-color: var(--input-base);
+    }
+  }
+
+  [data-slot="tabs-trigger"] {
+    font-size: 12px;
+    line-height: normal;
+    padding: 0px;
+  }
 
   /* Pill variant: closest to legacy tab style */
   &[data-variant="pill"] [data-slot="tabs-list"] {
@@ -24,17 +42,42 @@
     padding: 4px 0;
     font-size: 13px;
     line-height: normal;
+    cursor: pointer;
   }
 
-  /* Settings variant: content area padding and header styling */
-  &[data-variant="settings"] [data-slot="tabs-content"] {
-    padding: 16px 20px;
+  &[data-variant="settings"] {
+    container-type: inline-size;
 
-    > h3 {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0 0 16px 0;
-      color: var(--vscode-foreground, var(--text-strong));
+    [data-slot="tabs-list"] {
+      width: 180px;
+      min-width: 180px;
+    }
+
+    @container (max-width: 500px) {
+      [data-slot="tabs-list"] {
+        width: auto;
+        min-width: auto;
+      }
+      [data-slot="tabs-trigger"] .label {
+        display: none;
+      }
+    }
+
+    [data-slot="tabs-content"] {
+      background-color: var(--background-base);
+      padding: 8px 16px;
+
+      > h3 {
+        font-size: 16px;
+        font-weight: 400;
+        margin: 16px 0;
+        color: var(--vscode-foreground, var(--text-strong));
+      }
+
+      [data-component="card"] {
+        padding: 0;
+        border: none;
+      }
     }
   }
 }

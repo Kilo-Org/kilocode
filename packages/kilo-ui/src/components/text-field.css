@@ -1,27 +1,63 @@
-/* kilocode_change - new file */
-/* Kilo Input / TextField overrides – sized to match @vscode/webview-ui-toolkit */
+/* Kilo Input / TextField overrides – styled to match Figma design */
 
 [data-component="input"] {
+  &[data-variant="normal"] [data-slot="input-label"] {
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: var(--font-weight-regular);
+    color: var(--text-base);
+  }
+
   &[data-variant="normal"] [data-slot="input-wrapper"] {
     border-radius: 2px;
+    border: 1px solid var(--border-base);
+    background: var(--background-weak);
+    padding-right: 0;
+    transition: border-color 150ms;
+
+    &:hover:not(:has([data-readonly])):not(:has(:disabled)) {
+      border-color: var(--border-hover);
+    }
 
     &:focus-within:not(:has([data-readonly])) {
-      border-color: var(--border-focus);
+      border-color: var(--border-hover);
+      box-shadow: 0 0 0 1px var(--border-focus);
+    }
+
+    &:has([data-invalid]) {
+      background: var(--background-weak);
+      border: 1px solid var(--border-critical-base);
       box-shadow: none;
+    }
+
+    &:has(:disabled) {
+      opacity: 0.5;
     }
   }
 
   &[data-variant="normal"] [data-slot="input-input"] {
-    height: 26px;
-    padding: 0 9px;
+    height: 32px;
+    padding: 6px 12px;
     font-size: 13px;
-    line-height: normal;
+    line-height: 16px;
     font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+    color: var(--text-base);
+
+    &::placeholder {
+      color: var(--icon-weak-base);
+    }
   }
 
   &[data-variant="normal"] textarea[data-slot="input-input"] {
     height: auto;
-    min-height: 26px;
-    padding: 9px;
+    min-height: 32px;
+    padding: 6px 12px;
+  }
+
+  &[data-variant="normal"] [data-slot="input-error"] {
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: var(--font-weight-regular);
+    color: var(--text-on-critical-base);
   }
 }

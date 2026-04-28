@@ -3,3 +3,4 @@ out/
 .vscode-test/
 storybook-static/
 test-results/
+playwright-report/

@@ -1,19 +1,21 @@
 import type { Argv } from "yargs"
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { Session } from "../../session"
+import { MessageV2 } from "../../session/message-v2"
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
-import { Database } from "../../storage/db"
+import { Database } from "../../storage"
 import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
 import { Instance } from "../../project/instance"
-import { ShareNext } from "../../share/share-next"
 import { EOL } from "os"
-import { Filesystem } from "../../util/filesystem"
-import { Log } from "../../util/log"
+import { Filesystem } from "../../util"
+import { AppRuntime } from "@/effect/app-runtime"
+import { Schema } from "effect"
+import { Log } from "../../util" // kilocode_change
 
-const log = Log.create({ service: "import-command" })
+const log = Log.create({ service: "import" }) // kilocode_change
 
-/** Discriminated union returned by the ShareNext API (GET /api/share/:id/data) */
+/** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =
   | { type: "session"; data: SDKSession }
   | { type: "message"; data: Message }
@@ -21,10 +23,20 @@ export type ShareData =
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
 
-/** Extract share ID from a share URL like https://opncd.ai/share/abc123 */
+// kilocode_change start
+/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/[^/]+\/share\/([a-zA-Z0-9_-]+)$/)
+  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
   return match ? match[1] : null
+}
+// kilocode_change end
+
+export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: string): boolean {
+  try {
+    return new URL(shareUrl).origin === new URL(accountBaseUrl).origin
+  } catch {
+    return false
+  }
 }
 
 /**
@@ -119,7 +131,7 @@ export const ImportCommand = cmd({
     await bootstrap(process.cwd(), async () => {
       let exportData:
         | {
-            info: Session.Info
+            info: SDKSession
             messages: Array<{
               info: Message
               parts: Part[]
@@ -130,16 +142,16 @@ export const ImportCommand = cmd({
       const isUrl = args.file.startsWith("http://") || args.file.startsWith("https://")
 
       if (isUrl) {
+        // kilocode_change start
         const slug = parseShareUrl(args.file)
         if (!slug) {
-          const baseUrl = await ShareNext.url()
-          process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
+          process.stdout.write(`Invalid URL format. Expected: https://app.kilo.ai/s/<id>`)
           process.stdout.write(EOL)
           return
         }
 
-        const baseUrl = await ShareNext.url()
-        const response = await fetch(`${baseUrl}/api/share/${slug}/data`)
+        const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
+        const response = await fetch(`${base}/session/${encodeURIComponent(slug)}`)
 
         if (!response.ok) {
           process.stdout.write(`Failed to fetch share data: ${response.statusText}`)
@@ -147,16 +159,16 @@ export const ImportCommand = cmd({
           return
         }
 
-        const shareData: ShareData[] = await response.json()
-        const transformed = transformShareData(shareData)
+        const data = await response.json()
 
-        if (!transformed) {
+        if (!data || typeof data !== "object" || !data.info || !data.messages || !Array.isArray(data.messages)) {
           process.stdout.write(`Share not found or empty: ${slug}`)
           process.stdout.write(EOL)
           return
         }
 
-        exportData = transformed
+        exportData = data
+        // kilocode_change end
       } else {
         exportData = await Filesystem.readJson<NonNullable<typeof exportData>>(args.file).catch(() => undefined)
         if (!exportData) {
@@ -172,33 +184,46 @@ export const ImportCommand = cmd({
         return
       }
 
-      Database.use((db) => {
-        db.insert(SessionTable).values(Session.toRow(exportData.info)).onConflictDoNothing().run()
-      })
+      const info = Schema.decodeUnknownSync(Session.Info)({
+        ...exportData.info,
+        projectID: Instance.project.id,
+      }) as Session.Info
+      const row = Session.toRow(info)
+      Database.use((db) =>
+        db
+          .insert(SessionTable)
+          .values(row)
+          .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
+          .run(),
+      )
 
       for (const msg of exportData.messages) {
+        const msgInfo = MessageV2.Info.zod.parse(msg.info)
+        const { id, sessionID: _, ...msgData } = msgInfo
         Database.use((db) =>
           db
             .insert(MessageTable)
             .values({
-              id: msg.info.id,
-              session_id: exportData.info.id,
-              time_created: msg.info.time?.created ?? Date.now(),
-              data: msg.info,
+              id,
+              session_id: row.id,
+              time_created: msgInfo.time?.created ?? Date.now(),
+              data: msgData,
             })
             .onConflictDoNothing()
             .run(),
         )
 
         for (const part of msg.parts) {
+          const partInfo = MessageV2.Part.zod.parse(part)
+          const { id: partId, sessionID: _s, messageID, ...partData } = partInfo
           Database.use((db) =>
             db
               .insert(PartTable)
               .values({
-                id: part.id,
-                message_id: msg.info.id,
-                session_id: exportData.info.id,
-                data: part,
+                id: partId,
+                message_id: messageID,
+                session_id: row.id,
+                data: partData,
               })
               .onConflictDoNothing()
               .run(),

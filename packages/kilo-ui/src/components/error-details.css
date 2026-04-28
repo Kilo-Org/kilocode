@@ -1,0 +1,44 @@
+.error-card {
+  padding-bottom: 0;
+  background-color: var(--surface-critical-base);
+}
+
+.error-card [data-component="collapsible"] {
+  margin-top: 8px;
+}
+
+.error-details-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-xs, 11px);
+  opacity: 0.85;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0;
+}
+
+.error-details-trigger:hover {
+  opacity: 1;
+}
+
+.error-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-xs, 11px);
+  margin-top: 4px;
+}
+
+.error-detail-pre {
+  margin: 0;
+  max-height: 120px;
+  overflow-y: auto;
+  font-size: var(--font-size-xs, 11px);
+  white-space: pre-wrap;
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}

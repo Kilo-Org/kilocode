@@ -43,40 +43,31 @@ Fast, scalable code indexing for better AI context:
 
 ## Security Reviews
 
-AI-powered security analysis for your code and dependencies:
+AI-powered dependency vulnerability triage for your codebase:
 
-- [**Security Reviews**](/docs/deploy-secure/security-reviews) — Comprehensive security scanning
-- Dependency vulnerability contextualization
-- Code-level taint analysis (SQL injection, XSS, command injection)
-- Integration with existing security tools (Dependabot, npm audit)
+- [**Security Reviews**](/docs/deploy-secure/security-reviews) — Contextualize Dependabot alerts with AI
+- Syncs your Dependabot alerts and triages them automatically
+- Deep codebase analysis to determine if CVEs are actually reachable
+- Auto-dismiss non-exploitable findings and sync back to GitHub
 
 ### Security Features
 
-- **PR-triggered analysis** — Automatic security review on pull requests
-- **Scheduled full scans** — Periodic repository-wide analysis
-- **Dependency contextualization** — Determine if vulnerabilities are actually exploitable
-- **Historical tracking** — Track security posture over time
-
-### Focus Areas
-
-- **Security Vulnerabilities** — SQL injection, XSS, unsafe APIs
-- **Performance Issues** — N+1 queries, inefficient loops
-- **Bug Detection** — Logic errors, edge-case failures
-- **Code Style** — Formatting, naming, readability
-- **Test Coverage** — Missing or inadequate tests
-- **Documentation** — Missing comments, unclear APIs
+- **Automated triage** — AI classifies each alert as Safe to Dismiss, Needs Analysis, or Needs Review
+- **Deep analysis** — Full codebase search to check if vulnerable code paths are reachable
+- **Auto-dismiss** — Automatically close non-exploitable findings with configurable confidence thresholds
+- **SLA tracking** — Set remediation deadlines per severity and monitor compliance
 
 ## Get Started
 
 1. Enable [GitHub Integration](/docs/deploy-secure/deploy#prerequisites) for deployments
 2. Set up your first [deployment](/docs/deploy-secure/deploy) in the dashboard
 3. Configure [managed indexing](/docs/deploy-secure/managed-indexing) for large projects
-4. Enable [security reviews](/docs/deploy-secure/security-reviews) for your repositories
+4. Enable the [Security Agent](/docs/deploy-secure/security-reviews) to triage your Dependabot alerts
 
 ## Best Practices
 
 - **Deploy early** — Start with a staging deployment to verify the setup
 - **Use environment variables** — Keep secrets out of your codebase
 - **Enable automatic rebuilds** — Push to GitHub and deploy automatically
-- **Run security scans** — Review security findings before merging PRs
-- **Track your security posture** — Monitor trends over time
+- **Triage Dependabot alerts** — Let the Security Agent determine which CVEs are actually exploitable
+- **Set SLA deadlines** — Track remediation timelines per severity level

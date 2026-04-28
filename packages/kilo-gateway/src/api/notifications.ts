@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { z } from "zod"
 import { KILO_API_BASE } from "./constants.js"
 
@@ -16,6 +15,7 @@ export const KilocodeNotificationSchema = z.object({
     })
     .optional(),
   showIn: z.array(z.string()).optional(),
+  suggestModelId: z.string().optional(),
 })
 
 export type KilocodeNotification = z.infer<typeof KilocodeNotificationSchema>

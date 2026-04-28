@@ -1,0 +1,108 @@
+/* ============================================
+   High Contrast Theme Support
+   --vscode-contrastBorder is only defined in HC themes,
+   so transparent fallback keeps normal themes unchanged.
+   ============================================ */
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  /* Buttons */
+  .scroll-to-bottom-button,
+  .feedback-button,
+  .startup-error-retry,
+  .kilo-notifications-nav-btn,
+  .image-attachment-remove,
+  .prompt-review-chip-remove,
+  [data-slot="question-progress-nav"],
+  [data-slot="question-collapse-toggle"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Inputs and textareas */
+  .prompt-input-container,
+  .model-selector-search {
+    border-color: var(--vscode-contrastBorder, var(--vscode-input-border));
+  }
+
+  .prompt-input-container:focus-within,
+  .model-selector-search:focus {
+    border-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+  }
+
+  /* Dropdowns and popover panels */
+  .file-mention-dropdown,
+  .slash-command-dropdown {
+    border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+  }
+
+  /* List items — active selection */
+  .file-mention-item--active,
+  .slash-command-item--active,
+  .model-selector-item.active,
+  .thinking-selector-item.selected,
+  .mode-switcher-item.selected {
+    outline: 1px solid var(--vscode-contrastBorder, transparent);
+    outline-offset: -1px;
+  }
+
+  /* Recent sessions */
+  .recent-session-item {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Notification card */
+  .kilo-notifications-card {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Revert banner */
+  .revert-banner {
+    border-color: var(--vscode-contrastBorder, var(--vscode-editorWidget-border));
+  }
+
+  /* Image attachments */
+  .image-attachment img {
+    border-color: var(--vscode-contrastBorder, var(--vscode-widget-border));
+  }
+
+  /* Permission dock */
+  [data-component="dock-prompt"][data-kind="permission"] {
+    border-color: var(--vscode-contrastBorder, var(--vscode-panel-border));
+  }
+
+  /* Question dock */
+  [data-component="question-dock"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  [data-component="question-dock"] [data-slot="question-option"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  [data-component="question-dock"] [data-slot="question-option-box"] {
+    border-color: var(--vscode-contrastBorder, var(--border-weak-base));
+  }
+
+  [data-component="question-dock"] [data-slot="custom-input-form"] {
+    border: 1px solid var(--vscode-contrastBorder, transparent);
+  }
+
+  /* Prompt hint selector buttons */
+  .prompt-input-hint-selectors [data-component="button"] {
+    border-color: var(--vscode-contrastBorder, transparent) !important;
+  }
+
+  /* Prompt review chips */
+  .prompt-review-chip {
+    border-color: var(--vscode-contrastBorder, var(--vscode-input-border));
+  }
+
+  /* Focus states */
+  .scroll-to-bottom-button:focus-visible,
+  .feedback-button:focus-visible,
+  .recent-session-item:focus-visible,
+  .kilo-notifications-nav-btn:focus-visible {
+    outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+    outline-offset: -1px;
+  }
+}

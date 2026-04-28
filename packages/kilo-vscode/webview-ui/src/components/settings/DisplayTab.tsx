@@ -46,7 +46,12 @@ const DisplayTab: Component = () => {
             current={LAYOUT_OPTIONS.find((o) => o.value === (config().layout ?? "auto"))}
             value={(o) => o.value}
             label={(o) => language.t(o.labelKey)}
-            onSelect={(o) => o && updateConfig({ layout: o.value as "auto" | "stretch" })}
+            onSelect={(o) => {
+              if (!o) return
+              const next = o.value as "auto" | "stretch"
+              if (next === (config().layout ?? "auto")) return
+              updateConfig({ layout: next })
+            }}
             variant="secondary"
             size="small"
             triggerVariant="settings"

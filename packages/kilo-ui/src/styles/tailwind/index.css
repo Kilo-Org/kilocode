@@ -1,4 +1,3 @@
-/* kilocode_change - new file */
 /* Wraps upstream tailwind styles and adds Kilo overrides */
 @import "@opencode-ai/ui/styles/tailwind";
 
@@ -13,6 +12,7 @@
 @import "../../components/chat-input.css";
 @import "../../components/checkbox.css";
 @import "../../components/code.css";
+@import "../../components/collapsible.css";
 @import "../../components/context-menu.css";
 @import "../../components/dialog.css";
 @import "../../components/dropdown-menu.css";
@@ -26,6 +26,7 @@
 @import "../../components/model-selector.css";
 @import "../../components/popover.css";
 @import "../../components/prompt-input.css";
+@import "../../components/radio-group.css";
 @import "../../components/select.css";
 @import "../../components/session.css";
 @import "../../components/settings-sidebar.css";
