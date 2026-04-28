@@ -4,6 +4,7 @@
  */
 
 import { $ } from "bun"
+import { mkdir, readdir } from "node:fs/promises"
 
 export interface BranchInfo {
   current: string
@@ -13,6 +14,24 @@ export interface BranchInfo {
 export interface RemoteInfo {
   name: string
   url: string
+}
+
+export interface RerereTrainingCommit {
+  commit: string
+  parents: string[]
+}
+
+export interface RerereTrainingPlan {
+  commits: RerereTrainingCommit[]
+  skipped: number
+  total: number
+}
+
+export interface RerereTrainingResult {
+  learned: number
+  processed: number
+  skipped: number
+  total: number
 }
 
 export async function getCurrentBranch(): Promise<string> {
@@ -262,6 +281,80 @@ export async function ensureRerere(): Promise<void> {
   await $`git config rerere.autoupdate true`.quiet()
 }
 
+async function getRerereTrainingCachePath(): Promise<string> {
+  const dir = (await $`git rev-parse --git-common-dir`.quiet().text()).trim()
+  return `${dir}/kilo/upstream-rerere-trained-v1`
+}
+
+async function countRerereCacheRecords(): Promise<number> {
+  const path = (await $`git rev-parse --git-path rr-cache`.quiet().text()).trim()
+  const entries = await readdir(path).catch((err) => {
+    const code = err && typeof err === "object" && "code" in err ? err.code : undefined
+    if (code === "ENOENT") return []
+    throw err
+  })
+
+  return entries.filter((entry) => /^[0-9a-f]+$/.test(entry)).length
+}
+
+async function loadRerereTrainingCache(): Promise<Set<string>> {
+  const path = await getRerereTrainingCachePath()
+  const file = Bun.file(path)
+  if (!(await file.exists())) return new Set()
+
+  const text = await file.text()
+  const lines = text.split("\n")
+  const stamp = lines[0]?.match(/^# rr-cache-records (\d+)$/)
+  if (stamp?.[1] && (await countRerereCacheRecords()) < Number(stamp[1])) return new Set()
+
+  return new Set(lines.map((line) => line.trim()).filter((line) => /^[0-9a-f]{40}$/.test(line)))
+}
+
+async function saveRerereTrainingCache(cache: Set<string>): Promise<void> {
+  const path = await getRerereTrainingCachePath()
+  const dir = path.slice(0, path.lastIndexOf("/"))
+  await mkdir(dir, { recursive: true })
+
+  const text = [...cache].sort().join("\n")
+  const count = await countRerereCacheRecords()
+  await Bun.write(path, `# rr-cache-records ${count}\n${text ? `${text}\n` : ""}`)
+}
+
+function parseRerereTrainingCommit(line: string): RerereTrainingCommit | null {
+  const parts = line.trim().split(/\s+/)
+  if (parts.length < 3) return null
+
+  const commit = parts[0]
+  if (!commit) return null
+
+  return {
+    commit,
+    parents: parts.slice(1),
+  }
+}
+
+export async function getRerereTrainingPlan(grep: string): Promise<RerereTrainingPlan> {
+  const revList = await $`git rev-list --parents --all --grep=${grep}`.quiet().nothrow()
+  if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) {
+    return { commits: [], skipped: 0, total: 0 }
+  }
+
+  const cache = await loadRerereTrainingCache()
+  const all = revList.stdout
+    .toString()
+    .trim()
+    .split("\n")
+    .map(parseRerereTrainingCommit)
+    .filter((commit): commit is RerereTrainingCommit => commit !== null)
+  const commits = all.filter((commit) => !cache.has(commit.commit))
+
+  return {
+    commits,
+    skipped: all.length - commits.length,
+    total: all.length,
+  }
+}
+
 /**
  * Train the rerere cache from past merge commits in the repo history.
  * Implements the same logic as git's contrib/rerere-train.sh:
@@ -269,50 +362,46 @@ export async function ensureRerere(): Promise<void> {
  *   record the pre-image, then check out the resolved tree so rerere
  *   records the post-image (the resolution).
  *
- * Returns the number of resolutions learned.
+ * Returns training stats for the uncached merge commits in `plan`.
  */
-export async function trainRerere(grep: string): Promise<number> {
+export async function trainRerere(plan: RerereTrainingPlan): Promise<RerereTrainingResult> {
   // Save the current HEAD so we can restore it afterwards
   const headResult = await $`git symbolic-ref -q HEAD`.quiet().nothrow()
   const branch = headResult.exitCode === 0 ? headResult.stdout.toString().trim() : null
   const originalHead = branch ?? (await $`git rev-parse --verify HEAD`.text()).trim()
 
-  let learned = 0
+  const cache = await loadRerereTrainingCache()
+  const learned: string[] = []
+  const processed: string[] = []
 
   try {
-    // Find all merge commits matching the grep pattern (merges have multiple parents)
-    const revList = await $`git rev-list --parents --all --grep=${grep}`.quiet().nothrow()
-    if (revList.exitCode !== 0 || !revList.stdout.toString().trim()) return 0
-
-    const lines = revList.stdout
-      .toString()
-      .trim()
-      .split("\n")
-      .filter((l) => l.trim())
-
-    for (const line of lines) {
-      const parts = line.trim().split(/\s+/)
-      if (parts.length < 3) continue // skip non-merges (need commit + at least 2 parents)
-
-      const [commit, parent1, ...otherParents] = parts
+    for (const commit of plan.commits) {
+      const parent = commit.parents[0]
+      const others = commit.parents.slice(1)
+      if (!parent || others.length === 0) continue
 
       // Checkout the first parent
-      const coResult = await $`git checkout -q ${parent1}`.quiet().nothrow()
+      const coResult = await $`git checkout -q ${parent}`.quiet().nothrow()
       if (coResult.exitCode !== 0) continue
 
       // Attempt the merge - we expect it to fail with conflicts
-      const mergeResult = await $`git merge --no-gpg-sign ${otherParents}`.quiet().nothrow()
+      const mergeResult = await $`git merge --no-gpg-sign ${others}`.quiet().nothrow()
       if (mergeResult.exitCode === 0) {
         // Cleanly merged — no conflicts to learn from, reset and skip
         await $`git reset -q --hard`.quiet().nothrow()
+        processed.push(commit.commit)
+        cache.add(commit.commit)
         continue
       }
 
       // Check if rerere recorded a pre-image (MERGE_RR exists and is non-empty)
-      const mergeRR = Bun.file(`${process.env.GIT_DIR || ".git"}/MERGE_RR`)
-      const hasMergeRR = await mergeRR.exists().catch(() => false)
-      if (!hasMergeRR) {
+      const path = (await $`git rev-parse --git-path MERGE_RR`.quiet().text()).trim()
+      const mergeRR = Bun.file(path)
+      const hasMergeRR = await mergeRR.exists()
+      if (!hasMergeRR || !(await mergeRR.text()).trim()) {
         await $`git reset -q --hard`.quiet().nothrow()
+        processed.push(commit.commit)
+        cache.add(commit.commit)
         continue
       }
 
@@ -320,14 +409,18 @@ export async function trainRerere(grep: string): Promise<number> {
       await $`git rerere`.quiet().nothrow()
 
       // Apply the actual resolution by checking out the merge commit's tree
-      await $`git checkout -q ${commit} -- .`.quiet().nothrow()
+      await $`git checkout -q ${commit.commit} -- .`.quiet().nothrow()
 
       // Record the resolution post-image
       await $`git rerere`.quiet().nothrow()
 
-      learned++
       await $`git reset -q --hard`.quiet().nothrow()
+      learned.push(commit.commit)
+      processed.push(commit.commit)
+      cache.add(commit.commit)
     }
+
+    await saveRerereTrainingCache(cache)
   } finally {
     // Always restore original branch
     if (branch) {
@@ -337,7 +430,12 @@ export async function trainRerere(grep: string): Promise<number> {
     }
   }
 
-  return learned
+  return {
+    learned: learned.length,
+    processed: processed.length,
+    skipped: plan.skipped,
+    total: plan.total,
+  }
 }
 
 /**

@@ -158,12 +158,22 @@ async function main() {
     // historical convention used by older upstream merges ("[Rr]esolve merge conflicts").
     // Without the lowercase alternative, ~70 past merges are dropped from training on
     // this repo, since most older resolution commits use a lowercase "resolve".
-    logger.info("Training rerere cache from past merge history...")
-    const learned = await git.trainRerere("merge: upstream\\|[Rr]esolve merge conflict")
-    if (learned > 0) {
-      logger.success(`Learned ${learned} conflict resolution(s) from history`)
-    } else {
-      logger.info("No new resolutions to learn from history (cache already up to date)")
+    const plan = await git.getRerereTrainingPlan("merge: upstream\\|[Rr]esolve merge conflict")
+    if (plan.total === 0) {
+      logger.info("No past merge commits found for rerere training")
+    }
+    if (plan.total > 0 && plan.commits.length === 0) {
+      logger.info(`Rerere cache already trained from ${plan.skipped} past merge commit(s)`)
+    }
+    if (plan.commits.length > 0) {
+      logger.info(`Training rerere cache from ${plan.commits.length} past merge commit(s)...`)
+      const trained = await git.trainRerere(plan)
+      if (trained.learned > 0) {
+        logger.success(`Learned ${trained.learned} conflict resolution(s) from history`)
+      } else {
+        logger.info("No new resolutions to learn from history")
+      }
+      if (trained.skipped > 0) logger.info(`Skipped ${trained.skipped} cached merge commit(s)`)
     }
   }
 
