@@ -212,7 +212,15 @@ function DomBranch(props: {
                 aria-selected={isActive() ? "true" : "false"}
                 aria-controls={panelId}
                 data-tab-id={tab.id}
-                onClick={() => props.onSwitch(tab.id)}
+                onClick={(e: MouseEvent) => {
+                  const target = e.target
+                  if (target instanceof HTMLElement && target.dataset.close === "true") {
+                    e.stopPropagation()
+                    props.onClose?.(tab.id)
+                    return
+                  }
+                  props.onSwitch(tab.id)
+                }}
                 style={{
                   display: "inline-flex",
                   "align-items": "center",
@@ -232,12 +240,7 @@ function DomBranch(props: {
                 <Show when={tab.closeable && props.onClose}>
                   <span
                     aria-hidden
-                    {...{
-                      onClick: (e: MouseEvent) => {
-                        e.stopPropagation()
-                        props.onClose?.(tab.id)
-                      },
-                    }}
+                    data-close="true"
                     style={{ "font-size": "14px", opacity: "0.6", "line-height": "1" }}
                   >
                     x

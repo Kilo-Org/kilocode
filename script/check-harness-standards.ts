@@ -175,7 +175,7 @@ function checkWorkflows() {
     if (text.includes("Kilo-Org/kilocode")) {
       add("warn", "Active workflow contains stale Kilo-Org/kilocode text; verify compatibility or rename.", file)
     }
-    if (text.match(/if:\s*false|\&\&\s*false/)) {
+    if (text.match(/(?:if:\s*false)|(?:&&\s*false)/)) {
       add("warn", "Workflow contains a disabled guard; keep only if intentionally documented.", file)
     }
   }

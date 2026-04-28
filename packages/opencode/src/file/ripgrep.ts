@@ -129,14 +129,21 @@ export namespace Ripgrep {
 
   // devilcode_change start
   async function runnable(filepath: string) {
-    const result = await Process.run([filepath, "--version"], {
-      nothrow: true,
-      timeout: 1_000,
-    }).catch((err) => {
-      log.warn("rg path is not executable", { filepath, err: err instanceof Error ? err.message : String(err) })
-      return undefined
-    })
-    return result?.code === 0
+    const abort = new AbortController()
+    const timer = setTimeout(() => abort.abort(), 1_000)
+    try {
+      const result = await Process.run([filepath, "--version"], {
+        abort: abort.signal,
+        nothrow: true,
+        timeout: 500,
+      }).catch((err) => {
+        log.warn("rg path is not executable", { filepath, err: err instanceof Error ? err.message : String(err) })
+        return undefined
+      })
+      return result?.code === 0
+    } finally {
+      clearTimeout(timer)
+    }
   }
   // devilcode_change end
 

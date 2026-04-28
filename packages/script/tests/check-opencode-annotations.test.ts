@@ -14,10 +14,13 @@ function isSource(file: string) {
 
 const legacy = "kilo" + "code_change"
 const marker = `(?:devilcode_change|${legacy})`
-const MARKER_PREFIX = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\b`)
-const NEW_FILE = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s*-\\s*new\\s*file\\b`)
-const BLOCK_START = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+start\\b`)
-const BLOCK_END = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+end\\b`)
+const comment = String.raw`(?:\/\/|\{?\s*\/\*)`
+const inline = String.raw`(?:^|\s)${comment}\s*${marker}`
+const anchored = String.raw`^\s*${comment}\s*${marker}`
+const MARKER_PREFIX = new RegExp(`${inline}\\b`)
+const NEW_FILE = new RegExp(`${anchored}\\s*-\\s*new\\s*file\\b`)
+const BLOCK_START = new RegExp(`${anchored}\\s+start\\b`)
+const BLOCK_END = new RegExp(`${anchored}\\s+end\\b`)
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
@@ -109,6 +112,9 @@ describe("hasMarker", () => {
     ["// some other comment", false],
     ["{/* just a comment */}", false],
     ["/* something else */", false],
+    ['const text = "// devilcode_change"', false],
+    ['const text = "/* devilcode_change */"', false],
+    ['const text = "{/* devilcode_change */}"', false],
     // typo variants — should NOT match (missing word boundary)
     ["// devilcode_changes", false],
     ["// devilcode_changelog", false],
@@ -326,6 +332,22 @@ describe("coveredLines", () => {
     const text = ["  {/* devilcode_change start */}", "    const b = 2", "  {/* devilcode_change end */}"].join("\n")
     const covered = coveredLines(text)
     expect(covered).toEqual(new Set([1, 2, 3]))
+  })
+
+  test("marker text inside string literals does not open a block", () => {
+    const text = [
+      'const start = "// devilcode_change start"',
+      "const uncovered = 1",
+      'const end = "// devilcode_change end"',
+    ].join("\n")
+    const covered = coveredLines(text)
+    expect(covered).toEqual(new Set())
+  })
+
+  test("marker text inside a string literal is not a whole-file annotation", () => {
+    const text = ['"// devilcode_change - new file"', "const uncovered = 1"].join("\n")
+    const covered = coveredLines(text)
+    expect(covered).toEqual(new Set())
   })
 })
 

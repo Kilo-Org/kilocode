@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Devil is an open source AI coding agent platform. This repository is optimized for agent work: keep the entrypoint short, put durable knowledge in versioned docs, and enforce the important rules mechanically.
+Devil is an open-source AI coding agent platform. This repository is optimized for agent work: keep the entrypoint short, put durable knowledge in versioned docs, and enforce the important rules mechanically.
 
 - Use parallel tools whenever independent reads or checks can run at the same time.
 - Default branch: `main`.

@@ -76,10 +76,13 @@ function addedLines(file: string): Set<number> {
 
 const legacy = "kilo" + "code_change"
 const marker = `(?:devilcode_change|${legacy})`
-const MARKER_PREFIX = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\b`)
-const NEW_FILE = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s*-\\s*new\\s*file\\b`)
-const BLOCK_START = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+start\\b`)
-const BLOCK_END = new RegExp(`(?:\\/\\/|\\{?\\s*\\/\\*)\\s*${marker}\\s+end\\b`)
+const comment = String.raw`(?:\/\/|\{?\s*\/\*)`
+const inline = String.raw`(?:^|\s)${comment}\s*${marker}`
+const anchored = String.raw`^\s*${comment}\s*${marker}`
+const MARKER_PREFIX = new RegExp(`${inline}\\b`)
+const NEW_FILE = new RegExp(`${anchored}\\s*-\\s*new\\s*file\\b`)
+const BLOCK_START = new RegExp(`${anchored}\\s+start\\b`)
+const BLOCK_END = new RegExp(`${anchored}\\s+end\\b`)
 
 function hasMarker(line: string) {
   return MARKER_PREFIX.test(line)
