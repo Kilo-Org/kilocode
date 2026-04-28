@@ -345,6 +345,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
       unified: "other",
       raw: undefined,
     }
+    let receivedFinishReason = false
     const usage: {
       completionTokens: number | undefined
       completionTokensDetails: {
@@ -453,6 +454,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
             const choice = value.choices[0]
 
             if (choice?.finish_reason != null) {
+              receivedFinishReason = true
               finishReason = {
                 unified: mapOpenAICompatibleFinishReason(choice.finish_reason),
                 raw: choice.finish_reason ?? undefined,
@@ -645,6 +647,10 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
           },
 
           flush(controller) {
+            if (!receivedFinishReason && !isFirstChunk) {
+              finishReason = { unified: "unknown", raw: undefined }
+            }
+
             if (isActiveReasoning) {
               controller.enqueue({
                 type: "reasoning-end",

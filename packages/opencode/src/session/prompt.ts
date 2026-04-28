@@ -1592,7 +1592,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
               return "break" as const
             }
 
-            const finished = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
+            const finished = handle.message.finish && !["tool-calls", "unknown", "other"].includes(handle.message.finish)
             if (finished && !handle.message.error) {
               if (format.type === "json_schema") {
                 handle.message.error = new MessageV2.StructuredOutputError({

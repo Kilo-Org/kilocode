@@ -803,6 +803,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
       unified: "other",
       raw: undefined,
     }
+    let receivedFinishChunk = false
     const usage: {
       inputTokens: number | undefined
       outputTokens: number | undefined
@@ -1259,6 +1260,7 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
                 })
               }
             } else if (isResponseFinishedChunk(value)) {
+              receivedFinishChunk = true
               finishReason = {
                 unified: mapOpenAIResponseFinishReason({
                   finishReason: value.response.incomplete_details?.reason,
@@ -1303,6 +1305,10 @@ export class OpenAIResponsesLanguageModel implements LanguageModelV3 {
             if (currentTextId) {
               controller.enqueue({ type: "text-end", id: currentTextId })
               currentTextId = null
+            }
+
+            if (!receivedFinishChunk && responseId !== null) {
+              finishReason = { unified: "unknown", raw: undefined }
             }
 
             const providerMetadata: SharedV3ProviderMetadata = {

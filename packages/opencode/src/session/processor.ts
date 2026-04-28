@@ -625,6 +625,18 @@ export const layer: Layer.Layer<
               Stream.takeUntil(() => ctx.needsCompaction),
               Stream.runDrain,
             )
+
+            if (ctx.assistantMessage.finish === "unknown") {
+              const parts = MessageV2.parts(ctx.assistantMessage.id)
+              if (!parts.some((p) => p.type === "tool")) {
+                yield* Effect.fail(
+                  new MessageV2.APIError({
+                    message: "Stream terminated prematurely without a finish reason",
+                    isRetryable: true,
+                  }).toObject()
+                )
+              }
+            }
           }).pipe(
             Effect.onInterrupt(() =>
               Effect.gen(function* () {

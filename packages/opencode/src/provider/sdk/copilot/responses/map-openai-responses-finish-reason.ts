@@ -17,6 +17,6 @@ export function mapOpenAIResponseFinishReason({
     case "content_filter":
       return "content-filter"
     default:
-      return hasFunctionCall ? "tool-calls" : "other"
+      return hasFunctionCall ? "tool-calls" : "unknown"
   }
 }
