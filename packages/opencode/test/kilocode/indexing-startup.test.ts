@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test"
 import { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
 import type { Config } from "../../src/config"
+import { GlobalBus } from "../../src/bus/global"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
@@ -132,6 +133,41 @@ describe("indexing startup degradation", () => {
         message: "Indexing is initializing.",
       })
     } finally {
+      gate.resolve({ requiresRestart: false })
+      init.mockRestore()
+    }
+  })
+
+  test("does not publish initialized status after in-flight startup is disposed", async () => {
+    await using tmp = await tmpdir({ git: true, config: cfg })
+    process.env["KILO_CONFIG_DIR"] = tmp.path
+    const gate = Promise.withResolvers<{ requiresRestart: boolean }>()
+    const init = spyOn(CodeIndexManager.prototype, "initialize").mockImplementation(() => gate.promise)
+    const events: KiloIndexing.Status[] = []
+    const on = (data: { directory?: string; payload?: { type?: string; properties?: { status?: KiloIndexing.Status } } }) => {
+      if (data.directory !== tmp.path) return
+      if (data.payload?.type !== KiloIndexing.Event.type) return
+      if (data.payload.properties?.status) events.push(data.payload.properties.status)
+    }
+    GlobalBus.on("event", on)
+
+    try {
+      await Instance.provide({
+        directory: tmp.path,
+        init: () => AppRuntime.runPromise(InstanceBootstrap),
+        fn: async () => {
+          await called(init)
+          expect((await KiloIndexing.current()).state).toBe("In Progress")
+        },
+      })
+
+      await Instance.disposeAll()
+      gate.resolve({ requiresRestart: false })
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(events.some((status) => status.state === "Complete" || status.state === "Standby")).toBe(false)
+    } finally {
+      GlobalBus.off("event", on)
       gate.resolve({ requiresRestart: false })
       init.mockRestore()
     }

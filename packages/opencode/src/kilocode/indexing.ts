@@ -322,11 +322,11 @@ export namespace KiloIndexing {
   registerDisposer(async (dir) => {
     const hit = cache.get(dir)
     cache.delete(dir)
+    if (hit) hit.disposed = true
     if (hit?.entry) {
       hit.entry.dispose()
       return
     }
-    if (hit) hit.disposed = true
   })
 
   export async function init() {

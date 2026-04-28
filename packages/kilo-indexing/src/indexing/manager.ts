@@ -147,6 +147,8 @@ export class CodeIndexManager {
   }
 
   private async runRecovery(trigger: IndexingTelemetryTrigger, attempt: number): Promise<void> {
+    if (this._disposed) return
+
     this._isRecoveringFromError = true
     this._retryAttempt = attempt
 
@@ -169,9 +171,12 @@ export class CodeIndexManager {
 
     try {
       await this._recreateServices()
+      if (this._disposed) return
       this.emitStart(trigger)
       await this._orchestrator!.startIndexing(trigger)
+      if (this._disposed) return
     } catch (err) {
+      if (this._disposed) return
       log.error("indexing recovery attempt failed", {
         err,
         attempt,
@@ -206,6 +211,7 @@ export class CodeIndexManager {
 
     const delay = this._retryInitialDelayMs * Math.pow(2, attempt - 1)
     await this.waitForRetry(delay)
+    if (this._disposed) return
     this._isRecoveringFromError = false
     return this.runRecovery(trigger, attempt + 1)
   }
