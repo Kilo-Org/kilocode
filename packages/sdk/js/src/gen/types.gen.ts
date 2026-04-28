@@ -65,7 +65,6 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
-  platform?: string
 }
 
 export type ProviderAuthError = {

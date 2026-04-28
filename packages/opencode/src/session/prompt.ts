@@ -983,7 +983,6 @@ NOTE: At any point in time through this workflow you should feel free to ask the
         },
         system: input.system,
         format: input.format,
-        platform: input.platform, // kilocode_change - request surface for feature attribution
         editorContext: input.editorContext, // kilocode_change
       }
 

@@ -226,9 +226,7 @@ const live: Layer.Layer<
       const machineId = yield* isKilo
         ? Effect.promise(() => Identity.getMachineId().catch(() => undefined))
         : Effect.succeed(undefined)
-      const kiloFeature = isKilo
-        ? feature(input.user.platform ?? KiloSession.getPlatformOverride(input.sessionID))
-        : undefined
+      const kiloFeature = isKilo ? feature(KiloSession.getPlatformOverride(input.sessionID)) : undefined
       // kilocode_change end
 
       const tools = resolveTools(input)

@@ -12694,9 +12694,6 @@
               "type": "boolean"
             }
           },
-          "platform": {
-            "type": "string"
-          },
           "editorContext": {
             "type": "object",
             "properties": {

@@ -747,7 +747,6 @@ export type UserMessage = {
   tools?: {
     [key: string]: boolean
   }
-  platform?: string
   editorContext?: {
     visibleFiles?: Array<string>
     openTabs?: Array<string>

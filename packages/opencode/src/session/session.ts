@@ -627,11 +627,7 @@ export const layer: Layer.Layer<Service, never, Bus.Service | Storage.Service> =
       return session
     })
 
-    const fork = Effect.fn("Session.fork")(function* (input: {
-      sessionID: SessionID
-      messageID?: MessageID
-      platform?: string
-    }) {
+    const fork = Effect.fn("Session.fork")(function* (input: { sessionID: SessionID; messageID?: MessageID; platform?: string }) { // kilocode_change - fork platform attribution
       const directory = yield* InstanceState.directory
       const original = yield* get(input.sessionID)
       const title = getForkedTitle(original.title)
