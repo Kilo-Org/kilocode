@@ -1,4 +1,10 @@
 // kilocode_change - new file
+//
+// Proxied Exa endpoint for Kilo users.
+// When Kilo auth is present, routes Exa requests through api.kilo.ai/api/exa
+// instead of the public mcp.exa.ai MCP endpoint. This gives Kilo users free
+// Exa credits with overage charged to Kilo Credits.
+
 import { Duration, Effect } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { Auth } from "@/auth"
@@ -41,94 +47,87 @@ async function credentials(): Promise<{ token: string; org?: string } | undefine
   return undefined
 }
 
-function headers(auth: { token: string; org?: string }): Record<string, string> {
+function post(
+  http: HttpClient.HttpClient,
+  auth: { token: string; org?: string },
+  body: Record<string, unknown>,
+  timeout: Duration.Input,
+) {
   const h: Record<string, string> = {
     Authorization: `Bearer ${auth.token}`,
     "Content-Type": "application/json",
   }
   if (auth.org) h[HEADER_ORGANIZATIONID] = auth.org
-  return h
+
+  return Effect.gen(function* () {
+    const request = yield* HttpClientRequest.post(`${KILO_API_BASE}/api/exa/search`).pipe(
+      HttpClientRequest.setHeaders(h),
+      HttpClientRequest.bodyJson(body),
+    )
+    const response = yield* HttpClient.filterStatusOk(http)
+      .execute(request)
+      .pipe(
+        Effect.timeoutOrElse({
+          duration: timeout,
+          orElse: () => Effect.die(new Error("Exa proxy request timed out")),
+        }),
+      )
+    const json = (yield* response.json) as ExaResponse
+    return format(json.results ?? [])
+  })
 }
 
-export const search = (
+/**
+ * Try to handle an Exa MCP tool call via the Kilo proxy.
+ * Returns undefined if Kilo auth is not available (caller should fall back to public MCP).
+ */
+export function intercept(
   http: HttpClient.HttpClient,
-  params: {
-    query: string
-    type: string
-    numResults: number
-    livecrawl: string
-    contextMaxCharacters?: number
-  },
+  tool: string,
+  value: Record<string, unknown>,
   timeout: Duration.Input,
-) =>
-  Effect.gen(function* () {
-    const auth = yield* Effect.promise(credentials)
-    if (!auth) return yield* Effect.die(new Error("Not authenticated with Kilo Gateway"))
-
-    const body: Record<string, unknown> = {
-      query: params.query,
-      numResults: params.numResults,
-      type: params.type,
-      contents: {
-        text: params.contextMaxCharacters ? { maxCharacters: params.contextMaxCharacters } : true,
-        highlights: true,
-      },
-      livecrawl: params.livecrawl,
-    }
-
-    const request = yield* HttpClientRequest.post(`${KILO_API_BASE}/api/exa/search`).pipe(
-      HttpClientRequest.setHeaders(headers(auth)),
-      HttpClientRequest.bodyJson(body),
-    )
-
-    const response = yield* HttpClient.filterStatusOk(http)
-      .execute(request)
-      .pipe(
-        Effect.timeoutOrElse({
-          duration: timeout,
-          orElse: () => Effect.die(new Error("Exa proxy search request timed out")),
-        }),
+): Effect.Effect<string | undefined> | undefined {
+  if (tool === "web_search_exa") {
+    return Effect.gen(function* () {
+      const auth = yield* Effect.promise(credentials)
+      if (!auth) return undefined
+      return yield* post(
+        http,
+        auth,
+        {
+          query: value.query,
+          numResults: value.numResults,
+          type: value.type,
+          contents: {
+            text: value.contextMaxCharacters ? { maxCharacters: value.contextMaxCharacters } : true,
+            highlights: true,
+          },
+          livecrawl: value.livecrawl,
+        },
+        timeout,
       )
+    })
+  }
 
-    const json = (yield* response.json) as ExaResponse
-    return format(json.results ?? [])
-  })
-
-export const context = (
-  http: HttpClient.HttpClient,
-  params: {
-    query: string
-    tokensNum: number
-  },
-  timeout: Duration.Input,
-) =>
-  Effect.gen(function* () {
-    const auth = yield* Effect.promise(credentials)
-    if (!auth) return yield* Effect.die(new Error("Not authenticated with Kilo Gateway"))
-
-    const body: Record<string, unknown> = {
-      query: params.query,
-      numResults: 5,
-      type: "auto",
-      contents: {
-        text: { maxCharacters: params.tokensNum * 4 },
-      },
-    }
-
-    const request = yield* HttpClientRequest.post(`${KILO_API_BASE}/api/exa/search`).pipe(
-      HttpClientRequest.setHeaders(headers(auth)),
-      HttpClientRequest.bodyJson(body),
-    )
-
-    const response = yield* HttpClient.filterStatusOk(http)
-      .execute(request)
-      .pipe(
-        Effect.timeoutOrElse({
-          duration: timeout,
-          orElse: () => Effect.die(new Error("Exa proxy context request timed out")),
-        }),
+  if (tool === "get_code_context_exa") {
+    return Effect.gen(function* () {
+      const auth = yield* Effect.promise(credentials)
+      if (!auth) return undefined
+      return yield* post(
+        http,
+        auth,
+        {
+          query: value.query,
+          numResults: 5,
+          type: "auto",
+          contents: {
+            text: { maxCharacters: ((value.tokensNum as number) || 5000) * 4 },
+          },
+        },
+        timeout,
       )
+    })
+  }
 
-    const json = (yield* response.json) as ExaResponse
-    return format(json.results ?? [])
-  })
+  return undefined
+}
