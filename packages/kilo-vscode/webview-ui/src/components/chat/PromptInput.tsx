@@ -119,6 +119,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (imgs.length > 0) imageDrafts.set(key, imgs)
     else imageDrafts.delete(key)
   }
+  const readDraft = () => ({
+    text: text().trim(),
+    comments: reviewComments(),
+    images: imageAttach.images(),
+  })
 
   const [text, setText] = createSignal("")
   const [reviewComments, setReviewComments] = createSignal<ReviewComment[]>([])
@@ -275,6 +280,35 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   window.addEventListener("newTaskRequest", onNewTaskRequest)
   onCleanup(() => window.removeEventListener("newTaskRequest", onNewTaskRequest))
+
+  const captured = new Map<string, ReturnType<typeof readDraft>>()
+  const onAgentManagerCaptureDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.set(event.detail.id, readDraft())
+  }
+  window.addEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft)
+  onCleanup(() => window.removeEventListener("agentManagerCaptureDraft", onAgentManagerCaptureDraft))
+
+  const onAgentManagerApplyDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent)) return
+    const id = event.detail?.id
+    const sid = event.detail?.sessionId
+    const box = event.detail?.boxId
+    if (typeof id !== "string" || typeof sid !== "string" || typeof box !== "string") return
+    const draft = captured.get(id)
+    captured.delete(id)
+    if (!draft) return
+    saveDraft(scopeDraftKey(box, sessionDraftKey(sid)), draft.text, draft.comments, draft.images)
+  }
+  window.addEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft)
+  onCleanup(() => window.removeEventListener("agentManagerApplyDraft", onAgentManagerApplyDraft))
+
+  const onAgentManagerDiscardDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail?.id !== "string") return
+    captured.delete(event.detail.id)
+  }
+  window.addEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft)
+  onCleanup(() => window.removeEventListener("agentManagerDiscardDraft", onAgentManagerDiscardDraft))
 
   // Compact/summarize the current session (mirrors canCompact guards in TaskHeader)
   const onCompact = () => {
