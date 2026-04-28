@@ -1264,7 +1264,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  30_000, // kilocode_change - Windows CI process startup can exceed 3s
 )
 
 it.live(
@@ -1304,7 +1304,7 @@ it.live(
       }),
       { git: true, config: providerCfg },
     ),
-  3_000,
+  30_000, // kilocode_change - Windows CI process startup can exceed 3s
 )
 
 // kilocode_change start - TODO(#8990): flaky on Linux CI
