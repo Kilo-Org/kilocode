@@ -1407,10 +1407,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
           const hasToolCalls =
             lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
 
+          // kilocode_change start
+          const hasContent =
+            hasToolCalls || (lastAssistantMsg?.parts.some((p) => p.type === "text" && p.text.trim()) ?? false)
+          // kilocode_change end
+
           if (
             lastAssistant?.finish &&
             !["tool-calls"].includes(lastAssistant.finish) &&
             !hasToolCalls &&
+            hasContent && // kilocode_change
             lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
             lastUser.id < lastAssistant.id
           ) {

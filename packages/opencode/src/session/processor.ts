@@ -443,6 +443,12 @@ export const layer: Layer.Layer<
               cost: usage.cost,
             })
             yield* session.updateMessage(ctx.assistantMessage)
+
+            // kilocode_change start
+            if (value.finishReason === "error") {
+              throw new Error("Stream finished with error reason (provider overloaded)")
+            }
+            // kilocode_change end
             if (ctx.snapshot) {
               const patch = yield* snapshot.patch(ctx.snapshot)
               if (patch.files.length) {
@@ -625,6 +631,20 @@ export const layer: Layer.Layer<
               Stream.takeUntil(() => ctx.needsCompaction),
               Stream.runDrain,
             )
+
+            // kilocode_change start
+            if (ctx.assistantMessage.finish === "unknown") {
+              const parts = MessageV2.parts(ctx.assistantMessage.id)
+              if (!parts.some((p) => p.type === "tool" && p.state.status === "completed")) {
+                yield* Effect.fail(
+                  new MessageV2.APIError({
+                    message: "Stream terminated prematurely without a finish reason",
+                    isRetryable: true,
+                  })
+                )
+              }
+            }
+            // kilocode_change end
           }).pipe(
             Effect.onInterrupt(() =>
               Effect.gen(function* () {

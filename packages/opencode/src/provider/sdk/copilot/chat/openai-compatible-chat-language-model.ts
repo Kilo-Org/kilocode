@@ -315,11 +315,13 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
 
     const metadataExtractor = this.config.metadataExtractor?.createStreamExtractor()
 
+    const url = this.config.url({
+      path: "/chat/completions",
+      modelId: this.modelId,
+    })
+
     const { responseHeaders, value: response } = await postJsonToApi({
-      url: this.config.url({
-        path: "/chat/completions",
-        modelId: this.modelId,
-      }),
+      url,
       headers: combineHeaders(this.config.headers(), options.headers),
       body,
       failedResponseHandler: this.failedResponseHandler,
@@ -371,6 +373,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
       totalTokens: undefined,
     }
     let isFirstChunk = true
+    let receivedFinishReason = false // kilocode_change
     const providerOptionsName = this.providerOptionsName
     let isActiveReasoning = false
     let isActiveText = false
@@ -403,15 +406,24 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
 
             metadataExtractor?.processChunk(chunk.rawValue)
 
-            // handle error chunks:
+            // kilocode_change start
             if ("error" in value) {
               finishReason = {
                 unified: "error",
                 raw: undefined,
               }
-              controller.enqueue({ type: "error", error: value.error.message })
+              controller.enqueue({
+                type: "error",
+                error: new APICallError({
+                  message: value.error.message,
+                  url,
+                  requestBodyValues: body,
+                  isRetryable: true,
+                }),
+              })
               return
             }
+            // kilocode_change end
 
             if (isFirstChunk) {
               isFirstChunk = false
@@ -453,6 +465,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
             const choice = value.choices[0]
 
             if (choice?.finish_reason != null) {
+              receivedFinishReason = true // kilocode_change
               finishReason = {
                 unified: mapOpenAICompatibleFinishReason(choice.finish_reason),
                 raw: choice.finish_reason ?? undefined,
@@ -645,6 +658,12 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
           },
 
           flush(controller) {
+            // kilocode_change start
+            if (!receivedFinishReason) {
+              finishReason = { unified: "unknown" as any, raw: undefined }
+            }
+            // kilocode_change end
+
             if (isActiveReasoning) {
               controller.enqueue({
                 type: "reasoning-end",

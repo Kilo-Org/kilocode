@@ -1,4 +1,4 @@
-import { Effect, Exit, Layer, PubSub, Scope, Context, Stream, Schema } from "effect"
+import { Effect, Exit, Layer, PubSub, Scope, Context, Stream, Schema, Schedule, Duration, pipe } from "effect"
 import { EffectBridge } from "@/effect"
 import { Log } from "../util"
 import { BusEvent } from "./bus-event"
@@ -129,23 +129,28 @@ export const layer = Layer.effect(
         const subscription = yield* Scope.provide(scope)(PubSub.subscribe(pubsub))
 
         yield* Scope.provide(scope)(
-          Stream.fromSubscription(subscription).pipe(
-            Stream.runForEach((msg) =>
+          pipe(
+            Stream.fromSubscription(subscription),
+            Stream.runForEach((msg: T) =>
               Effect.tryPromise({
                 try: () => Promise.resolve().then(() => callback(msg)),
                 catch: (cause) => {
                   log.error("subscriber failed", { type, cause })
+                  return cause
                 },
-              }).pipe(Effect.ignore),
+              }),
             ),
+            // kilocode_change start
+            Effect.retry(Schedule.exponential(Duration.seconds(1))),
+            // kilocode_change end
             Effect.forkScoped,
           ),
         )
 
-        return () => {
+        return (() => {
           log.info("unsubscribing", { type })
           bridge.fork(Scope.close(scope, Exit.void))
-        }
+        }) as () => void
       })
     }
 
@@ -155,12 +160,12 @@ export const layer = Layer.effect(
     ) {
       const s = yield* InstanceState.get(state)
       const ps = yield* getOrCreate(s, def)
-      return yield* on(ps, def.type, callback)
+      return (yield* on(ps, def.type, callback)) as () => void
     })
 
     const subscribeAllCallback = Effect.fn("Bus.subscribeAllCallback")(function* (callback: (event: any) => unknown) {
       const s = yield* InstanceState.get(state)
-      return yield* on(s.wildcard, "*", callback)
+      return (yield* on(s.wildcard, "*", callback)) as () => void
     })
 
     return Service.of({ publish, subscribe, subscribeAll, subscribeCallback, subscribeAllCallback })

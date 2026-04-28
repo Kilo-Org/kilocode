@@ -35,7 +35,7 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 
 const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
-type Result = Awaited<ReturnType<typeof streamText>>
+type Result = Awaited<ReturnType<typeof streamText>> & { error: () => unknown } // kilocode_change
 
 export type StreamInput = {
   user: MessageV2.User
@@ -354,10 +354,12 @@ const live: Layer.Layer<
           })
         : undefined
 
-      return streamText({
-        onError(error) {
+      let error: unknown // kilocode_change
+      const result = streamText({
+        onError(e) {
+          error = e // kilocode_change
           l.error("stream error", {
-            error,
+            error: e,
           })
         },
         async experimental_repairToolCall(failed) {
@@ -439,6 +441,7 @@ const live: Layer.Layer<
         },
         // kilocode_change end
       })
+      return { ...result, error: () => error } // kilocode_change
     })
 
     const stream: Interface["stream"] = (input) =>
@@ -451,8 +454,22 @@ const live: Layer.Layer<
             )
 
             const result = yield* run({ ...input, abort: ctrl.signal })
+            const error = result.error // kilocode_change
 
-            return Stream.fromAsyncIterable(result.fullStream, (e) => (e instanceof Error ? e : new Error(String(e))))
+            return Stream.fromAsyncIterable(result.fullStream, (e) =>
+              e instanceof Error ? e : new Error(String(e)),
+            ).pipe(
+              // kilocode_change start
+              Stream.concat(
+                Stream.fromEffect(
+                  Effect.sync(() => {
+                    const err = error()
+                    if (err) throw err
+                  }),
+                ).pipe(Stream.drain),
+              ),
+              // kilocode_change end
+            )
           }),
         ),
       )
