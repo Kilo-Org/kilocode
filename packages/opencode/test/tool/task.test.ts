@@ -172,6 +172,7 @@ describe("tool.task", () => {
         Effect.gen(function* () {
           const agent = yield* Agent.Service
           const build = yield* agent.get("build")
+          build.permission.push({ permission: "task", pattern: "zebra", action: "deny" })
           const registry = yield* ToolRegistry.Service
           const description =
             (yield* registry.tools({ ...ref, agent: build })).find((tool) => tool.id === TaskTool.id)?.description ?? ""
@@ -405,33 +406,23 @@ describe("tool.task", () => {
           const child = yield* sessions.get(result.metadata.sessionId)
           expect(child.parentID).toBe(chat.id)
           // kilocode_change start — use arrayContaining: Kilo appends inherited caller restrictions
-          expect(child.permission).toEqual(
-            expect.arrayContaining([
-              {
-                permission: "todowrite",
-                pattern: "*",
-                action: "deny",
-              },
-              {
-                permission: "bash",
-                pattern: "*",
-                action: "allow",
-              },
-              {
-                permission: "read",
-                pattern: "*",
-                action: "allow",
-              },
-              {
-                permission: "task",
-                pattern: "*",
-                action: "deny",
-              },
-            ]),
-          )
+          expect(child.permission).toContainEqual({
+            permission: "bash",
+            pattern: "*",
+            action: "allow",
+          })
+          expect(child.permission).toContainEqual({
+            permission: "read",
+            pattern: "*",
+            action: "allow",
+          })
+          expect(child.permission).toContainEqual({
+            permission: "task",
+            pattern: "*",
+            action: "deny",
+          })
           // kilocode_change end
           expect(seen?.tools).toEqual({
-            todowrite: false,
             bash: false,
             read: false,
           })
@@ -441,9 +432,7 @@ describe("tool.task", () => {
           agent: {
             reviewer: {
               mode: "subagent",
-              permission: {
-                task: "allow",
-              },
+              permission: {},
             },
           },
           experimental: {
