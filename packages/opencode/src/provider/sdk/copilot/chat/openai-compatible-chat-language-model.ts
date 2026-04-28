@@ -320,10 +320,10 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
       path: "/chat/completions",
       modelId: this.modelId,
     })
-    // kilocode_change end
 
     const { responseHeaders, value: response } = await postJsonToApi({
       url,
+      // kilocode_change end
       headers: combineHeaders(this.config.headers(), options.headers),
       body,
       failedResponseHandler: this.failedResponseHandler,
