@@ -1645,7 +1645,16 @@ NOTE: At any point in time through this workflow you should feel free to ask the
             // instead of starting another LLM step for the now-superseded turn. The
             // current handle.process has fully drained (tokens + inline tool calls) by
             // the time we get here, so nothing is cut off.
-            if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
+            //
+            // Only break when the current assistant step has actually settled
+            // (finish: "stop" / "length" / etc.). A "tool-calls" or "unknown"
+            // finish means the turn is still mid-step — the tool ran but the
+            // follow-up LLM call that turns the tool result into a user-visible
+            // reply hasn't happened yet. Breaking here would silently drop that
+            // reply, matching the repro in #9607 where the queued prompt gets an
+            // answer but earlier prompts appear unanswered.
+            const settled = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
+            if (settled && KiloSessionPromptQueue.hasFollowup(sessionID)) {
               closeReasons.set(sessionID, "interrupted")
               return "break" as const
             }

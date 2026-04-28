@@ -59,6 +59,49 @@ function reply(input: { text: string; ready?: () => void; wait?: Promise<unknown
   })
 }
 
+// Emit an assistant response that invokes a tool. The caller provides the
+// tool name and args; the response finishes with `tool_calls` so the agent
+// loop will execute the tool and then send a follow-up LLM request with the
+// tool result.
+function toolReply(input: { id: string; name: string; args: string; ready?: () => void; wait?: Promise<unknown> }) {
+  const enc = new TextEncoder()
+  const head = line(chunk({ delta: { role: "assistant" } }))
+  const tail = [
+    line(
+      chunk({
+        delta: {
+          tool_calls: [
+            {
+              index: 0,
+              id: input.id,
+              type: "function",
+              function: { name: input.name, arguments: input.args },
+            },
+          ],
+        },
+        finish: "tool_calls",
+      }),
+    ),
+    "data: [DONE]\n\n",
+  ].join("")
+
+  return new ReadableStream<Uint8Array>({
+    start(ctrl) {
+      ctrl.enqueue(enc.encode(head))
+      input.ready?.()
+      const done = () => {
+        ctrl.enqueue(enc.encode(tail))
+        ctrl.close()
+      }
+      if (input.wait) {
+        void input.wait.then(done)
+        return
+      }
+      done()
+    },
+  })
+}
+
 function hasText(msg: Awaited<ReturnType<typeof SessionPrompt.prompt>>, text: string) {
   return msg.parts.some((part) => part.type === "text" && part.text.includes(text))
 }
@@ -438,6 +481,146 @@ describe("session prompt queue", () => {
           const tail = lastConversational(second2)
           expect(tail?.role).toBe("user")
           expect(JSON.stringify(tail?.content)).toContain("second prompt")
+        },
+      })
+    } finally {
+      server.stop(true)
+    }
+  })
+
+  test("queued prompts are all answered when the first is a multi-step tool run (#9607)", async () => {
+    // Regression for https://github.com/Kilo-Org/kilocode/issues/9607
+    //
+    // Repro from the issue: the first prompt triggers a multi-step run
+    // (subagents / tool calls), and while the tool is executing the user
+    // queues one or more follow-up prompts. The original behaviour drops
+    // queued prompts that landed *before* the most recent one — only the
+    // newest queued prompt is answered, the others are silently ignored.
+    //
+    // Every queued prompt must produce its own assistant reply parented to
+    // the matching user message.
+    const calls: Array<{ body: Record<string, unknown>; tag: string }> = []
+    const server = Bun.serve({
+      port: 0,
+      async fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+        const n = calls.length + 1
+        const tag = `call-${n}`
+        calls.push({ body, tag })
+        const bodyStr = JSON.stringify(body.messages ?? [])
+
+        // First call from the first prompt: emit a tool call (simulates a
+        // subagent / git command invocation from the reported scenario).
+        if (n === 1) {
+          return new Response(
+            toolReply({ id: `tool-${n}`, name: "bash", args: '{"command":"echo hello","description":"demo"}' }),
+            { status: 200, headers: { "Content-Type": "text/event-stream" } },
+          )
+        }
+        // Post-tool follow-up for the first prompt: text answer.
+        if (bodyStr.includes("first prompt") && !bodyStr.includes("second prompt")) {
+          return new Response(reply({ text: `reply ${n} (first)` }), {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" },
+          })
+        }
+        // Queued prompts: plain text reply tagged with the turn number.
+        return new Response(reply({ text: `reply ${n}` }), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify({
+              $schema: "https://opencode.ai/config.json",
+              enabled_providers: ["alibaba"],
+              provider: { alibaba: { options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` } } },
+              agent: { code: { model: "alibaba/qwen-plus" } },
+            }),
+          )
+        },
+      })
+
+      await Instance.provide({
+        directory: tmp.path,
+        fn: async () => {
+          const session = await Session.create({ title: "Tool-run queue regression" })
+          const first = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "first prompt with a tool" }],
+          })
+
+          // Wait until the first LLM request has been received so we know the
+          // first slot is actively running before we queue follow-ups.
+          while (calls.length === 0) await Bun.sleep(10)
+
+          const second = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "second prompt" }],
+          })
+          await Bun.sleep(10)
+          const third = SessionPrompt.prompt({
+            sessionID: session.id,
+            agent: "code",
+            parts: [{ type: "text", text: "third prompt" }],
+          })
+
+          const one = await first
+          const two = await second
+          const three = await third
+
+          const msgs = await Session.messages({ sessionID: session.id })
+          const users = msgs.filter((m) => m.info.role === "user")
+          const assistants = msgs.filter((m) => m.info.role === "assistant")
+          expect(users).toHaveLength(3)
+
+          const firstUser = users.find((m) => hasText(m, "first prompt"))!
+          const secondUser = users.find((m) => hasText(m, "second prompt"))!
+          const thirdUser = users.find((m) => hasText(m, "third prompt"))!
+
+          // The first prompt triggered a tool call. In the buggy behaviour,
+          // runLoop breaks out via hasFollowup *before* sending the post-tool
+          // LLM request, so the user-visible assistant reply for the first
+          // prompt is empty (only a tool_calls stub) — matching the reporter's
+          // "doesn't send replies on the previous prompts" observation.
+          //
+          // Every user prompt must receive an assistant reply that actually
+          // finishes cleanly (finish: "stop") — i.e. the turn is not left
+          // hanging on an unresolved tool call.
+          const firstAssistants = assistants.filter(
+            (m) => m.info.role === "assistant" && m.info.parentID === firstUser.info.id,
+          )
+          const secondAssistants = assistants.filter(
+            (m) => m.info.role === "assistant" && m.info.parentID === secondUser.info.id,
+          )
+          const thirdAssistants = assistants.filter(
+            (m) => m.info.role === "assistant" && m.info.parentID === thirdUser.info.id,
+          )
+          expect(firstAssistants.length).toBeGreaterThan(0)
+          expect(secondAssistants.length).toBeGreaterThan(0)
+          expect(thirdAssistants.length).toBeGreaterThan(0)
+
+          const firstFinished = firstAssistants.some((m) => m.info.role === "assistant" && m.info.finish === "stop")
+          const secondFinished = secondAssistants.some((m) => m.info.role === "assistant" && m.info.finish === "stop")
+          const thirdFinished = thirdAssistants.some((m) => m.info.role === "assistant" && m.info.finish === "stop")
+          expect(firstFinished).toBe(true)
+          expect(secondFinished).toBe(true)
+          expect(thirdFinished).toBe(true)
+
+          void one
+          void two
+          void three
         },
       })
     } finally {
